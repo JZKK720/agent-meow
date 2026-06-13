@@ -1401,6 +1401,47 @@ def test_handle_list_dir_pagination_after_cursor(tmp_path: Path) -> None:
     assert result.has_more is True  # "e.txt" still remains
 
 
+def test_handle_list_dir_pagination_before_cursor_returns_previous_page(
+    tmp_path: Path,
+) -> None:
+    """
+    Verify that ``before`` returns the page immediately before the cursor.
+
+    Backward pagination should take the tail of the bounded slice, not the
+    first entries in the directory. Otherwise a request for the page before
+    "e.txt" returns "a.txt", "b.txt" instead of "c.txt", "d.txt".
+    """
+    host = _make_host_process()
+    for name in ("a.txt", "b.txt", "c.txt", "d.txt", "e.txt"):
+        (tmp_path / name).write_text("x")
+
+    middle = host._handle_list_dir(
+        HostListDirFrame(
+            request_id="r_before_middle",
+            path=str(tmp_path),
+            limit=2,
+            before=str(tmp_path / "e.txt"),
+        )
+    )
+
+    assert middle.status == "ok"
+    assert [e.name for e in middle.entries] == ["c.txt", "d.txt"]
+    assert middle.has_more is True
+
+    first = host._handle_list_dir(
+        HostListDirFrame(
+            request_id="r_before_first",
+            path=str(tmp_path),
+            limit=2,
+            before=str(tmp_path / "c.txt"),
+        )
+    )
+
+    assert first.status == "ok"
+    assert [e.name for e in first.entries] == ["a.txt", "b.txt"]
+    assert first.has_more is False
+
+
 def test_handle_list_dir_pagination_last_page_has_more_false(
     tmp_path: Path,
 ) -> None:

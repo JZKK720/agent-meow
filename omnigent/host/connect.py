@@ -444,8 +444,13 @@ def _paginate_list_dir(
             if entry.path == before:
                 end = idx
                 break
-    page = entries[start:end][:limit]
-    has_more = end - start > limit
+    if before is not None:
+        page_start = max(start, end - limit)
+        page = entries[page_start:end]
+        has_more = page_start > start
+    else:
+        page = entries[start:end][:limit]
+        has_more = end - start > limit
     return HostListDirResultFrame(
         request_id=request_id,
         status="ok",
