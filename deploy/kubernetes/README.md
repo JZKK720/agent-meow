@@ -1,10 +1,11 @@
 # Omnigent on Kubernetes
 
 Deploy Omnigent to any Kubernetes cluster using Kustomize. The manifests pull
-the prebuilt image and wire up a persistent volume and health checks, plus an
-**optional** Ingress with TLS. The Ingress — and the ingress-nginx + cert-manager
-add-ons behind it — is only needed to expose the server on a public domain. For
-local or dev use, skip it entirely and reach the server with `kubectl
+the prebuilt image and set up a persistent volume and health checks. They also
+include an Ingress so you can serve the app over HTTPS at a public web address,
+but that part is optional — it only matters when people need to reach the server
+over the internet, and it pulls in two extra add-ons (ingress-nginx and
+cert-manager). For local or dev use, ignore it and connect with `kubectl
 port-forward` (see [Verify the deployment](#verify-the-deployment)).
 
 ## What gets provisioned
@@ -12,8 +13,9 @@ port-forward` (see [Verify the deployment](#verify-the-deployment)).
 - **Deployment** — single-replica pod running
   `ghcr.io/omnigent-ai/omnigent-server`, served on port 8000.
 - **Service** — ClusterIP on port 80 → 8000.
-- **Ingress** *(optional)* — HTTPS via cert-manager (nginx ingress class by
-  default); only for exposing the server on a public domain.
+- **Ingress** *(optional)* — serves the app over HTTPS at a public web address,
+  using cert-manager for the certificate. Skip it if the server isn't going on
+  the internet.
 - **PVC** — 10 Gi volume at `/data/artifacts` for the artifact store, minted
   cookie secret, and admin credentials.
 - **ConfigMap + Secret** — environment config and database credentials.
@@ -23,15 +25,16 @@ port-forward` (see [Verify the deployment](#verify-the-deployment)).
 - A Kubernetes cluster (1.25+)
 - `kubectl` with Kustomize support (`kubectl kustomize` or standalone `kustomize`)
 - A PostgreSQL database (managed or in-cluster — see below)
-- *Optional (public Ingress/TLS path only):* an Ingress controller (e.g.
-  ingress-nginx) and cert-manager
+- *Only if you're putting the server on a public web address:* an ingress
+  controller (e.g. ingress-nginx) and cert-manager
 
 ### Install the cluster add-ons (optional)
 
-Only needed for the public Ingress/TLS path — **skip this entirely** if you'll
-reach the server with `kubectl port-forward` or terminate TLS upstream. If you do
-want the Ingress and your cluster lacks an Ingress controller and cert-manager,
-install them (pin the versions to taste):
+Skip this unless you're putting the server on a public web address. (For local
+or dev use you'll reach it with `kubectl port-forward`, or you can let your own
+load balancer or proxy handle HTTPS instead.) Otherwise, if your cluster doesn't
+already have an ingress controller and cert-manager, install them (pin the
+versions to taste):
 
 ```bash
 # ingress-nginx — use the provider manifest that matches your cluster
@@ -49,8 +52,8 @@ kubectl wait -n cert-manager --for=condition=Available deployment --all --timeou
 
 ### Create a cert-manager issuer (optional)
 
-Only needed if you're using the Ingress. The Ingress requests its TLS cert from a
-`ClusterIssuer` named `letsencrypt-prod`
+Skip this unless you're using the Ingress. cert-manager fetches the HTTPS
+certificate for the Ingress from a `ClusterIssuer` named `letsencrypt-prod`
 (the `cert-manager.io/cluster-issuer` annotation in `base/ingress.yaml`). That
 issuer is **not** shipped here — create one before deploying, or change the
 annotation to match an issuer you already have. Two common choices:
@@ -101,9 +104,9 @@ Use this path when you have a managed Postgres (RDS, Cloud SQL, Neon, etc.).
    OMNIGENT_ACCOUNTS_COOKIE_SECRET: "$(openssl rand -hex 32)"
    ```
 
-2. **Edit the Ingress** *(only if exposing via Ingress)* — replace
-   `omnigent.example.com` in `base/ingress.yaml` with your actual domain, and make
-   sure the `letsencrypt-prod` ClusterIssuer exists (see
+2. **Set your domain** *(skip if you're not using the Ingress)* — replace
+   `omnigent.example.com` in `base/ingress.yaml` with your domain, and make sure
+   the `letsencrypt-prod` ClusterIssuer exists (see
    [Create a cert-manager issuer](#create-a-cert-manager-issuer)).
 
 3. **Apply:**
@@ -132,9 +135,10 @@ with its own 10 Gi PVC. Good for dev/testing clusters.
    OMNIGENT_ACCOUNTS_COOKIE_SECRET: "$(openssl rand -hex 32)"
    ```
 
-2. **Edit the Ingress hostname** *(only if exposing via Ingress)* in
-   `base/ingress.yaml`, and make sure the `letsencrypt-prod` ClusterIssuer exists
-   (see [Create a cert-manager issuer](#create-a-cert-manager-issuer)).
+2. **Set your domain** *(skip if you're not using the Ingress)* — edit the
+   hostname in `base/ingress.yaml`, and make sure the `letsencrypt-prod`
+   ClusterIssuer exists (see
+   [Create a cert-manager issuer](#create-a-cert-manager-issuer)).
 
 3. **Apply:**
 
@@ -160,10 +164,10 @@ The first boot runs database migrations before the server starts listening; the
 pod may restart once if the liveness probe fires during that window (see
 [Resource sizing](#resource-sizing)).
 
-To exercise the **Ingress** path locally instead of port-forwarding, set the
-Ingress host to a domain that already resolves to localhost — e.g.
-`omnigent.localtest.me` or `<node-ip>.sslip.io` — pair it with the `selfSigned`
-issuer above, and reach it through your Ingress controller's published port.
+To test the Ingress itself instead of port-forwarding, point its hostname at a
+domain that already resolves to localhost — `omnigent.localtest.me` or
+`<node-ip>.sslip.io` — use the self-signed issuer above, and reach it through the
+ingress controller's published port.
 
 ## Next steps: connect a host
 
