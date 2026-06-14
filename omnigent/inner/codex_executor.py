@@ -2065,8 +2065,10 @@ class CodexExecutor(Executor):
                 # No gateway host supplied directly: derive the transport from
                 # a Databricks profile (the Databricks producer's fallback).
                 creds = _read_databrickscfg(databricks_profile)
-                host = creds.host if creds is not None else _read_databrickscfg_host(
-                    databricks_profile
+                host = (
+                    creds.host
+                    if creds is not None
+                    else _read_databrickscfg_host(databricks_profile)
                 )
                 if not host:
                     raise OSError(
