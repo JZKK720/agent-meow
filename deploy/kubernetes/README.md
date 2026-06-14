@@ -28,7 +28,7 @@ port-forward` (see [Verify the deployment](#verify-the-deployment)).
 - *Only if you're putting the server on a public web address:* an ingress
   controller (e.g. ingress-nginx) and cert-manager
 
-### Install the cluster add-ons (optional)
+### Install cluster add-ons for ingress and cert management (optional)
 
 Skip this unless you're putting the server on a public web address. (For local
 or dev use you'll reach it with `kubectl port-forward`, or you can let your own
