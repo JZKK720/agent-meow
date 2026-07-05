@@ -15,6 +15,7 @@ import { resolveIdentity } from "./lib/identity";
 import { initNativeInsets } from "./lib/nativeInsets";
 import { initBrowserTelemetry } from "./lib/telemetry";
 import { initChatStore } from "./store/chatStore";
+import "./lib/i18n"; // Initialize i18n (EN/ZH) before the React tree renders
 import "./index.css";
 
 // Start tracing before any request fires so fetch/XHR are patched in time

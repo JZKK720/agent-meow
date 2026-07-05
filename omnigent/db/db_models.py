@@ -793,3 +793,90 @@ class SqlUserDailyCost(Base):
     cost_usd: Mapped[float] = mapped_column(Float, nullable=False)
     ask_approved_usd: Mapped[float] = mapped_column(Float, nullable=False, server_default="0")
     updated_at: Mapped[int] = mapped_column(Integer)
+
+
+class SqlDocument(Base):
+    """SQLAlchemy model for the ``documents`` table (agent-meow Docs surface).
+
+    Stores per-session rich-text documents. Each document has a markdown
+    representation (``content_md``) and optionally a ProseMirror/Tiptap
+    JSON representation (``content_json``) for round-trip editing in the
+    web UI's Tiptap editor.
+
+    :param id: UUID primary key, e.g. ``"a1b2c3d4-..."``.
+    :param conversation_id: Owning conversation id.
+    :param title: Human-readable document title.
+    :param format: Content format identifier — ``"markdown"`` or
+        ``"prosemirror"``. Defaults to ``"markdown"``.
+    :param content_md: Markdown text of the document body.
+    :param content_json: ProseMirror JSON (Tiptap) of the document body,
+        or ``None`` when only markdown is stored.
+    :param created_at: Unix epoch seconds at row creation.
+    :param updated_at: Unix epoch **microseconds** of the last mutation.
+    :param version: Monotonic version counter. Starts at 1.
+    :param created_by: Email of the creating user, or ``None`` in
+        single-user mode.
+    """
+
+    __tablename__ = "documents"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(64))
+    title: Mapped[str] = mapped_column(String(512))
+    format: Mapped[str] = mapped_column(String(32), default="markdown")
+    content_md: Mapped[str] = mapped_column(Text, default="")
+    content_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[int] = mapped_column(BigInteger)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    __table_args__ = (
+        Index("ix_documents_conversation_id", "conversation_id"),
+        Index("ix_documents_updated_at", "updated_at"),
+    )
+
+
+class SqlImage(Base):
+    """SQLAlchemy model for the ``images`` table (agent-meow Images surface).
+
+    Stores per-session image metadata. The binary content lives in the
+    ``ArtifactStore`` under ``artifact_key``; this table holds only
+    metadata plus the optional Fabric.js edit JSON.
+
+    :param id: UUID primary key, e.g. ``"a1b2c3d4-..."``.
+    :param conversation_id: Owning conversation id.
+    :param filename: Original or user-supplied filename,
+        e.g. ``"screenshot.png"``.
+    :param mime: MIME type, e.g. ``"image/png"``.
+    :param artifact_key: ArtifactStore key for the binary blob.
+    :param width: Pixel width, or ``0`` when unknown.
+    :param height: Pixel height, or ``0`` when unknown.
+    :param bytes_size: Binary size in bytes.
+    :param edit_json: Fabric.js canvas JSON for the last saved edit
+        state, or ``None`` when no edits have been applied.
+    :param created_at: Unix epoch seconds at row creation.
+    :param updated_at: Unix epoch **microseconds** of the last mutation.
+    :param created_by: Email of the creating user, or ``None`` in
+        single-user mode.
+    """
+
+    __tablename__ = "images"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(64))
+    filename: Mapped[str] = mapped_column(String(512))
+    mime: Mapped[str] = mapped_column(String(128))
+    artifact_key: Mapped[str] = mapped_column(String(512))
+    width: Mapped[int] = mapped_column(Integer, default=0)
+    height: Mapped[int] = mapped_column(Integer, default=0)
+    bytes_size: Mapped[int] = mapped_column(Integer, default=0)
+    edit_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[int] = mapped_column(BigInteger)
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    __table_args__ = (
+        Index("ix_images_conversation_id", "conversation_id"),
+        Index("ix_images_created_at", "created_at"),
+    )

@@ -5,14 +5,17 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "omnigent"
 # Keep in sync with omnigent/version.py's VERSION constant.
+# The pip package name stays "omnigent" for SDK dependency compatibility
+# (omnigent-client / omnigent-ui-sdk pin omnigent==X). The user-facing
+# brand is "agent-meow" — see README.md and web/index.html.
 version = "0.5.0.dev0"
-description = "Omnigent: declarative agent authoring and runtime framework"
+description = "agent-meow: agent workspace runtime with Docs, Images, and Voice surfaces"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
-    { name = "Databricks, Inc." },
+    { name = "agent-meow contributors" },
 ]
-keywords = ["agents", "llm", "ai", "databricks", "cli"]
+keywords = ["agents", "llm", "ai", "docs", "images", "cli"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

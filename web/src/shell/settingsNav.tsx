@@ -11,6 +11,7 @@ import {
   ArchiveIcon,
   ArrowLeftIcon,
   KeyboardIcon,
+  LanguagesIcon,
   PaletteIcon,
   PanelRightOpenIcon,
   ShieldCheckIcon,
@@ -25,10 +26,13 @@ import { useServerInfo } from "@/lib/CapabilitiesContext";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { isElectronShell } from "@/lib/nativeBridge";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 
 export type SettingsSectionId =
   | "appearance"
   | "shortcuts"
+  | "language"
   | "account"
   | "members"
   | "policies"
@@ -38,6 +42,7 @@ export type SettingsSectionId =
 const SECTION_IDS: readonly SettingsSectionId[] = [
   "appearance",
   "shortcuts",
+  "language",
   "account",
   "members",
   "policies",
@@ -72,25 +77,27 @@ export function settingsNavGroups(
   isDesktop: boolean,
   isAdmin = false,
 ): SettingsNavGroup[] {
+  const t = i18n.t.bind(i18n);
   const general: SettingsNavItem[] = [
-    { id: "appearance", label: "Appearance", icon: PaletteIcon },
-    { id: "shortcuts", label: "Keyboard shortcuts", icon: KeyboardIcon, hideOnMobile: true },
+    { id: "appearance", label: t("settings.appearance"), icon: PaletteIcon },
+    { id: "shortcuts", label: t("settings.shortcuts"), icon: KeyboardIcon, hideOnMobile: true },
+    { id: "language", label: t("settings.language"), icon: LanguagesIcon },
   ];
   if (hasAuthSession) {
     // Account leads the group when present — it's the most-visited section
     // on a deploy with sign-in.
-    general.unshift({ id: "account", label: "Account", icon: UserCogIcon });
+    general.unshift({ id: "account", label: t("settings.account"), icon: UserCogIcon });
   }
   const groups: SettingsNavGroup[] = [];
   // Desktop (Local CLI) leads when present — it's the shell-specific section a
   // desktop user is most likely here to change.
   if (isDesktop) {
     groups.push({
-      title: "Desktop",
-      items: [{ id: "cli", label: "Local CLI", icon: TerminalIcon }],
+      title: t("settings.desktop"),
+      items: [{ id: "cli", label: t("settings.localCli"), icon: TerminalIcon }],
     });
   }
-  groups.push({ title: "General", items: general });
+  groups.push({ title: t("settings.general"), items: general });
   // Admin: server-wide management, admin-only. Nested here as sub-categories
   // (rather than links out of the Account section) so entering them stays
   // inside /settings — the sidebar keeps the settings nav instead of snapping
@@ -100,16 +107,16 @@ export function settingsNavGroups(
   // read-only under OIDC (no password actions); Policies is identical.
   if (isAdmin) {
     groups.push({
-      title: "Admin",
+      title: t("settings.admin"),
       items: [
-        { id: "members", label: "Members", icon: UsersIcon },
-        { id: "policies", label: "Policies", icon: ShieldCheckIcon },
+        { id: "members", label: t("settings.members"), icon: UsersIcon },
+        { id: "policies", label: t("settings.policies"), icon: ShieldCheckIcon },
       ],
     });
   }
   groups.push({
-    title: "Archived",
-    items: [{ id: "archived", label: "Archived sessions", icon: ArchiveIcon }],
+    title: t("settings.archived"),
+    items: [{ id: "archived", label: t("settings.archived"), icon: ArchiveIcon }],
   });
   return groups;
 }
@@ -183,6 +190,7 @@ export function SettingsSidebarBody({
   // `/v1/me` (mode-agnostic) so the group appears for admins under OIDC too,
   // not just accounts deploys. Non-admins never see it.
   const isAdmin = useIsAdmin();
+  const { t: _t } = useTranslation(); // re-render on language change
   const { section } = useSettingsRoute();
   const groups = settingsNavGroups(hasAuthSession, isElectronShell(), isAdmin);
 
@@ -199,7 +207,7 @@ export function SettingsSidebarBody({
           (persistent card), so dropping it changes nothing there. */}
           <Link to={settingsReturnPath}>
             <ArrowLeftIcon className="size-4" />
-            Back to Omnigent
+            {i18n.t("app.backToApp")}
           </Link>
         </Button>
         <Tooltip>

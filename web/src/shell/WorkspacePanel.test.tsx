@@ -76,6 +76,12 @@ function renderWorkspace(
       onFlatViewChange={vi.fn()}
       filesPanelShowHidden={false}
       onShowHiddenChange={vi.fn()}
+      selectedDocId={null}
+      onDocSelect={vi.fn()}
+      onDocClose={vi.fn()}
+      selectedImageId={null}
+      onImageSelect={vi.fn()}
+      onImageClose={vi.fn()}
     />,
   );
   return { openFileViewer, onCloseFile, onRightRailTabChange };

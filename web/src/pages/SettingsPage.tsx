@@ -62,6 +62,8 @@ import { type ThemeMode, normalizeThemeMode } from "@/components/theme/themeMode
 import { useIsEmbedded } from "@/lib/embedded";
 import { type CliStatus, getCliStatus, isElectronShell, resetCliPath } from "@/lib/nativeBridge";
 import { cn } from "@/lib/utils";
+import { LanguageSection } from "@/pages/settings/LanguageSection";
+import { useTranslation } from "react-i18next";
 
 // Admin-only management surfaces, rendered as the Members / Policies settings
 // sub-categories. Lazy-loaded so non-accounts deploys (where these sections
@@ -107,6 +109,7 @@ export function SettingsPage() {
     <PageScroll contentClassName="px-8" extraBottom="2.5rem">
       {section === "appearance" && <AppearanceSection />}
       {section === "shortcuts" && <ShortcutsSection />}
+      {section === "language" && <LanguageSection />}
       {section === "account" && hasAuthSession && <AccountSection />}
       {section === "archived" && <ArchivedSection />}
       {section === "cli" && isElectronShell() && <LocalCliSection />}
@@ -133,13 +136,14 @@ function Section({
   );
 }
 
-const themeCards: { mode: ThemeMode; label: string; icon: typeof SunIcon }[] = [
-  { mode: "system", label: "System", icon: LaptopMinimalIcon },
-  { mode: "light", label: "Light", icon: SunIcon },
-  { mode: "dark", label: "Dark", icon: MoonIcon },
+const themeCards: { mode: ThemeMode; labelKey: string; icon: typeof SunIcon }[] = [
+  { mode: "system", labelKey: "settings.system", icon: LaptopMinimalIcon },
+  { mode: "light", labelKey: "settings.light", icon: SunIcon },
+  { mode: "dark", labelKey: "settings.dark", icon: MoonIcon },
 ];
 
 function AppearanceSection() {
+  const { t } = useTranslation();
   // Embedded: the host owns the theme (embed.tsx forces light), so the
   // selector would be a no-op — match ThemeModeMenu and hide it.
   const isEmbedded = useIsEmbedded();
@@ -147,14 +151,14 @@ function AppearanceSection() {
   const mode = normalizeThemeMode(theme);
 
   return (
-    <Section title="Appearance" description="Choose how Omnigent looks on this device.">
+    <Section title={t("settings.appearance")} description={t("settings.appearanceDesc")}>
       {isEmbedded ? (
         <p className="text-sm text-muted-foreground">
-          Appearance is controlled by the host application.
+          {t("settings.appearanceEmbedded")}
         </p>
       ) : (
-        <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-label="Theme">
-          {themeCards.map(({ mode: cardMode, label, icon: Icon }) => {
+        <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-label={t("settings.theme")}>
+          {themeCards.map(({ mode: cardMode, labelKey, icon: Icon }) => {
             const selected = mode === cardMode;
             return (
               <button
@@ -170,7 +174,7 @@ function AppearanceSection() {
                 )}
               >
                 <Icon className="size-6 text-muted-foreground" />
-                <span className="text-sm font-medium">{label}</span>
+                <span className="text-sm font-medium">{t(labelKey)}</span>
               </button>
             );
           })}
@@ -189,7 +193,7 @@ function ShortcutsSection() {
 }
 
 /**
- * Desktop-only: shows which Omnigent CLI binary the shell resolved
+ * Desktop-only: shows which agent-meow CLI binary the shell resolved
  * (auto-detected or a custom override). Read-only — setting a custom path is
  * done on the connect/setup screen (the trusted surface that allows free-text
  * entry); the SPA exposes no path setter. A safe "reset to auto-detected" stays
@@ -221,7 +225,7 @@ function LocalCliSection() {
   return (
     <Section
       title="Local CLI"
-      description="The Omnigent command-line tool this app uses to run a local server and connect this machine as a runner."
+      description="The agent-meow command-line tool this app uses to run a local server and connect this machine as a runner."
     >
       {status === null ? (
         <p className="text-sm text-muted-foreground">CLI status is unavailable.</p>
@@ -254,7 +258,7 @@ function LocalCliSection() {
           ) : (
             <div className="flex flex-col gap-2">
               <p className="text-sm text-muted-foreground">
-                The Omnigent CLI wasn't found. Install it, then set its path from the connect
+                The agent-meow CLI wasn't found. Install it, then set its path from the connect
                 screen:
               </p>
               {status.installCommand && (

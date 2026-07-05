@@ -1,0 +1,30 @@
+spec_version: 1
+name: hermes-gateway
+description: >-
+  Delegate to a local hermes-agent gateway. Hermes runs independently on the
+  same machine as an OpenAI-compatible API server (port 8642 by default).
+  This agent forwards user requests to the hermes gateway, which handles
+  tools, memory, skills, and terminal access locally. No hermes code is
+  vendored — the gateway is reached over HTTP.
+
+executor:
+  type: omnigent
+  config:
+    harness: openai-agents
+  model: hermes-agent
+  auth:
+    type: api_key
+    api_key: ${HERMES_GATEWAY_KEY}
+    base_url: http://127.0.0.1:8642/v1
+
+prompt: |
+  You are a delegate agent connected to a local hermes-agent gateway.
+  The hermes gateway handles tool execution, memory, skills, and terminal
+  access on the host machine. Forward user requests to the gateway and
+  return its responses. When the user asks about tools or capabilities,
+  explain that hermes-agent manages those locally.
+
+interaction:
+  modalities:
+    input: [text, image, file]
+    output: [text]

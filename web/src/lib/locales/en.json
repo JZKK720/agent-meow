@@ -1,0 +1,110 @@
+{
+  "app": {
+    "name": "agent-meow",
+    "welcome": "Welcome to agent-meow.",
+    "newVersion": "A new version of agent-meow is available.",
+    "backToApp": "Back to agent-meow"
+  },
+  "settings": {
+    "appearance": "Appearance",
+    "appearanceDesc": "Choose how agent-meow looks on this device.",
+    "shortcuts": "Keyboard shortcuts",
+    "account": "Account",
+    "members": "Members",
+    "policies": "Policies",
+    "archived": "Archived sessions",
+    "localCli": "Local CLI",
+    "localCliDesc": "The agent-meow command-line tool this app uses to run a local server and connect this machine as a runner.",
+    "localCliNotFound": "The agent-meow CLI wasn't found. Install it, then set its path from the connect screen:",
+    "language": "Language",
+    "languageDesc": "Choose the display language for the agent-meow interface.",
+    "general": "General",
+    "desktop": "Desktop",
+    "admin": "Admin",
+    "theme": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "appearanceEmbedded": "Appearance is controlled by the host application."
+  },
+  "docs": {
+    "title": "Documents",
+    "newDocument": "New document",
+    "noDocuments": "No documents yet.",
+    "loading": "Loading…",
+    "loadingDocument": "Loading document…",
+    "notFound": "Document not found.",
+    "loadFailed": "Failed to load documents.",
+    "deleteConfirm": "Delete this document?",
+    "save": "Save document",
+    "close": "Close",
+    "closePanel": "Close documents panel",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "documentTitle": "Document title",
+    "bold": "Bold",
+    "italic": "Italic",
+    "heading2": "Heading 2",
+    "bulletList": "Bullet list",
+    "orderedList": "Ordered list",
+    "quote": "Quote",
+    "codeBlock": "Code block",
+    "link": "Link",
+    "urlPrompt": "URL"
+  },
+  "images": {
+    "title": "Images",
+    "upload": "Upload image",
+    "noImages": "No images yet. Drop files here or click upload.",
+    "deleteConfirm": "Delete this image?",
+    "edited": "edited",
+    "rotate": "Rotate 90°",
+    "download": "Download PNG",
+    "saveEdit": "Save edit",
+    "close": "Close image",
+    "closePanel": "Close images panel",
+    "loadingImage": "Loading image…",
+    "notFound": "Image not found.",
+    "loadFailed": "Failed to load images."
+  },
+  "workspace": {
+    "files": "Files",
+    "docs": "Docs",
+    "images": "Images",
+    "agents": "Agents",
+    "shells": "Shells",
+    "tasks": "Tasks"
+  },
+  "voice": {
+    "micLabel": "Microphone",
+    "speak": "Speak",
+    "pause": "Pause",
+    "transcribe": "Transcribe",
+    "transcribing": "Transcribing…"
+  },
+  "chat": {
+    "newChat": "New Chat",
+    "send": "Send",
+    "stop": "Stop",
+    "untitled": "Untitled",
+    "searchSessions": "Search sessions"
+  },
+  "login": {
+    "signIn": "Sign in",
+    "username": "Username",
+    "createAccount": "Create your account",
+    "inviteMessage": "You were invited to join this agent-meow server."
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Error",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "save": "Save",
+    "delete": "Delete",
+    "reload": "Reload",
+    "dismiss": "Dismiss"
+  }
+}

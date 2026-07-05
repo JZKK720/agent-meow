@@ -697,7 +697,7 @@ def _read_cache() -> _CacheEntry | None:
         JSON, otherwise ``None``.
     """
     try:
-        raw = _CACHE_FILE.read_text()
+        raw = _CACHE_FILE.read_text(encoding="utf-8")
         data = json.loads(raw)
         return _CacheEntry(
             last_check_epoch=float(data["last_check_epoch"]),

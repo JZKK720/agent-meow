@@ -80,3 +80,7 @@ KIMI_NATIVE_WRAPPER_VALUE = "kimi-native-ui"
 # Value the ``omnigent hermes`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 HERMES_NATIVE_WRAPPER_VALUE = "hermes-native-ui"
+
+# Value the ``omnigent ironclaw`` wrapper writes into
+# ``conversations.labels[WRAPPER_LABEL_KEY]``.
+IRONCLAW_NATIVE_WRAPPER_VALUE = "ironclaw-native-ui"

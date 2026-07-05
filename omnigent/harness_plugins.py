@@ -20,6 +20,7 @@ from omnigent._wrapper_labels import (
     CURSOR_NATIVE_WRAPPER_VALUE,
     GOOSE_NATIVE_WRAPPER_VALUE,
     HERMES_NATIVE_WRAPPER_VALUE,
+    IRONCLAW_NATIVE_WRAPPER_VALUE,
     KIMI_NATIVE_WRAPPER_VALUE,
     KIRO_NATIVE_WRAPPER_VALUE,
     OPENCODE_NATIVE_WRAPPER_VALUE,
@@ -196,6 +197,15 @@ HERMES_NATIVE_CODING_AGENT = NativeCodingAgent(
     harness="hermes-native",
     wrapper_label=HERMES_NATIVE_WRAPPER_VALUE,
     terminal_name="hermes",
+)
+
+IRONCLAW_NATIVE_CODING_AGENT = NativeCodingAgent(
+    key="ironclaw",
+    display_name="IronClaw",
+    agent_name="ironclaw-native-ui",
+    harness="ironclaw-native",
+    wrapper_label=IRONCLAW_NATIVE_WRAPPER_VALUE,
+    terminal_name="ironclaw",
 )
 
 
@@ -560,6 +570,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
             "cursor-native",
             "goose-native",
             "hermes-native",
+            "ironclaw-native",
             "kimi-native",
             "kiro-native",
             "native-antigravity",
@@ -568,6 +579,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
             "native-cursor",
             "native-goose",
             "native-hermes",
+            "native-ironclaw",
             "native-kimi",
             "native-kiro",
             "native-opencode",
@@ -590,6 +602,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
         QWEN_NATIVE_CODING_AGENT,
         KIMI_NATIVE_CODING_AGENT,
         HERMES_NATIVE_CODING_AGENT,
+        IRONCLAW_NATIVE_CODING_AGENT,
     ),
     model_env_keys={
         "antigravity": "HARNESS_ANTIGRAVITY_MODEL",

@@ -1,0 +1,31 @@
+spec_version: 1
+name: ironclaw-gateway
+description: >-
+  Delegate to a local ironclaw reborn gateway. IronClaw runs independently
+  on the same machine as an OpenAI-compatible API server (port 3000 by
+  default). This agent forwards user requests to the ironclaw gateway,
+  which handles tools, sandboxed execution, memory, and skills locally.
+  No ironclaw code is vendored — the gateway is reached over HTTP.
+
+executor:
+  type: omnigent
+  config:
+    harness: openai-agents
+  model: ironclaw-agent
+  auth:
+    type: api_key
+    api_key: ${IRONCLAW_GATEWAY_TOKEN}
+    base_url: http://127.0.0.1:3000/api/v1
+
+prompt: |
+  You are a delegate agent connected to a local ironclaw reborn gateway.
+  The ironclaw gateway handles tool execution in a WASM sandbox, memory,
+  skills, and routines on the host machine. Forward user requests to the
+  gateway and return its responses. When the user asks about tools or
+  capabilities, explain that ironclaw manages those locally with its
+  capability-based security model.
+
+interaction:
+  modalities:
+    input: [text, image, file]
+    output: [text]

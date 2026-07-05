@@ -23,7 +23,9 @@ from omnigent.entities.conversation import (
     parse_item_data,
     synthesize_conversation_title,
 )
+from omnigent.entities.document import Document
 from omnigent.entities.file import StoredFile
+from omnigent.entities.image import ImageAsset
 from omnigent.entities.pagination import PagedList
 from omnigent.entities.permission import ResolvedAccess, SessionPermission
 from omnigent.entities.policy import Policy
@@ -46,9 +48,11 @@ __all__ = [
     "CompactionData",
     "Conversation",
     "ConversationItem",
+    "Document",
     "ErrorData",
     "FunctionCallData",
     "FunctionCallOutputData",
+    "ImageAsset",
     "ItemData",
     "LoadedAgent",
     "MessageData",

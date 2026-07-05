@@ -1,0 +1,110 @@
+{
+  "app": {
+    "name": "agent-meow",
+    "welcome": "欢迎使用 agent-meow。",
+    "newVersion": "agent-meow 有新版本可用。",
+    "backToApp": "返回 agent-meow"
+  },
+  "settings": {
+    "appearance": "外观",
+    "appearanceDesc": "选择 agent-meow 在此设备上的显示方式。",
+    "shortcuts": "键盘快捷键",
+    "account": "账户",
+    "members": "成员",
+    "policies": "策略",
+    "archived": "已归档会话",
+    "localCli": "本地命令行工具",
+    "localCliDesc": "此应用用于运行本地服务器并将本机注册为运行器的 agent-meow 命令行工具。",
+    "localCliNotFound": "未找到 agent-meow 命令行工具。请安装后从连接屏幕设置路径：",
+    "language": "语言",
+    "languageDesc": "选择 agent-meow 界面的显示语言。",
+    "general": "通用",
+    "desktop": "桌面",
+    "admin": "管理",
+    "theme": "主题",
+    "system": "跟随系统",
+    "light": "浅色",
+    "dark": "深色",
+    "appearanceEmbedded": "外观由宿主应用控制。"
+  },
+  "docs": {
+    "title": "文档",
+    "newDocument": "新建文档",
+    "noDocuments": "暂无文档。",
+    "loading": "加载中…",
+    "loadingDocument": "加载文档中…",
+    "notFound": "未找到文档。",
+    "loadFailed": "加载文档失败。",
+    "deleteConfirm": "删除此文档？",
+    "save": "保存文档",
+    "close": "关闭",
+    "closePanel": "关闭文档面板",
+    "saving": "保存中…",
+    "saved": "已保存",
+    "saveFailed": "保存失败",
+    "documentTitle": "文档标题",
+    "bold": "加粗",
+    "italic": "斜体",
+    "heading2": "二级标题",
+    "bulletList": "无序列表",
+    "orderedList": "有序列表",
+    "quote": "引用",
+    "codeBlock": "代码块",
+    "link": "链接",
+    "urlPrompt": "URL"
+  },
+  "images": {
+    "title": "图片",
+    "upload": "上传图片",
+    "noImages": "暂无图片。拖放文件或点击上传。",
+    "deleteConfirm": "删除此图片？",
+    "edited": "已编辑",
+    "rotate": "旋转 90°",
+    "download": "下载 PNG",
+    "saveEdit": "保存编辑",
+    "close": "关闭图片",
+    "closePanel": "关闭图片面板",
+    "loadingImage": "加载图片中…",
+    "notFound": "未找到图片。",
+    "loadFailed": "加载图片失败。"
+  },
+  "workspace": {
+    "files": "文件",
+    "docs": "文档",
+    "images": "图片",
+    "agents": "代理",
+    "shells": "终端",
+    "tasks": "任务"
+  },
+  "voice": {
+    "micLabel": "麦克风",
+    "speak": "播放",
+    "pause": "暂停",
+    "transcribe": "转录",
+    "transcribing": "转录中…"
+  },
+  "chat": {
+    "newChat": "新对话",
+    "send": "发送",
+    "stop": "停止",
+    "untitled": "未命名",
+    "searchSessions": "搜索会话"
+  },
+  "login": {
+    "signIn": "登录",
+    "username": "用户名",
+    "createAccount": "创建账户",
+    "inviteMessage": "您被邀请加入此 agent-meow 服务器。"
+  },
+  "common": {
+    "loading": "加载中…",
+    "error": "错误",
+    "cancel": "取消",
+    "confirm": "确认",
+    "close": "关闭",
+    "save": "保存",
+    "delete": "删除",
+    "reload": "重新加载",
+    "dismiss": "关闭"
+  }
+}
