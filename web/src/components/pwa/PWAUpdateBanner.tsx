@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ import { useServiceWorkerUpdate } from "./useServiceWorkerUpdate";
  */
 export function PWAUpdateBanner() {
   const { needRefresh, reload, dismiss } = useServiceWorkerUpdate();
+  const { t } = useTranslation();
 
   if (!needRefresh) return null;
 
@@ -26,7 +28,7 @@ export function PWAUpdateBanner() {
         "supports-[backdrop-filter]:bg-background/80",
       )}
     >
-      <span className="text-sm text-foreground">A new version of Omnigent is available.</span>
+      <span className="text-sm text-foreground">{t("app.newVersion")}</span>
       <Button size="sm" onClick={reload}>
         Reload
       </Button>

@@ -3016,6 +3016,17 @@ def server(
     permission_store = SqlAlchemyPermissionStore(db_uri)
     artifact_store = _create_artifact_store(art_loc)
 
+    # Document + image stores for the docs/images surfaces.
+    from omnigent.stores.document_store.sqlalchemy_store import (
+        SqlAlchemyDocumentStore as _SqlDocumentStore,
+    )
+    from omnigent.stores.image_store.sqlalchemy_store import (
+        SqlAlchemyImageStore as _SqlImageStore,
+    )
+
+    document_store = _SqlDocumentStore(db_uri)
+    image_store = _SqlImageStore(db_uri)
+
     # Initialize the runtime with store references so workflow code
     # can access them via getter functions (get_agent_cache(), etc.).
     from omnigent.runtime import init as init_runtime
@@ -3167,6 +3178,8 @@ def server(
         admins=config_str_list(cfg.get("admins")),
         allowed_domains=config_str_list(cfg.get("allowed_domains")),
         sandbox_config=sandbox_config,
+        document_store=document_store,
+        image_store=image_store,
     )
 
     click.echo(f"Starting omnigent server on {host}:{port}")

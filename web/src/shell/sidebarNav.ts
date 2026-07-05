@@ -39,6 +39,7 @@ export type ConversationIconKind =
   | "qwen"
   | "kimi"
   | "hermes"
+  | "ironclaw"
   | "nessie"
   | null;
 

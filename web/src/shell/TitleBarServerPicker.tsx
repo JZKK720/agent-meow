@@ -55,7 +55,7 @@ export function TitleBarServerPicker({
   threadTitle,
 }: {
   /** Title of the currently open thread, or null/undefined when no thread
-      is selected or it has no title yet (falls back to "Omnigent"). */
+      is selected or it has no title yet (falls back to "agent-meow"). */
   threadTitle?: string | null;
 }) {
   const [info, setInfo] = useState<ServerPickerInfo | null>(null);
@@ -90,7 +90,7 @@ export function TitleBarServerPicker({
           title="Switch server"
         >
           <span className="truncate font-medium">
-            {threadTitle || "Omnigent"} — {hostOf(info.currentOrigin)}
+            {threadTitle || "agent-meow"} — {hostOf(info.currentOrigin)}
           </span>
           <ChevronDownIcon className="size-3 shrink-0" />
         </DropdownMenuTrigger>

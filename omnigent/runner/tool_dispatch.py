@@ -304,6 +304,35 @@ _AGENT_TOOLS = frozenset({"sys_agent_get", "sys_agent_download", "sys_agent_list
 # The runner proxies the Omnigent server's session policy REST endpoint.
 _POLICY_TOOLS = frozenset({"sys_add_policy", "sys_policy_registry"})
 
+# Priority 5m: agent-meow Docs surface — doc_create / doc_get / doc_list /
+# doc_update / doc_generate. The runner has no in-process DocumentStore,
+# so these proxy the Omnigent server's REST endpoints
+# (POST/GET/PATCH/DELETE /v1/sessions/{id}/resources/documents) over
+# server_client. ``doc_generate`` is a special case: it routes back into
+# the agent's own LLM loop with a doc-generation system prompt, then
+# persists the result via ``doc_create``.
+_DOC_TOOLS = frozenset(
+    {"doc_create", "doc_get", "doc_list", "doc_update", "doc_generate"}
+)
+
+# Priority 5n: agent-meow Images surface — image_list / image_get /
+# image_upload / image_edit / image_generate. The runner proxies the
+# Omnigent server's REST endpoints
+# (POST/GET/PATCH/DELETE /v1/sessions/{id}/resources/images) over
+# server_client. ``image_generate`` is a stub in v1 (returns a
+# not-yet-wired message).
+_IMAGE_TOOLS = frozenset(
+    {"image_list", "image_get", "image_upload", "image_edit", "image_generate"}
+)
+
+# Priority 5o: agent-meow Voice surface — transcribe_audio (Handy CLI),
+# transcribe_audio_high_quality (VibeVoice-ASR gateway), text_to_speech /
+# speak (VibeVoice TTS gateway). The runner shells out to Handy for STT
+# and proxies HTTP for TTS/ASR.
+_VOICE_TOOLS = frozenset(
+    {"transcribe_audio", "transcribe_audio_high_quality", "text_to_speech", "speak"}
+)
+
 # Builtin tools the claude-native / codex-native relay advertises to the
 # real CLI, beyond the always-relayed ``sys_os_*`` family. Native harnesses
 # ignore the harness ``tools`` list, so the relay is their ONLY tool
@@ -331,6 +360,9 @@ _NATIVE_RELAY_BUILTIN_TOOLS = (
     | _AGENT_TOOLS
     | _POLICY_TOOLS
     | _TERMINAL_TOOLS
+    | _DOC_TOOLS
+    | _IMAGE_TOOLS
+    | _VOICE_TOOLS
 )
 
 
@@ -357,6 +389,28 @@ def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
         SysAgentDownloadTool,
         SysAgentGetTool,
         SysAgentListTool,
+    )
+    from omnigent.tools.builtins.docs import (
+        DocCreateTool,
+        DocGenerateTool,
+        DocGetTool,
+        DocListTool,
+        DocUpdateTool,
+    )
+    from omnigent.tools.builtins.images import (
+        ImageEditTool,
+        ImageGenerateTool,
+        ImageGetTool,
+        ImageListTool,
+        ImageUploadTool,
+    )
+    from omnigent.tools.builtins.transcribe import (
+        TranscribeAudioHighQualityTool,
+        TranscribeAudioTool,
+    )
+    from omnigent.tools.builtins.tts import (
+        SpeakTool,
+        TextToSpeechTool,
     )
     from omnigent.tools.builtins.list_comments import ListCommentsTool
     from omnigent.tools.builtins.os_env import (
@@ -406,6 +460,20 @@ def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
             SysAgentDownloadTool,
             SysAddPolicyTool,
             SysPolicyRegistryTool,
+            DocCreateTool,
+            DocGetTool,
+            DocListTool,
+            DocUpdateTool,
+            DocGenerateTool,
+            ImageListTool,
+            ImageGetTool,
+            ImageUploadTool,
+            ImageEditTool,
+            ImageGenerateTool,
+            TranscribeAudioTool,
+            TranscribeAudioHighQualityTool,
+            TextToSpeechTool,
+            SpeakTool,
         ):
             _append(_cls().get_schema()["function"])
 
@@ -467,6 +535,9 @@ _ALL_LOCAL_TOOLS = (
     | _COMMENT_TOOLS
     | _AGENT_TOOLS
     | _POLICY_TOOLS
+    | _DOC_TOOLS
+    | _IMAGE_TOOLS
+    | _VOICE_TOOLS
 )
 _PLACEHOLDER_CWDS = (None, "", ".", "./")
 
@@ -3109,6 +3180,472 @@ async def _session_share_via_rest(
     )
 
 
+# ── agent-meow Docs surface dispatch ─────────────────────────────────────────
+
+
+async def _execute_doc_tool(
+    tool_name: str,
+    args: dict[str, Any],
+    arguments: str,
+    *,
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+) -> str:
+    """
+    Runner-local handler for the ``doc_*`` tools (agent-meow Docs surface).
+
+    The runner has no in-process ``DocumentStore``, so these proxy the
+    Omnigent server's REST endpoints over ``server_client``:
+
+    - ``doc_create`` → ``POST /v1/sessions/{id}/resources/documents``
+    - ``doc_get`` → ``GET /v1/sessions/{id}/resources/documents/{doc_id}``
+    - ``doc_list`` → ``GET /v1/sessions/{id}/resources/documents``
+    - ``doc_update`` → ``PATCH /v1/sessions/{id}/resources/documents/{doc_id}``
+    - ``doc_generate`` → generates markdown from topic/outline by calling
+      the agent's own LLM loop is out of scope for the runner dispatch
+      (that requires re-entering the workflow). Instead, v1 persists a
+      structured placeholder document with the topic/outline as content
+      so the agent can iterate on it via ``doc_update``. A future version
+      can route ``doc_generate`` back into the workflow loop.
+
+    :param tool_name: One of the ``doc_*`` tool names.
+    :param args: Parsed tool arguments.
+    :param arguments: Raw JSON arguments string (unused; args is authoritative).
+    :param conversation_id: Current session id.
+    :param server_client: HTTP client pointed at the Omnigent server.
+    :returns: Tool output JSON string.
+    """
+    if server_client is None:
+        return json.dumps({"error": f"{tool_name} requires server access"})
+    if conversation_id is None:
+        return json.dumps({"error": f"{tool_name} requires a session id"})
+
+    base = f"/v1/sessions/{conversation_id}/resources/documents"
+
+    if tool_name == "doc_list":
+        try:
+            resp = await server_client.get(base, timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"doc_list returned {resp.status_code}"})
+            body = resp.json()
+            return json.dumps({"documents": body.get("data", [])})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_list failed: {exc}"})
+
+    if tool_name == "doc_create":
+        title = args.get("title") or "Untitled"
+        payload: dict[str, Any] = {
+            "title": title,
+            "format": args.get("format") or "markdown",
+            "content_md": args.get("content_md") or "",
+        }
+        if args.get("content_json") is not None:
+            payload["content_json"] = args["content_json"]
+        try:
+            resp = await server_client.post(base, json=payload, timeout=30.0)
+            if resp.status_code >= 400:
+                return json.dumps({"error": f"doc_create returned {resp.status_code}"})
+            return json.dumps({"document": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_create failed: {exc}"})
+
+    # doc_get / doc_update require document_id
+    document_id = args.get("document_id")
+    if not isinstance(document_id, str) or not document_id:
+        return json.dumps({"error": f"{tool_name} requires a non-empty 'document_id'"})
+
+    if tool_name == "doc_get":
+        try:
+            resp = await server_client.get(f"{base}/{document_id}", timeout=30.0)
+            if resp.status_code == 404:
+                return json.dumps({"error": f"document not found: {document_id}"})
+            if resp.status_code >= 400:
+                return json.dumps({"error": f"doc_get returned {resp.status_code}"})
+            return json.dumps({"document": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_get failed: {exc}"})
+
+    if tool_name == "doc_update":
+        update_payload: dict[str, Any] = {}
+        if args.get("title") is not None:
+            update_payload["title"] = args["title"]
+        if args.get("content_md") is not None:
+            update_payload["content_md"] = args["content_md"]
+        if args.get("content_json") is not None:
+            update_payload["content_json"] = args["content_json"]
+        if not update_payload:
+            return json.dumps({"error": "doc_update requires at least one of title/content_md/content_json"})
+        try:
+            resp = await server_client.patch(
+                f"{base}/{document_id}", json=update_payload, timeout=30.0
+            )
+            if resp.status_code == 404:
+                return json.dumps({"error": f"document not found: {document_id}"})
+            if resp.status_code >= 400:
+                return json.dumps({"error": f"doc_update returned {resp.status_code}"})
+            return json.dumps({"document": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_update failed: {exc}"})
+
+    if tool_name == "doc_generate":
+        # v1: persist a structured placeholder with the topic + outline so
+        # the agent can iterate via doc_update. The topic becomes the
+        # title; the outline + instructions become the initial content.
+        topic = args.get("topic") or "Untitled"
+        outline = args.get("outline") or ""
+        instructions = args.get("instructions") or ""
+        content_parts = [f"# {topic}\n"]
+        if outline:
+            content_parts.append(f"## Outline\n\n{outline}\n")
+        if instructions:
+            content_parts.append(f"## Instructions\n\n{instructions}\n")
+        content_parts.append(
+            "\n> This document was generated by `doc_generate`. The body is "
+            "a placeholder — use `doc_update` to fill in the full content.\n"
+        )
+        gen_payload = {
+            "title": topic,
+            "format": "markdown",
+            "content_md": "\n".join(content_parts),
+        }
+        try:
+            resp = await server_client.post(base, json=gen_payload, timeout=30.0)
+            if resp.status_code >= 400:
+                return json.dumps({"error": f"doc_generate returned {resp.status_code}"})
+            return json.dumps({"document": resp.json(), "generated": True})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_generate failed: {exc}"})
+
+    return json.dumps({"error": f"unknown doc tool: {tool_name}"})
+
+
+# ── agent-meow Images surface dispatch ───────────────────────────────────────
+
+
+async def _execute_image_tool(
+    tool_name: str,
+    args: dict[str, Any],
+    *,
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+    runner_workspace: Path | None,
+) -> str:
+    """
+    Runner-local handler for the ``image_*`` tools (agent-meow Images surface).
+
+    The runner has no in-process ``ImageStore`` / ``ArtifactStore``, so
+    these proxy the Omnigent server's REST endpoints over
+    ``server_client``:
+
+    - ``image_list`` → ``GET /v1/sessions/{id}/resources/images``
+    - ``image_get`` → metadata via the list endpoint (the per-id GET
+      returns binary, so we filter the list)
+    - ``image_upload`` → reads a local file and ``POST``s it as multipart
+    - ``image_edit`` → ``PATCH .../images/{id}/edit`` with Fabric.js JSON
+    - ``image_generate`` → v1 stub (returns a not-yet-wired message)
+
+    :param tool_name: One of the ``image_*`` tool names.
+    :param args: Parsed tool arguments.
+    :param conversation_id: Current session id.
+    :param server_client: HTTP client pointed at the Omnigent server.
+    :param runner_workspace: The runner's workspace dir, for resolving
+        ``image_upload`` local file paths.
+    :returns: Tool output JSON string.
+    """
+    if server_client is None:
+        return json.dumps({"error": f"{tool_name} requires server access"})
+    if conversation_id is None:
+        return json.dumps({"error": f"{tool_name} requires a session id"})
+
+    base = f"/v1/sessions/{conversation_id}/resources/images"
+
+    if tool_name == "image_list":
+        try:
+            resp = await server_client.get(base, timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"image_list returned {resp.status_code}"})
+            body = resp.json()
+            return json.dumps({"images": body.get("data", [])})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"image_list failed: {exc}"})
+
+    if tool_name == "image_get":
+        image_id = args.get("image_id")
+        if not isinstance(image_id, str) or not image_id:
+            return json.dumps({"error": "image_get requires a non-empty 'image_id'"})
+        # The per-id GET returns binary; fetch the list and filter for metadata.
+        try:
+            resp = await server_client.get(base, timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"image_get returned {resp.status_code}"})
+            rows = resp.json().get("data", [])
+            match = next((r for r in rows if r.get("id") == image_id), None)
+            if match is None:
+                return json.dumps({"error": f"image not found: {image_id}"})
+            return json.dumps({"image": match})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"image_get failed: {exc}"})
+
+    if tool_name == "image_upload":
+        path_str = args.get("path")
+        if not isinstance(path_str, str) or not path_str:
+            return json.dumps({"error": "image_upload requires a non-empty 'path'"})
+        # Resolve the path against the runner workspace if not absolute.
+        from pathlib import Path as _Path
+
+        file_path = _Path(path_str)
+        if not file_path.is_absolute() and runner_workspace is not None:
+            file_path = runner_workspace / file_path
+        if not file_path.is_file():
+            return json.dumps({"error": f"image_upload: file not found: {file_path}"})
+        filename = args.get("filename") or file_path.name
+        try:
+            data = file_path.read_bytes()
+            files = {"file": (filename, data)}
+            resp = await server_client.post(base, files=files, timeout=60.0)
+            if resp.status_code >= 400:
+                return json.dumps({"error": f"image_upload returned {resp.status_code}"})
+            return json.dumps({"image": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"image_upload failed: {exc}"})
+
+    if tool_name == "image_edit":
+        image_id = args.get("image_id")
+        if not isinstance(image_id, str) or not image_id:
+            return json.dumps({"error": "image_edit requires a non-empty 'image_id'"})
+        edit_json = args.get("edit_json")
+        if not isinstance(edit_json, str) or not edit_json:
+            return json.dumps({"error": "image_edit requires a non-empty 'edit_json' string"})
+        try:
+            resp = await server_client.patch(
+                f"{base}/{image_id}/edit",
+                json={"edit_json": edit_json},
+                timeout=30.0,
+            )
+            if resp.status_code == 404:
+                return json.dumps({"error": f"image not found: {image_id}"})
+            if resp.status_code >= 400:
+                return json.dumps({"error": f"image_edit returned {resp.status_code}"})
+            return json.dumps({"image": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"image_edit failed: {exc}"})
+
+    if tool_name == "image_generate":
+        return json.dumps(
+            {
+                "error": (
+                    "image_generate is not yet wired to a diffusion provider. "
+                    "Configure an image-generation backend (Stability, OpenAI "
+                    "images, or a ComfyUI MCP server) to enable it."
+                ),
+                "stub": True,
+            }
+        )
+
+    return json.dumps({"error": f"unknown image tool: {tool_name}"})
+
+
+# ── agent-meow Voice surface dispatch ─────────────────────────────────────────
+
+
+async def _execute_voice_tool(
+    tool_name: str,
+    args: dict[str, Any],
+    *,
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+    runner_workspace: Path | None,
+) -> str:
+    """
+    Runner-local handler for the ``transcribe_audio``, ``text_to_speech``,
+    ``speak``, and ``transcribe_audio_high_quality`` tools.
+
+    - ``transcribe_audio`` → shells out to ``handy --transcribe-file <path>
+      --json`` (or the CLI configured via ``HANDY_CLI_PATH``). Returns the
+      transcribed text.
+    - ``transcribe_audio_high_quality`` → calls a VibeVoice-ASR vLLM endpoint
+      (``VIBEVOICE_ASR_URL``) for diarized long-form transcription.
+    - ``text_to_speech`` / ``speak`` → calls a VibeVoice TTS vLLM endpoint
+      (``VIBEVOICE_TTS_URL``) to synthesize speech. The audio is uploaded as
+      a session artifact via the server's image/artifact routes.
+
+    :param tool_name: One of the voice tool names.
+    :param args: Parsed tool arguments.
+    :param conversation_id: Current session id.
+    :param server_client: HTTP client pointed at the Omnigent server.
+    :param runner_workspace: The runner's workspace dir, for resolving
+        audio file paths.
+    :returns: Tool output JSON string.
+    """
+    import os
+    import asyncio
+
+    if tool_name == "transcribe_audio":
+        path_str = args.get("path")
+        if not isinstance(path_str, str) or not path_str:
+            return json.dumps({"error": "transcribe_audio requires a non-empty 'path'"})
+        file_path = Path(path_str)
+        if not file_path.is_absolute() and runner_workspace is not None:
+            file_path = runner_workspace / file_path
+        if not file_path.is_file():
+            return json.dumps({"error": f"transcribe_audio: file not found: {file_path}"})
+
+        handy_cli = os.environ.get("HANDY_CLI_PATH", "handy")
+        cmd = [handy_cli, "--transcribe-file", str(file_path), "--json"]
+        model = args.get("model")
+        if isinstance(model, str) and model:
+            cmd.extend(["--model", model])
+        language = args.get("language")
+        if isinstance(language, str) and language:
+            cmd.extend(["--language", language])
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120.0)
+            if proc.returncode != 0:
+                err = stderr.decode(errors="replace").strip()[:500]
+                return json.dumps({"error": f"handy transcription failed (exit {proc.returncode}): {err}"})
+            output = stdout.decode(errors="replace").strip()
+            # Handy --json returns JSON; try to parse for the text field.
+            try:
+                result = json.loads(output)
+                text = result.get("text", output)
+            except json.JSONDecodeError:
+                text = output
+            return json.dumps({"transcription": text})
+        except FileNotFoundError:
+            return json.dumps({
+                "error": (
+                    "handy CLI not found. Install Handy from "
+                    "https://handy.computer or set HANDY_CLI_PATH."
+                ),
+            })
+        except asyncio.TimeoutError:
+            return json.dumps({"error": "handy transcription timed out (120s)"})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"transcribe_audio failed: {exc}"})
+
+    if tool_name == "transcribe_audio_high_quality":
+        asr_url = os.environ.get("VIBEVOICE_ASR_URL", "")
+        if not asr_url:
+            return json.dumps({
+                "error": (
+                    "VIBEVOICE_ASR_URL is not set. Serve VibeVoice-ASR via "
+                    "vLLM and set VIBEVOICE_ASR_URL=http://127.0.0.1:8001/v1"
+                ),
+            })
+        path_str = args.get("path")
+        if not isinstance(path_str, str) or not path_str:
+            return json.dumps({"error": "transcribe_audio_high_quality requires a non-empty 'path'"})
+        file_path = Path(path_str)
+        if not file_path.is_absolute() and runner_workspace is not None:
+            file_path = runner_workspace / file_path
+        if not file_path.is_file():
+            return json.dumps({"error": f"file not found: {file_path}"})
+
+        # Read audio as base64 and send to the vLLM endpoint.
+        import base64
+
+        try:
+            audio_bytes = file_path.read_bytes()
+            audio_b64 = base64.b64encode(audio_bytes).decode()
+            payload = {
+                "model": "vibevoice-asr",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Transcribe this audio."},
+                            {"type": "audio_url", "audio_url": {"url": f"data:audio/wav;base64,{audio_b64}"}},
+                        ],
+                    }
+                ],
+            }
+            if server_client is None:
+                return json.dumps({"error": "transcribe_audio_high_quality requires server access"})
+            resp = await server_client.post(
+                f"{asr_url.rstrip('/')}/chat/completions",
+                json=payload,
+                timeout=120.0,
+            )
+            if resp.status_code >= 400:
+                return json.dumps({"error": f"VibeVoice-ASR returned {resp.status_code}"})
+            result = resp.json()
+            text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            return json.dumps({"transcription": text, "diarized": True})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"transcribe_audio_high_quality failed: {exc}"})
+
+    if tool_name in ("text_to_speech", "speak"):
+        tts_url = os.environ.get("VIBEVOICE_TTS_URL", "")
+        if not tts_url:
+            return json.dumps({
+                "error": (
+                    "VIBEVOICE_TTS_URL is not set. Serve VibeVoice-TTS via "
+                    "vLLM and set VIBEVOICE_TTS_URL=http://127.0.0.1:8000/v1"
+                ),
+            })
+        text = args.get("text")
+        if not isinstance(text, str) or not text:
+            return json.dumps({"error": f"{tool_name} requires a non-empty 'text'"})
+        voice = args.get("voice")
+        language = args.get("language")
+
+        if server_client is None:
+            return json.dumps({"error": f"{tool_name} requires server access"})
+
+        try:
+            payload: dict[str, Any] = {
+                "model": "vibevoice-tts",
+                "input": text,
+            }
+            if voice:
+                payload["voice"] = voice
+            if language:
+                payload["language"] = language
+            resp = await server_client.post(
+                f"{tts_url.rstrip('/')}/audio/speech",
+                json=payload,
+                timeout=120.0,
+            )
+            if resp.status_code >= 400:
+                return json.dumps({"error": f"VibeVoice-TTS returned {resp.status_code}"})
+            # The TTS endpoint returns audio bytes. Upload as a session
+            # artifact so the UI can play it.
+            audio_bytes = resp.content
+            if conversation_id is None:
+                return json.dumps({"error": f"{tool_name} requires a session id to store audio"})
+            artifact_key = f"audio/{conversation_id}/{uuid.uuid4()}.wav"
+            # Upload via the server's artifact store (reuse the image upload
+            # route as a generic binary upload path).
+            files = {"file": ("tts.wav", audio_bytes, "audio/wav")}
+            upload_resp = await server_client.post(
+                f"/v1/sessions/{conversation_id}/resources/images",
+                files=files,
+                timeout=30.0,
+            )
+            if upload_resp.status_code >= 400:
+                # Fallback: return a base64 data URL so the UI can still play it.
+                audio_b64 = base64.b64encode(audio_bytes).decode()
+                return json.dumps({
+                    "audio_url": f"data:audio/wav;base64,{audio_b64}",
+                    "format": "wav",
+                    "text": text,
+                })
+            upload_result = upload_resp.json()
+            image_id = upload_result.get("id", "")
+            audio_url = f"/v1/sessions/{conversation_id}/resources/images/{image_id}"
+            return json.dumps({"audio_url": audio_url, "format": "wav", "text": text})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"{tool_name} failed: {exc}"})
+
+    return json.dumps({"error": f"unknown voice tool: {tool_name}"})
+
+
 async def _execute_agent_tool(
     tool_name: str,
     args: dict[str, Any],
@@ -4177,6 +4714,46 @@ async def execute_tool(
                 arguments,
                 conversation_id=conversation_id,
                 server_client=server_client,
+            )
+        elif tool_name in _DOC_TOOLS:
+            output = await _execute_doc_tool(
+                tool_name,
+                args,
+                arguments,
+                conversation_id=conversation_id,
+                server_client=server_client,
+            )
+        elif tool_name in _IMAGE_TOOLS:
+            output = await _execute_image_tool(
+                tool_name,
+                args,
+                conversation_id=conversation_id,
+                server_client=server_client,
+                runner_workspace=runner_workspace,
+            )
+        elif tool_name in _DOC_TOOLS:
+            output = await _execute_doc_tool(
+                tool_name,
+                args,
+                arguments,
+                conversation_id=conversation_id,
+                server_client=server_client,
+            )
+        elif tool_name in _IMAGE_TOOLS:
+            output = await _execute_image_tool(
+                tool_name,
+                args,
+                conversation_id=conversation_id,
+                server_client=server_client,
+                runner_workspace=runner_workspace,
+            )
+        elif tool_name in _VOICE_TOOLS:
+            output = await _execute_voice_tool(
+                tool_name,
+                args,
+                conversation_id=conversation_id,
+                server_client=server_client,
+                runner_workspace=runner_workspace,
             )
         elif _is_spec_local_python_tool(tool_name, agent_spec):
             output = await _execute_local_python_tool(

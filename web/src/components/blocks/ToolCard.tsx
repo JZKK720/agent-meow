@@ -28,6 +28,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { RenderItem, ToolState } from "@/lib/renderItems";
+import { AudioBlock, parseAudioFromToolOutput } from "@/components/blocks/AudioBlock";
 import { iconForTool } from "@/lib/toolIcon";
 import { type ToolTitle, formatToolTitle } from "@/lib/toolTitle";
 import { useFileViewer } from "@/shell/FileViewerContext";
@@ -416,8 +417,13 @@ function OutputSection({ output }: { output: string }) {
   const preview = useMemo(() => getOutputPreview(output, isExpanded), [output, isExpanded]);
   const canExpand = collapsedPreview.isTruncated;
 
+  // Detect TTS audio output — render an inline audio player above the
+  // raw JSON output when the tool returned an audio_url.
+  const audioInfo = useMemo(() => parseAudioFromToolOutput(output), [output]);
+
   return (
     <div className="space-y-2">
+      {audioInfo && <AudioBlock url={audioInfo.url} text={audioInfo.text} />}
       <div
         className={cn(
           "relative rounded-md",

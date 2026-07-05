@@ -15,7 +15,8 @@ export type NativeCodingAgentIconKind =
   | "qwen"
   | "antigravity"
   | "kimi"
-  | "hermes";
+  | "hermes"
+  | "ironclaw";
 export type NativeCodingAgentCapability = "permissionMode" | "approvalMode" | "cursorMode";
 
 export interface NativeCodingAgentSpec {
@@ -155,6 +156,18 @@ export const NATIVE_CODING_AGENTS = [
     iconKind: "hermes",
     sortRank: 80,
   },
+  {
+    // ironclaw has no brand glyph yet, so it falls back to the generic bot
+    // icon (see AgentCard.iconForAgent / SubagentsPanel) — the
+    // `iconKind: "ironclaw"` intentionally matches no icon branch.
+    key: "ironclaw",
+    agentName: "ironclaw-native-ui",
+    harness: "ironclaw-native",
+    wrapperLabel: "ironclaw-native-ui",
+    displayName: "IronClaw",
+    iconKind: "ironclaw",
+    sortRank: 85,
+  },
 ] as const satisfies readonly NativeCodingAgentSpec[];
 
 const BY_AGENT_NAME: Map<string, NativeCodingAgentSpec> = new Map(
@@ -180,6 +193,7 @@ const HARNESS_ALIASES: Record<string, string> = {
   "native-qwen": "qwen-native",
   "native-kimi": "kimi-native",
   "native-hermes": "hermes-native",
+  "native-ironclaw": "ironclaw-native",
 };
 
 export function nativeCodingAgentForAgentName(

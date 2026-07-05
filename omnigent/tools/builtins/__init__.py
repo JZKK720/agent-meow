@@ -210,6 +210,27 @@ _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
     # name in the runner's tool dispatch — reserved here so user specs
     # cannot shadow it.
     "sys_advise_models": None,
+    # agent-meow Docs/Images surface tools — runner-dispatched, schema-only.
+    # Reserved here so user specs cannot shadow them; the runner's tool
+    # dispatch intercepts the calls by name.
+    "doc_create": None,
+    "doc_get": None,
+    "doc_list": None,
+    "doc_update": None,
+    "doc_generate": None,
+    "image_list": None,
+    "image_get": None,
+    "image_upload": None,
+    "image_edit": None,
+    "image_generate": None,
+    # agent-meow voice surface tools — runner-dispatched, schema-only.
+    # transcribe_audio shells out to Handy CLI; text_to_speech / speak
+    # call a VibeVoice TTS gateway; transcribe_audio_high_quality calls
+    # a VibeVoice-ASR gateway.
+    "transcribe_audio": None,
+    "transcribe_audio_high_quality": None,
+    "text_to_speech": None,
+    "speak": None,
 }
 
 # Canonical set of every reserved builtin name. Derived from
