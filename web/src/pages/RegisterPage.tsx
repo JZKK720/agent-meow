@@ -19,6 +19,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "@/lib/routing";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { register as registerRequest } from "@/lib/accountsApi";
@@ -26,6 +27,7 @@ import { register as registerRequest } from "@/lib/accountsApi";
 const MIN_PASSWORD_LENGTH = 8;
 
 export function RegisterPage() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const invite = params.get("invite") ?? "";
 
@@ -83,7 +85,7 @@ export function RegisterPage() {
         <div className="space-y-1 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
           <p className="text-sm text-muted-foreground">
-            You were invited to join this Omnigent server.
+            {t("login.inviteMessage")}
           </p>
         </div>
 

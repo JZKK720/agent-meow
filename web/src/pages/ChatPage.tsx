@@ -922,7 +922,7 @@ export function ChatPage() {
       ? (boundAgentBySession?.name ?? boundAgentName ?? subAgentLabel ?? null)
       : null;
   useEffect(() => {
-    const fallback = urlConvId ? UNTITLED_CONVERSATION_LABEL : "Omnigent";
+    const fallback = urlConvId ? UNTITLED_CONVERSATION_LABEL : "agent-meow";
     const base = truncateTitle(activeConv?.title ?? subAgentTabTitle ?? fallback);
     document.title = showsWorking ? `● ${base}` : base;
   }, [activeConv?.title, subAgentTabTitle, showsWorking, urlConvId]);

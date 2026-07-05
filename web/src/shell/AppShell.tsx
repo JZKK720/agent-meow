@@ -200,6 +200,10 @@ export function AppShell() {
   // values the restore effect is about to apply.
   const workspacePersistHydrated = useRef(false);
   const [filesPanelShowHidden, setFilesPanelShowHidden] = useState(false);
+  // agent-meow Docs/Images surface state — selected doc/image ids for the
+  // right-rail Docs/Images tabs. null = list view; non-null = editor view.
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   // Lifted so the Changes list order and the FileViewer prev/next order
   // share one source of truth (otherwise the "X/N" index won't match the
   // list position). Default "recent" mirrors the prior FilesPanel default.
@@ -451,6 +455,8 @@ export function AppShell() {
     () =>
       ({
         files: showFilesPanel,
+        docs: true,
+        images: true,
         // Agents tab is unconditional: the panel always lists at least
         // the main agent (its "main" row), so there's never a dead end.
         subagents: true,
@@ -1194,6 +1200,12 @@ export function AppShell() {
                       onFlatViewChange={handleFilesFlatViewChange}
                       filesPanelShowHidden={filesPanelShowHidden}
                       onShowHiddenChange={setFilesPanelShowHidden}
+                      selectedDocId={selectedDocId}
+                      onDocSelect={setSelectedDocId}
+                      onDocClose={() => setSelectedDocId(null)}
+                      selectedImageId={selectedImageId}
+                      onImageSelect={setSelectedImageId}
+                      onImageClose={() => setSelectedImageId(null)}
                     />
                   )}
               </div>

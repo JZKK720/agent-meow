@@ -28,6 +28,8 @@ from omnigent.harness_plugins import (
     CLAUDE_NATIVE_CODING_AGENT,
     CODEX_NATIVE_CODING_AGENT,
     CURSOR_NATIVE_CODING_AGENT,
+    HERMES_NATIVE_CODING_AGENT,
+    IRONCLAW_NATIVE_CODING_AGENT,
     KIMI_NATIVE_CODING_AGENT,
     KIRO_NATIVE_CODING_AGENT,
     OPENCODE_NATIVE_CODING_AGENT,
@@ -58,7 +60,9 @@ from omnigent.server.performance_metrics import (
 from omnigent.server.routes.builtin_agents import create_builtin_agents_router
 from omnigent.server.routes.comments import create_comments_router
 from omnigent.server.routes.default_policies import create_default_policies_router
+from omnigent.server.routes.documents import create_documents_router
 from omnigent.server.routes.harnesses import create_harnesses_router
+from omnigent.server.routes.images import create_images_router
 from omnigent.server.routes.policy_registry import create_policy_registry_router
 from omnigent.server.routes.runner_tunnel import create_runner_tunnel_router
 from omnigent.server.routes.session_mcp_servers import create_session_mcp_servers_router
@@ -74,7 +78,9 @@ from omnigent.stores import (
     AgentStore,
     ArtifactStore,
     ConversationStore,
+    DocumentStore,
     FileStore,
+    ImageStore,
 )
 from omnigent.stores.comment_store import CommentStore
 from omnigent.stores.conversation_store import SessionConnectivity
@@ -151,6 +157,8 @@ _KIRO_NATIVE_AGENT_NAME = KIRO_NATIVE_CODING_AGENT.agent_name
 _ANTIGRAVITY_NATIVE_AGENT_NAME = ANTIGRAVITY_NATIVE_CODING_AGENT.agent_name
 _QWEN_NATIVE_AGENT_NAME = QWEN_NATIVE_CODING_AGENT.agent_name
 _KIMI_NATIVE_AGENT_NAME = KIMI_NATIVE_CODING_AGENT.agent_name
+_HERMES_NATIVE_AGENT_NAME = HERMES_NATIVE_CODING_AGENT.agent_name
+_IRONCLAW_NATIVE_AGENT_NAME = IRONCLAW_NATIVE_CODING_AGENT.agent_name
 _DEBBY_AGENT_NAME = "debby"
 _POLLY_AGENT_NAME = "polly"
 _UNMATCHED_ROUTE_TEMPLATE = "<unmatched>"
@@ -1015,6 +1023,8 @@ def create_app(
     admins: list[str] | None = None,
     allowed_domains: list[str] | None = None,
     sandbox_config: ManagedSandboxConfig | None = None,
+    document_store: DocumentStore | None = None,
+    image_store: ImageStore | None = None,
 ) -> FastAPI:
     """
     Build and return the FastAPI application with all routes mounted.
@@ -1829,6 +1839,33 @@ def create_app(
             or admin_list.is_admin(user_id)
         )
         return {"user_id": user_id, "is_admin": is_admin}
+
+    # Document + image routers are registered BEFORE the sessions router
+    # so the sessions router's catch-all ``GET /sessions/{id}/resources/{resource_id}``
+    # does not capture ``documents`` / ``images`` as a resource_id.
+    if document_store is not None:
+        app.include_router(
+            create_documents_router(
+                document_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+                conversation_store=conversation_store,
+            ),
+            prefix="/v1",
+            tags=["documents"],
+        )
+    if image_store is not None:
+        app.include_router(
+            create_images_router(
+                image_store,
+                artifact_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+                conversation_store=conversation_store,
+            ),
+            prefix="/v1",
+            tags=["images"],
+        )
 
     app.include_router(
         create_sessions_router(

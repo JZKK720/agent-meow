@@ -1,4 +1,81 @@
-<div align="center">
+# agent-meow
+
+### An agent workspace runtime with first-class Docs and Images surfaces.
+
+agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent)
+(Apache-2.0) — the open-source meta-harness for AI agents — extended with two
+new middleware surfaces for content work:
+
+- **Docs** — document generation + rich-text editing (Tiptap / ProseMirror kernel)
+- **Images** — image file manager + image editing (Fabric.js canvas kernel)
+
+Both surfaces are middleware on top of the existing 3-layer runtime
+(Server / Runner / Web UI): new session resource types, new builtin agent
+tools, and new UI rails. Agents call `doc_generate` / `image_edit` like any
+tool; results render in dedicated panels alongside chat, files, terminals,
+and sub-agents inherited from Omnigent.
+
+## Quick start
+
+```bash
+uv sync --extra dev
+uv pip install -e .
+meow                      # or: omnigent (alias retained)
+open http://localhost:6767
+```
+
+```bash
+cd web && pnpm i && pnpm dev   # web UI dev
+```
+
+## What's new vs. Omnigent
+
+| Surface | Backend | UI |
+| --- | --- | --- |
+| **Docs** | `document` resource type, `document_store`, `/v1/sessions/{id}/resources/documents` routes, `doc_*` builtin tools | `DocsPanel`, `DocEditor` (Tiptap), `/c/:id/docs` route |
+| **Images** | `image` resource type, `image_store`, `/v1/sessions/{id}/resources/images` routes, `image_*` builtin tools | `ImagesPanel`, `ImageEditor` (Fabric.js), `/c/:id/images` route |
+| **Voice** | `transcribe_audio` (Handy CLI), `text_to_speech` / `speak` (VibeVoice TTS), `transcribe_audio_high_quality` (VibeVoice-ASR) | Mic button (browser STT), Handy global hotkey (offline STT), audio playback (planned) |
+
+## Voice integrations
+
+### Speech-to-text input (Handy)
+
+[Handy](https://handy.computer) is a free, open-source, offline STT desktop
+app. Install it, set a global hotkey, and speak into agent-meow's composer —
+no cloud, fully private.
+
+```bash
+brew install --cask handy          # macOS
+winget install cjpais.Handy        # Windows
+```
+
+Press the hotkey → speak → text appears in the composer. See
+[docs/VOICE_SURFACE.md](docs/VOICE_SURFACE.md) for details.
+
+### Text-to-speech output (VibeVoice)
+
+Serve [VibeVoice](https://github.com/microsoft/VibeVoice) via vLLM, then
+agents can call `text_to_speech` / `speak` to synthesize speech:
+
+```bash
+vllm serve microsoft/VibeVoice-Realtime-0.5B --port 8000
+export VIBEVOICE_TTS_URL=http://127.0.0.1:8000/v1
+meow
+```
+
+## Attribution
+
+agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent)
+by the Omnigent Authors (Databricks, Inc. and contributors), licensed under
+Apache-2.0. See `LICENSE` and `NOTICE`. The Python package directory
+`omnigent/` is retained as a vendored runtime; user-facing strings and the
+CLI entry point have been rebranded.
+
+## License
+
+Apache-2.0 (inherited from Omnigent).
+
+---
 
 # <img src="https://raw.githubusercontent.com/omnigent-ai/omnigent/main/docs/images/omnigent-logo.svg" alt="" height="38" valign="middle" /> Omnigent
 

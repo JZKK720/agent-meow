@@ -42,6 +42,7 @@ import {
   reactRouterRouting,
 } from "./lib/routing";
 import { initChatStore } from "./store/chatStore";
+import "./lib/i18n"; // Initialize i18n (EN/ZH)
 import "./index.css";
 import { SessionUpdatesProvider } from "./hooks/SessionUpdatesProvider";
 
