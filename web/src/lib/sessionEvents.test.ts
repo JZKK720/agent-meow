@@ -1023,7 +1023,7 @@ describe("session.usage (FLAT envelope)", () => {
   });
 
   it("accepts cost-only broadcasts (relay path, no context fields)", () => {
-    // The Omnigent relay path emits a session.usage carrying only the
+    // The agent-meow relay path emits a session.usage carrying only the
     // cumulative cost — context_tokens/window ride on response.completed.
     const out = parse("session.usage", {
       type: "session.usage",

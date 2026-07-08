@@ -475,7 +475,7 @@ def test_next_web_message_starts_new_codex_turn_after_forwarder_marks_idle(
     A later web message starts a fresh turn after Codex reports idle.
 
     The forwarder clears ``active_turn_id`` from bridge state on
-    ``turn/completed``. Once that happens, the next Omnigent dispatch must
+    ``turn/completed``. Once that happens, the next agent-meow dispatch must
     call ``turn/start`` rather than steering a completed turn.
     """
     _FakeCodexNativeClient.requests = []
@@ -702,7 +702,7 @@ def test_web_model_pick_applied_via_thread_settings_update(
     """
     A web-picker model + reasoning effort apply via ``thread/settings/update``.
 
-    A model/effort change made in the Omnigent web UI reaches the runner
+    A model/effort change made in the agent-meow web UI reaches the runner
     as ``ExecutorConfig.model`` / ``extra["reasoning_effort"]``. Codex's
     ``turn/start`` takes no model/effort (input/context only), so the
     override must ride a ``thread/settings/update`` request — whose

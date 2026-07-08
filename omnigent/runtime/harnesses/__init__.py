@@ -1,6 +1,6 @@
 """
 Harness package — per-conversation subprocesses that implement a
-subset of the Omnigent REST API.
+subset of the agent-meow REST API.
 
 See ``designs/SERVER_HARNESS_CONTRACT.md`` for the full contract.
 The harness IS an HTTP service speaking the same Pydantic models AP
@@ -37,7 +37,7 @@ _HARNESS_MODULES: dict[str, str] = {
     # Step 4b: claude-sdk harness wrap. See
     # omnigent/inner/claude_sdk_harness.py.
     "claude-sdk": "omnigent.inner.claude_sdk_harness",
-    # User-facing alias accepted in specs / Omnigent harness dispatch.
+    # User-facing alias accepted in specs / agent-meow harness dispatch.
     "claude": "omnigent.inner.claude_sdk_harness",
     # Native Claude Code terminal bridge used by ``omnigent claude``.
     "claude-native": "omnigent.inner.claude_native_harness",
@@ -57,10 +57,10 @@ _HARNESS_MODULES: dict[str, str] = {
     "antigravity-native": "omnigent.inner.antigravity_native_harness",
     # Step 4e: openai-agents harness wrap. See
     # omnigent/inner/openai_agents_sdk_harness.py. Registry
-    # key is the Omnigent-side spelling (``openai-agents``,
+    # key is the agent-meow-side spelling (``openai-agents``,
     # no ``-sdk`` suffix) to match
     # ``OmnigentExecutor``'s harness allowlist and the
-    # ``executor.harness`` field used in Omnigent YAML; the
+    # ``executor.harness`` field used in agent-meow YAML; the
     # backing Python module retains the ``_sdk`` suffix because
     # the underlying SDK package is ``openai-agents`` and the
     # executor class is :class:`OpenAIAgentsSDKExecutor`.
@@ -103,7 +103,7 @@ _HARNESS_MODULES: dict[str, str] = {
     "kimi-native": "omnigent.inner.kimi_native_harness",
     # Google Antigravity SDK harness wrap. See
     # omnigent/inner/antigravity_harness.py. In-process SDK harness
-    # (``google-antigravity``), like openai-agents — Omnigent spawns no CLI
+    # (``google-antigravity``), like openai-agents — agent-meow spawns no CLI
     # binary or sandbox subprocess (the SDK itself launches a native
     # localharness binary; needs glibc >=~2.36). Drives Gemini 3.5 Flash by
     # default (also Claude / GPT-OSS), with Gemini API-key or Vertex AI auth.
@@ -129,7 +129,7 @@ _HARNESS_MODULES: dict[str, str] = {
     # GitHub Copilot SDK harness wrap. See omnigent/inner/copilot_harness.py.
     # In-process SDK harness (``github-copilot-sdk``), like cursor / antigravity:
     # the SDK bundles the Copilot CLI binary it drives as a backing server, so
-    # Omnigent spawns no separately-installed CLI. Authenticates against GitHub's
+    # agent-meow spawns no separately-installed CLI. Authenticates against GitHub's
     # Copilot backend with a GitHub token (no Databricks gateway).
     "copilot": "omnigent.inner.copilot_harness",
     # Hermes Agent harness wrap. Runs the ``hermes`` CLI as a subprocess

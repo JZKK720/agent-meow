@@ -7,7 +7,7 @@ name: Draft release notes
 #   1. Open a PR to omnigent/main updating the granular CHANGELOG.md (harvested
 #      from each merged PR's "## Changelog" section), so the draft's
 #      "Full Changelog" link resolves before the release goes public.
-#   2. Synthesize concise, curated release notes (an Omnigent agent collapses the
+#   2. Synthesize concise, curated release notes (an agent-meow agent collapses the
 #      merged PRs into ~4-5 themed highlights per section) and drop them into the
 #      GitHub Release DRAFT body for the coordinator to edit.
 #
@@ -226,7 +226,7 @@ jobs:
           node node_modules/@anthropic-ai/claude-code/install.cjs
           echo "${GITHUB_WORKSPACE}/.cc-cli/node_modules/.bin" >> "$GITHUB_PATH"
 
-      - name: Write Omnigent provider config
+      - name: Write agent-meow provider config
         if: steps.guard.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
         env:
           GATEWAY_BASE_URL: ${{ secrets.GATEWAY_BASE_URL }}

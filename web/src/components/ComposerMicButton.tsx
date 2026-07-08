@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MicIcon, SquareIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 // Local-only types; speech-input.tsx already augments Window globally.
 interface SpeechRecognitionLike {
@@ -64,6 +65,7 @@ export const ComposerMicButton = ({
   disabled,
   lang = "en-US",
 }: ComposerMicButtonProps) => {
+  const { t } = useTranslation();
   // null Ctor → no Web Speech support → render nothing (no server fallback).
   const [Ctor] = useState(getRecognitionCtor);
   const [isListening, setIsListening] = useState(false);
@@ -246,7 +248,7 @@ export const ComposerMicButton = ({
 
   // Stable accessible name with aria-pressed signals toggle state to
   // screen readers. Error text takes over the tooltip when set.
-  const a11yLabel = "Voice dictation";
+  const a11yLabel = t("voice.dictation");
   const tooltip = error ?? a11yLabel;
 
   return (

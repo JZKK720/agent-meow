@@ -1,4 +1,4 @@
-# Omnigent server config — non-secret settings in one file.
+# agent-meow server config — non-secret settings in one file.
 #
 # Copy to the persistent volume as `/data/config.yaml` (the default the
 # server looks for), or point OMNIGENT_CONFIG at an explicit path. The

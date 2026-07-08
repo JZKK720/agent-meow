@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import "@/lib/i18n";
 import { vi } from "vitest";
 
 // The @lobehub icon packages have broken nested-module resolution

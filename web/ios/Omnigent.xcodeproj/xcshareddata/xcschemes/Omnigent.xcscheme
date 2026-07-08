@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A00000000000000000000006"
-               BuildableName = "Omnigent.app"
-               BlueprintName = "Omnigent"
-               ReferencedContainer = "container:Omnigent.xcodeproj">
+               BuildableName = "agent-meow.app"
+               BlueprintName = "agent-meow"
+               ReferencedContainer = "container:agent-meow.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -36,7 +36,7 @@
                BlueprintIdentifier = "A00000000000000000000007"
                BuildableName = "OmnigentTests.xctest"
                BlueprintName = "OmnigentTests"
-               ReferencedContainer = "container:Omnigent.xcodeproj">
+               ReferencedContainer = "container:agent-meow.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -47,7 +47,7 @@
                BlueprintIdentifier = "A0000000000000000000000A"
                BuildableName = "OmnigentUITests.xctest"
                BlueprintName = "OmnigentUITests"
-               ReferencedContainer = "container:Omnigent.xcodeproj">
+               ReferencedContainer = "container:agent-meow.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A00000000000000000000006"
-            BuildableName = "Omnigent.app"
-            BlueprintName = "Omnigent"
-            ReferencedContainer = "container:Omnigent.xcodeproj">
+            BuildableName = "agent-meow.app"
+            BlueprintName = "agent-meow"
+            ReferencedContainer = "container:agent-meow.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </TestAction>
@@ -76,9 +76,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A00000000000000000000006"
-            BuildableName = "Omnigent.app"
-            BlueprintName = "Omnigent"
-            ReferencedContainer = "container:Omnigent.xcodeproj">
+            BuildableName = "agent-meow.app"
+            BlueprintName = "agent-meow"
+            ReferencedContainer = "container:agent-meow.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -93,9 +93,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A00000000000000000000006"
-            BuildableName = "Omnigent.app"
-            BlueprintName = "Omnigent"
-            ReferencedContainer = "container:Omnigent.xcodeproj">
+            BuildableName = "agent-meow.app"
+            BlueprintName = "agent-meow"
+            ReferencedContainer = "container:agent-meow.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

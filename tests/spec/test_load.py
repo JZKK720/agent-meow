@@ -227,7 +227,7 @@ def test_materialize_bundle_wraps_yaml_file_in_dest(tmp_path: Path) -> None:
 
     assert returned == dest
     assert dest.is_dir()
-    # Basename preserved — Omnigent' dispatch uses
+    # Basename preserved — agent-meow' dispatch uses
     # ``is_omnigent_yaml`` on the exact file (not a synthesized
     # ``config.yaml``), so the original name must carry through.
     assert (dest / "coding_supervisor.yaml").read_text() == source.read_text()
@@ -322,7 +322,7 @@ def test_materialize_bundle_then_load_roundtrip_yaml(tmp_path: Path) -> None:
     bundle_dir = materialize_bundle(source, tmp_path / "bundle")
     spec = load(bundle_dir)
 
-    # Omnigent-sourced spec — translator sets executor.type.
+    # agent-meow-sourced spec — translator sets executor.type.
     assert spec.name == "hello-from-yaml"
     assert spec.executor.type == "omnigent"
 
@@ -363,9 +363,9 @@ def test_load_omnigent_yaml_threads_executor_extra_max_tokens_to_llm_extra(
     tmp_path: Path,
 ) -> None:
     """
-    Omnigent-compatible YAML carries generation kwargs under
-    ``executor.extra``; the Omnigent compatibility loader must translate
-    those into ``spec.llm.extra`` so harness-backed Omnigent execution can
+    agent-meow-compatible YAML carries generation kwargs under
+    ``executor.extra``; the agent-meow compatibility loader must translate
+    those into ``spec.llm.extra`` so harness-backed agent-meow execution can
     forward them to the inner LLM executor.
     """
     yaml_text = textwrap.dedent("""\

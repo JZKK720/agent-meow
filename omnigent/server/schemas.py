@@ -649,7 +649,7 @@ class ChildSessionSummary(BaseModel):
         as written by :func:`omnigent.tools.builtins.spawn._spawn_one`,
         e.g. ``"researcher:auth"``. ``None`` only for legacy /
         malformed rows; the spawn path always sets it.
-    :param tool: UI-facing sub-agent label. For Omnigent-spawned
+    :param tool: UI-facing sub-agent label. For agent-meow-spawned
         children this is derived from the prefix of ``title`` before
         the first ``":"``, e.g. ``"researcher"``. For Codex-native
         children this is the Codex-assigned ``agent_nickname`` when
@@ -1021,7 +1021,7 @@ class ElicitationResult(BaseModel):
     Consumer reply to an outstanding elicitation.
 
     Field names + semantics mirror MCP's ``ElicitResult`` verbatim.
-    Omnigent clients deliver this shape inside the session-scoped
+    agent-meow clients deliver this shape inside the session-scoped
     ``approval`` event body, alongside the ``elicitation_id``
     correlation key.
 
@@ -1627,7 +1627,7 @@ class SessionResponse(BaseModel):
         the live SSE stream has no replay and a prompt emitted
         before the user opened the chat would otherwise vanish.
         Empty list when no prompts are outstanding. Sourced from
-        the Omnigent server's in-memory
+        the agent-meow server's in-memory
         :mod:`omnigent.runtime.pending_elicitations` index.
     :param pending_inputs: Un-consumed web-composer user messages on
         native-terminal (claude-native / codex-native) sessions at
@@ -1660,7 +1660,7 @@ class SessionResponse(BaseModel):
         todo JSON file. Each dict has ``content``, ``status``,
         and ``activeForm`` keys. Empty list for non-claude-native
         sessions or when no todos have been reported yet. Sourced
-        from the Omnigent server's in-memory ``_session_todos_cache``.
+        from the agent-meow server's in-memory ``_session_todos_cache``.
     :param skills: Skills the bound agent has access to — the
         merged result of the agent spec's bundled ``skills``
         and the host-scope skills discovered along the agent
@@ -1679,14 +1679,14 @@ class SessionResponse(BaseModel):
         pill instead of a silent greyed-out button. Cleared to
         ``False`` once the terminal lands or auto-create fails; from
         then on the client relies purely on whether a terminal resource
-        exists. Sourced from the Omnigent server's in-memory
+        exists. Sourced from the agent-meow server's in-memory
         ``_session_terminal_pending_cache`` at snapshot build time, so a
         client connecting mid-spin-up still sees the spinner.
     :param sandbox_status: Managed-sandbox launch progress while the
         session's background sandbox launch is in flight or has
         failed — see :class:`SandboxStatus`. ``None`` for sessions
         without a managed launch and once the launch succeeds.
-        Sourced from the Omnigent server's in-memory
+        Sourced from the agent-meow server's in-memory
         ``_session_sandbox_status_cache`` at snapshot build time, so
         a client opening the session mid-launch sees the current
         stage.
@@ -1839,7 +1839,7 @@ class CodexGoalObject(BaseModel):
     """
     Current Codex goal state for a Codex-native session.
 
-    Mirrors Codex app-server's ``ThreadGoal`` shape using Omnigent's
+    Mirrors Codex app-server's ``ThreadGoal`` shape using agent-meow's
     snake-case API convention. ``created_at`` and ``updated_at`` are optional
     because older app-server documentation examples omit them even though the
     current protocol includes them.
@@ -1908,7 +1908,7 @@ class UpdateCodexGoalStatusRequest(BaseModel):
     Request body for ``PATCH /v1/sessions/{id}/codex_goal/status``.
 
     Codex app-server represents pause/resume as ``thread/goal/set`` status
-    updates. Omnigent exposes the two user-driven transitions explicitly:
+    updates. agent-meow exposes the two user-driven transitions explicitly:
     ``"paused"`` pauses an active goal, and ``"active"`` resumes a paused,
     blocked, or usage-limited goal.
 
@@ -2060,7 +2060,7 @@ class SessionListItem(BaseModel):
         currently waiting on this session. Powers the sidebar's
         "needs attention" badge so a user with several sessions
         running can tell which ones are blocked on them without
-        opening each chat. Sourced from the Omnigent server's in-memory
+        opening each chat. Sourced from the agent-meow server's in-memory
         :mod:`omnigent.runtime.pending_elicitations` index,
         which mirrors every ``response.elicitation_request`` event
         passing through ``session_stream`` and decrements when a
@@ -2495,7 +2495,7 @@ class SessionTodosEvent(_SSEEventBase):
     Emitted after an ``external_session_todos`` POST from the
     ``omnigent claude`` transcript forwarder, which captures todo
     updates via ``PostToolUse``/``TodoWrite`` hook events from Claude
-    Code and forwards them to the Omnigent server. Lets web render a
+    Code and forwards them to the agent-meow server. Lets web render a
     live todo panel in the right column without polling.
 
     :param type: Always ``"session.todos"``.
@@ -2524,11 +2524,11 @@ class SessionTerminalPendingEvent(_SSEEventBase):
 
     Two sources emit this event:
 
-    1. The Omnigent server at ``POST /v1/sessions`` for host-launched
+    1. The agent-meow server at ``POST /v1/sessions`` for host-launched
        terminal-first sessions — the earliest possible point, before
        the runner even starts, so the spinner appears immediately on
        session create rather than after the runner boots.
-    2. The Omnigent relay when the runner's ``session.terminal_pending`` frame
+    2. The agent-meow relay when the runner's ``session.terminal_pending`` frame
        arrives — covers non-host-launched sessions (e.g. server-dispatched
        sub-agents) and carries the authoritative ``pending=False`` clear
        emitted by the runner's ``finally`` block.
@@ -2559,7 +2559,7 @@ class SessionSandboxStatusEvent(_SSEEventBase):
     """
     Managed-sandbox launch progress for a ``host_type="managed"`` session.
 
-    A managed create returns before its sandbox exists; the Omnigent
+    A managed create returns before its sandbox exists; the agent-meow
     server emits this event as the background launch pipeline advances
     so the Web UI can show live provisioning progress on the session
     page instead of a silent dead chat: sandbox provision → repository
@@ -3171,9 +3171,9 @@ class ElicitationRequestParams(BaseModel):
         {"type": "boolean"}}}``.
     :param url: External URL for url mode (or ``None`` for form
         mode), e.g. ``"https://oauth.example.com/authorize?..."``.
-    :param phase: Omnigent policy-engine phase the elicitation
+    :param phase: agent-meow policy-engine phase the elicitation
         belongs to, e.g. ``"pre_tool_use"``.
-    :param policy_name: Omnigent policy that triggered the
+    :param policy_name: agent-meow policy that triggered the
         elicitation, e.g. ``"approve_shell_commands"``.
     :param content_preview: Truncated preview of the underlying
         request payload (≤1024 chars in current AP), for the
@@ -3198,7 +3198,7 @@ class ElicitationRequestParams(BaseModel):
 
     # MCP's ElicitRequestParams uses ``extra="allow"``; mirror
     # that here so MCP-shaped passthrough (an MCP server's
-    # ``elicitation/create`` traversing harness → Omnigent → client)
+    # ``elicitation/create`` traversing harness → agent-meow → client)
     # preserves any fields the MCP server added.
     model_config = ConfigDict(extra="allow")
 
@@ -3207,7 +3207,7 @@ class ElicitationRequestEvent(_SSEEventBase):
     """
     Synchronous request for a decision from upstream.
 
-    Emitted by Omnigent (or, under the new contract, by a harness)
+    Emitted by agent-meow (or, under the new contract, by a harness)
     when the LLM / a tool / a policy needs a verdict before
     proceeding. The consumer replies via
     ``POST /v1/sessions/{session_id}/events`` with
@@ -3255,7 +3255,7 @@ class ElicitationResolvedEvent(_SSEEventBase):
     server has no way to learn that the prompt is dead and the
     badge stays stuck.
 
-    Idempotent on the consumer side: the Omnigent server's index
+    Idempotent on the consumer side: the agent-meow server's index
     decrement is a no-op when the id isn't tracked, so the
     runner can fire-and-forget on every Future cleanup.
 
@@ -3843,8 +3843,8 @@ class PolicyEvaluationRequestEvent(_SSEEventBase):
 
     Emitted by the executor adapter before or after an LLM call so
     the runner can evaluate ``LLM_REQUEST`` / ``LLM_RESPONSE``
-    policies on the Omnigent server. The runner intercepts this event in
-    ``proxy_stream``, calls the Omnigent server's
+    policies on the agent-meow server. The runner intercepts this event in
+    ``proxy_stream``, calls the agent-meow server's
     ``POST /sessions/{id}/policies/evaluate`` endpoint, and posts
     the verdict back to the harness as a ``policy_verdict`` inbound
     event. This event is **never** relayed to external clients —
@@ -3857,7 +3857,7 @@ class PolicyEvaluationRequestEvent(_SSEEventBase):
         scaffold can resolve the correct parked Future.
     :param phase: Proto-style phase string, e.g.
         ``"PHASE_LLM_REQUEST"`` or ``"PHASE_LLM_RESPONSE"``.
-    :param data: Event data dict passed to the Omnigent server's
+    :param data: Event data dict passed to the agent-meow server's
         policy evaluate endpoint, e.g.
         ``{"model": "gpt-4o", "messages_count": 42}``.
     """

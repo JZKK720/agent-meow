@@ -287,7 +287,7 @@ def create_runner_tunnel_router(
 
         A managed sandbox runner has no user credential of its own; it
         presents its server-minted tunnel binding token
-        (``X-Omnigent-Runner-Tunnel-Token``) and the server returns a
+        (``X-agent-meow-Runner-Tunnel-Token``) and the server returns a
         short-lived owner JWT the runner then uses on its HTTP callbacks
         (which gate on ``require_user``). This is the HTTP analog of the
         runner tunnel's binding-token handshake: the same SHA-256 gate

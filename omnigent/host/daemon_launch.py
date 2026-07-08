@@ -1,7 +1,7 @@
 """Client-side helpers for launching runners through the connect daemon.
 
 These are the CLI-side counterpart to the host-runner protocol: the CLI
-(``run`` / ``claude`` / ``codex``) asks the Omnigent server to launch
+(``run`` / ``claude`` / ``codex``) asks the agent-meow server to launch
 a runner on this machine's daemon via
 ``POST /v1/hosts/{host_id}/runners``; the server forwards a launch frame to
 the daemon, which spawns the runner subprocess and binds it to the session.
@@ -69,7 +69,7 @@ async def wait_for_host_online(
     as "not online yet" and polled through; only the deadline fails the
     wait, with the last transport error included in the message.
 
-    :param client: HTTP client pointed at the Omnigent server.
+    :param client: HTTP client pointed at the agent-meow server.
     :param host_id: This machine's host id, e.g. ``"host_abc123"``.
     :param timeout_s: Max seconds to wait, e.g. ``30.0``.
     :returns: None once the host reports ``status == "online"``.
@@ -99,7 +99,7 @@ async def runner_is_online(client: httpx.AsyncClient, runner_id: str) -> bool:
     """
     Return whether a runner currently has an open tunnel to the server.
 
-    :param client: HTTP client pointed at the Omnigent server.
+    :param client: HTTP client pointed at the agent-meow server.
     :param runner_id: Runner id, e.g. ``"runner_abc123"``.
     :returns: ``True`` when the status endpoint reports ``online``.
     """
@@ -127,7 +127,7 @@ async def wait_for_runner_online(
     only the deadline fails the wait, with the last transport error
     included in the message.
 
-    :param client: HTTP client pointed at the Omnigent server.
+    :param client: HTTP client pointed at the agent-meow server.
     :param runner_id: Runner id the host was asked to spawn, e.g.
         ``"runner_abc123"``.
     :param timeout_s: Max seconds to wait, e.g. ``60.0``.
@@ -178,7 +178,7 @@ async def launch_or_reuse_daemon_runner(
     asks the server to launch a fresh runner on the host via
     ``POST /v1/hosts/{host_id}/runners`` (which atomically binds it).
 
-    :param client: HTTP client pointed at the Omnigent server.
+    :param client: HTTP client pointed at the agent-meow server.
     :param host_id: This machine's host id, e.g. ``"host_abc123"``.
     :param session_id: Session to bind, e.g. ``"conv_abc123"``.
     :param workspace: Absolute host path for the runner cwd, e.g.

@@ -53,7 +53,7 @@ export function DocsPanel({
 
   function handleNewDoc() {
     createDoc.mutate(
-      { title: "Untitled", contentMd: "" },
+      { title: t("chat.untitled"), contentMd: "" },
       {
         onSuccess: (doc) => {
           onDocSelect(doc.id);

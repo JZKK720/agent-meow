@@ -129,6 +129,7 @@ import { useSessionSwitchHotkey } from "@/hooks/useSessionSwitchHotkey";
 import { usePinnedSessionHotkeys } from "@/hooks/usePinnedSessionHotkeys";
 import { absoluteTime, relativeTime } from "@/lib/relativeTime";
 import { SettingsSidebarBody, useSettingsRoute, useTrackSettingsReturn } from "./settingsNav";
+import { useTranslation } from "react-i18next";
 import {
   type ActiveChatOverride,
   COLLAPSED_SIDEBAR_SECTIONS_STORAGE_KEY,
@@ -241,6 +242,7 @@ function showArchivedToast() {
 }
 
 export function Sidebar({ open, onClose, dragProgress = null }: SidebarProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [pinnedConversationIds, setPinnedConversationIds] = useState(readPinnedConversationIds);
@@ -337,7 +339,7 @@ export function Sidebar({ open, onClose, dragProgress = null }: SidebarProps) {
   // for the settings section nav (see settingsNav.tsx) — entering settings
   // shouldn't replace the whole sidebar.
   const { inSettings } = useSettingsRoute();
-  // Remember the pre-settings location so "Back to Omnigent" returns to the
+  // Remember the pre-settings location so "Back to agent-meow" returns to the
   // conversation the user was viewing, not the home page. Tracked here since
   // the sidebar stays mounted across the transition into settings.
   useTrackSettingsReturn();
@@ -519,7 +521,7 @@ export function Sidebar({ open, onClose, dragProgress = null }: SidebarProps) {
             >
               <Link to="/" onClick={onNavClick}>
                 <SquarePenIcon className="size-4 text-foreground" />
-                New session
+                {t("chat.newSession")}
               </Link>
             </Button>
             {selectionMode ? (
@@ -543,8 +545,8 @@ export function Sidebar({ open, onClose, dragProgress = null }: SidebarProps) {
                     type="search"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    aria-label="Search sessions"
-                    placeholder="Search sessions"
+                    aria-label={t("chat.searchSessions")}
+                    placeholder={t("chat.searchSessions")}
                     className="min-h-8 w-full rounded-full border border-input pr-3 pl-8 text-sm transition placeholder:text-muted-foreground focus-visible:outline-1 md:select-text"
                   />
                 </div>
@@ -554,7 +556,7 @@ export function Sidebar({ open, onClose, dragProgress = null }: SidebarProps) {
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      aria-label="Select sessions"
+                      aria-label={t("chat.selectSessions")}
                       data-testid="toggle-selection-mode"
                       className="shrink-0 rounded-full"
                       onClick={() => setSelectionMode(true)}
@@ -562,7 +564,7 @@ export function Sidebar({ open, onClose, dragProgress = null }: SidebarProps) {
                       <ListChecksIcon className="size-3.5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">Select sessions</TooltipContent>
+                  <TooltipContent side="bottom">{t("chat.selectSessions")}</TooltipContent>
                 </Tooltip>
               </div>
             )}
@@ -621,10 +623,10 @@ export function Sidebar({ open, onClose, dragProgress = null }: SidebarProps) {
               and drop straight onto the default section's content — instead we
               keep it open so mobile lands on the section list, then tapping a
               section (which DOES use onNavClick) closes it to show content. */}
-              <Link to="/settings" aria-label="Settings">
+              <Link to="/settings" aria-label={t("common.settings")}>
                 <SettingsIcon className="size-4 text-muted-foreground" />
                 {/* Label is desktop-only; the icon stands alone on mobile. */}
-                <span className="max-md:hidden">Settings</span>
+                <span className="max-md:hidden">{t("common.settings")}</span>
               </Link>
             </Button>
           </div>

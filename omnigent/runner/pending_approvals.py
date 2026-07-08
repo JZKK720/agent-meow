@@ -143,7 +143,7 @@ async def wait_for_user_approval(
     Centralizes the register → wait_for → cleanup → publish
     sequence so every ASK-escalation site emits a
     ``response.elicitation_resolved`` event on the way out — the
-    Omnigent server's pending-elicitations index (powers the sidebar
+    agent-meow server's pending-elicitations index (powers the sidebar
     badge) decrements when it sees that event, so emitting on
     every exit path (verdict, timeout, cancellation) keeps the
     badge in lockstep with the underlying awaiter.
@@ -152,7 +152,7 @@ async def wait_for_user_approval(
     caller's task is cancelled the ``finally`` still emits the
     resolved event so the badge clears.
 
-    :param elicitation_id: Correlation id minted by the Omnigent server's
+    :param elicitation_id: Correlation id minted by the agent-meow server's
         policy evaluator and returned in the ``pending`` verdict,
         e.g. ``"elicit_abc123"``.
     :param conversation_id: Session/conversation id the prompt
@@ -183,7 +183,7 @@ async def wait_for_user_approval(
             _session_pending[conversation_id] = _remaining
         else:
             _session_pending.pop(conversation_id, None)
-        # Signal the Omnigent server's pending-elicitations index that
+        # Signal the agent-meow server's pending-elicitations index that
         # this prompt is done. Idempotent on the happy path (the
         # AP-side dispatch already cleared the entry); on timeout
         # / cancellation this event is the ONLY signal the server

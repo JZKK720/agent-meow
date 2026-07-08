@@ -1,7 +1,7 @@
 """Full-server transport driver (phase-2).
 
 Unlike :class:`tests.harness_bench.driver.SdkInprocDriver` (which drives a
-harness wrap subprocess directly), this driver spins up a REAL Omnigent
+harness wrap subprocess directly), this driver spins up a REAL agent-meow
 ``server`` + ``runner`` pair, registers an agent, and drives turns through
 the full session path — so policy enforcement and server-dispatched tools
 are exercised the way production does, not simulated at the wrap boundary.
@@ -143,7 +143,7 @@ def spawn_omnigent_server(
 
 
 class FullServerDriver:
-    """Drive turns through a live Omnigent server + runner.
+    """Drive turns through a live agent-meow server + runner.
 
     Async context manager: on enter it spawns the server and runner,
     waits for both to report healthy, registers *profile*'s harness as an

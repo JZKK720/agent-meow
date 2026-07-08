@@ -1,6 +1,6 @@
 name: Polly AI Review
 
-# Spins up a local Omnigent server + runner inside the CI runner, starts a
+# Spins up a local agent-meow server + runner inside the CI runner, starts a
 # Polly session with the PR diff, waits for the cross-vendor review to
 # complete, and posts the findings as a PR comment. Uses the same LLM
 # gateway secrets as the e2e suite (LLM_API_KEY + GATEWAY_BASE_URL).
@@ -209,7 +209,7 @@ jobs:
           "
           echo "DATABRICKS_BEARER=${LLM_API_KEY}" >> "$GITHUB_ENV"
 
-      - name: Write Omnigent provider config
+      - name: Write agent-meow provider config
         if: steps.trigger.outputs.skip != 'true' && steps.creds.outputs.available == 'true'
         env:
           GATEWAY_BASE_URL: ${{ secrets.GATEWAY_BASE_URL }}

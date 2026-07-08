@@ -26,7 +26,7 @@ Env vars read at startup:
   (from :func:`dataclasses.asdict`). When unset, the wrap
   falls back to a default
   ``OSEnvSpec(type="caller_process", sandbox=type="none")`` so
-  Omnigent mode parity with the legacy non-AP path holds for
+  agent-meow mode parity with the legacy non-AP path holds for
   specs that don't declare an ``os_env:`` block.
 - ``HARNESS_QWEN_GATEWAY_BASE_URL`` / ``HARNESS_QWEN_GATEWAY_AUTH_COMMAND``:
   OpenAI-compatible provider/gateway routing from the spec's ``auth:`` /
@@ -75,7 +75,7 @@ def _resolve_os_env() -> OSEnvSpec:
     Resolve the inner-executor :class:`OSEnvSpec` from env config.
 
     Reads :data:`_ENV_OS_ENV` and decodes the JSON-encoded dict
-    Omnigent serialized via :func:`dataclasses.asdict` on its
+    agent-meow serialized via :func:`dataclasses.asdict` on its
     :class:`OSEnvSpec`. When the env var is missing or
     malformed, falls back to ``caller_process + sandbox=none``
     so AP-bridged tools stay enabled — matches the legacy

@@ -3,11 +3,11 @@
 // in each picker). Three carry mechanisms, all keyed off the TARGET harness —
 // a frontend mirror of the server (omnigent/server/routes/sessions.py):
 //
-//   - SDK (non-native) harnesses replay the Omnigent transcript as LLM
+//   - SDK (non-native) harnesses replay the agent-meow transcript as LLM
 //     context — carry on BOTH fork and switch, regardless of source/family.
 //   - Native-REBUILD harnesses (Claude Code, Codex, Pi, Hermes, Qwen Code)
 //     record a resumable on-disk session file the runner rebuilds from the
-//     copied Omnigent items (a same-family native source clones the source
+//     copied agent-meow items (a same-family native source clones the source
 //     file instead; cross-family rebuilds, format-agnostic) — carry on BOTH
 //     fork and switch. Mirrors `_FORK_HISTORY_NATIVE_HARNESSES`.
 //   - PREAMBLE harnesses (Cursor, OpenCode) have no rebuildable local store,
@@ -62,7 +62,7 @@ export function harnessFamily(
  * so the picker doesn't promise history it would drop. Both native-antigravity
  * spellings are included (the in-process `antigravity` SDK harness is NOT
  * native); qwen-native rebuilds qwen's on-disk chat recording from the copied
- * Omnigent items (see `write_qwen_session_recording`).
+ * agent-meow items (see `write_qwen_session_recording`).
  */
 export function isNativeHarness(harness: string | null | undefined): boolean {
   return (
@@ -83,7 +83,7 @@ export function isNativeHarness(harness: string | null | undefined): boolean {
 
 /**
  * Native harnesses whose runner REBUILDS a resumable on-disk transcript from
- * the copied Omnigent items, so they carry history on BOTH fork and switch.
+ * the copied agent-meow items, so they carry history on BOTH fork and switch.
  * Mirrors Python `_FORK_HISTORY_NATIVE_HARNESSES`
  * (`omnigent/server/routes/sessions.py`); both canonical and reversed
  * spellings are listed so a catalog `harness` in either form matches.

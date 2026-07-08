@@ -1,6 +1,6 @@
-# Deploying Omnigent on Databricks Apps
+# Deploying agent-meow on Databricks Apps
 
-This directory deploys the Omnigent server to
+This directory deploys the agent-meow server to
 [Databricks Apps](https://docs.databricks.com/aws/en/dev-tools/databricks-apps/)
 via [Databricks Asset Bundles](https://docs.databricks.com/aws/en/dev-tools/bundles/):
 
@@ -9,10 +9,10 @@ via [Databricks Asset Bundles](https://docs.databricks.com/aws/en/dev-tools/bund
   storage snapshots.
 
 > **Most Databricks users want the managed offering instead.**
-> [Omnigent on Databricks](https://docs.databricks.com/aws/en/omnigent/)
+> [agent-meow on Databricks](https://docs.databricks.com/aws/en/omnigent/)
 > (Beta) runs the server for you, wired to workspace identity,
 > Foundation Models, AI Gateway, and MLflow Tracing out of the box.
-> Enable the **Omnigent** preview in your workspace settings and follow
+> Enable the **agent-meow** preview in your workspace settings and follow
 > the quickstart there. Use this directory only when you need to
 > self-manage the deployment: the managed service is not in your region
 > yet, or you need control it does not expose today (custom YAML
@@ -140,7 +140,7 @@ The script builds wheels, classifies them by size, copies wheels into
 `databricks bundle run omnigent --target prod`, and polls `/health`
 with backoff until 200.
 
-All Omnigent wheels must fit under the Databricks Apps source
+All agent-meow wheels must fit under the Databricks Apps source
 snapshot limit (10 MB). If a wheel exceeds it, rebuild with
 `--skip-web-ui` or reduce the wheel size; uv lockfiles cannot point at
 UC Volume wheel paths because `uv lock` validates path sources locally.

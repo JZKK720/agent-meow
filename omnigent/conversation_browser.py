@@ -1,4 +1,4 @@
-"""Helpers for opening Omnigent conversation URLs from CLI frontends."""
+"""Helpers for opening agent-meow conversation URLs from CLI frontends."""
 
 from __future__ import annotations
 
@@ -18,14 +18,14 @@ WORKSPACE_UI_PATH = "/omnigent"
 
 def is_workspace_hosted_url(base_url: str) -> bool:
     """
-    Whether *base_url* is a Databricks workspace-hosted Omnigent mount.
+    Whether *base_url* is a Databricks workspace-hosted agent-meow mount.
 
     True for the API proxy mount (``https://<ws>/api/2.0/omnigent``) the
     CLI connects to on a workspace. Used to suppress UI a workspace
     deployment shouldn't surface (e.g. the startup banner's server-version
     row, since a workspace build reports no meaningful version string).
 
-    :param base_url: Omnigent server base URL, e.g.
+    :param base_url: agent-meow server base URL, e.g.
         ``"https://example.databricks.com/api/2.0/omnigent"``.
     :returns: ``True`` when the URL path is the workspace API mount.
     """
@@ -34,7 +34,7 @@ def is_workspace_hosted_url(base_url: str) -> bool:
 
 def display_server_url(base_url: str) -> str:
     """
-    Map an Omnigent server base URL to the user-facing form to show.
+    Map an agent-meow server base URL to the user-facing form to show.
 
     Databricks workspace-hosted servers are connected to on the API proxy
     mount (``https://<ws>/api/2.0/omnigent``), but the URL a user
@@ -45,7 +45,7 @@ def display_server_url(base_url: str) -> str:
     other URL (local ``http://127.0.0.1:<port>``, a custom remote) is
     returned unchanged apart from a trailing-slash trim.
 
-    :param base_url: Omnigent server base URL, e.g.
+    :param base_url: agent-meow server base URL, e.g.
         ``"https://example.databricks.com/api/2.0/omnigent"`` or
         ``"http://127.0.0.1:6767"``.
     :returns: The display URL, e.g.
@@ -60,7 +60,7 @@ def display_server_url(base_url: str) -> str:
 
 def conversation_url(base_url: str, conversation_id: str) -> str:
     """
-    Build the browser URL for an Omnigent conversation.
+    Build the browser URL for an agent-meow conversation.
 
     For Databricks workspace-hosted servers
     (``https://<ws>/api/2.0/omnigent``) the web UI lives on the
@@ -69,7 +69,7 @@ def conversation_url(base_url: str, conversation_id: str) -> str:
     workspace selector appended when ``omnigent login`` recorded the
     org id.
 
-    :param base_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:6767"``.
     :param conversation_id: Conversation id, e.g. ``"conv_abc123"``.
     :returns: Browser URL, e.g. ``"http://127.0.0.1:6767/c/conv_abc123"``.
     """
@@ -127,7 +127,7 @@ def open_conversation_link_if_enabled(
     """
     Open a conversation link when the CLI config enables it.
 
-    :param base_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:6767"``.
     :param conversation_id: Conversation id, e.g. ``"conv_abc123"``.
     :param enabled: ``True`` when the user opted into automatic browser opens.
     :param warn: Optional warning sink. Receives a complete warning

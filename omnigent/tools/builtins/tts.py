@@ -5,9 +5,9 @@ These tools are **runner-dispatched**: the runner calls a TTS gateway
 ship as schema-only :class:`~omnigent.tools.base.Tool` subclasses.
 
 - ``text_to_speech`` → calls a VibeVoice TTS vLLM endpoint to generate
-  audio from text. Returns an audio artifact URL that the UI can play.
+    audio from text. In v1 it returns an inline audio data URL the UI can play.
 - ``speak`` → alias for ``text_to_speech`` with a shorter name for
-  conversational agents.
+    conversational agents.
 
 The runner's tool dispatch intercepts these calls by name and proxies
 them to the TTS gateway (see ``omnigent/runner/tool_dispatch.py``).
@@ -25,8 +25,8 @@ class TextToSpeechTool(Tool):
 
     Runner-dispatched: the runner calls a VibeVoice TTS vLLM endpoint
     (configured via ``VIBEVOICE_TTS_URL`` env var) to generate audio
-    from the provided text. The generated audio is stored as a session
-    artifact and returned as a URL the UI can play inline.
+    from the provided text. In v1 the generated audio is returned as
+    an inline data URL the UI can play directly.
 
     Requires ``text`` to synthesize. Optionally accepts a ``voice`` /
     ``speaker`` id and ``language`` code.
@@ -40,7 +40,7 @@ class TextToSpeechTool(Tool):
     def description(cls) -> str:
         return (
             "Synthesize speech from text using a text-to-speech engine "
-            "(VibeVoice by default). Returns an audio artifact URL that "
+            "(VibeVoice by default). Returns an inline audio URL that "
             "can be played in the UI. Requires text to synthesize. "
             "Optionally specify a voice/speaker id and language."
         )

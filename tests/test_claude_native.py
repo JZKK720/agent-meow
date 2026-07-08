@@ -129,7 +129,7 @@ def test_claude_terminal_request_launcher_plugin_wraps(tmp_path, monkeypatch) ->
 
     Exercises the local-CLI wiring of :func:`resolve_claude_launch`: with a
     launcher plugin selected, the terminal spec runs the wrapped command
-    (here ``isaac -- <augmented args>``) while the Omnigent bridge
+    (here ``isaac -- <augmented args>``) while the agent-meow bridge
     (``--mcp-config`` / ``--settings``) survives intact in the passed-through
     argv.
     """
@@ -505,7 +505,7 @@ def test_attach_url_encodes_path_components() -> None:
 
 def test_materialized_session_spec_is_valid_terminal_metadata(tmp_path: Path) -> None:
     """
-    The generated bundled agent spec validates for Omnigent session creation.
+    The generated bundled agent spec validates for agent-meow session creation.
 
     The session agent only exists so the Sessions API can create a
     normal session row; Claude itself is launched as a terminal
@@ -613,7 +613,7 @@ def test_local_run_preflights_local_claude_binary(
     """
     Local-server mode also requires a local Claude executable.
 
-    The Omnigent server and web UI are local in this mode, but Claude is
+    The agent-meow server and web UI are local in this mode, but Claude is
     still launched by a local runner-owned terminal resource.
     """
     called_local = False
@@ -903,7 +903,7 @@ def test_remote_daemon_run_attaches_without_cli_forwarder(
     forwarder. The CLI should only attach to tmux/WebSocket. If this
     call site omits ``run_transcript_forwarder=False``, the CLI starts a
     second forwarder on the same bridge and every transcript item is
-    posted to Omnigent twice.
+    posted to agent-meow twice.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory for the generated spec and bridge.
@@ -1264,7 +1264,7 @@ async def test_attach_marks_terminal_stopped_on_exit_when_launched(
         """
         Record cleanup args without issuing a real DELETE.
 
-        :param base_url: Omnigent base URL passed to the cleanup helper.
+        :param base_url: agent-meow base URL passed to the cleanup helper.
         :param headers: Auth headers passed to the cleanup helper.
         :param session_id: Session id being cleaned up.
         :param terminal_id: Terminal resource id being closed.
@@ -1352,7 +1352,7 @@ async def test_attach_runs_cleanup_even_when_forwarder_raises(
         """
         Record that cleanup ran despite the forwarder fault.
 
-        :param base_url: Omnigent base URL.
+        :param base_url: agent-meow base URL.
         :param headers: Auth headers.
         :param session_id: Session id being cleaned up.
         :param terminal_id: Terminal resource id being closed.
@@ -1644,7 +1644,7 @@ async def test_find_running_claude_terminal_reads_resource_endpoint() -> None:
         Return one running Claude terminal resource.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         requested_urls.append(str(request.url))
         return httpx.Response(
@@ -1675,7 +1675,7 @@ async def test_find_running_claude_terminal_miss_statuses_relaunch(
     """
     Missing or unavailable prior runners cause a deterministic relaunch.
 
-    :param status_code: HTTP status returned by the Omnigent resource lookup.
+    :param status_code: HTTP status returned by the agent-meow resource lookup.
     """
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -1683,7 +1683,7 @@ async def test_find_running_claude_terminal_miss_statuses_relaunch(
         Return a reattach miss response.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         del request
         return httpx.Response(status_code, json={"error": {"message": "not attachable"}})
@@ -1950,7 +1950,7 @@ async def test_ensure_local_claude_resume_transcript_returns_none_when_no_record
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Empty Omnigent history → ``None`` and no transcript file written.
+    Empty agent-meow history → ``None`` and no transcript file written.
 
     ``claude --resume`` against a zero-record transcript exits with "No
     conversation found with session ID" instead of starting; for claude-
@@ -2009,7 +2009,7 @@ async def test_create_claude_session_omits_title_for_generic_seed_path() -> None
         Mock POST /v1/sessions (create). PATCH must not be issued.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         if request.method == "POST":
             body = request.content.decode("utf-8")
@@ -2201,7 +2201,7 @@ async def test_attach_with_reconnect_passes_terminal_gone_probe_to_attach(
         """
         Capture probe arguments and report the terminal gone.
 
-        :param base_url: Omnigent base URL.
+        :param base_url: agent-meow base URL.
         :param headers: HTTP headers.
         :param session_id: Session id.
         :param terminal_id: Terminal resource id.
@@ -2749,7 +2749,7 @@ async def test_attach_with_reconnect_exits_when_probe_says_terminal_is_gone(
     attach = _ScriptedAttach(script=[False, False])
 
     async def _gone_probe(**kwargs: Any) -> bool:
-        """Pretend the Omnigent reports the terminal stopped."""
+        """Pretend the agent-meow reports the terminal stopped."""
         del kwargs
         return True
 
@@ -2792,7 +2792,7 @@ async def test_attach_with_reconnect_reconnects_when_probe_says_terminal_alive(
     attach = _ScriptedAttach(script=[False, True])
 
     async def _alive_probe(**kwargs: Any) -> bool:
-        """Pretend the Omnigent reports the terminal still running."""
+        """Pretend the agent-meow reports the terminal still running."""
         del kwargs
         return False
 
@@ -2950,7 +2950,7 @@ async def test_is_terminal_resource_gone_treats_transport_errors_as_not_gone(
 @dataclass
 class _FakeTerminalServer:
     """
-    Minimal echo WebSocket server stand-in for the Omnigent terminal-attach
+    Minimal echo WebSocket server stand-in for the agent-meow terminal-attach
     route. Tracks accept counts and supports a coordinated "bounce".
 
     :param accept_count: Number of WS connections accepted so far.
@@ -3617,7 +3617,7 @@ def test_strip_resume_from_claude_args_removes_recognized_forms(
     a user could route past Click. Names that merely contain the
     word ``resume`` (e.g. ``--no-resume-here``) MUST survive so we
     don't break unrelated upstream Claude flags. If this parametrize
-    case fails, upstream Claude will see the Omnigent conv id and
+    case fails, upstream Claude will see the agent-meow conv id and
     open its own picker against its native session-id namespace
     (the misroute's root cause).
     """
@@ -3633,7 +3633,7 @@ def _conversation_response_body(
     external_session_id: str | None,
 ) -> dict[str, Any]:
     """
-    Build a minimal Omnigent ``GET /v1/sessions/{id}`` response body.
+    Build a minimal agent-meow ``GET /v1/sessions/{id}`` response body.
 
     The route returns the full ``SessionResponse`` shape; the
     cold-resume helper only reads two fields — ``labels`` and
@@ -3662,7 +3662,7 @@ def _items_response_body(
     last_id: str | None = None,
 ) -> dict[str, Any]:
     """
-    Build a minimal Omnigent item-list response body.
+    Build a minimal agent-meow item-list response body.
 
     :param items: Session item dicts returned in ``data``.
     :param has_more: Whether a following page exists.
@@ -3741,7 +3741,7 @@ async def test_resolve_cold_resume_args_injects_external_session_id(
     ``("--resume", "<sid>")`` so the spawned terminal launches
     ``claude --resume <sid>`` and reattaches to the prior transcript.
     Without this, cold resume would launch fresh claude — the user
-    would keep the Omnigent conv id but lose claude-side context.
+    would keep the agent-meow conv id but lose claude-side context.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory used to isolate Claude
@@ -3766,7 +3766,7 @@ async def test_resolve_cold_resume_args_declines_resume_when_no_history(
     tmp_path: Path,
 ) -> None:
     """
-    Empty Omnigent history → ``()`` (launch fresh), not ``("--resume", sid)``.
+    Empty agent-meow history → ``()`` (launch fresh), not ``("--resume", sid)``.
 
     An ``external_session_id`` is set, but the conversation has no
     convertible items, so the synthesized transcript would be empty.
@@ -3802,12 +3802,12 @@ async def test_resolve_cold_resume_args_bootstraps_missing_local_claude_transcri
     tmp_path: Path,
 ) -> None:
     """
-    Cross-machine cold resume downloads Omnigent history into Claude JSONL.
+    Cross-machine cold resume downloads agent-meow history into Claude JSONL.
 
     This is the regression case behind the feature: the server knows
-    the Omnigent conversation and Claude external session id, but the local
+    the agent-meow conversation and Claude external session id, but the local
     machine has no ``~/.claude/projects/<cwd>/<sid>.jsonl``. The
-    helper must fetch committed Omnigent items and write a transcript before
+    helper must fetch committed agent-meow items and write a transcript before
     returning ``--resume <sid>``; otherwise Claude starts with no
     local context.
     """
@@ -3860,7 +3860,7 @@ async def test_resolve_cold_resume_args_bootstraps_missing_local_claude_transcri
         Serve the session snapshot and two chronological item pages.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         requested_paths.append(str(request.url))
         if request.url.path == "/v1/sessions/conv_abc":
@@ -3939,11 +3939,11 @@ async def test_resolve_cold_resume_args_replaces_existing_local_claude_transcrip
     tmp_path: Path,
 ) -> None:
     """
-    Cold resume treats Omnigent history as source of truth over local JSONL.
+    Cold resume treats agent-meow history as source of truth over local JSONL.
 
     Claude can leave a local ``~/.claude/projects/<cwd>/<sid>.jsonl``
-    that diverges from the Omnigent transcript we have persisted. The resume
-    path must still fetch Omnigent items and overwrite that stale file before
+    that diverges from the agent-meow transcript we have persisted. The resume
+    path must still fetch agent-meow items and overwrite that stale file before
     returning ``--resume <sid>``. If the helper reintroduces an early
     return when the local target exists, this test keeps the stale line
     and fails.
@@ -3974,7 +3974,7 @@ async def test_resolve_cold_resume_args_replaces_existing_local_claude_transcrip
         "type": "message",
         "status": "completed",
         "role": "user",
-        "content": [{"type": "input_text", "text": "fresh Omnigent text"}],
+        "content": [{"type": "input_text", "text": "fresh agent-meow text"}],
     }
     item_requests = 0
 
@@ -3983,7 +3983,7 @@ async def test_resolve_cold_resume_args_replaces_existing_local_claude_transcrip
         Serve the session snapshot and AP-authoritative item page.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         nonlocal item_requests
         if request.url.path == "/v1/sessions/conv_abc":
@@ -4006,13 +4006,13 @@ async def test_resolve_cold_resume_args_replaces_existing_local_claude_transcrip
         args = await claude_native._resolve_cold_resume_args(client, "conv_abc")
 
     assert args == ("--resume", "claude-uuid-abc")
-    assert item_requests == 1, "cold resume must fetch Omnigent items even when local JSONL exists"
+    assert item_requests == 1, "cold resume must fetch agent-meow items even when local JSONL exists"
     records = [
         json.loads(line)
         for line in transcript_path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    assert [record["message"]["content"] for record in records] == ["fresh Omnigent text"]
+    assert [record["message"]["content"] for record in records] == ["fresh agent-meow text"]
 
 
 @pytest.mark.asyncio
@@ -4022,7 +4022,7 @@ async def test_resolve_cold_resume_args_warns_when_external_session_id_missing(
     """
     Claude-native conv with no captured external_session_id (crashed
     before first hook, etc.) returns ``()`` and prints a warning.
-    The Omnigent conv id still survives — the new terminal binds
+    The agent-meow conv id still survives — the new terminal binds
     to the same row — but Claude starts fresh. Critical: this
     branch MUST NOT raise so the user can recover the conv even
     when the prior claude side is unrecoverable.
@@ -4142,12 +4142,12 @@ async def test_prepare_claude_terminal_cold_resume_injects_external_session_id(
     Cold-resume threads ``--resume <claude_sid>`` into the args
     passed to ``_launch_claude_terminal``.
 
-    Load-bearing assertion: the conv id stays the SAME Omnigent
+    Load-bearing assertion: the conv id stays the SAME agent-meow
     id end-to-end (no new id minted), AND the spawned terminal
     receives Claude's prior session id as the first two args. A
     regression that dropped the cold-resume args at the launch
     seam would silently lose Claude-side context — the user keeps
-    the Omnigent conv id but Claude starts fresh. Tests
+    the agent-meow conv id but Claude starts fresh. Tests
     ``_resolve_cold_resume_args`` in isolation cannot catch this.
     """
     captured_terminal_args: dict[str, Any] = {}
@@ -4207,7 +4207,7 @@ async def test_prepare_claude_terminal_cold_resume_injects_external_session_id(
         Capture the launch args without invoking the real runner.
 
         :param _client: HTTP client (ignored).
-        :param session_id: Omnigent conversation id — captured
+        :param session_id: agent-meow conversation id — captured
             for the end-to-end assertion.
         :param claude_args: Args the launch will pass to claude —
             this is the load-bearing capture.
@@ -4271,7 +4271,7 @@ async def test_prepare_claude_terminal_cold_resume_injects_external_session_id(
         )
         del http_client  # context-managed by the with block
 
-    # Omnigent conv id survives end-to-end. If this assertion
+    # agent-meow conv id survives end-to-end. If this assertion
     # fails, the wrapper minted a new session id on cold resume —
     # exactly what the user told us NOT to do.
     assert prepared.session_id == "conv_abc"
@@ -4406,7 +4406,7 @@ async def test_attach_passes_start_at_end_true_on_cold_resume(
     to pass ``prepared.reattached`` again (the original buggy
     behavior), this test would fail: cold resume's ``reattached``
     is ``False`` by construction, so the forwarder would still
-    walk the prior transcript from offset 0 and Omnigent would broadcast
+    walk the prior transcript from offset 0 and agent-meow would broadcast
     every prior turn as new.
     """
     captured: dict[str, Any] = {}
@@ -4466,7 +4466,7 @@ async def test_attach_passes_start_at_end_true_on_cold_resume(
         f"cold_resumed=True must force start_at_end=True; got "
         f"start_at_end={captured.get('start_at_end')!r}. Without this, "
         f"every prior turn in the reopened claude transcript is "
-        f"re-POSTed to Omnigent on resume and broadcast to live clients."
+        f"re-POSTed to agent-meow on resume and broadcast to live clients."
     )
 
 
@@ -4619,7 +4619,7 @@ def test_is_claude_native_conversation_logs_warning_on_non_200(
 ) -> None:
     """
     Non-200 returns False but ALSO logs a warning. Without the
-    warning a misrouted resume (auth failure → silent Omnigent REPL on
+    warning a misrouted resume (auth failure → silent agent-meow REPL on
     top of a tmux session) would have zero breadcrumbs in logs.
 
     Patches ``logger.warning`` directly (not caplog) to keep the
@@ -4664,7 +4664,7 @@ def test_is_claude_native_conversation_returns_false_on_transport_error(
     """
     Connection / DNS / TLS failure → False, with a warning logged.
 
-    The caller falls back to the Omnigent REPL path, which surfaces its
+    The caller falls back to the agent-meow REPL path, which surfaces its
     own connect-fail error; we just record what we saw so a flaky
     server doesn't cause a silent misroute.
     """
@@ -5071,7 +5071,7 @@ def test_fetch_external_session_id_for_redirect_uses_session_endpoint(
         """
         Minimal context-manager stand-in for :class:`httpx.Client`.
 
-        :param base_url: Omnigent server base URL.
+        :param base_url: agent-meow server base URL.
         :param headers: HTTP headers passed by the wrapper.
         :param timeout: Request timeout in seconds.
         """
@@ -5086,7 +5086,7 @@ def test_fetch_external_session_id_for_redirect_uses_session_endpoint(
             """
             Capture construction arguments for later assertions.
 
-            :param base_url: Omnigent server base URL.
+            :param base_url: agent-meow server base URL.
             :param headers: HTTP headers passed by the wrapper.
             :param timeout: Request timeout in seconds.
             :returns: None.
@@ -5129,7 +5129,7 @@ def test_fetch_external_session_id_for_redirect_uses_session_endpoint(
             """
             Return a session response for the requested URL.
 
-            :param url: Relative Omnigent session path, e.g.
+            :param url: Relative agent-meow session path, e.g.
                 ``"/v1/sessions/conv%20with%20space"``.
             :returns: HTTP response with ``external_session_id``.
             """
@@ -5284,7 +5284,7 @@ def test_align_working_directory_redirect_moves_transcript_and_updates_state(
     real ``~/.claude`` state: find the old transcript by external
     session id, write it into the current cwd's Claude project dir,
     rewrite top-level ``cwd`` values, remove the original transcript,
-    and update Omnigent launch state so future resumes treat the
+    and update agent-meow launch state so future resumes treat the
     current cwd as the session home.
     """
     from omnigent.claude_native_state import read_launch_state, write_launch_state

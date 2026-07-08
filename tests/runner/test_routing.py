@@ -97,7 +97,7 @@ def _assert_omnigent_error(
     code: str,
 ) -> None:
     """
-    Assert a structured Omnigent error code.
+    Assert a structured agent-meow error code.
 
     :param excinfo: Captured pytest exception info.
     :param code: Expected :class:`ErrorCode` value.

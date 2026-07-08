@@ -28,7 +28,7 @@ description: >-
 # claude-sdk harness runs on whatever Claude provider you configured
 # (`omnigent setup`) — an Anthropic API key, a Claude subscription, an
 # OpenAI-compatible gateway, or a Databricks workspace — resolving that
-# provider's default Claude model.
+# provider's default Claude model for agent-meow.
 executor:
   type: omnigent
   config:

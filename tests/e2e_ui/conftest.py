@@ -23,7 +23,7 @@ Local usage::
       uv run pytest tests/e2e_ui --ui-base-url http://127.0.0.1:5173
 
 ``omnigent server`` is documented at ``omnigent/cli.py:server``:
-it spins up uvicorn with the Omnigent app and spawns an out-of-process
+it spins up uvicorn with the agent-meow app and spawns an out-of-process
 runner that reconnects over the WebSocket tunnel. The fixture passes
 ``--database-uri`` and ``--artifact-location`` pointing at the
 pytest tmp dir so the test never touches the user's default
@@ -376,7 +376,7 @@ def _register_agent_yaml(
 ) -> str | None:
     """Register an agent via multipart ``POST /v1/sessions`` from a raw YAML body.
 
-    ``arcname`` defaults to ``config.yaml`` for native Omnigent specs. Pass a
+    ``arcname`` defaults to ``config.yaml`` for native agent-meow specs. Pass a
     ``*.yaml`` filename for omnigent-flavored single-file specs; the
     compat loader only routes those through the omnigent translator when
     the extracted bundle has no root ``config.yaml``.
@@ -603,7 +603,7 @@ def _assert_pwa_build(build_output: Path) -> None:
     The standalone build must ship the installable-PWA assets, and the
     hand-rolled service worker must (a) embed the per-build fingerprint so its
     bytes change every deploy — or the update prompt never fires — and (b) NOT
-    cache or serve the app shell: Omnigent is a cloud app, so a stale cached
+    cache or serve the app shell: agent-meow is a cloud app, so a stale cached
     shell would white-screen users after every deploy.
     """
     for name in ("index.html", "sw.js", "manifest.webmanifest", "version.json"):

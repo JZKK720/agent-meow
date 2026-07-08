@@ -54,21 +54,21 @@ _XDG_CONFIG_DIR = "xdg-config"
 # Token file the shared ``omnigent.claude_native_bridge serve-mcp`` reads to
 # boot (filename MUST match ``claude_native_bridge._CONFIG_FILE``). opencode
 # launches that serve-mcp as a ``{type:"local"}`` MCP server which relays the
-# Omnigent builtin tools (``sys_*``/``load_skill``/``web_fetch``) advertised in
+# agent-meow builtin tools (``sys_*``/``load_skill``/``web_fetch``) advertised in
 # ``tool_relay.json`` by the runner's comment relay.
 _MCP_BRIDGE_CONFIG_FILE = "bridge.json"
 # AP-routing snapshot the detached cost-approval popup process reads to resolve
-# the elicitation against the Omnigent server (mirrors codex-native's
+# the elicitation against the agent-meow server (mirrors codex-native's
 # ``policy_hook.json``; consumed by ``omnigent.native_cost_popup``).
 _COST_POPUP_CONFIG_FILE = "cost_popup.json"
 # Filename of the opencode plugin that bridges opencode's lifecycle hooks to the
-# Omnigent policy engine (REQUEST + TOOL_RESULT phases the reactive
+# agent-meow policy engine (REQUEST + TOOL_RESULT phases the reactive
 # ``permission.asked`` path can't reach).
 _POLICY_PLUGIN_FILE = "omnigent-policy.js"
 
 # The plugin source. opencode loads it (registered by absolute path in the
 # synthesized ``opencode.json`` ``plugin`` field) and iterates the module's
-# function exports as plugins (legacy shape). It reads its Omnigent coordinates
+# function exports as plugins (legacy shape). It reads its agent-meow coordinates
 # from env the runner stamps on ``opencode serve`` and POSTs each hook to
 # ``/v1/sessions/{id}/policies/evaluate`` — the SAME endpoint + ``PHASE_*``
 # contract claude-native's ``UserPromptSubmit`` / ``PostToolUse`` hooks use.
@@ -76,8 +76,8 @@ _POLICY_PLUGIN_FILE = "omnigent-policy.js"
 # explicit ``POLICY_ACTION_DENY`` blocks a prompt (throw) or withholds a tool
 # result (redact). Raw string so the JS ``\n`` / regex escapes survive verbatim.
 _OPENCODE_POLICY_PLUGIN_JS = r"""
-// Omnigent policy bridge for opencode-native (generated; do not edit).
-// Forwards opencode lifecycle hooks to the Omnigent policy engine so
+// agent-meow policy bridge for opencode-native (generated; do not edit).
+// Forwards opencode lifecycle hooks to the agent-meow policy engine so
 // REQUEST-phase (prompt-submit) and TOOL_RESULT-phase policies enforce — the
 // phases the reactive permission.asked path cannot reach.
 const BASE = (process.env.OMNIGENT_POLICY_URL || "").replace(/\/+$/, "");
@@ -139,7 +139,7 @@ export const OmnigentPolicyPlugin = async () => ({
       // can't change the TUI text from a plugin, but the thrown message is
       // written to opencode's session log, so carry the policy reason there.
       throw new Error(
-        "Omnigent policy blocked this prompt: " + (verdict.reason || "request denied"),
+        "agent-meow policy blocked this prompt: " + (verdict.reason || "request denied"),
       );
     }
   },
@@ -154,7 +154,7 @@ export const OmnigentPolicyPlugin = async () => ({
       { result: output.output },
     );
     if (verdict.result === "POLICY_ACTION_DENY") {
-      output.output = "[Omnigent policy withheld this tool result: " +
+      output.output = "[agent-meow policy withheld this tool result: " +
         (verdict.reason || "denied") + "]";
     }
   },
@@ -164,7 +164,7 @@ export const OmnigentPolicyPlugin = async () => ({
 
 def write_opencode_policy_plugin(bridge_dir: Path) -> Path:
     """
-    Write the Omnigent policy-bridge plugin into *bridge_dir* and return its path.
+    Write the agent-meow policy-bridge plugin into *bridge_dir* and return its path.
 
     The runner registers the returned path in the synthesized ``opencode.json``
     ``plugin`` field and stamps ``OMNIGENT_POLICY_URL`` / ``OMNIGENT_SESSION_ID``
@@ -210,7 +210,7 @@ class OpenCodeNativeBridgeState:
     """
     Runtime state shared by the native OpenCode wrapper and harness.
 
-    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
     :param server_base_url: Loopback base URL of ``opencode serve``, e.g.
         ``"http://127.0.0.1:49231"``.
     :param opencode_session_id: OpenCode session id, e.g. ``"ses_abc123"``.
@@ -283,7 +283,7 @@ def build_opencode_native_spawn_env(
     """
     Build spawn env for the ``opencode-native`` harness process.
 
-    :param conversation_id: Omnigent conversation id, e.g.
+    :param conversation_id: agent-meow conversation id, e.g.
         ``"conv_abc123"``.
     :param bridge_id: Opaque bridge id; ``None`` uses *conversation_id*.
     :returns: Environment variables the OpenCode-native executor needs.
@@ -351,13 +351,13 @@ def write_cost_popup_config(
 
     The cost-budget approval modal runs as a detached
     ``omnigent.native_cost_popup`` subprocess inside a ``tmux display-popup`` on
-    the opencode pane; it must POST the verdict to the Omnigent server but cannot
+    the opencode pane; it must POST the verdict to the agent-meow server but cannot
     inherit the forwarder's in-memory client, so the base URL + a one-shot auth
     header snapshot are persisted here (same contract as codex-native's
     ``policy_hook.json``). Rewritten on each checkpoint so the token is fresh.
 
     :param bridge_dir: OpenCode-native bridge directory.
-    :param ap_server_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param ap_server_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:6767"``.
     :param ap_auth_headers: Outbound auth headers, e.g.
         ``{"Authorization": "Bearer <token>"}``; empty for no-auth local mode.
     :returns: The written config file path (passed to ``launch_cost_popup``).
@@ -670,7 +670,7 @@ def update_last_event_id(bridge_dir: Path, last_event_id: str) -> None:
 
 def update_model_override(bridge_dir: Path, model_override: str | None) -> bool:
     """
-    Persist a new per-session model override (Omnigent→opencode model switch).
+    Persist a new per-session model override (agent-meow→opencode model switch).
 
     opencode has no session-level model setting — the model is a per-prompt
     field — so the executor reads ``model_override`` from this bridge state on

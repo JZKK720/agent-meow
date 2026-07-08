@@ -519,13 +519,13 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
 
         🚨 **TECH DEBT — REMOVE WHEN OMNIGENT COMPAT ENDS.**
         This field exists *solely* to carry harness / profile /
-        os_env data for the Omnigent integration (see
+        os_env data for the agent-meow integration (see
         ``designs/OMNIGENT_INTEGRATION.md``). A free-form
         ``dict[str, Any]`` on a spec dataclass is the kind of
         bag-of-values escape hatch we'd otherwise reject in
-        review — acceptable here only because the Omnigent
+        review — acceptable here only because the agent-meow
         executor is a temporary bridge with explicit sunset
-        criteria. Once Omnigent is consolidated (phase 6 of the
+        criteria. Once agent-meow is consolidated (phase 6 of the
         integration design), this field and every reader of it
         must go away. Do NOT use ``config`` as a general-purpose
         extension point for new executor types — add concrete
@@ -579,7 +579,7 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
     # DEPRECATED: use executor.auth: {type: databricks, profile: <name>} instead.
     profile: str | None = None
     # TECH DEBT (omnigent compat only — see class docstring).
-    # Remove when Omnigent consolidation lands; do NOT extend.
+    # Remove when agent-meow consolidation lands; do NOT extend.
     # Any: opaque per-type executor config passed through to adapters.
     config: dict[str, Any] = field(default_factory=dict)  # type: ignore[explicit-any]
     # Primary model identifier for all executor types. Populated by
@@ -1410,7 +1410,7 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
         inner-stack default at
         ``omnigent/inner/datamodel.py::AgentDef.async_enabled``
         — the same YAML must produce the same tool surface
-        whether the user opts into Omnigent mode or runs the legacy
+        whether the user opts into agent-meow mode or runs the legacy
         path. Agents that want to suppress the async surface
         declare ``async: false`` explicitly. See
         ``designs/SERVER_HARNESS_CONTRACT.md`` §Async work +
@@ -1426,7 +1426,7 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
         ``os_env:`` block — the runtime skips registering
         ``sys_os_*`` tools and the ``claude-sdk`` harness wrap
         falls back to its enable-natives-by-default rule.
-        Native Omnigent YAML accepts this as a top-level ``os_env:``
+        Native agent-meow YAML accepts this as a top-level ``os_env:``
         mapping; the omnigent-compat translator copies
         ``AgentDef.os_env`` into this field directly. The
         ``"inherit"`` string sentinel from omnigent inline
@@ -1441,7 +1441,7 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
         ``None`` means the agent declares no ``terminals:``
         block; ``sys_terminal_*`` tools are not registered.
         Populated by the omnigent-compat translator from
-        ``AgentDef.terminals``. Native Omnigent YAML support is
+        ``AgentDef.terminals``. Native agent-meow YAML support is
         deferred — see ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` §3.
     :param timers: Whether the LLM-callable timer builtins
         (``sys_timer_set``, ``sys_timer_cancel``) are
@@ -1452,7 +1452,7 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
         of the harness contract migration adds the AP-side
         port; firings durable across server restarts via the
         the legacy background-timer workflow (the inner
-        stack uses in-memory asyncio tasks; Omnigent supersedes that
+        stack uses in-memory asyncio tasks; agent-meow supersedes that
         with a workflow per timer pinned to the timer_id). See
         ``designs/SERVER_HARNESS_CONTRACT.md`` §Timers and
         step 10.

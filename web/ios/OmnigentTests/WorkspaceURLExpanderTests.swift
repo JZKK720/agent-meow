@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-@testable import Omnigent
+@testable import agent-meow
 
 final class WorkspaceURLExpanderTests: XCTestCase {
   override func setUp() {

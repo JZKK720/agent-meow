@@ -623,7 +623,7 @@ async def test_launch_disables_tmux_pane_and_window_creation_controls(
 
     The launcher should not leave tmux's default prefix table or
     right-click menus available, because those let an attached user
-    create extra panes, windows, or sessions outside Omnigent' terminal
+    create extra panes, windows, or sessions outside agent-meow' terminal
     registry.
 
     :param tmp_path: Temporary directory used for the fake tmux socket.

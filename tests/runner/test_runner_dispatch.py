@@ -316,7 +316,7 @@ class _FakeProcessManager:
         """
         Return the configured fake harness client.
 
-        :param conversation_id: Omnigent conversation id.
+        :param conversation_id: agent-meow conversation id.
         :param harness_name: Harness name requested by the runner.
         :param env: Optional spawn environment.
         :returns: Configured fake harness client.
@@ -477,7 +477,7 @@ class _RecordingProcessManager:
         """
         Record the harness name and return an empty fake harness client.
 
-        :param conversation_id: Omnigent conversation id.
+        :param conversation_id: agent-meow conversation id.
         :param harness_name: Harness name the runner resolved — the
             value under test.
         :param env: Optional spawn environment (ignored).
@@ -513,7 +513,7 @@ async def test_runner_resolves_agent_from_server_snapshot_when_msg_lacks_agent_i
 
     def _server_handler(request: httpx.Request) -> httpx.Response:
         """
-        Stub Omnigent server: the session snapshot carries the agent_id.
+        Stub agent-meow server: the session snapshot carries the agent_id.
 
         :param request: Outbound request from the runner.
         :returns: Snapshot with ``agent_id`` for the session GET; benign
@@ -573,7 +573,7 @@ async def test_runner_resolves_agent_from_server_snapshot_when_msg_lacks_agent_i
         async with _runner_test_client(app) as http:
             response = await http.post(
                 # No ``?stream=true`` → background turn, the production
-                # path the Omnigent server uses to forward session messages.
+                # path the agent-meow server uses to forward session messages.
                 f"/v1/sessions/{conv}/events",
                 json={
                     "type": "message",
@@ -630,7 +630,7 @@ class _ContentCapturingProcessManager:
         """
         Return a harness client that records the body it is sent.
 
-        :param conversation_id: Omnigent conversation id (unused).
+        :param conversation_id: agent-meow conversation id (unused).
         :param harness_name: Harness name the runner resolved (unused).
         :param env: Optional spawn environment (unused).
         :returns: A capturing harness client.
@@ -718,7 +718,7 @@ async def test_runner_reloads_full_history_on_cold_cache_after_restart() -> None
 
     def _server_handler(request: httpx.Request) -> httpx.Response:
         """
-        Stub Omnigent server: snapshot + full persisted history on ``/items``.
+        Stub agent-meow server: snapshot + full persisted history on ``/items``.
 
         :param request: Outbound request from the runner.
         :returns: Snapshot for the session GET; the persisted history
@@ -800,13 +800,13 @@ async def test_runner_reloads_full_history_on_cold_cache_after_restart() -> None
         async with _runner_test_client(app) as http:
             response = await http.post(
                 # No ``?stream=true`` → background turn, the production path
-                # the Omnigent server uses to forward session messages.
+                # the agent-meow server uses to forward session messages.
                 f"/v1/sessions/{conv}/events",
                 json={
                     "type": "message",
                     "role": "user",
                     "model": "x",
-                    # The store id the Omnigent server persisted for this turn
+                    # The store id the agent-meow server persisted for this turn
                     # (matches ``item_3`` from the stub ``/items``), so the
                     # cold-cache reload drops that exact item and the dedup
                     # fires (no duplicate).
@@ -862,7 +862,7 @@ async def test_runner_cold_cache_appends_message_when_store_lacks_it() -> None:
 
     def _server_handler(request: httpx.Request) -> httpx.Response:
         """
-        Stub Omnigent server: history reload that does NOT include the new message.
+        Stub agent-meow server: history reload that does NOT include the new message.
 
         :param request: Outbound request from the runner.
         :returns: Snapshot for the session GET; prior turns only (no
@@ -993,7 +993,7 @@ async def test_runner_cold_cache_keeps_trailing_user_when_no_persisted_id() -> N
 
     def _server_handler(request: httpx.Request) -> httpx.Response:
         """
-        Stub Omnigent server: history reload ending on a real prior user message.
+        Stub agent-meow server: history reload ending on a real prior user message.
 
         :param request: Outbound request from the runner.
         :returns: Snapshot for the session GET; a single prior user item
@@ -1113,7 +1113,7 @@ async def test_runner_cold_cache_uses_resolved_message_not_stored_file_id() -> N
 
     def _server_handler(request: httpx.Request) -> httpx.Response:
         """
-        Stub Omnigent server: file resolution, snapshot, and a history reload
+        Stub agent-meow server: file resolution, snapshot, and a history reload
         whose tail is the UNRESOLVED (``file_id``) copy of this message.
 
         :param request: Outbound request from the runner.
@@ -1485,7 +1485,7 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
     The fix wraps the setup phase so any pre-stream exception routes through
     ``_on_proxy_stream_end``, which clears the active turn and publishes
     ``session.status: failed``. This test drives the background-turn path
-    (no ``?stream=true`` — the production path the Omnigent server uses) and
+    (no ``?stream=true`` — the production path the agent-meow server uses) and
     asserts the ``failed`` status reaches the session SSE stream.
 
     :param monkeypatch: pytest fixture used to force the spawn-env build to
@@ -1546,7 +1546,7 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
     async with _runner_test_client(app) as http:
         response = await http.post(
             # No ``?stream=true`` → background turn (the production path the
-            # Omnigent server uses to forward session messages).
+            # agent-meow server uses to forward session messages).
             f"/v1/sessions/{conv}/events",
             json={
                 "type": "message",
@@ -1580,7 +1580,7 @@ async def test_runner_failed_status_carries_setup_error_message(
     spawn-env-build failure as
     :func:`test_runner_background_turn_emits_failed_when_spawn_env_build_raises`
     and asserts the published ``failed`` event now carries the normalized
-    ``{code, message}`` error so Omnigent and the REPL can render it.
+    ``{code, message}`` error so agent-meow and the REPL can render it.
 
     :param monkeypatch: pytest fixture used to force the spawn-env build to
         raise the no-model provider error.
@@ -1813,7 +1813,7 @@ async def test_runner_publishes_terminal_failed_when_harness_stream_fails(
     async with _runner_test_client(app) as http:
         response = await http.post(
             # No ``?stream=true`` → background turn (the production path the
-            # Omnigent server uses to forward session messages).
+            # agent-meow server uses to forward session messages).
             f"/v1/sessions/{conv}/events",
             json={
                 "type": "message",
@@ -4289,11 +4289,11 @@ async def test_sys_read_inbox_applies_subagent_tool_result_policy(
 
     ``sys_session_send`` returns a launching handle immediately, so the
     child output arrives after the original tool call. The delayed
-    output must still pass through Omnigent policy evaluation before the LLM
+    output must still pass through agent-meow policy evaluation before the LLM
     sees it in the inbox drain.
 
     :param status: Terminal sub-agent status being drained.
-    :param policy_response: Fake Omnigent policy verdict body.
+    :param policy_response: Fake agent-meow policy verdict body.
     :param expected_output: Output expected in the drained inbox text.
     :param blocked_output: Raw child output that policy must remove.
     """
@@ -4316,7 +4316,7 @@ async def test_sys_read_inbox_applies_subagent_tool_result_policy(
     policy_requests: list[dict[str, Any]] = []
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
-        """Capture the Omnigent policy evaluation request."""
+        """Capture the agent-meow policy evaluation request."""
         if (
             request.method == "POST"
             and request.url.path == "/v1/sessions/conv_parent_policy/policies/evaluate"
@@ -4390,7 +4390,7 @@ async def test_sys_read_inbox_requeues_subagent_output_on_transient_policy_failu
         """
         Fail policy evaluation once, then allow the retry.
 
-        :param request: Omnigent policy-evaluation request.
+        :param request: agent-meow policy-evaluation request.
         :returns: Non-JSON response on first call, allow verdict later.
         """
         nonlocal policy_attempts
@@ -4783,11 +4783,11 @@ def test_register_unregister_child_session_roundtrip() -> None:
 #
 # These verify the runner-local handler that makes get_history/list/close
 # work for harness agents (claude-sdk/codex/openai-agents), whose
-# Omnigent tool calls surface as action_required and route through
+# agent-meow tool calls surface as action_required and route through
 # the runner — NOT the in-process inner Session. Confirmed empirically:
 # without this dispatch the runner returns "not in local dispatch
 # table"; with it, a live harness agent reads a sibling's items. The
-# handler calls the Omnigent server's existing REST endpoints, so tests use a
+# handler calls the agent-meow server's existing REST endpoints, so tests use a
 # real httpx.AsyncClient backed by MockTransport (not a MagicMock) — the
 # code exercises the same request/response objects it sees in production.
 
@@ -4800,7 +4800,7 @@ def _session_query_client(
 
     :param handler: Maps an ``httpx.Request`` to a canned
         ``httpx.Response`` (routes by method + path).
-    :returns: An ``httpx.AsyncClient`` pointed at a fake Omnigent server.
+    :returns: An ``httpx.AsyncClient`` pointed at a fake agent-meow server.
     """
     return httpx.AsyncClient(
         transport=httpx.MockTransport(handler),
@@ -6244,7 +6244,7 @@ async def test_sys_session_get_info_maps_error_statuses(
     HTTP status. If the mapping regressed, the orchestrator couldn't
     distinguish "no such session" from "you can't read it".
 
-    :param status_code: HTTP status the mocked Omnigent server returns.
+    :param status_code: HTTP status the mocked agent-meow server returns.
     :param expected_error: The typed error string the tool should emit.
     """
     from omnigent.runner.tool_dispatch import execute_tool
@@ -6339,7 +6339,7 @@ async def test_sys_session_share_maps_error_statuses(
     session tools so the LLM can distinguish "no such session" from
     "you can't manage it".
 
-    :param status_code: HTTP status the mocked Omnigent server returns.
+    :param status_code: HTTP status the mocked agent-meow server returns.
     :param expected_error: The typed error string the tool should emit.
     """
     from omnigent.runner.tool_dispatch import execute_tool
@@ -6895,7 +6895,7 @@ async def test_sys_session_send_rejects_both_session_id_and_named_target() -> No
         """
         Fail the test if any server call is made.
 
-        :param request: Any Omnigent request — none should occur on the reject path.
+        :param request: Any agent-meow request — none should occur on the reject path.
         :returns: A 404 (also records the unexpected call).
         """
         nonlocal server_called
@@ -6938,7 +6938,7 @@ async def test_create_session_reinit_preserves_existing_inbox() -> None:
     """
     A reconnect re-POST of ``/v1/sessions`` must not wipe the session inbox.
 
-    The Omnigent server re-POSTs ``/v1/sessions`` for every bound conversation
+    The agent-meow server re-POSTs ``/v1/sessions`` for every bound conversation
     on each runner WebSocket (re)connect — including in-process reconnects of a
     still-alive runner after a transient blip. A sub-agent completion that lands
     while the socket is down delivers its result into the parent's

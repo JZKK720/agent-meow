@@ -9,7 +9,7 @@ How Dependabot and CodeQL (code-scanning) alerts are managed for this repo.
 | Detection — deps | Dependabot alerts (on) | Flags vulnerable dependencies. |
 | Detection — code | CodeQL default setup (on) | Flags code-level findings. |
 | Detection — secrets | Secret scanning + push protection (on) | Blocks committed secrets. |
-| Detection — diff | `security-scan.yml` | Per-PR static scan (secrets/exfil/sensitive-path/workflow-misuse/semgrep/OSV). |
+| Detection — diff | `security-scan.yml` | Per-PR static scan (secrets/exfil/sensitive-path/workflow-misuse/semgrep/OSV) for agent-meow. |
 | **Fixing — deps** | **Dependabot security updates** + `dependabot.yml` | Auto-opens grouped fix PRs for vulnerable deps. |
 | **Triage** | **`security-triage.yml`** (this) | Daily AI triage: dismiss high-confidence false positives, escalate serious findings privately. |
 

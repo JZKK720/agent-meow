@@ -370,7 +370,7 @@ async def test_web_ui_serves_pwa_service_worker_and_manifest(
     web_ui_dist.mkdir(parents=True)
     (web_ui_dist / "index.html").write_text("<!doctype html><div id='root'></div>")
     (web_ui_dist / "sw.js").write_text("self.addEventListener('install', () => {});")
-    (web_ui_dist / "manifest.webmanifest").write_text('{"name":"Omnigent"}')
+    (web_ui_dist / "manifest.webmanifest").write_text('{"name":"agent-meow"}')
     (web_ui_dist / "version.json").write_text('{"build":"testbuild"}')
 
     monkeypatch.setattr(app_module, "_WEB_UI_DIST", web_ui_dist)

@@ -111,7 +111,7 @@ _ASK_GATE_DELIVERY_READ_TIMEOUT_S: float = 86400.0
 _ASK_GATE_DELIVERY_TIMEOUT = httpx.Timeout(_ASK_GATE_DELIVERY_READ_TIMEOUT_S, connect=30.0)
 
 # Read timeouts for the two MCP-proxy hops that carry a tool call back to the
-# runner (runner → Omnigent server → runner). ``sys_os_shell`` accepts caller-provided
+# runner (runner → agent-meow server → runner). ``sys_os_shell`` accepts caller-provided
 # timeouts, so these must sit above the runner's execution timeout rather than
 # only above the 120-second shell default. Keep the outer hop larger so the
 # AP→runner leg fails first with the more specific error when the proxy wedges.
@@ -211,7 +211,7 @@ _SESSION_CREATE_TOOLS = frozenset({"sys_session_create"})
 
 # Priority 5f.0: Session query tools — peek/list/close/get_info/share. The
 # runner has no in-process ConversationStore, so these read/mutate session
-# state via the Omnigent server's existing REST endpoints (GET /items, GET
+# state via the agent-meow server's existing REST endpoints (GET /items, GET
 # /child_sessions, GET /sessions/{id}, PATCH /sessions/{id}, PUT
 # /sessions/{id}/permissions) over server_client — same channel and security
 # posture as _execute_subagent_tool / _execute_comment_tool.
@@ -293,7 +293,7 @@ _COMMENT_TOOLS = frozenset(
 
 # Priority 5k: Agent-management reads — sys_agent_get / sys_agent_download /
 # sys_agent_list. The runner has no in-process AgentStore/ArtifactStore, so
-# these proxy the Omnigent server's REST endpoints (GET /v1/sessions/{id}/agent,
+# these proxy the agent-meow server's REST endpoints (GET /v1/sessions/{id}/agent,
 # .../agent/contents, GET /v1/agents, GET /v1/sessions) over server_client.
 # sys_agent_download writes the bundle bytes into the agent's local os_env
 # cwd so sys_os_* can read it; sys_agent_list also scans that cwd for
@@ -301,12 +301,12 @@ _COMMENT_TOOLS = frozenset(
 _AGENT_TOOLS = frozenset({"sys_agent_get", "sys_agent_download", "sys_agent_list"})
 
 # Priority 5l: Policy management — sys_add_policy.
-# The runner proxies the Omnigent server's session policy REST endpoint.
+# The runner proxies the agent-meow server's session policy REST endpoint.
 _POLICY_TOOLS = frozenset({"sys_add_policy", "sys_policy_registry"})
 
 # Priority 5m: agent-meow Docs surface — doc_create / doc_get / doc_list /
 # doc_update / doc_generate. The runner has no in-process DocumentStore,
-# so these proxy the Omnigent server's REST endpoints
+# so these proxy the agent-meow server's REST endpoints
 # (POST/GET/PATCH/DELETE /v1/sessions/{id}/resources/documents) over
 # server_client. ``doc_generate`` is a special case: it routes back into
 # the agent's own LLM loop with a doc-generation system prompt, then
@@ -317,7 +317,7 @@ _DOC_TOOLS = frozenset(
 
 # Priority 5n: agent-meow Images surface — image_list / image_get /
 # image_upload / image_edit / image_generate. The runner proxies the
-# Omnigent server's REST endpoints
+# agent-meow server's REST endpoints
 # (POST/GET/PATCH/DELETE /v1/sessions/{id}/resources/images) over
 # server_client. ``image_generate`` is a stub in v1 (returns a
 # not-yet-wired message).
@@ -337,7 +337,7 @@ _VOICE_TOOLS = frozenset(
 # real CLI, beyond the always-relayed ``sys_os_*`` family. Native harnesses
 # ignore the harness ``tools`` list, so the relay is their ONLY tool
 # surface; this set is the runner-/server-proxied builtin surface that
-# rides through the Omnigent ``/mcp`` endpoint (comment, session read/write,
+# rides through the agent-meow ``/mcp`` endpoint (comment, session read/write,
 # async inbox, task lifecycle, agent-discovery, and terminal families —
 # the same dispatch posture non-native harnesses get via
 # ``request.tools``). ``sys_terminal_*`` inherits the spec gate for
@@ -367,14 +367,14 @@ _NATIVE_RELAY_BUILTIN_TOOLS = (
 
 
 def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
-    """Build the flat Omnigent tool surface for native harness bridges.
+    """Build the flat agent-meow tool surface for native harness bridges.
 
     Returns the same tool set the claude-native / codex-native relay advertises
     and that pi-native registers via ``pi.registerTool``: the spec-gated builtin
     surface (``_NATIVE_RELAY_BUILTIN_TOOLS`` — comment, session read/write,
     agent-discovery, policy, and terminal families) plus the ``sys_os_*`` tools,
     relayed unconditionally so they override any harness-static versions and get
-    centralized policy enforcement on the Omnigent server.
+    centralized policy enforcement on the agent-meow server.
 
     Each entry is a flat ``{"name", "description", "parameters"}`` dict (the
     ``"function"`` sub-dict of an OpenAI tool schema), which is exactly what
@@ -886,7 +886,7 @@ async def _list_child_sessions(
     """
     Fetch child-session summaries for a parent session.
 
-    :param server_client: Omnigent server client.
+    :param server_client: agent-meow server client.
     :param conversation_id: Parent session id, e.g. ``"conv_parent123"``.
     :param limit: Maximum child rows to request, e.g. ``100``.
     :returns: List of child summary dicts, or an error string.
@@ -923,7 +923,7 @@ async def _find_existing_child_session(
     children and scans locally because the child-session endpoint does
     not provide a ``(tool, session_name)`` filter yet.
 
-    :param server_client: Omnigent server client.
+    :param server_client: agent-meow server client.
     :param conversation_id: Parent session id, e.g. ``"conv_parent123"``.
     :param agent: Sub-agent name, e.g. ``"claude"``.
     :param title: Caller-chosen child title, e.g. ``"issue-1756"``.
@@ -1238,7 +1238,7 @@ async def _execute_subagent_tool(
         ``args`` (user message text, or an object with ``input`` plus
         optional ``purpose`` / ``model`` dispatch metadata),
         ``title`` (instance label).
-    :param server_client: httpx client pointed at the Omnigent server.
+    :param server_client: httpx client pointed at the agent-meow server.
     :param conversation_id: Parent session/conversation ID,
         e.g. ``"conv_abc123"``.
     :param agent_spec: Parent agent's :class:`AgentSpec`. Used
@@ -1561,9 +1561,9 @@ async def _execute_subagent_tool(
         )
         # Route through the runner's per-session queue, NOT session_stream
         # directly: in the out-of-process (--server) runner, session_stream
-        # has no subscribers (they live in the Omnigent server), so a direct
+        # has no subscribers (they live in the agent-meow server), so a direct
         # publish here is silently dropped. ``publish_event`` enqueues onto
-        # the parent's queue, which the Omnigent server's relay republishes onto
+        # the parent's queue, which the agent-meow server's relay republishes onto
         # session_stream — the same channel terminals use. Falls back
         # to a direct publish only for in-process callers without a queue.
         if publish_event is not None:
@@ -1679,7 +1679,7 @@ async def _send_to_existing_session(
     :param target_session_id: The existing child session id, e.g.
         ``"conv_abc123"``.
     :param message: The user message text to post.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :param conversation_id: The caller's own session id — the required
         parent of the target.
     :returns: JSON handle on success; a JSON/text error otherwise.
@@ -1929,7 +1929,7 @@ async def _execute_session_create(
 
     :param args: Parsed arguments; exactly one of ``agent_id`` /
         ``config_path`` required, ``title`` / ``message`` optional.
-    :param server_client: HTTP client pointed at the Omnigent server; ``None``
+    :param server_client: HTTP client pointed at the agent-meow server; ``None``
         returns an error string.
     :param conversation_id: The caller's session id — the forced parent;
         ``None`` returns an error string.
@@ -2054,7 +2054,7 @@ async def _post_child_first_message(
     :param child_session_id: The new child session id,
         e.g. ``"conv_abc123"``.
     :param message: The first user message text.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: ``None`` on success; a JSON error string (carrying the
         created ``conversation_id`` so the orchestrator can retry via
         ``sys_session_send``) on failure.
@@ -2113,7 +2113,7 @@ async def _upload_config_bundle(
         agent directory, or ``.tar.gz`` bundle, relative to the os_env
         cwd, e.g. ``".omnigent/agent-configs/helper.yaml"``.
     :param args: Parsed tool arguments; optional ``title``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :param conversation_id: The caller's session id — the forced parent.
     :param agent_spec: The calling agent's spec, for os_env resolution.
     :param runner_workspace: The runner workspace, authoritative cwd.
@@ -2181,7 +2181,7 @@ async def _session_create_from_config_path(
         cwd, e.g. ``".omnigent/agent-configs/helper.yaml"``.
     :param args: Parsed tool arguments; optional ``title`` /
         ``message``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :param conversation_id: The caller's session id — the forced parent.
     :param publish_event: SSE publish callback for ``session.created``.
     :param agent_spec: The calling agent's spec, for os_env resolution.
@@ -2259,7 +2259,7 @@ async def _execute_web_fetch_tool(
 
     :param args: Parsed LLM arguments — ``query`` (required) and
         optional ``url``.
-    :param server_client: httpx client pointed at the Omnigent server.
+    :param server_client: httpx client pointed at the agent-meow server.
     :param conversation_id: Parent session id,
         e.g. ``"conv_abc123"``.
     :param agent_spec: Parent agent's spec — used by the inner
@@ -2401,7 +2401,7 @@ def _has_subagent(
     for sa in sub_agents:
         if getattr(sa, "name", None) == sub_agent_name:
             return True
-    # Omnigent inner loader: tools dict with AgentTool entries
+    # agent-meow inner loader: tools dict with AgentTool entries
     tools = getattr(agent_spec, "tools", None)
     if isinstance(tools, dict) and sub_agent_name in tools:
         return True
@@ -2560,9 +2560,9 @@ async def _execute_comment_tool(
     """
     Runner-local handler for ``list_comments`` and ``update_comment``.
 
-    The runner is a separate subprocess from the Omnigent server and has no
+    The runner is a separate subprocess from the agent-meow server and has no
     in-process ``CommentStore``. This handler uses ``server_client`` to
-    call the Omnigent server's REST API (``GET/PATCH
+    call the agent-meow server's REST API (``GET/PATCH
     /v1/sessions/{id}/comments``), following the same pattern as the
     file tools.
 
@@ -2570,7 +2570,7 @@ async def _execute_comment_tool(
     :param arguments: JSON-encoded arguments string from the LLM.
     :param conversation_id: Current session id, e.g.
         ``"conv_abc123"``. Required for per-session comment scoping.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
         ``None`` if unavailable (returns an error string).
     :returns: Tool output JSON string.
     """
@@ -2652,7 +2652,7 @@ async def _execute_policy_tool(
     :param arguments: JSON-encoded arguments string from the LLM.
     :param conversation_id: Current session id, e.g.
         ``"conv_abc123"``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: Tool output JSON string.
     """
     if server_client is None:
@@ -2678,7 +2678,7 @@ async def _execute_list_policies(
     """
     Proxy ``GET /v1/policy-registry`` and return the list.
 
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: JSON string with the policy registry entries.
     """
     try:
@@ -2705,7 +2705,7 @@ async def _execute_add_policy(
 
     :param args: Parsed tool arguments from the LLM.
     :param conversation_id: Current session id.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: JSON string — created policy or error.
     """
     handler = args.get("handler")
@@ -2874,10 +2874,10 @@ async def _execute_session_query_tool(
     Runner-local handler for ``sys_session_get_history`` / ``sys_session_list`` /
     ``sys_session_close``.
 
-    The runner is a separate subprocess from the Omnigent server and has no
+    The runner is a separate subprocess from the agent-meow server and has no
     in-process ``ConversationStore`` (same constraint as
     :func:`_execute_comment_tool`). These tools therefore dispatch to the
-    Omnigent server's existing REST endpoints over ``server_client``:
+    agent-meow server's existing REST endpoints over ``server_client``:
 
     - ``sys_session_list`` → ``GET /v1/sessions/{caller}/child_sessions``
     - ``sys_session_get_history`` → ``GET /v1/sessions/{target}/items``
@@ -2902,7 +2902,7 @@ async def _execute_session_query_tool(
         ``'{"conversation_id": "conv_abc123", "tail_items": 5}'``.
     :param conversation_id: The calling session id, e.g. ``"conv_root1"``;
         used as the parent for ``sys_session_list``.
-    :param server_client: HTTP client pointed at the Omnigent server; ``None``
+    :param server_client: HTTP client pointed at the agent-meow server; ``None``
         if unavailable (returns an error string).
     :param agent_spec: The session's :class:`AgentSpec`. Used only by
         ``sys_session_share`` to read the spec's
@@ -2943,7 +2943,7 @@ async def _runner_online_or_none(
     unknown" rather than erroring on a transient runner-status hiccup.
 
     :param runner_id: The session's bound runner id, or ``None``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: ``True``/``False`` from the status endpoint, or ``None``
         when unbound or the lookup is inconclusive.
     """
@@ -2985,7 +2985,7 @@ async def _session_get_info_via_rest(
     :param args: Parsed tool arguments; optional ``session_id``.
     :param conversation_id: The caller's own session id, used as the
         default target when ``session_id`` is omitted.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: JSON metadata object, or a JSON error object.
     """
     raw_target = args.get("session_id") or conversation_id
@@ -3041,7 +3041,7 @@ async def _session_get_info_via_rest(
 
 def _omnigent_error_message(resp: httpx.Response) -> str | None:
     """
-    Extract the human-readable message from an Omnigent error response.
+    Extract the human-readable message from an agent-meow error response.
 
     The server renders :class:`omnigent.errors.OmnigentError` as
     ``{"error": {"code": ..., "message": ...}}`` (see the exception
@@ -3104,7 +3104,7 @@ async def _session_share_via_rest(
         default / ``"edit"`` / ``"manage"``) and ``session_id``.
     :param conversation_id: The caller's own session id, used as the
         default target when ``session_id`` is omitted.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :param agent_spec: The session's :class:`AgentSpec`; its
         ``agent_session_sharing`` policy gates this call. ``None`` (or
         ``agent_session_sharing: none``) fails closed — no grant is
@@ -3195,7 +3195,7 @@ async def _execute_doc_tool(
     Runner-local handler for the ``doc_*`` tools (agent-meow Docs surface).
 
     The runner has no in-process ``DocumentStore``, so these proxy the
-    Omnigent server's REST endpoints over ``server_client``:
+    agent-meow server's REST endpoints over ``server_client``:
 
     - ``doc_create`` → ``POST /v1/sessions/{id}/resources/documents``
     - ``doc_get`` → ``GET /v1/sessions/{id}/resources/documents/{doc_id}``
@@ -3212,7 +3212,7 @@ async def _execute_doc_tool(
     :param args: Parsed tool arguments.
     :param arguments: Raw JSON arguments string (unused; args is authoritative).
     :param conversation_id: Current session id.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: Tool output JSON string.
     """
     if server_client is None:
@@ -3248,6 +3248,35 @@ async def _execute_doc_tool(
             return json.dumps({"document": resp.json()})
         except Exception as exc:  # noqa: BLE001
             return json.dumps({"error": f"doc_create failed: {exc}"})
+
+    if tool_name == "doc_generate":
+        # v1: persist a structured placeholder with the topic + outline so
+        # the agent can iterate via doc_update. The topic becomes the
+        # title; the outline + instructions become the initial content.
+        topic = args.get("topic") or "Untitled"
+        outline = args.get("outline") or ""
+        instructions = args.get("instructions") or ""
+        content_parts = [f"# {topic}\n"]
+        if outline:
+            content_parts.append(f"## Outline\n\n{outline}\n")
+        if instructions:
+            content_parts.append(f"## Instructions\n\n{instructions}\n")
+        content_parts.append(
+            "\n> This document was generated by `doc_generate`. The body is "
+            "a placeholder — use `doc_update` to fill in the full content.\n"
+        )
+        gen_payload = {
+            "title": topic,
+            "format": "markdown",
+            "content_md": "\n".join(content_parts),
+        }
+        try:
+            resp = await server_client.post(base, json=gen_payload, timeout=30.0)
+            if resp.status_code >= 400:
+                return json.dumps({"error": f"doc_generate returned {resp.status_code}"})
+            return json.dumps({"document": resp.json(), "generated": False, "placeholder": True})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_generate failed: {exc}"})
 
     # doc_get / doc_update require document_id
     document_id = args.get("document_id")
@@ -3287,35 +3316,6 @@ async def _execute_doc_tool(
         except Exception as exc:  # noqa: BLE001
             return json.dumps({"error": f"doc_update failed: {exc}"})
 
-    if tool_name == "doc_generate":
-        # v1: persist a structured placeholder with the topic + outline so
-        # the agent can iterate via doc_update. The topic becomes the
-        # title; the outline + instructions become the initial content.
-        topic = args.get("topic") or "Untitled"
-        outline = args.get("outline") or ""
-        instructions = args.get("instructions") or ""
-        content_parts = [f"# {topic}\n"]
-        if outline:
-            content_parts.append(f"## Outline\n\n{outline}\n")
-        if instructions:
-            content_parts.append(f"## Instructions\n\n{instructions}\n")
-        content_parts.append(
-            "\n> This document was generated by `doc_generate`. The body is "
-            "a placeholder — use `doc_update` to fill in the full content.\n"
-        )
-        gen_payload = {
-            "title": topic,
-            "format": "markdown",
-            "content_md": "\n".join(content_parts),
-        }
-        try:
-            resp = await server_client.post(base, json=gen_payload, timeout=30.0)
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"doc_generate returned {resp.status_code}"})
-            return json.dumps({"document": resp.json(), "generated": True})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_generate failed: {exc}"})
-
     return json.dumps({"error": f"unknown doc tool: {tool_name}"})
 
 
@@ -3334,7 +3334,7 @@ async def _execute_image_tool(
     Runner-local handler for the ``image_*`` tools (agent-meow Images surface).
 
     The runner has no in-process ``ImageStore`` / ``ArtifactStore``, so
-    these proxy the Omnigent server's REST endpoints over
+    these proxy the agent-meow server's REST endpoints over
     ``server_client``:
 
     - ``image_list`` → ``GET /v1/sessions/{id}/resources/images``
@@ -3347,7 +3347,7 @@ async def _execute_image_tool(
     :param tool_name: One of the ``image_*`` tool names.
     :param args: Parsed tool arguments.
     :param conversation_id: Current session id.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :param runner_workspace: The runner's workspace dir, for resolving
         ``image_upload`` local file paths.
     :returns: Tool output JSON string.
@@ -3472,7 +3472,7 @@ async def _execute_voice_tool(
     :param tool_name: One of the voice tool names.
     :param args: Parsed tool arguments.
     :param conversation_id: Current session id.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :param runner_workspace: The runner's workspace dir, for resolving
         audio file paths.
     :returns: Tool output JSON string.
@@ -3599,6 +3599,8 @@ async def _execute_voice_tool(
             return json.dumps({"error": f"{tool_name} requires server access"})
 
         try:
+            import base64
+
             payload: dict[str, Any] = {
                 "model": "vibevoice-tts",
                 "input": text,
@@ -3614,32 +3616,16 @@ async def _execute_voice_tool(
             )
             if resp.status_code >= 400:
                 return json.dumps({"error": f"VibeVoice-TTS returned {resp.status_code}"})
-            # The TTS endpoint returns audio bytes. Upload as a session
-            # artifact so the UI can play it.
+            # v1 returns an inline data URL instead of persisting the audio
+            # through the images surface. Routing WAV bytes through
+            # /resources/images polluted the Images tab with broken entries.
             audio_bytes = resp.content
-            if conversation_id is None:
-                return json.dumps({"error": f"{tool_name} requires a session id to store audio"})
-            artifact_key = f"audio/{conversation_id}/{uuid.uuid4()}.wav"
-            # Upload via the server's artifact store (reuse the image upload
-            # route as a generic binary upload path).
-            files = {"file": ("tts.wav", audio_bytes, "audio/wav")}
-            upload_resp = await server_client.post(
-                f"/v1/sessions/{conversation_id}/resources/images",
-                files=files,
-                timeout=30.0,
-            )
-            if upload_resp.status_code >= 400:
-                # Fallback: return a base64 data URL so the UI can still play it.
-                audio_b64 = base64.b64encode(audio_bytes).decode()
-                return json.dumps({
-                    "audio_url": f"data:audio/wav;base64,{audio_b64}",
-                    "format": "wav",
-                    "text": text,
-                })
-            upload_result = upload_resp.json()
-            image_id = upload_result.get("id", "")
-            audio_url = f"/v1/sessions/{conversation_id}/resources/images/{image_id}"
-            return json.dumps({"audio_url": audio_url, "format": "wav", "text": text})
+            audio_b64 = base64.b64encode(audio_bytes).decode()
+            return json.dumps({
+                "audio_url": f"data:audio/wav;base64,{audio_b64}",
+                "format": "wav",
+                "text": text,
+            })
         except Exception as exc:  # noqa: BLE001
             return json.dumps({"error": f"{tool_name} failed: {exc}"})
 
@@ -3659,7 +3645,7 @@ async def _execute_agent_tool(
     Runner-local handler for ``sys_agent_get`` / ``sys_agent_download``.
 
     The runner has no in-process ``AgentStore`` / ``ArtifactStore``, so
-    these proxy the Omnigent server's REST endpoints over ``server_client``:
+    these proxy the agent-meow server's REST endpoints over ``server_client``:
 
     - ``sys_agent_get`` → ``GET /v1/sessions/{id}/agent`` (project the
       :class:`~omnigent.server.schemas.AgentObject`)
@@ -3673,7 +3659,7 @@ async def _execute_agent_tool(
         ``"sys_agent_list"``.
     :param args: Parsed tool arguments; ``session_id`` required for
         get/download, ignored for list.
-    :param server_client: HTTP client pointed at the Omnigent server; ``None``
+    :param server_client: HTTP client pointed at the agent-meow server; ``None``
         returns an error string.
     :param agent_spec: The running agent's spec — used (with
         ``conversation_id`` / ``runner_workspace``) to resolve the
@@ -3723,7 +3709,7 @@ async def _agent_get_via_rest(
 
     :param session_id: The session whose bound agent to inspect, e.g.
         ``"conv_abc123"``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: JSON agent-metadata object, or a JSON error object.
     """
     try:
@@ -3816,7 +3802,7 @@ async def _agent_download_via_rest(
 
     :param session_id: The session whose agent bundle to download.
     :param args: Parsed tool arguments; optional ``dest_filename``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :param agent_spec: The running agent's spec, for os_env resolution.
     :param conversation_id: The caller's session id, for os_env cwd.
     :param runner_workspace: The runner workspace, authoritative cwd.
@@ -3878,7 +3864,7 @@ async def _agent_list_fetch(
 
     :param path: The list endpoint path, e.g. ``"/v1/agents"`` or
         ``"/v1/sessions"``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: The ``data`` list from the paginated response (possibly
         empty).
     """
@@ -3956,7 +3942,7 @@ async def _agent_list_via_rest(
       (YAMLs authored with ``sys_os_write`` per the agent-authoring
       skill), projected to ``{name, path, description}``.
 
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :param agent_spec: The running agent's spec, for os_env cwd
         resolution of the local-config scan.
     :param conversation_id: The caller's session id, for os_env cwd.
@@ -4033,7 +4019,7 @@ async def _session_list_via_rest(
     rather than failing the whole call.
 
     :param conversation_id: The caller session id, e.g. ``"conv_root1"``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :param agent_name: Optional agent-name filter for the global
         ``sessions`` view; ignored for ``sub_agents``.
     :returns: JSON ``{"sub_agents": [...], "sessions": [...]}``.
@@ -4059,7 +4045,7 @@ async def _collect_sub_agents(
     lookup yields ``[]`` (or own-children-only) rather than raising.
 
     :param conversation_id: The caller session id.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: The sub-agent entries.
     """
     try:
@@ -4111,7 +4097,7 @@ async def _resolve_runner_online_map(
     :func:`_runner_online_or_none`.
 
     :param rows: Session rows from ``GET /v1/sessions``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: Map of ``runner_id`` → online bool (or ``None`` if the
         lookup was inconclusive).
     """
@@ -4145,7 +4131,7 @@ async def _collect_global_sessions(
     runner's request carries the owning user's identity). Best-effort:
     returns ``[]`` on a fetch failure.
 
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :param agent_name: Optional agent-name filter; applied only when a
         non-empty string.
     :returns: The projected global session entries.
@@ -4221,7 +4207,7 @@ async def _session_parent_id(
     effort: returns ``None`` on any read failure rather than raising.
 
     :param conversation_id: The session to inspect.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: The parent session id, or ``None``.
     """
     try:
@@ -4251,7 +4237,7 @@ async def _session_get_history_via_rest(
 
     :param args: Parsed tool arguments; requires ``conversation_id``,
         optional ``tail_items``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: JSON peek result, or a JSON error object.
     """
     target_id = args.get("conversation_id")
@@ -4282,7 +4268,7 @@ async def _session_get_history_via_rest(
     items: list[dict[str, Any]] = [_project_api_item(it) for it in reversed(data)]
     meta = await _fetch_peek_meta(target_id, server_client)
     # A parked elicitation never lands in the conversation store (it
-    # lives only in the Omnigent server's pending-elicitations index, replayed
+    # lives only in the agent-meow server's pending-elicitations index, replayed
     # on the snapshot), so append the snapshot's outstanding prompts
     # after the stored tail — they are the sub-agent's most recent act.
     items.extend(
@@ -4306,7 +4292,7 @@ async def _fetch_close_target(
     Fetch + status-classify the close target's session snapshot.
 
     :param target_id: The conversation id to close, e.g. ``"conv_abc123"``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: The parsed snapshot dict on HTTP 200; otherwise a JSON
         error string (``session_not_found`` for 404,
         ``session_out_of_tree`` for 401/403, a generic status error
@@ -4349,7 +4335,7 @@ async def _close_tree_scope_error(
         ``"conv_caller"``.
     :param target_id: The target conversation id, echoed into errors,
         e.g. ``"conv_abc123"``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: ``None`` when the target is in-tree and a sub-agent;
         otherwise a JSON error string (``session_out_of_tree`` or
         ``session_not_a_sub_agent``).
@@ -4404,7 +4390,7 @@ async def _session_close_via_rest(
     :param conversation_id: The calling session's own id, e.g.
         ``"conv_caller"``. Used to resolve the caller's spawn-tree root
         for the tree-scope check.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: JSON ``{"closed": true, ...}`` on success; a JSON error
         object otherwise: ``session_not_found`` (404),
         ``session_out_of_tree`` (403/401, or the target's root differs
@@ -4462,7 +4448,7 @@ class _PeekMeta:
         ``None`` in the same case.
     :param pending_elicitations: Outstanding
         ``response.elicitation_request`` event payloads the target is
-        parked on, replayed on the snapshot from the Omnigent server's
+        parked on, replayed on the snapshot from the agent-meow server's
         :mod:`omnigent.runtime.pending_elicitations` index. Empty list
         when the target has none (or the snapshot couldn't be read).
     """
@@ -4486,7 +4472,7 @@ async def _fetch_peek_meta(
     failing the whole call.
 
     :param target_id: The session whose snapshot to read.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: The parsed title plus any outstanding elicitation
         payloads (all empty/``None`` on any miss).
     """
@@ -5188,7 +5174,7 @@ async def _execute_rest_tool(
     :param tool_name: The tool to execute, e.g.
         ``"sys_call_async"``.
     :param args: Tool arguments from the LLM.
-    :param server_client: httpx client pointed at the Omnigent server.
+    :param server_client: httpx client pointed at the agent-meow server.
     :param agent_id: Durable agent id, e.g. ``"ag_abc123"``.
         Required from the session context.
     :param conversation_id: Parent conversation id, e.g.
@@ -5304,7 +5290,7 @@ async def _execute_file_tool(
 
     :param tool_name: File tool name, e.g. ``"upload_file"``.
     :param args: Parsed tool arguments.
-    :param server_client: HTTP client for the Omnigent server.
+    :param server_client: HTTP client for the agent-meow server.
     :param conversation_id: Owning session/conversation id,
         e.g. ``"conv_abc123"``.
     :param agent_spec: Agent spec resolved for the current turn, used
@@ -5464,7 +5450,7 @@ async def _execute_terminal_tool(
     # tool ran in the runner process, where ``session_stream`` (the
     # AP-server pub-sub the web UI subscribes to) has no subscribers;
     # ``publish_event`` is the runner's own per-session queue, which
-    # the Omnigent server's relay republishes onto ``session_stream``.
+    # the agent-meow server's relay republishes onto ``session_stream``.
     if publish_event is not None and tool_name in (
         SysTerminalLaunchTool.name(),
         SysTerminalCloseTool.name(),
@@ -5868,7 +5854,7 @@ def _subagent_tool_result_policy_request(
     output: str,
 ) -> dict[str, Any]:
     """
-    Build the Omnigent policy-evaluation request for delayed child output.
+    Build the agent-meow policy-evaluation request for delayed child output.
 
     :param payload: Completed sub-agent inbox payload.
     :param output: Raw child output text.
@@ -5899,9 +5885,9 @@ async def _post_subagent_policy_verdict(
     output: str,
 ) -> dict[str, Any] | None:
     """
-    POST delayed sub-agent output to Omnigent policy evaluation.
+    POST delayed sub-agent output to agent-meow policy evaluation.
 
-    :param server_client: HTTP client pointed at Omnigent server.
+    :param server_client: HTTP client pointed at agent-meow server.
     :param conversation_id: Parent session id, e.g.
         ``"conv_parent123"``.
     :param payload: Completed sub-agent inbox payload.
@@ -5945,10 +5931,10 @@ def _apply_subagent_policy_verdict(
     verdict: dict[str, Any],
 ) -> _SubagentInboxEvaluation:
     """
-    Apply an Omnigent policy verdict to a sub-agent inbox payload.
+    Apply an agent-meow policy verdict to a sub-agent inbox payload.
 
     :param payload: Original completed sub-agent payload.
-    :param verdict: Parsed Omnigent policy response, e.g.
+    :param verdict: Parsed agent-meow policy response, e.g.
         ``{"result": "POLICY_ACTION_ALLOW"}``.
     :returns: Evaluation result for ``sys_read_inbox`` formatting.
     """
@@ -5993,7 +5979,7 @@ async def _evaluate_subagent_inbox_output(
     Apply parent TOOL_RESULT policy to a delayed sub-agent payload.
 
     :param payload: Inbox payload for a completed sub-agent task.
-    :param server_client: HTTP client pointed at Omnigent server.
+    :param server_client: HTTP client pointed at agent-meow server.
     :param conversation_id: Parent session id, e.g.
         ``"conv_parent123"``.
     :returns: Evaluation result carrying the safe payload plus retry
@@ -6063,7 +6049,7 @@ async def _drain_inbox(
 
     :param inbox: The session's asyncio.Queue, or ``None`` if
         no queue has been created yet.
-    :param server_client: HTTP client pointed at Omnigent server.
+    :param server_client: HTTP client pointed at agent-meow server.
     :param conversation_id: Parent session id, e.g.
         ``"conv_parent123"``.
     :returns: Formatted string of completed tasks.
@@ -6322,7 +6308,7 @@ async def _execute_task_lifecycle_tool(
         from ``create_runner_app``.
     :param conversation_id: Parent session id, e.g.
         ``"conv_parent123"``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: JSON-encoded result string.
     """
     async_result = _cancel_async_tool_result(
@@ -6369,7 +6355,7 @@ async def _cancel_subagent_task(
         ``handle_id``, e.g. ``{"task_id": "conv_child456"}``.
     :param conversation_id: Parent session id, e.g.
         ``"conv_parent123"``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: JSON cancellation result.
     """
     from omnigent.runner import app as _runner_app

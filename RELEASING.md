@@ -1,12 +1,16 @@
-# Releasing omnigent
+# Releasing agent-meow
 
-omnigent ships **three PyPI packages that version-lock together**:
+agent-meow currently ships **three PyPI packages that version-lock together**:
 
 | Package | What it is |
 | --- | --- |
 | `omnigent` | core wheel (bundles the `web` web UI) |
 | `omnigent-client` | Python client SDK |
 | `omnigent-ui-sdk` | terminal UI SDK |
+
+> The distribution names still use `omnigent` for SDK dependency compatibility.
+> A rename to `meow` / `meow-client` / `meow-ui-sdk` is planned for a
+> follow-up release; see [docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md).
 
 `pip install omnigent==X` must resolve `omnigent-client==X` and
 `omnigent-ui-sdk==X`. The pins are **lockstep** (the three packages co-version and

@@ -1,4 +1,4 @@
-// Auto-generated Omnigent bridge extension for native Pi sessions.
+// Auto-generated agent-meow bridge extension for native Pi sessions.
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -59,7 +59,7 @@ const _MAX_RAW_ASK_ROUNDS = 50;
 // omnigent.policies.types.FAIL_CLOSED_PHASES and the Python native hook's
 // fail_closed_hook_output(PreToolUse) → deny.
 const _FAIL_CLOSED_REASON =
-  "blocked: Omnigent policy server unreachable — failing closed (PHASE_TOOL_CALL)";
+  "blocked: agent-meow policy server unreachable — failing closed (PHASE_TOOL_CALL)";
 
 function failClosedVerdict() {
   return { block: true, reason: _FAIL_CLOSED_REASON };
@@ -100,11 +100,11 @@ function freshAuthHeaders(fallback) {
 }
 
 /**
- * Evaluate a TOOL_CALL policy for a native Pi tool via the Omnigent server's
+ * Evaluate a TOOL_CALL policy for a native Pi tool via the agent-meow server's
  * session-level HTTP endpoint (POST /v1/sessions/{sessionId}/policies/evaluate).
  *
  * This is the same endpoint used by the Claude Code, Codex, and Cursor native
- * hooks. It does NOT require an active Omnigent turn context on the harness
+ * hooks. It does NOT require an active agent-meow turn context on the harness
  * side — the endpoint evaluates against the session's full policy set directly.
  *
  * Verdict handling (parity with the native hooks):
@@ -279,7 +279,7 @@ async function evalNativePolicyHttp(config, toolName, args) {
     if (result === "POLICY_ACTION_DENY") {
       return {
         block: true,
-        reason: json.reason || "blocked by Omnigent policy",
+        reason: json.reason || "blocked by agent-meow policy",
       };
     }
     if (result === "POLICY_ACTION_ASK") {
@@ -311,7 +311,7 @@ async function evalNativePolicyHttp(config, toolName, args) {
 /**
  * Build a Pi tool-result object from an MCP ``tools/call`` JSON-RPC response.
  *
- * Pi expects ``{ content: [{ type: "text", text }], isError }``. The Omnigent
+ * Pi expects ``{ content: [{ type: "text", text }], isError }``. The agent-meow
  * MCP proxy returns a JSON-RPC envelope whose ``result`` carries an MCP
  * content array (``[{ type: "text", text }]``) on success, or a JSON-RPC
  * ``error`` object (with the MCP convention code -32000 for tool denials /
@@ -322,7 +322,7 @@ async function evalNativePolicyHttp(config, toolName, args) {
 function piResultFromMcpResponse(json) {
   if (json && typeof json === "object" && json.error) {
     const msg =
-      (json.error && json.error.message) || "Omnigent tool call failed";
+      (json.error && json.error.message) || "agent-meow tool call failed";
     return { content: [{ type: "text", text: String(msg) }], isError: true };
   }
   const result = json && typeof json === "object" ? json.result : undefined;
@@ -337,7 +337,7 @@ function piResultFromMcpResponse(json) {
       content: [
         {
           type: "text",
-          text: "Omnigent tool call requires approval that was not resolved",
+          text: "agent-meow tool call requires approval that was not resolved",
         },
       ],
       isError: true,
@@ -368,7 +368,7 @@ function piResultFromMcpResponse(json) {
  * ``input_required`` (MRTR) envelope, or ``null`` when the response is not an
  * ``input_required`` result.
  *
- * The Omnigent server keys ``inputRequests`` by the server-minted elicitation
+ * The agent-meow server keys ``inputRequests`` by the server-minted elicitation
  * id (the MRTR spec lets the client read those keys; only ``requestState`` is
  * opaque), so the first key is the id the retry must echo back inside
  * ``inputResponses``.
@@ -422,7 +422,7 @@ async function postMcpToolsCall(config, toolName, args, rpcId, extraParams) {
           content: [
             {
               type: "text",
-              text: `Omnigent tool call failed: HTTP ${resp.status}`,
+              text: `agent-meow tool call failed: HTTP ${resp.status}`,
             },
           ],
           isError: true,
@@ -436,7 +436,7 @@ async function postMcpToolsCall(config, toolName, args, rpcId, extraParams) {
         content: [
           {
             type: "text",
-            text: `Omnigent tool call failed: ${err && err.message ? err.message : String(err)}`,
+            text: `agent-meow tool call failed: ${err && err.message ? err.message : String(err)}`,
           },
         ],
         isError: true,
@@ -446,11 +446,11 @@ async function postMcpToolsCall(config, toolName, args, rpcId, extraParams) {
 }
 
 /**
- * Execute an Omnigent tool by POSTing a JSON-RPC ``tools/call`` request to the
+ * Execute an agent-meow tool by POSTing a JSON-RPC ``tools/call`` request to the
  * server's per-session MCP proxy endpoint
  * (``POST /v1/sessions/{sessionId}/mcp``).
  *
- * This is the SAME endpoint the runner's ``ProxyMcpManager`` uses: the Omnigent
+ * This is the SAME endpoint the runner's ``ProxyMcpManager`` uses: the agent-meow
  * server evaluates TOOL_CALL / TOOL_RESULT policy and then forwards execution
  * to the runner's ``/mcp/execute`` (which dispatches the real ``sys_*`` tool on
  * the correct machine with the session's terminal/workspace). The extension
@@ -495,7 +495,7 @@ async function callOmnigentTool(config, toolName, args) {
   ) {
     return {
       content: [
-        { type: "text", text: "Omnigent tool bridge is not configured" },
+        { type: "text", text: "agent-meow tool bridge is not configured" },
       ],
       isError: true,
     };
@@ -516,7 +516,7 @@ async function callOmnigentTool(config, toolName, args) {
       content: [
         {
           type: "text",
-          text: "Omnigent tool call requires approval but the server sent no resolvable elicitation",
+          text: "agent-meow tool call requires approval but the server sent no resolvable elicitation",
         },
       ],
       isError: true,
@@ -531,7 +531,7 @@ async function callOmnigentTool(config, toolName, args) {
       content: [
         {
           type: "text",
-          text: "Omnigent tool call requires approval but the policy server was unreachable",
+          text: "agent-meow tool call requires approval but the policy server was unreachable",
         },
       ],
       isError: true,
@@ -550,7 +550,7 @@ async function callOmnigentTool(config, toolName, args) {
       content: [
         {
           type: "text",
-          text: "Omnigent tool call still requires approval after one round — not retrying",
+          text: "agent-meow tool call still requires approval after one round — not retrying",
         },
       ],
       isError: true,
@@ -695,7 +695,7 @@ async function postEvent(config, body) {
       body: JSON.stringify(body),
     });
   } catch (_err) {
-    // Keep Pi responsive even if Omnigent is temporarily unavailable.
+    // Keep Pi responsive even if agent-meow is temporarily unavailable.
   }
 }
 
@@ -720,11 +720,11 @@ async function patchExternalSessionId(config, nativeSessionId) {
 function setOmnigentStatus(config, ctx, state) {
   if (!ctx || !ctx.ui || !config) return;
   const urlLabel = config.conversationUrl
-    ? `Omnigent: ${config.conversationUrl}`
-    : "Omnigent";
+    ? `agent-meow: ${config.conversationUrl}`
+    : "agent-meow";
   const label = state ? `${urlLabel} · ${state}` : urlLabel;
   try {
-    ctx.ui.setTitle(`Omnigent: ${config.sessionId}`);
+    ctx.ui.setTitle(`agent-meow: ${config.sessionId}`);
     ctx.ui.setStatus("omnigent", label);
     ctx.ui.setStatus("omnigent_state", undefined);
   } catch (_err) {}
@@ -744,7 +744,7 @@ function interruptActiveContext(ctx) {
  * Trigger Pi's own context compaction on the resident ExtensionContext.
  *
  * Pi owns its context window inside this TUI process, so explicit /compact
- * must run here (the Omnigent server's AP-side compaction would only
+ * must run here (the agent-meow server's AP-side compaction would only
  * summarise the transcript mirror and desync the two). ctx.compact() is
  * fire-and-forget (returns void); Pi summarises older messages and appends a
  * CompactionEntry to the session. We bracket it with external_compaction_status
@@ -779,7 +779,7 @@ async function triggerCompaction(config, ctx, customInstructions) {
           source: "execution",
           code: "pi_compact_unavailable",
           message:
-            "Omnigent: /compact is unavailable for this Pi session. The " +
+            "agent-meow: /compact is unavailable for this Pi session. The " +
             "resident Pi context exposes no compaction API, so the model or " +
             "Pi version may not support it.",
         },
@@ -898,7 +898,7 @@ function startInboxPoller(pi, config, handleInterrupt, handleCompact) {
                 source: "execution",
                 code: "pi_followup_delivery_dropped",
                 message:
-                  `Omnigent: a queued follow-up message (id ${droppedId}) could ` +
+                  `agent-meow: a queued follow-up message (id ${droppedId}) could ` +
                   `not be delivered to Pi after ${MAX_DELIVER_ATTEMPTS} attempts ` +
                   `and was dropped. Content preview: ${JSON.stringify(preview)}`,
               },
@@ -998,7 +998,7 @@ module.exports = function (pi) {
   // or double-finalize the preview.
   const finalizedTextBlocks = new Set();
 
-  // Names of the Omnigent tools registered via pi.registerTool below. Bridged
+  // Names of the agent-meow tools registered via pi.registerTool below. Bridged
   // tools are policy-evaluated server-side inside the /mcp proxy (TOOL_CALL +
   // TOOL_RESULT), so the tool_call hook must NOT also call
   // evalNativePolicyHttp for them — that would double-evaluate and, for ASK
@@ -1018,8 +1018,8 @@ module.exports = function (pi) {
           ? tool.parameters
           : { type: "object", properties: {} };
       // Pi passes tool.parameters straight to the LLM as JSON Schema, so the
-      // Omnigent schema is usable as-is. execute() round-trips the call to the
-      // Omnigent server's MCP proxy and returns the result to Pi.
+      // agent-meow schema is usable as-is. execute() round-trips the call to the
+      // agent-meow server's MCP proxy and returns the result to Pi.
       if (typeof pi.registerTool === "function") {
         pi.registerTool({
           name,
@@ -1318,11 +1318,11 @@ module.exports = function (pi) {
   }
 
   pi.registerCommand("omnigent", {
-    description: "Show the Omnigent conversation URL",
+    description: "Show the agent-meow conversation URL",
     async handler(_args, ctx) {
       setOmnigentStatus(config, ctx, "linked");
       if (ctx && ctx.ui && config && config.conversationUrl) {
-        ctx.ui.notify(`Omnigent: ${config.conversationUrl}`, "info");
+        ctx.ui.notify(`agent-meow: ${config.conversationUrl}`, "info");
       }
     },
   });
@@ -1451,7 +1451,7 @@ module.exports = function (pi) {
     if (blocked) {
       return { block: true, reason: "Interrupted by user" };
     }
-    // Bridged Omnigent tools (registered via pi.registerTool above) are
+    // Bridged agent-meow tools (registered via pi.registerTool above) are
     // policy-evaluated server-side inside the /mcp proxy when execute() runs,
     // so skip the hook-level eval for them to avoid double-evaluation and, for
     // ASK policies, a double prompt. Pi's own built-in tools (read/shell/etc)
@@ -1459,11 +1459,11 @@ module.exports = function (pi) {
     if (bridgedTools.has((event && event.toolName) || "")) {
       return;
     }
-    // Evaluate TOOL_CALL policy via the Omnigent server's session-level HTTP
+    // Evaluate TOOL_CALL policy via the agent-meow server's session-level HTTP
     // endpoint. This works even after the harness turn has completed (which
     // happens immediately for pi-native — just enqueue + TurnComplete), so
     // the verdict is always evaluated against live session policies regardless
-    // of whether an Omnigent turn is currently in flight.
+    // of whether an agent-meow turn is currently in flight.
     const verdict = await evalNativePolicyHttp(
       config,
       (event && event.toolName) || "",
@@ -1472,7 +1472,7 @@ module.exports = function (pi) {
     if (verdict && verdict.block) {
       return {
         block: true,
-        reason: verdict.reason || "blocked by Omnigent policy",
+        reason: verdict.reason || "blocked by agent-meow policy",
       };
     }
   });

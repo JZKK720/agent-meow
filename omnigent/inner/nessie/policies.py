@@ -374,7 +374,7 @@ def blast_radius(
             factory params).
         :returns: ALLOW / ASK / DENY decision dict.
         """
-        # Match the Omnigent built-in OS shell, the Claude/Codex native
+        # Match the agent-meow built-in OS shell, the Claude/Codex native
         # Bash tool, and Pi's native lowercase ``bash``. The PreToolUse hook
         # reports BOTH CLI harnesses' shell tool as ``Bash`` with a string
         # ``command`` (codex normalizes to this shape); Pi's ``tool_call``
@@ -538,10 +538,10 @@ def worktree_guard(
     :returns: An evaluator ``fn(event, config)`` returning a V0 decision.
     """
 
-    # Match Omnigent built-in OS write/edit, Claude/Codex native Write/Edit/
+    # Match agent-meow built-in OS write/edit, Claude/Codex native Write/Edit/
     # MultiEdit (surfaced via the PreToolUse hook), and Pi's native lowercase
     # write/edit (surfaced via the pi ``tool_call`` hook). Pi uses the same
-    # ``path`` argument key as the Omnigent tools, so no Pi-specific arg
+    # ``path`` argument key as the agent-meow tools, so no Pi-specific arg
     # branch is needed below. ``MultiEdit`` carries ``file_path`` like the
     # other Claude native edit tools, so the extraction below already covers it.
     _write_tools = {"sys_os_write", "sys_os_edit", "Write", "Edit", "MultiEdit", "write", "edit"}
@@ -558,7 +558,7 @@ def worktree_guard(
         args = _tool_call(event, _write_tools)
         if args is None:
             return _ALLOW
-        # Omnigent tools use ``path``; Claude native tools use ``file_path``.
+        # agent-meow tools use ``path``; Claude native tools use ``file_path``.
         path = args.get("path") or args.get("file_path")
         if not isinstance(path, str):
             return _ALLOW
@@ -597,7 +597,7 @@ def read_only_os(
         write/edit tool call, ALLOW otherwise.
     """
 
-    # Match Omnigent built-in OS write/edit, Claude/Codex native Write/Edit/
+    # Match agent-meow built-in OS write/edit, Claude/Codex native Write/Edit/
     # MultiEdit, and Pi's native lowercase write/edit — the same tool set
     # worktree_guard gates, so the two write policies stay in lockstep.
     write_tools = {

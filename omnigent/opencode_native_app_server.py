@@ -20,7 +20,7 @@ Responsibilities:
 
 Security posture: bind to ``127.0.0.1`` only, random per-session password,
 per-session XDG dirs (never the user's global OpenCode state). The server
-is runner-internal — the web UI attaches to Omnigent terminal resources,
+is runner-internal — the web UI attaches to agent-meow terminal resources,
 never to the OpenCode HTTP port.
 """
 
@@ -270,7 +270,7 @@ def filtered_server_env(
 
     :param bridge_dir: Native OpenCode bridge directory.
     :param auth_secret: Server password for basic auth.
-    :param extra_env: Additional provider env (e.g. from Omnigent setup).
+    :param extra_env: Additional provider env (e.g. from agent-meow setup).
     :returns: The environment mapping for the server subprocess.
     """
     env: dict[str, str] = {}

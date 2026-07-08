@@ -1,8 +1,8 @@
-// Omnigent desktop shell — Electron edition.
+// agent-meow desktop shell — Electron edition.
 //
 // A deliberately thin Electron wrapper around the existing web UI. It bundles
 // ONLY a tiny "connect to server" setup page; the real application UI is the
-// SPA served by the Omnigent server itself. At startup we read a persisted
+// SPA served by the agent-meow server itself. At startup we read a persisted
 // server URL and, if present, load it directly so the user lands in the same
 // UI they'd see in a browser — now with OS-native notifications and a
 // dock/taskbar badge (wired up on the web side via `src/lib/nativeBridge.ts`,
@@ -851,7 +851,7 @@ function createWindow(targetUrl, opts = {}) {
     // Tall enough that the bundled setup page (logo, Start-locally, divider,
     // URL field, Connect, and a few recents) fits without overflowing.
     minHeight: 600,
-    title: "Omnigent",
+    title: "agent-meow",
     backgroundColor: "#0b0b0c",
     // macOS: hide the native title bar but keep the traffic lights, inset
     // into the content. The web layer provides the drag surface + clearance
@@ -954,9 +954,9 @@ function createWindow(targetUrl, opts = {}) {
     },
   );
 
-  // Databricks workspace-hosted Omnigent renders inside the workspace's
+  // Databricks workspace-hosted agent-meow renders inside the workspace's
   // top-nav chrome (the SPA is a workspace page). On a dedicated desktop
-  // window, hide it by overlaying Omnigent's own root — see
+  // window, hide it by overlaying agent-meow's own root — see
   // registerWorkspaceChromeHide, which wires the inject-on-did-finish-load.
   registerWorkspaceChromeHide(win.webContents);
 
@@ -1297,7 +1297,7 @@ async function confirmHostEnrollment(win) {
     // Keep the full origin string if it somehow doesn't parse.
   }
   // Brand the OS dialog as the app (title + bundled icon) so it reads as
-  // Omnigent's own prompt rather than an anonymous system alert; in a packaged
+  // agent-meow's own prompt rather than an anonymous system alert; in a packaged
   // build macOS already shows the app icon, but `electron .` (dev) shows the
   // generic Electron tile without this.
   const icon = nativeImage.createFromPath(ICON_PNG);
@@ -1313,8 +1313,8 @@ async function confirmHostEnrollment(win) {
   const { response } = await dialog.showMessageBox(win, {
     type: "warning",
     icon: icon.isEmpty() ? undefined : icon,
-    title: "Omnigent",
-    message: `Allow ${host} to manage Omnigent on this machine?`,
+    title: "agent-meow",
+    message: `Allow ${host} to manage agent-meow on this machine?`,
     detail:
       `${pinned} wants to connect this machine as a runner. While connected, it ` +
       `can execute agent code and commands here on its behalf.\n\n` +
@@ -1396,7 +1396,7 @@ function buildMenu() {
   /** @type {Electron.MenuItemConstructorOptions[]} */
   const template = [];
 
-  // macOS app menu (About/Services/Hide/Quit), named "Omnigent" via the
+  // macOS app menu (About/Services/Hide/Quit), named "agent-meow" via the
   // app name set below. Non-mac platforms have no app menu.
   if (isMac) {
     template.push({ role: "appMenu" });
@@ -1552,7 +1552,7 @@ function registerIpc() {
     }
     const normalized = normalizeUrl(url); // throws → rejects → setup page shows error
     // Bare Databricks workspace URLs serve a 404 at the root; expand them to
-    // the Omnigent UI mount so the user can paste just the workspace host.
+    // the agent-meow UI mount so the user can paste just the workspace host.
     const target = await expandDatabricksWorkspaceUrl(normalized);
     const win = BrowserWindow.fromWebContents(event.sender) ?? activeWindow();
     // Multi-server windows connect without touching the saved server —
@@ -1828,7 +1828,7 @@ function registerIpc() {
     }
     const win = BrowserWindow.fromWebContents(event.sender) ?? activeWindow();
     const result = await dialog.showOpenDialog(win ?? undefined, {
-      title: "Locate the Omnigent CLI binary",
+      title: "Locate the agent-meow CLI binary",
       properties: ["openFile"],
     });
     if (result.canceled || result.filePaths.length === 0) return null;
@@ -1935,7 +1935,7 @@ function registerIpc() {
 // ---------------------------------------------------------------------------
 
 // Name drives the macOS app menu title and the notification source name.
-app.setName("Omnigent");
+app.setName("agent-meow");
 
 // Single-instance: focus the existing window instead of opening a second.
 const gotLock = app.requestSingleInstanceLock();

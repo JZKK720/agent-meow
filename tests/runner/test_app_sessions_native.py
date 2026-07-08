@@ -289,7 +289,7 @@ class _ReadTimeoutTransport(httpx.AsyncBaseTransport):
 
         :param request: Outbound request from ``httpx.AsyncClient``.
         :returns: Never returns; raises ``httpx.ReadTimeout``.
-        :raises httpx.ReadTimeout: Always raised to simulate Omnigent slowness.
+        :raises httpx.ReadTimeout: Always raised to simulate agent-meow slowness.
         """
         self.requests.append(request)
         raise httpx.ReadTimeout("session lookup timed out", request=request)
@@ -452,7 +452,7 @@ async def test_session_labels_for_runner_spawn_timeout_is_quiet(
     Timed-out optional label resolution returns the spawn fallback quietly.
 
     Native harness spawn can recover by using the session id when labels
-    cannot be fetched. A slow Omnigent session lookup therefore must not emit a
+    cannot be fetched. A slow agent-meow session lookup therefore must not emit a
     warning with traceback; that was noisy and misleading for a best-effort
     lookup.
 
@@ -1389,7 +1389,7 @@ async def test_sessions_native_path_injects_mcp_schemas() -> None:
 async def test_action_required_marker_round_trips_to_relayed_frame() -> None:
     """The runner stamps ``omnigent_runner_dispatched`` on action_required frames.
 
-    The Omnigent executor's ``_runner_dispatches`` predicate reads this marker
+    The agent-meow executor's ``_runner_dispatches`` predicate reads this marker
     to skip server-side dispatch. Without the stamp it'd race the
     runner's dispatch and return "unknown server-side tool."
     """
@@ -1417,7 +1417,7 @@ async def test_action_required_marker_round_trips_to_relayed_frame() -> None:
         f"action_required event must be stamped with the dispatch marker; "
         f"stream text was {stream_text!r}"
     )
-    # Runner dispatched the MCP tool through the Omnigent server proxy (AP mode).
+    # Runner dispatched the MCP tool through the agent-meow server proxy (AP mode).
     assert server_client.call_tool_invocations == [("jira_search_issues", {})], (
         f"runner must dispatch the MCP tool via ProxyMcpManager (AP server); "
         f"got {server_client.call_tool_invocations}"
@@ -1777,7 +1777,7 @@ async def test_auto_create_codex_terminal_uses_persisted_resume_launch_config(
 
     The CLI now persists launch intent and asks the runner to ensure the
     terminal. This test exercises the runner helper directly: it must read
-    ``terminal_launch_args`` and ``external_session_id`` from the Omnigent snapshot,
+    ``terminal_launch_args`` and ``external_session_id`` from the agent-meow snapshot,
     start the app-server itself, launch the TUI as ``codex ... resume
     --remote <runner-ws> <thread>``, and run the known-thread forwarder. If
     this regresses, the CLI falls back into split ownership or loses user
@@ -2065,7 +2065,7 @@ async def test_auto_create_codex_terminal_fork_clones_rollout_and_resumes(
     When the clone has no ``external_session_id`` but carries the fork
     labels, the runner must clone the SOURCE's rollout into the clone's
     own ``CODEX_HOME`` under a freshly minted thread id, pre-set that id
-    on the Omnigent session, and launch ``codex resume <minted_id>`` (not the
+    on the agent-meow session, and launch ``codex resume <minted_id>`` (not the
     source thread). A regression launches fresh (no ``resume`` subcommand)
     and the clone loses the source's Codex history.
 
@@ -2331,8 +2331,8 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
 
     When the clone carries the carry-history directive but has NO source
     Codex thread to clone (an SDK source, so no rollout on disk), the runner
-    must build the clone's rollout from its OWN copied Omnigent items under a
-    freshly minted thread id, pre-set that id on the Omnigent session, and launch
+    must build the clone's rollout from its OWN copied agent-meow items under a
+    freshly minted thread id, pre-set that id on the agent-meow session, and launch
     ``codex resume <minted_id>``. A regression launches fresh and the clone
     loses the SDK source's conversation history.
 
@@ -2365,7 +2365,7 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
 
     class _ItemsForkSnapshotClient:
         """Server client: clone snapshot (carry-history, no source thread)
-        plus the copied Omnigent items the rollout is built from."""
+        plus the copied agent-meow items the rollout is built from."""
 
         async def get(
             self,
@@ -2557,7 +2557,7 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
 
     # The rollout was BUILT (not cloned) in the clone's CODEX_HOME under the
     # minted id, carrying the source conversation's codeword — proving the
-    # copied Omnigent items, not a source rollout, seeded the history.
+    # copied agent-meow items, not a source rollout, seeded the history.
     clone_home = codex_home_for_bridge_dir(bridge_dir_for_bridge_id(session_id))
     built = list(clone_home.glob(f"sessions/**/rollout-*-{minted}.jsonl"))
     assert len(built) == 1, f"expected one built rollout under {clone_home}, found {built}"
@@ -2567,7 +2567,7 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
     assert meta["cwd"] == str(workspace.resolve())
     assert codeword in body, (
         "Built rollout must carry the source conversation's text from the "
-        "copied Omnigent items; missing it means history was not seeded."
+        "copied agent-meow items; missing it means history was not seeded."
     )
 
 
@@ -3153,7 +3153,7 @@ async def _run_antigravity_auto_create(
     :param tmp_path: Temporary directory for isolated bridge state.
     :param monkeypatch: Pytest monkeypatch fixture.
     :param session_id: Session/conversation id under test.
-    :param snapshot: The Omnigent session snapshot the helper should read.
+    :param snapshot: The agent-meow session snapshot the helper should read.
     :param candidate_ports: Ports ``_candidate_agy_rpc_ports`` yields (``[]`` →
         the bootstrap never finds a candidate port).
     :param pane: ``(tmux_socket, tmux_target)`` ``_terminal_tmux_pane`` returns,
@@ -3188,7 +3188,7 @@ async def _run_antigravity_auto_create(
     # ``supervise_reader`` at its definition module (the helper imports it lazily)
     # so the test does not start a real one. The reader is wrapped in
     # ``_run_antigravity_reader``, which still opens (and, on teardown, closes) a
-    # real Omnigent client around this stub — fine, since nothing posts here.
+    # real agent-meow client around this stub — fine, since nothing posts here.
     reader_calls: list[dict[str, Any]] = []
 
     def _counting_reader(*args: Any, **kwargs: Any) -> Any:
@@ -3644,7 +3644,7 @@ async def test_auto_create_antigravity_wires_reader_task_and_interaction_bridge(
 
     monkeypatch.setattr(reader_mod, "supervise_reader", _capturing_reader)
 
-    # Control the reader's Omnigent client transport: record the elicitation hook
+    # Control the reader's agent-meow client transport: record the elicitation hook
     # POST and return the human's ACCEPT verdict as an ElicitationResult body.
     hook_posts: list[tuple[str, dict[str, Any]]] = []
 
@@ -3771,7 +3771,7 @@ async def test_auto_create_antigravity_wires_omnigent_mcp_relay(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Auto-create wires the Omnigent MCP relay so agy gets the sys_* tools (#1194).
+    """Auto-create wires the agent-meow MCP relay so agy gets the sys_* tools (#1194).
 
     Asserts the three wiring points end-to-end against fakes:
 
@@ -4052,9 +4052,9 @@ async def test_codex_subagent_always_needs_runner_terminal(
             """
             Return child then parent session snapshots.
 
-            :param url: Omnigent session snapshot URL.
+            :param url: agent-meow session snapshot URL.
             :param timeout: HTTP timeout in seconds.
-            :returns: Fake Omnigent session response.
+            :returns: Fake agent-meow session response.
             """
             del timeout
             if url.endswith("/conv_child"):
@@ -4231,7 +4231,7 @@ async def test_create_session() -> None:
 async def test_create_session_preserves_existing_event_queue() -> None:
     """Session init must not orphan a stream subscriber's event queue.
 
-    The Omnigent relay's ``GET /stream`` lazily creates the per-session event
+    The agent-meow relay's ``GET /stream`` lazily creates the per-session event
     queue when it connects before ``POST /v1/sessions`` runs (the relay
     can race ahead of init). Init used to *unconditionally replace* that
     queue, orphaning the relay on the now-dead object: ``_publish_event``
@@ -4478,7 +4478,7 @@ async def test_session_stream_emits_heartbeat_on_idle() -> None:
         heartbeats = [e for e in collected if e.get("type") == "session.heartbeat"]
         assert len(heartbeats) >= 1, f"Expected at least 1 session.heartbeat, got {collected}"
         assert collected[0] == {"type": "session.heartbeat"}, (
-            "The first stream frame must be the ready heartbeat. Omnigent waits "
+            "The first stream frame must be the ready heartbeat. agent-meow waits "
             "for this before forwarding fast no-replay user input."
         )
     finally:
@@ -5721,9 +5721,9 @@ async def test_session_creation_does_not_replay_trailing_user_for_codex_native(
     Codex-native startup must not replay a trailing user item as recovery.
 
     Native transcripts are mirrored from Codex. If a Codex turn errors before
-    producing an assistant item, Omnigent history can end with the user prompt even
+    producing an assistant item, agent-meow history can end with the user prompt even
     though Codex already consumed it. Generic crash recovery would treat that
-    as an unanswered Omnigent turn and resend the same prompt when ``omnigent
+    as an unanswered agent-meow turn and resend the same prompt when ``omnigent
     codex`` reattaches.
 
     :param monkeypatch: Pytest monkeypatch fixture used to bypass real
@@ -5860,7 +5860,7 @@ async def test_catch_up_scan_skips_codex_native_history_entries(
         runner_app_mod._session_histories_ref.update(saved_histories)
 
     assert server_client.get_calls == [], (
-        "Catch-up scan must skip Codex-native sessions before fetching Omnigent "
+        "Catch-up scan must skip Codex-native sessions before fetching agent-meow "
         "items. A GET here means reconnect recovery can observe mirrored "
         "native transcript items and replay them."
     )
@@ -7029,7 +7029,7 @@ async def test_external_session_status_idle_delivers_forwarded_native_output_to_
     """
     Native idle status completes sub-agent work with AP-forwarded output.
 
-    Native harness transcript items are persisted by Omnigent server, so the
+    Native harness transcript items are persisted by agent-meow server, so the
     runner's local history can be empty or stale. A forwarded
     ``data.output`` value must be used for the parent inbox instead of
     falling back to the runner-local history.
@@ -7356,7 +7356,7 @@ async def test_external_status_idle_without_output_omits_stale_history_preview()
     """
     Native child ``idle`` without forwarded output omits stale local text.
 
-    If Omnigent has no authoritative native transcript text to forward, the parent
+    If agent-meow has no authoritative native transcript text to forward, the parent
     rail and parent inbox must not fall back to runner-local history: native
     runner history may be stale because the terminal forwarder owns
     persistence. The inbox receives an explicit empty result so the parent can
@@ -8764,7 +8764,7 @@ async def test_events_interrupt_on_native_session_injects_escape_without_marker(
         # own running/idle edges.
         ("claude-native", []),
         # codex-native may use the runner's running edge so the thread
-        # shows work as soon as Omnigent accepts the turn, but must not use the
+        # shows work as soon as agent-meow accepts the turn, but must not use the
         # runner's idle edge because the injection task completes before
         # the user-visible Codex turn.
         ("codex-native", ["running"]),
@@ -8791,7 +8791,7 @@ async def test_message_turn_lifecycle_status_suppressed_for_terminal_backed_harn
     represent the user-visible model turn. For claude-native, the runner
     turn is only a pane-injection task, so its ``running`` and ``idle`` edges
     are both suppressed. For codex-native, the runner's ``running`` edge is a
-    useful immediate signal that Omnigent accepted the turn, but its ``idle`` edge
+    useful immediate signal that agent-meow accepted the turn, but its ``idle`` edge
     is invalid because the injection task finishes before Codex is done.
 
     Drives the real ``POST /events`` message path and waits for the
@@ -9010,7 +9010,7 @@ async def test_events_interrupt_on_native_session_503_skips_cleanup_when_inject_
 
 
 class _EventRecordingServerClient(NullServerClient):
-    """Records Omnigent ``external_conversation_item`` POSTs for assertion.
+    """Records agent-meow ``external_conversation_item`` POSTs for assertion.
 
     Subclasses :class:`NullServerClient` so all other runner→AP calls still
     succeed silently; captures the bodies so a test can assert that NO
@@ -9117,7 +9117,7 @@ async def test_events_codex_native_settings_change_uses_thread_settings_update(
     """
     Codex-native model / effort updates call ``thread/settings/update``.
 
-    The web UI persists model and effort through Omnigent's normal session
+    The web UI persists model and effort through agent-meow's normal session
     PATCH path. The runner must translate the forwarded control event into
     Codex app-server's structured settings RPC, not type into the terminal or
     204 as a no-op. The update is a next-turn setting: it is valid even when
@@ -10152,7 +10152,7 @@ async def test_stop_session_on_native_subagent_without_parent_inbox_returns_204(
 
     ``stop_session`` is user-initiated stop orchestration, not the native
     terminal-status ACK path. Once the pane is killed, the runner must return
-    204 so Omnigent can finish host-runner teardown and write the deliberate-stop
+    204 so agent-meow can finish host-runner teardown and write the deliberate-stop
     label even if parent delivery cannot be confirmed.
     """
     from omnigent.runner import app as runner_app
@@ -10306,7 +10306,7 @@ async def test_events_stop_session_on_non_native_session_is_204_noop(
 
     In-process harnesses have no external tmux process for the runner to
     kill: stop cancels the in-flight turn via the cancel floor, or — with
-    no turn in flight, as here — is a clean 204 no-op. The Omnigent server is
+    no turn in flight, as here — is a clean 204 no-op. The agent-meow server is
     harness-agnostic and forwards stop_session for any session, so the
     runner must accept it and 204 — never reach ``kill_session``.
     """
@@ -10905,7 +10905,7 @@ async def test_events_effort_change_on_native_session_types_slash_command(
     POST ``/events`` with ``{"type":"effort_change","effort":"high"}``
     on a claude-native session injects ``/effort high`` into tmux.
 
-    With the unified-effort refactor Omnigent server no longer POSTs to
+    With the unified-effort refactor agent-meow server no longer POSTs to
     ``/claude-native-effort`` — every PATCH effort goes through the
     generic ``/events`` path. The runner's ``/events`` dispatch must
     recognize the native harness and route to
@@ -11000,10 +11000,10 @@ async def test_events_effort_change_on_native_session_types_slash_command(
     assert command == "/effort high", f"Expected '/effort high' literal, got {command!r}."
     # 1.0s short timeout: missing tmux.json means the pane isn't
     # attached; persisted effort still applies on next spawn. A 30s
-    # default would hang the Omnigent PATCH whenever the pane is detached.
+    # default would hang the agent-meow PATCH whenever the pane is detached.
     assert timeout_s == 1.0
     # 3) effort_change is a control signal, not a state change.
-    # Any session.status enqueued here would mislead the Omnigent relay.
+    # Any session.status enqueued here would mislead the agent-meow relay.
     assert queued_events == [], (
         f"effort_change must not publish session events; got "
         f"{queued_events!r}. If non-empty, the native handler is "
@@ -11029,14 +11029,14 @@ async def test_events_effort_change_on_native_session_skips_inject_for_unsupport
     """
     Unsupported / null effort values 204 without typing into tmux.
 
-    Omnigent server is harness-agnostic — it always forwards the new
+    agent-meow server is harness-agnostic — it always forwards the new
     persisted effort to ``/events``. The runner's native handler
     owns the level-validation, skipping injection when the value
     isn't in Claude's accepted set. Persistence already happened on
-    the Omnigent side; the next spawn picks up the value via ``--effort``.
+    the agent-meow side; the next spawn picks up the value via ``--effort``.
 
     Pins that the validation lives in the runner (where the
-    harness-specific knowledge belongs), not in the Omnigent server.
+    harness-specific knowledge belongs), not in the agent-meow server.
     """
     from omnigent.spec.types import ExecutorSpec
 
@@ -11106,7 +11106,7 @@ async def test_events_effort_change_on_native_session_returns_503_when_bridge_no
     Sister to the happy-path test. Pins that the failure mode of the
     native effort dispatch (tmux pane gone / bridge dir not yet
     advertised) returns 503 with the same error code shape the
-    legacy route returns. Omnigent server's PATCH swallows this 503 and
+    legacy route returns. agent-meow server's PATCH swallows this 503 and
     still returns 200 with the persisted value — the next spawn
     will apply the new effort via ``--effort``.
     """
@@ -11177,7 +11177,7 @@ async def test_events_effort_change_on_non_native_session_is_204_noop(
     In-process harnesses (default / claude-sdk / openai-agents / codex)
     re-read the persisted ``reasoning_effort`` from store on each
     turn, so they need no runtime notification when it changes. The
-    Omnigent server still POSTs ``effort_change`` to ``/events`` for every
+    agent-meow server still POSTs ``effort_change`` to ``/events`` for every
     PATCH (it's harness-agnostic), so the runner must accept the
     event and 204 — never reach the slash-command injector, never
     forward to the harness scaffold.
@@ -11250,15 +11250,15 @@ async def test_events_compact_on_native_session_types_slash_command(
 
     Explicit compaction on a claude-native session must run inside
     Claude Code (it owns its own context window in the terminal); the
-    Omnigent server's own compaction would only summarise the transcript
+    agent-meow server's own compaction would only summarise the transcript
     mirror. The runner's ``/events`` dispatch recognises the native
     harness and routes to ``_handle_claude_native_compact``, which
     types the slash command into the pane.
 
-    The 200 (not 204) is load-bearing: the Omnigent server reads it to know
+    The 200 (not 204) is load-bearing: the agent-meow server reads it to know
     the control was handled in the terminal and skips its own
     in-process compaction. A regression returning 204 here would make
-    the Omnigent server fall through to ``_run_compact_locked``, which 400s
+    the agent-meow server fall through to ``_run_compact_locked``, which 400s
     on the LLM-less claude-native pseudo-agent — the original bug.
     """
     from omnigent.runner.app import _session_event_queues_ref
@@ -11324,7 +11324,7 @@ async def test_events_compact_on_native_session_types_slash_command(
 
     # 200 = native dispatch routed to the compact handler and it
     # injected successfully. 204 would mean the handler returned the
-    # in-process no-op (wrong harness branch) → Omnigent falls through to
+    # in-process no-op (wrong harness branch) → agent-meow falls through to
     # _run_compact_locked and 400s. 404 = the dispatch fell through to
     # the generic harness-forward.
     assert resp.status_code == 200, (
@@ -11433,7 +11433,7 @@ async def test_events_compact_on_codex_native_injects_slash_command(
     compaction must run inside Codex — the same rationale as the
     claude-native path.  The pane coordinates come from the resource
     registry (not a ``tmux.json`` sidecar).  The 200 return is
-    load-bearing: the Omnigent server reads it to skip its own
+    load-bearing: the agent-meow server reads it to skip its own
     AP-side compaction.
     """
     from omnigent.runner.app import _session_event_queues_ref
@@ -11527,7 +11527,7 @@ async def test_events_compact_on_codex_native_returns_204_when_no_terminal() -> 
     Codex-native compact returns 204 when no live terminal is registered.
 
     Without a running codex terminal the ``/compact`` slash command
-    has nowhere to go.  204 tells the Omnigent server to fall back to
+    has nowhere to go.  204 tells the agent-meow server to fall back to
     its own AP-side compaction (or skip it).
     """
     codex_native_spec = AgentSpec(
@@ -11579,7 +11579,7 @@ async def test_events_compact_on_codex_native_returns_503_on_tmux_failure(
     """
     Codex-native compact returns 503 when the tmux send-keys call fails.
 
-    The 503 tells the Omnigent server the control was NOT handled, so it
+    The 503 tells the agent-meow server the control was NOT handled, so it
     can surface an error rather than silently running its own (wrong)
     compaction.
     """
@@ -11651,7 +11651,7 @@ async def test_events_compact_on_cursor_native_pastes_summarize_and_raises_spinn
     cursor-agent manages its own context window in the TUI, so explicit
     compaction must run there (its built-in ``/summarize`` command) rather
     than as AP-side compaction — the same rationale as the claude-native
-    path.  The 200 (not 204) is load-bearing: the Omnigent server reads it to
+    path.  The 200 (not 204) is load-bearing: the agent-meow server reads it to
     skip its own ``_run_compact_locked`` (which 400s on the LLM-less native
     pseudo-agent).
 
@@ -11723,7 +11723,7 @@ async def test_events_compact_on_cursor_native_pastes_summarize_and_raises_spinn
 
     # 200 = cursor-native dispatch routed to the compact handler and the paste
     # succeeded. 204 would mean the dispatch fell through to the in-process
-    # no-op branch (the original gap) → Omnigent runs its own compaction and 400s.
+    # no-op branch (the original gap) → agent-meow runs its own compaction and 400s.
     assert resp.status_code == 200, (
         f"Cursor-native compact must return 200 from /events; got {resp.status_code}: {resp.text}"
     )
@@ -11870,7 +11870,7 @@ async def test_events_compact_on_pi_native_enqueues_compact_payload(
     queues a ``compact`` payload to the Pi extension inbox and returns 200.
 
     Pi owns its context window inside the resident Pi TUI process, so explicit
-    compaction must run there (the Omnigent server's AP-side compaction would
+    compaction must run there (the agent-meow server's AP-side compaction would
     only summarise the transcript mirror and desync the two, and 400s on the
     LLM-less pi-native pseudo-agent). The runner's ``compact`` dispatch routes
     to ``_handle_pi_native_compact``, which drops a ``compact`` payload into the
@@ -11881,7 +11881,7 @@ async def test_events_compact_on_pi_native_enqueues_compact_payload(
     cursor-native, so pi-native fell through to the 204 no-op.
 
     Pins:
-    1. 200 returned (not 204) so the Omnigent server skips its own AP-side
+    1. 200 returned (not 204) so the agent-meow server skips its own AP-side
        compaction.
     2. A ``compact_*`` payload is written to the session's bridge inbox.
     3. /compact is a control signal and publishes no ``session.status`` events.
@@ -11971,7 +11971,7 @@ async def test_events_compact_on_pi_native_returns_503_when_inbox_unwritable(
     Sister to the happy-path test. If the inbox enqueue raises OSError (e.g. a
     filesystem fault), the handler surfaces 503 with the
     ``pi_native_compact_failed`` code rather than silently swallowing the
-    request; the Omnigent server then treats it as not-handled.
+    request; the agent-meow server then treats it as not-handled.
     """
     import omnigent.pi_native_bridge as pi_native_bridge
     from omnigent.spec.types import ExecutorSpec
@@ -12414,7 +12414,7 @@ def test_resolve_opencode_compact_model_returns_none_when_unresolvable() -> None
     """
     Nothing resolvable → ``(None, None)`` so the handler 204s to AP-side.
 
-    Covers the live Omnigent flow: the session is created without a model and
+    Covers the live agent-meow flow: the session is created without a model and
     has no assistant turn yet, and no override is set.
     """
     from omnigent.opencode_native_client import OpenCodeSession
@@ -12436,8 +12436,8 @@ async def test_events_compact_on_opencode_native_summarizes_from_assistant_messa
     opencode-native compact resolves the live model and calls ``/summarize``.
 
     The model comes from the latest assistant message (``providerID`` +
-    ``modelID``) because Omnigent creates the session without a model. A 200
-    return is load-bearing: the Omnigent server reads it to skip its AP-side
+    ``modelID``) because agent-meow creates the session without a model. A 200
+    return is load-bearing: the agent-meow server reads it to skip its AP-side
     compaction (the native ``/summarize`` path was previously dead, always
     204ing because ``session.raw["model"]`` is empty).
     """
@@ -12532,7 +12532,7 @@ async def test_events_compact_on_opencode_native_204_when_model_unresolvable(
     """
     No resolvable model → 204 and ``/summarize`` is never called.
 
-    The 204 tells the Omnigent server to run its own AP-side compaction.
+    The 204 tells the agent-meow server to run its own AP-side compaction.
     """
     resp, client = await _drive_opencode_native_compact(
         monkeypatch,
@@ -12560,7 +12560,7 @@ async def test_events_compact_on_opencode_native_503_when_summarize_raises(
     """
     A failing ``/summarize`` surfaces 503 with the opencode error code.
 
-    The Omnigent server must see the failure (rather than a silent fallback)
+    The agent-meow server must see the failure (rather than a silent fallback)
     so it does not run a duplicate compaction.
     """
     from omnigent.opencode_native_client import OpenCodeClientError
@@ -12601,10 +12601,10 @@ async def test_events_compact_on_non_native_session_is_204_noop(
 
     For in-process harnesses, explicit compaction is an AP-side
     operation (``_run_compact_locked`` → ``compact_conversation_now``).
-    The Omnigent server forwards ``compact`` to ``/events`` for every harness
+    The agent-meow server forwards ``compact`` to ``/events`` for every harness
     (it stays harness-agnostic), so the runner must accept the event
     and 204 — never reach the slash-command injector. The 204 tells the
-    Omnigent server to run its own compaction.
+    agent-meow server to run its own compaction.
     """
     from omnigent.spec.types import ExecutorSpec
 
@@ -12961,7 +12961,7 @@ async def test_events_model_change_on_native_session_skips_inject_for_empty_or_n
     Null / empty / whitespace-only model values 204 without typing.
 
     Pins that the empty-value validation lives in the runner native
-    handler, not in the Omnigent server.
+    handler, not in the agent-meow server.
     """
     from omnigent.spec.types import ExecutorSpec
 
@@ -13027,7 +13027,7 @@ async def test_events_model_change_on_native_session_returns_503_when_bridge_not
     Sister to the happy-path test. Pins that the failure mode of the
     native model dispatch (tmux pane gone / bridge dir not yet
     advertised) returns 503 with the same error code shape the
-    legacy ``/claude-native-model`` route used. Omnigent server's PATCH
+    legacy ``/claude-native-model`` route used. agent-meow server's PATCH
     swallows this 503 and still returns 200 with the persisted
     value — the next spawn applies the new model via ``--model``.
     """
@@ -13094,7 +13094,7 @@ async def test_events_model_change_on_non_native_session_is_204_noop(
     Non-native sessions accept model_change and 204 without side effects.
 
     In-process harnesses re-read the persisted ``model_override`` on
-    each turn (or via the per-event override). Omnigent server is harness-
+    each turn (or via the per-event override). agent-meow server is harness-
     agnostic and POSTs model_change for every PATCH, so the runner
     must accept the event with a 204 — never reach the slash-command
     injector.
@@ -13283,7 +13283,7 @@ async def test_events_model_change_on_cursor_native_session_returns_503_when_not
 
     Cursor analog of the claude-native 503 test: a missing tmux target
     (pane not attached yet) returns 503 with the cursor-specific error
-    code; Omnigent server swallows it and the next spawn applies ``--model``.
+    code; agent-meow server swallows it and the next spawn applies ``--model``.
     """
     from omnigent.spec.types import ExecutorSpec
 
@@ -13394,7 +13394,7 @@ async def test_auto_create_claude_terminal_registers_permission_hook(
     The runner's ``_auto_create_claude_terminal`` is the launch path
     used when a claude-native session is created with no CLI client
     present (web-UI sessions, the ``omnigent host`` host API). It
-    must pass the Omnigent server URL into ``augment_claude_args`` so
+    must pass the agent-meow server URL into ``augment_claude_args`` so
     ``build_hook_settings`` registers the ``PermissionRequest`` command
     hook and writes permission_hook.json. Without it, approval prompts
     silently never reach the web UI even though every other hook is
@@ -13472,7 +13472,7 @@ async def test_auto_create_claude_terminal_registers_permission_hook(
     assert "claude_native_hook permission-request" in permission_hook["command"]
 
     # The hook reads the server URL back out of this file at hook time,
-    # so it must be written with the runner's Omnigent server URL.
+    # so it must be written with the runner's agent-meow server URL.
     config = read_permission_hook_config(bridge_dir_for_bridge_id("conv_abc"))
     assert config["ap_server_url"] == "http://127.0.0.1:8000"
 
@@ -13712,7 +13712,7 @@ async def test_auto_create_kiro_terminal_launches_required_terminal_with_isolate
     assert permission_mirror_calls
     assert permission_mirror_calls[0]["base_url"] == "http://127.0.0.1:6767"
     assert permission_mirror_calls[0]["session_id"] == "conv_kiro"
-    # The Omnigent MCP tool relay is seeded for this session's bridge dir.
+    # The agent-meow MCP tool relay is seeded for this session's bridge dir.
     assert relay_calls == [
         {
             "session_id": "conv_kiro",
@@ -13720,7 +13720,7 @@ async def test_auto_create_kiro_terminal_launches_required_terminal_with_isolate
             "await_notify": False,
         }
     ]
-    # And the Omnigent MCP server is declared in the workspace-scoped kiro config.
+    # And the agent-meow MCP server is declared in the workspace-scoped kiro config.
     workspace_mcp = tmp_path / ".kiro" / "settings" / "mcp.json"
     assert workspace_mcp.exists()
     mcp_servers = json.loads(workspace_mcp.read_text())["mcpServers"]
@@ -13732,7 +13732,7 @@ async def test_auto_create_kiro_terminal_skips_mcp_wiring_without_relay(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Without a comment-relay callback, the Omnigent MCP is NOT wired.
+    """Without a comment-relay callback, the agent-meow MCP is NOT wired.
 
     The workspace mcp.json write + relay seed are gated on ``server_client`` AND
     ``ensure_comment_relay`` together, so serve-mcp never launches with no relay
@@ -13924,7 +13924,7 @@ async def test_auto_create_claude_terminal_passes_session_effort(
     """
     Host-spawned terminal launch reads session effort and passes ``--effort``.
 
-    When the Omnigent server returns a session with a persisted
+    When the agent-meow server returns a session with a persisted
     ``reasoning_effort``, the auto-create path must include
     ``--effort <value>`` in the Claude CLI args so the terminal
     starts at the user's chosen effort level.
@@ -13972,7 +13972,7 @@ async def test_auto_create_claude_terminal_passes_session_effort(
                 metadata={"terminal_name": "claude", "session_key": "main", "running": True},
             )
 
-    # Fake Omnigent server client that returns a session with reasoning_effort.
+    # Fake agent-meow server client that returns a session with reasoning_effort.
     fake_client = httpx.AsyncClient(
         base_url="http://test-server",
         transport=httpx.MockTransport(
@@ -14449,7 +14449,7 @@ async def test_auto_create_claude_terminal_forwarder_skips_replayed_transcript_o
 
     On cold resume the runner synthesizes Claude's local transcript from
     AP's committed history and launches ``claude --resume``, so the
-    transcript file already holds every item Omnigent has at offset 0. The
+    transcript file already holds every item agent-meow has at offset 0. The
     forwarder must therefore start at the transcript end
     (``start_at_end=True``); starting at offset 0 would re-post the whole
     history as new ``external_conversation_item`` records — which carry no
@@ -14487,7 +14487,7 @@ async def test_auto_create_claude_terminal_forwarder_skips_replayed_transcript_o
         _capture_forwarder,
     )
 
-    # Transcript synthesis from Omnigent history has its own coverage; stub it to
+    # Transcript synthesis from agent-meow history has its own coverage; stub it to
     # return a path so the resume branch sets ``resume_external_session_id``
     # without a real item fetch. A non-None return mirrors the production
     # contract: it means ``--resume`` will be passed, which is precisely the
@@ -14718,7 +14718,7 @@ async def test_auto_create_claude_terminal_emits_resource_created_event(
     assert len(created) == 1, (
         f"auto-create must publish exactly one session.resource.created; got {published}"
     )
-    # Routed under the session id so the Omnigent relay forwards it to that
+    # Routed under the session id so the agent-meow relay forwards it to that
     # session's web stream.
     assert created[0].session_id == "conv_emit"
     resource = created[0].event["resource"]
@@ -14730,7 +14730,7 @@ async def test_auto_create_claude_terminal_emits_resource_created_event(
 
 def test_publish_terminal_pending_emits_pending_then_clear() -> None:
     """
-    ``_publish_terminal_pending`` emits the wire shape the Omnigent relay
+    ``_publish_terminal_pending`` emits the wire shape the agent-meow relay
     consumes for the Terminal-pill spinner.
 
     The session-creation handler calls this with ``True`` before
@@ -14752,7 +14752,7 @@ def test_publish_terminal_pending_emits_pending_then_clear() -> None:
         {"type": "session.terminal_pending", "pending": True},
         {"type": "session.terminal_pending", "pending": False},
     ]
-    # Routed under the session id so the Omnigent relay forwards it to that
+    # Routed under the session id so the agent-meow relay forwards it to that
     # session's web stream.
     assert all(p.session_id == "conv_pending" for p in published)
 
@@ -14766,7 +14766,7 @@ def test_publish_native_terminal_start_error_emits_failed_status_only(
     The runner must stay alive when terminal auto-create fails, but the
     affected session should only receive ``session.status: failed`` from
     this startup path. A bare ``response.error`` is turn-scoped; if the
-    runner publishes one here, Omnigent can persist an orphan transcript error
+    runner publishes one here, agent-meow can persist an orphan transcript error
     and then publish/persist a second error when the user message
     fast-fails against the same terminal.
 
@@ -14871,7 +14871,7 @@ async def test_auto_create_claude_terminal_resets_stale_bridge_id_label(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Auto-create corrects a stale ``bridge_id`` label on the Omnigent session.
+    Auto-create corrects a stale ``bridge_id`` label on the agent-meow session.
 
     If a prior rotation left ``BRIDGE_ID_LABEL_KEY`` set to an older
     bridge id (e.g. ``"m0-bridge_from_prior_rotation"``),
@@ -14928,7 +14928,7 @@ async def test_auto_create_claude_terminal_resets_stale_bridge_id_label(
                 },
             )
 
-    # Capture all HTTP requests made to the fake Omnigent server.
+    # Capture all HTTP requests made to the fake agent-meow server.
     recorded_requests: list[httpx.Request] = []
 
     def _handle(req: httpx.Request) -> httpx.Response:
@@ -15471,7 +15471,7 @@ async def test_create_session_antigravity_auto_create_guard_skips_rotation_targe
     """
     The antigravity-native auto-create guard skips ``/clear`` rotation targets.
 
-    A ``/clear`` rotation binds the runner to a fresh Omnigent session, then
+    A ``/clear`` rotation binds the runner to a fresh agent-meow session, then
     transfers the existing agy terminal onto it — agy is one long-lived process
     hosting many cascades, so the rotation re-homes the SAME process. The bind
     reaches the runner's ``POST /v1/sessions`` before the transfer runs, so the
@@ -15767,8 +15767,8 @@ async def test_create_session_terminal_ensure_failure_returns_json_without_live_
     """
     Native terminal ensure failures are reported to AP, not published live.
 
-    ``ensure_native_terminal`` is called by the Omnigent server while handling a
-    user message. Omnigent owns that failed transcript turn: it persists the
+    ``ensure_native_terminal`` is called by the agent-meow server while handling a
+    user message. agent-meow owns that failed transcript turn: it persists the
     consumed user message, appends the sibling ``error`` item, and
     publishes the live banner. If the runner endpoint also publishes
     ``response.error`` before returning its structured 500, the same
@@ -16102,7 +16102,7 @@ async def test_late_status_for_deleted_sub_agent_child_is_not_a_spurious_503() -
     child is deleted there is nothing to preserve, so ``delete_session`` must
     drop the name. Without the pop, the lingering name makes the late status
     read ``is_runner_known_subagent=True`` with no work entry → a spurious
-    ``503 subagent_delivery_not_confirmed`` (which Omnigent then retries) plus an
+    ``503 subagent_delivery_not_confirmed`` (which agent-meow then retries) plus an
     unbounded leak of the name map across deleted sessions.
     """
     child_id = "conv_child_late_status_after_delete"
@@ -16140,7 +16140,7 @@ async def test_late_status_for_deleted_sub_agent_child_is_not_a_spurious_503() -
     assert late_status.status_code == 204, late_status.text
 
 
-# ── Omnigent REPL terminal auto-create (SDK sessions) ────────────────
+# ── agent-meow REPL terminal auto-create (SDK sessions) ────────────────
 
 
 @dataclass
@@ -16524,7 +16524,7 @@ class _WakePost:
 
 class _QueuedResponseServerClient:
     """
-    Omnigent HTTP client stub that returns a fixed queue of real responses.
+    agent-meow HTTP client stub that returns a fixed queue of real responses.
 
     A real stub (NOT ``MagicMock``) so that an unexpected attribute access or
     an extra POST beyond the queue fails the test loudly instead of silently
@@ -16614,7 +16614,7 @@ async def test_wake_post_retries_transient_503_then_succeeds(
     """
     A transient 503 wake response is retried and the next 200 succeeds.
 
-    Guards the core bug: Omnigent returns a genuine 503 ``RUNNER_UNAVAILABLE``
+    Guards the core bug: agent-meow returns a genuine 503 ``RUNNER_UNAVAILABLE``
     *response* (not a transport exception) while the parent's runner tunnel
     reconnects. The wake POST must treat that as a failure and retry, not
     accept it as delivered.
@@ -16751,7 +16751,7 @@ def test_wake_post_transport_error_is_retryable() -> None:
     A transport-level error (no response) is always retryable.
 
     A ``ConnectError`` carries no HTTP response — the POST may never have
-    reached Omnigent — so the wake should be retried.
+    reached agent-meow — so the wake should be retried.
     """
     request = httpx.Request("POST", "http://test/v1/sessions/p/events")
     exc = httpx.ConnectError("connection refused", request=request)

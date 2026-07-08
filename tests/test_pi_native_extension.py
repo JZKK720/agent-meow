@@ -765,7 +765,7 @@ def test_registers_omnigent_tools_and_execute_round_trips(tmp_path: Path) -> Non
     Drives the real JavaScript extension under Node with a config carrying a
     flat tool list (as the runner now writes). Asserts each tool is registered
     via ``pi.registerTool`` with its schema, and that calling a registered
-    tool's ``execute`` POSTs a JSON-RPC ``tools/call`` to the Omnigent server's
+    tool's ``execute`` POSTs a JSON-RPC ``tools/call`` to the agent-meow server's
     ``/v1/sessions/{id}/mcp`` proxy and returns the tool output to Pi.
     """
     node = shutil.which("node")
@@ -824,7 +824,7 @@ process.env.OMNIGENT_PI_NATIVE_CONFIG = configPath;
 const fetchCalls = [];
 global.fetch = async (url, request) => {
   fetchCalls.push({ url, request });
-  // Mimic the Omnigent /mcp proxy success envelope.
+  // Mimic the agent-meow /mcp proxy success envelope.
   return {
     ok: true,
     async json() {
@@ -907,7 +907,7 @@ require(extensionPath)(pi);
 
 
 def test_bridged_tool_call_skips_hook_policy_eval(tmp_path: Path) -> None:
-    """The tool_call hook must NOT re-evaluate policy for bridged Omnigent tools.
+    """The tool_call hook must NOT re-evaluate policy for bridged agent-meow tools.
 
     Bridged tools are policy-evaluated server-side inside the /mcp proxy when
     execute() runs, so the hook-level ``policies/evaluate`` call would
@@ -1146,7 +1146,7 @@ require(extensionPath)(pi);
 
 
 def test_mcp_unreachable_fails_closed_without_throwing(tmp_path: Path) -> None:
-    """An unreachable Omnigent MCP server resolves to an error, never a throw.
+    """An unreachable agent-meow MCP server resolves to an error, never a throw.
 
     Boundary discipline at the /mcp call site: a transport failure (connection
     refused) and an HTTP non-2xx must each resolve ``execute`` to a readable

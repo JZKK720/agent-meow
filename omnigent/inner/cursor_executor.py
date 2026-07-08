@@ -1,7 +1,7 @@
 """CursorExecutor: run agents through the Cursor Python SDK (``cursor-sdk``).
 
 Drives Cursor via :mod:`cursor_sdk` over a local bridge — one persistent
-``AsyncAgent`` per Omnigent conversation, created on a
+``AsyncAgent`` per agent-meow conversation, created on a
 :meth:`cursor_sdk.AsyncClient.launch_bridge` client and reused turn to turn.
 Each ``run_turn`` issues one ``agent.send`` and translates the streamed
 ``run.events()`` (``RunStreamEvent`` objects) into ExecutorEvents:
@@ -13,11 +13,11 @@ Policy enforcement covers three phases: PHASE_LLM_REQUEST (pre-send),
 PHASE_LLM_RESPONSE (post-response), and PHASE_TOOL_CALL (native tools).
 Cursor's native tools execute inside the Cursor process so they cannot be
 pre-blocked, but when a non-bridged tool call is observed the executor
-evaluates PHASE_TOOL_CALL and cancels the run on DENY.  Bridged Omnigent
+evaluates PHASE_TOOL_CALL and cancels the run on DENY.  Bridged agent-meow
 tools (MCP-wrapped) are already gated server-side via the dispatch bridge
 and are skipped to avoid double evaluation.
 
-Crucially, Omnigent's spec-declared tools (``sys_session_send`` et al.) are
+Crucially, agent-meow's spec-declared tools (``sys_session_send`` et al.) are
 bridged into Cursor **in-process** via the SDK's ``custom_tools``: each
 :class:`~omnigent.inner.executor.ToolSpec` becomes a ``cursor_sdk.CustomTool``
 whose ``execute`` callback routes back to the executor's ``_tool_executor`` —
@@ -74,7 +74,7 @@ from .executor import (
 
 logger = logging.getLogger(__name__)
 
-# Omnigent's bridged-tool callback: (tool_name, args) -> awaitable result.
+# agent-meow's bridged-tool callback: (tool_name, args) -> awaitable result.
 # Installed by the runtime adapter (see ``_executor_adapter``); mirrors the
 # claude-sdk executor's ``ToolExecutor``.
 ToolExecutor: TypeAlias = Callable[[str, dict[str, Any]], Awaitable[Any]]  # type: ignore[explicit-any]
@@ -128,7 +128,7 @@ def _first_of(d: dict[str, Any], *keys: str, default: int = 0) -> int:
 
 
 def _normalize_cursor_usage(raw: dict[str, Any], model: str) -> dict[str, Any]:
-    """Map Cursor SDK usage fields to the standard Omnigent usage dict."""
+    """Map Cursor SDK usage fields to the standard agent-meow usage dict."""
     in_tok = _first_of(raw, "inputTokens", "input_tokens")
     out_tok = _first_of(raw, "outputTokens", "output_tokens")
     total = _first_of(raw, "totalTokens", "total_tokens", default=in_tok + out_tok)
@@ -140,7 +140,7 @@ def _normalize_cursor_usage(raw: dict[str, Any], model: str) -> dict[str, Any]:
     }
     # Carry cache breakdown if the backend reports it.
     # The Cursor backend sends cacheReadTokens / cacheWriteTokens;
-    # map to the Omnigent-standard cache_read_input_tokens /
+    # map to the agent-meow-standard cache_read_input_tokens /
     # cache_creation_input_tokens names.
     for dst, *sources in (
         (
@@ -228,7 +228,7 @@ def _build_cursor_prompt(
     """Build the prompt text for an ``agent.send``.
 
     The SDK agent persists conversation history across ``send`` calls, so on the
-    first turn the Omnigent system prompt is prepended (the SDK has no separate
+    first turn the agent-meow system prompt is prepended (the SDK has no separate
     system-prompt field), and any prior history (a sub-agent with
     ``pass_history=True``) is serialized for context. On subsequent turns the
     agent already holds the history, so only the latest user message is sent.
@@ -293,7 +293,7 @@ def _sdk_message_to_events(message: Any) -> list[ExecutorEvent]:  # type: ignore
         args: dict[str, Any] = raw_args if isinstance(raw_args, dict) else {}
         # Cursor surfaces host custom tools under an envelope: name == "mcp",
         # args == {providerIdentifier, toolName, args}. Unwrap to the real
-        # Omnigent tool name + args so the observed events (and any name-keyed
+        # agent-meow tool name + args so the observed events (and any name-keyed
         # policy / UI) see the actual tool, not "mcp".
         if "toolName" in args:
             name = str(args.get("toolName") or name)
@@ -408,7 +408,7 @@ def _write_cursor_hooks(cwd: str, hook_script_path: str, server_url: str, sessio
 
     :param cwd: Workspace root directory.
     :param hook_script_path: Absolute path to ``cursor_policy_hook.py``.
-    :param server_url: Omnigent server URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param server_url: agent-meow server URL, e.g. ``"http://127.0.0.1:6767"``.
     :param session_id: Conversation / session ID for policy evaluation.
     :returns: The path to the written ``hooks.json`` file.
     """
@@ -442,7 +442,7 @@ def _write_cursor_hooks(cwd: str, hook_script_path: str, server_url: str, sessio
 
 @dataclass
 class _CursorSessionState:
-    """Per-Omnigent-conversation SDK session state."""
+    """Per-agent-meow-conversation SDK session state."""
 
     client: Any = None  # cursor_sdk.AsyncClient
     agent: Any = None  # cursor_sdk.AsyncAgent
@@ -490,7 +490,7 @@ class CursorExecutor(Executor):
         self._skills_filter = skills_filter
         self._session_states: dict[str, _CursorSessionState] = {}
         # Installed by the runtime adapter; routes a bridged-tool call back into
-        # Omnigent's session (policy gating, sub-agent dispatch, logging).
+        # agent-meow's session (policy gating, sub-agent dispatch, logging).
         self._tool_executor: ToolExecutor | None = None
         # Installed by the runtime adapter; evaluates PHASE_LLM_REQUEST,
         # PHASE_LLM_RESPONSE, and PHASE_TOOL_CALL policies (the same round-trip
@@ -584,11 +584,11 @@ class CursorExecutor(Executor):
     def _make_custom_tools(
         self, tools: list[ToolSpec], loop: asyncio.AbstractEventLoop
     ) -> dict[str, Any]:  # type: ignore[explicit-any]
-        """Build the SDK ``custom_tools`` mapping from Omnigent ToolSpecs.
+        """Build the SDK ``custom_tools`` mapping from agent-meow ToolSpecs.
 
         Each tool's ``execute`` runs on the SDK callback server's daemon thread,
         so it hops back to *loop* (the main event loop) to await
-        ``_tool_executor`` — the bridge into Omnigent's tool dispatch.
+        ``_tool_executor`` — the bridge into agent-meow's tool dispatch.
         """
         from cursor_sdk import CustomTool  # lazy: optional dependency
 
@@ -610,7 +610,7 @@ class CursorExecutor(Executor):
     def _make_execute(
         self, tool_name: str, loop: asyncio.AbstractEventLoop
     ) -> Callable[[dict[str, Any], Any], Any]:  # type: ignore[explicit-any]
-        """Build a sync ``execute`` that bridges a cursor tool call to Omnigent.
+        """Build a sync ``execute`` that bridges a cursor tool call to agent-meow.
 
         Runs on the SDK callback server's daemon thread and blocks it on the
         main-loop coroutine via ``run_coroutine_threadsafe``. The wait is bounded

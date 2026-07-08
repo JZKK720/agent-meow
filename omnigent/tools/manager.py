@@ -190,7 +190,7 @@ class ToolManager:
         Always available so the agent can browse available policy
         templates and add CEL or builtin policies to the current
         session at runtime. The runner dispatches both tools via
-        the Omnigent server's REST endpoints.
+        the agent-meow server's REST endpoints.
         """
         from omnigent.tools.builtins.policy import SysAddPolicyTool, SysPolicyRegistryTool
 
@@ -708,9 +708,9 @@ class ToolManager:
                 tool_name=uc_info.name,
                 schema=uc_schema,
             )
-        # Native Omnigent local tools (``language == "python"``) need a
+        # Native agent-meow local tools (``language == "python"``) need a
         # workdir on disk so the subprocess loader can locate the
-        # ``tools/python/*.py`` files. Omnigent-style tools
+        # ``tools/python/*.py`` files. agent-meow-style tools
         # (``language == "omnigent-python-callable"``) come
         # from a dotted import path with no on-disk presence and
         # don't need ``workdir``.
@@ -735,7 +735,7 @@ class ToolManager:
                     )
                     continue
                 self._tools[tool.name()] = tool
-        # Omnigent-style callable tools — sibling loader for the
+        # agent-meow-style callable tools — sibling loader for the
         # ``omnigent-python-callable`` language entries the YAML
         # translator emits. See
         # :mod:`omnigent.tools.local_callable` for the reasoning;
@@ -747,7 +747,7 @@ class ToolManager:
         for callable_tool in load_local_callable_tools(server_local_tools):
             if not is_valid_tool_name(callable_tool.name()):
                 _logger.warning(
-                    "Omnigent callable tool %r has invalid name — skipping",
+                    "agent-meow callable tool %r has invalid name — skipping",
                     callable_tool.name(),
                 )
                 continue

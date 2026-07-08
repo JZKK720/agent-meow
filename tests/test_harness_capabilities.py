@@ -71,7 +71,7 @@ def test_model_family_matches_model_override_sets() -> None:
 
 def test_subagents_matches_native_wrapper_label() -> None:
     # subagents is derivable: only native agents with a subagent_wrapper_label
-    # can spawn Omnigent native sub-agents.
+    # can spawn agent-meow native sub-agents.
     subagent_capable = {agent.harness for agent in native_agents() if agent.subagent_wrapper_label}
     for harness, capability in harness_capabilities().items():
         expected = harness in subagent_capable

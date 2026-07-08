@@ -31,9 +31,9 @@ Env vars read at startup (full contract in
   own sandbox + approval flow internally).
 
 Provider routing for kimi happens via ``kimi provider add`` / its
-``~/.kimi/config.toml`` (out-of-band from Omnigent) — upstream kimi
+``~/.kimi/config.toml`` (out-of-band from agent-meow) — upstream kimi
 has no per-spawn ``--config-file`` or env-var provider override.
-Omnigent-side provider injection remains a deferred follow-up.
+agent-meow-side provider injection remains a deferred follow-up.
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ def _resolve_os_env() -> OSEnvSpec:
 
     Mirrors the cursor / antigravity wraps' default: when no spec was
     serialised, fall back to ``caller_process + sandbox=none``. Kimi
-    has its own internal sandbox / approval flow, so Omnigent does not
+    has its own internal sandbox / approval flow, so agent-meow does not
     wrap the subprocess in bwrap / seatbelt by default — the user can
     still set a sandbox via the spec's ``os_env`` block.
     """

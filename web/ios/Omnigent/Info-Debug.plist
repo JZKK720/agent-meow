@@ -30,7 +30,7 @@
 		<true/>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Omnigent uses the microphone for voice dictation in the message composer.</string>
+	<string>agent-meow uses the microphone for voice dictation in the message composer.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchScreen</key>

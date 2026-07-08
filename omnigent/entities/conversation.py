@@ -152,7 +152,7 @@ class Conversation:
         before it boots) and updated on resume via
         ``PATCH /v1/sessions/{id}`` (last-write-wins). The runner
         reconstructs the terminal launch command from these plus the
-        harness binary; the command and all bridge / Omnigent / auth wiring
+        harness binary; the command and all bridge / agent-meow / auth wiring
         stay runner-owned and are never stored here. A flat list (not
         a dict) is deliberate — there is no key for a user to smuggle
         internal wiring through. See

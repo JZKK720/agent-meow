@@ -1,5 +1,5 @@
 """
-Sandbox launchers: run Omnigent hosts in remote sandboxes.
+Sandbox launchers: run agent-meow hosts in remote sandboxes.
 
 Public API for the ``omnigent sandbox`` CLI and anything else that
 bootstraps a sandbox-backed host. Providers are registered by name in

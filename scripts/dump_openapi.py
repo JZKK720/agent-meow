@@ -105,7 +105,7 @@ _SSE_ROUTES: list[tuple[str, str]] = [
 _SERVERS: list[dict[str, str]] = [
     {
         "url": "http://127.0.0.1:6767",
-        "description": "Self-hosted Omnigent server (default local port).",
+        "description": "Self-hosted agent-meow server (default local port).",
     },
 ]
 
@@ -114,8 +114,8 @@ _SERVERS: list[dict[str, str]] = [
 # auth model (there is no bearer/API-key scheme — see
 # ``omnigent/server/auth.py``).
 _INFO_DESCRIPTION: str = """\
-Omnigent is an open-source meta-harness for building and running AI \
-agents. This is the REST API exposed by the Omnigent server: use it to \
+agent-meow is an open-source meta-harness for building and running AI \
+agents. This is the REST API exposed by the agent-meow server: use it to \
 create and drive **sessions**, manage **agents**, **hosts**, and \
 **runners**, attach **contextual policies**, post **comments**, and work \
 with session **resources** — files, terminals, and sandboxed \
@@ -123,7 +123,7 @@ environments.
 
 ## Base URL
 
-Omnigent is self-hosted. The server binds `http://127.0.0.1:6767` by \
+agent-meow is self-hosted. The server binds `http://127.0.0.1:6767` by \
 default (`omnigent server`); point the base URL at your own deployment.
 
 ## Authentication
@@ -149,7 +149,7 @@ according to your deployment.
 schema documented below.
 """
 
-# Auth representations. Omnigent has no bearer/API-key scheme — identity
+# Auth representations. agent-meow has no bearer/API-key scheme — identity
 # arrives via a trusted-proxy header or a signed session cookie,
 # selected by ``OMNIGENT_AUTH_PROVIDER``. We model both as OpenAPI
 # ``apiKey`` schemes so SDK generators and the reference can surface

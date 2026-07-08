@@ -172,7 +172,7 @@ export function ImagesPanel({
                 </div>
                 {img.hasEdits && (
                   <span className="absolute right-1 top-1 rounded bg-primary px-1 text-[9px] text-primary-foreground">
-                    edited
+                    {t("images.edited")}
                   </span>
                 )}
               </div>

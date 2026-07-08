@@ -14,8 +14,8 @@ def test_format_native_resume_command_includes_remote_context() -> None:
     """
     Remote native-wrapper hints include enough context to copy/paste.
 
-    The command must carry the wrapper name, Omnigent server, and
-    Omnigent conversation id. If any of those fields are dropped, a
+    The command must carry the wrapper name, agent-meow server, and
+    agent-meow conversation id. If any of those fields are dropped, a
     user who launched against a non-default remote workspace cannot
     reliably resume the same conversation from the printed hint.
     There is no ``--profile`` part: the CLI flag was removed, so a

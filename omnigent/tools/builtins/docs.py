@@ -1,6 +1,6 @@
 """Document tools (``doc_*``) for the agent-meow Docs surface.
 
-These tools are **runner-dispatched**: the runner proxies the Omnigent
+These tools are **runner-dispatched**: the runner proxies the agent-meow
 server's document REST endpoints over ``server_client`` (same channel as
 ``sys_agent_*``). They ship as schema-only :class:`~omnigent.tools.base.Tool`
 subclasses — the base-class ``invoke`` fails loud if the AP-side path ever
@@ -217,10 +217,10 @@ class DocGenerateTool(Tool):
     """Generate a markdown document from an outline or prompt.
 
     This is a **schema-only** tool: the runner's tool dispatch intercepts
-    the call by name and routes it to the agent's own LLM loop with a
-    doc-generation system prompt. The generated markdown is then persisted
-    via ``doc_create``. The class here just advertises the contract to the
-    LLM so it knows to call ``doc_generate`` with an outline + topic.
+    the call by name and, in v1, persists a structured placeholder draft
+    containing the topic, outline, and instructions. The agent is expected
+    to refine that draft with ``doc_update``. A future version may route the
+    call back into the agent's own LLM loop for full-body generation.
     """
 
     @classmethod
@@ -230,11 +230,12 @@ class DocGenerateTool(Tool):
     @classmethod
     def description(cls) -> str:
         return (
-            "Generate a markdown document from a topic and optional outline. "
-            "The runtime produces a full markdown body and persists it as a "
-            "new document in the session. Returns the new document's id and "
-            "title. Requires session_id and topic; outline is optional but "
-            "recommended for structure."
+            "Create a placeholder markdown draft from a topic and optional "
+            "outline. In v1 the runtime persists a structured starter "
+            "document (topic/outline/instructions) that the agent can refine "
+            "later with doc_update; it does not synthesize a full body yet. "
+            "Returns the new document's id and title. Requires session_id "
+            "and topic; outline is optional but recommended for structure."
         )
 
     def get_schema(self) -> dict[str, Any]:

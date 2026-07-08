@@ -1,7 +1,7 @@
 """Tests for the RPC read driver (:mod:`omnigent.antigravity_native_reader`).
 
 The reader replaces the transcript-tail forwarder's read loop: it polls agy's
-connect-RPC for trajectory steps, maps each new step to Omnigent conversation
+connect-RPC for trajectory steps, maps each new step to agent-meow conversation
 items (via the pure Task 4 mapper), POSTs them, emits session-status edges on
 transition, and hands WAITING steps to the Task 8 interaction bridge through an
 ``on_pending_interaction`` callback.
@@ -2069,7 +2069,7 @@ async def test_planner_done_emits_session_usage(
 ) -> None:
     """A PLANNER_RESPONSE DONE with modelUsage emits exactly one external_session_usage.
 
-    The event data must map agy's string-int fields onto the Omnigent shape:
+    The event data must map agy's string-int fields onto the agent-meow shape:
     - cumulative_input_tokens = inputTokens (int)
     - cumulative_output_tokens = outputTokens (int)
     - cumulative_cache_read_input_tokens = cacheReadTokens (int)
@@ -3241,7 +3241,7 @@ async def test_run_reader_with_bridge_adopts_first_cascade_in_place(
     The cold-start ``StartCascade`` cascade is a headless placeholder the agy TUI
     never shows; the TUI mints its OWN cascade on the first typed turn. That first
     transition is the conversation STARTING, not a ``/clear`` — so the loop must
-    adopt the new cascade in the SAME Omnigent session (rewrite bridge state, NO
+    adopt the new cascade in the SAME agent-meow session (rewrite bridge state, NO
     fork) so the user's current session starts mirroring (#1156/#1158). Modeled by
     a supervise_reader that reports ZERO committed turns on the rotation run.
     """

@@ -1487,7 +1487,7 @@ def test_parse_os_env_caller_process(tmp_path: Path) -> None:
     """A native YAML ``os_env:`` mapping parses into a real
     :class:`OSEnvSpec` with the declared ``type`` and ``cwd``.
 
-    What breaks if this fails: native Omnigent YAMLs cannot opt into
+    What breaks if this fails: native agent-meow YAMLs cannot opt into
     sys_os_* tools — the whole point of step 5l.
     """
     from omnigent.inner.datamodel import OSEnvSpec

@@ -202,7 +202,7 @@ def _create_engine(db_uri: str) -> Engine:
     SQLite engines enable WAL journal mode and a 20s
     ``busy_timeout`` on every connection (not just sessions
     created via :func:`make_managed_session_maker`). Without WAL,
-    multi-process workloads — REPL + Omnigent server + runner subprocess
+    multi-process workloads — REPL + agent-meow server + runner subprocess
     all hitting the same ``chat.db`` — surface as spurious
     ``disk I/O error`` and ``database is locked`` failures because
     the default ``journal_mode=DELETE`` only permits one writer at
@@ -461,7 +461,7 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
 
     if current != head:
         _logger.warning(
-            "Omnigent database schema is out of date "
+            "agent-meow database schema is out of date "
             "(found revision %r, expected %r); attempting automatic migration.",
             current,
             head,
@@ -470,7 +470,7 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
             _run_migrations(engine, db_uri)
         except Exception as exc:
             raise RuntimeError(
-                f"Omnigent database schema is out of date "
+                f"agent-meow database schema is out of date "
                 f"(found revision {current!r}, expected {head!r}) "
                 f"and automatic migration failed. Take a backup of your database, then run\n"
                 f"\n"
@@ -482,7 +482,7 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
         migrated = _get_current_db_revision(engine)
         if migrated != head:
             raise RuntimeError(
-                f"Omnigent automatic database migration did not reach head "
+                f"agent-meow automatic database migration did not reach head "
                 f"(started at {current!r}, now at {migrated!r}, expected {head!r}). "
                 f"Take a backup of your database, then run\n"
                 f"\n"

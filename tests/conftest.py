@@ -1,4 +1,4 @@
-"""Shared pytest configuration and fixtures for Omnigent tests."""
+"""Shared pytest configuration and fixtures for agent-meow tests."""
 
 from __future__ import annotations
 

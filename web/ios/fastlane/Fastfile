@@ -100,11 +100,11 @@ default_platform(:ios)
 FLAVORS = {
   public: {
     bundle_id: "ai.omnigent.ios",
-    display_name: "Omnigent",
+    display_name: "agent-meow",
   },
   internal: {
     bundle_id: "ai.omnigent.ios.internal",
-    display_name: "Omnigent (Databricks)",
+    display_name: "agent-meow (Databricks)",
   },
 }.freeze
 
@@ -112,7 +112,7 @@ platform :ios do
   desc "Run the OmnigentTests unit tests"
   lane :tests do
     run_tests(
-      scheme: "Omnigent",
+      scheme: "agent-meow",
       configuration: "Debug",
       destination: "platform=iOS Simulator,name=iPhone 17 Pro Max,OS=26.5",
       skip_detect_devices: true,
@@ -176,7 +176,7 @@ platform :ios do
     server_pid = nil
     begin
       server_pid = omnigent_start_process(
-        "Omnigent server",
+        "agent-meow server",
         {
           "HOME" => home_dir,
           "OMNIGENT_DATA_DIR" => data_dir,
@@ -192,7 +192,7 @@ platform :ios do
       capture_ios_screenshots(
         only_testing: ["OmnigentUITests/OmnigentUITests/testLocalServerSnapshot"],
         launch_arguments: ["--omnigent-server-url #{server_url}"],
-        test_target_name: "Omnigent",
+        test_target_name: "agent-meow",
         result_bundle: true,
         number_of_retries: 0,
         stop_after_first_error: true,
@@ -312,7 +312,7 @@ platform :ios do
       xcargs << "APP_DISPLAY_NAME=#{flavor[:display_name].shellescape}"
     end
     build_app(
-      scheme: "Omnigent",
+      scheme: "agent-meow",
       configuration: "Release",
       export_method: "app-store",
       xcargs: xcargs.join(" "),

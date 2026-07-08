@@ -370,7 +370,7 @@ async def maybe_run_advisor(
     :param spec: The resolved agent spec for the session.
     :param conversation_id: Session id, e.g. ``"conv_abc123"``.
     :param turn_content: This turn's inbound message content blocks.
-    :param server_client: HTTP client pointed at the Omnigent server,
+    :param server_client: HTTP client pointed at the agent-meow server,
         used for the one label-persist PATCH.
     :param turn_anchor: Caller-sampled anchor for the verdict (item id or
         ISO timestamp) — the advisor never reads the clock itself.
@@ -535,7 +535,7 @@ def _runner_identity_headers() -> dict[str, str]:
     """
     Build the headers proving runner identity for reserved-label writes.
 
-    :returns: ``{X-Omnigent-Runner-Tunnel-Token: <token>}`` when the
+    :returns: ``{X-agent-meow-Runner-Tunnel-Token: <token>}`` when the
         runner process carries its tunnel binding token (set by every
         CLI / host-daemon spawn path), else ``{}`` — single-user local
         servers accept the write without it, multi-user servers reject it
@@ -563,7 +563,7 @@ async def _persist_verdict_label(
 
     :param verdict: The verdict to persist.
     :param conversation_id: Session id, e.g. ``"conv_abc123"``.
-    :param server_client: HTTP client pointed at the Omnigent server.
+    :param server_client: HTTP client pointed at the agent-meow server.
     :returns: ``True`` on success; ``False`` (with a warning logged) when
         the PATCH failed — the caller then applies nothing so the
         recorded and the applied model never diverge.
