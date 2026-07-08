@@ -518,9 +518,9 @@ class TestInstructionsField(unittest.TestCase):
     """
     ``instructions:`` field handling in omnigent-flavored YAML.
 
-    Native Omnigent YAMLs have always supported ``instructions: <path>``
+    Native agent-meow YAMLs have always supported ``instructions: <path>``
     (path relative to the bundle dir, falling through to inline
-    text if not a file). Omnigent-flavored YAMLs silently
+    text if not a file). agent-meow-flavored YAMLs silently
     dropped the field — the loader didn't read it, the translator
     didn't see it. Bug from kasey_uhlenhuth's report. These tests
     pin the cross-format parity.
@@ -542,7 +542,7 @@ class TestInstructionsField(unittest.TestCase):
     def test_instructions_inline_text_when_no_matching_file(self):
         """A value that doesn't match any sibling file is treated as inline.
 
-        Matches the native Omnigent behavior — silent fall-through to
+        Matches the native agent-meow behavior — silent fall-through to
         inline avoids breaking specs whose authors typed an
         instruction that happens to look pathy.
         """
@@ -645,7 +645,7 @@ def test_instructions_rejects_path_traversal() -> None:
 
 
 class TestLoaderOsEnvValidation(unittest.TestCase):
-    """Validate that ``inner.loader`` mirrors Omnigent parser sandbox checks.
+    """Validate that ``inner.loader`` mirrors agent-meow parser sandbox checks.
 
     The legacy ``load_agent_def`` is what the CLI ``omnigent run``
     actually invokes (via the omnigent-compat shim). If the legacy

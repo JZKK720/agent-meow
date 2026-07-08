@@ -16,7 +16,7 @@ async def test_bind_session_runner_patches_encoded_session_path() -> None:
 
     A regression here would either bind the wrong session when ids
     contain path separators, or drop the ``runner_id`` body that the
-    Omnigent server expects before launching a native terminal.
+    agent-meow server expects before launching a native terminal.
     """
     seen: dict[str, object] = {}
 

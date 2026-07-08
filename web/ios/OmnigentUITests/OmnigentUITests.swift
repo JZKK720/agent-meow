@@ -17,20 +17,20 @@ final class OmnigentUITests: XCTestCase {
       "--omnigent-server-url",
       serverURL,
     ]
-    NSLog("Omnigent screenshot server URL: \(serverURL)")
+    NSLog("agent-meow screenshot server URL: \(serverURL)")
     app.launchEnvironment["OMNIGENT_SCREENSHOT_APP_URL"] = serverURL
     app.launch()
 
     XCTAssertTrue(
       app.staticTexts["Server URL"].waitForExistence(timeout: 15),
-      "Expected Omnigent to show the server selection screen before connecting."
+      "Expected agent-meow to show the server selection screen before connecting."
     )
     snapshot("01-home", timeWaitingForIdle: 2)
 
     connectFromSetupIfNeeded(app, serverURL: serverURL)
     XCTAssertTrue(
       app.webViews.firstMatch.waitForExistence(timeout: 90),
-      "Expected Omnigent to connect to \(serverURL) before taking screenshots."
+      "Expected agent-meow to connect to \(serverURL) before taking screenshots."
     )
 
     snapshot("02-connected", timeWaitingForIdle: 5)

@@ -1,4 +1,4 @@
-"""Core data model types for Omnigent, which are all exposed to agents and in configs."""
+"""Core data model types for agent-meow, which are all exposed to agents and in configs."""
 
 from __future__ import annotations
 

@@ -38,7 +38,7 @@ def test_save_and_load_user_config_round_trips_yaml(tmp_path) -> None:
 
     assert written == path
     assert path.read_text(encoding="utf-8") == (
-        "# Omnigent user configuration\ntui:\n  theme: dark\n"
+        "# agent-meow user configuration\ntui:\n  theme: dark\n"
     )
     assert load_user_config(path) == UserConfig(theme="dark")
 
@@ -51,7 +51,7 @@ def test_save_preserves_sibling_cli_keys(tmp_path) -> None:
     save_user_config(UserConfig(theme="dark"), path)
 
     assert path.read_text(encoding="utf-8") == (
-        "# Omnigent user configuration\ndefault_agent: foo\nprofile: bar\ntui:\n  theme: dark\n"
+        "# agent-meow user configuration\ndefault_agent: foo\nprofile: bar\ntui:\n  theme: dark\n"
     )
 
 
@@ -66,7 +66,7 @@ def test_save_default_removes_tui_but_keeps_siblings(tmp_path) -> None:
     save_user_config(DEFAULT_USER_CONFIG, path)
 
     assert path.read_text(encoding="utf-8") == (
-        "# Omnigent user configuration\ndefault_agent: foo\n"
+        "# agent-meow user configuration\ndefault_agent: foo\n"
     )
 
 
@@ -96,7 +96,7 @@ def test_save_default_user_config_round_trips_without_tui_table(tmp_path) -> Non
 
     save_user_config(DEFAULT_USER_CONFIG, path)
 
-    assert path.read_text(encoding="utf-8") == "# Omnigent user configuration\n"
+    assert path.read_text(encoding="utf-8") == "# agent-meow user configuration\n"
     assert load_user_config(path) == DEFAULT_USER_CONFIG
 
 

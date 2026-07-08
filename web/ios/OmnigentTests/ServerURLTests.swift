@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import Omnigent
+@testable import agent-meow
 
 final class ServerURLTests: XCTestCase {
   func testReleasePolicyDefaultsBareHostToHTTPS() throws {

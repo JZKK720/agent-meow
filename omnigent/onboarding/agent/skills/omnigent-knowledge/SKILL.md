@@ -1,11 +1,11 @@
 ---
 name: omnigent-knowledge
-description: Deep reference on Omnigent config format, executor types, skill/tool structure, and conventions. Load when you need to look up how the platform works.
+description: Deep reference on agent-meow config format, executor types, skill/tool structure, and conventions. Load when you need to look up how the platform works.
 ---
 
-# Omnigent Knowledge Base
+# agent-meow Knowledge Base
 
-## What is Omnigent?
+## What is agent-meow?
 
 Agent plane is a server that hosts, manages, and executes agents via an
 OpenResponses-compatible API. Users create **agent directories** (also

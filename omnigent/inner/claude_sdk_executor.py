@@ -1,11 +1,11 @@
 """ClaudeSDKExecutor: run agents using the Claude Agent SDK.
 
 Uses the ``claude-agent-sdk`` Python package to run Claude Code as the
-underlying agent harness.  Omnigent tools are bridged into the SDK session
+underlying agent harness.  agent-meow tools are bridged into the SDK session
 as MCP tools so Claude can call them alongside its built-in capabilities.
 
 The SDK manages its own internal agent loop (tool calls, retries, context).
-This executor translates the SDK message stream into Omnigent ExecutorEvents
+This executor translates the SDK message stream into agent-meow ExecutorEvents
 and builds up the session History from observed tool-use blocks.
 
 Requirements:
@@ -86,7 +86,7 @@ logger = logging.getLogger(__name__)
 _GATEWAY_AUTH_REFRESH_MS = 900_000
 
 # ---------------------------------------------------------------------------
-# TypeAliases for Omnigent JSON-shaped boundary values. The SDK exchanges
+# TypeAliases for agent-meow JSON-shaped boundary values. The SDK exchanges
 # heterogeneous dicts at the transport and tool boundaries — named aliases
 # here keep the executor ``object``-free while isolating the justified
 # ``explicit-any`` boundary to a single place, mirroring the peer
@@ -94,7 +94,7 @@ _GATEWAY_AUTH_REFRESH_MS = 900_000
 # ---------------------------------------------------------------------------
 
 # Parsed tool arguments / tool result dict — JSON-shaped bags exchanged
-# with the Omnigent tool executor and the SDK's MCP bridge.
+# with the agent-meow tool executor and the SDK's MCP bridge.
 ToolArgs: TypeAlias = dict[str, Any]  # type: ignore[explicit-any]
 ToolResult: TypeAlias = dict[str, Any]  # type: ignore[explicit-any]
 
@@ -554,7 +554,7 @@ def _best_effort_close(resource: _Stream | _Process) -> None:
 
 # Default model for the Databricks-profile gateway path (no gateway base URL
 # supplied directly), used when no spec/cfg model is set. On the ucode-cached
-# path the Omnigent producer resolves the model instead (see workflow.py).
+# path the agent-meow producer resolves the model instead (see workflow.py).
 _DATABRICKS_CLAUDE_DEFAULT_MODEL = DATABRICKS_CLAUDE_DEFAULT_MODEL
 
 _CLAUDE_API_KEY_HELPER_ENV_KEY = "OMNIGENT_CLAUDE_API_KEY_HELPER"
@@ -570,7 +570,7 @@ class _ClaudeClientState:
 
 @dataclass(frozen=True)
 class PreparedClaudeCli:
-    """Result of wrapping the Claude CLI in an Omnigent sandbox.
+    """Result of wrapping the Claude CLI in an agent-meow sandbox.
 
     :param cli_path: Path the SDK should exec for the Claude CLI.  May be the
         original system CLI or a generated wrapper script that applies the
@@ -604,9 +604,9 @@ def _build_mcp_tools(
     tool_schemas: list[ToolSpec],
     tool_executor: ToolExecutor | None,
 ) -> list[SdkMcpTool]:
-    """Build SdkMcpTool objects from Omnigent tool schemas.
+    """Build SdkMcpTool objects from agent-meow tool schemas.
 
-    Each tool is backed by a handler that calls the Omnigent tool_executor
+    Each tool is backed by a handler that calls the agent-meow tool_executor
     callback, which routes through the Session's tool registry (and thus
     respects policies, history recording, etc.).
     """
@@ -617,7 +617,7 @@ def _build_mcp_tools(
         raw_name = schema.get("name")
         raw_desc = schema.get("description")
         # ``sdk.tool()`` requires ``str`` for name/description — the SDK
-        # itself does not accept ``None``. Omnigent tool schemas always
+        # itself does not accept ``None``. agent-meow tool schemas always
         # carry a ``name`` (see ``Tool.tool_schema``); fall back to ``""``
         # only for the description, which is legitimately optional.
         tname: str = raw_name if isinstance(raw_name, str) else ""
@@ -672,7 +672,7 @@ def _augment_system_prompt_for_omnigent_mcp_tools(
     """
     Add Claude SDK-specific MCP tool-name guidance to the system prompt.
 
-    Omnigent schemas use bare names such as ``sys_session_send``. The
+    agent-meow schemas use bare names such as ``sys_session_send``. The
     Claude SDK exposes tools from our in-process MCP server to the model
     as ``mcp__omnigent__<bare_name>``. Bundled agent prompts and skills use
     bare names because other executors call those directly, so the SDK needs
@@ -690,14 +690,14 @@ def _augment_system_prompt_for_omnigent_mcp_tools(
             f"use `mcp__omnigent__{name}` when instructions say `{name}`" for name in examples
         )
         note = (
-            "Claude SDK tool naming: Omnigent tools are exposed as MCP tools. "
-            f"{example_text}. For any other Omnigent tool, use "
+            "Claude SDK tool naming: agent-meow tools are exposed as MCP tools. "
+            f"{example_text}. For any other agent-meow tool, use "
             "`mcp__omnigent__<tool_name>` rather than the bare name."
         )
     else:
         note = (
-            "Claude SDK tool naming: Omnigent tools are exposed as MCP tools. "
-            "When instructions mention a bare Omnigent tool name, invoke "
+            "Claude SDK tool naming: agent-meow tools are exposed as MCP tools. "
+            "When instructions mention a bare agent-meow tool name, invoke "
             "`mcp__omnigent__<tool_name>` rather than the bare name."
         )
 
@@ -1055,10 +1055,10 @@ def _resolve_skills_option(
 class ClaudeSDKExecutor(Executor):
     """Execute agent turns using the Claude Agent SDK.
 
-    The SDK runs Claude Code's full agent loop internally.  Omnigent tools
+    The SDK runs Claude Code's full agent loop internally.  agent-meow tools
     are registered as MCP tools so the model can call them.  Built-in OS tools
     (Bash, Read, Edit, …) are only enabled when the agent's ``os_env`` flag
-    is set.  Even without ``os_env``, Omnigent tries to place the Claude CLI
+    is set.  Even without ``os_env``, agent-meow tries to place the Claude CLI
     itself in a tight default sandbox on supported Linux hosts.
 
     Unlike DatabricksExecutor, the SDK manages its own tool-call loop.  This
@@ -1069,7 +1069,7 @@ class ClaudeSDKExecutor(Executor):
 
     Multi-turn: call ``run_turn()`` repeatedly.  The executor maintains a
     persistent ``ClaudeSDKClient`` that preserves conversation context across
-    turns by keeping a live Claude SDK client per Omnigent session.
+    turns by keeping a live Claude SDK client per agent-meow session.
 
     Gateway support: pass ``gateway=True`` to route through a vendor-neutral
     gateway (base URL + bearer-token command + model). The Databricks AI
@@ -1103,8 +1103,8 @@ class ClaudeSDKExecutor(Executor):
             cwd: Working directory for Claude Code.
             os_env: If set, enable built-in OS tools (Bash, Read, Edit, …)
                 and align them with the provided OS environment. When the
-                spec's sandbox is enabled, Omnigent wraps the Claude CLI
-                in the same sandbox. If omitted, Omnigent still tries to
+                spec's sandbox is enabled, agent-meow wraps the Claude CLI
+                in the same sandbox. If omitted, agent-meow still tries to
                 sandbox the Claude CLI process itself on supported Linux
                 hosts, but does not enable native OS tools.
             model: Override the model name.
@@ -1212,10 +1212,10 @@ class ClaudeSDKExecutor(Executor):
         # Elicitation handler wired in by ExecutorAdapter. When set
         # (and permission_mode is not bypassPermissions), each tool
         # call is gated by an async approve/deny round-trip through
-        # the Omnigent elicitation system rather than silently allowed.
+        # the agent-meow elicitation system rather than silently allowed.
         # ``None`` until the adapter installs it on first use.
         self._elicitation_handler: ElicitationHandler | None = None
-        # Live Claude SDK clients keyed by Omnigent session id.
+        # Live Claude SDK clients keyed by agent-meow session id.
         self._clients: dict[str, _ClaudeClientState] = {}
         # Session keys whose Claude harness process crashed and must not be reused.
         self._crashed_sessions: dict[str, str] = {}
@@ -1637,7 +1637,7 @@ class ClaudeSDKExecutor(Executor):
         perm_ctx: Any,  # type: ignore[explicit-any]  # ToolPermissionContext — avoid hard sdk import
     ) -> Any:  # type: ignore[explicit-any]  # PermissionResult
         """
-        Route a Claude SDK permission request through the Omnigent elicitation system.
+        Route a Claude SDK permission request through the agent-meow elicitation system.
 
         Installed as ``options.can_use_tool`` when ``permission_mode`` is
         not ``"bypassPermissions"`` and an elicitation handler has been wired
@@ -1675,7 +1675,7 @@ class ClaudeSDKExecutor(Executor):
         allowed = await self._elicitation_handler(tool_name, tool_input)
         if allowed:
             return PermissionResultAllow()
-        return PermissionResultDeny(message="Denied via Omnigent elicitation")
+        return PermissionResultDeny(message="Denied via agent-meow elicitation")
 
     async def _evaluate_tool_call_policy(
         self,
@@ -1690,15 +1690,15 @@ class ClaudeSDKExecutor(Executor):
         SDK / claude.ai connector layer (e.g. ``mcp__github__*``,
         ``mcp__atlassian__*``) that are NOT part of the agent spec's
         ``mcp_servers`` and execute INSIDE the CLI subprocess — get
-        evaluated against Omnigent TOOL_CALL-phase policies BEFORE they
+        evaluated against agent-meow TOOL_CALL-phase policies BEFORE they
         run. Without this gate those calls bypass policy entirely (the
         executor only OBSERVES them in the message stream, which posts no
         policy event).
 
-        Double-evaluation guard: Omnigent's OWN tools are exposed as the
+        Double-evaluation guard: agent-meow's OWN tools are exposed as the
         single ``omnigent`` SDK MCP server (the model sees
         ``mcp__omnigent__*``). When the model calls one, the SDK wrapper
-        routes it back through Omnigent's dispatch bridge
+        routes it back through agent-meow's dispatch bridge
         (``_stable_tool_executor`` -> ``TurnContext.dispatch_tool`` ->
         ``action_required``), and the runner re-dispatches it via
         ``ProxyMcpManager``, which enforces TOOL_CALL + TOOL_RESULT
@@ -1720,7 +1720,7 @@ class ClaudeSDKExecutor(Executor):
             collapsed to a hard ALLOW/DENY by the server-side
             ``/policies/evaluate`` route. If a raw ASK reaches this callback
             (for example from a read-only evaluation path), this hook runs the
-            existing Omnigent elicitation handler before returning
+            existing agent-meow elicitation handler before returning
             :class:`claude_agent_sdk.PermissionResultAllow` or DENY; without
             a handler it fails closed. Returns ``None`` when the call should
             be allowed to proceed (no policy evaluator wired, an
@@ -1732,7 +1732,7 @@ class ClaudeSDKExecutor(Executor):
         _policy_eval = getattr(self, "_policy_evaluator", None)
         if _policy_eval is None:
             return None
-        # Omnigent's own tools are already TOOL_CALL-gated server-side via
+        # agent-meow's own tools are already TOOL_CALL-gated server-side via
         # the dispatch bridge / ProxyMcpManager — don't evaluate them twice.
         if tool_name.startswith("mcp__omnigent__"):
             return None
@@ -1748,7 +1748,7 @@ class ClaudeSDKExecutor(Executor):
         if _action == "POLICY_ACTION_ASK":
             from claude_agent_sdk import PermissionResultAllow, PermissionResultDeny
 
-            reason = _verdict.reason or "Approval required by Omnigent TOOL_CALL policy"
+            reason = _verdict.reason or "Approval required by agent-meow TOOL_CALL policy"
             if self._elicitation_handler is None:
                 logger.warning(
                     "TOOL_CALL policy ASK had no elicitation handler; denying tool=%s reason=%s",
@@ -1763,12 +1763,12 @@ class ClaudeSDKExecutor(Executor):
         if _action == "POLICY_ACTION_DENY":
             from claude_agent_sdk import PermissionResultDeny
 
-            reason = _verdict.reason or "Denied by Omnigent TOOL_CALL policy"
+            reason = _verdict.reason or "Denied by agent-meow TOOL_CALL policy"
             logger.info("TOOL_CALL policy denied tool=%s reason=%s", tool_name, reason)
             return PermissionResultDeny(message=reason)
         from claude_agent_sdk import PermissionResultDeny
 
-        reason = f"Unexpected Omnigent TOOL_CALL policy verdict: {_action!r}"
+        reason = f"Unexpected agent-meow TOOL_CALL policy verdict: {_action!r}"
         logger.warning("TOOL_CALL policy failed closed tool=%s reason=%s", tool_name, reason)
         return PermissionResultDeny(message=reason)
 
@@ -1853,10 +1853,10 @@ class ClaudeSDKExecutor(Executor):
             yield TurnComplete(response=None)
             return
 
-        # Build MCP tools from Omnigent tool schemas
+        # Build MCP tools from agent-meow tool schemas
         mcp_tools = _build_mcp_tools(tools, self._tool_executor) if tools else []
 
-        # Create MCP server config for Omnigent tools. The SDK's
+        # Create MCP server config for agent-meow tools. The SDK's
         # ``McpServerConfig`` union is opaque to us — we pass through
         # whatever ``create_sdk_mcp_server`` returns.
         mcp_servers: dict[str, Any] = {}  # type: ignore[explicit-any]
@@ -1872,7 +1872,7 @@ class ClaudeSDKExecutor(Executor):
             )
 
         # Build allowed_tools list.  OS-environment operations route
-        # through Omnigent ``sys_os_*`` MCP tools rather than the
+        # through agent-meow ``sys_os_*`` MCP tools rather than the
         # SDK's native Bash/Read/Edit/Write — MCP tools flow through
         # the scaffold's ``dispatch_tool`` path, giving the runner
         # visibility, timeouts, and error recovery.
@@ -1889,11 +1889,11 @@ class ClaudeSDKExecutor(Executor):
         # entirely, letting Claude's normal permission flow apply.
         allowed_tools: list[str] = []
         if self._permission_mode in ("auto", "bypassPermissions"):
-            # Allow all Omnigent MCP tools (no per-call human gate needed)
+            # Allow all agent-meow MCP tools (no per-call human gate needed)
             for schema in tools:
                 raw_tname = schema.get("name")
                 # Claude SDK's ``allowed_tools`` requires concrete strings;
-                # Omnigent tool schemas always carry a name (see
+                # agent-meow tool schemas always carry a name (see
                 # ``Tool.tool_schema``), but defend against malformed specs
                 # by skipping unnamed entries rather than producing a
                 # bogus ``mcp__omnigent__`` allow-entry.
@@ -1904,7 +1904,7 @@ class ClaudeSDKExecutor(Executor):
         # cfg.model > spec model > Databricks default (only on the
         # Databricks-profile gateway path) > None (lets the SDK pick its own
         # default). The neutral generic-provider gateway path never falls back
-        # to a ``databricks-*`` model: the Omnigent producer always resolves a
+        # to a ``databricks-*`` model: the agent-meow producer always resolves a
         # concrete model (spec > provider default > catalog default) before
         # spawning, so no ``databricks-*`` default is injected there.
         model = cfg.model or self._model_override
@@ -1957,7 +1957,7 @@ class ClaudeSDKExecutor(Executor):
         # they explicitly opted into. ``no-session-persistence``
         # stays because omnigent owns conversation persistence
         # via its own conversation store.
-        # OS-environment tools are provided via Omnigent ``sys_os_*``
+        # OS-environment tools are provided via agent-meow ``sys_os_*``
         # MCP tools (declared via ``os_env`` in the spec), not the
         # SDK's native Bash/Read/Edit/Write.  Only the Skill tool
         # needs to be in the SDK's base set.
@@ -2042,7 +2042,7 @@ class ClaudeSDKExecutor(Executor):
         # policy evaluation in EVERY permission mode — including
         # ``bypassPermissions`` — so connector-native MCP tools
         # (``mcp__github__*``, ``mcp__atlassian__*``) that execute inside
-        # the CLI subprocess are evaluated against Omnigent TOOL_CALL
+        # the CLI subprocess are evaluated against agent-meow TOOL_CALL
         # policy before they run, instead of bypassing policy entirely.
         #
         # The gate is no-friction when nothing matches: a policy ALLOW /
@@ -2122,7 +2122,7 @@ class ClaudeSDKExecutor(Executor):
 
         # ── LLM_REQUEST policy evaluation ────────────────────────
         # If the executor adapter installed a ``_policy_evaluator``
-        # callback, call it with the request data so the Omnigent server
+        # callback, call it with the request data so the agent-meow server
         # can evaluate LLM_REQUEST policies before the LLM call.
         _policy_eval = getattr(self, "_policy_evaluator", None)
         if _policy_eval is not None:

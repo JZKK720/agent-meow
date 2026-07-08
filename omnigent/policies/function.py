@@ -155,7 +155,7 @@ class FunctionPolicy(Policy):
         boundaries. Without this delegation, those counters
         would accumulate forever and a "15 calls per turn"
         limit would silently degrade to "15 calls per session"
-        under Omnigent mode — see
+        under agent-meow mode — see
         :meth:`omnigent.runtime.policies.engine.PolicyEngine.reset_turn`
         for the native equivalent we mirror.
 

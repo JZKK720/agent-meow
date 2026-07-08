@@ -77,7 +77,7 @@ def _server_uvicorn_log_config() -> dict[str, Any]:  # type: ignore[explicit-any
     """
     Return Uvicorn logging config with request-duration access logs.
 
-    Uvicorn emits the FastAPI access line itself, so Omnigent swaps
+    Uvicorn emits the FastAPI access line itself, so agent-meow swaps
     only the access formatter while preserving Uvicorn's default
     handlers, levels, and server-log formatting.
 
@@ -291,7 +291,7 @@ _HostPayload: TypeAlias = dict[str, _HostJsonValue]
 
 def _effective_global_config_path() -> Path:
     """
-    Return the path to the user-level Omnigent config.
+    Return the path to the user-level agent-meow config.
 
     :returns: ``$OMNIGENT_CONFIG_HOME/config.yaml`` when the env
         override is set, otherwise :data:`_GLOBAL_CONFIG_PATH`.
@@ -1164,7 +1164,7 @@ class _OmnigentCLI(click.Group):
     help="Show the version and exit.",
 )
 def cli() -> None:
-    """Omnigent CLI."""
+    """agent-meow CLI."""
 
 
 # Names of every subcommand the click group owns. Used by
@@ -1458,7 +1458,7 @@ _HOST_PID_PATH = Path.home() / ".omnigent" / "host.pid"
 
 # host.pid records the daemon PID + the "target" it serves: a normalized
 # server URL for remote/explicit targets, or the literal marker ``"local"``
-# for a daemon that owns a local Omnigent server. Daemon reuse is keyed on this
+# for a daemon that owns a local agent-meow server. Daemon reuse is keyed on this
 # target (real URLs never collide with the marker).
 _LOCAL_DAEMON_MARKER = "local"
 
@@ -1479,7 +1479,7 @@ class _HostDaemonRecord:
         ``"/Users/me/.omnigent/logs/host-daemon/daemon-abc.log"``.
     :param started_at: Unix epoch seconds when the daemon was spawned,
         e.g. ``1710000000``.
-    :param host_id: Local host id advertised to Omnigent servers, e.g.
+    :param host_id: Local host id advertised to agent-meow servers, e.g.
         ``"host_abc123"``. ``None`` for legacy records.
     :param resolved_server_url: Concrete local server URL discovered for
         local mode, e.g. ``"http://127.0.0.1:8123"``. ``None`` until
@@ -1506,7 +1506,7 @@ class _HostDaemonRecord:
 @dataclass(frozen=True)
 class _HostHttpResult:
     """
-    Decoded Omnigent management HTTP response.
+    Decoded agent-meow management HTTP response.
 
     :param status_code: HTTP status code, e.g. ``200``. ``0`` means no
         HTTP response was received because the request failed locally.
@@ -1541,7 +1541,7 @@ class _DaemonSessionsResult:
     """
     Sessions fetched for one daemon target.
 
-    :param base_url: Omnigent server base URL, e.g.
+    :param base_url: agent-meow server base URL, e.g.
         ``"https://example.databricksapps.com"``. ``None`` when a
         local daemon's server cannot be discovered.
     :param sessions: Session rows owned by the daemon host id.
@@ -1601,7 +1601,7 @@ def _normalize_daemon_target(server_url: str | None) -> str:
     """
     Normalize a daemon target key.
 
-    :param server_url: Requested Omnigent server URL, e.g.
+    :param server_url: Requested agent-meow server URL, e.g.
         ``"https://example.databricksapps.com/"``. ``None`` or empty
         string selects local mode.
     :returns: ``"local"`` for local mode, otherwise the URL without a
@@ -1615,7 +1615,7 @@ def _daemon_host_online(record: _HostDaemonRecord, *, timeout_s: float = 2.0) ->
     Probe whether a daemon's host is currently online on its server.
 
     A daemon process being alive (PID check) does not mean its WebSocket
-    tunnel to the Omnigent server is up: the server only reports the host
+    tunnel to the agent-meow server is up: the server only reports the host
     ``online`` while a daemon holds an authenticated tunnel and has
     heartbeated within ``HOST_LIVENESS_TTL_S``. After a server restart,
     an ungraceful daemon death, or a flapping tunnel, the daemon can be a
@@ -1826,7 +1826,7 @@ def _find_daemon_record(target: str) -> _HostDaemonRecord | None:
 
 def _update_daemon_resolved_server_url(target: str, server_url: str) -> None:
     """
-    Record the concrete Omnigent server URL served by a daemon target.
+    Record the concrete agent-meow server URL served by a daemon target.
 
     :param target: Normalized target, e.g. ``"local"``.
     :param server_url: Concrete server URL, e.g.
@@ -1917,9 +1917,9 @@ def _daemon_host_identity_changed(record: _HostDaemonRecord) -> bool:
 
 def _terminate_host_unit(record: _HostDaemonRecord, *, reason: str) -> None:
     """
-    Tear down a daemon and, in local mode, the Omnigent server it owns.
+    Tear down a daemon and, in local mode, the agent-meow server it owns.
 
-    The ``--local`` daemon spawns its Omnigent server once and never respawns
+    The ``--local`` daemon spawns its agent-meow server once and never respawns
     it, so a stale daemon and its server must be replaced as a unit:
     killing only the daemon would strand the server (and vice versa). This
     stops both so the caller can spawn a fresh, correctly-configured pair.
@@ -2113,7 +2113,7 @@ def _foreground_daemon_record(
 
     :param target: Normalized daemon target, e.g.
         ``"https://example.databricksapps.com"`` or ``"local"``.
-    :param server_url: Concrete Omnigent server URL being connected to, e.g.
+    :param server_url: Concrete agent-meow server URL being connected to, e.g.
         ``"http://127.0.0.1:8123"``.
     :param host_id: Local host id, e.g. ``"host_abc123"``.
     :returns: Daemon registry record for ``os.getpid()``.
@@ -2228,9 +2228,9 @@ def _load_or_create_host_id() -> str | None:
 def _ensure_host_daemon(server_url: str | None) -> bool:
     """Start or reuse a host daemon for one target.
 
-    :param server_url: Omnigent server URL the daemon connects to, or ``None``
+    :param server_url: agent-meow server URL the daemon connects to, or ``None``
         for local mode — the daemon starts (or reuses) a persistent local
-        Omnigent server and connects to that.
+        agent-meow server and connects to that.
     :returns: ``True`` when an existing daemon was torn down and respawned
         because its config (auth source) changed — the caller
         should ask the user to re-run against the freshly-restarted server
@@ -2267,10 +2267,10 @@ def _build_host_daemon_env(
     """
     Build the environment for the background host daemon.
 
-    Remote daemons connect to an already-running Omnigent server, so they only
+    Remote daemons connect to an already-running agent-meow server, so they only
     need process essentials, TLS trust, and Databricks auth. Local daemons
-    also start the local Omnigent server; that server is the user's local runtime
-    and must inherit Omnigent config plus provider credentials such as
+    also start the local agent-meow server; that server is the user's local runtime
+    and must inherit agent-meow config plus provider credentials such as
     ``OPENAI_API_KEY`` and ``OPENAI_BASE_URL``. Both modes are allowlisted:
     local mode carries the runtime/provider vars needed by the local server,
     but unrelated shell secrets are not inherited merely because the daemon
@@ -2278,7 +2278,7 @@ def _build_host_daemon_env(
     through :func:`omnigent.host.connect._build_runner_env`, so these
     local-server credentials do not leak into runner subprocesses.
 
-    :param server_url: Omnigent server URL for remote mode, e.g.
+    :param server_url: agent-meow server URL for remote mode, e.g.
         ``"https://example.databricksapps.com"``, or a falsey value
         such as ``None`` / ``""`` for local daemon mode.
     :returns: Environment dict for ``subprocess.Popen``.
@@ -2405,16 +2405,16 @@ def _ensure_databricks_server_auth(server: str, *, non_interactive: bool = False
 
 
 def _ensure_backend(server: str | None) -> str:
-    """Ensure the host daemon is running and return the Omnigent server URL.
+    """Ensure the host daemon is running and return the agent-meow server URL.
 
     The daemon is the single backend for ``attach`` / ``run`` / ``claude`` /
-    ``codex``: it spawns the runner and, in local mode, the Omnigent server too.
+    ``codex``: it spawns the runner and, in local mode, the agent-meow server too.
     The CLI is a pure client of the returned URL.
 
     :param server: ``--server`` value after config fallback. A non-empty
         value targets that (remote or explicit-local) server. ``None`` or
         ``""`` selects local mode: the daemon starts (or reuses) a
-        persistent local Omnigent server and this returns its discovered loopback
+        persistent local agent-meow server and this returns its discovered loopback
         URL.
     :returns: A concrete base URL, e.g. ``"http://127.0.0.1:8123"`` or the
         remote URL passed in.
@@ -2442,7 +2442,7 @@ def _ensure_backend(server: str | None) -> str:
         with runner_startup_progress(initial_message=STARTUP_PHASE_CONNECTING_REMOTE):
             _ensure_host_daemon(server)
         return server
-    # Local mode: the daemon spawns (or reuses) a persistent local Omnigent server.
+    # Local mode: the daemon spawns (or reuses) a persistent local agent-meow server.
     # On a cold start this is the longest silent gap between the user pressing
     # Enter and any output, so render a spinner whose label tracks the step.
     # It clears on context exit — before any auth-mode-change echo below and
@@ -2461,7 +2461,7 @@ def _ensure_backend(server: str | None) -> str:
 def _exit_for_auth_mode_change(base_url: str) -> None:
     """Tell the user the server was restarted in a new mode, then exit clean.
 
-    The local Omnigent server bakes its auth posture (header vs accounts, cookie
+    The local agent-meow server bakes its auth posture (header vs accounts, cookie
     secret) at boot, so an ``OMNIGENT_AUTH_ENABLED`` flip restarts it
     via :func:`_ensure_host_daemon`. Continuing the *same* command across
     that restart is brittle — the in-flight session/credential/terminal
@@ -2470,7 +2470,7 @@ def _exit_for_auth_mode_change(base_url: str) -> None:
     a clean single-mode start. When the new mode is accounts and no admin
     exists yet, point the user at the one-time setup URL.
 
-    :param base_url: The freshly-restarted Omnigent server URL, e.g.
+    :param base_url: The freshly-restarted agent-meow server URL, e.g.
         ``"http://127.0.0.1:6767"``.
     :returns: Never returns — raises ``SystemExit(0)``.
     :raises SystemExit: Always, with code 0 (a clean, expected stop).
@@ -2500,9 +2500,9 @@ def _exit_for_auth_mode_change(base_url: str) -> None:
 def _discover_local_server_url(
     timeout: float = _LOCAL_SERVER_DISCOVER_TIMEOUT_S,
 ) -> str:
-    """Poll until the daemon-started local Omnigent server is reachable.
+    """Poll until the daemon-started local agent-meow server is reachable.
 
-    In local mode the daemon owns the Omnigent server; the CLI discovers its URL
+    In local mode the daemon owns the agent-meow server; the CLI discovers its URL
     via the local-server pidfile + ``/health`` rather than starting it
     itself.
 
@@ -2520,13 +2520,13 @@ def _discover_local_server_url(
             return url
         if not _host_daemon_alive():
             raise click.ClickException(
-                "The local daemon exited before its Omnigent server became ready. "
+                "The local daemon exited before its agent-meow server became ready. "
                 "See logs under ~/.omnigent/logs/host-daemon/ and "
                 "~/.omnigent/logs/server/."
             )
         time.sleep(0.2)
     raise click.ClickException(
-        f"Timed out after {timeout:.0f}s waiting for the local Omnigent server to "
+        f"Timed out after {timeout:.0f}s waiting for the local agent-meow server to "
         "start. See ~/.omnigent/logs/server/ for details."
     )
 
@@ -2564,7 +2564,7 @@ def _start_cli_runner_process(
 
     The runner always connects back over the WebSocket tunnel. Local
     ``omnigent server`` passes its loopback URL; ``run --server``
-    passes the remote Omnigent server URL.
+    passes the remote agent-meow server URL.
 
     For remote Databricks-fronted servers, the runner subprocess
     authenticates via the stored ``omnigent login`` record (or
@@ -2842,7 +2842,7 @@ def server(
     auto_open: bool,
     admin_password: str | None,
 ) -> None:
-    """Start the Omnigent server in the foreground, or manage the background server.
+    """Start the agent-meow server in the foreground, or manage the background server.
 
     Bare ``omnigent server`` runs the server in the FOREGROUND (Ctrl-C to
     stop) — for deploys / Docker. Subcommands manage the detached background
@@ -3267,11 +3267,11 @@ def server(
 
 
 def _stop_local_server_and_daemon(*, force: bool) -> bool:
-    """Stop the background Omnigent server and the local host daemon that owns it.
+    """Stop the background agent-meow server and the local host daemon that owns it.
 
     Stops the local-mode host daemon first (the daemon spawns its server
     once and never respawns it, so leaving it alive would only have it
-    reconnect-flap against a dead server), then the detached Omnigent server
+    reconnect-flap against a dead server), then the detached agent-meow server
     recorded in ``~/.omnigent/local_server.pid``. Best-effort and
     idempotent — a missing daemon or server is a no-op.
 
@@ -3296,7 +3296,7 @@ def _stop_local_server_and_daemon(*, force: bool) -> bool:
 
 @server.command("start")
 def server_start() -> None:
-    """Ensure the managed background Omnigent server is running.
+    """Ensure the managed background agent-meow server is running.
 
     Reuses a healthy background server if one is already up (started here or
     by a prior ``run`` / ``host``); otherwise spawns a detached one on a
@@ -3328,7 +3328,7 @@ def server_start() -> None:
     help="SIGKILL the local host daemon if it does not exit on SIGTERM.",
 )
 def server_stop(force: bool) -> None:
-    """Stop the background Omnigent server and the local host daemon.
+    """Stop the background agent-meow server and the local host daemon.
 
     Stops the local host daemon first, then the detached server recorded
     in ``~/.omnigent/local_server.pid`` — its web UI and sessions become
@@ -3348,7 +3348,7 @@ def server_stop(force: bool) -> None:
 @server.command("status")
 @click.option("--json", "json_output", is_flag=True, help="Emit JSON.")
 def server_status(json_output: bool) -> None:
-    """Show whether the background Omnigent server is running.
+    """Show whether the background agent-meow server is running.
 
     Reports the recorded pid/port, URL, live-session count, and whether a
     local host daemon is attached. Reads ``~/.omnigent/local_server.pid``
@@ -3400,7 +3400,7 @@ def server_status(json_output: bool) -> None:
     help="Continue past failures and SIGKILL daemons that do not exit on SIGTERM.",
 )
 def stop(force: bool) -> None:
-    """Stop everything Omnigent is running on this machine.
+    """Stop everything agent-meow is running on this machine.
 
     The off switch: stops every host daemon (local and remote-targeted)
     and the detached background server. Runners are reaped when their daemon
@@ -3787,7 +3787,7 @@ cli.add_command(upgrade, name="update")
 def _bundle(source: Path) -> bytes:
     """
     Produce a tar.gz bundle from a directory or standalone
-    Omnigent YAML file, or pass through an existing tarball.
+    agent-meow YAML file, or pass through an existing tarball.
 
     Environment variable references (``${VAR}``) in
     ``config.yaml`` and ``tools/mcp/*.yaml`` are expanded
@@ -3797,7 +3797,7 @@ def _bundle(source: Path) -> bytes:
     resolve.
 
     :param source: Path to an agent image directory,
-        standalone Omnigent YAML file, or an existing
+        standalone agent-meow YAML file, or an existing
         ``.tar.gz`` bundle file.
     :returns: The gzipped tarball bytes.
     :raises OmnigentError: If a required env var is
@@ -4150,7 +4150,7 @@ def _reject_native_on_windows(harness: str) -> None:
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to claude-native sessions."
     ),
@@ -4218,14 +4218,14 @@ def claude(
     claude_args: tuple[str, ...],
 ) -> None:
     # Param docs live in comments — Click uses the docstring for --help.
-    # :param server: Remote Omnigent server URL, or None for local.
+    # :param server: Remote agent-meow server URL, or None for local.
     # :param resume: None, picker sentinel, or a conversation id.
     # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
     # :param use_claude_config: When True, skip ucode/Databricks auth and use
     #     existing Claude config.
     # :param profile_startup: When True, print startup timing marks.
     # :param claude_args: Pass-through args for ``claude``.
-    """Launch Claude Code in an Omnigent terminal.
+    """Launch Claude Code in an agent-meow terminal.
 
     \b
     Examples:
@@ -4265,7 +4265,7 @@ def claude(
     startup_profiler.mark("arguments validated")
 
     # Ensure the host daemon (local when ``--server`` is omitted/empty,
-    # remote otherwise) and resolve the concrete Omnigent server URL. The daemon
+    # remote otherwise) and resolve the concrete agent-meow server URL. The daemon
     # owns the runner; the CLI only connects. ``--host`` is now redundant
     # (the daemon is always ensured) and kept only as a no-op for scripts.
     startup_profiler.mark("ensuring backend")
@@ -4316,7 +4316,7 @@ def claude(
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to codex-native sessions."
     ),
@@ -4346,13 +4346,13 @@ def codex(
     codex_args: tuple[str, ...],
 ) -> None:
     # Param docs live in comments — Click uses the docstring for --help.
-    # :param server: Remote Omnigent server URL, or None for local.
+    # :param server: Remote agent-meow server URL, or None for local.
     # :param resume: None, picker sentinel, or a conversation id.
     # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
     # :param model: Codex model id.
     # :param prompt: Optional first prompt.
     # :param codex_args: Pass-through args for ``codex`` before ``resume``.
-    """Launch Codex TUI in an Omnigent terminal.
+    """Launch Codex TUI in an agent-meow terminal.
 
     \b
     Examples:
@@ -4391,7 +4391,7 @@ def codex(
         )
 
     # Ensure the host daemon (local when ``--server`` is omitted/empty,
-    # remote otherwise) and resolve the concrete Omnigent server URL. Codex follows
+    # remote otherwise) and resolve the concrete agent-meow server URL. Codex follows
     # the same ownership model as attach/run/claude: the daemon-spawned runner
     # owns the app-server and TUI; the CLI attaches to the tmux terminal.
     server = _ensure_backend(server)
@@ -4435,7 +4435,7 @@ def codex(
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to opencode-native sessions."
     ),
@@ -4457,12 +4457,12 @@ def opencode(
     model: str | None,
     opencode_args: tuple[str, ...],
 ) -> None:
-    # :param server: Remote Omnigent server URL, or None for local.
+    # :param server: Remote agent-meow server URL, or None for local.
     # :param resume: None, picker sentinel, or a conversation id.
     # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
     # :param model: OpenCode model id pinned on the wrapper spec.
     # :param opencode_args: Pass-through args persisted for the ``opencode attach`` TUI.
-    """Launch OpenCode TUI in an Omnigent terminal.
+    """Launch OpenCode TUI in an agent-meow terminal.
 
     \b
     Examples:
@@ -4534,7 +4534,7 @@ def opencode(
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to pi-native sessions."
     ),
@@ -4554,7 +4554,7 @@ def pi(
     session_id: str | None,
     pi_args: tuple[str, ...],
 ) -> None:
-    """Launch Pi TUI in an Omnigent terminal.
+    """Launch Pi TUI in an agent-meow terminal.
 
     \b
     Examples:
@@ -4722,7 +4722,7 @@ def _ensure_bundled_agent_brain_credential(name: str) -> None:
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to cursor-native sessions."
     ),
@@ -4762,7 +4762,7 @@ def cursor(
 ) -> None:
     # Param docs live in comments — Click uses the docstring for --help.
     # :param model: Cursor model id passed to cursor-agent as ``--model``.
-    """Launch the Cursor TUI in an Omnigent terminal.
+    """Launch the Cursor TUI in an agent-meow terminal.
 
     \b
     Examples:
@@ -4832,7 +4832,7 @@ def cursor(
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to kiro-native sessions."
     ),
@@ -4880,7 +4880,7 @@ def kiro(
     prompt: str | None,
     kiro_args: tuple[str, ...],
 ) -> None:
-    """Launch the Kiro TUI in an Omnigent terminal.
+    """Launch the Kiro TUI in an agent-meow terminal.
 
     \b
     Examples:
@@ -4934,7 +4934,7 @@ def _reject_reserved_kiro_resume_args(kiro_args: tuple[str, ...]) -> None:
     reserved = {"--resume", "--resume-id", "--resume-picker"}
     if any(arg == flag or arg.startswith(f"{flag}=") for arg in kiro_args for flag in reserved):
         raise click.UsageError(
-            "Kiro resume flags are reserved for Omnigent resume handling; use "
+            "Kiro resume flags are reserved for agent-meow resume handling; use "
             "`omnigent kiro --resume [CONVERSATION]` instead."
         )
 
@@ -4985,7 +4985,7 @@ def _build_kiro_launch_args(
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to goose-native sessions."
     ),
@@ -5005,7 +5005,7 @@ def goose(
     session_id: str | None,
     goose_args: tuple[str, ...],
 ) -> None:
-    """Launch the Goose TUI in an Omnigent terminal.
+    """Launch the Goose TUI in an agent-meow terminal.
 
     \b
     Examples:
@@ -5065,7 +5065,7 @@ def goose(
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to hermes-native sessions."
     ),
@@ -5085,7 +5085,7 @@ def hermes(
     session_id: str | None,
     hermes_args: tuple[str, ...],
 ) -> None:
-    """Launch the Hermes TUI in an Omnigent terminal.
+    """Launch the Hermes TUI in an agent-meow terminal.
 
     \b
     Examples:
@@ -5145,7 +5145,7 @@ def hermes(
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to antigravity-native sessions."
     ),
@@ -5167,7 +5167,7 @@ def antigravity(
     model: str | None,
     antigravity_args: tuple[str, ...],
 ) -> None:
-    """Launch the Antigravity (agy) TUI in an Omnigent terminal.
+    """Launch the Antigravity (agy) TUI in an agent-meow terminal.
 
     \b
     Examples:
@@ -5239,7 +5239,7 @@ def antigravity(
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to qwen-native sessions."
     ),
@@ -5259,7 +5259,7 @@ def qwen(
     session_id: str | None,
     qwen_args: tuple[str, ...],
 ) -> None:
-    """Launch the qwen (Qwen Code) TUI in an Omnigent terminal.
+    """Launch the qwen (Qwen Code) TUI in an agent-meow terminal.
 
     \b
     Examples:
@@ -5400,7 +5400,7 @@ def debby(run_args: tuple[str, ...]) -> None:
     flag_value=_RESUME_PICKER_SENTINEL,
     default=None,
     help=(
-        "Resume a prior Omnigent conversation. With a conversation id "
+        "Resume a prior agent-meow conversation. With a conversation id "
         "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
         "opens an interactive picker scoped to kimi-native sessions."
     ),
@@ -5420,15 +5420,15 @@ def kimi(
     session_id: str | None,
     kimi_args: tuple[str, ...],
 ) -> None:
-    """Launch the Kimi Code TUI in an Omnigent terminal.
+    """Launch the Kimi Code TUI in an agent-meow terminal.
 
     Boots Moonshot AI's interactive ``kimi`` TUI
     (https://github.com/MoonshotAI/Kimi-Code) in a runner-owned terminal and
-    attaches your TTY — the native experience, embedded in the Omnigent web
-    UI. No Omnigent provider config is needed: kimi authenticates against its
+    attaches your TTY — the native experience, embedded in the agent-meow web
+    UI. No agent-meow provider config is needed: kimi authenticates against its
     own backend (``kimi login`` for OAuth, or a Moonshot API key).
 
-    For the headless SDK harness (per-turn ``kimi -p`` behind the Omnigent
+    For the headless SDK harness (per-turn ``kimi -p`` behind the agent-meow
     REPL) use ``omnigent run --harness kimi`` instead.
 
     \b
@@ -5483,11 +5483,11 @@ def resume(
     # Click uses the docstring as --help text — keep param docs in
     # comments so they don't leak into CLI output.
     #
-    # :param target: Optional Omnigent conversation id, e.g.
+    # :param target: Optional agent-meow conversation id, e.g.
     #     ``"conv_abc123"``. None falls through to the picker.
-    # :param server: Remote Omnigent server URL (optional in id mode;
+    # :param server: Remote agent-meow server URL (optional in id mode;
     #     required in picker mode).
-    """Resume an Omnigent conversation, auto-dispatching by runtime.
+    """Resume an agent-meow conversation, auto-dispatching by runtime.
 
     \b
     With CONV_ID: looks up the conversation and dispatches to the
@@ -5547,33 +5547,33 @@ _LOG_HELP = "Write a JSON dump of the conversation to ~/.omnigent/logs/ on exit.
 
 _DEFAULT_HARNESS_PROMPTS = {
     "claude-sdk": (
-        "You are Claude Code, running through Omnigent. "
+        "You are Claude Code, running through agent-meow. "
         "Help the user with software engineering tasks."
     ),
     "codex": (
-        "You are Codex, running through Omnigent. Help the user with software engineering tasks."
+        "You are Codex, running through agent-meow. Help the user with software engineering tasks."
     ),
     "cursor": (
-        "You are Cursor, running through Omnigent. Help the user with software engineering tasks."
+        "You are Cursor, running through agent-meow. Help the user with software engineering tasks."
     ),
     "kimi": (
-        "You are Kimi Code, running through Omnigent. "
+        "You are Kimi Code, running through agent-meow. "
         "Help the user with software engineering tasks."
     ),
     "qwen": (
-        "You are Qwen Code, running through Omnigent. "
+        "You are Qwen Code, running through agent-meow. "
         "Help the user with software engineering tasks."
     ),
     "goose": (
-        "You are Goose, running through Omnigent. Help the user with software engineering tasks."
+        "You are Goose, running through agent-meow. Help the user with software engineering tasks."
     ),
 }
-_DEFAULT_HARNESS_PROMPT = "You are a helpful coding agent running through Omnigent."
+_DEFAULT_HARNESS_PROMPT = "You are a helpful coding agent running through agent-meow."
 
 # Harnesses whose auto-generated launcher YAML should include an
 # ``os_env`` block.  This triggers the workflow's ``ToolManager``
 # to inject ``sys_os_*`` tools into the request so file/shell
-# operations route through the Omnigent dispatch path (runner
+# operations route through the agent-meow dispatch path (runner
 # visibility, timeouts, error recovery) instead of the harness's
 # internal built-in tools.
 _OS_ENV_HARNESSES: frozenset[str] = frozenset(
@@ -5583,7 +5583,7 @@ _OS_ENV_HARNESSES: frozenset[str] = frozenset(
 
 def _validate_harness(harness: str) -> None:
     """
-    Fail fast when *harness* is not a supported Omnigent harness.
+    Fail fast when *harness* is not a supported agent-meow harness.
 
     :param harness: Harness id from ``--harness``, e.g.
         ``"claude-sdk"``.
@@ -5602,7 +5602,7 @@ def _default_harness_prompt(harness: str) -> str:
     Return the lightweight generated-agent instructions for *harness*.
 
     :param harness: Supported harness id.
-    :returns: Prompt text for the generated Omnigent YAML.
+    :returns: Prompt text for the generated agent-meow YAML.
     """
     return _DEFAULT_HARNESS_PROMPTS.get(harness, _DEFAULT_HARNESS_PROMPT)
 
@@ -5614,16 +5614,16 @@ def _materialize_harness_launcher_file(
     system_prompt: str | None,
 ) -> Path:
     """
-    Create a temporary standalone Omnigent YAML for no-AGENT ``run``.
+    Create a temporary standalone agent-meow YAML for no-AGENT ``run``.
 
-    The generated file uses the single-file Omnigent YAML shape
+    The generated file uses the single-file agent-meow YAML shape
     (``name`` / ``prompt`` / ``executor``), not native AP
     ``config.yaml``. Passing this file to ``run_chat`` exercises the
     same compat adapter as ``omnigent run examples/foo.yaml``.
 
     Harnesses listed in :data:`_OS_ENV_HARNESSES` get an ``os_env``
     block so the workflow injects ``sys_os_*`` tools into the
-    request — routing file/shell operations through the Omnigent
+    request — routing file/shell operations through the agent-meow
     dispatch path rather than the harness's internal built-ins.
 
     :param harness: Supported harness id to launch, e.g.
@@ -5789,7 +5789,7 @@ def _dispatch_native_terminal_harness(
 
     ``run --harness cursor-native`` (and the claude/codex/pi equivalents)
     must NOT go through the materialized-launcher REPL: that drives an
-    Omnigent turn per message — which persists its own user item — *while*
+    agent-meow turn per message — which persists its own user item — *while*
     the harness forwarder mirrors the same message back from the TUI's
     transcript, recording every user message twice. These harnesses are
     terminal-mirror sessions whose turns originate in the TUI, so dispatch
@@ -5907,7 +5907,7 @@ def _reject_agent_with_native_terminal_harness(harness: str) -> None:
 
     A ``*-native`` harness mirrors an external CLI's own TUI; the agent spec's
     prompt/tools are never consulted, and driving it through the REPL would
-    double-record every message (Omnigent turn + forwarder mirror). So an
+    double-record every message (agent-meow turn + forwarder mirror). So an
     explicit AGENT path combined with a native terminal harness has no coherent
     meaning — fail loud and point at the dedicated subcommand.
 
@@ -5949,7 +5949,7 @@ def _dispatch_run(
     """
     Route ``omnigent run`` to the right impl.
 
-    The click path always drives the Omnigent server-backed REPL. With
+    The click path always drives the agent-meow server-backed REPL. With
     ``--server <url>``, use that server URL instead of starting a
     local server. (``omnigent attach`` is a separate attach-only
     client and does NOT route through here.)
@@ -5963,7 +5963,7 @@ def _dispatch_run(
     :param prompt: ``-p`` / ``--prompt`` value.
     :param system_prompt: ``--system-prompt`` value.
     :param server: Server URL from ``--server`` or config. With a local
-        target, this is the Omnigent server used for upload/session setup; with
+        target, this is the agent-meow server used for upload/session setup; with
         no target and explicit ``--server``, this is the direct server.
     :param resume_picker: True when ``--resume`` / ``-r`` is set with
         no value (interactive picker).
@@ -6074,7 +6074,7 @@ def _dispatch_run(
             raise click.ClickException(_missing_run_agent_message())
         # ``*-native`` terminal harnesses launch their own TUI wrapper instead of
         # the materialized-launcher REPL — the REPL would double-record every
-        # user message (Omnigent turn + forwarder mirror). Returns False for
+        # user message (agent-meow turn + forwarder mirror). Returns False for
         # non-native harnesses, which fall through to the launcher below.
         if _dispatch_native_terminal_harness(
             harness=harness,
@@ -6112,7 +6112,7 @@ def _dispatch_run(
         _validate_harness(harness)
         # A ``*-native`` harness IS its own TUI agent — pairing it with an AGENT
         # spec is meaningless, and routing it through the REPL would double-record
-        # every message (Omnigent turn + forwarder mirror, same as the no-AGENT
+        # every message (agent-meow turn + forwarder mirror, same as the no-AGENT
         # path above). Reject rather than silently launch the broken surface.
         _reject_agent_with_native_terminal_harness(harness)
 
@@ -6219,10 +6219,10 @@ def _dispatch_run(
 
 def _resolve_attach_server(server: str | None, configured_server: str | None) -> str | None:
     """
-    Resolve the Omnigent server URL ``attach`` should join.
+    Resolve the agent-meow server URL ``attach`` should join.
 
     Resolution order: an explicit ``--server`` value, then the configured
-    ``server`` default, then a local Omnigent server already running in the
+    ``server`` default, then a local agent-meow server already running in the
     background. ``attach`` never starts a server, so this returns ``None``
     when none of those is available and the caller fails loud.
 
@@ -6253,7 +6253,7 @@ def _require_live_conversation(
     ``GET /v1/sessions/{id}`` and raises on a transport failure or any
     non-200 status.
 
-    :param base_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:6767"``.
     :param conversation_id: Conversation id to attach to, e.g.
         ``"conv_abc123"``.
     :raises click.ClickException: When the server is unreachable or the
@@ -6361,7 +6361,7 @@ def attach(
 # `run` absorbs the legacy ``omnigent run`` subcommand. With an AGENT
 # argument it opens the interactive REPL on a freshly started session;
 # without AGENT it can launch a built-in harness directly via ``--harness``.
-# Both paths route through the same Omnigent server+REPL dispatcher.
+# Both paths route through the same agent-meow server+REPL dispatcher.
 @cli.command()
 @click.argument("target", required=False, metavar="[AGENT]")
 @click.option(
@@ -6436,7 +6436,7 @@ def run(
     debug_events: bool,
     register_host: bool,
 ) -> None:
-    """Start a session with an Omnigent agent.
+    """Start a session with an agent-meow agent.
 
     AGENT may be an agent YAML file or an agent directory. Without AGENT,
     pass ``--server`` to connect directly to a server, or pass
@@ -6505,7 +6505,7 @@ def run(
     auto_open_setting = _resolve_auto_open_conversation_setting(_global_cfg)
     auto_open_conversation = auto_open_setting if auto_open_setting is not None else prompt is None
 
-    # NOTE: the host daemon + Omnigent server are ensured inside ``run_chat``'s
+    # NOTE: the host daemon + agent-meow server are ensured inside ``run_chat``'s
     # non-URL branch (a URL ``target`` connects directly). ``--host`` is now
     # redundant (the daemon is always ensured) and kept only as a no-op.
     del register_host
@@ -6638,7 +6638,7 @@ class _HostGroup(click.Group):
 
 
 def _prompt_stop_local_server() -> None:
-    """Ask whether to also stop the detached local Omnigent server after exit.
+    """Ask whether to also stop the detached local agent-meow server after exit.
 
     The local-mode host daemon spawns a detached, persistent local AP
     server (:func:`ensure_local_omnigent_server`) that survives the daemon's exit
@@ -6708,7 +6708,7 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
 
     :param ctx: Click invocation context. ``ctx.invoked_subcommand`` is
         set when a management subcommand such as ``"status"`` is running.
-    :param server: Remote Omnigent server URL, e.g.
+    :param server: Remote agent-meow server URL, e.g.
         ``"https://example.databricksapps.com"``. ``None`` falls back
         to config; empty string selects local mode.
     :param non_interactive: When ``True``, never launch the browser login
@@ -6732,7 +6732,7 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
     from omnigent.host.connect import run_host_process
 
     # ``host`` IS the daemon (foreground). With no server URL, start (or
-    # reuse) the local Omnigent server here and connect to it; otherwise connect to
+    # reuse) the local agent-meow server here and connect to it; otherwise connect to
     # the given remote/local URL. Unlike the background commands, we do not
     # spawn a second daemon via ``_ensure_host_daemon``.
     target = _normalize_daemon_target(server)
@@ -6812,10 +6812,10 @@ def _resolve_host_server(server: str | None) -> str | None:
 
 def _daemon_base_url(record: _HostDaemonRecord) -> str | None:
     """
-    Resolve the Omnigent server URL for a daemon record.
+    Resolve the agent-meow server URL for a daemon record.
 
     :param record: Daemon registry record to inspect.
-    :returns: Omnigent server URL, e.g. ``"http://127.0.0.1:8123"``, or
+    :returns: agent-meow server URL, e.g. ``"http://127.0.0.1:8123"``, or
         ``None`` when a local daemon's server cannot be discovered.
     """
     if record.mode == "local":
@@ -6862,9 +6862,9 @@ def _host_http_json(
     timeout_s: float = 10.0,
 ) -> _HostHttpResult:
     """
-    Send one management request to an Omnigent server.
+    Send one management request to an agent-meow server.
 
-    :param base_url: Omnigent server base URL, e.g.
+    :param base_url: agent-meow server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param method: HTTP method, e.g. ``"GET"`` or ``"POST"``.
     :param path: Request path beginning with ``/``, e.g.
@@ -6904,7 +6904,7 @@ def _host_http_json(
 
 def _host_error_text(body: _HostJsonObject | str) -> str:
     """
-    Extract a concise error string from an Omnigent response body.
+    Extract a concise error string from an agent-meow response body.
 
     :param body: Response body decoded by :func:`_host_http_json`.
     :returns: Human-readable error text.
@@ -7004,7 +7004,7 @@ def _fetch_session_pages(
     """
     Fetch every available session page from a server.
 
-    :param base_url: Omnigent server base URL, e.g.
+    :param base_url: agent-meow server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param connected_only: When ``True``, ask the server for connected
         sessions only.
@@ -7049,7 +7049,7 @@ def _sessions_for_daemon(
         return _DaemonSessionsResult(
             base_url=None,
             sessions=[],
-            error="local Omnigent server is not reachable",
+            error="local agent-meow server is not reachable",
         )
     host_id = record.host_id or _load_existing_host_id()
     if not host_id:
@@ -7076,7 +7076,7 @@ def _runner_online_map(
     """
     Resolve live runner connectivity for sessions.
 
-    :param base_url: Omnigent server base URL, e.g.
+    :param base_url: agent-meow server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param sessions: Session rows containing ``runner_id`` values.
     :returns: Map of ``runner_id`` to ``True`` / ``False``. ``None``
@@ -7114,7 +7114,7 @@ def _annotate_sessions_with_runner_online(
     """
     Add ``runner_online`` to session rows.
 
-    :param base_url: Omnigent server base URL, e.g.
+    :param base_url: agent-meow server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param sessions: Session rows returned by ``GET /v1/sessions``.
     :returns: Copies of the session rows with ``runner_online`` added.
@@ -7162,7 +7162,7 @@ def _add_daemon_host_status(
     base_url = payload.get("server_url")
     host_id = payload.get("host_id")
     if not isinstance(base_url, str):
-        payload["error"] = "local Omnigent server is not reachable"
+        payload["error"] = "local agent-meow server is not reachable"
         return
     if not isinstance(host_id, str) or not host_id:
         payload["error"] = "host id is not available in local config"
@@ -7303,7 +7303,7 @@ def _host_truncate(text: _HostJsonValue, *, max_chars: int) -> str:
     """
     Truncate long text from the right for compact terminal display.
 
-    :param text: Value to truncate, e.g. an Omnigent error message.
+    :param text: Value to truncate, e.g. an agent-meow error message.
     :param max_chars: Maximum display width, e.g. ``96``.
     :returns: The original text if it fits, otherwise a right-truncated
         string ending in an ellipsis.
@@ -7561,9 +7561,9 @@ def _stop_session_on_server(
     session_id: str,
 ) -> None:
     """
-    Stop one Omnigent session via the server lifecycle event API.
+    Stop one agent-meow session via the server lifecycle event API.
 
-    :param base_url: Omnigent server base URL, e.g.
+    :param base_url: agent-meow server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param session_id: Session id, e.g. ``"conv_abc123"``.
     :raises click.ClickException: If the server rejects the stop event.
@@ -7719,7 +7719,7 @@ def host_stop_session(
     :param ctx: Click context carrying group-level options.
     :param session_ids: Session ids to stop, e.g.
         ``["conv_abc123", "conv_def456"]``.
-    :param server: Omnigent server URL that owns the sessions, e.g.
+    :param server: agent-meow server URL that owns the sessions, e.g.
         ``"https://example.databricksapps.com"``. ``None`` falls back
         to config/local discovery.
     :param force: Continue after individual stop failures.
@@ -7731,7 +7731,7 @@ def host_stop_session(
         resolved_server = local_server_url_if_healthy()
         if resolved_server is None:
             raise click.ClickException(
-                "No server was supplied and no local Omnigent server is reachable."
+                "No server was supplied and no local agent-meow server is reachable."
             )
     for session_id in session_ids:
         try:
@@ -7749,7 +7749,7 @@ def host_stop_session(
 
 @cli.command(hidden=True)
 def version() -> None:
-    """Print the installed Omnigent version."""
+    """Print the installed agent-meow version."""
     print(_format_version())
 
 
@@ -7913,7 +7913,7 @@ class _ConfigGroup(click.Group):
 
 @cli.group("config", cls=_ConfigGroup)
 def config_grp() -> None:
-    """Get, set, and view Omnigent defaults and credentials.
+    """Get, set, and view agent-meow defaults and credentials.
 
     Defaults (auto_open_conversation, default_agent, harness, model,
     server) are used by ``omnigent run``. Project-level config
@@ -7955,7 +7955,7 @@ def config_list() -> None:
 )
 @click.argument("settings", nargs=-1, required=True, metavar="KEY=VALUE...")
 def config_set(is_global: bool, settings: tuple[str, ...]) -> None:
-    """Set one or more Omnigent defaults.
+    """Set one or more agent-meow defaults.
 
     Without ``--global``, pairs are written to ``.omnigent/config.yaml``
     in the current directory (project-level, like ``.git/config``); with
@@ -7996,7 +7996,7 @@ def config_set(is_global: bool, settings: tuple[str, ...]) -> None:
 )
 @click.argument("keys", nargs=-1, required=True, metavar="KEY...")
 def config_unset(is_global: bool, keys: tuple[str, ...]) -> None:
-    """Remove one or more Omnigent defaults.
+    """Remove one or more agent-meow defaults.
 
     :param is_global: When ``True``, remove from ``~/.omnigent/config.yaml``;
         when ``False``, from ``.omnigent/config.yaml`` in cwd.
@@ -8205,7 +8205,7 @@ def _run_configure_databricks() -> None:
 
     Shells out to ``ucode configure`` to authenticate workspaces and set
     up harnesses (Claude SDK, Codex, OpenAI Agents, Pi). After setup,
-    Omnigent reads ``~/.ucode/state.json`` to pick per-harness model
+    agent-meow reads ``~/.ucode/state.json`` to pick per-harness model
     defaults and base URLs.
 
     :returns: None.
@@ -8229,7 +8229,7 @@ def _run_configure_databricks() -> None:
             "see the command output above for details."
         )
 
-    click.echo("ucode configuration complete. Omnigent will use state.json for harness setup.")
+    click.echo("ucode configuration complete. agent-meow will use state.json for harness setup.")
 
 
 def _warn_missing_harness_dependencies() -> None:
@@ -8890,7 +8890,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         # Ask only for the workspace URL — never a profile name. The flow
         # below authenticates that one workspace and runs `ucode configure`
         # against it, scoped to the harness the user drilled into. This is
-        # the one place Omnigent triggers a Databricks CLI / ucode login;
+        # the one place agent-meow triggers a Databricks CLI / ucode login;
         # it never happens on a bare `run`, so a user who only wants their
         # own provider is never routed through Databricks unexpectedly.
         from omnigent.onboarding.configure_models import family_label
@@ -9815,7 +9815,7 @@ def _manage_qwen_harness() -> None:
     to launch ``qwen`` for ``/auth`` — it does **not** pretend to run a ``qwen
     login``
     (there isn't one). Storing/injecting an OpenAI-compatible key *through
-    Omnigent* is deferred (see docs/QWEN_FOLLOWUPS.md, Provider Injection).
+    agent-meow* is deferred (see docs/QWEN_FOLLOWUPS.md, Provider Injection).
 
     Like the CLI-backed harnesses, a missing CLI gates the drill-in — there's
     nothing to configure for a harness you can't run.
@@ -9893,11 +9893,11 @@ def _manage_qwen_harness() -> None:
 
 
 def _print_goose_auth_help() -> None:
-    """Print Goose's configuration options (Omnigent manages no Goose credential)."""
+    """Print Goose's configuration options (agent-meow manages no Goose credential)."""
     from omnigent.onboarding.interactive import console
 
     console.print(
-        "\n  [bold]Configure Goose[/bold] (Omnigent stores no Goose credential):\n"
+        "\n  [bold]Configure Goose[/bold] (agent-meow stores no Goose credential):\n"
         "    • Interactive: run [bold]goose configure[/bold] to pick a provider "
         "and store its key (keyring or ~/.config/goose/config.yaml)\n"
         "    • Env override: set [bold]GOOSE_PROVIDER[/bold] + [bold]GOOSE_MODEL[/bold] "
@@ -9942,10 +9942,10 @@ def _launch_goose_configure() -> str | None:
 def _manage_goose_harness() -> None:
     """Run the level-2 loop for Goose: ensure the CLI, then guide ``goose configure``.
 
-    Goose owns its own auth (keyring / ``~/.config/goose/config.yaml``) — Omnigent
+    Goose owns its own auth (keyring / ``~/.config/goose/config.yaml``) — agent-meow
     stores no Goose credential — so, like the Qwen drill-in, this reports
     best-effort configuration status and offers to launch ``goose configure``; it
-    does not store a key through Omnigent. A missing CLI gates the drill-in
+    does not store a key through agent-meow. A missing CLI gates the drill-in
     (nothing to configure for a harness you can't run); Goose ships out-of-band
     (brew / curl, no npm package), so we show its install hint rather than
     auto-installing. Serves both ``goose-native`` (TUI) and the headless
@@ -10003,7 +10003,7 @@ def _manage_hermes_harness() -> None:
     """Run the level-2 loop for Hermes: ensure the CLI is installed.
 
     Hermes owns its own auth via ``hermes model`` (interactive provider/model
-    picker) and is installed via a curl script from Nous Research — Omnigent
+    picker) and is installed via a curl script from Nous Research — agent-meow
     stores no Hermes credential. A missing CLI gates the drill-in; when
     installed, the drill-in offers to launch ``hermes model`` for provider
     configuration.
@@ -10061,7 +10061,7 @@ def _manage_kiro_harness() -> None:
     """Run the level-2 loop for Kiro: ensure the CLI is installed and signed in.
 
     Kiro owns its own auth via ``kiro-cli login`` (Builder ID / social login /
-    Identity Center) and is installed via Kiro's curl installer — Omnigent stores
+    Identity Center) and is installed via Kiro's curl installer — agent-meow stores
     no Kiro credential. A missing CLI gates the drill-in; when installed, the
     drill-in offers to launch ``kiro-cli login`` to sign in. Mirrors
     :func:`_manage_hermes_harness`.
@@ -10118,13 +10118,13 @@ def _manage_kiro_harness() -> None:
 def _print_kimi_auth_help() -> None:
     """Print Kimi Code's authentication options.
 
-    Kimi authenticates against Moonshot AI's backend rather than an Omnigent
+    Kimi authenticates against Moonshot AI's backend rather than an agent-meow
     credential: ``kimi login`` (OAuth or a Moonshot API key) for the default
     provider, and ``kimi provider add`` to register any other provider (an
     OpenAI-compatible endpoint, a Databricks gateway, …) in
-    ``~/.kimi/config.toml``. Omnigent has no per-spawn provider override for
+    ``~/.kimi/config.toml``. agent-meow has no per-spawn provider override for
     upstream kimi, so all of this lives in the kimi CLI's own config —
-    Omnigent-side injection remains a deferred follow-up.
+    agent-meow-side injection remains a deferred follow-up.
     """
     from omnigent.onboarding.interactive import console
 
@@ -10136,7 +10136,7 @@ def _print_kimi_auth_help() -> None:
         "    • Other providers: run [bold]kimi provider add[/bold] "
         "(OpenAI-compatible endpoint, gateway, …), then pin that model id in "
         "the agent spec\n"
-        "    • Omnigent stores no kimi credential and cannot thread one per "
+        "    • agent-meow stores no kimi credential and cannot thread one per "
         "spawn — configure it once in the kimi CLI\n"
     )
 
@@ -10794,8 +10794,8 @@ def _print_opencode_auth_help() -> None:
         "      stored in ~/.local/share/opencode/auth.json.\n"
         "    • Provider env vars (OPENAI_API_KEY / ANTHROPIC_API_KEY / …) are auto-detected.\n"
         "    • Databricks gateway: set an agent ``profile`` (configured under Claude / Codex);\n"
-        "      Omnigent synthesizes opencode's per-session provider config from it.\n"
-        "  Omnigent stores no OpenCode credential of its own.\n"
+        "      agent-meow synthesizes opencode's per-session provider config from it.\n"
+        "  agent-meow stores no OpenCode credential of its own.\n"
         "  [dim]Tip:[/dim] 'Set default model' picks which model `omni opencode` launches on\n"
         "  (otherwise OpenCode uses its built-in default, opencode/big-pickle)."
     )
@@ -10808,7 +10808,7 @@ def _manage_opencode_harness() -> None:
     ``~/.local/share/opencode/auth.json``) or ambient provider env vars — so,
     like the Goose / Qwen drill-ins, this reports which providers OpenCode can
     reach and offers to launch its native login; it never stores a key through
-    Omnigent. (For the Databricks-gateway path the agent's ``profile`` is
+    agent-meow. (For the Databricks-gateway path the agent's ``profile`` is
     synthesized into opencode's per-session config instead — set under
     Claude / Codex.)
 
@@ -10859,7 +10859,7 @@ def _manage_opencode_harness() -> None:
             return
 
     # OpenCode owns its provider auth (``opencode auth login`` → auth.json) or
-    # ambient env keys; Omnigent stores nothing. Report what's reachable and
+    # ambient env keys; agent-meow stores nothing. Report what's reachable and
     # offer to run its native login — like the Goose/Qwen drill-ins.
     status: str | None = None
     while True:
@@ -10993,16 +10993,16 @@ def _run_configure_harnesses_interactive() -> None:
     _ANTIGRAVITY = "\x00antigravity"
     # Sentinel marking the Qwen Code row — like Antigravity/Cursor it is not a
     # provider family (its v1 auth is the CLI's own env vars / ``/auth`` flow,
-    # not an Omnigent credential), so it dispatches to its own drill-in.
+    # not an agent-meow credential), so it dispatches to its own drill-in.
     _QWEN = "\x00qwen"
-    # Sentinel marking the OpenCode row — native-server harness with no Omnigent
+    # Sentinel marking the OpenCode row — native-server harness with no agent-meow
     # credential of its own (it routes through the bound agent's Databricks
     # gateway profile or ambient provider env), so it dispatches to its own
     # binary-install/info drill-in.
     _OPENCODE = "\x00opencode"
     # Sentinel marking the Goose row — like Qwen/Antigravity/Cursor it is not a
     # provider family (Goose owns its own auth via ``goose configure``, not an
-    # Omnigent credential), so it dispatches to its own drill-in.
+    # agent-meow credential), so it dispatches to its own drill-in.
     _GOOSE = "\x00goose"
     # Sentinel marking the Hermes row — like Goose it owns its own auth via
     # ``hermes model`` and is installed via a curl installer.
@@ -11362,7 +11362,7 @@ def _run_configure_harnesses_interactive() -> None:
 )
 def setup(internal_beta: bool) -> None:
     """
-    Launch the Omnigent first-time setup flow.
+    Launch the agent-meow first-time setup flow.
 
     By default this runs the standard model/credential picker — choose a
     provider for each harness and set your defaults, then start a session
@@ -11461,7 +11461,7 @@ if _sandbox_providers():
 # Operator-only maintenance commands, grouped under ``omnigent debug``
 # so they stay out of the everyday surface.
 #
-# ``db-upgrade`` runs manual schema operations on an Omnigent tracking
+# ``db-upgrade`` runs manual schema operations on an agent-meow tracking
 # database. Mirrors ``mlflow db upgrade`` (``mlflow/db.py``) so the
 # workflow is familiar to anyone who's bumped an MLflow database before.
 # The server initializes a fresh database on first boot and attempts to
@@ -11487,7 +11487,7 @@ def debug() -> None:
 @click.argument("url")
 def debug_db_upgrade(url: str) -> None:
     """
-    Upgrade the schema of an Omnigent tracking database to the
+    Upgrade the schema of an agent-meow tracking database to the
     latest supported version.
 
     URL is a SQLAlchemy database URL, e.g.
@@ -11837,7 +11837,7 @@ def _workspace_api_server_url(server: str) -> str:
 
 def _resolve_server_url(server: str) -> str:
     """
-    Normalize a user-supplied ``--server`` value to the Omnigent API base.
+    Normalize a user-supplied ``--server`` value to the agent-meow API base.
 
     Every ``--server`` entry point (and ``login``) needs the same
     normalization, so they all route through here: strip a trailing slash,
@@ -11947,7 +11947,7 @@ def _host_with_org(workspace_host: str, org_id: str | None) -> str:
 
 
 def _databricks_login(server: str, workspace_host: str, org_id: str | None = None) -> None:
-    """Log in to a Databricks-fronted Omnigent server.
+    """Log in to a Databricks-fronted agent-meow server.
 
     Covers both Databricks Apps deployments and workspace-hosted
     omnigent (``https://<workspace>/api/2.0/omnigent``). Reuses an
@@ -12169,7 +12169,7 @@ def _remember_default_server(server: str) -> None:
 @cli.command("login")
 @click.argument("server_url")
 def login(server_url: str) -> None:
-    """Authenticate with a remote Omnigent server.
+    """Authenticate with a remote agent-meow server.
 
     Probes the server's auth mode and runs the matching flow:
 
@@ -12238,7 +12238,7 @@ def login(server_url: str) -> None:
     if probe.status_code == 401:
         import contextlib as _contextlib
 
-        # 401 with non-JSON body — probably not an Omnigent server.
+        # 401 with non-JSON body — probably not an agent-meow server.
         # Suppress: we fall through to the OIDC path below which has
         # its own clearer error message.
         with _contextlib.suppress(ValueError):

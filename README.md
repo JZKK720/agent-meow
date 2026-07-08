@@ -1,15 +1,16 @@
 # agent-meow
 
-### An agent workspace runtime with first-class Docs and Images surfaces.
+### An agent workspace runtime with first-class Docs, Images, and Voice surfaces.
 
 agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent)
-(Apache-2.0) — the open-source meta-harness for AI agents — extended with two
-new middleware surfaces for content work:
+(Apache-2.0) — the open-source meta-harness for AI agents — extended with
+three new middleware surfaces for content work:
 
 - **Docs** — document generation + rich-text editing (Tiptap / ProseMirror kernel)
 - **Images** — image file manager + image editing (Fabric.js canvas kernel)
+- **Voice** — speech-to-text input (Handy CLI) and text-to-speech output (VibeVoice)
 
-Both surfaces are middleware on top of the existing 3-layer runtime
+Both Docs and Images are middleware on top of the existing 3-layer runtime
 (Server / Runner / Web UI): new session resource types, new builtin agent
 tools, and new UI rails. Agents call `doc_generate` / `image_edit` like any
 tool; results render in dedicated panels alongside chat, files, terminals,
@@ -20,7 +21,7 @@ and sub-agents inherited from Omnigent.
 ```bash
 uv sync --extra dev
 uv pip install -e .
-meow                      # or: omnigent (alias retained)
+omnigent                      # or: omni (short alias)
 open http://localhost:6767
 ```
 
@@ -28,7 +29,12 @@ open http://localhost:6767
 cd web && pnpm i && pnpm dev   # web UI dev
 ```
 
-## What's new vs. Omnigent
+> [!NOTE]
+> The CLI currently installs as `omnigent` / `omni`. A `meow` alias is
+> planned for a follow-up release; see [docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md)
+> for the rename roadmap.
+
+## What's new vs. agent-meow
 
 | Surface | Backend | UI |
 | --- | --- | --- |
@@ -60,47 +66,15 @@ agents can call `text_to_speech` / `speak` to synthesize speech:
 ```bash
 vllm serve microsoft/VibeVoice-Realtime-0.5B --port 8000
 export VIBEVOICE_TTS_URL=http://127.0.0.1:8000/v1
-meow
+omnigent
 ```
 
-## Attribution
-
-agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent)
-by the Omnigent Authors (Databricks, Inc. and contributors), licensed under
-Apache-2.0. See `LICENSE` and `NOTICE`. The Python package directory
-`omnigent/` is retained as a vendored runtime; user-facing strings and the
-CLI entry point have been rebranded.
-
-## License
-
-Apache-2.0 (inherited from Omnigent).
-
 ---
 
-# <img src="https://raw.githubusercontent.com/omnigent-ai/omnigent/main/docs/images/omnigent-logo.svg" alt="" height="38" valign="middle" /> Omnigent
+## Why agent-meow?
 
-### The open-source meta-harness for all your AI agents.
-
-Omnigent is an open-source **meta-harness** that gives you a common orchestration layer over Claude Code, Codex, Cursor, OpenCode, Hermes, Pi, and the agents you write yourself: swap or combine harnesses without rewriting, enforce policies and sandboxing, and collaborate in real time from any device — terminal, browser, phone, or the native desktop app.
-
-[![PyPI version](https://img.shields.io/pypi/v/omnigent.svg)](https://pypi.org/project/omnigent/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/omnigent-ai/omnigent/blob/main/LICENSE)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/omnigent)
-![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
-
-[omnigent.ai](https://omnigent.ai) · **[⬇️ Download the macOS desktop app](https://omnigent.ai/download/mac)**
-
-</div>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/omnigent-ai/omnigent/main/docs/images/omnigent-desktop.png" alt="The Omnigent desktop app: starting a new session, with pinned and project-grouped sessions in the sidebar" width="720" />
-</p>
-
----
-
-## Why Omnigent?
-
-Omnigent lets you:
+agent-meow inherits agent-meow's meta-harness runtime and adds content surfaces
+on top. The inherited runtime lets you:
 
 - **📱 Work with agents from any device, including your phone.** Sessions
   follow you: start in your terminal, continue in the browser, pick it up on
@@ -119,13 +93,9 @@ Omnigent lets you:
   conversation to continue on their own.
 
 - **☁️ Run agents in cloud sandboxes.** No laptop required: run sessions in
-  disposable [Modal](https://modal.com), [Daytona](https://www.daytona.io),
-  [Islo](https://islo.dev), [E2B](https://e2b.dev),
-  [CoreWeave](https://docs.coreweave.com/products/sandboxes),
-  [Kubernetes](https://kubernetes.io), [OpenShell](https://github.com/NVIDIA/OpenShell),
-  [Boxlite](https://github.com/boxlite-ai/boxlite), or
-  [Databricks](https://www.databricks.com) sandboxes, launched from the
-  CLI or provisioned by the server per session (*managed hosts*).
+  disposable Modal, Daytona, Islo, E2B, CoreWeave, Kubernetes, OpenShell,
+  Boxlite, or Databricks sandboxes, launched from the CLI or provisioned by
+  the server per session (*managed hosts*).
 
 - **🛡️ Govern your agents.** Create
   [policies](#6-govern-your-agents-with-policies) to pause for your approval
@@ -134,82 +104,48 @@ Omnigent lets you:
 
 ---
 
-## Quick start
+## Quick start (detailed)
 
 ### 1. Install
 
-One command installs Omnigent and everything it needs:
+agent-meow needs **Python 3.12+** and **Node.js 22 LTS** (for the web UI and
+npm-installed harness CLIs).
+
+From a source checkout:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/omnigent-ai/omnigent/main/scripts/install_oss.sh | sh
+uv sync --extra dev
+uv pip install -e .
 ```
 
 <details>
-<summary>Prefer to install manually?</summary>
-
-Omnigent needs **Python 3.12+**. Install the `omnigent` package:
-
-```bash
-uv tool install omnigent        # or: pip install "omnigent"
-```
-
-Or with [Homebrew](https://github.com/omnigent-ai/homebrew-tap):
-
-```bash
-brew install omnigent-ai/tap/omnigent
-```
-
-Or install straight from the repo:
-
-```bash
-uv tool install -q --python 3.12 git+https://github.com/omnigent-ai/omnigent.git
-```
-
-</details>
-
-<details>
-<summary>Toolchain and prerequisites (if the installer reports a missing tool)</summary>
+<summary>Toolchain and prerequisites</summary>
 
 - **`uv`** (required). https://docs.astral.sh/uv/getting-started/installation/
-  The installer offers to set this up for you.
 - **`git`** (required).
 - **Node.js 22 LTS or newer** with **`npm`**, for the npm-installed coding
   harnesses (Claude, Codex, OpenCode, Pi). `omnigent run` installs the
   harness CLI you pick.
   https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
-- **Kiro CLI** (optional), for `omnigent kiro`: install with
-  `curl -fsSL https://cli.kiro.dev/install | bash`, then sign in with Kiro.
-  Kiro tool approvals stay answerable in the embedded Terminal; supported
-  one-time approvals also appear as Chat cards. See
-  `docs/kiro-native-elicitation.md`.
 - **`tmux`**, required by the native `omnigent <harness>` terminal wrappers
   (`claude`, `codex`, `cursor`, `hermes`, `kiro`, `pi`)
-  (`brew install tmux` / `apt install tmux`; the installer offers
-  to install it for you).
-- **`bubblewrap`** (`bwrap`), **Linux only**. The native `omnigent <harness>`
-  terminal wrappers and the `pi` harness wrap each agent
-  terminal in a `bwrap` OS-sandbox; on Linux that isolation is mandatory, so a
-  missing `bwrap` binary makes those terminals fail to start
-  (`apt install bubblewrap`; the installer offers to install it for you). macOS
-  uses the built-in `seatbelt` sandbox and needs nothing extra.
-- **Databricks** (optional). To use a Databricks workspace as your model
-  provider, install Omnigent with the `databricks` extra:
-  `uv tool install "omnigent[databricks]"` — or pass it to the bootstrap
-  installer with `... | sh -s -- --extra databricks`. Signing in to the
-  workspace also uses the [Databricks CLI](https://docs.databricks.com/aws/en/dev-tools/cli/install).
+  (`brew install tmux` / `apt install tmux`).
+- **`bubblewrap`** (`bwrap`), **Linux only**. The native terminal wrappers
+  wrap each agent terminal in a `bwrap` OS-sandbox; on Linux that isolation
+  is mandatory (`apt install bubblewrap`). macOS uses the built-in
+  `seatbelt` sandbox and needs nothing extra.
 
 </details>
 
 <details>
 <summary>Windows (native)</summary>
 
-Omnigent runs natively on Windows in a degraded mode. The `install_oss.sh`
-bootstrap is POSIX-only, so install with `uv` directly:
+agent-meow runs natively on Windows in a degraded mode. Install with `uv`
+directly:
 
 ```powershell
-uv tool install --python 3.12 omnigent
-# or from the repo:
-uv tool install --python 3.12 git+https://github.com/omnigent-ai/omnigent.git
+uv sync --extra dev
+uv pip install -e .
 ```
 
 What works on Windows: `omnigent server`, the web UI, and the SDK-based
@@ -230,7 +166,7 @@ What is **not** available on Windows (use Linux/macOS, or WSL, for these):
 <details>
 <summary>Updating to a new release</summary>
 
-When a newer release is on PyPI, Omnigent shows a one-line notice (once per
+When a newer release is on PyPI, agent-meow shows a one-line notice (once per
 release) pointing here. To update:
 
 ```bash
@@ -244,9 +180,10 @@ local server (pass `--force` to stop them immediately); the next `omni` command
 brings the server back up on the new version. Source checkouts update with
 `git pull` instead. Silence the notice with `OMNIGENT_NO_UPDATE_CHECK=1`.
 
-The check queries your configured package index — honoring `UV_INDEX_URL` /
-`PIP_INDEX_URL` and your `uv.toml` / `pip.conf` (default PyPI), so private
-mirrors work out of the box; override with `OMNIGENT_INDEX_URL` if needed.
+> [!NOTE]
+> The `OMNIGENT_*` env-var prefix is inherited from Omnigent and retained
+> for compatibility. It will be renamed in a follow-up release; see
+> [docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md).
 
 </details>
 
@@ -254,17 +191,14 @@ mirrors work out of the box; override with `OMNIGENT_INDEX_URL` if needed.
 
 `omnigent` picks a model with you and starts a session in your terminal. It
 also launches a local web UI at `http://localhost:6767` that shows the same
-session in the browser, or on a phone on your network (step 4). The
-[desktop app](https://omnigent.ai/docs/interact/desktop) wraps that same UI
-in a native window and adds OS notifications and a dock badge —
-[download it for macOS](https://omnigent.ai/download/mac).
+session in the browser, or on a phone on your network (step 4).
 
 > [!NOTE]
 > The install puts two names for the same CLI on your PATH: `omnigent` and
 > the shorter `omni`. They're interchangeable.
 
 > [!TIP]
-> On first run, Omnigent picks up model credentials already in your
+> On first run, agent-meow picks up model credentials already in your
 > environment (an `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`, or a `claude` /
 > `codex` CLI you're logged into) and offers one as the default.
 
@@ -323,7 +257,7 @@ In the web UI, hit **New Chat**, pick your machine, and go. Check status with
 omnigent setup
 ```
 
-Add a credential, set a default, or remove one, grouped by agent. Omnigent
+Add a credential, set a default, or remove one, grouped by agent. agent-meow
 works with four kinds of credentials:
 
 | | Kind | What it is |
@@ -356,8 +290,8 @@ the OpenAI-compatible `…/api/v1`.
 
 ### 4. Deploy a server (and use it from your phone📱)
 
-Run Omnigent on a server with a stable URL
-([`deploy/README.md`](https://github.com/omnigent-ai/omnigent/blob/main/deploy/README.md) is the full guide) and your sessions
+Run agent-meow on a server with a stable URL
+([`deploy/README.md`](deploy/README.md) is the full guide) and your sessions
 become reachable from anywhere, including your phone. The web UI is built for
 mobile, so you get the same chat, sub-agents, terminals, and files, in sync
 with your laptop.
@@ -370,8 +304,7 @@ covered too — and a **Cloudflare quick tunnel** (public) or **Tailscale**
 (private) reaches a server running on your own laptop without a deploy. The
 server can also provision a cloud sandbox per session (*managed hosts*), so no
 laptop has to stay online. The full menu of targets, the database options, and
-the sandbox setup live in
-[`deploy/README.md`](https://github.com/omnigent-ai/omnigent/blob/main/deploy/README.md).
+the sandbox setup live in [`deploy/README.md`](deploy/README.md).
 
 Once the server is up, sign in and register your laptop as a host:
 
@@ -386,15 +319,17 @@ omnigent host  https://your-host    # new sessions can now run on this machine
 
 ### 5. Collaborate with your team
 
-Omnigent supports **multi-user accounts**, controlled by one environment
+agent-meow supports **multi-user accounts**, controlled by one environment
 variable:
 
 ```bash
 OMNIGENT_AUTH_ENABLED=1 omnigent server start
 ```
 
-The **Docker deploy in [step 4](#4-deploy-a-server-and-use-it-from-your-phone)
-turns it on for you** (`OMNIGENT_AUTH_ENABLED` defaults to `1` there).
+> [!NOTE]
+> The `OMNIGENT_*` env-var prefix is inherited from Omnigent and retained
+> for compatibility. See [docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md) for
+> the rename roadmap.
 
 #### Invite your teammates
 
@@ -403,8 +338,6 @@ sign in as `admin`; first run prints the password and saves it locally. Then
 open **Admin → Members → Invite** to create a single-use invite link, no
 email server needed. Send it over; your teammate opens it, sets a password,
 and they're in. Signup is invite-only.
-
-<!-- TODO: screenshot of Admin → Members → Invite. -->
 
 > [!NOTE]
 > Teammates need to be able to reach the server. A local server is only
@@ -435,7 +368,7 @@ and they're in. Signup is invite-only.
 > GitHub, Okta, Microsoft**)? Set `OMNIGENT_OIDC_ISSUER` plus a client ID
 > and secret on your deployed server and restart. The full walkthrough,
 > domain allowlists, and the proxy-only `header` auth mode are covered in
-> [`deploy/README.md#auth`](https://github.com/omnigent-ai/omnigent/blob/main/deploy/README.md#auth).
+> [`deploy/README.md#auth`](deploy/README.md#auth).
 
 ### 6. Govern your agents with policies
 
@@ -473,7 +406,7 @@ Policies stack across three levels, **server-wide** (admin), **per-agent**
 (developer), and **per-session** (you), with the stricter session rules
 checked first. Spend caps and access limits ship as builtins.
 
-See the [policy guide](https://github.com/omnigent-ai/omnigent/blob/main/docs/POLICIES.md) for the full catalog and trust model.
+See the [policy guide](docs/POLICIES.md) for the full catalog and trust model.
 
 ---
 
@@ -482,7 +415,7 @@ See the [policy guide](https://github.com/omnigent-ai/omnigent/blob/main/docs/PO
 An agent is a short YAML file: your prompt, your tools — local Python
 functions, MCP servers, and sub-agents a supervisor can delegate to. You don't
 have to write it by hand: agents can build agents, so describe the agent you
-want in any Omnigent chat and it authors the file for you.
+want in any agent-meow chat and it authors the file for you.
 
 ```yaml
 name: my_agent
@@ -519,21 +452,28 @@ omnigent run path/to/my_agent.yaml
 ```
 
 The same file can declare sub-agents and reviewers. For a fuller example, see
-Polly at [`examples/polly/`](https://github.com/omnigent-ai/omnigent/tree/main/examples/polly/), and the
-[Agent YAML spec](https://github.com/omnigent-ai/omnigent/blob/main/docs/AGENT_YAML_SPEC.md) for the full schema.
+Polly at [`examples/polly/`](examples/polly/), and the
+[Agent YAML spec](docs/AGENT_YAML_SPEC.md) for the full schema.
 
 ---
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](https://github.com/omnigent-ai/omnigent/blob/main/CONTRIBUTING.md) for how to set up your environment, run the checks, and open a pull request.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to
+set up your environment, run the checks, and open a pull request.
 
+---
 
-### Contributors
+## Attribution
 
-Thanks to all of our amazing contributors!
+agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent)
+by the Omnigent Authors (Databricks, Inc. and contributors), licensed under
+Apache-2.0. See `LICENSE` and `NOTICE`. The Python package directory
+`omnigent/` is retained as a vendored runtime; user-facing strings and the
+CLI entry point have been rebranded. See [docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md)
+for the full rename roadmap and the list of surfaces still carrying the
+upstream name.
 
-<a href="https://github.com/omnigent-ai/omnigent/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=omnigent-ai/omnigent" />
-</a>
+## License
 
+Apache-2.0 (inherited from Omnigent).

@@ -166,8 +166,8 @@ class RunnerMcpManager:
         :param stdio_cwd: Working directory for spawned stdio MCP
             subprocesses.
         :param server_client: ``httpx.AsyncClient`` pointed at the
-            Omnigent server. When provided, inline MCP elicitations are
-            surfaced to the user via the Omnigent server's session events
+            agent-meow server. When provided, inline MCP elicitations are
+            surfaced to the user via the agent-meow server's session events
             API. When ``None``, inline elicitations are declined.
         """
         self._specs: dict[str, _SpecEntry] = {}
@@ -186,10 +186,10 @@ class RunnerMcpManager:
         Build an inline elicitation callback for MCP connections.
 
         When ``server_client`` is available, surfaces the
-        elicitation to the user via the Omnigent server's session events
+        elicitation to the user via the agent-meow server's session events
         API (approval card in web UI, y/a/n prompt in REPL) and
         parks until the user responds. Falls back to decline
-        when no Omnigent server is available.
+        when no agent-meow server is available.
 
         :returns: Async callback ``(session_id, params) →
             ElicitResult``.
@@ -204,18 +204,18 @@ class RunnerMcpManager:
             Handle an inline ``elicitation/create`` from the MCP
             server.
 
-            When an Omnigent server client is available, POSTs a
+            When an agent-meow server client is available, POSTs a
             ``mcp_elicitation`` event to surface the approval
             prompt and parks on ``pending_approvals``. Otherwise
             declines.
 
-            :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
+            :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
             :param params: MCP elicitation params from the gateway.
             :returns: User verdict as an :class:`ElicitResult`.
             """
             if server_client is None:
                 _logger.warning(
-                    "MCP elicitation callback: no Omnigent server client available — declining",
+                    "MCP elicitation callback: no agent-meow server client available — declining",
                 )
                 return ElicitResult(action="decline")
 
@@ -240,7 +240,7 @@ class RunnerMcpManager:
                 data = resp.json()
             except Exception as exc:  # noqa: BLE001
                 _logger.warning(
-                    "MCP elicitation callback: Omnigent server POST failed (%s) — declining",
+                    "MCP elicitation callback: agent-meow server POST failed (%s) — declining",
                     exc,
                 )
                 return ElicitResult(action="decline")
@@ -248,7 +248,7 @@ class RunnerMcpManager:
             elicitation_id = data.get("elicitation_id", "")
             if not elicitation_id:
                 _logger.warning(
-                    "MCP elicitation callback: Omnigent server returned no "
+                    "MCP elicitation callback: agent-meow server returned no "
                     "elicitation_id — declining",
                 )
                 return ElicitResult(action="decline")
@@ -258,10 +258,10 @@ class RunnerMcpManager:
             # — it does not carry the user's form data. Content is
             # auto-filled from the requestedSchema below.
             # No-op publish_event: ``response.elicitation_resolved``
-            # won't fire on timeout/cancellation, so the Omnigent server's
+            # won't fire on timeout/cancellation, so the agent-meow server's
             # sidebar badge may stay stale. Same pattern as
             # proxy_mcp_manager. A future enhancement could POST
-            # the resolved event back to the Omnigent server here.
+            # the resolved event back to the agent-meow server here.
             approved = await pending_approvals.wait_for_user_approval(
                 elicitation_id=elicitation_id,
                 conversation_id=session_id,
@@ -349,7 +349,7 @@ class RunnerMcpManager:
         :param tool_name: Namespaced tool name, e.g.
             ``"github__list_issues"``.
         :param arguments: Decoded tool argument dict.
-        :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
+        :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
             Forwarded to the connection for inline elicitation
             context. ``None`` when no session is available.
         :returns: Tool result string.

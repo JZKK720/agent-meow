@@ -59,7 +59,7 @@ from omnigent.spec.types import Phase
 _LEGACY_FIRST_PARAM = "content"
 _LEGACY_SECOND_PARAM = "phase"
 
-# Maps Omnigent' :class:`Phase` enum to the string literal
+# Maps agent-meow' :class:`Phase` enum to the string literal
 # the legacy callable expects as its ``phase`` argument.
 _PHASE_TO_LEGACY_STR: dict[Phase, str] = {
     Phase.REQUEST: "input",
@@ -109,7 +109,7 @@ def build(
         directly. The translator
         (:func:`omnigent.spec.omnigent._translate_function_policy_yaml`)
         always passes a list.
-    :returns: A callable matching Omnigent'
+    :returns: A callable matching agent-meow'
         ``(ctx, context)`` convention.
     :raises TypeError: If *target* (or its factory result)
         doesn't resolve to a callable.
@@ -295,7 +295,7 @@ def _v0_event_to_legacy_phase(event: dict[str, Any]) -> str:
     Event types match the inner system's phase strings directly
     (``"request"``, ``"response"``, ``"tool_call"``, ``"tool_result"``),
     but the legacy shim's ``_PHASE_TO_LEGACY_STR`` map was built for
-    Omnigent' ``Phase`` enum. Provide a direct mapping here.
+    agent-meow' ``Phase`` enum. Provide a direct mapping here.
 
     :param event: An event dict with ``"type"`` key.
     :returns: The legacy phase string, e.g. ``"tool_call"``.
@@ -334,7 +334,7 @@ def _convert_args(
 ) -> tuple[Any, ...]:
     """
     Produce ``(content, phase)`` or
-    ``(content, phase, context)`` from Omnigent'
+    ``(content, phase, context)`` from agent-meow'
     :class:`EvaluationContext` (or an event dict) + engine-supplied
     context dict.
 
@@ -493,7 +493,7 @@ def _legacy_context(
     # Native omnigent only adds ``tool_name`` on
     # ``TOOL_RESULT``. Mirror that exactly so callables that
     # use ``"tool_name" in context`` to discriminate phase
-    # behave identically across legacy and Omnigent mode.
+    # behave identically across legacy and agent-meow mode.
     if ctx.phase == Phase.TOOL_RESULT and ctx.tool_name is not None:
         legacy["tool_name"] = ctx.tool_name
     return legacy

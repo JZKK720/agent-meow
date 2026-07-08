@@ -456,7 +456,7 @@ async def test_relay_executor_routes_through_omnigent_in_omnigent_mode(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Route relay tool execution through Omnigent ``/mcp`` for policy enforcement.
+    """Route relay tool execution through agent-meow ``/mcp`` for policy enforcement.
 
     Verifies that when the runner is configured with a server_client (AP mode),
     the ``_relay_tool_executor`` closure routes calls through
@@ -466,14 +466,14 @@ async def test_relay_executor_routes_through_omnigent_in_omnigent_mode(
     """
     import omnigent.claude_native_bridge as _bridge_mod
 
-    # Records every POST sent to the fake Omnigent server.
+    # Records every POST sent to the fake agent-meow server.
     ap_mcp_posts: list[dict[str, Any]] = []
 
     class _FakeApClient:
-        """Fake Omnigent server client that captures /mcp calls and returns a fixed result.
+        """Fake agent-meow server client that captures /mcp calls and returns a fixed result.
 
         Appends each POST request body to the outer ``ap_mcp_posts`` list via
-        closure so the test can assert on what was sent to the Omnigent server.
+        closure so the test can assert on what was sent to the agent-meow server.
         """
 
         async def get(self, url: str, *, timeout: float = 10.0) -> httpx.Response:
@@ -564,8 +564,8 @@ async def test_relay_executor_routes_through_omnigent_in_omnigent_mode(
         # Call the relay executor directly (simulates Claude Code invoking list_comments).
         result = await executor("list_comments", {"status": "pending"})
 
-        # In Omnigent mode the executor must have POSTed a tools/call JSON-RPC to the
-        # Omnigent server's /mcp endpoint, not called the direct comment handler.
+        # In agent-meow mode the executor must have POSTed a tools/call JSON-RPC to the
+        # agent-meow server's /mcp endpoint, not called the direct comment handler.
         mcp_call = next(
             (
                 r
@@ -575,7 +575,7 @@ async def test_relay_executor_routes_through_omnigent_in_omnigent_mode(
             None,
         )
         assert mcp_call is not None, (
-            "No tools/call request reached the Omnigent /mcp endpoint. "
+            "No tools/call request reached the agent-meow /mcp endpoint. "
             "The relay executor is bypassing ProxyMcpManager and policy enforcement."
         )
         # Tool name and arguments must be forwarded verbatim.
@@ -583,13 +583,13 @@ async def test_relay_executor_routes_through_omnigent_in_omnigent_mode(
             "Wrong tool name forwarded; policy would be evaluated against the wrong tool."
         )
         assert mcp_call["json"]["params"]["arguments"] == {"status": "pending"}, (
-            "Arguments were not forwarded correctly to Omnigent /mcp."
+            "Arguments were not forwarded correctly to agent-meow /mcp."
         )
         # The request URL must be scoped to this session's /mcp endpoint.
         assert session_id in mcp_call["url"], (
             f"AP /mcp request URL {mcp_call['url']!r} does not contain session_id {session_id!r}."
         )
-        # The Omnigent response's text content must be parsed back to a dict.
-        assert result == {"items": []}, f"Expected parsed Omnigent response dict, got {result!r}."
+        # The agent-meow response's text content must be parsed back to a dict.
+        assert result == {"items": []}, f"Expected parsed agent-meow response dict, got {result!r}."
     finally:
         shutil.rmtree(bridge_dir, ignore_errors=True)

@@ -1842,7 +1842,7 @@ def test_list_conversations_filtered_by_agent_id_returns_matching_only(
     agent_store: SqlAlchemyAgentStore,
 ) -> None:
     """
-    Powers Omnigent mode ``--continue`` (resume the most-recent
+    Powers agent-meow mode ``--continue`` (resume the most-recent
     conversation for *this agent*). Two agents, three
     conversations: agent_alpha owns convs 1+2, agent_beta
     owns conv 3. Filtering by agent_alpha returns exactly the
@@ -3057,7 +3057,7 @@ def test_fork_conversation_stamps_source_external_session_id(
         f"Fork should carry the source's external session id, got {fork.labels!r}"
     )
     # The clone is a fresh session — it has no native session of its own
-    # yet. Copying external_session_id would make two Omnigent sessions claim
+    # yet. Copying external_session_id would make two agent-meow sessions claim
     # the same Claude session.
     reloaded = conversation_store.get_conversation(fork.id)
     assert reloaded is not None
@@ -3212,7 +3212,7 @@ def test_fork_conversation_cross_family_drops_external_session_directive(
     and the runner's clone path launches FRESH when its clone attempt
     fails — silently losing history. Omitting the directive routes the
     runner to the carry-history rebuild path (native transcript built from
-    the copied Omnigent items) instead.
+    the copied agent-meow items) instead.
     """
     from omnigent.stores.conversation_store import (
         FORK_CARRY_HISTORY_LABEL_KEY,

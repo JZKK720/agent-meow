@@ -57,7 +57,7 @@ class SysSessionSendTool(Tool):
     """
     Send a message to a named sub-agent — auto-create-or-continue.
 
-    Sub-agent sessions are separate Omnigent agent sessions (own
+    Sub-agent sessions are separate agent-meow agent sessions (own
     conversation, visible in the session tree) — distinct from any
     built-in subagent/Task tool the wrapping harness provides.
 
@@ -116,7 +116,7 @@ class SysSessionSendTool(Tool):
         """:returns: Human-readable description of the tool."""
         return (
             "Send a message to a sub-agent session. Sub-agent sessions "
-            "are separate Omnigent agent sessions (own conversation, "
+            "are separate agent-meow agent sessions (own conversation, "
             "visible in the session tree) — distinct from any built-in "
             "subagent/Task tool your harness provides. Two modes: pass "
             "(agent, title) to spawn-or-continue a named sub-agent (the "
@@ -238,7 +238,7 @@ def _build_sys_session_send_schema(
         else (
             "Send a message to an existing child session you created "
             "(e.g. via sys_session_create), identified by session_id. "
-            "Child sessions are separate Omnigent agent sessions (own "
+            "Child sessions are separate agent-meow agent sessions (own "
             "conversation, visible in the session tree) — not your "
             "harness's built-in subagent/Task tool, which remains the "
             "right choice for quick in-context delegation. "
@@ -767,7 +767,7 @@ class SysSessionCreateTool(Tool):
     """
     Create a child session from an existing agent or a local bundle.
 
-    The child is a separate Omnigent agent session — its own
+    The child is a separate agent-meow agent session — its own
     conversation, visible in the session tree, optionally a different
     registered agent — not the wrapping harness's built-in
     subagent/Task tool (which remains the right choice for quick
@@ -817,7 +817,7 @@ class SysSessionCreateTool(Tool):
         """:returns: Human-readable description of the tool."""
         return (
             "Create a child session from an agent. This launches a "
-            "separate Omnigent agent session — its own conversation, "
+            "separate agent-meow agent session — its own conversation, "
             "visible in the session tree, optionally a different "
             "registered agent. It is not your harness's built-in "
             "subagent/Task tool: for quick in-context helpers (parallel "

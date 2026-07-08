@@ -19,7 +19,7 @@ with four required arguments (plus one optional):
 - ``--conversation-id <id>``: the conversation this process serves.
   Stashed on ``app.state.conversation_id`` so the harness can scope
   its in-memory state per §Harness in-memory state in the design
-  doc. Omnigent allocates the id; the runner does NOT parse it from the
+  doc. agent-meow allocates the id; the runner does NOT parse it from the
   socket path (the socket layout is a process-manager
   implementation detail, not a stable contract).
 - ``--parent-pid <pid>`` (optional): PID of the spawning process.
@@ -368,7 +368,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.parent_pid is not None:
         _set_pdeathsig()
         _start_parent_watchdog(args.parent_pid)
-    # Bind the endpoint Omnigent allocated for this conversation: a Unix socket
+    # Bind the endpoint agent-meow allocated for this conversation: a Unix socket
     # path (``--socket``, POSIX) or a TCP loopback host:port (``--bind``,
     # Windows). ``log_level`` keeps per-process noise low — see
     # ``_UVICORN_LOG_LEVEL``. ``timeout_graceful_shutdown`` bounds how long

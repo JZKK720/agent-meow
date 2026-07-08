@@ -99,7 +99,7 @@
   }
 
   /**
-   * Path under a Databricks workspace where the Omnigent web UI is mounted. A
+   * Path under a Databricks workspace where the agent-meow web UI is mounted. A
    * bare workspace URL serves the workspace's own web app at the root, so a
    * user who pastes just the workspace host (e.g.
    * ``https://<ws>.azuredatabricks.net``) lands on a 404 unless this suffix is
@@ -131,7 +131,7 @@
   const WORKSPACE_PROBE_TIMEOUT_MS = 8000;
 
   /**
-   * Expand a bare Databricks workspace URL to its Omnigent web-UI mount.
+   * Expand a bare Databricks workspace URL to its agent-meow web-UI mount.
    *
    * Mirrors the omni CLI's behavioral detection
    * (``omnigent/cli.py:_workspace_api_server_url``): rather than match

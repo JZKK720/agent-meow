@@ -1,8 +1,8 @@
 """CodexExecutor: run agents through the Codex App Server.
 
 This executor keeps one long-lived ``codex app-server`` subprocess per
-Omnigent session, persists the Codex thread across turns, and exposes
-Omnigent tools to Codex as App Server ``dynamicTools``.
+agent-meow session, persists the Codex thread across turns, and exposes
+agent-meow tools to Codex as App Server ``dynamicTools``.
 """
 
 from __future__ import annotations
@@ -100,14 +100,14 @@ _STREAM_READ_CHUNK_SIZE = 65536
 _OPENAI_CODEX_DEFAULT_MODEL = "gpt-5.4-mini"
 # Databricks-specific default model for the Databricks-profile-derivation
 # gateway path (no gateway base URL supplied directly). The neutral
-# generic-provider gateway path never uses this — it requires the Omnigent producer
+# generic-provider gateway path never uses this — it requires the agent-meow producer
 # to resolve a concrete model. Used only when constructing the codex config
 # from ~/.databrickscfg credentials with no spec/override model.
 _DATABRICKS_CODEX_DEFAULT_MODEL = "databricks-gpt-5-5"
 
 # Files symlinked from the real CODEX_HOME into the per-session temp home.
 # Symlinks (not copies) so credential refreshes in the real home propagate
-# to running sessions without any action from Omnigent.
+# to running sessions without any action from agent-meow.
 _CODEX_HOME_SYMLINK_FILES = ("auth.json",)
 
 # Files copied (not symlinked) from the real CODEX_HOME into the per-session
@@ -385,7 +385,7 @@ def _clean_codex_env(extra_allow: Iterable[str] = ()) -> dict[str, str]:
         "PYTHONUTF8",
         "DATABRICKS_BEARER",  # explicit CI/integration bearer used by auth.command
         "DATABRICKS_CODEX_TOKEN",  # env_key referenced by ~/.codex/config.toml's DB provider
-        OMNIGENT_SESSION_ENV_VAR,  # "inside Omnigent" marker (CLAUDE_CODE/CODEX analog)
+        OMNIGENT_SESSION_ENV_VAR,  # "inside agent-meow" marker (CLAUDE_CODE/CODEX analog)
     } | set(extra_allow)
     for key, value in os.environ.items():
         if key in _CODEX_ENV_DENY_EXACT:
@@ -586,9 +586,9 @@ def populate_codex_skills_from_bundle(
 
 def _is_omnigent_private_codex_home(path: Path) -> bool:
     """
-    Return whether *path* is an Omnigent-created private ``CODEX_HOME``.
+    Return whether *path* is an agent-meow-created private ``CODEX_HOME``.
 
-    Omnigent launches Codex with private homes for session state
+    agent-meow launches Codex with private homes for session state
     isolation. Those homes are not the user's source of truth for auth;
     nested launches must not treat them as the real login directory.
 
@@ -613,7 +613,7 @@ def _private_codex_home_config_source(path: Path) -> Path | None:
     """
     Infer the original config source from a private Codex home.
 
-    A parent Omnigent launch bridges ``auth.json`` and ``config.toml`` into
+    A parent agent-meow launch bridges ``auth.json`` and ``config.toml`` into
     its private home as symlinks. If a nested launch inherits that private
     ``CODEX_HOME``, those symlink targets are the only durable record of a
     custom parent source.
@@ -640,7 +640,7 @@ def _resolve_codex_home_config_source(source_dir: Path, home_codex_home: Path) -
     Resolve the single Codex home to read auth/config from.
 
     User-supplied ``CODEX_HOME`` remains authoritative, except when it
-    points at an Omnigent private home from a parent session. In that
+    points at an agent-meow private home from a parent session. In that
     nested case, the private home is session state, not the login source,
     so the user's normal ``~/.codex`` directory is the intended source.
 
@@ -663,9 +663,9 @@ def _codex_home_config_source_from_env() -> Path:
     """
     Return the Codex home whose auth/config should be bridged.
 
-    Codex stores subscription login state in ``CODEX_HOME``. Omnigent
+    Codex stores subscription login state in ``CODEX_HOME``. agent-meow
     launches Codex with private per-session homes for isolation, then bridges
-    only auth/config from the user's source home. Nested Omnigent processes
+    only auth/config from the user's source home. Nested agent-meow processes
     can inherit a parent private home, so this resolver maps that specific
     inherited session-state home back to the user's default ``~/.codex``.
 
@@ -798,7 +798,7 @@ def _databricks_codex_config_overrides(
         f'model_provider="{provider_name}"',
         (
             "model_providers.omnigent_databricks="
-            '{name="Omnigent Databricks",'
+            '{name="agent-meow Databricks",'
             f"base_url={json.dumps(base_url)},"
             'auth={command="sh",'
             f'args=["-c",{auth_command_json}],'
@@ -859,7 +859,7 @@ def _provider_codex_config_overrides(
     overrides.append(f'model_provider="{provider_name}"')
     overrides.append(
         f"model_providers.{provider_name}="
-        '{name="Omnigent Provider",'
+        '{name="agent-meow Provider",'
         f"base_url={json.dumps(base_url)},"
         'auth={command="sh",'
         f'args=["-c",{auth_command_json}],'
@@ -1139,7 +1139,7 @@ def _dynamic_tool_result_payload(result: CodexToolResult) -> CodexParams:
 class _PendingToolResult:
     """Tracks a dynamic tool invocation pending a Codex result event.
 
-    :param name: The tool name Codex asked Omnigent to run.
+    :param name: The tool name Codex asked agent-meow to run.
     :param result: The raw tool result payload, or ``None`` if the tool
         hasn't completed yet.
     :param status: Classification of ``result`` (success / error / blocked).
@@ -2064,12 +2064,12 @@ class CodexExecutor(Executor):
             *gateway* — the gateway path pins its own generated provider.
         :param gateway_host: Gateway workspace host origin, e.g.
             ``"https://example.databricks.com"``.  Set from
-            ``HARNESS_CODEX_GATEWAY_HOST`` (written by the Omnigent workflow
+            ``HARNESS_CODEX_GATEWAY_HOST`` (written by the agent-meow workflow
             layer). When set, skips profile host lookup and requires the
             gateway base URL and auth command values.
         :param base_url_override: Override the Codex gateway base URL instead
             of deriving it from the profile host.  Set from
-            ``HARNESS_CODEX_GATEWAY_BASE_URL`` (written by the Omnigent workflow
+            ``HARNESS_CODEX_GATEWAY_BASE_URL`` (written by the agent-meow workflow
             layer). Required whenever ``gateway_host`` is set.
         :param gateway_auth_command: Shell command that prints a bearer token,
             e.g.
@@ -2081,7 +2081,7 @@ class CodexExecutor(Executor):
             ``HARNESS_CODEX_GATEWAY_AUTH_REFRESH_INTERVAL_MS``.
         :param enable_web_search: Leave Codex's built-in ``web_search`` tool
             enabled.  Set ``False`` to force the model to use only
-            Omnigent-bridged tools.
+            agent-meow-bridged tools.
         :param disable_native_tools: When True, disable supported native
             Codex tools for the turn.
         :param retry_policy: The spec's ``llm.retry`` budget. Threads
@@ -2160,7 +2160,7 @@ class CodexExecutor(Executor):
             # config. On the Databricks-profile-derivation branch (no gateway
             # host or base URL supplied directly) a ``databricks-*`` default is
             # legitimate Databricks behavior; on the directly-supplied neutral
-            # gateway path the Omnigent producer must have resolved a model, and the
+            # gateway path the agent-meow producer must have resolved a model, and the
             # path never falls back to a ``databricks-*`` model.
             effective_model: str
             if host is None:
@@ -2206,13 +2206,13 @@ class CodexExecutor(Executor):
                 base_url = base_url_override
                 auth_command = gateway_auth_command
                 if model is None:
-                    # Directly-supplied neutral gateway: the Omnigent producer always
+                    # Directly-supplied neutral gateway: the agent-meow producer always
                     # resolves a concrete model (spec > provider default >
                     # catalog default) before spawning. Fail loud rather than
                     # silently selecting a ``databricks-*`` default.
                     raise OSError(
                         "CodexExecutor(gateway=True) with a gateway base URL requires a "
-                        "model: the Omnigent producer must resolve one before spawning."
+                        "model: the agent-meow producer must resolve one before spawning."
                     )
                 effective_model = model
             # ``DATABRICKS_HOST`` is read by the Databricks ``databricks auth
@@ -2229,7 +2229,7 @@ class CodexExecutor(Executor):
             )
         if not enable_web_search:
             # Disable Codex's built-in web_search tool so the model can only reach
-            # tools exposed by Omnigent as dynamicTools. The top-level web_search
+            # tools exposed by agent-meow as dynamicTools. The top-level web_search
             # key accepts "live", "cached", or "disabled".
             self._codex_config_overrides.append('web_search="disabled"')
         self._tool_executor: CodexToolExecutor | None = None

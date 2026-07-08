@@ -86,7 +86,7 @@ function sameLoopbackServer(a, b) {
 }
 
 /**
- * The Omnigent local runtime data dir — `$OMNIGENT_DATA_DIR` (with `~`
+ * The agent-meow local runtime data dir — `$OMNIGENT_DATA_DIR` (with `~`
  * expanded) or `~/.omnigent`. Mirrors `_local_data_dir()` in
  * omnigent/host/local_server.py. The local-server pidfile lives here.
  *
@@ -102,7 +102,7 @@ function localDataDir() {
 }
 
 /**
- * The Omnigent config dir — `$OMNIGENT_CONFIG_HOME` (with `~` expanded) or
+ * The agent-meow config dir — `$OMNIGENT_CONFIG_HOME` (with `~` expanded) or
  * `~/.omnigent`. config.yaml (machine identity) lives here; it can differ from
  * the data dir under test env overrides, but is the same by default.
  *
@@ -118,7 +118,7 @@ function localConfigDir() {
 }
 
 /**
- * The shared Omnigent state dir, ALWAYS `~/.omnigent` — it ignores
+ * The shared agent-meow state dir, ALWAYS `~/.omnigent` — it ignores
  * `$OMNIGENT_DATA_DIR`, mirroring `state_dir()` in
  * sdks/ui/omnigent_ui_sdk/terminal/_config.py and `_HOST_PID_PATH` in
  * omnigent/cli.py (both hardcode `Path.home()/".omnigent"`). The auth-token
@@ -135,7 +135,7 @@ function stateDir() {
 let cachedHostId = null;
 
 /**
- * This machine's Omnigent host id (e.g. "host_ab12…"), read from the machine
+ * This machine's agent-meow host id (e.g. "host_ab12…"), read from the machine
  * identity in `config.yaml` (`host: host_id:`, written by
  * omnigent/host/identity.py) — instant, no subprocess. Present once generated,
  * even before connecting to any server. Returns null when no id exists yet;
@@ -674,7 +674,7 @@ function readDaemonRecords() {
 }
 
 /**
- * The Omnigent server URL a daemon record talks to, mirroring
+ * The agent-meow server URL a daemon record talks to, mirroring
  * `_daemon_base_url()` (omnigent/cli.py): a local-mode daemon's URL lives in
  * `resolved_server_url` (falling back to a healthy local server's URL); a
  * server-mode daemon's is its `server_url`/`target`.

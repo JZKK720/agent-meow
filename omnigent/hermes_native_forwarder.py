@@ -3,7 +3,7 @@
 The ``omnigent hermes`` wrapper launches the real ``hermes`` TUI in a runner-owned
 tmux pane, and :mod:`omnigent.hermes_native_bridge` injects web-UI messages into
 it. That covers the web→TUI direction, but the *embedded terminal* is then the
-only surface that reflects the agent's work — the Omnigent conversation view (chat
+only surface that reflects the agent's work — the agent-meow conversation view (chat
 bubbles, title) stays empty because nothing mirrors the TUI's transcript back into
 the session.
 
@@ -636,7 +636,7 @@ async def _post_external_session_status(
     emits only a web-spinner ``session.status`` edge for hermes-native and never
     wakes a parent, which is why this explicit post is required.
 
-    :raises httpx.HTTPError: If the Omnigent request fails or is rejected.
+    :raises httpx.HTTPError: If the agent-meow request fails or is rejected.
     """
     resp = await client.post(
         f"/v1/sessions/{session_id}/events",
@@ -760,9 +760,9 @@ async def forward_hermes_store_to_session(
     ``external_conversation_item``. The high-water ``id`` is persisted to
     ``bridge_dir`` so a supervisor restart resumes without re-posting.
 
-    :param base_url: Omnigent server base URL.
+    :param base_url: agent-meow server base URL.
     :param headers: Static HTTP headers (auth normally via ``auth``).
-    :param session_id: Omnigent session/conversation id.
+    :param session_id: agent-meow session/conversation id.
     :param bridge_dir: The hermes-native bridge dir (holds the persisted cursor).
     :param agent_name: Agent label stamped on mirrored assistant items.
     :param workspace: The session's working directory (Hermes' ``sessions.cwd``).
@@ -777,7 +777,7 @@ async def forward_hermes_store_to_session(
     hermes_session_id: str | None = persisted.hermes_session_id
     last_id = persisted.last_id if hermes_session_id is not None else 0
     # Track whether we have already PATCHed the external_session_id to the
-    # Omnigent server so we do it at most once per forwarder lifetime.
+    # agent-meow server so we do it at most once per forwarder lifetime.
     _external_id_synced = False
     timeout = httpx.Timeout(_POST_TIMEOUT_S)
     async with httpx.AsyncClient(

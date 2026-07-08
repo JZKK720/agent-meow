@@ -2030,7 +2030,7 @@ def test_populate_codex_skills_none(tmp_path: Path) -> None:
 
     Codex's discovery walks ``$CODEX_HOME/skills/`` — if the
     directory doesn't exist, no skills load. This is the
-    hermetic-agent regression-pin: Omnigent must produce no skill
+    hermetic-agent regression-pin: agent-meow must produce no skill
     surface for ``skills: none`` even when host
     ``~/.codex/skills/`` is populated.
     """
@@ -2230,7 +2230,7 @@ def test_app_server_start_uses_real_home_for_private_inherited_codex_home(
     """
     Empty inherited ``CODEX_HOME`` does not hide the real user login at startup.
 
-    Omnigent itself can be launched from a Codex-managed environment
+    agent-meow itself can be launched from a Codex-managed environment
     where ``CODEX_HOME`` points at an isolated private home. If that
     inherited home lacks Codex auth/config files, app-server startup must
     bridge from the user's real ``~/.codex`` equivalent so Codex sessions
@@ -2312,7 +2312,7 @@ def test_app_server_start_preserves_custom_home_from_inherited_private_symlink(
     Nested startup preserves a parent's custom Codex home source.
 
     A top-level launch may bridge auth/config from an explicit custom
-    ``CODEX_HOME`` into an Omnigent private home. A nested launch inherits
+    ``CODEX_HOME`` into an agent-meow private home. A nested launch inherits
     only that private path, so it must infer the original custom source from
     the existing symlink targets instead of falling back to ``~/.codex``.
 
@@ -2450,7 +2450,7 @@ def test_clean_codex_env_includes_omnigent_session_marker(monkeypatch) -> None:
     """The ``OMNIGENT`` session marker survives the codex env scrub.
 
     The marker (set once on the runner) must reach the codex CLI so the
-    shell commands codex runs can detect they are inside an Omnigent
+    shell commands codex runs can detect they are inside an agent-meow
     session, like ``CLAUDE_CODE`` / ``CODEX``.
 
     :param monkeypatch: Pytest monkeypatch fixture.

@@ -356,7 +356,7 @@ def test_provider_catalog_caches_fetch_failure(
 
 
 # ---------------------------------------------------------------------------
-# Omnigent's authoritative context-window registry (supersedes litellm/catalog)
+# agent-meow's authoritative context-window registry (supersedes litellm/catalog)
 # ---------------------------------------------------------------------------
 
 

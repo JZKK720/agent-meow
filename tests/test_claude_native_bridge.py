@@ -234,10 +234,10 @@ def test_prepare_bridge_dir_preserves_permission_hook_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Re-preparing a bridge keeps the permission command hook's Omnigent URL.
+    Re-preparing a bridge keeps the permission command hook's agent-meow URL.
 
     The claude-native ``PermissionRequest`` command hook reads
-    ``permission_hook.json`` at hook time to learn which Omnigent server to
+    ``permission_hook.json`` at hook time to learn which agent-meow server to
     POST to (the URL is not baked into Claude's launch args). A
     rebind/reattach that re-runs ``prepare_bridge_dir`` must NOT wipe
     that file — if it does, the permission subprocess bails with "AP
@@ -448,7 +448,7 @@ def test_read_assistant_text_since_parses_claude_jsonl(tmp_path: Path) -> None:
     Transcript parsing returns only assistant text after the cursor.
 
     The parser must not echo channel/user records back into the
-    Omnigent assistant stream.
+    agent-meow assistant stream.
     """
     transcript_path = tmp_path / "session.jsonl"
     transcript_path.write_text(
@@ -802,7 +802,7 @@ def test_read_transcript_line_cursor_migration_preserves_legacy_source_ids(
 
 def test_read_transcript_items_since_ignores_observed_status_records(tmp_path: Path) -> None:
     """
-    Non-conversation Claude JSONL records do not become Omnigent items.
+    Non-conversation Claude JSONL records do not become agent-meow items.
 
     The local transcript audit found status/UI records such as
     ``queue-operation``, ``branch-update``, ``progress``,
@@ -1976,7 +1976,7 @@ def test_read_transcript_items_from_offset_surfaces_skill_as_slash_command(
 
 def test_augment_claude_args_injects_mcp_and_hooks(tmp_path: Path) -> None:
     """
-    Claude receives the Omnigent MCP server and hook settings in one launch.
+    Claude receives the agent-meow MCP server and hook settings in one launch.
 
     This fails if the terminal starts Claude without the bridge pieces
     needed for tool dispatch / transcript discovery. Also asserts the
@@ -2083,10 +2083,10 @@ def test_augment_claude_args_omits_permission_hook_without_omnigent_server(
 ) -> None:
     """
     No ``PermissionRequest`` hook is registered when the wrapper has
-    no Omnigent server URL to point Claude at.
+    no agent-meow server URL to point Claude at.
 
     This guards the default path: a call site that forgets to plumb
-    the Omnigent server URL must NOT silently fall through to Claude's TUI
+    the agent-meow server URL must NOT silently fall through to Claude's TUI
     prompt for every tool — but it also must not register an HTTP hook
     against an undefined URL. The expected behaviour is "no hook at
     all", which means Claude uses its built-in permission flow.
@@ -2106,7 +2106,7 @@ def test_augment_claude_args_registers_permission_command_hook(
     """
     Passing ``ap_server_url`` registers Claude's
     ``PermissionRequest`` hook as a command hook that resolves the
-    active Omnigent session at hook time.
+    active agent-meow session at hook time.
 
     If this regresses, Claude Code's built-in TUI permission prompt
     appears every time the user is supposed to approve from the web
@@ -2188,7 +2188,7 @@ def test_augment_claude_args_omits_user_prompt_submit_policy_hook_without_server
     """
     Without ``ap_server_url`` the UserPromptSubmit policy hook is not wired.
 
-    Policy hooks only make sense when an Omnigent server is configured to
+    Policy hooks only make sense when an agent-meow server is configured to
     evaluate against; the forwarder's status hook still registers, but no
     evaluate-policy command should appear (mirrors PreToolUse/PostToolUse,
     which are also gated behind ``ap_server_url``).
@@ -2457,7 +2457,7 @@ def test_inject_user_message_raises_when_tmux_target_never_published(
     """
     The injection helper fails loud when the runner has not written tmux.json.
 
-    Failing silently would let the Omnigent turn complete with no user
+    Failing silently would let the agent-meow turn complete with no user
     message ever reaching Claude — the executor needs the
     RuntimeError so it can surface an ExecutorError.
     """
@@ -2761,7 +2761,7 @@ def test_inject_user_message_raises_when_draft_never_submits(
     Injection fails loud when the draft never leaves the input box.
 
     If every submit Enter is swallowed (e.g. the pane is wedged in a
-    dialog), returning success would complete the Omnigent turn with
+    dialog), returning success would complete the agent-meow turn with
     the message still sitting unsent in Claude's input box. The
     RuntimeError surfaces as an ExecutorError instead.
     """
@@ -2812,7 +2812,7 @@ def test_inject_interrupt_sends_escape_keystroke(
 
     Without the ``-l`` flag, tmux interprets ``Escape`` as the key
     name (the single ASCII byte 0x1b). If the flag leaks in or the
-    keyword changes, Claude won't see a cancel and the Omnigent stop
+    keyword changes, Claude won't see a cancel and the agent-meow stop
     button silently degrades back to a no-op.
     """
     bridge_dir = tmp_path / "bridge"
@@ -2867,7 +2867,7 @@ def test_inject_interrupt_raises_when_tmux_target_never_published(
     inject_interrupt fails loud if tmux.json hasn't been written.
 
     The runner route catches RuntimeError and returns 503 so the
-    Omnigent server falls back to the DBOS cancel path. Swallowing this
+    agent-meow server falls back to the DBOS cancel path. Swallowing this
     silently would make the stop button appear to work while
     actually doing nothing.
     """
@@ -3163,7 +3163,7 @@ async def test_channel_server_relays_active_omnigent_tools(
     Active turn tools are advertised to Claude and dispatched through AP.
 
     This fails if Claude Code can receive web-channel inputs but cannot
-    call the Omnigent tools made available to the server-side agent.
+    call the agent-meow tools made available to the server-side agent.
     """
     monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
     monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
@@ -3212,7 +3212,7 @@ async def test_channel_server_relays_active_omnigent_tools(
             tools=[
                 {
                     "name": "sys_custom",
-                    "description": "Test-only active Omnigent tool.",
+                    "description": "Test-only active agent-meow tool.",
                     "parameters": {
                         "type": "object",
                         "properties": {"value": {"type": "string"}},
@@ -3236,7 +3236,7 @@ async def test_channel_server_relays_active_omnigent_tools(
         assert custom_tools == [
             {
                 "name": "sys_custom",
-                "description": "Test-only active Omnigent tool.",
+                "description": "Test-only active agent-meow tool.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {"value": {"type": "string"}},
@@ -3347,7 +3347,7 @@ def test_call_relay_tool_returns_mcp_error_on_read_timeout(
     # The result is a well-formed MCP error result, NOT a raised exception.
     assert result["isError"] is True
     error_text = json.loads(result["content"][0]["text"])["error"]
-    assert "failed to call Omnigent tool relay" in error_text
+    assert "failed to call agent-meow tool relay" in error_text
 
 
 @pytest.mark.asyncio
@@ -3603,7 +3603,7 @@ async def test_start_tool_relay_accepts_antigravity_native_bridge_root(
             tools=[
                 {
                     "name": "sys_session_create",
-                    "description": "Spawn an Omnigent sub-agent session.",
+                    "description": "Spawn an agent-meow sub-agent session.",
                     "parameters": {"type": "object", "properties": {}},
                 }
             ],
@@ -3660,7 +3660,7 @@ async def test_start_tool_relay_accepts_opencode_native_bridge_root(
             tools=[
                 {
                     "name": "sys_session_list",
-                    "description": "List Omnigent sessions.",
+                    "description": "List agent-meow sessions.",
                     "parameters": {"type": "object", "properties": {}},
                 }
             ],
@@ -4657,7 +4657,7 @@ def test_display_cost_approval_popup_builds_detached_tmux_command(
     Proves the modal targets the right tmux socket + pane + attached
     client (``-c``), launches :mod:`omnigent.native_cost_popup`, and
     forwards the session/elicitation/message plus THIS bridge's
-    ``permission_hook.json`` (where the popup reads the Omnigent url/token). A
+    ``permission_hook.json`` (where the popup reads the agent-meow url/token). A
     failure means native approval would render at the wrong pane/client,
     run the wrong program, or omit an input the resolve POST needs — i.e.
     it silently wouldn't work.

@@ -1,4 +1,4 @@
-"""Tests for the Omnigent brand wordmark and Otto lockup."""
+"""Tests for the agent-meow brand wordmark and Otto lockup."""
 
 from __future__ import annotations
 

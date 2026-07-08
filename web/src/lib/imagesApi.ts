@@ -41,6 +41,10 @@ export interface ImageAsset {
   createdBy: string | null;
 }
 
+function normalizeEpochSeconds(value: number): number {
+  return value > 10_000_000_000 ? Math.floor(value / 1_000_000) : value;
+}
+
 function toImage(w: ImageWire): ImageAsset {
   return {
     id: w.id,
@@ -51,8 +55,8 @@ function toImage(w: ImageWire): ImageAsset {
     height: w.height,
     bytesSize: w.bytes_size,
     hasEdits: w.has_edits,
-    createdAt: w.created_at,
-    updatedAt: w.updated_at,
+    createdAt: normalizeEpochSeconds(w.created_at),
+    updatedAt: normalizeEpochSeconds(w.updated_at),
     createdBy: w.created_by,
   };
 }

@@ -254,7 +254,7 @@ jobs:
           node node_modules/@anthropic-ai/claude-code/install.cjs
           echo "${GITHUB_WORKSPACE}/.cc-cli/node_modules/.bin" >> "$GITHUB_PATH"
 
-      - name: Write Omnigent provider config
+      - name: Write agent-meow provider config
         if: steps.plan.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
         env:
           GATEWAY_BASE_URL: ${{ secrets.GATEWAY_BASE_URL }}

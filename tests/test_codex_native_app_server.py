@@ -182,7 +182,7 @@ def test_build_codex_native_server_uses_profile_host_without_static_token(
     """
     Native Codex accepts Databricks CLI OAuth profiles without static tokens.
 
-    A default Omnigent install may not include ``databricks-sdk`` in the
+    A default agent-meow install may not include ``databricks-sdk`` in the
     runner process. In that case ``_read_databrickscfg`` cannot mint a bearer
     at startup, but the profile's host is still enough: Codex gets an
     ``auth.command`` that runs ``databricks auth token --profile`` at request
@@ -427,7 +427,7 @@ async def test_start_writes_fresh_mcp_config_without_leading_blanks(
 
 async def test_untrusted_hook_is_trusted_via_batchwrite() -> None:
     """
-    An untrusted Omnigent hook is trusted with its currentHash.
+    An untrusted agent-meow hook is trusted with its currentHash.
 
     This is the core flow: list → write trusted_hash → verify trusted.
     It fails if the batchWrite omits our key, writes the wrong hash, or
@@ -462,7 +462,7 @@ async def test_already_trusted_hook_skips_batchwrite() -> None:
 
 async def test_missing_hook_raises() -> None:
     """
-    No discovered Omnigent hook fails loud (anti fail-open).
+    No discovered agent-meow hook fails loud (anti fail-open).
 
     If our hook was never registered/loaded, enforcement would silently
     not run. The flow must raise rather than return quietly. Fails if a
@@ -493,7 +493,7 @@ async def test_still_untrusted_after_write_raises() -> None:
 
 async def test_user_hooks_are_never_trusted() -> None:
     """
-    Only Omnigent hooks are trusted; user-declared hooks are left alone.
+    Only agent-meow hooks are trusted; user-declared hooks are left alone.
 
     The private CODEX_HOME symlinks the user's config.toml, which may
     declare its own hooks. Auto-trusting those would be a security hole.
@@ -724,7 +724,7 @@ async def test_trust_failure_is_fail_open_with_reason(
     _set_codex_version(monkeypatch, (0, 136, 0))
 
     async def _raise_trust(_self: CodexNativeAppServer) -> None:
-        raise RuntimeError("Omnigent policy hook was not discovered for cwd ...")
+        raise RuntimeError("agent-meow policy hook was not discovered for cwd ...")
 
     monkeypatch.setattr(CodexNativeAppServer, "_trust_policy_hooks", _raise_trust)
 

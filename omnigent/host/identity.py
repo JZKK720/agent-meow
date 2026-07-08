@@ -29,11 +29,11 @@ HOST_ID_ENV_VAR = "OMNIGENT_HOST_ID"
 HOST_NAME_ENV_VAR = "OMNIGENT_HOST_NAME"
 
 # WebSocket upgrade header carrying a managed host's launch token.
-# Mirrors the runner tunnel's X-Omnigent-Runner-Tunnel-Token pattern:
+# Mirrors the runner tunnel's X-agent-meow-Runner-Tunnel-Token pattern:
 # a dedicated header (not Authorization) so the credential can't be
 # confused with a user Bearer token by intermediate proxies or the
 # auth provider.
-MANAGED_HOST_TOKEN_HEADER = "X-Omnigent-Host-Token"
+MANAGED_HOST_TOKEN_HEADER = "X-agent-meow-Host-Token"
 
 
 @dataclass

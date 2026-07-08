@@ -10,12 +10,12 @@ from omnigent.inner.terminal import TerminalInstance
 
 
 class NullServerClient:
-    """Minimal fake Omnigent server client for tests that do not exercise Omnigent interactions.
+    """Minimal fake agent-meow server client for tests that do not exercise agent-meow interactions.
 
-    Returns empty/204 responses to all requests so the runner's Omnigent calls
+    Returns empty/204 responses to all requests so the runner's agent-meow calls
     (session fetch, label patch, history load, etc.) succeed silently.
     Used wherever ``create_runner_app`` is called in tests that only
-    exercise runner-local behavior with no real Omnigent server.
+    exercise runner-local behavior with no real agent-meow server.
     """
 
     class _Response:

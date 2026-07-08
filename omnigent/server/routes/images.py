@@ -9,6 +9,7 @@ patch), and delete.
 from __future__ import annotations
 
 import asyncio
+import mimetypes
 import uuid
 from typing import Any
 
@@ -107,7 +108,12 @@ def create_images_router(
         if not data:
             raise OmnigentError("Empty upload", code=ErrorCode.BAD_REQUEST)
         image_id = str(uuid.uuid4())
-        mime = file.content_type or "application/octet-stream"
+        mime = file.content_type or mimetypes.guess_type(file.filename or "")[0] or ""
+        if not mime.startswith("image/"):
+            raise OmnigentError(
+                f"Unsupported image upload type: {mime or 'unknown'}",
+                code=ErrorCode.INVALID_INPUT,
+            )
         artifact_key = f"images/{session_id}/{image_id}"
         await asyncio.to_thread(artifact_store.put, artifact_key, data)
         img = await asyncio.to_thread(
@@ -140,7 +146,7 @@ def create_images_router(
         request: Request,
         session_id: str,
         image_id: str,
-    ) -> bytes:
+    ) -> Any:
         """Fetch an image's binary content."""
         user_id = get_user_id(request, auth_provider)
         await _require_session_access(user_id, session_id, LEVEL_READ)
@@ -148,9 +154,9 @@ def create_images_router(
         if img is None:
             raise OmnigentError("Image not found", code=ErrorCode.NOT_FOUND)
         data = await asyncio.to_thread(artifact_store.get, img.artifact_key)
-        # FastAPI will return the bytes with application/octet-stream; the
-        # caller can use the metadata endpoint for the mime type.
-        return data
+        from fastapi import Response
+
+        return Response(content=data, media_type=img.mime or "application/octet-stream")
 
     @router.patch("/sessions/{session_id}/resources/images/{image_id}/edit")
     async def update_image_edit(

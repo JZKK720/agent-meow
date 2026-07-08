@@ -1,15 +1,15 @@
-"""Cursor preToolUse hook script for Omnigent policy enforcement.
+"""Cursor preToolUse hook script for agent-meow policy enforcement.
 
 Runs as a subprocess of the Cursor SDK bridge process, not the harness.
 
 Reads tool-call info from stdin (Cursor hook protocol), evaluates
-PHASE_TOOL_CALL policy via the Omnigent server, and returns the
+PHASE_TOOL_CALL policy via the agent-meow server, and returns the
 verdict on stdout.
 
 Environment variables (baked into the hooks.json command by the
 CursorExecutor at session startup):
 
-    _OMNIGENT_SERVER_URL  : Base URL of the Omnigent server
+    _OMNIGENT_SERVER_URL  : Base URL of the agent-meow server
                             (e.g. ``http://127.0.0.1:6767``).
     _OMNIGENT_SESSION_ID  : Session / conversation ID for policy
                             evaluation.
@@ -98,7 +98,7 @@ def main() -> None:
     if action == "POLICY_ACTION_DENY":
         out: dict[str, str] = {"permission": "deny"}
         if reason:
-            out["agent_message"] = f"Tool '{tool_name}' denied by Omnigent policy: {reason}"
+            out["agent_message"] = f"Tool '{tool_name}' denied by agent-meow policy: {reason}"
         json.dump(out, sys.stdout)
     elif action == "POLICY_ACTION_ASK":
         # The server resolves ASK by parking the HTTP request until the

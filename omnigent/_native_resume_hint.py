@@ -18,9 +18,9 @@ def format_native_resume_command(
 
     :param native_command: Native wrapper subcommand, e.g.
         ``"claude"``.
-    :param session_id: Omnigent conversation id, e.g.
+    :param session_id: agent-meow conversation id, e.g.
         ``"conv_abc123"``.
-    :param server: Optional Omnigent server URL, e.g.
+    :param server: Optional agent-meow server URL, e.g.
         ``"https://example.databricks.com"``.
     :returns: Shell-quoted command string, e.g.
         ``"omnigent claude --resume conv_abc123"``.
@@ -43,9 +43,9 @@ def echo_native_resume_hint(
 
     :param native_command: Native wrapper subcommand, e.g.
         ``"codex"``.
-    :param session_id: Omnigent conversation id, e.g.
+    :param session_id: agent-meow conversation id, e.g.
         ``"conv_abc123"``.
-    :param server: Optional Omnigent server URL, e.g.
+    :param server: Optional agent-meow server URL, e.g.
         ``"https://example.databricks.com"``.
     :returns: None.
     """

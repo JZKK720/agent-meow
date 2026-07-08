@@ -62,7 +62,7 @@ _ENV_AGENT_NAME = "HARNESS_CURSOR_AGENT_NAME"
 def _resolve_os_env() -> OSEnvSpec:
     """Resolve the inner-executor :class:`OSEnvSpec` from :data:`_ENV_OS_ENV`.
 
-    Decodes the JSON-encoded dict Omnigent serialized via
+    Decodes the JSON-encoded dict agent-meow serialized via
     :func:`dataclasses.asdict`. When the env var is missing or malformed, falls
     back to ``caller_process + sandbox=none`` — matches the codex/pi wraps'
     default for specs without an ``os_env:`` block.

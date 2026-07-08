@@ -2,7 +2,7 @@
 
 The Images surface adds first-class image file management and image editing
 to the agent-meow workspace. It is implemented as middleware on top of the
-existing Omnigent runtime — a new `image` session resource type, a new
+existing agent-meow runtime — a new `image` session resource type, a new
 `ImageStore` (metadata) backed by the existing `ArtifactStore` (binary),
 new REST routes, new builtin agent tools, and a new UI rail tab.
 

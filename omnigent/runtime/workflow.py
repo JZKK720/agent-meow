@@ -139,7 +139,7 @@ _logger = logging.getLogger(__name__)
 # instead of 2.5 s) while keeping the DB query cost negligible
 # (~20 short SELECTs/sec while waiting). See
 # designs/REPL_STREAMING_THROUGHPUT.md bottleneck #2.
-# Translates Omnigent spec executor types (underscore) to harness subprocess names
+# Translates agent-meow spec executor types (underscore) to harness subprocess names
 # (hyphen), e.g. ``"claude_sdk"`` → ``"claude-sdk"`` used by ``_HARNESS_MODULES``.
 
 
@@ -268,7 +268,7 @@ def _get_runner_client_for_compaction(
 
     Used by compaction call sites so Layer 2 summarization is routed
     through the runner's own credentials (e.g. the user's Databricks
-    profile) instead of the Omnigent server's.
+    profile) instead of the agent-meow server's.
 
     Returns ``None`` when:
     - ``conversation_id`` is ``None`` (in-process / no-server mode).
@@ -437,9 +437,9 @@ _HARNESS_DATABRICKS_PROFILE: dict[AgentHarnessType, str] = {
     "qwen": "HARNESS_QWEN_DATABRICKS_PROFILE",
     # NB: no ``antigravity`` — it has no Databricks/gateway path (Gemini-native).
     # NB: no ``kimi`` — upstream kimi has no per-spawn provider override flag,
-    # so Omnigent cannot thread a Databricks gateway through. Users configure
+    # so agent-meow cannot thread a Databricks gateway through. Users configure
     # providers via ``kimi provider add`` in ``~/.kimi/config.toml``
-    # (Omnigent-side provider injection is a deferred follow-up).
+    # (agent-meow-side provider injection is a deferred follow-up).
 }
 
 
@@ -1160,7 +1160,7 @@ def _build_claude_sdk_spawn_env(
     Maps spec.executor fields → the ``HARNESS_CLAUDE_SDK_*`` env
     vars defined in ``omnigent/inner/claude_sdk_harness.py``.
     Per the v1 spec-config-flow design (see §Step 5b in the
-    design doc), per-spawn env overrides are how Omnigent threads
+    design doc), per-spawn env overrides are how agent-meow threads
     per-spec config into the subprocess without polluting
     ``os.environ``.
 
@@ -1223,8 +1223,8 @@ def _build_claude_sdk_spawn_env(
     # for omnigent-style specs (the inner CLI auto-creates a
     # ``caller_process`` os_env when ``--os`` is set, and the
     # SDK's bundled CLI exposes the natives unconditionally in
-    # some configurations); routing through Omnigent mode without a
-    # similar default leaves Omnigent mode users staring at a
+    # some configurations); routing through agent-meow mode without a
+    # similar default leaves agent-meow mode users staring at a
     # tool list that's ~80% smaller. Forward the spec's
     # OSEnvSpec verbatim when present; default to
     # ``caller_process + sandbox=none`` otherwise so the parity
@@ -1245,7 +1245,7 @@ def _build_claude_sdk_spawn_env(
     # Permission mode: controls whether Claude asks for approval before
     # calling native tools. When set to anything other than the default
     # ``"bypassPermissions"``, the SDK's ``can_use_tool`` callback is
-    # active and approval requests surface via Omnigent elicitation. Read from
+    # active and approval requests surface via agent-meow elicitation. Read from
     # Omitted when not set — harness falls back to ``"bypassPermissions"``.
     permission_mode = spec.executor.config.get("permission_mode")
     if permission_mode is not None:
@@ -1272,7 +1272,7 @@ def _build_codex_spawn_env(
     path doesn't surface them either, so AP-side parity is
     preserved by leaving them at the inner executor's defaults.
     Operators who want non-default values set those env vars
-    on the Omnigent server directly (they propagate to the subprocess
+    on the agent-meow server directly (they propagate to the subprocess
     through normal env inheritance — the wrap's per-spawn
     overrides only override, they don't filter).
 
@@ -1743,7 +1743,7 @@ def _build_kimi_spawn_env(
             "(no ``--config-file`` / ``--mcp-config-file``). Remove "
             "``executor.auth`` from the spec and configure the provider once "
             "via `kimi provider add` in ~/.kimi/config.toml, then pin the "
-            "resulting model id in the agent spec. Omnigent-side provider "
+            "resulting model id in the agent spec. agent-meow-side provider "
             "injection is a deferred follow-up.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2309,7 +2309,7 @@ def _load_initial_history(
     # Validate the compaction item before trusting it as a cursor.
     # A broken item (empty summary, missing/bogus last_item_id) would
     # make the after= query return nothing, leaving history as just
-    # the empty synthetic pair — the Omnigent thinks context is ~0 tokens
+    # the empty synthetic pair — the agent-meow thinks context is ~0 tokens
     # and never triggers compaction while the executor's real context
     # keeps growing.
     last_id = compaction_item.data.last_item_id
@@ -2497,7 +2497,7 @@ def _maybe_persist_compaction_item(
     # or a missing last_item_id would poison the history cursor so
     # _load_initial_history returns an empty history on every
     # subsequent turn — the executor keeps running on its internal
-    # session while the Omnigent thinks context is near-zero and never
+    # session while the agent-meow thinks context is near-zero and never
     # triggers compaction again.
     if (
         not summary.text

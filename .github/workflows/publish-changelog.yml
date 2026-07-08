@@ -16,7 +16,8 @@ name: Publish Changelog
 #
 # Cross-repo writes can't use the workflow's own GITHUB_TOKEN (scoped to this
 # repo), so we mint a short-lived token from the omnigent-ci GitHub App scoped to
-# omnigent-site — the same App used by sync-openapi-to-site.yml.
+# omnigent-site — the same App used by sync-openapi-to-site.yml. (omnigent-ci is
+# the bot name; omnigent-site is the docs staging repo — both kept as-is.)
 
 on:
   release:

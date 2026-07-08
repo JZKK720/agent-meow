@@ -76,7 +76,7 @@ _GIT_VALUE_OPTS: frozenset[str] = frozenset(
 )
 
 # Shell tools whose command string this policy parses, by default.
-# Includes both the Omnigent built-in OS shell and Claude Code / Codex
+# Includes both the agent-meow built-in OS shell and Claude Code / Codex
 # native ``Bash`` tool (surfaced via the ``PreToolUse`` hook contract).
 _DEFAULT_SHELL_TOOLS: tuple[str, ...] = ("sys_os_shell", "Bash")
 
@@ -271,7 +271,7 @@ def block_working_dir_changes(
         ``"ask"`` (park for human approval). Defaults to ``"deny"``.
     :param shell_tools: Names of the shell tools whose ``command`` argument is
         parsed. ``None`` uses the defaults: ``["sys_os_shell", "Bash"]``
-        (Omnigent built-in + Claude/Codex native). Commands run through
+        (agent-meow built-in + Claude/Codex native). Commands run through
         a tool not listed here are not inspected.
     :returns: A one-argument policy callable returning a :class:`PolicyResponse`
         (DENY / ASK) on a gated command, or ``None`` to abstain (ALLOW).

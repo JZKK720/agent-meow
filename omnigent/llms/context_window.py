@@ -54,7 +54,7 @@ _MODEL_PREFIX_TO_PROVIDER: dict[str, str] = {
 
 _DEFAULT_CONTEXT_WINDOW: int = 128_000
 
-# Omnigent's authoritative context-window registry, consulted BEFORE litellm
+# agent-meow's authoritative context-window registry, consulted BEFORE litellm
 # and the MLflow catalog (see :func:`get_model_context_window`). The upstream
 # backends mis-size or omit several ids we actually serve, and offline both
 # collapse to the conservative 128K default — so for those models this registry
@@ -90,7 +90,7 @@ _ANTHROPIC_1M_BETA_WINDOW = 1_000_000
 
 
 def _registry_context_window(model: str) -> int | None:
-    """Resolve a model's context window from Omnigent's authoritative registry.
+    """Resolve a model's context window from agent-meow's authoritative registry.
 
     Consulted BEFORE litellm and the MLflow catalog. Normalizes the id the way
     model strings reach us — a provider prefix (``qwen/qwen3-coder``,
@@ -293,7 +293,7 @@ def get_model_context_window(model: str) -> int:
 
     1. ``AP_CONTEXT_WINDOW_OVERRIDE`` env var — overrides everything.
        Supports custom/self-hosted models and e2e compaction tests.
-    2. :func:`_registry_context_window` — Omnigent's own authoritative
+    2. :func:`_registry_context_window` — agent-meow's own authoritative
        registry (Qwen models, Anthropic ``[1m]`` beta). Supersedes the
        upstream backends, which mis-size or omit these ids and collapse to
        the 128K default offline.

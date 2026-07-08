@@ -1,4 +1,4 @@
-"""Allow running Omnigent as ``python -m omnigent``."""
+"""Allow running agent-meow as ``python -m omnigent``."""
 
 from omnigent.cli import main
 

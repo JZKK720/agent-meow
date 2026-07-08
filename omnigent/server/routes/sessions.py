@@ -319,18 +319,18 @@ _SLASH_COMMAND_TYPE: str = "slash_command"
 _STOP_SESSION_TYPE: str = "stop_session"
 
 # Internal input used by terminal-backed integrations that observe an
-# assistant response outside the Omnigent task runtime and need to
+# assistant response outside the agent-meow task runtime and need to
 # persist/broadcast it into the session transcript without starting a
 # duplicate agent turn.
 _EXTERNAL_ASSISTANT_MESSAGE_TYPE: str = "external_assistant_message"
 
 # Internal input used by terminal-backed integrations to append a
-# semantic item observed outside the Omnigent task runtime. Unlike a
+# semantic item observed outside the agent-meow task runtime. Unlike a
 # normal ``message`` POST, this does not create or steer an agent task.
 _EXTERNAL_CONVERSATION_ITEM_TYPE: str = "external_conversation_item"
 
 # Internal input used by terminal-backed integrations to publish a live
-# assistant text delta observed outside the Omnigent task runtime. The
+# assistant text delta observed outside the agent-meow task runtime. The
 # payload is transient SSE only and is intentionally not persisted; the
 # corresponding completed message still arrives later via
 # ``external_conversation_item``.
@@ -348,7 +348,7 @@ _EXTERNAL_OUTPUT_TEXT_DELTA_TYPE: str = "external_output_text_delta"
 _EXTERNAL_OUTPUT_REASONING_DELTA_TYPE: str = "external_output_reasoning_delta"
 
 # Internal input used by terminal-backed integrations to publish an
-# explicit ``session.interrupted`` edge observed outside the Omnigent
+# explicit ``session.interrupted`` edge observed outside the agent-meow
 # task runtime. Payload is empty.
 _EXTERNAL_SESSION_INTERRUPTED_TYPE: str = "external_session_interrupted"
 
@@ -368,7 +368,7 @@ _EXTERNAL_SESSION_SUPERSEDED_TYPE: str = "external_session_superseded"
 _EXTERNAL_ELICITATION_RESOLVED_TYPE: str = "external_elicitation_resolved"
 
 # Internal input used by terminal-backed integrations to publish a
-# session.status event observed outside the Omnigent task runtime
+# session.status event observed outside the agent-meow task runtime
 # (e.g. ``omnigent claude`` mirroring Claude Code's Stop hook into
 # the session stream so the web UI's idle/running indicator updates).
 # Payload shape: ``{"status": "idle" | "running" | "waiting" | "failed"}``.
@@ -420,7 +420,7 @@ _EXTERNAL_REASONING_EFFORT_CHANGE_TYPE: str = "external_reasoning_effort_change"
 # to ``~/.claude/projects/.../subagents/agent-<id>.jsonl`` — there is
 # no Claude Code hook fired when a sub-agent begins. The forwarder
 # polls the on-disk directory and POSTs this event when a new
-# ``.meta.json`` appears so the Omnigent server can mint a child Conversation
+# ``.meta.json`` appears so the agent-meow server can mint a child Conversation
 # row and surface it in the Subagents rail tab. Payload shape:
 # ``{"subagent_id": "<claude-side id>", "agent_type": "Explore",
 # "description": "...", "tool_use_id": "toolu_..."}``.
@@ -444,7 +444,7 @@ _CLAUDE_NATIVE_DESCRIPTION_LABEL_KEY = "omnigent.claude_native.description"
 
 # Subagent-start signal from the codex-native forwarder. Codex AgentControl
 # emits ``collabAgentToolCall`` items when it spawns child threads. The
-# forwarder converts each receiver thread into this event so Omnigent can mint a
+# forwarder converts each receiver thread into this event so agent-meow can mint a
 # child Conversation row and surface it in the Subagents rail.
 _EXTERNAL_CODEX_SUBAGENT_START_TYPE: str = "external_codex_subagent_start"
 # Wrapper label value distinguishing Codex-internal children from both
@@ -496,7 +496,7 @@ def _publish_collaboration_mode(session_id: str, mode: str) -> None:
 # Display name fallback when neither nickname nor role is available.
 _CODEX_NATIVE_SUBAGENT_DISPLAY_FALLBACK = "Codex"
 # Labels read by ``_get_session_snapshot`` to seed the web ring on
-# reload for sessions where no Omnigent task carries usage (claude-native).
+# reload for sessions where no agent-meow task carries usage (claude-native).
 _LAST_CONTEXT_TOKENS_LABEL_KEY: str = "omnigent.last_context_tokens"
 _LAST_CONTEXT_WINDOW_LABEL_KEY: str = "omnigent.last_context_window"
 # Labels read by ``_get_session_snapshot`` to surface the latest terminal /
@@ -514,7 +514,7 @@ _LABEL_VALUE_MAX_LEN: int = LABEL_VALUE_MAX_LEN
 _EXTERNAL_SESSION_TODOS_TYPE: str = "external_session_todos"
 
 # Session labels stamped by ``omnigent claude``. A matching session
-# is terminal-owned: Omnigent web-chat input must be forwarded to the local
+# is terminal-owned: agent-meow web-chat input must be forwarded to the local
 # runner for tmux injection, and rendered transcript items must come
 # back through ``external_conversation_item`` only.
 _CLAUDE_NATIVE_WRAPPER_LABEL_KEY = "omnigent.wrapper"
@@ -782,7 +782,7 @@ _SESSION_STREAM_HEARTBEAT_INTERVAL_S = 15.0
 # runner can never delay the live tail (the conversation snapshot endpoint
 # remains the primary reconcile path).
 _SNAPSHOT_RUNNER_TIMEOUT_S = 2.0
-# Maximum time Omnigent waits for its runner->AP SSE relay to observe the
+# Maximum time agent-meow waits for its runner->AP SSE relay to observe the
 # runner stream's ready heartbeat before forwarding a no-replay input
 # event. A timeout fails loud instead of accepting a prompt whose fast
 # output could be dropped before the relay is subscribed.
@@ -1152,7 +1152,7 @@ def _native_ask_gate_lock(conversation_id: str, deciding_policy: str) -> asyncio
     ALLOW. Get-or-create is race-free because there is no ``await`` between the
     lookup and the insert (single event loop).
 
-    :param conversation_id: Omnigent conversation id whose ASK gate is being
+    :param conversation_id: agent-meow conversation id whose ASK gate is being
         serialized, e.g. ``"conv_abc123"``. Sub-agent native tool calls
         evaluate against the parent conversation id, so they share its lock.
     :param deciding_policy: Name of the policy that produced the ASK verdict,
@@ -1443,7 +1443,7 @@ async def _publish_and_wait_for_harness_elicitation(
 
     :param request: FastAPI request object so upstream disconnect can
         be detected.
-    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
+    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
     :param params: Elicitation params to publish.
     :param timeout_s: Maximum wait in seconds, e.g. ``300.0``.
     :param conversation_store: Optional store used to mirror
@@ -1635,7 +1635,7 @@ def _signal_terminal_resolved_harness_elicitation(
     keyed on the parked prompt's tool identity, not on a claude-native
     check — so a Codex hook that records ``tool_name`` benefits too.
 
-    :param session_id: Omnigent conversation id whose forwarder mirrored the
+    :param session_id: agent-meow conversation id whose forwarder mirrored the
         result, e.g. ``"conv_abc123"``.
     :param tool_name: Tool name the result is for, e.g. ``"Bash"``.
     :param tool_input: Tool input the result is for, e.g.
@@ -1771,7 +1771,7 @@ def _consume_pre_resolved_harness_elicitation(
     """
     Consume a resolution that arrived before the hook wait registered.
 
-    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
+    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
     :param elicitation_id: Harness elicitation id, e.g.
         ``"elicit_codex_abc123"``.
     :returns: The consumed tombstone when one matched this session
@@ -1827,7 +1827,7 @@ def _signal_harness_elicitation_resolved_by_id(
     """
     Resolve or pre-resolve one parked harness elicitation by id.
 
-    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
+    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
     :param elicitation_id: Harness elicitation id, e.g.
         ``"elicit_codex_abc123"``.
     :returns: None.
@@ -3150,7 +3150,7 @@ def _persist_native_cumulative_usage(
     """
     Persist cumulative cost / token usage reported by a native harness.
 
-    Unlike the Omnigent relay path (:func:`_accumulate_session_usage`), which adds
+    Unlike the agent-meow relay path (:func:`_accumulate_session_usage`), which adds
     per-response *deltas*, native harnesses (claude-native / codex-native)
     report *cumulative* session usage — so this writes with SET semantics, not
     add. The two paths never run for the same session, so they don't conflict.
@@ -3410,7 +3410,7 @@ async def _persist_external_session_usage(
         )
 
     # Native harnesses report cumulative cost / tokens (SET semantics) — distinct
-    # from the Omnigent relay's per-response accumulation. Persist this session's
+    # from the agent-meow relay's per-response accumulation. Persist this session's
     # own cumulative usage (its priced own-cost return is unused — the badge shows
     # the subtree total computed below, not own cost).
     await asyncio.to_thread(
@@ -3483,7 +3483,7 @@ async def _persist_external_model_change(
 
     Mirrors a ``/model`` change typed into a claude-native session's
     Claude Code pane (or picked via its in-TUI model picker) onto the
-    Omnigent session: writes ``model_override`` so the value survives reload
+    agent-meow session: writes ``model_override`` so the value survives reload
     and publishes a ``session.model`` SSE event so the web picker
     updates live. Unlike the PATCH path
     (:func:`update_session`), this deliberately does NOT forward a
@@ -3570,7 +3570,7 @@ async def _persist_external_reasoning_effort_change(
     """
     Persist and broadcast a reasoning-effort switch made inside the terminal.
 
-    Mirrors a native-terminal thinking-level change onto the Omnigent session.
+    Mirrors a native-terminal thinking-level change onto the agent-meow session.
     Unlike the public PATCH path, this deliberately does NOT forward an
     ``effort_change`` back to the runner: the terminal is already on that
     effort, so re-injecting it would loop.
@@ -3753,7 +3753,7 @@ def _publish_external_conversation_item(
     them exactly like local/composer messages. Assistant/tool-side
     items use ``response.output_item.done`` because they are already
     completed records from Claude's transcript, not token deltas from
-    an active Omnigent task.
+    an active agent-meow task.
 
     :param session_id: Session/conversation identifier.
     :param item: Persisted conversation item.
@@ -4065,7 +4065,7 @@ def _spawn_native_approval_popup_forward(
     answers first releases the gate. Non-native harnesses 204 no-op on the
     runner.
 
-    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
+    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
     :param elicitation_id: The parked elicitation's id, e.g. ``"elicit_x"``.
     :param message: The approval reason shown in the popup.
     :param policy_name: Name of the deciding policy, rendered as the
@@ -4109,7 +4109,7 @@ def _spawn_native_blocked_notice_forward(
     harness-gated (only ``opencode-native`` pops — claude/codex already show a
     clean ``UserPromptSubmit`` block, so they no-op).
 
-    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
+    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
     :param message: The block reason shown in the popup.
     :param policy_name: Deciding policy, rendered as the popup header. ``None``
         falls back to a generic header on the runner.
@@ -4172,7 +4172,7 @@ async def _hold_native_ask_gate(
 
     :param request: FastAPI request, for upstream-disconnect detection
         inside the parking helper.
-    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
+    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
     :param phase: Enforcement phase being gated, e.g.
         :attr:`Phase.TOOL_CALL` or :attr:`Phase.REQUEST`.
     :param data: The proto event ``data`` — for a tool call,
@@ -4287,11 +4287,11 @@ async def _persist_external_assistant_message(
     conversation_store: ConversationStore,
 ) -> str:
     """
-    Persist and broadcast assistant text produced outside Omnigent tasks.
+    Persist and broadcast assistant text produced outside agent-meow tasks.
 
     The event is append-only conversation history. It intentionally
     bypasses the legacy persist path so mirroring a
-    Claude terminal response does not create or steer an Omnigent
+    Claude terminal response does not create or steer an agent-meow
     agent task.
 
     :param session_id: Session/conversation identifier.
@@ -4498,7 +4498,7 @@ async def _persist_external_subagent_start(
     sub-agent and emit the parent's ``session.created`` SSE event.
 
     Claude Code spawns sub-agents internally via its Task tool and
-    never POSTs to Omnigent to register them. The forwarder watches the
+    never POSTs to agent-meow to register them. The forwarder watches the
     parent's on-disk ``subagents/`` directory and calls this handler
     when a new ``.meta.json`` appears. We reuse the parent's
     ``agent_id`` (claude-native sub-agents don't have their own
@@ -4721,7 +4721,7 @@ def _subagent_delivery_status(
 ) -> str:
     """Collapse a sub-agent's background-task ``waiting`` back to ``idle``.
 
-    A claude-native session running as an Omnigent sub-agent relabels its
+    A claude-native session running as an agent-meow sub-agent relabels its
     ``Stop`` turn-end ``idle`` to ``waiting`` (in the forwarder) when
     background shells linger, purely so its own UI shows a spinner. But the
     sub-agent terminal-delivery branch in ``post_event`` keys off
@@ -4901,7 +4901,7 @@ async def _persist_external_conversation_item(
 
     This is the transcript bridge path for native Claude. It appends
     user messages, assistant messages, tool calls, and tool results
-    without starting or steering the placeholder Omnigent agent.
+    without starting or steering the placeholder agent-meow agent.
 
     :param session_id: Session/conversation identifier,
         e.g. ``"conv_abc123"``.
@@ -5089,7 +5089,7 @@ def _latest_assistant_text_from_store(
 
     Native harnesses mirror completed transcript items to the AP
     server, not necessarily to the runner's in-memory history. This
-    helper lets Omnigent forward the durable assistant output with the
+    helper lets agent-meow forward the durable assistant output with the
     terminal-observed idle edge.
 
     :param conversation_store: Store used to read conversation items.
@@ -5302,7 +5302,7 @@ def _require_collaboration_mode_forward(
     Fail when a live Codex Plan-mode switch was not applied by the runner.
 
     Codex Plan mode is a loaded-thread collaboration mode inside Codex
-    app-server. Persisting the Omnigent label without a successful runner
+    app-server. Persisting the agent-meow label without a successful runner
     update would make the web UI claim Plan mode while Codex still runs in
     the previous mode, so explicit UI toggles require a confirmed 2xx forward.
 
@@ -5344,7 +5344,7 @@ def _drive_terminal_resolved_elicitation(session_id: str, persisted: Conversatio
     matching parked prompt now instead of waiting for the hook timeout.
     Other item types are ignored.
 
-    :param session_id: Omnigent conversation id the item was mirrored for,
+    :param session_id: agent-meow conversation id the item was mirrored for,
         e.g. ``"conv_abc123"``.
     :param persisted: The stored conversation item the forwarder just
         mirrored via ``external_conversation_item``.
@@ -7706,7 +7706,7 @@ async def _forward_native_terminal_message(
     artifact_store: ArtifactStore | None = None,
 ) -> None:
     """
-    Forward one Omnigent web-chat message to the native terminal harness.
+    Forward one agent-meow web-chat message to the native terminal harness.
 
     The message is intentionally not persisted here. Claude Code
     and Codex record the accepted prompt in their terminal/app-server
@@ -7818,7 +7818,7 @@ def _extract_claude_native_runner_failure(resp: httpx.Response) -> str | None:
 
     Runner ``POST /v1/sessions/{id}/events`` returns HTTP 200 for a
     syntactically valid harness stream even when the harness emits
-    ``response.failed``. Claude-native Omnigent forwarding must treat that
+    ``response.failed``. Claude-native agent-meow forwarding must treat that
     as failed injection, otherwise the web UI would believe a message
     reached the terminal when ``tmux send-keys`` actually failed.
 
@@ -7875,7 +7875,7 @@ async def _forward_session_change_to_runner(
       boundary, so they ignore the return value.
     * Explicit ``compact`` — the caller inspects the returned status
       to decide whether the runner handled the control (claude-native,
-      200) or the Omnigent server must run its own in-process compaction
+      200) or the agent-meow server must run its own in-process compaction
       (204 / no runner). See the ``compact`` branch in
       :func:`post_event`.
 
@@ -7883,12 +7883,12 @@ async def _forward_session_change_to_runner(
     session router binding, fall back to the global runner client
     (in-process / test setups where the router hasn't bound the
     session). When neither resolves to a client, the POST is silently
-    skipped — the persisted value on the Omnigent side is the authoritative
+    skipped — the persisted value on the agent-meow side is the authoritative
     fallback, picked up by the next spawn.
 
     Non-2xx runner responses (e.g. 503 when the tmux pane isn't
     advertised yet) are logged as warnings so the failure surfaces
-    in the Omnigent log — otherwise the POST succeeds at the httpx layer
+    in the agent-meow log — otherwise the POST succeeds at the httpx layer
     and the status would be silently dropped.
 
     :param session_id: Session/conversation identifier, e.g.
@@ -8888,7 +8888,7 @@ async def _dispatch_session_event_to_runner(
 
     * **transcript-forwarded native + ``type == "message"``**: web-chat user
       messages on these sessions must NOT be persisted by the AP
-      server. The Omnigent would otherwise persist an AP-side copy AND
+      server. The agent-meow would otherwise persist an AP-side copy AND
       let the transcript forwarder mirror the same message back
       (with its own store-assigned item id), so every web-typed
       prompt would land as two items in the chat panel. We forward
@@ -9613,7 +9613,7 @@ async def _relay_runner_stream(
                     # happens inside _publish_status itself.
                     # Runner-emitted keepalive — consumed to reset the
                     # read timeout; not forwarded to the session stream
-                    # (the Omnigent subscriber generates its own heartbeats).
+                    # (the agent-meow subscriber generates its own heartbeats).
                     if evt_type == "session.heartbeat":
                         if ready is not None:
                             ready.set()
@@ -10096,9 +10096,9 @@ async def _ensure_runner_relay_ready(
     """
     Start the runner SSE relay and wait for its subscription ack.
 
-    The runner stream has no replay buffer. For item events, Omnigent must
+    The runner stream has no replay buffer. For item events, agent-meow must
     subscribe to runner output before it forwards the input event; a
-    fast harness can otherwise complete before Omnigent is listening, leaving
+    fast harness can otherwise complete before agent-meow is listening, leaving
     the user with an apparently successful empty response.
 
     :param session_id: Session/conversation identifier,
@@ -10247,7 +10247,7 @@ def _same_provider_family(a: Agent, b: Agent) -> bool:
     ``False`` when either family is undeterminable, so a fork that can't
     confirm both agents speak the same provider resets model settings and
     skips resuming the source's native session (the runner rebuilds the
-    native transcript from Omnigent items instead).
+    native transcript from agent-meow items instead).
 
     :param a: First agent (e.g. the fork source's agent).
     :param b: Second agent (e.g. the switch target).
@@ -10312,7 +10312,7 @@ def _agent_is_native(agent: Agent) -> bool:
 
 
 # Native harnesses that rebuild a resumable on-disk transcript from the copied
-# Omnigent items and relaunch the CLI with --resume, so prior turns reappear as
+# agent-meow items and relaunch the CLI with --resume, so prior turns reappear as
 # native chat history. Used by BOTH fork and switch-agent. claude/codex are
 # listed in both spellings because canonicalize_harness passes their reversed
 # native ids through unchanged; pi-native needs only the one canonical id
@@ -10360,7 +10360,7 @@ def _agent_carries_native_fork_history(agent: Agent) -> bool:
     """Return whether *agent*'s native harness rebuilds a fork's transcript.
 
     claude-native / codex-native / pi-native each record a resumable native
-    session file that the runner rebuilds from the copied Omnigent items on
+    session file that the runner rebuilds from the copied agent-meow items on
     fork/resume, so a fork bound to one of them carries prior history into the
     native CLI. Used by both fork and switch-agent. cursor-native is a native
     CLI but has no resumable session file to rebuild; it carries fork history a
@@ -11534,7 +11534,7 @@ def _validate_terminal_launch_args(value: list[str] | None) -> list[str] | None:
 
     Enforces a flat list of strings within bounded count / length.
     The flat-list shape is the security boundary: there is no key for
-    a caller to smuggle internal launch wiring (bridge dir, Omnigent URL,
+    a caller to smuggle internal launch wiring (bridge dir, agent-meow URL,
     auth) through — those stay runner-owned (see
     designs/NATIVE_RUNNER_SERVER_LAUNCH.md).
 
@@ -12045,7 +12045,7 @@ def _require_cost_control_label_authority(
 
     :param reserved_keys: The ``cost_control.*`` keys the request tries
         to write, e.g. ``("cost_control.plan",)``. Quoted in the error.
-    :param tunnel_token: Value of the ``X-Omnigent-Runner-Tunnel-Token``
+    :param tunnel_token: Value of the ``X-agent-meow-Runner-Tunnel-Token``
         request header, or ``None`` when absent.
     :param bound_runner_id: The session's current ``runner_id``, or
         ``None`` when no runner is bound.
@@ -13274,7 +13274,7 @@ async def _handle_mcp_tools_list(
     Delegates execution to the runner's ``POST
     /v1/sessions/{id}/mcp/execute`` endpoint so that stdio MCP
     subprocesses spawn on the runner's machine (correct ``cwd``,
-    env, and tooling). The Omnigent server's role here is routing only —
+    env, and tooling). The agent-meow server's role here is routing only —
     policy evaluation happens in ``tools/call``.
 
     :param rpc_id: The JSON-RPC request id, e.g. ``1``.
@@ -13615,7 +13615,7 @@ async def _handle_mcp_tools_call(
     # ── Execute on the runner via WS tunnel ──────────────────────────
     # The runner owns stdio subprocess spawning (correct machine, cwd,
     # and env). We call its /mcp/execute endpoint through the same WS
-    # tunnel the runner already opened to the Omnigent server at startup.
+    # tunnel the runner already opened to the agent-meow server at startup.
     runner_client = await _get_runner_client(session_id, runner_router)
     if runner_client is None:
         from omnigent.runtime import get_runner_client
@@ -15300,7 +15300,7 @@ def create_sessions_router(
         # ``silent`` so bind-time auto-apply doesn't inject visible
         # ``/model X`` items into a fresh pane.
         # Effort and model both go through the unified ``/events``
-        # dispatch — Omnigent server stays harness-agnostic; the runner
+        # dispatch — agent-meow server stays harness-agnostic; the runner
         # dispatches by harness (claude-native injects the slash
         # command into tmux, other harnesses 204 no-op). See
         # ``_forward_session_change_to_runner`` for the shared
@@ -15319,7 +15319,7 @@ def create_sessions_router(
                 {"type": "model_change", "model": updated.model_override},
             )
             # Append a durable [System: model changed to X] note for sessions
-            # whose history Omnigent writes. Gate on the wrapper label (NOT
+            # whose history agent-meow writes. Gate on the wrapper label (NOT
             # omnigent.ui, which chat-first SDK terminal-view sessions like
             # polly/debby also carry) — see _persist_model_change_note for the
             # full rationale. live_forward (== not silent) already excludes
@@ -15538,12 +15538,12 @@ def create_sessions_router(
             )
 
         # When the fork binds a NATIVE target, the native CLI won't replay
-        # the copied Omnigent transcript on its own — mark the fork so the
+        # the copied agent-meow transcript on its own — mark the fork so the
         # runner carries history into the native harness. Same-family: clone
         # the source's native transcript when present, else rebuild from the
-        # copied Omnigent items. Cross-family: the source's native transcript
-        # is the wrong format, so ALWAYS rebuild from the copied Omnigent
-        # items (the converters consume Omnigent's normalized item shape, so
+        # copied agent-meow items. Cross-family: the source's native transcript
+        # is the wrong format, so ALWAYS rebuild from the copied agent-meow
+        # items (the converters consume agent-meow's normalized item shape, so
         # the source harness doesn't matter). SDK targets replay the
         # transcript as context regardless, so the marker is inert for them.
         # claude/codex/pi native rebuild the transcript (each rebuilds its
@@ -15749,7 +15749,7 @@ def create_sessions_router(
         # carries history regardless of family: the switch clears
         # external_session_id and drops the fork-source directive, so the
         # runner rebuilds the native transcript from this session's own
-        # Omnigent items (a format-agnostic conversion). SDK targets replay
+        # agent-meow items (a format-agnostic conversion). SDK targets replay
         # the AP transcript as context regardless.
         copy_model_settings = await asyncio.to_thread(
             _same_provider_family, current_agent, target_agent
@@ -15876,13 +15876,13 @@ def create_sessions_router(
 
         Auth: standard session ACL — the wrapper's outbound headers
         (``ap_auth_headers`` in :func:`build_hook_settings`) carry
-        the same Bearer token used for every other Omnigent request. For
+        the same Bearer token used for every other agent-meow request. For
         local-server mode (no auth provider), unauth'd calls are
         allowed.
 
         :param request: FastAPI request — body is Claude Code's
             PermissionRequest payload as JSON.
-        :param session_id: Omnigent conversation id from the URL path.
+        :param session_id: agent-meow conversation id from the URL path.
         :returns: Claude PermissionRequest hookSpecificOutput JSON,
             or ``200`` with empty body on timeout (fail-ask).
         :raises OmnigentError: 404 if the session doesn't exist,
@@ -16209,7 +16209,7 @@ def create_sessions_router(
 
         :param request: FastAPI request — body is the
             ``EvaluationRequest`` JSON envelope.
-        :param session_id: Omnigent conversation id from the URL path.
+        :param session_id: agent-meow conversation id from the URL path.
         :returns: ``EvaluationResponse`` JSON with ``result``,
             ``reason``, and optional ``data``.
         :raises OmnigentError: 404 if the session doesn't exist,
@@ -16468,7 +16468,7 @@ def create_sessions_router(
 
         :param request: FastAPI request carrying the Codex JSON-RPC
             request envelope.
-        :param session_id: Omnigent conversation id from the URL path.
+        :param session_id: agent-meow conversation id from the URL path.
         :returns: Codex JSON-RPC ``result`` payload for the forwarded
             request, or ``200`` with empty body on timeout/disconnect.
         :raises OmnigentError: 404 if the session does not exist,
@@ -16557,7 +16557,7 @@ def create_sessions_router(
         :class:`~omnigent.server.schemas.ElicitationRequestParams` dict.
 
         :param request: FastAPI request carrying the agy elicitation body.
-        :param session_id: Omnigent conversation id from the URL path.
+        :param session_id: agent-meow conversation id from the URL path.
         :returns: ``ElicitationResult`` JSON on user verdict; ``200`` with
             empty body on timeout/disconnect (bridge interprets as ``None``).
         :raises OmnigentError: 404 if the session does not exist, 400 if
@@ -16653,7 +16653,7 @@ def create_sessions_router(
         :param request: FastAPI request carrying the detected prompt
             (``elicitation_id`` plus the ``message`` / ``content_preview`` /
             ``operation_type`` to render).
-        :param session_id: Omnigent conversation id from the URL path.
+        :param session_id: agent-meow conversation id from the URL path.
         :returns: An ``ElicitationResult`` (``{"action": …}``) on a web
             verdict, or ``200`` with empty body on TUI-resolution / timeout /
             disconnect.
@@ -16769,7 +16769,7 @@ def create_sessions_router(
         :param request: FastAPI request carrying the detected prompt
             (``elicitation_id``, ``message``, ``content_preview``,
             ``operation_type``, optional ``agent`` / ``policy_name``).
-        :param session_id: Omnigent conversation id from the URL path.
+        :param session_id: agent-meow conversation id from the URL path.
         :returns: An ``ElicitationResult`` (``{"action": …}``) on a web verdict,
             or ``200`` with empty body on TUI-resolution / timeout / disconnect.
         :raises OmnigentError: 404 if the session does not exist, 400 if the
@@ -18435,22 +18435,22 @@ def create_sessions_router(
         - ``"approval"`` resolves an outstanding elicitation
           in-band (see :func:`_dispatch_approval`).
         - ``"external_assistant_message"`` appends and streams an
-          assistant message observed outside the Omnigent task runtime,
+          assistant message observed outside the agent-meow task runtime,
           without starting or steering a task.
         - ``"external_conversation_item"`` appends and streams a
-          completed item observed outside the Omnigent task runtime,
+          completed item observed outside the agent-meow task runtime,
           without starting or steering a task.
         - ``"external_output_text_delta"`` publishes a transient
           ``response.output_text.delta`` event observed outside the
-          Omnigent task runtime, without persisting an item or starting /
+          agent-meow task runtime, without persisting an item or starting /
           steering a task.
         - ``"external_output_reasoning_delta"`` publishes a transient
           ``response.reasoning_text.delta`` event (preceded by one
           ``response.reasoning.started`` when ``data.started`` is true)
-          observed outside the Omnigent task runtime, without persisting an
+          observed outside the agent-meow task runtime, without persisting an
           item or starting / steering a task.
         - ``"external_session_interrupted"`` publishes a
-          ``session.interrupted`` event observed outside the Omnigent task
+          ``session.interrupted`` event observed outside the agent-meow task
           runtime, without persisting an item or starting / steering a
           task.
         - ``"external_elicitation_resolved"`` marks a native
@@ -18846,7 +18846,7 @@ def create_sessions_router(
             # runner dispatches by harness — claude-native injects
             # /compact into the tmux pane so Claude Code compacts its
             # own context and returns 200; other harnesses 204 no-op.
-            # The Omnigent server stays harness-agnostic: it runs its own
+            # The agent-meow server stays harness-agnostic: it runs its own
             # in-process compaction only when the runner did NOT handle
             # the control (204 / no runner bound). A 4xx/5xx from the
             # runner (e.g. 503 when the claude-native pane isn't
@@ -19337,7 +19337,7 @@ def create_sessions_router(
                     created_by=_attribution_user(user_id),
                 )
                 return {"queued": True, "item_id": item_id}
-            # Raise so the Omnigent server doesn't persist an item the
+            # Raise so the agent-meow server doesn't persist an item the
             # harness will never see. Other event paths (interrupt,
             # approval) are best-effort and silently skip when no
             # runner is bound — item events can't, because that
@@ -20334,7 +20334,7 @@ def create_sessions_router(
         (reached through the WS tunnel the runner opened at startup).
         This split ensures:
 
-        - Policy runs on the Omnigent server where the ConversationStore and
+        - Policy runs on the agent-meow server where the ConversationStore and
           label state live.
         - Stdio MCP subprocesses spawn on the runner's machine with the
           correct ``cwd``, environment, and installed tooling.

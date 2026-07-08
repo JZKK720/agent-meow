@@ -1,7 +1,7 @@
-# Omnigent Desktop (Electron)
+# agent-meow Desktop (Electron)
 
 A thin [Electron](https://www.electronjs.org) desktop shell around the
-existing Omnigent web UI. It shows the **same** UI you get in a browser, but
+existing agent-meow web UI. It shows the **same** UI you get in a browser, but
 adds native niceties:
 
 - **OS-native desktop notifications** (via the main-process `Notification`
@@ -21,7 +21,7 @@ adds native niceties:
   notifies for sessions you are _not_ actively viewing, the shell adds an
   OS-level cue the frontmost app _can_ show: it **bounces the macOS dock icon**
   (or flashes the taskbar frame on Windows/Linux) so an unopened session's
-  turn-end is noticeable even with Omnigent in front.
+  turn-end is noticeable even with agent-meow in front.
 - **Multiple windows** (**Server → New Window**, `Cmd/Ctrl+N`). Each window is
   an independent view, opening on the current window's URL so you can then
   navigate it to a different conversation and watch two side by side. A
@@ -72,7 +72,7 @@ The desktop app does **not** ship a copy of the web UI. It bundles only a tiny
 "connect to server" page (`setup/index.html`). On launch:
 
 1. If no server URL is saved yet, it shows the setup page (one input +
-   Connect). You enter your Omnigent server URL (default
+   Connect). You enter your agent-meow server URL (default
    `http://localhost:8000`).
 2. It persists that URL to the per-user app data dir (`settings.json` under
    Electron's `userData` path) and **loads the server's own origin**, where
@@ -170,7 +170,7 @@ npm install     # installs electron + electron-builder
 npm start        # launches the Electron shell
 ```
 
-The shell opens on the bundled setup page. Point it at a running Omnigent
+The shell opens on the bundled setup page. Point it at a running agent-meow
 server (see below), Connect, and you're in.
 
 > Note: this loads the UI from whatever server URL you give it — it does
@@ -190,7 +190,7 @@ npm run build:win         # NSIS installer
 ```
 
 Output lands in `electron/dist/` (the DMG is named
-`Omnigent-<version>-<arch>.dmg`).
+`agent-meow-<version>-<arch>.dmg`).
 
 ## macOS code signing & notarization
 
@@ -261,7 +261,7 @@ notarization step to add a few minutes (Apple-side processing). Verify the
 result with:
 
 ```bash
-spctl -a -vv dist/mac-arm64/Omnigent.app   # → "accepted, source=Notarized Developer ID"
+spctl -a -vv dist/mac-arm64/agent-meow.app   # → "accepted, source=Notarized Developer ID"
 ```
 
 `build:mac:release` **fails loudly** if signing or notarization
@@ -270,7 +270,7 @@ silently ship unsigned.
 
 ## Getting a server to point at
 
-Any reachable Omnigent server works. For a quick local target, run the
+Any reachable agent-meow server works. For a quick local target, run the
 server from this repo:
 
 ```bash
@@ -343,7 +343,7 @@ menu (when starting a chat) tags this machine and offers to connect it. Choosing
 it calls `controlHost("start")` over the bridge. Because that call originates in
 server-served code, the main process does not treat it as the user's consent: on
 the first `start`/`restart` for a server origin it shows a **native confirmation
-dialog** ("Allow _host_ to manage Omnigent on this machine?") with **Don't Allow**
+dialog** ("Allow _host_ to manage agent-meow on this machine?") with **Don't Allow**
 (default) / **Allow Once** / **Always Allow**. Only after approval does it — once
 the CLI is authenticated for the server (remote only; local needs none) — either
 adopt a daemon already serving that server (one you started by hand) or spawn
@@ -448,7 +448,7 @@ hand-add its origin to `settings.json`:
 ```
 
 (`settings.json` lives in Electron's per-user `userData` dir — on macOS,
-`~/Library/Application Support/Omnigent/settings.json`.)
+`~/Library/Application Support/agent-meow/settings.json`.)
 
 ## Multiple servers
 

@@ -78,6 +78,7 @@
   },
   "voice": {
     "micLabel": "麦克风",
+    "dictation": "语音输入",
     "speak": "播放",
     "pause": "暂停",
     "transcribe": "转录",
@@ -85,10 +86,25 @@
   },
   "chat": {
     "newChat": "新对话",
+    "newSession": "新会话",
     "send": "发送",
     "stop": "停止",
+    "interrupt": "中断",
     "untitled": "未命名",
-    "searchSessions": "搜索会话"
+    "searchSessions": "搜索会话",
+    "selectSessions": "选择会话",
+    "emptyTitle": "我们要处理什么？",
+    "emptyBody": "发送一条消息开始。",
+    "loadAgentsFailed": "加载代理失败：{{message}}",
+    "waitingForAgents": "正在等待代理…",
+    "followUpQueued": "后续消息已排队发送，按 Esc 停止",
+    "hostOfflineResume": "当前会话的主机已离线。下一条消息会恢复沙箱主机，这可能需要几分钟。",
+    "reconnectPrompt": "发送一条消息以重新连接此会话",
+    "askAnything": "向代理提问…",
+    "attachFiles": "附加文件",
+    "executionLogs": "执行日志",
+    "expandExecutionLogs": "展开执行日志",
+    "collapseExecutionLogs": "折叠执行日志"
   },
   "login": {
     "signIn": "登录",
@@ -102,6 +118,7 @@
     "cancel": "取消",
     "confirm": "确认",
     "close": "关闭",
+    "settings": "设置",
     "save": "保存",
     "delete": "删除",
     "reload": "重新加载",

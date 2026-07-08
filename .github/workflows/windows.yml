@@ -1,11 +1,11 @@
 name: Windows (native)
 
-# Smoke + unit check that omnigent imports, the CLI loads, and the
-# cross-platform process/sandbox primitives work on native Windows. This is a
-# NON-BLOCKING signal while native Windows support stabilizes: it is not wired
-# into merge-ready.yml, and the broader unit sweep runs with continue-on-error
-# so POSIX-only gaps don't gate merges. The hard checks (import, --help, the
-# Windows-support unit tests) must pass.
+# Smoke + unit check that the agent-meow package (omnigent) imports, the CLI
+# loads, and the cross-platform process/sandbox primitives work on native
+# Windows. This is a NON-BLOCKING signal while native Windows support
+# stabilizes: it is not wired into merge-ready.yml, and the broader unit sweep
+# runs with continue-on-error so POSIX-only gaps don't gate merges. The hard
+# checks (import, --help, the Windows-support unit tests) must pass.
 
 on:
   pull_request:

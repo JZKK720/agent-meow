@@ -1,6 +1,6 @@
-# Omnigent on Render
+# agent-meow on Render
 
-Deploy Omnigent to Render in one click. Render provisions the app and a
+Deploy agent-meow to Render in one click. Render provisions the app and a
 managed Postgres database, assigns an HTTPS URL on `*.onrender.com`, and
 handles SSL automatically. No local tooling required.
 

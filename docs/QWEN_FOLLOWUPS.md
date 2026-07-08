@@ -9,7 +9,7 @@ Tracks pending work and known limitations for the Qwen Code harness
 - ACP executor: streaming turns, system-prompt folding, session-not-found
   reset, missing-binary handling.
 - **Permission gating** (`session/request_permission`): routed through
-  Omnigent's TOOL_CALL policy + human-consent elicitation
+  agent-meow's TOOL_CALL policy + human-consent elicitation
   (`_decide_permission`), mirroring claude-sdk — a hard policy DENY rejects,
   otherwise the user is asked; default-deny on policy-ASK with no handler.
   Standalone/test use (no bridges wired) falls back to allow.
@@ -64,9 +64,9 @@ Tracks pending work and known limitations for the Qwen Code harness
   advertises `clientCapabilities.fs` in `initialize`, so qwen routes its file
   reads/writes back to us as `fs/read_text_file` / `fs/write_text_file` requests
   (qwen's `AcpFileSystemService` swaps in only when the capability is set). The
-  handlers execute the I/O through the Omnigent `OSEnvironment`, so the spec's
+  handlers execute the I/O through the agent-meow `OSEnvironment`, so the spec's
   sandbox read/write roots are enforced at the Python layer — and the bytes flow
-  through Omnigent rather than qwen touching disk directly. Disabled (qwen uses
+  through agent-meow rather than qwen touching disk directly. Disabled (qwen uses
   its own tools) when there's no `os_env` or it's a `fork` env (a forked tree's
   path would diverge from the qwen subprocess cwd). Binary/non-UTF-8 reads are
   refused; missing-file reads map to qwen's ENOENT code. (Same fix applied to
@@ -132,7 +132,7 @@ comments; this is the *what*, not the *how*.)
   `ComposerStatusLine` in `web/src/pages/ChatPage.tsx`). It was showing the
   bound spec's *default* model (`claude-sonnet-4-6`) because the qwen-native-ui
   spec sets no model and qwen picks its model inside the vendor TUI (OpenAI-compat
-  env / qwen's own `/model`), so Omnigent's `llmModel` was a misleading default.
+  env / qwen's own `/model`), so agent-meow's `llmModel` was a misleading default.
   Hiding it is the interim; the real fix is to **surface qwen's actual model**
   (and effort/approval-mode if meaningful). The data is already on qwen's
   `--json-file` stream — `assistant` message events carry `message.model` (e.g.
@@ -162,7 +162,7 @@ comments; this is the *what*, not the *how*.)
   used to relaunch a **blank** `qwen` TUI (only the web chat kept history, via the
   forwarder). Fixed, using the **same `external_session_id` convention as
   claude-/codex-/pi-native** (so it's consistent and fork-capable):
-  `_auto_create_qwen_terminal` persists the qwen session id on the Omnigent
+  `_auto_create_qwen_terminal` persists the qwen session id on the agent-meow
   session (`_persist_qwen_external_session_id` → `PATCH /v1/sessions/{id}`), reads
   it back from the snapshot (`launch_config.external_session_id`) on the next
   launch, and it's stamped as `omnigent.fork.source_external_session_id` for fork
@@ -190,11 +190,11 @@ comments; this is the *what*, not the *how*.)
   (`server/routes/sessions.py`), so both the fork and switch-agent routes stamp
   `omnigent.fork.carry_history` and clear `external_session_id` on the clone. On
   the clone's first launch, `_auto_create_qwen_terminal` calls
-  `_build_qwen_fork_recording`, which fetches the clone's copied Omnigent items
+  `_build_qwen_fork_recording`, which fetches the clone's copied agent-meow items
   (`fetch_all_session_items_for_pi_resume` — harness-neutral) and rebuilds qwen's
   on-disk recording via `qwen_session_records_from_session_items` +
   `write_qwen_session_recording`, then forces `--resume`. Because it rebuilds from
-  Omnigent items (not the source's vendor transcript), it works **cross-harness**
+  agent-meow items (not the source's vendor transcript), it works **cross-harness**
   (claude/pi/codex → qwen). **Key on-disk-format finding:** qwen resolves
   `--resume <id>` from *three* files, not the `.jsonl` alone — it also needs
   `chats/<id>.runtime.json` (session index entry) and the project `meta.json`; a
@@ -271,11 +271,11 @@ comments; this is the *what*, not the *how*.)
   - *Full route:* spec with `executor.profile: <db-profile>` (or a
     `databricks-*` model), then `omni run`; confirm the runner log's
     `qwen gateway routing:` line shows the Databricks base URL + profile.
-- [x] **Omnigent tools.** Qwen-native now exposes the shared Omnigent MCP relay
+- [x] **agent-meow tools.** Qwen-native now exposes the shared agent-meow MCP relay
   (`omnigent.claude_native_bridge serve-mcp`, `mcpServers.omnigent`,
   `trust: true`) to qwen via the `--mcp-config <path>` launch flag (the
   claude-native model). qwen connects to it on boot, `/mcp` lists it, and the
-  model can call Omnigent's builtin tools (`sys_*`, `load_skill`, `web_fetch`, …).
+  model can call agent-meow's builtin tools (`sys_*`, `load_skill`, `web_fetch`, …).
   The config lives in the per-session bridge dir, **not** the workspace, so we
   drop no file in the user's repo, concurrent same-workspace sessions can't
   collide, and CLI-provided servers are ungated (no "Untrusted MCP server"
@@ -285,10 +285,10 @@ comments; this is the *what*, not the *how*.)
   bearer token is written through `_ensure_secure_bridge_dir` (the same
   owner-only ancestor validation the shared relay applies to token-bearing
   trees). Permission gating on qwen's *own* tool calls already works.
-- [ ] **File I/O recording / content policy.** Omnigent now *executes* delegated
+- [ ] **File I/O recording / content policy.** agent-meow now *executes* delegated
   file reads/writes through the `OSEnvironment` (see "File I/O delegation" in
-  What works today), so the bytes flow through Omnigent and the sandbox roots are
-  enforced. Still missing on top of that: (a) emitting the I/O into Omnigent's
+  What works today), so the bytes flow through agent-meow and the sandbox roots are
+  enforced. Still missing on top of that: (a) emitting the I/O into agent-meow's
   event stream (ToolCall-style records) so it shows in history, and (b) running
   TOOL_RESULT-phase content policy on the read/written content. Both build on the
   `_handle_fs_read` / `_handle_fs_write` handlers — the byte-level hook now

@@ -14,7 +14,7 @@ Protocol flow:
 
 Qwen manages its own agent loop, tool execution, context window, and
 compaction internally.  This executor translates the ACP event stream into
-Omnigent ExecutorEvents.
+agent-meow ExecutorEvents.
 
 Requirements:
     The ``qwen`` CLI (v0.18+) must be installed and on PATH.
@@ -189,7 +189,7 @@ class QwenExecutor(Executor):
         :param model: Model identifier to pass in ``session/new``.
         :param qwen_path: Absolute path to qwen CLI binary.
             Defaults to ``"qwen"`` (PATH lookup).
-        :param gateway_base_url: OpenAI-compatible base URL of an Omnigent
+        :param gateway_base_url: OpenAI-compatible base URL of an agent-meow
             provider/gateway (from ``HARNESS_QWEN_GATEWAY_BASE_URL``). When set
             with *gateway_auth_command*, the executor exports ``OPENAI_BASE_URL``
             / ``OPENAI_API_KEY`` / ``OPENAI_MODEL`` into the ``qwen`` subprocess
@@ -202,7 +202,7 @@ class QwenExecutor(Executor):
         self._cwd = cwd or os.getcwd()
         self._os_env = os_env
         # Whether to advertise ``clientCapabilities.fs`` so qwen delegates file
-        # reads/writes back to us (executed through the Omnigent OSEnvironment,
+        # reads/writes back to us (executed through the agent-meow OSEnvironment,
         # which enforces the spec's sandbox read/write roots) instead of using
         # its own raw file tools. Enabled only when an os_env is configured and
         # it isn't a ``fork`` env — a forked env operates on a *copied* tree
@@ -258,7 +258,7 @@ class QwenExecutor(Executor):
 
         # Bridges the ExecutorAdapter installs (best-effort, via
         # ``getattr(..., None) is None``) so qwen's mid-turn
-        # ``session/request_permission`` routes through Omnigent's TOOL_CALL
+        # ``session/request_permission`` routes through agent-meow's TOOL_CALL
         # policy + human-consent elicitation instead of blind auto-approve —
         # mirrors ClaudeSDKExecutor. Declared here so the install check sees
         # them and the intent is explicit. ``None`` means "no bridge wired"
@@ -287,7 +287,7 @@ class QwenExecutor(Executor):
         self._initialized = False
         self._image_supported = False
         env = os.environ.copy()
-        # Translate Omnigent's provider/gateway routing into the OpenAI-compatible
+        # Translate agent-meow's provider/gateway routing into the OpenAI-compatible
         # env vars qwen reads (overriding any ambient values). No-op when no
         # gateway is wired (the CLI's own ambient auth is used).
         env.update(await self._resolve_gateway_env())
@@ -624,14 +624,14 @@ class QwenExecutor(Executor):
         qwen can drive the client mid-turn (e.g. permission prompts). A blanket
         ``{"result": {}}`` reply would be wrong, so we branch on the method:
 
-        - ``session/request_permission`` — decide via Omnigent's TOOL_CALL
+        - ``session/request_permission`` — decide via agent-meow's TOOL_CALL
           policy + human-consent elicitation (:meth:`_decide_permission`),
           then select the matching allow/reject option. NOT a blind approve.
         - ``fs/read_text_file`` / ``fs/write_text_file`` — when fs delegation is
           advertised (an os_env is configured; see :attr:`_fs_delegation`), qwen
-          routes its file I/O here. Executed through the Omnigent OSEnvironment
+          routes its file I/O here. Executed through the agent-meow OSEnvironment
           so the spec's sandbox read/write roots are enforced at the Python
-          layer and the I/O flows through Omnigent rather than qwen touching
+          layer and the I/O flows through agent-meow rather than qwen touching
           disk directly. With delegation off, these never arrive (qwen uses its
           own tools) and would hit the ``method not found`` branch.
         - anything else — reply with a JSON-RPC ``method not found`` error
@@ -883,7 +883,7 @@ class QwenExecutor(Executor):
         whose text is empty and whose ``_meta`` carries
         ``{"usage": {"inputTokens", "outputTokens", "totalTokens",
         "thoughtTokens", "cachedReadTokens"}}`` (see qwen-code
-        ``MessageEmitter.emitUsageMetadata``). A single Omnigent turn can drive
+        ``MessageEmitter.emitUsageMetadata``). A single agent-meow turn can drive
         several internal model calls (tool loops), each emitting its own usage —
         so we **sum** across the turn rather than keep only the last; each API
         call bills its own full input, so summing matches actual cost.

@@ -3,12 +3,12 @@
 Spawns Pi (``pi --mode rpc``) as a subprocess and communicates via a JSONL
 protocol over stdin/stdout.  Pi manages its own agent loop, tool execution,
 context window, and compaction internally.  This executor translates the Pi
-event stream into Omnigent ExecutorEvents.
+event stream into agent-meow ExecutorEvents.
 
-Omnigent tools are bridged into Pi via a generated JavaScript extension
+agent-meow tools are bridged into Pi via a generated JavaScript extension
 that registers each tool with ``pi.registerTool()``.  Tool execution is
-proxied over a local TCP socket to the Omnigent Python process, so
-policies, history recording, sub-agents, runtime, and all other Omnigent
+proxied over a local TCP socket to the agent-meow Python process, so
+policies, history recording, sub-agents, runtime, and all other agent-meow
 features work exactly as they do with the Claude SDK and Codex harnesses.
 
 When ``os_env`` is set, the Pi subprocess is wrapped in the same
@@ -123,7 +123,7 @@ NativePolicyGate: TypeAlias = Callable[  # type: ignore[explicit-any]
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 # ---------------------------------------------------------------------------
-# TCP tool server — serves Omnigent tools to the Pi extension
+# TCP tool server — serves agent-meow tools to the Pi extension
 # ---------------------------------------------------------------------------
 
 
@@ -304,7 +304,7 @@ class _ToolServer:
         Fail-open (allow) when no gate is wired or the gate raises: this
         mirrors the runner/scaffold policy-evaluation contract, which also
         defaults to ALLOW on a stalled or failed verdict so a transient
-        Omnigent outage can't wedge the agent mid-turn.
+        agent-meow outage can't wedge the agent mid-turn.
         """
         if self._policy_gate is None:
             return {"block": False, "reason": ""}
@@ -323,7 +323,7 @@ class _ToolServer:
 
 
 # ---------------------------------------------------------------------------
-# Pi extension generator — bridges Omnigent tools into Pi
+# Pi extension generator — bridges agent-meow tools into Pi
 # ---------------------------------------------------------------------------
 
 
@@ -362,13 +362,13 @@ def _sanitize_schema(schema: ToolSpec) -> ToolSpec:
 
 
 def _generate_extension_js(port: int, tool_schemas: list[ToolSpec], token: str) -> str:
-    """Generate a JavaScript Pi extension that registers Omnigent tools.
+    """Generate a JavaScript Pi extension that registers agent-meow tools.
 
     Each tool is forwarded to the TCP tool server at ``127.0.0.1:<port>``.
 
-    :param port: TCP port the Omnigent tool server is listening on, e.g.
+    :param port: TCP port the agent-meow tool server is listening on, e.g.
         ``54321``.
-    :param tool_schemas: Omnigent tool schemas to register with Pi.
+    :param tool_schemas: agent-meow tool schemas to register with Pi.
     :param token: The tool server's bearer token
         (:attr:`_ToolServer.token`), embedded in the extension and sent
         on every request so the server can authenticate this Pi process.
@@ -401,8 +401,8 @@ def _generate_extension_js(port: int, tool_schemas: list[ToolSpec], token: str) 
     token_json = json.dumps(token)
 
     return f"""\
-// Auto-generated Omnigent tool bridge extension for Pi.
-// Connects to the Omnigent TCP tool server on port {port}.
+// Auto-generated agent-meow tool bridge extension for Pi.
+// Connects to the agent-meow TCP tool server on port {port}.
 const net = require("net");
 
 const TOOLS = {tools_json};
@@ -467,7 +467,7 @@ function callTool(toolName, args) {{
 }}
 
 /**
- * Ask the Omnigent tool server for a TOOL_CALL policy verdict on a native
+ * Ask the agent-meow tool server for a TOOL_CALL policy verdict on a native
  * (non-bridged) Pi tool. Resolves to the verdict object {{ block, reason }}
  * or null. Fail-open (null) on any transport error: a wedged native tool
  * would break Pi worse than a missed gate, and bridged tools stay gated
@@ -501,7 +501,7 @@ function evalNativePolicy(toolName, args) {{
 }}
 
 module.exports = function(pi) {{
-  // Gate native (non-bridged) tool calls through Omnigent policy. Pi's
+  // Gate native (non-bridged) tool calls through agent-meow policy. Pi's
   // native tools (e.g. ``read``, enabled for skill loading) run in-process
   // and never traverse the bridged /mcp path, so without this hook they
   // escape all guardrails. Bridged tools ARE evaluated server-side at /mcp,
@@ -511,13 +511,13 @@ module.exports = function(pi) {{
     if (BRIDGED.has(event.toolName)) return;
     const verdict = await evalNativePolicy(event.toolName, event.input || {{}});
     if (verdict && verdict.block) {{
-      return {{ block: true, reason: verdict.reason || "blocked by Omnigent policy" }};
+      return {{ block: true, reason: verdict.reason || "blocked by agent-meow policy" }};
     }}
   }});
 
   for (const tool of TOOLS) {{
     // Pi passes tool.parameters directly to the LLM as JSON Schema, so we
-    // can use the Omnigent schema as-is without TypeBox conversion.
+    // can use the agent-meow schema as-is without TypeBox conversion.
     pi.registerTool({{
       name: tool.name,
       label: tool.name,
@@ -656,7 +656,7 @@ _PI_ENV_ALLOW_EXACT: frozenset[str] = frozenset(
         "LOGNAME",
         "SHELL",
         "TZ",
-        OMNIGENT_SESSION_ENV_VAR,  # "inside Omnigent" marker (CLAUDE_CODE/CODEX analog)
+        OMNIGENT_SESSION_ENV_VAR,  # "inside agent-meow" marker (CLAUDE_CODE/CODEX analog)
     }
 )
 _STREAM_READ_CHUNK_SIZE = 65536
@@ -1234,7 +1234,7 @@ def _build_pi_prompt(
     the Pi process has context. Otherwise returns just the
     latest user message content (may be multimodal).
 
-    :param messages: Omnigent conversation history for the
+    :param messages: agent-meow conversation history for the
         turn.
     :param is_first_turn: ``True`` when this is the first turn
         against a freshly-started Pi subprocess, so the full
@@ -1446,7 +1446,7 @@ def _aggregate_pi_turn_usage(
 ) -> dict[str, Any] | None:  # type: ignore[explicit-any]
     """Aggregate per-message Pi usage into one turn-level usage dict.
 
-    A single Omnigent turn drives Pi's full agent loop, which may make
+    A single agent-meow turn drives Pi's full agent loop, which may make
     several LLM calls (one assistant message per iteration of a tool-use
     loop), each forwarded as its own ``message_end``. Mirrors the
     openai-agents executor's billing/context split (see
@@ -1544,7 +1544,7 @@ class PiExecutor(Executor):
             ``DATABRICKS_CONFIG_PROFILE`` then the first valid profile.
         :param gateway_host: Gateway workspace host origin, e.g.
             ``"https://example.databricks.com"``.  Set from
-            ``HARNESS_PI_GATEWAY_HOST`` (written by the Omnigent workflow layer).
+            ``HARNESS_PI_GATEWAY_HOST`` (written by the agent-meow workflow layer).
             When set, skips profile host lookup.
         :param base_url_override: Override the workspace host used when
             building Pi's ``models.json``.  Expected to be the Anthropic
@@ -1612,7 +1612,7 @@ class PiExecutor(Executor):
         # tools by default; we re-enable just the bridged tool names per
         # turn via ``--tools <comma-list>`` in :meth:`_build_env_and_dir`.
         # The combined effect is: pi's native read/bash/edit/write stay
-        # off (they don't route through Omnigent policies / history and
+        # off (they don't route through agent-meow policies / history and
         # can 400 against the Databricks Responses API), and the bridge
         # extension's tools are explicitly allowlisted.
         self._extra_args: list[str] = ["--no-tools"]
@@ -1794,7 +1794,7 @@ class PiExecutor(Executor):
         return model
 
     async def _ensure_tool_server(self, tools: list[ToolSpec]) -> int | None:
-        """Start the TCP tool server if there are Omnigent tools to bridge."""
+        """Start the TCP tool server if there are agent-meow tools to bridge."""
         if not tools:
             return None
         if self._tool_server is None:
@@ -1809,13 +1809,13 @@ class PiExecutor(Executor):
         name: str,
         args: dict[str, Any],
     ) -> dict[str, Any]:
-        """Evaluate a native Pi tool call against Omnigent TOOL_CALL policy.
+        """Evaluate a native Pi tool call against agent-meow TOOL_CALL policy.
 
         Bridges the tool server's :attr:`_ToolServer._policy_gate` to the
         ``_policy_evaluator`` the harness scaffold installs on this executor
         (the same round-trip the Claude SDK executor uses for LLM_REQUEST /
         LLM_RESPONSE policies). Mirrors the claude-native / codex-native
-        PreToolUse hooks: the verdict is computed by the Omnigent server
+        PreToolUse hooks: the verdict is computed by the agent-meow server
         against the session's full policy set (inherited parent session
         policies + the agent spec's guardrails).
 
@@ -1846,8 +1846,8 @@ class PiExecutor(Executor):
     ) -> PiSubprocessConfig:
         """Build env dict, temp dir, and extra CLI args for a Pi subprocess.
 
-        :param tools: Omnigent tool schemas to bridge into Pi.
-        :param tool_server_port: TCP port the Omnigent tool server is
+        :param tools: agent-meow tool schemas to bridge into Pi.
+        :param tool_server_port: TCP port the agent-meow tool server is
             listening on, or ``None`` if no tools need bridging.
         :param tool_server_token: The tool server's bearer token
             (:attr:`_ToolServer.token`), embedded in the generated
@@ -1911,7 +1911,7 @@ class PiExecutor(Executor):
                 with open(fallback_path, "w") as f:
                     json.dump(retry_settings, f, indent=2)
 
-        # Generate the Omnigent tool bridge extension if tools are available.
+        # Generate the agent-meow tool bridge extension if tools are available.
         if tools and tool_server_port is not None:
             if tool_server_token is None:
                 # A port without a token would spawn the bridge
@@ -1938,7 +1938,7 @@ class PiExecutor(Executor):
             # we wired via ``--skill <path>``. As a native tool it would
             # otherwise escape all guardrails, so the generated extension's
             # ``tool_call`` hook routes it (and any other native tool) through
-            # an Omnigent TOOL_CALL policy verdict; see
+            # an agent-meow TOOL_CALL policy verdict; see
             # :func:`_generate_extension_js` and
             # :meth:`PiExecutor._gate_native_tool`.
             if self._skills_filter != "none":

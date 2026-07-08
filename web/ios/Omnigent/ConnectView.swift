@@ -31,7 +31,7 @@ struct ConnectView: View {
           .frame(height: 80)
           .padding(.bottom, 12)
 
-        Text("Enter the URL of the Omnigents server.")
+        Text("Enter the URL of the agent-meow server.")
           .font(.system(size: 14))
           .lineSpacing(2)
           .multilineTextAlignment(.center)
@@ -162,7 +162,7 @@ struct ConnectView: View {
         .frame(width: 44, height: 44)
         .contentShape(Rectangle())
     }
-    .accessibilityLabel("About Omnigent")
+    .accessibilityLabel("About agent-meow")
   }
 
   private var primary: Color {

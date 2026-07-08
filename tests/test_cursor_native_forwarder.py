@@ -81,7 +81,7 @@ class TestUnwrapUserQuery:
     def test_strips_fork_history_preamble_block(self) -> None:
         # A fork into cursor prepends the prior conversation, fenced. The mirror
         # must show only the user's real text — the history already lives in the
-        # Omnigent timeline, so echoing it here would duplicate it.
+        # agent-meow timeline, so echoing it here would duplicate it.
         from omnigent.cursor_native_bridge import (
             FORK_HISTORY_CLOSE_TAG,
             FORK_HISTORY_OPEN_TAG,

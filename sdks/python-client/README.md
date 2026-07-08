@@ -1,9 +1,9 @@
 # omnigent-client
 
-Python client SDK for the [omnigent](https://github.com/omnigent-ai/omnigent)
+Python client SDK for [agent-meow](https://github.com/omnigent-ai/omnigent)
 server API.
 
-`omnigent-client` is a typed client for driving omnigent sessions over the
+`omnigent-client` is a typed client for driving agent-meow sessions over the
 server's HTTP + SSE API — creating sessions, sending turns, and streaming
 responses. It shares the `StreamEvent` / `SessionStreamEventType` types that the
 server emits, so streamed envelopes are validated against a single source of
@@ -16,5 +16,5 @@ version:
 pip install omnigent-client
 ```
 
-See the [omnigent repository](https://github.com/omnigent-ai/omnigent) for full
+See the [agent-meow repository](https://github.com/omnigent-ai/omnigent) for full
 documentation.

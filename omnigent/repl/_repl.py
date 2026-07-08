@@ -609,7 +609,7 @@ async def _fetch_server_version(client: OmnigentClient) -> str | None:
 def _is_remote_server_url(url: str | None) -> bool:
     """True if *url* points at a host other than loopback.
 
-    A local ``omnigent run`` spawns its own Omnigent server on
+    A local ``omnigent run`` spawns its own agent-meow server on
     ``http://127.0.0.1:<port>``; surfacing that URL in the
     welcome banner adds noise without information. A user
     running with ``--server <url>`` is talking to a different
@@ -2238,7 +2238,7 @@ class _SessionsChatReplAdapter:
         """
         Post a structured skill slash-command event.
 
-        The Omnigent server persists a visible ``slash_command`` item and
+        The agent-meow server persists a visible ``slash_command`` item and
         injects the skill body as a hidden ``message`` with
         ``is_meta=True``. This method deliberately does not call
         :meth:`send`, because skill commands are not user-message
@@ -3012,7 +3012,7 @@ async def run_repl(
         ``[SkillSpec(name="code-review", ...)]``. Each skill is
         registered as a ``/<name>`` slash command at REPL startup.
         ``None`` (default) means no skill commands are registered.
-    :param server_url: Base URL of the Omnigent server the REPL is
+    :param server_url: Base URL of the agent-meow server the REPL is
         connected to. Surfaced in the welcome banner when it
         points at a non-loopback host so the user can see which
         workspace they're talking to. ``None`` omits it.
@@ -4347,7 +4347,7 @@ async def run_repl(
             _event_log_fh = open(_event_log_path, "a")  # noqa: SIM115 — closed in finally below
 
         # Mirror the legacy CLI's mascot-art startup banner so the
-        # Omnigent REPL feels identical at boot. Raw stdout write
+        # agent-meow REPL feels identical at boot. Raw stdout write
         # (matching ``omnigent/inner/cli.py:2962``) — the banner
         # is a pre-formatted ANSI string with explicit centering;
         # routing it through ``host.output`` (which renders via a
@@ -5719,7 +5719,7 @@ async def _refresh_session_metadata(
     :param session: Sessions-API adapter; must expose ``session_id``,
         ``model``, and ``_hydrate_from_session_snapshot``. Legacy
         sessions without those attributes are a no-op.
-    :param client: Omnigent HTTP client used to fetch the snapshot.
+    :param client: agent-meow HTTP client used to fetch the snapshot.
     :param host: Terminal host whose toolbar label is updated.
     :param fmt: Active formatter; supplies the muted style for the
         switch notice.
@@ -5764,7 +5764,7 @@ async def _update_context_ring_estimate(
     :param session: Current REPL session; exposes ``llm_model`` (the
         spec-pinned LLM id, ``None`` for native harnesses) and
         ``model`` (the agent name, e.g. ``"claude-native-ui"``).
-    :param client: Omnigent HTTP client used to query items.
+    :param client: agent-meow HTTP client used to query items.
     :param host: Terminal host whose context ring is updated.
     :param context_window: Context window size in tokens, e.g. ``200_000``.
     :returns: None.
@@ -6796,7 +6796,7 @@ async def _open_terminal_in_tmux(
     non-AP mode F20-overlay shortcuts at
     ``omnigent/inner/cli.py::_open_current_terminal_window``
     so users with muscle memory from the legacy CLI see the
-    same behavior under Omnigent mode.
+    same behavior under agent-meow mode.
 
     Four guards short-circuit cleanly without raising — the
     overlay's exception swallow at the host catches anything
@@ -6830,7 +6830,7 @@ async def _open_terminal_in_tmux(
     can type into the same pane.
 
     :param target: The selected :class:`OverlayTarget`.
-    :param client: Omnigent HTTP client — used to re-walk the
+    :param client: agent-meow HTTP client — used to re-walk the
         owning conversation's items so we recover the latest
         socket path (the sidebar's encoded key intentionally
         omits it; see ``_terminal_target_key``).

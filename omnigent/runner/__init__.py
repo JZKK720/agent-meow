@@ -1,4 +1,4 @@
-"""Runner package — execution-side counterpart to the Omnigent server.
+"""Runner package — execution-side counterpart to the agent-meow server.
 
 The runner is the data-plane component that owns harness subprocesses,
 OS environments, MCP connections, sub-agent harnesses, the async-work

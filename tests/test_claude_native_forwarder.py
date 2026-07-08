@@ -71,7 +71,7 @@ def _handler_factory(
     """
 
     class _Handler(BaseHTTPRequestHandler):
-        """Request handler for the test Omnigent endpoint."""
+        """Request handler for the test agent-meow endpoint."""
 
         def log_message(self, format: str, *args: Any) -> None:
             """
@@ -154,7 +154,7 @@ async def _get_recorded_request(
     """
     Await one recorded request from the test server, filtered by method.
 
-    The forwarder mirrors Claude's native session id to Omnigent via a
+    The forwarder mirrors Claude's native session id to agent-meow via a
     one-shot ``PATCH /v1/sessions/{id}`` (see
     :func:`_maybe_mirror_external_session_id`). Most tests in this
     file assert on POSTs to ``/events``; defaulting the filter to
@@ -258,7 +258,7 @@ async def test_clear_hook_rotates_active_session_without_reprocessing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Claude ``/clear`` creates a fresh Omnigent session and consumes the hook.
+    Claude ``/clear`` creates a fresh agent-meow session and consumes the hook.
 
     This exercises the rotation transaction directly: create the new
     session, bind the same runner, transfer the terminal, rewrite the
@@ -284,10 +284,10 @@ async def test_clear_hook_rotates_active_session_without_reprocessing(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Mock the Omnigent session-rotation endpoints.
+        Mock the agent-meow session-rotation endpoints.
 
         :param request: Incoming request.
-        :returns: Canned Omnigent response.
+        :returns: Canned agent-meow response.
         """
         body = json.loads(request.content.decode("utf-8")) if request.content else None
         calls.append((request.method, request.url.path, body))
@@ -419,10 +419,10 @@ async def test_clear_hook_rotation_survives_old_runner_clear_failure(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Mock Omnigent rotation endpoints with a failing old-session cleanup.
+        Mock agent-meow rotation endpoints with a failing old-session cleanup.
 
         :param request: Incoming request.
-        :returns: Canned Omnigent response.
+        :returns: Canned agent-meow response.
         """
         nonlocal create_count
         body = json.loads(request.content.decode("utf-8")) if request.content else None
@@ -718,7 +718,7 @@ async def test_clear_hook_consumes_hook_rotated_session_without_duplicate_fork(
         :param request: Incoming request.
         :returns: Never returns.
         """
-        raise AssertionError(f"unexpected Omnigent request: {request.method} {request.url}")
+        raise AssertionError(f"unexpected agent-meow request: {request.method} {request.url}")
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="http://ap") as client:
@@ -757,7 +757,7 @@ async def test_fork_hook_creates_omnigent_fork_and_consumes_hook(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Claude ``/fork`` creates an Omnigent fork and consumes the hook.
+    Claude ``/fork`` creates an agent-meow fork and consumes the hook.
 
     This exercises the branch/fork transaction directly: fork the AP
     session, bind the same runner, transfer the terminal, rewrite the
@@ -800,10 +800,10 @@ async def test_fork_hook_creates_omnigent_fork_and_consumes_hook(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Mock the Omnigent fork-rotation endpoints.
+        Mock the agent-meow fork-rotation endpoints.
 
         :param request: Incoming request.
-        :returns: Canned Omnigent response.
+        :returns: Canned agent-meow response.
         """
         body = json.loads(request.content.decode("utf-8")) if request.content else None
         calls.append((request.method, request.url.path, body))
@@ -936,7 +936,7 @@ async def test_fork_hook_consumes_hook_rotated_session_without_duplicate_fork(
         :param request: Incoming request.
         :returns: Never returns.
         """
-        raise AssertionError(f"unexpected Omnigent request: {request.method} {request.url}")
+        raise AssertionError(f"unexpected agent-meow request: {request.method} {request.url}")
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="http://ap") as client:
@@ -980,7 +980,7 @@ async def test_resume_seen_claude_fork_does_not_create_second_omnigent_fork(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Resuming an already-seen Claude branch does not create another Omnigent fork.
+    Resuming an already-seen Claude branch does not create another agent-meow fork.
 
     Claude branch transcripts retain ``forkedFrom`` metadata forever.
     This test fails if the forwarder treats that historical marker
@@ -1020,12 +1020,12 @@ async def test_resume_seen_claude_fork_does_not_create_second_omnigent_fork(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Fail if the forwarder tries to create another Omnigent fork.
+        Fail if the forwarder tries to create another agent-meow fork.
 
         :param request: Incoming request.
         :returns: Never returns.
         """
-        raise AssertionError(f"unexpected Omnigent request: {request.method} {request.url}")
+        raise AssertionError(f"unexpected agent-meow request: {request.method} {request.url}")
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="http://ap") as client:
@@ -1048,11 +1048,11 @@ async def test_resume_seen_claude_fork_does_not_create_second_omnigent_fork(
 @pytest.mark.asyncio
 async def test_forwarder_posts_visible_transcript_items(tmp_path: Path) -> None:
     """
-    The background forwarder reads Claude JSONL and posts Omnigent items.
+    The background forwarder reads Claude JSONL and posts agent-meow items.
 
     This catches the real-Claude failure where a terminal-originated
     prompt/tool/output sequence was written to Claude's transcript
-    but no process tailed that transcript into the Omnigent session
+    but no process tailed that transcript into the agent-meow session
     stream.
     """
     bridge_dir = tmp_path / "bridge"
@@ -1352,7 +1352,7 @@ async def test_forwarder_posts_web_injected_terminal_transcript_items(tmp_path: 
     Web-injected messages still surface only after Claude records them.
 
     The ``claude-native`` executor no longer owns transcript streaming
-    for Omnigent turns. This fails if a leftover pause/cursor path suppresses
+    for agent-meow turns. This fails if a leftover pause/cursor path suppresses
     terminal-originated output after a web message was typed into Claude.
     """
     bridge_dir = tmp_path / "bridge"
@@ -1654,12 +1654,12 @@ async def test_forwarder_posts_compaction_in_progress_on_precompact_hook(
     Claude Code's ``PreCompact`` hook surfaces as ``in_progress``.
 
     Claude compacts its own context in the terminal (manual ``/compact``
-    or automatic overflow); the Omnigent server never runs the compaction for
+    or automatic overflow); the agent-meow server never runs the compaction for
     a claude-native session. Without forwarding ``PreCompact``, the web
     UI gets no signal while Claude compacts — the gap the user reported
     (the summary flushes in with no "Compacting…" spinner). The
     forwarder maps it to ``external_compaction_status: in_progress`` so
-    Omnigent can publish the spinner SSE.
+    agent-meow can publish the spinner SSE.
     """
     bridge_dir = tmp_path / "bridge"
     transcript_path = tmp_path / "session.jsonl"
@@ -2865,7 +2865,7 @@ async def test_forwarder_drops_poison_item_after_bounded_permanent_retries(
     """
     Permanent item rejections eventually advance the transcript cursor.
 
-    A malformed transcript item that Omnigent rejects with a permanent 4xx
+    A malformed transcript item that agent-meow rejects with a permanent 4xx
     should not be reposted forever at the poll interval. After the
     retry budget is exhausted, the forwarder emits a failed status,
     marks the source id handled, persists the new byte cursor, and
@@ -2902,7 +2902,7 @@ async def test_forwarder_drops_poison_item_after_bounded_permanent_retries(
         Reject conversation items but accept failure status posts.
 
         :param request: Outbound HTTP request from the forwarder.
-        :returns: HTTP response for the mock Omnigent endpoint.
+        :returns: HTTP response for the mock agent-meow endpoint.
         """
         payload = json.loads(request.content.decode("utf-8"))
         assert isinstance(payload, dict)
@@ -3198,7 +3198,7 @@ async def test_forwarder_mirrors_external_session_id_after_hook_event(
     tmp_path: Path,
 ) -> None:
     """
-    Forwarder PATCHes the Omnigent conversation with Claude's session id.
+    Forwarder PATCHes the agent-meow conversation with Claude's session id.
 
     After the bridge records a hook event carrying ``session_id``
     (every hook from Claude does), the forwarder's first loop pass
@@ -3543,7 +3543,7 @@ async def test_forwarder_retries_model_post_after_transient_failure(tmp_path: Pa
     incremental window carries no fresh ``message.model`` (e.g. a plain
     user turn) reconciles the observed alias against the last POSTed one
     and re-attempts the drop. Guards the self-healing contract of the
-    model mirror against a single transient Omnigent error.
+    model mirror against a single transient agent-meow error.
     """
     bridge_dir = tmp_path / "bridge"
     transcript_path = tmp_path / "session.jsonl"
@@ -3969,7 +3969,7 @@ async def test_supervise_forwarder_backoff_grows_on_repeated_crashes(
     """
     Consecutive crashes use exponentially growing backoff, capped at the max.
 
-    Prevents a fast-failing forwarder from POST-storming the Omnigent server
+    Prevents a fast-failing forwarder from POST-storming the agent-meow server
     or burning CPU on tight-loop restarts.
     """
     # 6 crashes is enough to walk past the cap: 1, 2, 4, 8, 16, 30
@@ -4353,7 +4353,7 @@ def _start_recording_server_with_responses(
     a customizable response body.
 
     Variant of :func:`_start_recording_server` for tests that need
-    the Omnigent server's response (rather than just a generic 202 ``{}``)
+    the agent-meow server's response (rather than just a generic 202 ``{}``)
     — used by the sub-agent watcher tests because
     ``external_subagent_start`` returns ``{"child_session_id": "..."}``
     that the forwarder reads back.
@@ -4564,7 +4564,7 @@ async def test_subagent_watcher_forwards_transcript_items_to_child_session(
     """
     After registering a sub-agent, the forwarder tails its
     ``.jsonl`` and POSTs ``external_conversation_item`` events to
-    the Omnigent child session id (not the parent's).
+    the agent-meow child session id (not the parent's).
     """
     bridge_dir = tmp_path / "bridge"
     transcript_path = tmp_path / "session.jsonl"
@@ -4665,7 +4665,7 @@ async def test_subagent_watcher_retry_skips_previously_posted_items(
     when a later item fails, so the next poll re-reads the same JSONL
     window. This test pins the durable ``seen_source_ids`` guard: item
     A succeeds, item B fails once, and the retry must post only B.
-    Without that guard Omnigent live subscribers can see item A synced back
+    Without that guard agent-meow live subscribers can see item A synced back
     twice; the server no longer receives a ``source_id`` key that can
     dedupe the post on AP's side.
     """
@@ -4713,7 +4713,7 @@ async def test_subagent_watcher_retry_skips_previously_posted_items(
         Fail the assistant item once and accept everything else.
 
         :param request: Request issued by the forwarder.
-        :returns: Canned Omnigent response.
+        :returns: Canned agent-meow response.
         """
         body = json.loads(request.content.decode("utf-8"))
         if body.get("type") != "external_conversation_item":
@@ -4941,7 +4941,7 @@ async def test_subagent_watcher_preserves_parked_sentinel_across_restart(
 
 
 # ---------------------------------------------------------------------------
-# In-pane /effort → Omnigent session reasoning_effort mirroring
+# In-pane /effort → agent-meow session reasoning_effort mirroring
 # ---------------------------------------------------------------------------
 
 
@@ -5164,7 +5164,7 @@ async def test_forward_available_deltas_posts_each_and_advances_offset(tmp_path:
     Each appended chunk is POSTed as an ``external_output_text_delta``.
 
     Proves the forwarder turns deltas-file lines into the exact event
-    shape the Omnigent route expects (delta + message_id + index + final) and
+    shape the agent-meow route expects (delta + message_id + index + final) and
     advances+persists the byte offset so the next poll resumes after
     them. Fails if a field is dropped (UI can't scope/order the buffer)
     or the offset doesn't persist (chunks re-POST on restart).
@@ -5251,7 +5251,7 @@ async def test_forward_available_deltas_drops_on_http_error(tmp_path: Path) -> N
 
     Deltas are an ephemeral preview; the authoritative final message
     arrives via ``external_conversation_item`` regardless, so a transient
-    Omnigent blip must not raise or wedge the tail. Fails if the error
+    agent-meow blip must not raise or wedge the tail. Fails if the error
     propagates (would crash the forwarder loop) or the offset stalls
     (would re-POST the failed chunk forever).
     """
@@ -6572,7 +6572,7 @@ async def test_subagent_item_drop_writes_dead_letter(tmp_path: Path) -> None:
         """Accept the start POST; permanently reject the child item POST.
 
         :param request: Request issued by the forwarder.
-        :returns: Canned Omnigent response.
+        :returns: Canned agent-meow response.
         """
         body = json.loads(request.content.decode("utf-8"))
         if body.get("type") == "external_subagent_start":
@@ -6633,7 +6633,7 @@ async def test_subagent_start_drop_writes_dead_letter(tmp_path: Path) -> None:
         """Permanently reject the sub-agent start POST.
 
         :param request: Request issued by the forwarder.
-        :returns: Canned Omnigent response.
+        :returns: Canned agent-meow response.
         """
         return httpx.Response(400, json={"error": "nope"})
 

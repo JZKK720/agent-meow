@@ -1,6 +1,6 @@
-// Omnigent installability / update-only service worker (hand-rolled).
+// agent-meow installability / update-only service worker (hand-rolled).
 //
-// Omnigent is a cloud app with NO offline mode, so this worker deliberately:
+// agent-meow is a cloud app with NO offline mode, so this worker deliberately:
 //   - does NOT precache or serve the app shell, and
 //   - does NOT intercept navigations — every navigation hits the network, so a
 //     deploy is never masked behind a stale cached shell.
