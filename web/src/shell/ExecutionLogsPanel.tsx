@@ -43,6 +43,7 @@ import { useResizablePanel } from "@/hooks/useResizablePanel";
 import { useSessionItems, type RawSessionItem } from "@/hooks/useSessionItems";
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/store/chatStore";
+import { useTranslation } from "react-i18next";
 
 /** True when the focused session's agent loop is live. */
 function useFocusedSessionActive(): boolean {
@@ -92,6 +93,7 @@ export function ExecutionLogsPanel({
   initialKey,
   onClose,
 }: ExecutionLogsPanelProps) {
+  const { t } = useTranslation();
   // No child-sessions poll — status arrives live over the session stream
   // (see chatStore ``session_child_session_updated``).
   const { children } = useChildSessions(open ? conversationId : null);
@@ -152,8 +154,14 @@ export function ExecutionLogsPanel({
         />
       )}
       <header className="flex shrink-0 items-center justify-between border-border border-b px-4 py-3">
-        <h2 className="font-medium text-sm">Execution logs</h2>
-        <Button type="button" variant="ghost" size="icon-sm" aria-label="Close" onClick={onClose}>
+        <h2 className="font-medium text-sm">{t("chat.executionLogs")}</h2>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("common.close")}
+          onClick={onClose}
+        >
           <XIcon className="size-4" />
         </Button>
       </header>

@@ -19,7 +19,7 @@ RUNNER_PARENT_PID_ENV_VAR = "OMNIGENT_RUNNER_PARENT_PID"
 RUNNER_ADOPT_SIGNAL: signal.Signals | None = getattr(signal, "SIGUSR1", None)
 RUNNER_WORKSPACE_ENV_VAR = "OMNIGENT_RUNNER_WORKSPACE"
 RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR = "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN"
-RUNNER_TUNNEL_TOKEN_HEADER = "X-Omnigent-Runner-Tunnel-Token"
+RUNNER_TUNNEL_TOKEN_HEADER = "X-agent-meow-Runner-Tunnel-Token"
 # Sentinel ``Origin`` header that the project's own non-browser WebSocket
 # clients (runner -> server tunnel, host/daemon -> server tunnel,
 # terminal-attach) set on their handshakes so the server's CSWSH origin
@@ -35,8 +35,8 @@ OMNIGENT_INTERNAL_WS_ORIGIN = "omnigent://internal"
 RUNNER_ISOLATE_SESSION_ENV_VAR = "OMNIGENT_RUNNER_ISOLATE_SESSION"
 
 # Marker env var stamped into every agent-facing environment so any
-# process launched inside an Omnigent agent session can detect it is
-# running under Omnigent. This is the analog of Claude Code's
+# process launched inside an agent-meow agent session can detect it is
+# running under agent-meow. This is the analog of Claude Code's
 # ``CLAUDE_CODE`` / ``CLAUDECODE`` and Codex's ``CODEX``. It is set once
 # on the runner process (see :mod:`omnigent.runner._entry`) and inherited
 # by harness workers, terminals, and the in-process SDK harnesses. The

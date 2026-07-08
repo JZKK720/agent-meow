@@ -877,7 +877,7 @@ class PolicyEngine:
         :meth:`omnigent.runtime.policies.engine.PolicyEngine.reset_turn`.
         Without this hook, legacy ``max_tool_calls_per_turn``
         callables silently degrade to per-session limits under
-        Omnigent mode.
+        agent-meow mode.
         """
         for policy in self.policies:
             policy.reset_turn()

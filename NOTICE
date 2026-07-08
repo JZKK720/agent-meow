@@ -1,6 +1,12 @@
-Copyright (2026) Databricks, Inc.
+agent-meow
+Copyright (2026) agent-meow contributors
 
-This Software includes software developed at Databricks (https://www.databricks.com/) and its use is subject to the included LICENSE file.
+agent-meow is a derivative work of Omnigent (https://github.com/omnigent-ai/omnigent),
+originally developed at Databricks, Inc. and its contributors, licensed under
+Apache-2.0. See the LICENSE file for the full license text.
+
+This Software includes software developed at Databricks (https://www.databricks.com/)
+and its use is subject to the included LICENSE file.
 
 ________________
 

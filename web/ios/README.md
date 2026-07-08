@@ -1,11 +1,11 @@
-# Omnigent iOS
+# agent-meow iOS
 
-Thin SwiftUI/WKWebView shell for Omnigent. Like the Electron app, this target
+Thin SwiftUI/WKWebView shell for agent-meow. Like the Electron app, this target
 loads the server-served web UI instead of shipping a duplicate copy of the SPA.
 
 ## Development
 
-Open `Omnigent.xcodeproj` in Xcode 16 or newer and run the `Omnigent` scheme on
+Open `agent-meow.xcodeproj` in Xcode 16 or newer and run the `agent-meow` scheme on
 an iOS 18 simulator.
 
 Debug builds allow `http://` web content for local development by enabling

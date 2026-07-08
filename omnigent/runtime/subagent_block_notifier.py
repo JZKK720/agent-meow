@@ -10,7 +10,7 @@ parent *agent* is woken only after an escalation grace passes with the block
 still unanswered (once per block, re-arming when it clears); a delivered wake
 is then paired with a resolution notice when the block clears so the parent is
 never left waiting on a stale notice. Delivery is an injected ``wake_dispatch``
-coroutine (kept free of HTTP/server knowledge) wired up by the Omnigent server
+coroutine (kept free of HTTP/server knowledge) wired up by the agent-meow server
 in ``configure_subagent_block_notifier``. See
 ``designs/SUBAGENT_ELICITATION_VISIBILITY_V2.md``.
 """
@@ -98,7 +98,7 @@ class SubagentBlockNotifier:
     """
     Observe elicitation events and wake a blocked child's parent.
 
-    One instance is constructed and registered per Omnigent server process.
+    One instance is constructed and registered per agent-meow server process.
     Its :meth:`observe` method is registered with
     :func:`omnigent.runtime.pending_elicitations.set_elicitation_observer`;
     every tracked elicitation event flows through it.
@@ -108,7 +108,7 @@ class SubagentBlockNotifier:
     :param wake_dispatch: Coroutine that delivers a notice to a parent
         session and wakes it, returning ``True`` on a confirmed delivery
         and ``False`` when it could not deliver. See :data:`WakeDispatch`.
-    :param loop: The Omnigent server's event loop, captured at registration
+    :param loop: The agent-meow server's event loop, captured at registration
         time so :meth:`observe` (which runs synchronously on the publish
         path, possibly off the loop) can schedule async handling onto it.
     """

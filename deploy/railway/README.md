@@ -1,6 +1,6 @@
-# Omnigent on Railway
+# agent-meow on Railway
 
-Deploy Omnigent to Railway. Railway pulls the pre-built image, runs it next to
+Deploy agent-meow to Railway. Railway pulls the pre-built image, runs it next to
 a managed Postgres, and serves it over HTTPS on `*.up.railway.app`.
 
 > **Railway is not yet a true one-click.** Unlike Render's `render.yaml` (fully
@@ -140,7 +140,7 @@ Railway redeploys automatically when a new image tag is pushed to GHCR
 ## Cost
 
 Railway Hobby plan: ~$5/month base + per-minute CPU/memory usage. A lightly
-loaded Omnigent instance (few concurrent users) typically stays under
+loaded agent-meow instance (few concurrent users) typically stays under
 $10–15/month total including the Postgres plugin.
 
 ## Publishing the template

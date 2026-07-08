@@ -138,6 +138,7 @@ import { useMarkConversationSeen } from "@/hooks/useUnseenConversations";
 import { useUserMessageNav } from "@/hooks/useUserMessageNav";
 import { UserMessageNav } from "@/components/UserMessageNav";
 import { HostBadge } from "@/components/HostBadge";
+import { useTranslation } from "react-i18next";
 import {
   BUILTIN_SLASH_COMMANDS,
   isSlashCommandText,
@@ -913,7 +914,7 @@ export function ChatPage() {
   // background tabs signal parent activity without duplicating child-session
   // badges from the sidebar/Agents rail. An open-but-untitled session
   // (no synthesized title yet) reads as "New session" to match its
-  // sidebar row; the landing page (no active session) stays "Omnigent".
+  // sidebar row; the landing page (no active session) stays "agent-meow".
   // Sub-agent (child) sessions are absent from the sidebar list, so
   // ``activeConv`` is null and the title would otherwise read "New session";
   // name the tab after the sub-agent instead, mirroring the header.
@@ -1385,6 +1386,7 @@ function MainAgentSurface({
   costRoutingEligible,
   subAgentLabel,
 }: MainAgentSurfaceProps) {
+  const { t } = useTranslation();
   const terminalFirst = useTerminalFirst();
   // Mirrors ChatPage's `sandboxLaunching`: while the managed-sandbox
   // launch runs, the composer must stay sendable — the server parks
@@ -1540,7 +1542,7 @@ function MainAgentSurface({
   // (the server has no slash_command path for native sessions). Undefined
   // → the composer falls through to the plaintext send for these. Keyed
   // on the wrapper label, NOT `isTerminalFirst` — a terminal-first SDK
-  // session (embedded Omnigent REPL terminal) runs an in-process harness
+  // session (embedded agent-meow REPL terminal) runs an in-process harness
   // with the full server-side slash_command path.
   const isTerminalFirst = terminalFirst?.isTerminalFirst === true;
   const isNativeWrapper = terminalFirst?.isNativeWrapper === true;
@@ -1621,12 +1623,15 @@ function MainAgentSurface({
                 <ConversationEmptyState>
                   <div className="space-y-1.5">
                     <h3 className="text-2xl font-medium tracking-[-0.02em]">
-                      What should we work on?
+                      {t("chat.emptyTitle")}
                     </h3>
                     <p className="text-muted-foreground text-base">
                       {agentsError
-                        ? `Failed to load agents: ${agentsError instanceof Error ? agentsError.message : String(agentsError)}`
-                        : "Send a message to get started."}
+                        ? t("chat.loadAgentsFailed", {
+                            message:
+                              agentsError instanceof Error ? agentsError.message : String(agentsError),
+                          })
+                        : t("chat.emptyBody")}
                     </p>
                   </div>
                 </ConversationEmptyState>
@@ -3113,7 +3118,7 @@ interface ComposerProps {
   /**
    * Native-CLI wrapper session (claude-native / codex-native). Drops the
    * `/model` slash command unless the session also has a model picker
-   * (`showModels`); terminal-first SDK sessions (embedded Omnigent REPL
+   * (`showModels`); terminal-first SDK sessions (embedded agent-meow REPL
    * terminal) keep it.
    */
   isNativeWrapper?: boolean;
@@ -3554,6 +3559,7 @@ export function Composer({
   costRoutingEligible = false,
   subAgentLabel = null,
 }: ComposerProps) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
@@ -4477,14 +4483,14 @@ export function Composer({
                     : hasPendingElicitation
                       ? "Respond to the pending request above to continue"
                       : disabled
-                        ? "Waiting for agents…"
+                        ? t("chat.waitingForAgents")
                         : isStreaming
-                          ? "Send a follow-up (queued) — Esc to stop"
+                          ? t("chat.followUpQueued")
                           : sandboxAsleepHint
-                            ? "Current session's host is offline. Next message will resume the sandbox host which can take minutes"
+                            ? t("chat.hostOfflineResume")
                             : reconnectHint
-                              ? "Send a message to reconnect this session"
-                              : "Ask the agent anything…"
+                              ? t("chat.reconnectPrompt")
+                              : t("chat.askAnything")
             }
             rows={1}
             disabled={disabled || isReadOnly || unreachable || hasPendingElicitation}
@@ -4580,10 +4586,10 @@ export function Composer({
               className="size-9 md:size-8"
               disabled={disabled || isReadOnly || hasPendingElicitation}
               onClick={() => fileInputRef.current?.click()}
-              title="Attach files"
+              title={t("chat.attachFiles")}
             >
               <PaperclipIcon className="size-4" />
-              <span className="sr-only">Attach files</span>
+              <span className="sr-only">{t("chat.attachFiles")}</span>
             </Button>
             <ComposerMicButton
               disabled={disabled || isReadOnly || hasPendingElicitation}
@@ -4681,15 +4687,17 @@ export function Composer({
                   ? isReadOnly
                   : !hasDraft || disabled || isReadOnly || hasPendingElicitation
               }
-              title={showInterruptButton ? "Interrupt" : "Send"}
-              aria-label={showInterruptButton ? "Interrupt" : "Send"}
+              title={showInterruptButton ? t("chat.interrupt") : t("chat.send")}
+              aria-label={showInterruptButton ? t("chat.interrupt") : t("chat.send")}
             >
               {showInterruptButton ? (
                 <SquareIcon className="size-4 fill-current" />
               ) : (
                 <ArrowUpIcon className="size-4" />
               )}
-              <span className="sr-only">{showInterruptButton ? "Interrupt" : "Send"}</span>
+              <span className="sr-only">
+                {showInterruptButton ? t("chat.interrupt") : t("chat.send")}
+              </span>
             </Button>
           </div>
         </div>
@@ -5093,7 +5101,7 @@ function AgentPicker({
   // forwarder's terminal→web mirror and by web-side picks. Surface *that* as
   // the live model — never the cross-session sticky `selectedModel` (a pick
   // carried over from some other session) nor the meaningless `llmModel`
-  // default. The other vendor-owns wrappers have no Omnigent-visible model and
+  // default. The other vendor-owns wrappers have no agent-meow-visible model and
   // stay null.
   // kiro persists the pick as ``model_override`` (applied via ``--model`` at
   // launch) and, mid-session, the runner types ``/model <id>`` into the live TUI.
@@ -5116,7 +5124,7 @@ function AgentPicker({
     ? modelPickerKind === "cursor" || modelPickerKind === "kiro"
       ? // cursor mirrors its live TUI model into ``model_override``; kiro sets it
         // on a web pick (which also drives a live ``/model`` switch). Either way
-        // the Omnigent-visible model is ``model_override``.
+        // the agent-meow-visible model is ``model_override``.
         sessionModelOverride
       : modelPickerKind === "opencode"
         ? // opencode mirrors its live TUI model into ``model_override`` (set at

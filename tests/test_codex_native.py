@@ -563,7 +563,7 @@ def _expected_delta_data(
     item_type: str = "agentMessage",
 ) -> dict[str, Any]:
     """
-    Build the Omnigent event data expected for one Codex native text delta.
+    Build the agent-meow event data expected for one Codex native text delta.
 
     :param delta: Coalesced text fragment, e.g. ``"hello"``.
     :param turn_id: Codex turn id, e.g. ``"turn_123"``.
@@ -581,9 +581,9 @@ def _expected_delta_data(
 
 def _expected_status_data(status: str, turn_id: str) -> dict[str, Any]:
     """
-    Build the Omnigent event data expected for one Codex native status edge.
+    Build the agent-meow event data expected for one Codex native status edge.
 
-    :param status: Omnigent session status, e.g. ``"running"``.
+    :param status: agent-meow session status, e.g. ``"running"``.
     :param turn_id: Codex turn id, e.g. ``"turn_123"``.
     :returns: Expected ``external_session_status`` data payload.
     """
@@ -620,7 +620,7 @@ def _usage_coalescer(
     Build the required Codex usage coalescer for direct handler tests.
 
     :param client: HTTP client used by the coalescer.
-    :param session_id: Omnigent session id, e.g. ``"conv_123"``.
+    :param session_id: agent-meow session id, e.g. ``"conv_123"``.
     :returns: Usage coalescer bound to ``session_id``.
     """
     return codex_native_forwarder._SessionUsageCoalescer(client, session_id)
@@ -662,7 +662,7 @@ def test_materialized_codex_agent_spec_loads_as_valid_omnigent_yaml(
     tmp_path: Path,
 ) -> None:
     """
-    The generated wrapper spec passes Omnigent YAML validation.
+    The generated wrapper spec passes agent-meow YAML validation.
 
     This guards the session-create path, which registers the generated
     spec bundle and fails before Codex starts if ``codex-native`` is not
@@ -1055,7 +1055,7 @@ def test_codex_app_server_client_responds_to_server_requests(
     The Codex websocket client can answer server-to-client requests.
 
     Native Codex elicitations arrive as JSON-RPC requests from the
-    app-server to the Omnigent client. After AP/web resolves the
+    app-server to the agent-meow client. After AP/web resolves the
     prompt, the forwarder must send a result envelope with the same
     request id; otherwise Codex never observes the answer.
     """
@@ -1145,7 +1145,7 @@ def test_wait_for_thread_started_uses_tui_created_thread() -> None:
 def test_wait_for_thread_started_fails_when_stream_ends() -> None:
     """
     A Codex TUI that exits before creating a thread fails loudly instead
-    of leaving the Omnigent session without a bridge state.
+    of leaving the agent-meow session without a bridge state.
     """
     fake_client = _FakeCodexAppServerClient(events=[])
 
@@ -1390,7 +1390,7 @@ def test_subscribe_until_ready_replays_completed_turn_status(
     Host-spawned codex-native suppresses the runner's injection-task ``idle``
     edge, so a reconnect that misses both ``turn/started`` and
     ``turn/completed`` must recover the terminal status from explicit resume
-    turn state instead of leaving the Omnigent session running forever.
+    turn state instead of leaving the agent-meow session running forever.
 
     :param tmp_path: Temporary bridge directory.
     :returns: None.
@@ -1436,7 +1436,7 @@ def test_subscribe_until_ready_replays_completed_turn_status(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -1590,7 +1590,7 @@ def test_subscribe_until_ready_parks_until_signal_then_resumes(
 
 def test_forwarder_ignores_thread_started_for_current_codex_thread(tmp_path: Path) -> None:
     """
-    A duplicate ``thread/started`` notification does not rotate Omnigent sessions.
+    A duplicate ``thread/started`` notification does not rotate agent-meow sessions.
 
     Codex can broadcast the current thread after the forwarder has
     already bound it. This fails if the rotation detector treats every
@@ -1645,7 +1645,7 @@ def test_forwarder_rotates_session_on_new_codex_thread_and_posts_to_new_session(
     tmp_path: Path,
 ) -> None:
     """
-    Native Codex thread switches create a replacement Omnigent session.
+    Native Codex thread switches create a replacement agent-meow session.
 
     This is the ``/clear`` regression shape: Codex keeps the terminal
     alive but starts a new app-server thread. The forwarder must move
@@ -1668,10 +1668,10 @@ def test_forwarder_rotates_session_on_new_codex_thread_and_posts_to_new_session(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Serve Omnigent calls made during Codex session rotation.
+        Serve agent-meow calls made during Codex session rotation.
 
         :param request: HTTP request from the forwarder.
-        :returns: Fake Omnigent response.
+        :returns: Fake agent-meow response.
         """
         body = json.loads(request.content) if request.content else None
         requests.append((request.method, request.url.path, body))
@@ -1833,9 +1833,9 @@ def test_forwarder_rotation_failure_preserves_old_target(
     """
     Failed Codex thread rotation leaves the old forwarding target usable.
 
-    If Omnigent rejects replacement-session creation, the forwarder logs the
+    If agent-meow rejects replacement-session creation, the forwarder logs the
     event-handler failure and continues. The old target must remain
-    intact; closing its coalescer before the Omnigent move succeeds would
+    intact; closing its coalescer before the agent-meow move succeeds would
     leave later old-thread streaming in a half-rotated state.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -1847,7 +1847,7 @@ def test_forwarder_rotation_failure_preserves_old_target(
         """
         Test coalescer that records lifecycle calls.
 
-        :param session_id: Omnigent session id represented by this fake,
+        :param session_id: agent-meow session id represented by this fake,
             e.g. ``"conv_old"``.
         """
 
@@ -1855,7 +1855,7 @@ def test_forwarder_rotation_failure_preserves_old_target(
             """
             Initialize the fake coalescer.
 
-            :param session_id: Omnigent session id represented by this fake,
+            :param session_id: agent-meow session id represented by this fake,
                 e.g. ``"conv_old"``.
             :returns: None.
             """
@@ -1881,10 +1881,10 @@ def test_forwarder_rotation_failure_preserves_old_target(
 
     async def fail_create_thread_replacement_session(**_kwargs: object) -> str:
         """
-        Simulate Omnigent rejecting the replacement-session operation.
+        Simulate agent-meow rejecting the replacement-session operation.
 
         :returns: Never returns successfully.
-        :raises RuntimeError: Always raised to model Omnigent failure.
+        :raises RuntimeError: Always raised to model agent-meow failure.
         """
         raise RuntimeError("replacement failed")
 
@@ -2036,7 +2036,7 @@ def test_forwarder_tracks_active_turn_across_terminal_event_sequences(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2099,7 +2099,7 @@ def test_forwarder_posts_agent_item_after_stale_terminal_event(tmp_path: Path) -
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2151,11 +2151,11 @@ def test_forwarder_posts_agent_item_after_stale_terminal_event(tmp_path: Path) -
 
 def test_forwarder_posts_active_codex_agent_message_delta(tmp_path: Path) -> None:
     """
-    Codex assistant deltas are forwarded as transient Omnigent text deltas.
+    Codex assistant deltas are forwarded as transient agent-meow text deltas.
 
     Breaking the ``item/agentMessage/delta`` branch would leave the
     web stream silent until Codex posts its completed ``agentMessage``
-    item, so this asserts on the exact Omnigent event envelope.
+    item, so this asserts on the exact agent-meow event envelope.
     """
     write_bridge_state(
         tmp_path,
@@ -2171,7 +2171,7 @@ def test_forwarder_posts_active_codex_agent_message_delta(tmp_path: Path) -> Non
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2223,7 +2223,7 @@ def test_forwarder_persists_interrupted_codex_partial_agent_message(tmp_path: Pa
 
     Codex interruption terminates the turn with ``turn/completed`` status
     ``interrupted`` and may never emit a completed ``agentMessage`` item.
-    Without this fallback, Omnigent Web shows the streamed text live but loses it
+    Without this fallback, agent-meow Web shows the streamed text live but loses it
     from durable history as soon as the turn ends.
     """
     write_bridge_state(
@@ -2241,7 +2241,7 @@ def test_forwarder_persists_interrupted_codex_partial_agent_message(tmp_path: Pa
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2325,10 +2325,10 @@ def test_forwarder_persists_interrupted_codex_partial_agent_message(tmp_path: Pa
 
 def test_forwarder_posts_active_codex_plan_delta(tmp_path: Path) -> None:
     """
-    Codex plan deltas are forwarded as transient Omnigent text deltas.
+    Codex plan deltas are forwarded as transient agent-meow text deltas.
 
     Plan mode uses ``item/plan/delta`` while rendering the visible
-    plan. If this branch is missing, Omnigent web stays blank even though the
+    plan. If this branch is missing, agent-meow web stays blank even though the
     Codex TUI is already showing the plan.
     """
     write_bridge_state(
@@ -2345,7 +2345,7 @@ def test_forwarder_posts_active_codex_plan_delta(tmp_path: Path) -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2421,7 +2421,7 @@ def test_forwarder_recovers_active_turn_from_codex_plan_delta(tmp_path: Path) ->
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2507,7 +2507,7 @@ def test_forwarder_recovers_active_turn_from_codex_agent_message_delta(tmp_path:
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2611,7 +2611,7 @@ def test_forwarder_recovers_user_before_recovered_agent_message_delta(tmp_path: 
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2688,7 +2688,7 @@ def test_forwarder_drops_stale_and_malformed_codex_agent_message_deltas(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2741,10 +2741,10 @@ def test_forwarder_drops_stale_and_malformed_codex_agent_message_deltas(
 
 def test_forwarder_coalesces_codex_agent_message_deltas(tmp_path: Path) -> None:
     """
-    Native Codex streaming does not post one Omnigent event per tiny delta.
+    Native Codex streaming does not post one agent-meow event per tiny delta.
 
     Breaking the coalescer would recreate the slow-drain failure where
-    Codex finishes locally while the Omnigent SSE stream is still serialized
+    Codex finishes locally while the agent-meow SSE stream is still serialized
     behind many per-token HTTP POSTs. Stale and malformed deltas must
     still be filtered before text enters the coalesced buffer.
     """
@@ -2762,7 +2762,7 @@ def test_forwarder_coalesces_codex_agent_message_deltas(tmp_path: Path) -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2844,7 +2844,7 @@ def test_forwarder_posts_codex_usage_live_per_frame(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from both coalescers.
+        Capture agent-meow event posts from both coalescers.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -2960,7 +2960,7 @@ def test_output_text_delta_coalescer_auto_flushes(
 
     Each parametrized case isolates one automatic trigger: timer
     expiry, character threshold, and newline. The test waits for the
-    Omnigent post directly instead of calling ``flush()``, so removing any
+    agent-meow post directly instead of calling ``flush()``, so removing any
     trigger leaves that case stuck until ``wait_for`` fails.
 
     :param deltas: Text fragments appended to the coalescer, e.g.
@@ -2969,14 +2969,14 @@ def test_output_text_delta_coalescer_auto_flushes(
         delta, e.g. ``0.001``.
     :param flush_char_threshold: Buffered character threshold that
         triggers a flush, e.g. ``5``.
-    :param expected_delta: Coalesced Omnigent delta payload.
+    :param expected_delta: Coalesced agent-meow delta payload.
     :returns: None.
     """
     posted: list[dict[str, Any]] = []
 
     async def run() -> None:
         """
-        Append deltas and wait for the automatic Omnigent post.
+        Append deltas and wait for the automatic agent-meow post.
 
         :returns: None.
         """
@@ -2984,7 +2984,7 @@ def test_output_text_delta_coalescer_auto_flushes(
 
         def handler(request: httpx.Request) -> httpx.Response:
             """
-            Capture Omnigent event posts from the coalescer.
+            Capture agent-meow event posts from the coalescer.
 
             :param request: HTTP request sent by the coalescer.
             :returns: Accepted response.
@@ -3041,7 +3041,7 @@ def test_forwarder_flushes_coalesced_deltas_before_completed_agent_item(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -3127,8 +3127,8 @@ def test_supervise_forwarder_continues_after_event_handler_failure(
         """
         Fail the first event and record subsequent events.
 
-        :param _client: Omnigent HTTP client.
-        :param session_id: Omnigent session id, e.g. ``"conv_123"``.
+        :param _client: agent-meow HTTP client.
+        :param session_id: agent-meow session id, e.g. ``"conv_123"``.
         :param bridge_dir: Native Codex bridge directory.
         :param event: Codex event payload.
         :param delta_coalescer: Optional text-delta coalescer.
@@ -3182,7 +3182,7 @@ def test_forwarder_sends_codex_mcp_elicitation_response_to_app_server(
     tmp_path: Path,
 ) -> None:
     """
-    Codex MCP elicitation requests are forwarded to Omnigent and the Omnigent hook
+    Codex MCP elicitation requests are forwarded to agent-meow and the agent-meow hook
     result is sent back to the app-server with the original JSON-RPC id.
     """
     fake_client = _FakeCodexAppServerClient()
@@ -3202,10 +3202,10 @@ def test_forwarder_sends_codex_mcp_elicitation_response_to_app_server(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture the Omnigent hook request and return an accepted MCP result.
+        Capture the agent-meow hook request and return an accepted MCP result.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent hook response.
+        :returns: agent-meow hook response.
         """
         requests.append(request)
         return httpx.Response(
@@ -3261,12 +3261,12 @@ def test_forwarder_keeps_streaming_when_native_tui_answers_codex_elicitation(
     tmp_path: Path,
 ) -> None:
     """
-    Native TUI approval must not park the Omnigent web mirror.
+    Native TUI approval must not park the agent-meow web mirror.
 
-    The Omnigent hook remains pending when a separate native Codex client
+    The agent-meow hook remains pending when a separate native Codex client
     answers the prompt first. Codex app-server emits
     ``serverRequest/resolved`` with the original request id; the
-    forwarder must mirror that exact resolution to Omnigent and still mirror
+    forwarder must mirror that exact resolution to agent-meow and still mirror
     later transcript events.
     """
     fake_client = _FakeCodexAppServerClient()
@@ -3288,10 +3288,10 @@ def test_forwarder_keeps_streaming_when_native_tui_answers_codex_elicitation(
 
     async def handler(request: httpx.Request) -> httpx.Response:
         """
-        Hold the hook open and capture subsequent Omnigent event posts.
+        Hold the hook open and capture subsequent agent-meow event posts.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent event response for non-hook posts.
+        :returns: agent-meow event response for non-hook posts.
         """
         if request.url.path.endswith("/hooks/codex-elicitation-request"):
             hook_started.set()
@@ -3413,10 +3413,10 @@ def test_forwarder_ignores_resolution_for_different_codex_request_id(
 
     async def handler(request: httpx.Request) -> httpx.Response:
         """
-        Hold the hook open and capture subsequent Omnigent event posts.
+        Hold the hook open and capture subsequent agent-meow event posts.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent event response for non-hook posts.
+        :returns: agent-meow event response for non-hook posts.
         """
         if request.url.path.endswith("/hooks/codex-elicitation-request"):
             hook_started.set()
@@ -3519,10 +3519,10 @@ def test_forwarder_falls_back_to_terminal_turn_for_missed_resolution(
 
     async def handler(request: httpx.Request) -> httpx.Response:
         """
-        Hold the hook open and capture subsequent Omnigent event posts.
+        Hold the hook open and capture subsequent agent-meow event posts.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent event response for non-hook posts.
+        :returns: agent-meow event response for non-hook posts.
         """
         if request.url.path.endswith("/hooks/codex-elicitation-request"):
             hook_started.set()
@@ -3631,10 +3631,10 @@ def test_forwarder_does_not_clear_pending_elicitation_for_stale_terminal_turn(
 
     async def handler(request: httpx.Request) -> httpx.Response:
         """
-        Hold the hook open and capture subsequent Omnigent event posts.
+        Hold the hook open and capture subsequent agent-meow event posts.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent event response for non-hook posts.
+        :returns: agent-meow event response for non-hook posts.
         """
         if request.url.path.endswith("/hooks/codex-elicitation-request"):
             hook_started.set()
@@ -3695,7 +3695,7 @@ def test_forwarder_sends_codex_request_user_input_response_to_app_server(
     tmp_path: Path,
 ) -> None:
     """
-    Codex requestUserInput frames use the same Omnigent hook path and relay
+    Codex requestUserInput frames use the same agent-meow hook path and relay
     its ``answers`` result back to app-server.
     """
     fake_client = _FakeCodexAppServerClient()
@@ -3712,10 +3712,10 @@ def test_forwarder_sends_codex_request_user_input_response_to_app_server(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Return a requestUserInput result from the Omnigent hook.
+        Return a requestUserInput result from the agent-meow hook.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent hook response.
+        :returns: agent-meow hook response.
         """
         assert request.url.path == "/v1/sessions/conv_123/hooks/codex-elicitation-request"
         assert json.loads(request.content) == codex_event
@@ -3755,7 +3755,7 @@ def test_forwarder_flushes_plan_text_before_codex_request_user_input(
     tmp_path: Path,
 ) -> None:
     """
-    Buffered plan deltas reach Omnigent before the final plan prompt.
+    Buffered plan deltas reach agent-meow before the final plan prompt.
 
     Codex can emit ``item/plan/delta`` and immediately send
     ``item/tool/requestUserInput`` for "Implement this plan?". The
@@ -3799,10 +3799,10 @@ def test_forwarder_flushes_plan_text_before_codex_request_user_input(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent posts in arrival order.
+        Capture agent-meow posts in arrival order.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent response appropriate to the endpoint.
+        :returns: agent-meow response appropriate to the endpoint.
         """
         request_paths.append(request.url.path)
         request_bodies.append(json.loads(request.content))
@@ -3881,7 +3881,7 @@ def test_forwarder_synthesizes_plan_implementation_prompt_after_completed_plan_t
     tmp_path: Path,
 ) -> None:
     """
-    Completed Plan-mode turns surface the final implementation prompt in Omnigent Web.
+    Completed Plan-mode turns surface the final implementation prompt in agent-meow Web.
 
     Codex's terminal TUI owns the ``Implement this plan?`` picker
     locally, so the app-server does not emit a native
@@ -3906,10 +3906,10 @@ def test_forwarder_synthesizes_plan_implementation_prompt_after_completed_plan_t
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent posts and decline the synthesized prompt.
+        Capture agent-meow posts and decline the synthesized prompt.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent response appropriate to the endpoint.
+        :returns: agent-meow response appropriate to the endpoint.
         """
         request_paths.append(request.url.path)
         request_bodies.append(json.loads(request.content))
@@ -4024,7 +4024,7 @@ def test_forwarder_starts_default_turn_from_plan_implementation_prompt(
     Accepting the synthesized Plan prompt starts a Default-mode Codex turn.
 
     If the forwarder only displayed the web prompt without translating
-    the answer back into Codex app-server actions, Omnigent Web would look
+    the answer back into Codex app-server actions, agent-meow Web would look
     interactive but selecting ``Yes, implement this plan`` would do
     nothing.
     """
@@ -4059,7 +4059,7 @@ def test_forwarder_starts_default_turn_from_plan_implementation_prompt(
         Accept the synthesized Plan implementation prompt.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent hook or event response.
+        :returns: agent-meow hook or event response.
         """
         if request.url.path.endswith("/events"):
             return httpx.Response(202, json={"queued": False})
@@ -4134,7 +4134,7 @@ def test_forwarder_starts_fresh_thread_from_clear_context_plan_prompt(
     """
     The clear-context Plan prompt choice creates a fresh Codex thread.
 
-    This mirrors the terminal TUI action closely enough for Omnigent Web:
+    This mirrors the terminal TUI action closely enough for agent-meow Web:
     the bridge switches to the new thread, sends the clear-context
     implementation prompt, and records the new active turn.
     """
@@ -4171,7 +4171,7 @@ def test_forwarder_starts_fresh_thread_from_clear_context_plan_prompt(
         Select the clear-context implementation option.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent hook or event response.
+        :returns: agent-meow hook or event response.
         """
         if request.url.path.endswith("/events"):
             return httpx.Response(202, json={"queued": False})
@@ -4245,7 +4245,7 @@ def test_forwarder_sends_codex_command_approval_response_to_app_server(
     tmp_path: Path,
 ) -> None:
     """
-    Codex command-approval request frames use the Omnigent hook path and
+    Codex command-approval request frames use the agent-meow hook path and
     relay its decision result back to app-server.
     """
     fake_client = _FakeCodexAppServerClient()
@@ -4264,10 +4264,10 @@ def test_forwarder_sends_codex_command_approval_response_to_app_server(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Return a command approval result from the Omnigent hook.
+        Return a command approval result from the agent-meow hook.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent hook response.
+        :returns: agent-meow hook response.
         """
         assert request.url.path == "/v1/sessions/conv_123/hooks/codex-elicitation-request"
         assert json.loads(request.content) == codex_event
@@ -4692,7 +4692,7 @@ def test_forwarder_sends_codex_permissions_response_to_app_server(
     tmp_path: Path,
 ) -> None:
     """
-    Codex permission-profile request frames are relayed through Omnigent and
+    Codex permission-profile request frames are relayed through agent-meow and
     answered with the hook's permission-grant result.
     """
     fake_client = _FakeCodexAppServerClient()
@@ -4712,10 +4712,10 @@ def test_forwarder_sends_codex_permissions_response_to_app_server(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Return a permissions approval result from the Omnigent hook.
+        Return a permissions approval result from the agent-meow hook.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent hook response.
+        :returns: agent-meow hook response.
         """
         assert request.url.path == "/v1/sessions/conv_123/hooks/codex-elicitation-request"
         assert json.loads(request.content) == codex_event
@@ -4773,7 +4773,7 @@ def test_forwarder_logs_unsupported_codex_server_request(
         :param request: HTTP request sent by the forwarder.
         :returns: Never returns.
         """
-        raise AssertionError(f"unexpected Omnigent request: {request.method} {request.url}")
+        raise AssertionError(f"unexpected agent-meow request: {request.method} {request.url}")
 
     async def run() -> None:
         """
@@ -4811,7 +4811,7 @@ def test_forwarder_leaves_codex_elicitation_pending_on_empty_hook_body(
     tmp_path: Path,
 ) -> None:
     """
-    Empty Omnigent hook responses represent timeout/disconnect fallback, not
+    Empty agent-meow hook responses represent timeout/disconnect fallback, not
     an approval. The forwarder must not synthesize an accept/decline
     result back to Codex.
     """
@@ -4819,7 +4819,7 @@ def test_forwarder_leaves_codex_elicitation_pending_on_empty_hook_body(
 
     def handler(_request: httpx.Request) -> httpx.Response:
         """
-        Return the Omnigent hook's fail-ask shape.
+        Return the agent-meow hook's fail-ask shape.
 
         :param _request: HTTP request sent by the forwarder.
         :returns: Empty successful response.
@@ -4876,7 +4876,7 @@ def test_forwarder_posts_user_message_on_assistant_item_started(tmp_path: Path) 
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -4953,7 +4953,7 @@ def test_forwarder_posts_user_message_on_assistant_item_started(tmp_path: Path) 
 def test_forwarder_posts_codex_user_and_agent_messages(tmp_path: Path) -> None:
     """
     Codex app-server completed message items are translated into
-    external conversation items for the Omnigent session stream.
+    external conversation items for the agent-meow session stream.
     """
     posted: list[dict[str, Any]] = []
 
@@ -5048,13 +5048,13 @@ def test_forwarder_recovers_missed_user_message_before_assistant(tmp_path: Path)
     assistant reply would be posted first and the resume backfill would
     add the user message after it, inverting the web bubbles. The
     forwarder must resume to recover the turn's user message and post it
-    BEFORE the reply so Omnigent assigns it the earlier position.
+    BEFORE the reply so agent-meow assigns it the earlier position.
     """
     posted: list[dict[str, Any]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -5136,7 +5136,7 @@ def test_forwarder_skips_user_recovery_when_user_seen_live(tmp_path: Path) -> No
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -5204,7 +5204,7 @@ def test_forwarder_skips_user_recovery_when_user_seen_live(tmp_path: Path) -> No
 
 def test_forwarder_posts_codex_turn_plan_update(tmp_path: Path) -> None:
     """
-    Codex ``turn/plan/updated`` notifications are visible in Omnigent web.
+    Codex ``turn/plan/updated`` notifications are visible in agent-meow web.
 
     Plan mode emits plan state through a dedicated app-server
     notification rather than assistant text. If the forwarder ignores
@@ -5215,7 +5215,7 @@ def test_forwarder_posts_codex_turn_plan_update(tmp_path: Path) -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -5280,7 +5280,7 @@ def test_forwarder_posts_codex_turn_plan_update(tmp_path: Path) -> None:
 
 def test_forwarder_posts_completed_codex_plan_item() -> None:
     """
-    Completed Codex ``plan`` thread items are mirrored into Omnigent history.
+    Completed Codex ``plan`` thread items are mirrored into agent-meow history.
 
     This covers resume/replay and final transcript state, where the
     plan arrives as a completed thread item rather than a live
@@ -5329,7 +5329,7 @@ def _capture_handler(posted: list[dict[str, Any]]) -> Callable[[httpx.Request], 
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture one Omnigent event post from the forwarder.
+        Capture one agent-meow event post from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -5347,7 +5347,7 @@ async def _replay_completed_item(
     Drive one Codex ``item/completed`` notification through the forwarder.
 
     :param item: Codex item payload, e.g. a ``commandExecution`` item.
-    :param handler: MockTransport handler capturing the Omnigent posts.
+    :param handler: MockTransport handler capturing the agent-meow posts.
     :returns: None.
     """
     async with httpx.AsyncClient(
@@ -5377,7 +5377,7 @@ def test_forwarder_posts_codex_command_execution_tool_call() -> None:
 
     Native Codex sessions run Codex's own shell tool, so the single
     ``item/completed`` (which carries both the command and its
-    aggregated output) must be mirrored as the Omnigent ``function_call`` /
+    aggregated output) must be mirrored as the agent-meow ``function_call`` /
     ``function_call_output`` pair the web UI renders. The item shape
     here matches a real app-server capture.
     """
@@ -6108,7 +6108,7 @@ def test_forwarder_retries_transient_external_item_rejection(
     tmp_path: Path,
 ) -> None:
     """
-    Transient Omnigent failures do not drop the mirrored Codex item.
+    Transient agent-meow failures do not drop the mirrored Codex item.
 
     This test fails if ``_post_external_item`` gives up after the first
     retryable HTTP status instead of retrying the same item post.
@@ -6185,7 +6185,7 @@ def test_forwarder_logs_rejected_external_item(
     tmp_path: Path,
 ) -> None:
     """
-    Omnigent 4xx responses are logged so mirror failures are diagnosable.
+    agent-meow 4xx responses are logged so mirror failures are diagnosable.
     """
 
     def handler(_request: httpx.Request) -> httpx.Response:
@@ -6227,14 +6227,14 @@ def test_forwarder_marks_codex_skill_user_message_as_meta(tmp_path: Path) -> Non
 
     Codex persists skill bodies as user messages wrapped in
     ``<skill>...</skill>``. The forwarder must preserve that message
-    for Omnigent resume/history replay while tagging it ``is_meta`` so UI
+    for agent-meow resume/history replay while tagging it ``is_meta`` so UI
     clients can hide it.
     """
     posted: list[dict[str, Any]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent event posts from the forwarder.
+        Capture agent-meow event posts from the forwarder.
 
         :param request: HTTP request sent by the forwarder.
         :returns: Accepted response.
@@ -6909,7 +6909,7 @@ async def test_prepare_codex_terminal_via_daemon_creates_runner_and_ensures_term
     Daemon preparation owns session create, runner launch, and terminal ensure.
 
     This exercises the real ``_prepare_codex_terminal_via_daemon`` orchestration
-    against an ``httpx.MockTransport`` Omnigent server. Removing terminal launch arg
+    against an ``httpx.MockTransport`` agent-meow server. Removing terminal launch arg
     persistence, daemon runner launch, the runner re-bind (which clears
     ``omnigent.stopped`` on resume), the ``ensure_native_terminal``
     request, or terminal metadata decoding turns this test red.
@@ -6922,10 +6922,10 @@ async def test_prepare_codex_terminal_via_daemon_creates_runner_and_ensures_term
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Route Omnigent requests issued by daemon preparation.
+        Route agent-meow requests issued by daemon preparation.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         path = request.url.path
         body: object = None
@@ -6968,7 +6968,7 @@ async def test_prepare_codex_terminal_via_daemon_creates_runner_and_ensures_term
 
     def client_factory(*args: object, **kwargs: object) -> httpx.AsyncClient:
         """
-        Inject the mock Omnigent transport into clients created by the helper.
+        Inject the mock agent-meow transport into clients created by the helper.
 
         :param args: Positional ``httpx.AsyncClient`` args.
         :param kwargs: Keyword ``httpx.AsyncClient`` args.
@@ -7040,7 +7040,7 @@ async def test_prepare_codex_terminal_via_daemon_live_resume_skips_config_patch(
     ``model_override`` would only change the database for a later cold start and
     silently mislead the user. The helper must return the live terminal and warn
     instead of PATCHing the session. It also must not rewrite the live Codex
-    rollout from Omnigent history while the app-server may be appending to it.
+    rollout from agent-meow history while the app-server may be appending to it.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param capsys: Pytest capture fixture.
@@ -7061,10 +7061,10 @@ async def test_prepare_codex_terminal_via_daemon_live_resume_skips_config_patch(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Route Omnigent requests for a live resume.
+        Route agent-meow requests for a live resume.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         path = request.url.path
         body: object = json.loads(request.content) if request.content else None
@@ -7098,7 +7098,7 @@ async def test_prepare_codex_terminal_via_daemon_live_resume_skips_config_patch(
 
     def client_factory(*args: object, **kwargs: object) -> httpx.AsyncClient:
         """
-        Inject the mock Omnigent transport into clients created by the helper.
+        Inject the mock agent-meow transport into clients created by the helper.
 
         :param args: Positional ``httpx.AsyncClient`` args.
         :param kwargs: Keyword ``httpx.AsyncClient`` args.
@@ -7143,7 +7143,7 @@ async def test_prepare_codex_terminal_hot_resume_does_not_rewrite_rollout(
 
     ``_prepare_codex_terminal`` has an early return when the terminal
     resource is already running. That hot path must not synthesize or
-    rewrite rollout files from Omnigent history because Codex may be appending
+    rewrite rollout files from agent-meow history because Codex may be appending
     to the same JSONL file concurrently.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -7170,10 +7170,10 @@ async def test_prepare_codex_terminal_hot_resume_does_not_rewrite_rollout(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Serve a codex-native session, live terminal, and Omnigent item history.
+        Serve a codex-native session, live terminal, and agent-meow item history.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         path = request.url.path
         calls.append((request.method, path))
@@ -7210,7 +7210,7 @@ async def test_prepare_codex_terminal_hot_resume_does_not_rewrite_rollout(
 
     def client_factory(*args: object, **kwargs: object) -> httpx.AsyncClient:
         """
-        Inject the mock Omnigent transport into clients created by the helper.
+        Inject the mock agent-meow transport into clients created by the helper.
 
         :param args: Positional ``httpx.AsyncClient`` args.
         :param kwargs: Keyword ``httpx.AsyncClient`` args.
@@ -7282,8 +7282,8 @@ async def test_find_running_codex_terminal_known_misses_relaunch(
     unbound conversation, and stale runner. They let resume bind the
     current runner and launch ``codex resume``.
 
-    :param status_code: HTTP status returned by the Omnigent resource lookup.
-    :param body: Structured Omnigent error body for the lookup.
+    :param status_code: HTTP status returned by the agent-meow resource lookup.
+    :param body: Structured agent-meow error body for the lookup.
     :returns: None.
     """
 
@@ -7292,7 +7292,7 @@ async def test_find_running_codex_terminal_known_misses_relaunch(
         Return a reattach miss response.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         assert request.url.path.endswith("/resources/terminals/terminal_codex_main")
         return httpx.Response(status_code, json=body)
@@ -7317,7 +7317,7 @@ async def test_find_running_codex_terminal_unexpected_error_still_raises() -> No
         Return an unexpected server error.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         del request
         return httpx.Response(500, text="database unavailable")
@@ -7339,7 +7339,7 @@ async def test_find_running_codex_terminal_generic_errors_still_raise(
     """
     Generic infra failures are not treated as "no terminal".
 
-    :param status_code: HTTP status returned by the Omnigent resource lookup.
+    :param status_code: HTTP status returned by the agent-meow resource lookup.
     :returns: None.
     """
 
@@ -7348,7 +7348,7 @@ async def test_find_running_codex_terminal_generic_errors_still_raise(
         Return a non-reattach failure response.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         del request
         return httpx.Response(
@@ -7667,7 +7667,7 @@ def test_attach_with_forwarder_closes_active_rotated_session_terminal(
     tmp_path: Path,
 ) -> None:
     """
-    Wrapper exit closes the terminal on the active rotated Omnigent session.
+    Wrapper exit closes the terminal on the active rotated agent-meow session.
 
     Codex ``/clear`` transfers the terminal resource to a replacement
     session. Shutdown must follow the bridge state written by the
@@ -7696,7 +7696,7 @@ def test_attach_with_forwarder_closes_active_rotated_session_terminal(
 
     async def fake_attach_terminal_resource(**_kwargs: object) -> None:
         """
-        Simulate ``/clear`` rotating Omnigent ownership during attach.
+        Simulate ``/clear`` rotating agent-meow ownership during attach.
 
         :returns: None.
         """
@@ -7769,7 +7769,7 @@ def test_attach_terminal_resource_runner_owned_missing_socket_fails_loud(
 
     The CLI should only attach to the runner's tmux socket for this
     shape; if the socket metadata is stale or non-local, falling back to
-    the Omnigent terminal WebSocket would reintroduce CLI-owned terminal IO.
+    the agent-meow terminal WebSocket would reintroduce CLI-owned terminal IO.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory used for fake socket paths.
@@ -7819,7 +7819,7 @@ def test_attach_with_forwarder_falls_back_when_tmux_socket_is_not_local(
     tmp_path: Path,
 ) -> None:
     """
-    Non-local runner sockets keep using the Omnigent terminal attach bridge.
+    Non-local runner sockets keep using the agent-meow terminal attach bridge.
 
     This is the remote-runner case: the resource may advertise a socket
     path from another host, but the CLI can only direct-attach when that
@@ -7899,7 +7899,7 @@ def test_session_usage_data_extracts_cumulative_tokens() -> None:
 
     Codex's ``tokenUsage.total`` is cumulative across the thread, so these are
     the session totals; without them codex-native ``session_usage.total_cost_usd``
-    stays 0 (codex produces no ``response.completed`` for the Omnigent relay).
+    stays 0 (codex produces no ``response.completed`` for the agent-meow relay).
     """
     params = {
         "threadId": "thread_123",
@@ -8062,7 +8062,7 @@ def test_usage_coalescer_flush_attaches_model_to_every_post() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture Omnigent usage posts from the coalescer.
+        Capture agent-meow usage posts from the coalescer.
 
         :param request: HTTP request sent by the coalescer.
         :returns: Accepted response.
@@ -8296,10 +8296,10 @@ def _transcript_posts(
     session_id: str,
 ) -> list[dict[str, Any]]:
     """
-    Filter Omnigent posts to the ``external_conversation_item`` events for one session.
+    Filter agent-meow posts to the ``external_conversation_item`` events for one session.
 
-    :param posted: All captured Omnigent posts as ``(path, body)`` tuples.
-    :param session_id: Omnigent session id to filter for.
+    :param posted: All captured agent-meow posts as ``(path, body)`` tuples.
+    :param session_id: agent-meow session id to filter for.
     :returns: List of ``external_conversation_item`` body dicts.
     """
     return [
@@ -8315,10 +8315,10 @@ def _registration_posts(
     parent_session_id: str,
 ) -> list[dict[str, Any]]:
     """
-    Filter Omnigent posts to the ``external_codex_subagent_start`` events for a parent.
+    Filter agent-meow posts to the ``external_codex_subagent_start`` events for a parent.
 
-    :param posted: All captured Omnigent posts as ``(path, body)`` tuples.
-    :param parent_session_id: Parent Omnigent session id to filter for.
+    :param posted: All captured agent-meow posts as ``(path, body)`` tuples.
+    :param parent_session_id: Parent agent-meow session id to filter for.
     :returns: List of ``external_codex_subagent_start`` body dicts.
     """
     return [
@@ -8334,10 +8334,10 @@ def _make_omnigent_handler(
     child_session_id: str = "conv_child",
 ) -> Callable[[httpx.Request], httpx.Response]:
     """
-    Build an Omnigent ``MockTransport`` handler that registers a child session on demand.
+    Build an agent-meow ``MockTransport`` handler that registers a child session on demand.
 
-    :param posted: Mutable list collecting all captured Omnigent requests.
-    :param child_session_id: Omnigent child session id to return for
+    :param posted: Mutable list collecting all captured agent-meow requests.
+    :param child_session_id: agent-meow child session id to return for
         ``external_codex_subagent_start`` events.
     :returns: Request handler for ``httpx.MockTransport``.
     """
@@ -8347,7 +8347,7 @@ def _make_omnigent_handler(
         Capture the request and return the appropriate mock response.
 
         :param request: Incoming HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         body = json.loads(request.content)
         posted.append((request.url.path, body))
@@ -8428,7 +8428,7 @@ def test_forwarder_does_not_double_write_stable_id_item_delivered_twice(
 ) -> None:
     """
     A child item with a stable ``id`` posted twice in the same turn is
-    written to Omnigent only once.
+    written to agent-meow only once.
 
     This is the primary stable-id dedup case: the same ``item/completed``
     event may arrive once from the backfill replay and once live. The
@@ -8495,12 +8495,12 @@ def test_forwarder_child_thread_started_does_not_rotate_parent_session(
 ) -> None:
     """
     A ``thread/started`` event from a Codex AgentControl child does not
-    rotate the parent Omnigent session.
+    rotate the parent agent-meow session.
 
     Native ``/clear`` starts a new top-level thread and must rotate.
     Child threads also emit ``thread/started`` when they begin — those
     events carry ``source.subAgent.thread_spawn`` and must be ignored
-    by the rotation check, otherwise the parent's Omnigent session would be
+    by the rotation check, otherwise the parent's agent-meow session would be
     replaced every time a child starts.
 
     The test fails if ``_maybe_rotate_session_on_thread_started`` returns
@@ -8562,7 +8562,7 @@ def test_forwarder_child_thread_started_does_not_rotate_parent_session(
         "Expected child thread/started to NOT rotate the parent session; "
         "it rotated. _thread_started_is_subagent guard is missing or broken."
     )
-    # No Omnigent calls should have been made during rotation detection.
+    # No agent-meow calls should have been made during rotation detection.
     assert ap_posts == []
 
 
@@ -8571,7 +8571,7 @@ def test_forwarder_routes_live_child_items_to_child_session(
 ) -> None:
     """
     Live ``item/completed`` events for a known child thread are routed
-    to the child Omnigent session, not the parent.
+    to the child agent-meow session, not the parent.
 
     Once a child thread is registered in ``forwarder_state.subagents_by_thread``,
     the routing layer must direct any event carrying the child's ``threadId``
@@ -8793,7 +8793,7 @@ def test_forwarder_resolves_child_thread_elicitation_on_child_session(
     A child-thread elicitation resolves on the child session, not the parent.
 
     When a collab child thread raises an elicitation, the approval card is
-    published on the child Omnigent session (``route_session_id``). Codex's
+    published on the child agent-meow session (``route_session_id``). Codex's
     ``serverRequest/resolved`` must clear it on that same child session;
     resolving on the parent leaves the child's card stuck for any web user
     watching the child.
@@ -8821,7 +8821,7 @@ def test_forwarder_resolves_child_thread_elicitation_on_child_session(
         Hold the child hook open; record the session path other events post to.
 
         :param request: HTTP request sent by the forwarder.
-        :returns: Omnigent event response for non-hook posts.
+        :returns: agent-meow event response for non-hook posts.
         """
         if request.url.path.endswith("/hooks/codex-elicitation-request"):
             hook_started.set()
@@ -9139,11 +9139,11 @@ async def test_ensure_local_codex_resume_rollout_synthesizes_omnigent_history(
     tmp_path: Path,
 ) -> None:
     """
-    Cross-machine Codex resume rebuilds a local rollout from Omnigent history.
+    Cross-machine Codex resume rebuilds a local rollout from agent-meow history.
 
-    The server can know the Omnigent conversation and Codex thread id while the
+    The server can know the agent-meow conversation and Codex thread id while the
     current host has no ``$CODEX_HOME/sessions/.../rollout-*-<thread>.jsonl``.
-    This helper must fetch committed Omnigent items, follow pagination, and write
+    This helper must fetch committed agent-meow items, follow pagination, and write
     the response items before ``codex resume <thread>`` launches. If it only
     checked for local rollout state, this test would leave no file to read.
 
@@ -9208,7 +9208,7 @@ async def test_ensure_local_codex_resume_rollout_synthesizes_omnigent_history(
         Serve two chronological item pages.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         requested_urls.append(str(request.url))
         assert request.url.path == "/v1/sessions/conv_codex/items"
@@ -9338,13 +9338,13 @@ async def test_ensure_local_codex_resume_rollout_preserves_existing_rollout(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Fail if Omnigent history is fetched despite a local rollout.
+        Fail if agent-meow history is fetched despite a local rollout.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent response.
+        :returns: Mock agent-meow response.
         """
         del request
-        raise AssertionError("existing rollout should avoid Omnigent history fetch")
+        raise AssertionError("existing rollout should avoid agent-meow history fetch")
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -9393,23 +9393,23 @@ async def test_ensure_local_codex_resume_rollout_rejects_malformed_tool_history(
     message: str,
 ) -> None:
     """
-    Codex rollout synthesis fails loudly for corrupt Omnigent tool history.
+    Codex rollout synthesis fails loudly for corrupt agent-meow tool history.
 
-    Tool call ``arguments`` and tool ``output`` are required Omnigent string
+    Tool call ``arguments`` and tool ``output`` are required agent-meow string
     fields. Missing values must not be invented as ``{}`` or ``""``,
     because Codex would then resume a tool history that never happened.
 
     :param tmp_path: Temporary directory for isolated ``CODEX_HOME``.
-    :param bad_item: Malformed Omnigent item to serve.
+    :param bad_item: Malformed agent-meow item to serve.
     :param message: Expected diagnostic substring.
     """
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Serve malformed Omnigent history.
+        Serve malformed agent-meow history.
 
         :param request: Incoming mock HTTP request.
-        :returns: Mock Omnigent item page.
+        :returns: Mock agent-meow item page.
         """
         assert request.url.path == "/v1/sessions/conv_codex/items"
         return httpx.Response(200, json={"data": [bad_item], "has_more": False})
@@ -9444,13 +9444,13 @@ async def test_ensure_local_codex_resume_rollout_rejects_unsafe_thread_id(
 
     def handler(request: httpx.Request) -> httpx.Response:
         """
-        Fail if Omnigent history is fetched for an unsafe thread id.
+        Fail if agent-meow history is fetched for an unsafe thread id.
 
         :param request: Incoming mock HTTP request.
         :returns: Never returns.
         """
         del request
-        raise AssertionError("unsafe thread id should be rejected before Omnigent fetch")
+        raise AssertionError("unsafe thread id should be rejected before agent-meow fetch")
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:

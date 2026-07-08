@@ -1,4 +1,4 @@
-"""Tests for the Omnigent datamodel module."""
+"""Tests for the agent-meow datamodel module."""
 
 import asyncio
 import sys

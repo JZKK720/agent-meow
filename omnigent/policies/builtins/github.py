@@ -1,7 +1,7 @@
 """Built-in GitHub access policy (MCP- and shell-agnostic).
 
 A single factory, :func:`github_policy`, gating GitHub access across two
-surfaces an Omnigent agent can reach GitHub through:
+surfaces an agent-meow agent can reach GitHub through:
 
 - **MCP tool calls** — both the official per-operation GitHub MCP server
   (``get_file_contents`` / ``create_or_update_file`` / ``push_files`` /

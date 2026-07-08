@@ -2348,7 +2348,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             cross-family agent switch: the source's native transcript is
             the wrong format for the target harness, so the directive is
             skipped and the runner builds the native transcript from the
-            copied Omnigent items instead.
+            copied agent-meow items instead.
         :param presentation_labels: When not ``None``, drop the source's
             ``omnigent.ui`` / ``omnigent.wrapper`` labels from the clone
             and apply these instead, so the clone's Web UI mode matches the
@@ -2554,7 +2554,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             # When the fork binds a native target, mark it so the runner
             # rebuilds the native transcript (clone the source's native
             # transcript when same-family, else build from the copied
-            # Omnigent items) rather than launching fresh (see
+            # agent-meow items) rather than launching fresh (see
             # FORK_CARRY_HISTORY_LABEL_KEY).
             if carry_history_into_native:
                 fork_labels[FORK_CARRY_HISTORY_LABEL_KEY] = "1"

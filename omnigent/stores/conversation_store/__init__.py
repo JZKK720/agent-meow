@@ -38,15 +38,15 @@ FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY = "omnigent.fork.source_external_session_
 
 # Fork directive: set when the fork binds a NATIVE target harness
 # (claude-native / codex-native) whose history should carry over. A native
-# CLI ignores the Omnigent transcript, so the runner rebuilds the target's
+# CLI ignores the agent-meow transcript, so the runner rebuilds the target's
 # on-disk transcript before launch. Two rebuild paths share this directive:
 # when the source was a SAME-FAMILY native session its captured
 # ``external_session_id`` is also stamped (see
 # FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY) and the runner clones that
 # transcript; otherwise (an SDK or cross-family source) the runner builds
-# the native transcript from the fork's copied Omnigent items
+# the native transcript from the fork's copied agent-meow items
 # (``_ensure_local_claude_resume_transcript`` /
-# ``_ensure_local_codex_resume_rollout`` — the converters consume Omnigent's
+# ``_ensure_local_codex_resume_rollout`` — the converters consume agent-meow's
 # normalized item shape, so the source harness doesn't matter). Set by the
 # route whenever the target is native. Inert once the clone captures its
 # own native session id (the launch path consults it only while
@@ -530,7 +530,7 @@ class ConversationStore(ABC):
             (bumped on every item append), which lines up
             with what users expect from "the conversation I
             most recently *did anything in*". Powers the
-            Omnigent mode ``--continue`` flag (resume the
+            agent-meow mode ``--continue`` flag (resume the
             most-recent conversation for the agent that
             *this YAML* registers as) — see
             ``designs/RUN_OMNIGENT_SESSION_RESUMPTION.md``. ``None``
@@ -1250,7 +1250,7 @@ class ConversationStore(ABC):
         :param carry_history_into_native: When ``True``, stamp
             :data:`FORK_CARRY_HISTORY_LABEL_KEY` on the fork so a native
             target harness rebuilds its transcript (clone the source's
-            native transcript, or build from the copied Omnigent items) instead
+            native transcript, or build from the copied agent-meow items) instead
             of starting fresh. Set by the route only for native targets whose
             harness can replay fork history.
         :param resume_source_native_session: When ``True`` (default), a
@@ -1260,7 +1260,7 @@ class ConversationStore(ABC):
             fork switches to an agent in a DIFFERENT provider family: the
             source's native transcript is the wrong format for the target
             harness, so the directive is skipped and the runner builds the
-            native transcript from the copied Omnigent items instead.
+            native transcript from the copied agent-meow items instead.
         :param presentation_labels: When not ``None``, replace the source's
             harness-presentation labels (``omnigent.ui`` /
             ``omnigent.wrapper``) on the clone with these. Used when the

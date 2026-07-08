@@ -501,7 +501,7 @@ class McpServerConnection:
         :param name: The tool name as returned by discovery.
         :param arguments: The tool arguments dict (already parsed
             from the LLM's JSON string).
-        :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
+        :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
             Forwarded to ``_invoke_tool`` for inline elicitation
             context. ``None`` when no session is available.
         :returns: The tool result as a string. For multi-content
@@ -549,12 +549,12 @@ class McpServerConnection:
         When the MCP server returns an ``InputRequiredResult``
         (MRTR pattern, ``resultType == "input_required"``), raises
         :class:`McpElicitationRequired` so the caller (runner
-        ``/mcp/execute`` → Omnigent server) can surface the elicitation
+        ``/mcp/execute`` → agent-meow server) can surface the elicitation
         to the user and retry with ``inputResponses``.
 
         :param name: The tool name.
         :param arguments: The tool arguments dict.
-        :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
+        :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
             Set on the connection for the inline elicitation handler.
         :returns: The formatted tool result string.
         :raises McpElicitationRequired: When the MCP server returns
@@ -593,7 +593,7 @@ class McpServerConnection:
         """
         Retry a ``tools/call`` with MRTR ``inputResponses``.
 
-        Called by the Omnigent server after the user has responded to an
+        Called by the agent-meow server after the user has responded to an
         ``InputRequiredResult`` elicitation. Sends a new
         ``tools/call`` with the user's ``inputResponses`` and the
         opaque ``requestState`` per the MCP MRTR spec.
@@ -636,7 +636,7 @@ class McpServerConnection:
                 self._active_session_id = None
 
         # Multi-round MRTR: the server may return another
-        # InputRequiredResult on the retry. Raise so the Omnigent server
+        # InputRequiredResult on the retry. Raise so the agent-meow server
         # can surface the next elicitation round.
         extras = getattr(result, "model_extra", {}) or {}
         if extras.get("resultType") == "input_required":
@@ -1018,7 +1018,7 @@ class McpServerConnection:
         backend), so ``sandbox: true`` consistently produced silent
         hangs on the first ``tool/call``. Inner-stack stdio MCPs
         have always spawned without sandboxing
-        (``omnigent/inner/mcp_tools.py``); Omnigent now matches that
+        (``omnigent/inner/mcp_tools.py``); agent-meow now matches that
         baseline. Per-MCP sandboxing — if reintroduced — should
         flow through the ``omnigent/environments/`` primitive
         with explicit outbound-host allowlists, not srt-defaults.
@@ -1289,7 +1289,7 @@ async def _call_tool_with_reconnect(
     :param arguments: The tool arguments dict.
     :param retry: Retry policy controlling max attempts, backoff
         base, and backoff cap.
-    :param session_id: Omnigent session id forwarded to
+    :param session_id: agent-meow session id forwarded to
         ``_invoke_tool`` for inline elicitation context.
     :returns: The formatted tool result string.
     """

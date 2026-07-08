@@ -8,7 +8,7 @@ command-line surface (``--print``, list-of-blocks content, etc.) is
 incompatible with the upstream binary the issue (#271) targets.
 
 One ``kimi -p <prompt> --output-format stream-json`` subprocess per
-Omnigent turn:
+agent-meow turn:
 
 - parses each JSONL line on stdout into one or more
   :class:`ExecutorEvent` (assistant text, tool-call request, tool-call
@@ -19,10 +19,10 @@ Omnigent turn:
   has no ``--work-dir`` flag).
 
 Kimi runs its own agent loop and its own tools (Bash, edit, read, web,
-…) — Omnigent does not re-execute them. The executor advertises
+…) — agent-meow does not re-execute them. The executor advertises
 ``handles_tools_internally=True`` and forwards ``tool_calls`` /
 ``role:"tool"`` events from kimi's transcript as informational
-:class:`ToolCallRequest` / :class:`ToolCallComplete` so the Omnigent
+:class:`ToolCallRequest` / :class:`ToolCallComplete` so the agent-meow
 UI can render them, but the Session layer does not dispatch them.
 
 Env-var contract (read once at construction by
@@ -47,7 +47,7 @@ Env-var contract (read once at construction by
 Per-invocation provider routing (``--config-file`` / ``--mcp-config-file``
 / gateway env vars) is **not** wired: upstream kimi has no per-spawn
 config override. Provider configuration lives in ``~/.kimi/config.toml``
-and is managed out-of-band via ``kimi provider add`` (Omnigent-side
+and is managed out-of-band via ``kimi provider add`` (agent-meow-side
 provider injection is a deferred follow-up).
 """
 
@@ -117,7 +117,7 @@ def _resolve_kimi_binary() -> str:
 
     The legacy pypi ``kimi-cli`` package is intentionally NOT detected —
     its command-line surface is incompatible with the upstream binary
-    Omnigent supports.
+    agent-meow supports.
     """
     explicit = os.environ.get("HARNESS_KIMI_PATH", "").strip()
     if explicit:
@@ -183,7 +183,7 @@ def _resolve_skills_dirs(raw: str | None) -> list[str]:
 
 
 class KimiExecutor(Executor):
-    """Drive ``kimi -p`` per Omnigent turn.
+    """Drive ``kimi -p`` per agent-meow turn.
 
     See module docstring for env-var contract and lifecycle.
     """
@@ -328,7 +328,7 @@ class KimiExecutor(Executor):
         return argv
 
     def _translate_event(self, payload: dict[str, Any]) -> list[ExecutorEvent]:
-        """Translate one kimi stream-json line into Omnigent events.
+        """Translate one kimi stream-json line into agent-meow events.
 
         Upstream emits whole messages (not deltas). Roles seen:
 
@@ -336,7 +336,7 @@ class KimiExecutor(Executor):
           assistant's reply) and/or ``tool_calls`` (the model invoking
           one of kimi's internal tools).
         - ``"tool"``: kimi's own tool execution result delivered back to
-          its loop. Surfaced as a ``ToolCallComplete`` so the Omnigent
+          its loop. Surfaced as a ``ToolCallComplete`` so the agent-meow
           UI can render it; the Session layer does not re-execute
           (``handles_tools_internally=True``).
         - ``"meta"`` with ``type:"session.resume_hint"``: carries the
@@ -381,7 +381,7 @@ class KimiExecutor(Executor):
                         )
         elif role == "tool":
             # Kimi has already executed the tool. Emit a synthetic completion
-            # so the Omnigent UI can render the result. The Session layer
+            # so the agent-meow UI can render the result. The Session layer
             # will not double-execute (handles_tools_internally=True).
             result = payload.get("content")
             call_id = payload.get("tool_call_id") or ""
@@ -411,7 +411,7 @@ class KimiExecutor(Executor):
     ) -> AsyncIterator[ExecutorEvent]:
         if tools and not self._warned_tools_without_bridge:
             _logger.warning(
-                "kimi executor received %d declared tool(s) but Omnigent has no "
+                "kimi executor received %d declared tool(s) but agent-meow has no "
                 "tool-injection bridge for the upstream kimi binary yet (no "
                 "per-spawn --mcp-config-file). The tools will not be exposed to "
                 "kimi for this session (MCP tool-injection is a deferred follow-up).",

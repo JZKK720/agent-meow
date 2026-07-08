@@ -106,7 +106,7 @@ class _GenerateBuildInfo(build_py):
           while letting release builds force a fresh bundle.
         - Otherwise the build MUST succeed: a missing ``npm`` or a
           failing ``npm install`` / ``npm run build`` aborts the
-          install with an actionable error. Omnigent needs Node +
+          install with an actionable error. agent-meow needs Node +
           npm at runtime anyway (the Claude / Codex / Pi harness
           CLIs are npm packages), so a node-less machine would get a
           broken install either way — failing here, with a message
@@ -141,7 +141,7 @@ class _GenerateBuildInfo(build_py):
         if npm is None:
             raise SystemExit(
                 "omnigent build: npm not found on PATH, so the web UI "
-                "cannot be built. Omnigent requires Node.js 22 LTS or "
+                "cannot be built. agent-meow requires Node.js 22 LTS or "
                 "newer with npm (the Claude / Codex / Pi harness CLIs are "
                 "npm packages). Install it from "
                 "https://nodejs.org/en/download and rerun the install. "

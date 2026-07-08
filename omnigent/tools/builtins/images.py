@@ -1,6 +1,6 @@
 """Image tools (``image_*``) for the agent-meow Images surface.
 
-These tools are **runner-dispatched**: the runner proxies the Omnigent
+These tools are **runner-dispatched**: the runner proxies the agent-meow
 server's image REST endpoints over ``server_client``. They ship as
 schema-only :class:`~omnigent.tools.base.Tool` subclasses.
 
@@ -208,7 +208,7 @@ class ImageGenerateTool(Tool):
 
     Schema-only: the runner's tool dispatch intercepts the call by name and
     routes it to a configured image-generation provider (Stability, OpenAI
-    images, ComfyUI MCP) when available. In v1 the call returns a stub
+    images, ComfyUI MCP) when available. In v1 the call returns a stub error
     indicating image generation is not yet wired.
     """
 
@@ -219,10 +219,9 @@ class ImageGenerateTool(Tool):
     @classmethod
     def description(cls) -> str:
         return (
-            "Generate an image from a text prompt. The runtime routes the "
-            "call to a configured image-generation provider. Requires "
-            "session_id and prompt. Returns the new image's id and metadata "
-            "when generation succeeds."
+            "Generate an image from a text prompt. In v1 this tool is only a "
+            "stub and returns an explanatory error until an image-generation "
+            "provider is configured and wired. Requires session_id and prompt."
         )
 
     def get_schema(self) -> dict[str, Any]:

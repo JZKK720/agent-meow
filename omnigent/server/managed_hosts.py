@@ -1191,7 +1191,7 @@ def _e2b_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: e2b`` path.
 
-    :param template: E2B template NAME the Omnigent host image was built
+    :param template: E2B template NAME the agent-meow host image was built
         into (``e2b template build``), or ``None`` to use the launcher's
         env-var fallback / the default template. Unlike the other
         providers' ``image`` field this is NOT a registry reference —
@@ -1219,7 +1219,7 @@ def _parse_e2b_template(raw: dict[str, object]) -> str | None:
     Extract and validate the e2b template from the ``sandbox`` dict.
 
     ``sandbox.e2b.template`` names the pre-built E2B template the
-    Omnigent host image was built into — NOT a registry image reference
+    agent-meow host image was built into — NOT a registry image reference
     (the wording every other provider's ``image`` field uses), because
     E2B cannot boot an arbitrary registry image. OPTIONAL — when absent,
     the launcher resolves :data:`~omnigent.onboarding.sandboxes.e2b.TEMPLATE_ENV_VAR`

@@ -1,9 +1,12 @@
 # Changelog
 
-All notable user-facing changes to omnigent are documented here. This file is
+All notable user-facing changes to agent-meow are documented here. This file is
 generated at release time from each PR's `## Changelog` section, tagged by the
 PR's `Type of change` (e.g. `[UI]`); the concise, curated highlights live on the
 website under `/releases`.
+
+> agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent).
+> Releases prior to the fork are tagged on the upstream repo.
 
 ## [v0.3.0] — 2026-06-26
 

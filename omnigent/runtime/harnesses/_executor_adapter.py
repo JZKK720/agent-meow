@@ -8,10 +8,10 @@ inner ``Executor`` they construct. The adapter handles:
 
 - Per-conversation lazy executor construction (Layer 1 state on
   the adapter instance).
-- Per-turn translation of Omnigent :class:`CreateResponseRequest` →
+- Per-turn translation of agent-meow :class:`CreateResponseRequest` →
   inner :class:`Message` list + :class:`ExecutorConfig`.
 - Per-turn translation of inner :class:`ExecutorEvent`s →
-  typed Omnigent SSE events emitted via :meth:`TurnContext.emit`.
+  typed agent-meow SSE events emitted via :meth:`TurnContext.emit`.
 - Forwarding ``request.tools`` and ``request.instructions`` to
   the inner Executor; wiring a ``_tool_executor`` callback so
   the inner SDK round-trips spec-declared tools through
@@ -116,7 +116,7 @@ def _strip_mcp_tool_prefix(name: str) -> str:
 
     The Claude SDK names MCP tools as ``mcp__{server}__{tool}``
     (e.g. ``mcp__omnigent__sys_terminal_launch``). The bare
-    name (``sys_terminal_launch``) is what the Omnigent wire shape
+    name (``sys_terminal_launch``) is what the agent-meow wire shape
     and persisted conversation items carry — kept in sync with
     :func:`omnigent.runtime.workflow._observed_tool_call_sse_dicts`
     and :func:`_build_observed_tool_items` so the SSE name, the
@@ -208,7 +208,7 @@ class ExecutorAdapter(HarnessApp):
         # bridged tools). Drained by :meth:`_stable_tool_executor`
         # so each :func:`_bridge_one_dispatch` call reuses the
         # SAME ``call_id`` the observed function_call event
-        # already carried — that's what lets the Omnigent REPL dedupe
+        # already carried — that's what lets the agent-meow REPL dedupe
         # the inline observed render with the post-stream
         # action_required render. Without this correlation, the
         # two events have different uuids, the SDK client sees
@@ -244,7 +244,7 @@ class ExecutorAdapter(HarnessApp):
         Lazily constructs the inner executor on the first call.
         Subsequent calls reuse the cached instance. Wires a
         per-turn ``_tool_executor`` callback so the inner SDK
-        can round-trip spec-declared tools through Omnigent via the
+        can round-trip spec-declared tools through agent-meow via the
         scaffold's ``dispatch_tool`` (action_required) path.
         The hook is reset to ``None`` after the turn so cross-
         turn references can't accidentally fire stale dispatch
@@ -311,7 +311,7 @@ class ExecutorAdapter(HarnessApp):
         # stable-reference pattern as ``_tool_executor``. The inner
         # executor calls this before/after each LLM call to evaluate
         # LLM_REQUEST / LLM_RESPONSE policies via a round-trip to the
-        # Omnigent server (routed through the runner).
+        # agent-meow server (routed through the runner).
         if getattr(executor, "_policy_evaluator", None) is None:  # type: ignore[attr-defined]
             executor._policy_evaluator = self._stable_policy_evaluator  # type: ignore[attr-defined]
         self._current_ctx = ctx
@@ -788,7 +788,7 @@ class ExecutorAdapter(HarnessApp):
         :param phase: Proto-style phase string, e.g.
             ``"PHASE_LLM_REQUEST"`` or ``"PHASE_LLM_RESPONSE"``.
         :param data: Event data dict for the policy engine.
-        :returns: The policy verdict from the Omnigent server.
+        :returns: The policy verdict from the agent-meow server.
         """
         ctx = self._current_ctx
         if ctx is None:
@@ -829,7 +829,7 @@ class ExecutorAdapter(HarnessApp):
 
     def _translate_event(self, event: ExecutorEvent, ctx: TurnContext) -> None:
         """
-        Translate one inner :class:`ExecutorEvent` into Omnigent SSE
+        Translate one inner :class:`ExecutorEvent` into agent-meow SSE
         events emitted via ``ctx.emit``.
 
         Per the v1 limitations in the module docstring, all
@@ -851,7 +851,7 @@ class ExecutorAdapter(HarnessApp):
                 )
             )
         elif isinstance(event, ReasoningChunk):
-            # Translate inner reasoning to the Omnigent wire shape so the
+            # Translate inner reasoning to the agent-meow wire shape so the
             # workflow sees the same SSE events whether the executor
             # runs inline or behind the harness scaffold.
             if event.event_type == "reasoning_started":
@@ -898,7 +898,7 @@ class ExecutorAdapter(HarnessApp):
             # The emitted ``name`` is the bare tool name. The
             # inner SDK passes the MCP-prefixed form
             # (``mcp__omnigent__sys_terminal_launch``) but the
-            # Omnigent wire shape and persisted conversation items
+            # agent-meow wire shape and persisted conversation items
             # carry the bare form — kept consistent with
             # ``omnigent/runtime/workflow.py``'s
             # ``_observed_tool_call_sse_dicts`` /
@@ -1011,7 +1011,7 @@ class ExecutorAdapter(HarnessApp):
             # Capture provider-reported usage so _build_terminal_event
             # can include it in the response.completed SSE payload.
             # The harness HTTP client reads response["usage"] from that
-            # payload to populate TurnComplete.usage on the Omnigent side.
+            # payload to populate TurnComplete.usage on the agent-meow side.
             if event.usage is not None:
                 ctx.provider_usage = event.usage
         elif isinstance(event, CompactionComplete):
@@ -1080,7 +1080,7 @@ class ExecutorAdapter(HarnessApp):
 
         :param exception: The exception :meth:`run_turn` raised.
         :returns: An :class:`ErrorDetail` whose ``code`` matches
-            the Omnigent allowlist for known retryable failures, and is
+            the agent-meow allowlist for known retryable failures, and is
             still informative (provider exception class) for the
             rest.
         """
@@ -1120,14 +1120,14 @@ class ExecutorAdapter(HarnessApp):
 
 def _classify_openai_exception(exception: BaseException) -> str | None:
     """
-    Map an OpenAI SDK exception onto the Omnigent semantic code allowlist.
+    Map an OpenAI SDK exception onto the agent-meow semantic code allowlist.
 
     The :mod:`openai` package is the runtime SDK for the
     openai-agents-sdk + codex wraps (and the open-responses
     inner executor). Its exception hierarchy mirrors HTTP
     semantics. We only translate the variants that match AP's
     retryable allowlist verbatim — adding more codes here without
-    extending the allowlist would just produce strings Omnigent ignores.
+    extending the allowlist would just produce strings agent-meow ignores.
 
     Lazy-imports :mod:`openai` because the package isn't a hard
     dependency of every wrap (the claude-sdk wrap goes through the
@@ -1137,7 +1137,7 @@ def _classify_openai_exception(exception: BaseException) -> str | None:
 
     :param exception: The exception :meth:`ExecutorAdapter.run_turn`
         caught.
-    :returns: A semantic code from the Omnigent allowlist (e.g.
+    :returns: A semantic code from the agent-meow allowlist (e.g.
         ``"rate_limit_exceeded"``), or ``None`` when *exception*
         is not an OpenAI SDK exception we recognize.
     """
@@ -1169,7 +1169,7 @@ def _classify_openai_exception(exception: BaseException) -> str | None:
 
 def _classify_claude_sdk_exception(exception: BaseException) -> str | None:
     """
-    Map a :mod:`claude_agent_sdk` exception onto the Omnigent semantic
+    Map a :mod:`claude_agent_sdk` exception onto the agent-meow semantic
     code allowlist.
 
     The Claude Code CLI wrapper surfaces a small exception set
@@ -1183,7 +1183,7 @@ def _classify_claude_sdk_exception(exception: BaseException) -> str | None:
 
     :param exception: The exception :meth:`ExecutorAdapter.run_turn`
         caught.
-    :returns: A semantic code from the Omnigent allowlist, or ``None``
+    :returns: A semantic code from the agent-meow allowlist, or ``None``
         when *exception* isn't a recognized retryable
         :mod:`claude_agent_sdk` exception.
     """
@@ -1208,7 +1208,7 @@ def _classify_claude_sdk_exception(exception: BaseException) -> str | None:
 
 def _classify_httpx_exception(exception: BaseException) -> str | None:
     """
-    Map an :mod:`httpx` exception onto the Omnigent semantic code allowlist.
+    Map an :mod:`httpx` exception onto the agent-meow semantic code allowlist.
 
     Some inner executors (notably ``litellm``-backed paths for
     non-Anthropic providers) surface raw httpx exceptions instead
@@ -1223,7 +1223,7 @@ def _classify_httpx_exception(exception: BaseException) -> str | None:
 
     :param exception: The exception :meth:`ExecutorAdapter.run_turn`
         caught.
-    :returns: A semantic code from the Omnigent allowlist, or ``None``
+    :returns: A semantic code from the agent-meow allowlist, or ``None``
         when *exception* is not an httpx exception we recognize.
     """
     try:
@@ -1242,7 +1242,7 @@ def _classify_httpx_exception(exception: BaseException) -> str | None:
     # behave the same way for retry purposes — the connection
     # is gone, a fresh attempt may succeed. Without this branch,
     # users see the bare class name (``[llm] ReadError``) with
-    # no semantic code, and the Omnigent retry classifier treats them
+    # no semantic code, and the agent-meow retry classifier treats them
     # as permanent.
     if isinstance(exception, httpx.NetworkError):
         return "connection_error"
@@ -1262,7 +1262,7 @@ def _classify_httpx_exception(exception: BaseException) -> str | None:
 
 def _classify_anthropic_exception(exception: BaseException) -> str | None:
     """
-    Map an :mod:`anthropic` SDK exception onto the Omnigent semantic
+    Map an :mod:`anthropic` SDK exception onto the agent-meow semantic
     code allowlist.
 
     The Anthropic Python SDK is the underlying transport for the
@@ -1271,7 +1271,7 @@ def _classify_anthropic_exception(exception: BaseException) -> str | None:
     intercept them (e.g. mid-stream gateway errors that bypass
     the CLI's framing layer). Without a dedicated classifier
     these would fall through to ``[llm] RateLimitError`` /
-    ``[llm] APIConnectionError`` etc., which the Omnigent retry
+    ``[llm] APIConnectionError`` etc., which the agent-meow retry
     allowlist doesn't match — silent demotion of retryable
     failures to permanent.
 
@@ -1288,7 +1288,7 @@ def _classify_anthropic_exception(exception: BaseException) -> str | None:
 
     :param exception: The exception :meth:`ExecutorAdapter.run_turn`
         caught.
-    :returns: A semantic code from the Omnigent allowlist, or ``None``
+    :returns: A semantic code from the agent-meow allowlist, or ``None``
         when *exception* is not an Anthropic SDK exception we
         recognize.
     """
@@ -1313,7 +1313,7 @@ def _classify_anthropic_exception(exception: BaseException) -> str | None:
 
 def classify_inner_exception(exception: BaseException) -> str | None:
     """
-    Map any inner-SDK exception onto the Omnigent semantic code allowlist.
+    Map any inner-SDK exception onto the agent-meow semantic code allowlist.
 
     Single entry point that fans out across the per-SDK
     classifiers. First match wins. Returns ``None`` when no
@@ -1337,7 +1337,7 @@ def classify_inner_exception(exception: BaseException) -> str | None:
 
     :param exception: The exception
         :meth:`ExecutorAdapter.run_turn` caught.
-    :returns: A semantic code from the Omnigent allowlist (e.g.
+    :returns: A semantic code from the agent-meow allowlist (e.g.
         ``"rate_limit_exceeded"``), or ``None`` when no
         classifier matched.
     """
@@ -1368,7 +1368,7 @@ def _normalize_tool_schemas(
     """
     Flatten OpenAI Chat-Completions tool schemas to inner shape.
 
-    Omnigent emits :meth:`omnigent.tools.base.Tool.get_schema` in
+    agent-meow emits :meth:`omnigent.tools.base.Tool.get_schema` in
     OpenAI Chat Completions shape: ``{"type": "function",
     "function": {"name", "description", "parameters"}}``. The
     inner :class:`Executor` ABC and its
@@ -1472,7 +1472,7 @@ async def _bridge_one_dispatch(
     except Exception as exc:
         _logger.exception("dispatch_tool failed for %s", tool_name)
         return {"error": str(exc)}
-    # Try to parse the output as JSON — if Omnigent serialized the
+    # Try to parse the output as JSON — if agent-meow serialized the
     # tool result via ``ToolResult.content`` (a JSON string),
     # parsing here gives the SDK a structured dict it can show
     # the LLM cleanly. Falls back to raw string under a
@@ -1608,7 +1608,7 @@ def _extract_role_keyed_messages(
     input_value: list[dict[str, Any]],
 ) -> list[Message]:
     """
-    Pull role-keyed message items out of an Omnigent ``input`` list.
+    Pull role-keyed message items out of an agent-meow ``input`` list.
 
     Looks for ``{"type": "message", "role": ..., "content": ...}``
     entries (the shape :func:`_translate_messages_to_input`
@@ -1624,7 +1624,7 @@ def _extract_role_keyed_messages(
     Layer 1 state when resuming, so duplicating them in the
     serialized prompt would just confuse the LLM.
 
-    :param input_value: The Omnigent ``input`` list.
+    :param input_value: The agent-meow ``input`` list.
     :returns: One :class:`Message` per role-keyed entry, or
         an empty list when *input_value* contains no
         role-keyed items (caller falls back to the legacy
@@ -1725,7 +1725,7 @@ def _serialize_tool_result(event: ToolCallComplete) -> str:
     - A plain ``str`` — pass through unchanged.
     - A list of typed content blocks (``{"type": "text", "text":
       ...}``, image blocks, etc.) — join the ``text`` fields so
-      the LLM-rendered tool output reaches Omnigent intact. Without
+      the LLM-rendered tool output reaches agent-meow intact. Without
       this branch, ``str([{...}])`` would emit a Python repr
       (literal ``[{'type': 'text', 'text': '...'}]``) and
       function_call_output would carry garbage instead of the
@@ -1740,7 +1740,7 @@ def _serialize_tool_result(event: ToolCallComplete) -> str:
       status carries one.
     - Empty string is a last resort — the inner Executor
       contract is that one of result/error is populated;
-      logged so a regression surfaces in the Omnigent logs.
+      logged so a regression surfaces in the agent-meow logs.
 
     :param event: The completion event.
     :returns: A string suitable for the AP-side

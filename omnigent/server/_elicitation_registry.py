@@ -66,7 +66,7 @@ class _PreResolvedHarnessElicitation:
     from ``external_elicitation_resolved`` — the terminal already
     answered, so a re-park fail-asks.
 
-    :param session_id: Omnigent session id that issued the resolution, e.g.
+    :param session_id: agent-meow session id that issued the resolution, e.g.
         ``"conv_abc123"``.
     :param created_at: Wall-clock timestamp from ``time.time()``, e.g.
         ``1710000000.0``.
@@ -87,7 +87,7 @@ _harness_parked_elicitations: dict[str, _ParkedHarnessElicitation] = {}
 # Maps deterministic ``elicitation_id`` values to the session that
 # resolved them before the harness hook registered its parked wait. The
 # hook consumes the tombstone at registration time, which closes the
-# race between a native client answering instantly and the Omnigent hook
+# race between a native client answering instantly and the agent-meow hook
 # request reaching this process.
 _harness_pre_resolved_elicitations: dict[str, _PreResolvedHarnessElicitation] = {}
 

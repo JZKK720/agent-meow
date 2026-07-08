@@ -4,11 +4,11 @@ HermesExecutor: run agent turns through the Hermes Agent CLI.
 Spawns ``hermes chat -q`` as a subprocess for each turn.  Hermes manages its
 own session state via a persistent session store (SQLite under
 ``~/.hermes/``), so the executor uses ``--resume <session_id>`` on subsequent
-turns to maintain conversational context across the Omnigent session without
+turns to maintain conversational context across the agent-meow session without
 re-serialising the full history.
 
 Each turn yields text output as ``TextChunk`` / ``TurnComplete`` events.
-Omnigent policies are enforced on Hermes' native tool calls via Hermes'
+agent-meow policies are enforced on Hermes' native tool calls via Hermes'
 ``pre_tool_call`` shell hook mechanism: a per-session ``HERMES_HOME``
 directory is created with a ``config.yaml`` that registers a policy hook
 script, matching how Codex uses a per-session ``CODEX_HOME``.
@@ -134,7 +134,7 @@ def _parse_session_id(output: str) -> str | None:
 def _extract_last_user_message(messages: list[Message]) -> str:
     """
     Extract the text of the most recent user message from the
-    Omnigent message list.
+    agent-meow message list.
 
     :param messages: The conversation message list passed to
         ``run_turn``.
@@ -173,7 +173,7 @@ def _get_conversation_id() -> str | None:
 # Keys from the user's ``~/.hermes/config.yaml`` that the per-session
 # HERMES_HOME needs in order to authenticate with the inference provider.
 # Everything else (secrets, security, agent tuning, terminal, etc.) is
-# either irrelevant to a headless Omnigent turn or actively harmful
+# either irrelevant to a headless agent-meow turn or actively harmful
 # (e.g. ``secrets.bitwarden`` referencing an unset ``BWS_ACCESS_TOKEN``).
 _USER_CONFIG_KEYS = frozenset(
     {
@@ -213,7 +213,7 @@ def _populate_hermes_home(
 ) -> None:
     """Populate a per-session ``HERMES_HOME`` with policy hook config.
 
-    Creates a ``config.yaml`` that registers the Omnigent policy hook
+    Creates a ``config.yaml`` that registers the agent-meow policy hook
     as a ``pre_tool_call`` shell hook, and writes a wrapper script
     that exports the server env vars before exec-ing the Python hook.
 
@@ -227,7 +227,7 @@ def _populate_hermes_home(
 
     :param hermes_home: The per-session HERMES_HOME directory.
     :param hook_script_path: Absolute path to ``hermes_policy_hook.py``.
-    :param server_url: Omnigent server URL.
+    :param server_url: agent-meow server URL.
     :param session_id: Conversation / session ID for policy evaluation.
     """
     hermes_home.mkdir(parents=True, exist_ok=True)
@@ -247,7 +247,7 @@ def _populate_hermes_home(
     user_cfg = _load_user_hermes_config()
     config: dict = {**user_cfg}
 
-    # Layer Omnigent's policy hook config on top.
+    # Layer agent-meow's policy hook config on top.
     config["hooks_auto_accept"] = True
     config["hooks"] = {
         **config.get("hooks", {}),
@@ -336,7 +336,7 @@ class HermesExecutor(Executor):
     Hermes manages its own session persistence (SQLite).  The executor
     captures the ``session_id`` from the first turn and passes
     ``--resume <session_id>`` on subsequent turns so conversational
-    history is maintained without Omnigent re-serializing the full
+    history is maintained without agent-meow re-serializing the full
     message list.
 
     Each turn runs ``hermes chat -q "<message>" -Q --source tool`` as an
@@ -344,7 +344,7 @@ class HermesExecutor(Executor):
     and yields ``TextChunk`` / ``TurnComplete`` events.
 
     A per-session ``HERMES_HOME`` directory is created with a
-    ``config.yaml`` that registers an Omnigent policy hook as a
+    ``config.yaml`` that registers an agent-meow policy hook as a
     Hermes ``pre_tool_call`` shell hook, enforcing ``PHASE_TOOL_CALL``
     policies on all native Hermes tool calls.
     """
@@ -390,11 +390,11 @@ class HermesExecutor(Executor):
         self._setup_hermes_home()
 
     def _setup_hermes_home(self) -> None:
-        """Create a per-session ``HERMES_HOME`` with Omnigent policy hooks.
+        """Create a per-session ``HERMES_HOME`` with agent-meow policy hooks.
 
-        When the Omnigent server URL and conversation ID are available,
+        When the agent-meow server URL and conversation ID are available,
         creates a temp directory with a ``config.yaml`` that registers the
-        Omnigent policy hook as a Hermes ``pre_tool_call`` shell hook.
+        agent-meow policy hook as a Hermes ``pre_tool_call`` shell hook.
         The ``HERMES_HOME`` env var is passed to the subprocess so Hermes
         reads this config instead of the user's ``~/.hermes/``.
 
@@ -415,7 +415,7 @@ class HermesExecutor(Executor):
         _logger.debug("Hermes per-session home: %s", self._hermes_home)
 
     def _hermes_session_id(self, session_key: str) -> str | None:
-        """Return the stored Hermes session ID for an Omnigent session key."""
+        """Return the stored Hermes session ID for an agent-meow session key."""
         return self._session_map.get(session_key)
 
     def supports_streaming(self) -> bool:
@@ -427,9 +427,9 @@ class HermesExecutor(Executor):
 
         The Hermes Agent CLI manages its own tool-calling loop internally.
         Tool-call requests/results are handled by Hermes, not bridged
-        through Omnigent's tool dispatch.  Omnigent policies are enforced
+        through agent-meow's tool dispatch.  agent-meow policies are enforced
         via Hermes' native ``pre_tool_call`` shell hook that evaluates
-        ``PHASE_TOOL_CALL`` against the Omnigent server before each tool
+        ``PHASE_TOOL_CALL`` against the agent-meow server before each tool
         execution.
         """
         return True
@@ -444,7 +444,7 @@ class HermesExecutor(Executor):
         """
         Run one agent turn by spawning ``hermes chat -q``.
 
-        :param messages: Conversation history from Omnigent.
+        :param messages: Conversation history from agent-meow.
         :param tools: Tool schemas (Hermes uses its own tools internally).
         :param system_prompt: System prompt (used by Hermes internally).
         :param config: Per-turn config (model override, etc.).
@@ -560,7 +560,7 @@ class HermesExecutor(Executor):
 
     def _session_key(self, messages: list[Message]) -> str:
         """
-        Derive a stable Omnigent session key from the message list.
+        Derive a stable agent-meow session key from the message list.
 
         Uses the ``session_id`` stamped on the first message if available,
         otherwise falls back to a hash of the conversation content.
@@ -580,7 +580,7 @@ class HermesExecutor(Executor):
 
         Removes the Hermes session mapping — the Hermes session
         persists in its own SQLite store and can be resumed later
-        via `hermes --resume` outside Omnigent.
+        via `hermes --resume` outside agent-meow.
         """
         self._session_map.pop(session_key, None)
         await super().close_session(session_key)

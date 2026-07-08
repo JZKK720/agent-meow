@@ -1,6 +1,6 @@
-"""Sandbox CLI commands: run an Omnigent host in a remote sandbox.
+"""Sandbox CLI commands: run an agent-meow host in a remote sandbox.
 
-``omnigent sandbox …`` bootstraps an Omnigent host inside a sandbox
+``omnigent sandbox …`` bootstraps an agent-meow host inside a sandbox
 from one of the registered providers (``--provider``) so that sessions
 on it are reachable from the server-hosted UI, TUI, and ``omnigent
 resume``. Provider availability is build-dependent — the Databricks
@@ -156,11 +156,11 @@ def _print_ready_banner(provider: str, sandbox_id: str, server_url: str) -> None
 @click.group("sandbox")
 def sandbox() -> None:
     """
-    Run an Omnigent host inside a remote sandbox.
+    Run an agent-meow host inside a remote sandbox.
 
     \b
     Subcommands:
-      create   Provision a sandbox + bootstrap Omnigent into it.
+      create   Provision a sandbox + bootstrap agent-meow into it.
       connect  Register the sandbox as a host with your server (runs
                `omnigent host` in the sandbox).
 
@@ -246,13 +246,13 @@ def sandbox_create(
     skip_auth: bool,
 ) -> None:
     """
-    Provision a sandbox and ship Omnigent into it.
+    Provision a sandbox and ship agent-meow into it.
 
     The server's workspace is derived from ``--server`` (the same
     unauthenticated probe ``omnigent login`` uses), and for lakebox
     the sandbox is created IN that workspace — so the sandbox always
     lives where the server lives, regardless of the local default
-    profile. Builds the Omnigent wheels from your local checkout,
+    profile. Builds the agent-meow wheels from your local checkout,
     installs them into the fresh sandbox, and finishes by logging the
     sandbox in to the server (``omnigent login`` runs inside the
     sandbox; the browser step is driven from this machine). Sandboxes

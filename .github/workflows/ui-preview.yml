@@ -1,8 +1,8 @@
 name: UI Preview
 
-# Per-PR live preview of the Omnigent web UI, deployed to Databricks Apps.
+# Per-PR live preview of the agent-meow web UI, deployed to Databricks Apps.
 # The preview is ephemeral (SQLite + local artifacts) and ships no LLM/runner --
-# Omnigent runs agent turns on a runner the reviewer connects from their own
+# agent-meow runs agent turns on a runner the reviewer connects from their own
 # machine. See .github/ui-preview/README.md.
 
 on:

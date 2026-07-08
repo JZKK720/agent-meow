@@ -804,7 +804,7 @@ async def test_transfer_terminal_moves_resource_without_closing(
 
     This catches the ``/clear`` bug class where moving ownership would
     accidentally close tmux or leave the runner registry keyed under
-    the old conversation, making the new Omnigent conversation unable to
+    the old conversation, making the new agent-meow conversation unable to
     attach to the still-running Claude pane.
     """
     source = registry.get("conv_abc", "bash", "s1")
@@ -1818,7 +1818,7 @@ async def test_concurrent_resource_reads_share_one_session_snapshot(
 ) -> None:
     """A startup burst of concurrent resource reads resolves the
     session's spec through one ``GET /v1/sessions/{id}`` and one bundle
-    resolution, instead of each request stampeding the Omnigent server.
+    resolution, instead of each request stampeding the agent-meow server.
 
     Reproduces the observed runner-startup burst: dozens of paired
     ``GET /sessions/{id}`` + ``agent/contents`` requests in one second.
@@ -1848,7 +1848,7 @@ async def test_concurrent_resource_reads_share_one_session_snapshot(
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         """
-        Stub Omnigent server that blocks + counts the session snapshot fetch.
+        Stub agent-meow server that blocks + counts the session snapshot fetch.
 
         :param request: Outbound request from the runner.
         :returns: The session snapshot (after release) for the session
@@ -1953,7 +1953,7 @@ async def test_failed_session_snapshot_is_not_cached_and_retries(
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         """
-        Stub Omnigent server: fail the first snapshot, succeed afterward.
+        Stub agent-meow server: fail the first snapshot, succeed afterward.
 
         :param request: Outbound request from the runner.
         :returns: 503 on the first session GET, then the real snapshot.
@@ -2046,7 +2046,7 @@ async def test_unbound_agent_snapshot_is_not_cached_and_retries(
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         """
-        Stub Omnigent server: 200 with no agent_id first, then the bound one.
+        Stub agent-meow server: 200 with no agent_id first, then the bound one.
 
         :param request: Outbound request from the runner.
         :returns: A 200 snapshot lacking ``agent_id`` on the first

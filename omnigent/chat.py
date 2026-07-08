@@ -1,6 +1,6 @@
 """Implementation of the ``omnigent chat`` command.
 
-The CLI always ends by connecting an Omnigent client to a server URL. For
+The CLI always ends by connecting an agent-meow client to a server URL. For
 path targets it first ensures the agent is registered on that server
 (a local subprocess by default, or ``--server`` when supplied). URL
 targets skip setup and use the existing server's registered agents.
@@ -146,7 +146,7 @@ def _default_cli_model() -> str:
     spec is self-contained and independent of any later env state.
 
     Mirrors :func:`omnigent.inner.cli._default_cli_model` so
-    legacy and Omnigent paths agree on the env-var contract.
+    legacy and agent-meow paths agree on the env-var contract.
 
     :returns: The default model identifier, e.g.
         ``"databricks-gpt-5-4"`` or whatever the user pinned in
@@ -329,7 +329,7 @@ def run_chat(
         conversation to ``~/.omnigent/logs/`` on REPL exit.
         Maps to ``--log`` on the CLI (default-on for the legacy
         path, default-off here so it stays explicit on
-        Omnigent mode). See ``omnigent.repl._session_log`` for the
+        agent-meow mode). See ``omnigent.repl._session_log`` for the
         schema. Local-mode only — passing this with a remote
         URL target raises :class:`click.ClickException`
         (no client-side conversation hand-off to dump).
@@ -425,7 +425,7 @@ def run_chat(
     else:
         # Non-URL target → the host daemon is the backend. It connects to
         # the given ``--server`` URL, or starts (and connects to) a persistent
-        # local Omnigent server when none is provided; this returns that concrete
+        # local agent-meow server when none is provided; this returns that concrete
         # URL. The agent is uploaded as a session and the daemon spawns +
         # *owns* the runner (the CLI only attaches the REPL), matching
         # claude-native.
@@ -531,7 +531,7 @@ def run_attach(
     confirms the session's host runner is online (``attach`` can't start one),
     failing loud otherwise.
 
-    :param base_url: Omnigent server hosting the session, e.g.
+    :param base_url: agent-meow server hosting the session, e.g.
         ``"http://127.0.0.1:6767"``.
     :param conversation_id: Live conversation/session id to join, e.g.
         ``"conv_abc123"``.
@@ -798,7 +798,7 @@ def _server_headers(
     runner_id: str | None = None,
 ) -> dict[str, str]:
     """
-    Build non-auth HTTP headers for an Omnigent server client.
+    Build non-auth HTTP headers for an agent-meow server client.
 
     Auth is handled separately via :func:`_server_auth` which
     returns an ``httpx.Auth`` that refreshes the Databricks OAuth
@@ -819,7 +819,7 @@ def _server_auth(
     server_url: str | None = None,
 ) -> httpx.Auth | None:
     """
-    Build an httpx Auth for a remote Omnigent server client.
+    Build an httpx Auth for a remote agent-meow server client.
 
     Returns a :class:`_DatabricksTokenAuth` when any credential
     source is available (env var, stored ``omnigent login`` record,
@@ -1013,8 +1013,8 @@ def _is_claude_native_conversation(
     """
     Return whether *conversation_id* is a claude-native wrapper session.
 
-    :param base_url: Omnigent server base URL.
-    :param conversation_id: Omnigent conversation id.
+    :param base_url: agent-meow server base URL.
+    :param conversation_id: agent-meow conversation id.
     :returns: ``True`` only when the wrapper label matches Claude native.
     """
     return (
@@ -1034,10 +1034,10 @@ def _redirect_native_resume_if_needed(
     progress: RunnerStartupProgress | None = None,
 ) -> bool:
     """
-    Redirect a terminal-native resume before Omnigent attach liveness runs.
+    Redirect a terminal-native resume before agent-meow attach liveness runs.
 
-    :param base_url: Omnigent server base URL, e.g. ``"https://example.com"``.
-    :param conversation_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param base_url: agent-meow server base URL, e.g. ``"https://example.com"``.
+    :param conversation_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
     :param auto_open_conversation: Browser-open preference for the wrapper.
     :param progress: Optional startup spinner to finish before redirect.
     :returns: ``True`` when a native wrapper handled the resume.
@@ -1107,10 +1107,10 @@ def _finish_native_redirect_progress(
     native_command: str,
 ) -> None:
     """
-    Finish any Omnigent startup progress and print the native redirect notice.
+    Finish any agent-meow startup progress and print the native redirect notice.
 
     :param progress: Optional startup spinner to finish before writing.
-    :param conversation_id: Omnigent conversation id, e.g.
+    :param conversation_id: agent-meow conversation id, e.g.
         ``"conv_abc123"``.
     :param wrapper_name: Wrapper label for display, e.g. ``"codex-native"``.
     :param native_command: Native command to show, e.g. ``"codex"``.
@@ -1137,12 +1137,12 @@ def _run_claude_native_resume_redirect(
     """
     Hand a claude-native conversation back to ``omnigent claude``.
 
-    :param base_url: Omnigent server base URL, e.g.
+    :param base_url: agent-meow server base URL, e.g.
         ``"https://example.databricksapps.com"``.
-    :param conversation_id: Omnigent conversation id, e.g.
+    :param conversation_id: agent-meow conversation id, e.g.
         ``"conv_abc123"``.
     :param auto_open_conversation: Browser-open preference for the wrapper.
-    :param progress: Optional Omnigent startup spinner to finish before redirect.
+    :param progress: Optional agent-meow startup spinner to finish before redirect.
     :returns: None.
     """
     _finish_native_redirect_progress(
@@ -1171,12 +1171,12 @@ def _run_codex_native_resume_redirect(
     """
     Hand a codex-native conversation back to ``omnigent codex``.
 
-    :param base_url: Omnigent server base URL, e.g.
+    :param base_url: agent-meow server base URL, e.g.
         ``"https://example.databricksapps.com"``.
-    :param conversation_id: Omnigent conversation id, e.g.
+    :param conversation_id: agent-meow conversation id, e.g.
         ``"conv_abc123"``.
     :param auto_open_conversation: Browser-open preference for the wrapper.
-    :param progress: Optional Omnigent startup spinner to finish before redirect.
+    :param progress: Optional agent-meow startup spinner to finish before redirect.
     :returns: None.
     """
     _finish_native_redirect_progress(
@@ -1205,10 +1205,10 @@ def _run_pi_native_resume_redirect(
     """
     Hand a pi-native conversation back to ``omnigent pi``.
 
-    :param base_url: Omnigent server base URL.
-    :param conversation_id: Omnigent conversation id.
+    :param base_url: agent-meow server base URL.
+    :param conversation_id: agent-meow conversation id.
     :param auto_open_conversation: Browser-open preference for the wrapper.
-    :param progress: Optional Omnigent startup spinner to finish before redirect.
+    :param progress: Optional agent-meow startup spinner to finish before redirect.
     :returns: None.
     """
     _finish_native_redirect_progress(
@@ -1263,16 +1263,16 @@ def _run_cursor_native_resume_redirect(
 
     The cursor-native session is driven by the ``cursor-agent`` TUI in a
     runner-owned tmux pane, and the forwarder mirrors that transcript back
-    into the conversation. Resuming through the Omnigent REPL would instead
-    run an Omnigent turn per message (which persists its own user item) *and*
+    into the conversation. Resuming through the agent-meow REPL would instead
+    run an agent-meow turn per message (which persists its own user item) *and*
     leave the forwarder mirroring the same message from the cursor store —
     recording each user message twice. Redirecting to ``omnigent cursor``'s
     direct tmux attach keeps the TUI the single source of turns.
 
-    :param base_url: Omnigent server base URL.
-    :param conversation_id: Omnigent conversation id.
+    :param base_url: agent-meow server base URL.
+    :param conversation_id: agent-meow conversation id.
     :param auto_open_conversation: Browser-open preference for the wrapper.
-    :param progress: Optional Omnigent startup spinner to finish before redirect.
+    :param progress: Optional agent-meow startup spinner to finish before redirect.
     :returns: None.
     """
     _finish_native_redirect_progress(
@@ -1302,15 +1302,15 @@ def _run_kimi_native_resume_redirect(
     Hand a kimi-native conversation back to ``omnigent kimi``.
 
     The kimi-native session is driven by the ``kimi`` TUI in a runner-owned
-    tmux pane. Resuming through the Omnigent REPL would run an Omnigent turn
+    tmux pane. Resuming through the agent-meow REPL would run an agent-meow turn
     per message instead of attaching to the live TUI; redirecting to
     ``omnigent kimi``'s direct tmux attach keeps the TUI the single source of
     turns. Mirrors :func:`_run_cursor_native_resume_redirect`.
 
-    :param base_url: Omnigent server base URL.
-    :param conversation_id: Omnigent conversation id.
+    :param base_url: agent-meow server base URL.
+    :param conversation_id: agent-meow conversation id.
     :param auto_open_conversation: Browser-open preference for the wrapper.
-    :param progress: Optional Omnigent startup spinner to finish before redirect.
+    :param progress: Optional agent-meow startup spinner to finish before redirect.
     :returns: None.
     """
     _finish_native_redirect_progress(
@@ -1340,11 +1340,11 @@ def _wrapper_label_for_conversation(
     Single-shot ``GET /v1/sessions/{id}`` against *base_url*, inspecting
     the response's ``labels.omnigent.wrapper`` field. ``None`` on any
     transport / parse error so a flaky server doesn't silently misroute
-    the resume — the caller falls back to the normal Omnigent REPL path and
+    the resume — the caller falls back to the normal agent-meow REPL path and
     surfaces a clear failure there.
 
-    :param base_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:6767"``.
-    :param conversation_id: Omnigent conversation id,
+    :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param conversation_id: agent-meow conversation id,
         e.g. ``"conv_abc123"``.
     :returns: Wrapper label value, or ``None``.
     """
@@ -1432,7 +1432,7 @@ def _attach_session_info(
     A missing/unreachable session yields all-empty facts and the caller fails
     loud.
 
-    :param base_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:6767"``.
     :param conversation_id: Conversation/session id, e.g. ``"conv_abc123"``.
     :returns: The session facts; ``runner_online=False`` on any failure.
     """
@@ -1567,7 +1567,7 @@ def _await_accounts_first_run_setup(
 ) -> None:
     """Block until a fresh accounts-mode local server has its first admin.
 
-    When ``omnigent run`` (re)spawns the local Omnigent server in accounts mode on
+    When ``omnigent run`` (re)spawns the local agent-meow server in accounts mode on
     a machine with no admin yet, the server reports ``needs_setup`` and (by
     default) opens a browser to its Create-admin form. Until an admin is
     claimed there is no CLI credential, so the first authenticated call would
@@ -1580,7 +1580,7 @@ def _await_accounts_first_run_setup(
     a token for *base_url*, or when an admin already exists (the server mints
     our token at boot in that case).
 
-    :param base_url: Resolved local Omnigent server URL, e.g.
+    :param base_url: Resolved local agent-meow server URL, e.g.
         ``"http://127.0.0.1:6767"``.
     :param timeout_s: Max seconds to wait for setup, e.g. ``600.0``.
     :param progress: Active startup spinner, if any. Cleared before the
@@ -1647,7 +1647,7 @@ async def _prepare_chat_session_via_daemon(
     the CLI only attaches the REPL afterward). Mirrors claude-native's
     ``_prepare_claude_terminal_via_daemon`` minus the terminal bring-up.
 
-    :param base_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:8123"``.
+    :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:8123"``.
     :param headers: Static HTTP auth headers (empty for a loopback server).
     :param auth: Per-request ``httpx.Auth`` for token refresh on the SDK
         client, or ``None`` for a loopback server.
@@ -1745,7 +1745,7 @@ def _chat_via_daemon(
     server relaunches it (host-bound auto-relaunch).
 
     :param agent_path: Local YAML path or directory.
-    :param base_url: Resolved Omnigent server base URL (the daemon is already
+    :param base_url: Resolved agent-meow server base URL (the daemon is already
         ensured for it), e.g. ``"http://127.0.0.1:8123"``.
     :param tool_handler: Optional client-side tool handler.
     :param overrides: CLI overrides to bake into the uploaded spec.
@@ -2524,7 +2524,7 @@ _ResponseOutput: TypeAlias = list[dict[str, Any]]  # type: ignore[explicit-any]
 
 
 def _response_output_text(output: _ResponseOutput) -> str | None:
-    """Extract assistant text from an Omnigent response ``output`` list."""
+    """Extract assistant text from an agent-meow response ``output`` list."""
     parts: list[str] = []
     for item in output:
         if not isinstance(item, dict) or item.get("type") != "message":
@@ -3234,7 +3234,7 @@ def _apply_overrides_to_raw(raw: _YamlMapping, overrides: ChatOverrides) -> None
     # ``_DEFAULT_AD_HOC_MODEL`` directly so ``OMNIGENT_MODEL=foo``
     # is honored on the ``omnigent/cli.py`` → ``run_chat`` direct
     # path. Without this, that env var was silently dropped on the
-    # Omnigent path invoked through the ``omnigent`` console
+    # agent-meow path invoked through the ``omnigent`` console
     # script (see ``designs/RUN_OMNIGENT_REPL_PARITY.md``).
     if not _spec_declares_harness_or_model(raw):
         executor_block["model"] = _default_cli_model()
@@ -3412,7 +3412,7 @@ def _find_free_port() -> int:
 
 def _omnigent_log_dir() -> Path:
     """
-    Resolve the shared Omnigent process log directory.
+    Resolve the shared agent-meow process log directory.
 
     Server and captured runner stdout/stderr logs live under the
     same per-user state root as session transcripts and CLI
@@ -3459,10 +3459,10 @@ def _start_local_server(
     ephemeral: bool = False,
 ) -> LocalServer:
     """
-    Launch a local Omnigent server.
+    Launch a local agent-meow server.
 
     Server stdout/stderr are routed to ``server.log`` in a
-    per-run directory under ``~/.omnigent/logs`` so concurrent Omnigent sessions don't
+    per-run directory under ``~/.omnigent/logs`` so concurrent agent-meow sessions don't
     interleave. The log path is returned to the caller (via
     :class:`LocalServer`) so :func:`_raise_server_failed`
     can surface it in its error message — critical because
@@ -3558,7 +3558,7 @@ def _start_local_server(
     # Propagate executor.profile from the spec as DATABRICKS_CONFIG_PROFILE
     # (spec self-containment: the YAML's own declaration is the only thing
     # that selects a Databricks workspace here — there is no CLI override).
-    # This ensures the Omnigent server and its runner subprocess resolve credentials
+    # This ensures the agent-meow server and its runner subprocess resolve credentials
     # for the right Databricks workspace (LLM calls, compaction, etc.).
     if "DATABRICKS_CONFIG_PROFILE" not in child_env:
         _spec = load_spec(agent_path)

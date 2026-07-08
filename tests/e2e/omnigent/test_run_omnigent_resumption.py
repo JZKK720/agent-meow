@@ -190,7 +190,7 @@ def _isolated_env(
     home: Path,
 ) -> dict[str, str]:
     """
-    Override ``HOME`` and the explicit Omnigent state/config roots so
+    Override ``HOME`` and the explicit agent-meow state/config roots so
     the subprocess's persistent store, local server pidfile, and host
     daemon records all land inside the test's temp dir.
 

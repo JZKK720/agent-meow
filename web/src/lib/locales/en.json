@@ -78,6 +78,7 @@
   },
   "voice": {
     "micLabel": "Microphone",
+    "dictation": "Voice dictation",
     "speak": "Speak",
     "pause": "Pause",
     "transcribe": "Transcribe",
@@ -85,10 +86,25 @@
   },
   "chat": {
     "newChat": "New Chat",
+    "newSession": "New session",
     "send": "Send",
     "stop": "Stop",
+    "interrupt": "Interrupt",
     "untitled": "Untitled",
-    "searchSessions": "Search sessions"
+    "searchSessions": "Search sessions",
+    "selectSessions": "Select sessions",
+    "emptyTitle": "What should we work on?",
+    "emptyBody": "Send a message to get started.",
+    "loadAgentsFailed": "Failed to load agents: {{message}}",
+    "waitingForAgents": "Waiting for agents…",
+    "followUpQueued": "Send a follow-up (queued) — Esc to stop",
+    "hostOfflineResume": "Current session's host is offline. Next message will resume the sandbox host which can take minutes",
+    "reconnectPrompt": "Send a message to reconnect this session",
+    "askAnything": "Ask the agent anything…",
+    "attachFiles": "Attach files",
+    "executionLogs": "Execution logs",
+    "expandExecutionLogs": "Expand execution logs",
+    "collapseExecutionLogs": "Collapse execution logs"
   },
   "login": {
     "signIn": "Sign in",
@@ -102,6 +118,7 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "close": "Close",
+    "settings": "Settings",
     "save": "Save",
     "delete": "Delete",
     "reload": "Reload",

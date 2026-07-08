@@ -1,6 +1,6 @@
-# Omnigent on Fly.io
+# agent-meow on Fly.io
 
-Deploy Omnigent to Fly.io. Fly pulls the prebuilt image, runs it next to a
+Deploy agent-meow to Fly.io. Fly pulls the prebuilt image, runs it next to a
 persistent volume, and serves it over HTTPS on `*.fly.dev`.
 
 > **Fly is CLI-first.** There's no embeddable one-click button like Render's;

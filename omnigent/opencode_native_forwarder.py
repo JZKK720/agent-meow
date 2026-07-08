@@ -1,14 +1,14 @@
-"""SSE consumer that mirrors OpenCode events into an Omnigent session.
+"""SSE consumer that mirrors OpenCode events into an agent-meow session.
 
 The runner owns this forwarder (parallel to the codex-native forwarder).
 It connects to the per-session ``opencode serve`` SSE stream (``GET
 /event``), filters to the session's OpenCode session id, and translates
-OpenCode events into Omnigent session-stream events posted to
+OpenCode events into agent-meow session-stream events posted to
 ``/v1/sessions/{id}/events`` — the same envelope the codex forwarder uses
 (``external_conversation_item`` / ``external_session_status`` /
 ``external_output_text_delta``).
 
-Design references: the SSE-event → Omnigent-event translation table in
+Design references: the SSE-event → agent-meow-event translation table in
 ``designs/opencode-harness-and-unified-interface.md`` §A.9. The forwarder
 is tolerant of unknown events (logged, never fatal) and dedupes by stable
 OpenCode message / part / tool-call ids so web and TUI driving the same
@@ -43,7 +43,7 @@ from omnigent.opencode_native_permissions import (
 _logger = logging.getLogger(__name__)
 
 _AGENT_NAME = "opencode"
-# Omnigent session-event types (must match the server's ingestion route;
+# agent-meow session-event types (must match the server's ingestion route;
 # shared with the codex-native forwarder).
 _EXTERNAL_ITEM = "external_conversation_item"
 _EXTERNAL_STATUS = "external_session_status"
@@ -54,7 +54,7 @@ _EXTERNAL_COMPACTION_STATUS = "external_compaction_status"
 # session cost badge + context ring (same contract codex-native uses).
 _EXTERNAL_SESSION_USAGE = "external_session_usage"
 # Mirrors a model switch typed in the opencode TUI (``/model`` or the picker)
-# back to Omnigent so the web model pill stays in sync (claude-native contract).
+# back to agent-meow so the web model pill stays in sync (claude-native contract).
 _EXTERNAL_MODEL_CHANGE = "external_model_change"
 # Transient chain-of-thought delta — the reasoning analogue of the text delta
 # (same contract codex-native uses). The web paints a reasoning block; it is not
@@ -115,13 +115,13 @@ def _int_or_zero(value: Any) -> int:
 
 class OpenCodeNativeForwarder:
     """
-    Translate one OpenCode session's SSE stream into Omnigent events.
+    Translate one OpenCode session's SSE stream into agent-meow events.
 
-    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
     :param opencode_session_id: OpenCode session id to filter on.
     :param opencode_client: Client connected to the ``opencode serve``
         server (for SSE + permission replies).
-    :param server_client: HTTP client for the Omnigent server (event posts).
+    :param server_client: HTTP client for the agent-meow server (event posts).
     :param bridge_dir: Native OpenCode bridge directory (status/active-id
         persistence). ``None`` disables bridge writes (tests).
     :param workspace: Session workspace, used for permission normalization.
@@ -175,7 +175,7 @@ class OpenCodeNativeForwarder:
         # cumulative usage posted as ``external_session_usage``.
         self._usage_by_message: dict[str, dict[str, Any]] = {}
         self._last_usage_signature: tuple[tuple[str, Any], ...] | None = None
-        # Last model mirrored to Omnigent (provider/id), to dedupe switches.
+        # Last model mirrored to agent-meow (provider/id), to dedupe switches.
         self._last_model: str | None = None
         # reasoning part id -> chars already streamed as a delta. opencode sends
         # the cumulative reasoning text on each ``part.updated``; we forward only
@@ -267,7 +267,7 @@ class OpenCodeNativeForwarder:
 
     async def handle_event(self, event: OpenCodeEvent) -> None:
         """
-        Translate one OpenCode event into Omnigent session events.
+        Translate one OpenCode event into agent-meow session events.
 
         :param event: A decoded OpenCode SSE event.
         """
@@ -321,9 +321,9 @@ class OpenCodeNativeForwarder:
 
     async def _post_event(self, event_type: str, data: dict[str, Any]) -> httpx.Response | None:
         """
-        POST one Omnigent session event with a single retry.
+        POST one agent-meow session event with a single retry.
 
-        :param event_type: Omnigent event type, e.g.
+        :param event_type: agent-meow event type, e.g.
             ``"external_session_status"``.
         :param data: Event data payload.
         :returns: The HTTP response, or ``None`` on transport failure.
@@ -781,7 +781,7 @@ class OpenCodeNativeForwarder:
 
         Brackets opencode's own context compaction so the web UI shows its
         "Compacting conversation…" marker while opencode summarizes the session
-        server-side. The Omnigent server maps ``external_compaction_status``
+        server-side. The agent-meow server maps ``external_compaction_status``
         ``in_progress`` → the ``response.compaction.in_progress`` SSE the web
         client already renders (the claude-native wire contract).
         """
@@ -801,7 +801,7 @@ class OpenCodeNativeForwarder:
     async def _on_model_switched(self, event: OpenCodeEvent) -> None:
         """Handle ``session.next.model.switched`` — mirror a TUI /model switch.
 
-        When the user switches model in the opencode TUI, reflect it to Omnigent
+        When the user switches model in the opencode TUI, reflect it to agent-meow
         (``external_model_change`` → the session's ``model_override``) so the
         web model pill stays in sync. Deduped against the last mirrored model.
         """
@@ -918,7 +918,7 @@ _HANDLERS: dict[str, Callable[[OpenCodeNativeForwarder, OpenCodeEvent], Awaitabl
     "session.next.compaction.started": OpenCodeNativeForwarder._on_compaction_started,
     "session.next.compaction.ended": OpenCodeNativeForwarder._on_compaction_ended,
     "session.compacted": OpenCodeNativeForwarder._on_compaction_ended,
-    # Mirror a TUI model switch back to Omnigent (in-harness session-cmd sync).
+    # Mirror a TUI model switch back to agent-meow (in-harness session-cmd sync).
     "session.next.model.switched": OpenCodeNativeForwarder._on_model_switched,
     # Permission ask: 1.17.x emits ``permission.asked``; keep the ``v2`` spelling
     # too so a point-release rename still routes through the policy gate.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deploy Omnigent to a Databricks App via Databricks Asset Bundles.
+"""Deploy agent-meow to a Databricks App via Databricks Asset Bundles.
 
 End-to-end orchestrator that wraps `databricks bundle deploy` +
 `databricks bundle run`. The build pieces (version stamp, wheel
@@ -238,7 +238,7 @@ def _classify_wheels(wheels: Iterable[Path]) -> _ClassifiedWheels:
 
 
 def _wheel_version(wheel: Path, prefix: str) -> str:
-    """Extract a deploy version from an Omnigent wheel filename.
+    """Extract a deploy version from an agent-meow wheel filename.
 
     :param wheel: Built wheel path, e.g.
         ``dist/omnigent-0.1.0.post123-py3-none-any.whl``.
@@ -276,7 +276,7 @@ def _derive_deploy_version_from_wheels(wheels: list[Path]) -> str:
 
 
 def _sweep_local_src_wheels(keep: set[str]) -> None:
-    """Delete Omnigent wheels from src/ whose filename is not in `keep`.
+    """Delete agent-meow wheels from src/ whose filename is not in `keep`.
 
     Old deploys accumulate wheels here. Databricks Apps installs the
     source directory as a project, so stale wheels can keep local path
@@ -837,7 +837,7 @@ def main() -> int:
         _log(f"  {wheel.name}  {size_mb:.2f} MB")
     if classified.oversize:
         raise SystemExit(
-            "uv-based Databricks Apps deploys require all Omnigent wheels "
+            "uv-based Databricks Apps deploys require all agent-meow wheels "
             "to fit in the app source snapshot. Rebuild with --skip-web-ui "
             "or reduce wheel size; UC Volume wheel paths are not used "
             "because uv lock validates path sources locally."

@@ -596,7 +596,7 @@ def _prompt_global_auth() -> tuple[dict[str, str], None] | tuple[None, None]:
 
 def _prompt_server_url(current: str | None) -> str | None:
     """
-    Prompt for the Omnigent server URL, or confirm the existing one.
+    Prompt for the agent-meow server URL, or confirm the existing one.
 
     Skipped when *current* is already set and the user presses Enter to
     accept it. The user can type a new value to override.
@@ -618,7 +618,7 @@ def _prompt_server_url(current: str | None) -> str | None:
             return current
     console.print("  [bold]Server URL[/bold]")
     console.print(
-        "  [dim]The Omnigent server your agents connect to."
+        "  [dim]The agent-meow server your agents connect to."
         " Leave blank to run locally (no server).[/dim]"
     )
     console.print()
@@ -667,7 +667,7 @@ def _prompt_existing_or_new(configs: list[Path]) -> Path | None:
         console.print()
         console.print("[bold]What would you like to do?[/bold]")
         console.print()
-        choice = _arrow_menu(["Create a new Omnigent", "Run an existing Omnigent"])
+        choice = _arrow_menu(["Create a new agent-meow", "Run an existing agent-meow"])
         if choice == 0:
             return None
 
@@ -714,14 +714,14 @@ def _show_welcome() -> None:
     from omnigent.inner.mascots import MASCOT_ART_COLOR
 
     banner = startup_banner_strings(
-        "Welcome to Omnigent!",
+        "Welcome to agent-meow!",
         hint_line="skip anytime: omnigent run <agent.yaml>",
         art_color=MASCOT_ART_COLOR,
     )
     console.print()
     sys.stdout.write(banner.ansi + "\n")
     console.print()
-    console.print("  Omnigent is a declarative agent authoring and runtime framework.")
+    console.print("  agent-meow is a declarative agent authoring and runtime framework.")
     console.print("  Define your agent in a YAML config and the framework handles the rest.")
     console.print()
     console.print(
@@ -764,7 +764,7 @@ def _show_welcome() -> None:
 def _prompt_use_case() -> int:
     """Prompt for use case. Returns 1 (single), 2 (multi), or 3 (custom)."""
     console.print(
-        "  Here are two popular coding agent scenarios where people find Omnigent useful:"
+        "  Here are two popular coding agent scenarios where people find agent-meow useful:"
     )
     console.print()
     options = [
@@ -1388,11 +1388,11 @@ def run_wizard_and_launch() -> None:
     Asks for three things in order, then writes them to
     ``~/.omnigent/config.yaml``:
 
-    1. **Server URL** — the Omnigent server to connect to (optional;
+    1. **Server URL** — the agent-meow server to connect to (optional;
        blank means run locally).
     2. **Auth** — ``api_key`` (bearer token + optional base URL) or
        ``databricks`` (profile name). When ``type: databricks``, the
-       same profile is reused automatically for Omnigent server OAuth so no
+       same profile is reused automatically for agent-meow server OAuth so no
        separate ``profile:`` key is needed.
     3. **Agent YAML** — path to the agent spec file that becomes
        ``default_agent`` so ``omnigent run`` uses it without an
@@ -1422,7 +1422,7 @@ def run_wizard_and_launch() -> None:
 
     # ── Step 2: LLM executor auth ─────────────────────────────────────
     # When auth.type == "databricks", the same profile is also used to
-    # authenticate with the Omnigent server, so no separate ``profile:`` key
+    # authenticate with the agent-meow server, so no separate ``profile:`` key
     # is needed in the global config.
     _section()
     console.print("  [bold]Step 2 / 3 — LLM auth[/bold]")

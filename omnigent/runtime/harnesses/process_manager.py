@@ -6,7 +6,7 @@ Owns the contract from §Process management of
 conversation, lazily spawned on the conversation's first
 ``get_client`` call, lifecycle coupled to the conversation, idle
 reaper for abandoned subprocesses, crash detection, and AP-startup
-orphan sweep so a previous Omnigent crash doesn't leave runner processes
+orphan sweep so a previous agent-meow crash doesn't leave runner processes
 behind.
 
 This module knows nothing about the harness API — it spawns a
@@ -46,8 +46,8 @@ from omnigent.runtime.harnesses import _HARNESS_MODULES
 _logger = logging.getLogger(__name__)
 
 # Per-AP-instance directory holding all per-conversation Unix
-# sockets (POSIX) and the AP_PID sentinel file. Each Omnigent instance gets a
-# uuid-named subdir so concurrent Omnigent processes (zero-downtime restarts,
+# sockets (POSIX) and the AP_PID sentinel file. Each agent-meow instance gets a
+# uuid-named subdir so concurrent agent-meow processes (zero-downtime restarts,
 # multi-tenant single-machine deployments) don't step on each other.
 #
 # POSIX pins ``/tmp/omnigent`` deliberately: Unix socket paths have a tight
@@ -71,9 +71,9 @@ _TMP_PARENT_ENV_VAR = "OMNIGENT_HARNESS_TMP_PARENT"
 # depth.
 _HARNESS_AUTH_TOKEN_ENV = "OMNIGENT_HARNESS_AUTH_TOKEN"
 
-# Sentinel file the Omnigent instance writes into its subdir on boot. The
+# Sentinel file the agent-meow instance writes into its subdir on boot. The
 # orphan sweep uses it to tell whether a sibling subdir belongs to
-# a still-running Omnigent (leave alone) or a crashed one (kill its
+# a still-running agent-meow (leave alone) or a crashed one (kill its
 # children, remove the dir).
 _AP_PID_FILE = "AP_PID"
 
@@ -141,7 +141,7 @@ def _resolve_harness_idle_timeout_s() -> float:
 # Grace period between SIGTERM and SIGKILL when releasing a
 # subprocess. Long enough for a well-behaved harness to flush
 # in-flight responses + close the FastAPI app cleanly; short
-# enough that a wedged subprocess doesn't block Omnigent shutdown.
+# enough that a wedged subprocess doesn't block agent-meow shutdown.
 _RELEASE_GRACE_S = 5.0
 
 # Timeout for the per-conversation socket file to appear after
@@ -158,7 +158,7 @@ _SPAWN_POLL_INTERVAL_S = 0.05
 
 # httpx's default read timeout (5s) is too short for SSE streams
 # that pause for tens of seconds during tool dispatch round-trips
-# or model-thinking gaps. Omnigent doesn't bound harness-side latency —
+# or model-thinking gaps. agent-meow doesn't bound harness-side latency —
 # the harness controls its own work bounds (inner SDK request
 # timeouts, executor per-turn timeouts) and emits the
 # ``response.heartbeat`` SSE events the design defines for live-
@@ -206,7 +206,7 @@ def _socket_path(instance_dir: Path, conversation_id: str) -> Path:
     """
     Per-conversation socket path under the per-AP-instance dir.
 
-    :param instance_dir: This Omnigent instance's directory, e.g.
+    :param instance_dir: This agent-meow instance's directory, e.g.
         ``/tmp/omnigent/ap-abc123``.
     :param conversation_id: AP-allocated conversation id, e.g.
         ``"conv_xyz789"``.
@@ -289,7 +289,7 @@ async def _wait_for_bind(
             raise RuntimeError(
                 f"harness {harness!r} for conversation "
                 f"{conversation_id!r} exited with "
-                f"{process.returncode} during spawn (see Omnigent stderr)"
+                f"{process.returncode} during spawn (see agent-meow stderr)"
             )
         if await endpoint.can_connect():
             # Lock down the socket file's permissions defensively
@@ -427,7 +427,7 @@ class _SubprocessEntry:
     Bookkeeping for one harness subprocess.
 
     :param process: The :class:`asyncio.subprocess.Process` handle.
-    :param client: The :class:`httpx.AsyncClient` Omnigent uses to talk
+    :param client: The :class:`httpx.AsyncClient` agent-meow uses to talk
         to this subprocess over its Unix socket.
     :param socket_path: Absolute Unix socket path the runner
         bound, e.g.
@@ -503,11 +503,11 @@ class HarnessProcessManager:
     """
     One subprocess per conversation; lifecycle tied to conversation.
 
-    Use ``start()`` once at Omnigent boot to create the per-instance
+    Use ``start()`` once at agent-meow boot to create the per-instance
     directory and run the orphan sweep, then call ``get_client``
     per conversation to lazily spawn / look up its subprocess.
     Call ``release(conv_id)`` when the conversation reaches a
-    terminal state, and ``shutdown()`` at Omnigent shutdown to release
+    terminal state, and ``shutdown()`` at agent-meow shutdown to release
     every remaining subprocess.
 
     See ``designs/SERVER_HARNESS_CONTRACT.md`` §Process management
@@ -572,7 +572,7 @@ class HarnessProcessManager:
     @property
     def instance_dir(self) -> Path:
         """
-        This Omnigent instance's per-instance directory.
+        This agent-meow instance's per-instance directory.
 
         :returns: Path like ``/tmp/omnigent/ap-<uuid>``.
         """
@@ -795,7 +795,7 @@ class HarnessProcessManager:
         teardown path, so a wedged harness can't block the cancel
         route's response.
 
-        :param conversation_id: The Omnigent conversation id whose
+        :param conversation_id: The agent-meow conversation id whose
             harness subprocess should receive the cancel.
         :param timeout_s: Max seconds to wait for the harness's
             204. Larger than the typical RTT but small enough to
@@ -910,7 +910,7 @@ class HarnessProcessManager:
         instance for all callers of a given conv_id over the AP
         instance's lifetime. The per-lock memory cost is tiny
         (one ``asyncio.Lock``), bounded by the count of unique
-        conversation ids the Omnigent instance has ever spawned for. If
+        conversation ids the agent-meow instance has ever spawned for. If
         that bound becomes a real problem, switch to a TTL-based
         lock cache.
 
@@ -933,7 +933,7 @@ class HarnessProcessManager:
         Called from AP's lifespan teardown. After this returns the
         manager is reset to its pre-``start`` state; a subsequent
         ``start()`` would re-initialize it (uncommon — typically
-        Omnigent exits after shutdown).
+        agent-meow exits after shutdown).
         """
         if not self._started:
             return
@@ -947,7 +947,7 @@ class HarnessProcessManager:
             await self.release(conv_id)
         # Best-effort cleanup of our instance dir. If a subprocess
         # we couldn't kill is still holding a socket file, the
-        # rmtree leaves it behind; the next Omnigent boot's orphan
+        # rmtree leaves it behind; the next agent-meow boot's orphan
         # sweep handles it.
         shutil.rmtree(self._instance_dir, ignore_errors=True)
         self._started = False
@@ -1020,7 +1020,7 @@ class HarnessProcessManager:
 
         # Subprocess inherits AP's stdout/stderr per §Process
         # management — operators see harness output interleaved
-        # with Omnigent logs. The runner doesn't currently prefix lines
+        # with agent-meow logs. The runner doesn't currently prefix lines
         # with ``[<harness> <conv>] `` itself; that's tracked as
         # a follow-up (the design calls for it but the simplest
         # correct behavior — inheritance — is fine for v1).
@@ -1244,10 +1244,10 @@ class HarnessProcessManager:
                 )
                 continue
             if _pid_alive(pid):
-                # Sibling Omnigent is still running — leave it alone.
+                # Sibling agent-meow is still running — leave it alone.
                 continue
             _logger.info(
-                "sweeping orphaned Omnigent instance dir %s (pid %d not running)",
+                "sweeping orphaned agent-meow instance dir %s (pid %d not running)",
                 child,
                 pid,
             )

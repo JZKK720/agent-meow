@@ -108,7 +108,7 @@ def test_python_module_entrypoint_uses_unified_click_cli() -> None:
     as the installed ``omnigent`` console script.
 
     This catches ``omnigent/__main__.py`` pointing at the legacy
-    argparse CLI, which bypasses the Omnigent REPL path. In that broken
+    argparse CLI, which bypasses the agent-meow REPL path. In that broken
     state ``python -m omnigent run ...`` opens the old ``>``
     prompt and loses AP-only input features such as slash-command
     autocomplete and bracketed-paste abstraction.
@@ -124,7 +124,7 @@ def test_python_module_entrypoint_uses_unified_click_cli() -> None:
     assert "Usage: python -m omnigent [OPTIONS] COMMAND [ARGS]..." in result.stdout
     assert "Commands:" in result.stdout
     assert "run" in result.stdout and "Attach the REPL to a LIVE session" in result.stdout
-    assert "Omnigent quick chat" not in result.stdout
+    assert "agent-meow quick chat" not in result.stdout
 
 
 @pytest.mark.parametrize(
@@ -220,7 +220,7 @@ def test_claude_command_resume_binds_session_and_passes_unknown_args(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent claude --resume <conv_id>`` binds the Omnigent
+    ``omnigent claude --resume <conv_id>`` binds the agent-meow
     session; unknown args after ``--`` reach ``run_claude_native``
     as raw passthrough.
 
@@ -256,7 +256,7 @@ def test_claude_command_resume_binds_session_and_passes_unknown_args(
     )
 
     assert result.exit_code == 0, result.output
-    # ``--resume conv_abc`` binds the Omnigent conv id; everything
+    # ``--resume conv_abc`` binds the agent-meow conv id; everything
     # post-``--`` reaches ``run_claude_native`` raw (the strip runs
     # there).
     assert captured["server"] == "https://example.com"
@@ -273,11 +273,11 @@ def test_claude_command_short_r_binds_omnigent_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent claude -r <conv_id>`` is the Omnigent resume shortcut.
+    ``omnigent claude -r <conv_id>`` is the agent-meow resume shortcut.
 
-    With the unified ``--resume`` UX, ``-r`` is the Omnigent alias
+    With the unified ``--resume`` UX, ``-r`` is the agent-meow alias
     (not Claude's own short flag). Users who need Claude's own
-    resume can rely on the wrapper to translate the Omnigent conv
+    resume can rely on the wrapper to translate the agent-meow conv
     id internally — see ``omnigent.claude_native._resolve_cold_resume_args``
     for the cold-resume injection.
     """
@@ -306,7 +306,7 @@ def test_claude_command_bare_resume_requests_picker(
 
     Bare ``--resume`` sets the picker sentinel, which the CLI
     translates into ``resume_picker=True`` for ``run_claude_native``.
-    Critical: the Omnigent conv id MUST stay ``None`` so the
+    Critical: the agent-meow conv id MUST stay ``None`` so the
     wrapper actually runs the picker instead of binding to a
     bogus literal sentinel string.
     """
@@ -441,7 +441,7 @@ def test_codex_command_resume_binds_session_and_passes_unknown_args(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent codex --resume <conv_id>`` binds the Omnigent
+    ``omnigent codex --resume <conv_id>`` binds the agent-meow
     session and preserves Codex CLI passthrough args after ``--``.
     """
     captured: dict[str, object] = {}
@@ -2319,7 +2319,7 @@ def test_preregister_agent_stored_tarball_rehydrates(tmp_path: Path) -> None:
 
 
 def test_materialize_harness_launcher_file_writes_omnigent_yaml() -> None:
-    """No-AGENT run materialization writes a standalone Omnigent YAML file."""
+    """No-AGENT run materialization writes a standalone agent-meow YAML file."""
     generated = _materialize_harness_launcher_file(
         harness="claude",
         model="databricks-claude-sonnet-4-6",
@@ -2970,7 +2970,7 @@ def test_run_server_resume_native_redirects_before_attach_preflight(
 ) -> None:
     """Terminal-native ``run --server --resume`` redirects before attach checks.
 
-    The pre-attach liveness check is for Omnigent REPL co-drive. Native-wrapper
+    The pre-attach liveness check is for agent-meow REPL co-drive. Native-wrapper
     sessions need to hand off to ``omnigent claude`` / ``omnigent codex``
     even when their old runner is gone, otherwise a cold native resume fails
     before the wrapper can relaunch its terminal.
@@ -2988,7 +2988,7 @@ def test_run_server_resume_native_redirects_before_attach_preflight(
         raise AssertionError("native resume should redirect before live-session preflight")
 
     def _must_not_attach(**_kwargs: object) -> None:
-        """Fail if direct-server resume reaches Omnigent attach after native redirect."""
+        """Fail if direct-server resume reaches agent-meow attach after native redirect."""
         raise AssertionError("native resume should not call run_attach after redirect")
 
     monkeypatch.setattr("omnigent.chat._redirect_native_resume_if_needed", _redirect)
@@ -4619,7 +4619,7 @@ def test_dispatch_native_terminal_harness_cursor_launches_wrapper(
     """``run --harness cursor-native`` dispatches to the cursor TUI wrapper.
 
     Regression for duplicate user messages: the materialized-launcher REPL
-    drove an Omnigent turn (which persists its own user item) on top of the
+    drove an agent-meow turn (which persists its own user item) on top of the
     cursor forwarder mirroring the same message back, recording each message
     twice. Native terminal harnesses must launch their wrapper directly so the
     TUI is the single source of turns. A top-level ``--model`` is forwarded as a

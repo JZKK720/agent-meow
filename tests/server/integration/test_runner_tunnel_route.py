@@ -1044,7 +1044,7 @@ async def _post_mint_token(
 
     :param app: The tunnel-route app under test.
     :param runner_id: Path runner id.
-    :param token: Binding token for the ``X-Omnigent-Runner-Tunnel-Token``
+    :param token: Binding token for the ``X-agent-meow-Runner-Tunnel-Token``
         header, or ``None`` to omit it.
     :returns: The HTTP response.
     """

@@ -1,6 +1,6 @@
-# Builds + pushes two images to GHCR via GITHUB_TOKEN: the server image
-# (ghcr.io/omnigent-ai/omnigent-server, referenced by every deploy template)
-# and the host image (the `host` target of the same Dockerfile,
+# Builds + pushes two images to GHCR via GITHUB_TOKEN for agent-meow: the
+# server image (ghcr.io/omnigent-ai/omnigent-server, referenced by every deploy
+# template) and the host image (the `host` target of the same Dockerfile,
 # ghcr.io/omnigent-ai/omnigent-host — default for `sandbox create --provider
 # modal` and server-launched managed hosts). Dockerfile ARGs default to public
 # registries, so no build-args needed.

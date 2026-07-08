@@ -1,6 +1,6 @@
-project("Omnigent.xcodeproj")
-scheme("Omnigent")
-test_target_name("Omnigent")
+project("agent-meow.xcodeproj")
+scheme("agent-meow")
+test_target_name("agent-meow")
 only_testing(["OmnigentUITests/OmnigentUITests/testLocalServerSnapshot"])
 configuration("Debug")
 

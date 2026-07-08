@@ -32,6 +32,7 @@ import {
 } from "@/hooks/useChildSessions";
 import { useDebugMode } from "@/hooks/useDebugMode";
 import { terminalTabKey, useTerminals, type TerminalInfo } from "@/hooks/useTerminals";
+import { useTranslation } from "react-i18next";
 
 interface SessionRailProps {
   conversationId: string;
@@ -146,15 +147,18 @@ interface ExecutionLogsCardProps {
 }
 
 function ExecutionLogsCard({ childSessions, onExpand }: ExecutionLogsCardProps) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
   return (
     <Card size="sm" data-testid="execution-logs-card">
       <CardHeader>
-        <CardTitle className="text-sm">Execution logs</CardTitle>
+        <CardTitle className="text-sm">{t("chat.executionLogs")}</CardTitle>
         <CardAction>
           <button
             type="button"
-            aria-label={collapsed ? "Expand execution logs" : "Collapse execution logs"}
+            aria-label={
+              collapsed ? t("chat.expandExecutionLogs") : t("chat.collapseExecutionLogs")
+            }
             aria-expanded={!collapsed}
             className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
             onClick={() => setCollapsed((v) => !v)}

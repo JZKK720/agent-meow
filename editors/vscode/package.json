@@ -1,7 +1,7 @@
 {
   "name": "omnigent-vscode",
-  "displayName": "Omnigent",
-  "description": "Open your running local Omnigent server inside VS Code, in an editor-beside iframe.",
+  "displayName": "agent-meow",
+  "description": "Open your running local agent-meow server inside VS Code, in an editor-beside iframe.",
   "version": "0.1.0",
   "publisher": "databricks",
   "license": "Apache-2.0",
@@ -18,12 +18,12 @@
   "activationEvents": [],
   "contributes": {
     "configuration": {
-      "title": "Omnigent",
+      "title": "agent-meow",
       "properties": {
         "omnigent.serverUrl": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Manual Omnigent server URL override for a **localhost** server (e.g. `http://127.0.0.1:6767`). Leave empty to auto-discover a locally running Omnigent server. Non-localhost URLs are not supported in this build."
+          "markdownDescription": "Manual agent-meow server URL override for a **localhost** server (e.g. `http://127.0.0.1:6767`). Leave empty to auto-discover a locally running agent-meow server. Non-localhost URLs are not supported in this build."
         }
       }
     },
@@ -31,7 +31,7 @@
       "activitybar": [
         {
           "id": "omnigent-container",
-          "title": "Omnigent",
+          "title": "agent-meow",
           "icon": "media/omnigent-icon.svg"
         }
       ]
@@ -41,20 +41,20 @@
         {
           "type": "tree",
           "id": "omnigent.home",
-          "name": "Omnigent"
+          "name": "agent-meow"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "omnigent.home",
-        "contents": "Open the running Omnigent server UI in an editor tab.\n[Open Omnigent](command:omnigent.open)\nStart a local server with `omnigent server`, or set `omnigent.serverUrl` to a localhost URL."
+        "contents": "Open the running agent-meow server UI in an editor tab.\n[Open agent-meow](command:omnigent.open)\nStart a local server with `omnigent server`, or set `omnigent.serverUrl` to a localhost URL."
       }
     ],
     "commands": [
       {
         "command": "omnigent.open",
-        "title": "Omnigent: Open",
+        "title": "agent-meow: Open",
         "icon": "media/omnigent-icon.svg"
       }
     ],

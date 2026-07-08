@@ -107,7 +107,7 @@ def _validate_spec_version(spec: AgentSpec, result: ValidationResult) -> None:
         result.add("spec_version", f"must be 1, got {spec.spec_version}")
 
 
-# Omnigent compat: imported surgically from a dedicated module so
+# agent-meow compat: imported surgically from a dedicated module so
 # the integration's tech debt is removable in one shot. See
 # omnigent/spec/_omnigent_compat.py. Placed after the module's
 # internal helpers (rather than with the top-of-file imports) so the
@@ -484,9 +484,9 @@ def _validate_os_env(spec: AgentSpec, result: ValidationResult) -> None:
     that the runtime can't reject on its own without an obscure error
     (or, worse, silently degrades the policy to no-op).
 
-    The Omnigent parser already enforces these on the YAML-loaded path,
+    The agent-meow parser already enforces these on the YAML-loaded path,
     but ``AgentSpec`` may also be constructed programmatically —
-    by tests, by the Omnigent compat shim, or by future API
+    by tests, by the agent-meow compat shim, or by future API
     callers that build a spec without going through the YAML
     pipeline. The validator is the last common gate before the
     spec is handed to the runtime, so the same combos are checked

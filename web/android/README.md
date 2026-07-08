@@ -1,6 +1,6 @@
-# Omnigent Android
+# agent-meow Android
 
-Thin Kotlin/`WebView` shell for Omnigent. Like the Electron app and the iOS
+Thin Kotlin/`WebView` shell for agent-meow. Like the Electron app and the iOS
 shell (`web/ios`), this target loads the server-served web UI instead of
 shipping a duplicate copy of the SPA. It is a native _shell_, not a rewrite.
 

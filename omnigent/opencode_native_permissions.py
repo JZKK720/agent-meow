@@ -4,10 +4,10 @@ OpenCode requests approval for sensitive actions via permission events
 (``permission.v2.asked`` over SSE / ``GET /permission``) and accepts a
 reply of ``once`` / ``always`` / ``reject`` (``POST
 /permission/{requestID}/reply``). This module is the seam between
-OpenCode's permission surface and Omnigent's policy/approval model:
+OpenCode's permission surface and agent-meow's policy/approval model:
 
 1. Normalize a raw permission request into a flat policy-evaluation input.
-2. Map an Omnigent policy verdict (allow / allow-always / deny / ask) onto
+2. Map an agent-meow policy verdict (allow / allow-always / deny / ask) onto
    an OpenCode reply.
 3. Fail closed: an unmapped verdict yields no auto-reply, so the caller
    must obtain a human decision before answering.
@@ -24,7 +24,7 @@ OPENCODE_NATIVE_HARNESS = "opencode-native"
 # OpenCode's accepted reply tokens.
 OpenCodeReply = Literal["once", "always", "reject"]
 
-# Omnigent-side normalized decisions used by the forwarder.
+# agent-meow-side normalized decisions used by the forwarder.
 PolicyDecision = Literal["allow_once", "allow_always", "reject", "ask"]
 
 
@@ -104,7 +104,7 @@ def normalize_for_policy(
     workspace: str | None,
 ) -> dict[str, Any]:
     """
-    Build an Omnigent policy-evaluation input from a permission request.
+    Build an agent-meow policy-evaluation input from a permission request.
 
     The shape mirrors what the codex-native policy hook posts to
     ``/v1/sessions/{id}/policies/evaluate`` — an action name plus the
@@ -112,7 +112,7 @@ def normalize_for_policy(
     can reason about the operation.
 
     :param request: The normalized OpenCode permission request.
-    :param omnigent_session_id: Owning Omnigent conversation id.
+    :param omnigent_session_id: Owning agent-meow conversation id.
     :param workspace: Session working directory, when known.
     :returns: A flat dict suitable for policy evaluation.
     """
@@ -164,7 +164,7 @@ def _extract_resource_fields(
 
 def map_verdict_to_decision(verdict: Mapping[str, Any] | None) -> PolicyDecision:
     """
-    Map an Omnigent policy verdict onto a normalized decision.
+    Map an agent-meow policy verdict onto a normalized decision.
 
     Recognizes both ``{"decision": "..."}`` and ``{"action": "..."}``
     verdict shapes. Anything unrecognized maps to ``"ask"`` (fail closed:
@@ -194,7 +194,7 @@ def decision_to_reply(decision: PolicyDecision) -> OpenCodeReply | None:
     forwarder NEVER replies ``"always"``. opencode persists an ``"always"``
     reply into its local ``approved`` ruleset and then auto-allows every future
     matching tool WITHOUT re-emitting ``permission.asked`` (see opencode
-    ``permission/index.ts``), which bypasses the Omnigent policy engine and
+    ``permission/index.ts``), which bypasses the agent-meow policy engine and
     breaks live policy changes — e.g. toggling "Require Approval" mid-session
     would never take effect because opencode stopped asking. Replying ``"once"``
     forces opencode to re-ask on every call so the server engine stays

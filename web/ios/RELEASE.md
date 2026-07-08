@@ -1,4 +1,4 @@
-# Releasing Omnigent iOS
+# Releasing agent-meow iOS
 
 Releases are built locally with [fastlane](https://fastlane.tools). The `beta`
 lane archives a signed Release build and uploads it to TestFlight; the `release`
@@ -50,7 +50,7 @@ Apple finishes processing.
   number with no version churn in git. Don't bump it by hand.
 - **Marketing version** (`CFBundleShortVersionString`, currently `0.1.0`) is set
   manually. Bump `MARKETING_VERSION` for both the Debug and Release
-  configurations of the **Omnigent** target in Xcode (or via `fastlane
+  configurations of the **agent-meow** target in Xcode (or via `fastlane
 increment_version_number`) when shipping a new user-facing version.
 - **App icon** is the shared Icon Composer source at
   `platform-assets/AppIcon.icon`, which the iOS target includes directly for
@@ -72,7 +72,7 @@ the latest uploaded TestFlight build and uploads `fastlane/metadata` plus
 - `bundle exec fastlane tests` — run the `OmnigentTests` unit suite.
 - `bundle exec fastlane screenshots` — build and capture App Store screenshots
   into `fastlane/screenshots` using the `OmnigentUITests` snapshot target. The
-  lane rebuilds the web UI, starts an isolated local Omnigent server via `uv` on
+  lane rebuilds the web UI, starts an isolated local agent-meow server via `uv` on
   a non-6767 port, and connects the simulator to that server automatically.
 - `bundle exec fastlane release` — upload a new binary to App Store Connect
   without submitting it for review. Prefer `prod` after a TestFlight build is

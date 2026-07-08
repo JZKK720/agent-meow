@@ -38,12 +38,12 @@ function originOf(url: string): string | null {
  *
  * The shell hides the native title bar (titleBarStyle "hiddenInset"), so the
  * strip at the top of the window — normally the OS title — is blank canvas
- * owned by the web layer. This fills its center with "Omnigent — <host>" and
+ * owned by the web layer. This fills its center with "agent-meow — <host>" and
  * a chevron; clicking opens a menu of recently-connected servers (switching
  * re-points the whole window via the shell) plus "Connect to new server…",
  * which returns the window to the shell's setup page.
  *
- * When a thread is open, its title replaces the "Omnigent" brand label
+ * When a thread is open, its title replaces the "agent-meow" brand label
  * (becoming "<title> — <host>") so the window title tracks what the user
  * is looking at, like a document window.
  *

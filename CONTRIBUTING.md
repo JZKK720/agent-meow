@@ -1,7 +1,13 @@
-# Contributing to Omnigent
+# Contributing to agent-meow
 
-Thanks for your interest in improving Omnigent. Issues and pull requests are
+Thanks for your interest in improving agent-meow. Issues and pull requests are
 welcome. For larger changes, open an issue first so we can discuss the approach.
+
+agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent)
+(Apache-2.0). The Python package directory `omnigent/` is retained as a
+vendored runtime; user-facing strings and the CLI entry point have been
+rebranded. See [docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md) for the full
+rename roadmap.
 
 Please don't include secrets, internal URLs, customer data, or private
 configuration in issues, tests, examples, or logs.
@@ -33,6 +39,7 @@ Install local prerequisites first:
 ```bash
 git clone https://github.com/omnigent-ai/omnigent.git
 cd omnigent
+# agent-meow is developed on a fork of the upstream omnigent-ai/omnigent repo.
 
 uv python install
 uv venv --python "$(cat .python-version)"

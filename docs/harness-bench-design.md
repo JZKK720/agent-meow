@@ -129,7 +129,7 @@ tests/harness_bench/
     _base.py         #   CapabilityProbe: name, priority, applies_to, declared(), run()
     basic_turn.py
     streaming.py
-    tool_calling.py  #   incl. "connects to Omnigent MCP"
+    tool_calling.py  #   incl. "connects to agent-meow MCP"
     interrupt.py
     policy_deny.py
     model_override.py
@@ -194,7 +194,7 @@ Validated for presence and shape only: `Owner`, `Transport`, `Implementation`,
 | Dimension | How the probe proves it |
 |---|---|
 | Basic turn (prereq) | ask model to reply with `<marker>`, assert marker in final text |
-| Connects to Omnigent MCP | expose an Omnigent tool, ask model to call it, assert `ToolCallRequest` dispatched through the relay |
+| Connects to agent-meow MCP | expose an agent-meow tool, ask model to call it, assert `ToolCallRequest` dispatched through the relay |
 | Streaming | count `TextChunk` events: >1 delta = `deltas`, single blob = `complete-only` |
 | Model override | launch with a chosen model, assert routing (gateway request / `TurnComplete` usage model); cross-family reject verified via `model_family_mismatch` |
 | Policy: DENY | set DENY on a tool, ask model to call it, assert the call is blocked + surfaced |

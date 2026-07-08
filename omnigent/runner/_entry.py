@@ -2,7 +2,7 @@
 
 Launched by the CLI when spawning the runner as a separate process.
 Reads process wiring from environment variables set by the parent:
-- ``RUNNER_SERVER_URL``: Omnigent server base URL for outbound calls
+- ``RUNNER_SERVER_URL``: agent-meow server base URL for outbound calls
   (spec fetch, response resolution, and WS tunnel registration).
 """
 
@@ -48,7 +48,7 @@ _logger = logging.getLogger(__name__)
 
 
 def _server_url_from_env() -> str:
-    """Return the required Omnigent server URL from the runner environment.
+    """Return the required agent-meow server URL from the runner environment.
 
     :returns: Server base URL, e.g. ``"http://127.0.0.1:6767"``.
     :raises RuntimeError: If ``RUNNER_SERVER_URL`` is missing or
@@ -63,7 +63,7 @@ def _server_url_from_env() -> str:
 
 
 def _runner_config_path() -> Path:
-    """Return the global Omnigent config path visible to the runner.
+    """Return the global agent-meow config path visible to the runner.
 
     Respects :envvar:`OMNIGENT_CONFIG_HOME` for test isolation and
     subprocess consistency with the CLI/onboarding layer.
@@ -169,7 +169,7 @@ async def _run_inactivity_monitor(
 class _RunnerDatabricksAuth(httpx.Auth):
     """httpx Auth that mints a fresh Databricks OAuth token per request.
 
-    Used by the runner's HTTP client for callbacks to the Omnigent server
+    Used by the runner's HTTP client for callbacks to the agent-meow server
     (agent-bundle downloads, response lookups, file APIs, idle
     notifications). Tokens are refreshed transparently so
     long-running sessions survive the 1-hour OAuth token lifetime.
@@ -188,7 +188,7 @@ class _RunnerDatabricksAuth(httpx.Auth):
             token, e.g. the return value of
             :func:`_make_auth_token_factory`. ``None`` disables
             auth (local unauthenticated servers).
-        :param server_url: Omnigent server URL used to look up the ``?o=``
+        :param server_url: agent-meow server URL used to look up the ``?o=``
             workspace selector for the ``X-Databricks-Org-Id`` routing
             header. Defaults to ``RUNNER_SERVER_URL`` so existing callers
             (which pass only the factory) need no change.
@@ -309,7 +309,7 @@ def _make_auth_token_factory(
     - :func:`serve_tunnel` for the WebSocket ``Authorization`` header
       (refreshed on each reconnect).
     - :class:`_RunnerDatabricksAuth` for the httpx client
-      (refreshed on each HTTP callback to the Omnigent server).
+      (refreshed on each HTTP callback to the agent-meow server).
     - ``omnigent/host/connect.py`` for the host tunnel's WS upgrade
       headers.
 
@@ -435,7 +435,7 @@ def _make_managed_mint_factory(
     callback client (see :func:`_make_auth_token_factory` callers), so one
     credential authenticates every runner->server surface.
 
-    :param server_url: Omnigent server base URL, e.g.
+    :param server_url: agent-meow server base URL, e.g.
         ``"https://omnigent.example.com"``.
     :param binding_token: The runner's tunnel binding token (the sandbox's
         only credential), presented to the mint endpoint.
@@ -487,7 +487,7 @@ class _ManagedMintTokenFactory:
     def __init__(self, mint_url: str, server_url: str, binding_token: str) -> None:
         """
         :param mint_url: Fully-qualified ``/v1/runners/{id}/token`` URL.
-        :param server_url: Omnigent server base URL.
+        :param server_url: agent-meow server base URL.
         :param binding_token: The runner's tunnel binding token.
         """
         self._mint_url = mint_url
@@ -552,7 +552,7 @@ def _mint_managed_owner_token(
     :param server_url: Server base URL, used for the Databricks workspace
         routing header (``X-Databricks-Org-Id``) when applicable.
     :param binding_token: The runner's tunnel binding token, sent as the
-        ``X-Omnigent-Runner-Tunnel-Token`` header to authenticate the mint.
+        ``X-agent-meow-Runner-Tunnel-Token`` header to authenticate the mint.
     :returns: ``(jwt, expires_at_epoch_seconds)``.
     :raises httpx.HTTPError: On network failure or a non-2xx response.
     :raises KeyError: If the response is missing the expected fields.
@@ -778,9 +778,9 @@ async def _resolve_agent_spec_from_server(
     session_id: str | None = None,
 ) -> ResolvedSpec | None:
     """
-    Fetch, cache, and parse one agent spec bundle from the Omnigent server.
+    Fetch, cache, and parse one agent spec bundle from the agent-meow server.
 
-    :param server_client: HTTP client pointed at the Omnigent server,
+    :param server_client: HTTP client pointed at the agent-meow server,
         e.g. base URL ``"http://127.0.0.1:6767"``.
     :param spec_cache_root: Stable runner-local cache root for
         extracted agent bundles.
@@ -875,9 +875,9 @@ def create_app(
     # restarts (§5 "Persistence" in RUNNER.md).
     _runner_id = get_stable_runner_id()
     os.environ[RUNNER_ID_ENV_VAR] = _runner_id
-    # Stamp the Omnigent session marker into the runner's environment so
+    # Stamp the agent-meow session marker into the runner's environment so
     # every process this runner spawns can detect it is running inside an
-    # Omnigent agent session, the way Claude Code sets CLAUDE_CODE and
+    # agent-meow agent session, the way Claude Code sets CLAUDE_CODE and
     # Codex sets CODEX. Harness workers inherit it (the process manager
     # merges os.environ), native CLI terminals copy os.environ, and the
     # claude-sdk SDK merges os.environ. The deny-by-default env scrubbers
@@ -890,10 +890,10 @@ def create_app(
     pm = HarnessProcessManager()
 
     # MCP pool — the runner owns stdio MCP subprocess spawning.
-    # The Omnigent server's POST /v1/sessions/{id}/mcp handles policy
+    # The agent-meow server's POST /v1/sessions/{id}/mcp handles policy
     # evaluation and delegates execution here via
     # POST /v1/sessions/{id}/mcp/execute (tunneled through the WS
-    # tunnel the runner opened to the Omnigent server at startup).
+    # tunnel the runner opened to the agent-meow server at startup).
     # stdio_cwd=runner_workspace ensures relative command paths like
     # ".venv/bin/python" resolve against the user's project root.
     from omnigent.runner.mcp_manager import RunnerMcpManager
@@ -946,7 +946,7 @@ def create_app(
 
     async def spec_resolver(agent_id: str, session_id: str | None = None) -> ResolvedSpec | None:
         """
-        Fetch agent spec from the Omnigent server, extract under the
+        Fetch agent spec from the agent-meow server, extract under the
         runner's stable spec cache, and return the parsed
         :class:`AgentSpec`.
 

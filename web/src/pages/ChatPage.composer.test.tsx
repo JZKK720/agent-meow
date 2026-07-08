@@ -360,7 +360,7 @@ describe("Composer slash-command submit routing", () => {
     // isNativeWrapper without showModels → showModel false: native wrappers
     // need an explicit picker-backed propagation path. Without one, /model
     // must NOT fire setModel — it falls through to a plaintext message.
-    // Terminal-first SDK sessions (embedded Omnigent REPL terminal) keep the
+    // Terminal-first SDK sessions (embedded agent-meow REPL terminal) keep the
     // in-process routing.
     const setModel = vi.fn().mockResolvedValue(undefined);
     useChatStore.setState({ setModel });
@@ -711,7 +711,7 @@ describe("Composer effort slash-command visibility", () => {
     expect(screen.getByTestId("slash-menu-item-model")).toBeInTheDocument();
     unmount();
 
-    // Terminal-first SDK session (embedded Omnigent REPL terminal, no
+    // Terminal-first SDK session (embedded agent-meow REPL terminal, no
     // native wrapper) → still an in-process harness, /model stays offered.
     const { unmount: unmountSdk } = render(
       <Composer {...composerProps({ isTerminalFirst: true })} />,

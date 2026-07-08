@@ -1,6 +1,6 @@
-"""Reusable pexpect helpers for driving the Omnigent REPL.
+"""Reusable pexpect helpers for driving the agent-meow REPL.
 
-The Omnigent REPL is a prompt-toolkit app that renders a full
+The agent-meow REPL is a prompt-toolkit app that renders a full
 terminal layout (status bar + input area + streaming output +
 Ctrl+G debug overview). Driving it from tests requires:
 
@@ -68,7 +68,7 @@ PROMPT_READY = r"❯ "
 # picker. REPL tests already exercise prompt-toolkit interactions; the
 # picker has its own focused unit tests and should not sit in front of
 # every pexpect boot.
-_TEST_THEME_CONFIG = "# Omnigent user configuration\ntui:\n  theme: light\n"
+_TEST_THEME_CONFIG = "# agent-meow user configuration\ntui:\n  theme: light\n"
 
 
 @dataclass(frozen=True)
@@ -192,7 +192,7 @@ def spawn_omnigent_run(
         by the ``omnigent_credentials_env`` fixture so PAT
         and base URL propagate.
     :param cwd: Working directory for the subprocess. Must be
-        the Omnigent repo root so YAML ``callable:`` entries
+        the agent-meow repo root so YAML ``callable:`` entries
         like ``tests.resources.examples._shared.tool_functions.get_current_time``
         resolve on sys.path.
     :param timeout: Default expect-timeout in seconds. Tests

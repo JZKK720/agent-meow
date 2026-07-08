@@ -2,7 +2,7 @@
 
 The Docs surface adds first-class document generation and rich-text editing
 to the agent-meow workspace. It is implemented as middleware on top of the
-existing Omnigent runtime — a new `document` session resource type, a new
+existing agent-meow runtime — a new `document` session resource type, a new
 `DocumentStore`, new REST routes, new builtin agent tools, and a new UI
 rail tab.
 

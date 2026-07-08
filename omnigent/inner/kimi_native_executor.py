@@ -1,4 +1,4 @@
-"""Executor that bridges Omnigent web-chat turns into the native Kimi TUI.
+"""Executor that bridges agent-meow web-chat turns into the native Kimi TUI.
 
 It does not launch ``kimi`` — the ``omnigent kimi`` wrapper already
 launched the interactive TUI in the session terminal. Each web-UI turn injects

@@ -1,6 +1,6 @@
 # SDKs
 
-Python packages for integrating with omnigent.
+Python packages for integrating with agent-meow.
 
 ## Structure
 

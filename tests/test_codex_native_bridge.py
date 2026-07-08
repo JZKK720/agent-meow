@@ -101,10 +101,10 @@ def test_read_codex_config_model_none_when_unparsable(bridge_dir: Path) -> None:
 
 def test_policy_hook_config_round_trips(bridge_dir: Path) -> None:
     """
-    Written Omnigent coordinates read back verbatim for the policy hook.
+    Written agent-meow coordinates read back verbatim for the policy hook.
 
     The codex hook subprocess depends on this exact payload to reach the
-    Omnigent server. A failure (dropped/renamed field) would leave the hook
+    agent-meow server. A failure (dropped/renamed field) would leave the hook
     unable to POST, silently disabling enforcement.
     """
     write_policy_hook_config(
@@ -121,7 +121,7 @@ def test_policy_hook_config_round_trips(bridge_dir: Path) -> None:
 
 def test_policy_hook_config_absent_returns_none(bridge_dir: Path) -> None:
     """
-    Reading before any write returns None (no Omnigent server configured).
+    Reading before any write returns None (no agent-meow server configured).
 
     The hook treats None as "nothing to enforce" and no-ops. A failure
     (e.g. raising, or returning a partial dict) would crash the hook or

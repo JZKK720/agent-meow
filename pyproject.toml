@@ -177,7 +177,7 @@ databricks = [
     "databricks-sdk>=0.56.0,<1",
     "opentelemetry-distro>=0,<1",
     "psycopg[binary]>=3.1,<4",
-    # Databricks-specific MCP servers. Not imported by core Omnigent
+    # Databricks-specific MCP servers. Not imported by core agent-meow
     # code, so it is opt-in here rather than a default dependency.
     "databricks-mcp>=0.1.0",
 ]
@@ -439,7 +439,7 @@ known-first-party = ["omnigent"]
     "RUF012", "B007", "B008", "SIM117",
 ]
 # Graduation backlog for code migrated from omnigent during the
-# unification. Pre-unification Omnigent' ruff config only selected
+# unification. Pre-unification agent-meow' ruff config only selected
 # ``E, F, I, UP`` — none of the ARG/BLE/B/SIM/... rules — so these
 # files have a backlog of unused-arg, blind-except, and bugbear issues
 # that were invisible before. Graduate each subpath out of this list

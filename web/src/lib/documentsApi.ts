@@ -39,6 +39,10 @@ export interface Document {
   createdBy: string | null;
 }
 
+function normalizeEpochSeconds(value: number): number {
+  return value > 10_000_000_000 ? Math.floor(value / 1_000_000) : value;
+}
+
 function toDocument(w: DocumentWire): Document {
   return {
     id: w.id,
@@ -47,8 +51,8 @@ function toDocument(w: DocumentWire): Document {
     format: w.format,
     contentMd: w.content_md,
     contentJson: w.content_json,
-    createdAt: w.created_at,
-    updatedAt: w.updated_at,
+    createdAt: normalizeEpochSeconds(w.created_at),
+    updatedAt: normalizeEpochSeconds(w.updated_at),
     version: w.version,
     createdBy: w.created_by,
   };
