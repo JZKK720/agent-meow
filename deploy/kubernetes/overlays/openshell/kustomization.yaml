@@ -14,8 +14,8 @@ resources:
 # Use the server image variant that includes the openshell SDK extra
 # (built by CI with OMNIGENT_EXTRAS=openshell).
 images:
-  - name: ghcr.io/omnigent-ai/omnigent-server
-    newName: ghcr.io/omnigent-ai/omnigent-server-openshell
+  - name: ghcr.io/JZKK720/agent-meow-server
+    newName: ghcr.io/JZKK720/agent-meow-server-openshell
 
 patches:
   - path: configmap-patch.yaml

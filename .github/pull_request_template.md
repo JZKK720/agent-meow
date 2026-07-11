@@ -81,7 +81,7 @@ DELETE THIS WHOLE SECTION if the change isn't noteworthy (CI, refactors,
 test-only changes, dependency bumps with no user impact) — it will simply be
 left out of the changelog. A Breaking change must always keep this section.
 
-Example:  `omnigent run --watch` reruns an agent when files change
+Example:  `meow run --watch` reruns an agent when files change
 (agent-meow CLI currently installs as `omnigent` / `omni`; see docs/REBRAND_AUDIT.md)
 -->
 

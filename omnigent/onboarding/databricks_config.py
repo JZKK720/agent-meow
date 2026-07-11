@@ -48,7 +48,7 @@ def normalize_workspace_url(raw: str) -> str:
 # differs per distribution, and inlining it into the hint string would
 # make the line's width — and therefore its ruff formatting — depend on
 # which slug a checkout carries.
-_SOURCE_REPO_URL = "https://github.com/omnigent-ai/omnigent.git"
+_SOURCE_REPO_URL = "https://github.com/JZKK720/agent-meow.git"
 DATABRICKS_EXTRA_INSTALL_HINT = (
     f'uv tool install --force "omnigent[databricks] @ git+{_SOURCE_REPO_URL}"'
 )

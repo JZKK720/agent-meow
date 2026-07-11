@@ -57,7 +57,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SOURCE_REPO: omnigent-ai/omnigent
+  SOURCE_REPO: JZKK720/agent-meow
   OMNIGENT_SKIP_WEB_UI: "true"
   UV_INDEX_URL: https://pypi.org/simple
   PIP_INDEX_URL: https://pypi.org/simple
@@ -66,7 +66,7 @@ jobs:
   draft:
     name: Harvest CHANGELOG and draft release notes
     if: >-
-      github.repository == 'omnigent-ai/omnigent' &&
+      github.repository == 'JZKK720/agent-meow' &&
       (github.event_name == 'workflow_dispatch' ||
        github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
@@ -254,7 +254,7 @@ jobs:
           python3 -u <<'PYEOF'
           import os, pathlib
           tag = os.environ["TAG"]
-          # The agent is tools-less, so its input must be inline — but `omnigent run
+          # The agent is tools-less, so its input must be inline — but `meow run
           # -p` passes the whole prompt as one argv string, capped at ~128 KiB on
           # Linux (MAX_ARG_STRLEN). Cap the PR list well under that; the mechanical
           # scaffold already covers everything, so a partial list still drafts.
@@ -285,7 +285,7 @@ jobs:
         run: |
           set -euo pipefail
           prompt="$(cat /tmp/draft_prompt.txt)"
-          uv run --project "${GITHUB_WORKSPACE}" omnigent run \
+          uv run --project "${GITHUB_WORKSPACE}" meow run \
             "${GITHUB_WORKSPACE}/.github/agents/release-notes-drafter" \
             -p "$prompt" --no-session \
             2>draft-stderr.log | tee /tmp/draft_out.txt \

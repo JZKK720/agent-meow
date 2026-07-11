@@ -389,7 +389,7 @@ official OTel test harness.
 
 ### 10.4 Verification results (local Jaeger, real turn)
 
-A headless turn (`omnigent run --harness claude-sdk -p "…"`) against a local Jaeger
+A headless turn (`meow run --harness claude-sdk -p "…"`) against a local Jaeger
 all-in-one produced the expected connected traces:
 
 - **Agent turn — one trace, 54 spans across three processes**

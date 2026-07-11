@@ -37,7 +37,7 @@ jobs:
       pull-requests: write # read the PR head ref, post the fork-rejection comment
       issues: write        # react to the triggering comment
     if: >-
-      github.repository == 'omnigent-ai/omnigent'
+      github.repository == 'JZKK720/agent-meow'
       && github.event.issue.pull_request
       && startsWith(github.event.comment.body, '/regen')
     runs-on: ubuntu-latest

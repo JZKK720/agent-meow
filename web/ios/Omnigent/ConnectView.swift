@@ -207,9 +207,9 @@ private enum InfoLink: Identifiable {
 
   var url: URL {
     switch self {
-    case .website: URL(string: "https://omnigent.ai")!
-    case .docs: URL(string: "https://omnigent.ai/docs")!
-    case .privacy: URL(string: "https://omnigent.ai/privacy")!
+    case .website: URL(string: "https://cubecloud.io")!
+    case .docs: URL(string: "https://cubecloud.io/docs")!
+    case .privacy: URL(string: "https://cubecloud.io/privacy")!
     }
   }
 }

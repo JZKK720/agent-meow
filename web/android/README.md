@@ -35,7 +35,7 @@ agent-HTML iframe, so an injected artifact can't reach the native surface.
 Provides native setup chrome (server entry + recent servers via
 `ConnectActivity`), `WebView` loading, foreground local notifications with tap
 routing back into the SPA, a best-effort app badge, edge-to-edge inset plumbing
-(measured insets injected as `--omnigent-android-safe-area-*`, consumed by the
+(measured insets injected as `--agentmeow-android-safe-area-*`, consumed by the
 web inset system), correct system-back / predictive-back handling, file
 downloads — including `blob:` / `data:` exports via a fetch→base64→MediaStore
 bridge, which closes omnigent-ai/omnigent#969 (the iOS shell drops these) —

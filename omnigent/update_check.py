@@ -150,7 +150,7 @@ class _InstalledWheelInfo:
         ``/pipx/venvs/`` pattern to detect it.
     :param vcs_url: The git URL recorded in ``direct_url.json``
         (PEP 610) when the install came from a VCS source, e.g.
-        ``"git+https://github.com/omnigent-ai/omnigent.git"``.
+        ``"git+https://github.com/JZKK720/agent-meow.git"``.
         ``None`` for registry installs (no ``direct_url.json``) or
         URL installs without ``vcs_info``.
     :param commit_sha: The pinned commit SHA recorded by uv or pip
@@ -993,9 +993,9 @@ def _unredact_ssh_userinfo(vcs_url: str) -> str:
     non-SSH URLs (HTTPS, ``file://``) pass through untouched.
 
     :param vcs_url: The normalized ``<vcs>+<scheme>://…`` reinstall URL,
-        e.g. ``"git+ssh://****@github.com/omnigent-ai/omnigent.git"``.
+        e.g. ``"git+ssh://****@github.com/JZKK720/agent-meow.git"``.
     :returns: The same URL with a redacted SSH user restored to ``git``,
-        e.g. ``"git+ssh://git@github.com/omnigent-ai/omnigent.git"``;
+        e.g. ``"git+ssh://git@github.com/JZKK720/agent-meow.git"``;
         the input unchanged when no redacted SSH user is present.
     """
     from urllib.parse import urlsplit, urlunsplit
@@ -1485,8 +1485,8 @@ def _remote_git_head(vcs_url: str) -> str | None:
     determine" rather than crashing.
 
     :param vcs_url: A normalized VCS URL, e.g.
-        ``"git+https://github.com/omnigent-ai/omnigent.git"`` or
-        ``"git+https://…/omnigent.git@main"``.
+        ``"git+https://github.com/JZKK720/agent-meow.git"`` or
+        ``"git+https://…/agent-meow.git@main"``.
     :returns: The 40-char commit SHA the ref resolves to, or ``None``.
     """
     url, ref = _split_vcs_url(vcs_url)

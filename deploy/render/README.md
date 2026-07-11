@@ -4,10 +4,10 @@ Deploy agent-meow to Render in one click. Render provisions the app and a
 managed Postgres database, assigns an HTTPS URL on `*.onrender.com`, and
 handles SSL automatically. No local tooling required.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/omnigent-ai/omnigent)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/JZKK720/agent-meow)
 
-> **Note:** The button points at the public repo `github.com/omnigent-ai/omnigent`.
-> It goes live once that repo **and** the `ghcr.io/omnigent-ai/omnigent-server`
+> **Note:** The button points at the public repo `github.com/JZKK720/agent-meow`.
+> It goes live once that repo **and** the `ghcr.io/JZKK720/agent-meow-server`
 > package are public; until then it only works if you connect Render to the
 > (private) repo in the dashboard first.
 
@@ -15,12 +15,12 @@ handles SSL automatically. No local tooling required.
 
 The `render.yaml` blueprint at the repo root defines:
 
-- **omnigent** (Starter web service) — pulls the pre-built image
-  `ghcr.io/omnigent-ai/omnigent-server:latest` (CI-built; ships the web UI
-  bundle), served on `https://omnigent-<hash>.onrender.com`. While the GHCR
+- **agent-meow** (Starter web service) — pulls the pre-built image
+  `ghcr.io/JZKK720/agent-meow-server:latest` (CI-built; ships the web UI
+  bundle), served on `https://agent-meow-\u003chash\u003e.onrender.com`. While the GHCR
   package is private, add a Render registry credential and reference it from
   `render.yaml` (`image.creds`); once public, the pull is anonymous.
-- **omnigent-db** (`basic-256mb` managed Postgres) — `DATABASE_URL` is injected
+- **agent-meow-db** (`basic-256mb` managed Postgres) — `DATABASE_URL` is injected
   into the service automatically
 - **artifact-data** (10 GB persistent disk) — mounted at `/data` so server
   config, first-boot credentials, cookie secrets, and agent artifacts survive
@@ -56,12 +56,12 @@ automatically by Render.
 ### GitHub OAuth (simplest to register)
 
 1. Go to `github.com/settings/developers` → **New OAuth App**.
-   - Homepage URL: `https://omnigent-<hash>.onrender.com`
+   - Homepage URL: `https://agent-meow-\u003chash\u003e.onrender.com`
    - Authorization callback URL:
-     `https://omnigent-<hash>.onrender.com/auth/callback`
+     `https://agent-meow-\u003chash\u003e.onrender.com/auth/callback`
    - Click **Register application**, then **Generate a new client secret**.
 
-2. In the Render dashboard, open the **omnigent** service → **Environment**
+2. In the Render dashboard, open the **agent-meow** service → **Environment**
    and add / update these variables:
 
    | Variable | Value |
@@ -70,7 +70,7 @@ automatically by Render.
    | `OMNIGENT_OIDC_ISSUER` | `https://github.com` |
    | `OMNIGENT_OIDC_CLIENT_ID` | your GitHub OAuth client ID |
    | `OMNIGENT_OIDC_CLIENT_SECRET` | your GitHub OAuth client secret |
-   | `OMNIGENT_OIDC_REDIRECT_URI` | `https://omnigent-<hash>.onrender.com/auth/callback` |
+   | `OMNIGENT_OIDC_REDIRECT_URI` | `https://agent-meow-\u003chash\u003e.onrender.com/auth/callback` |
 
    Also add `OMNIGENT_OIDC_COOKIE_SECRET` = a 64-hex-char value from
    `openssl rand -hex 32` — OIDC mode requires it and validates it as hex.
@@ -86,7 +86,7 @@ automatically by Render.
 | `OMNIGENT_OIDC_ISSUER` | `https://accounts.google.com` |
 | `OMNIGENT_OIDC_CLIENT_ID` | `…apps.googleusercontent.com` |
 | `OMNIGENT_OIDC_CLIENT_SECRET` | your client secret |
-| `OMNIGENT_OIDC_REDIRECT_URI` | `https://omnigent-<hash>.onrender.com/auth/callback` |
+| `OMNIGENT_OIDC_REDIRECT_URI` | `https://agent-meow-\u003chash\u003e.onrender.com/auth/callback` |
 | `OMNIGENT_OIDC_ALLOWED_DOMAINS` | `example.com` (critical — see note below) |
 
 > **Important:** Without `OMNIGENT_OIDC_ALLOWED_DOMAINS`, any Google account
@@ -101,7 +101,7 @@ as above.
 
 ## Custom domain
 
-In the Render dashboard, open the **omnigent** service → **Settings** →
+In the Render dashboard, open the **agent-meow** service → **Settings** →
 **Custom Domains** → **Add Custom Domain**. Point your DNS CNAME at the
 Render-assigned address. Render provisions a Let's Encrypt cert automatically.
 
@@ -113,7 +113,7 @@ propagates.
 Render redeploys automatically when a new commit lands on the connected branch
 (if auto-deploy is enabled), or manually:
 
-1. In the Render dashboard, open the **omnigent** service.
+1. In the Render dashboard, open the **agent-meow** service.
 2. Click **Manual Deploy** → **Deploy latest commit**.
 
 ## Cost

@@ -5,7 +5,7 @@ This is the *reproducible loop* half of the ``polly-e2e-dev`` skill. It boots a
 throwaway local agent-meow server from the current checkout (which carries
 ``omnigent.inner.nessie.policies`` — the module polly's guardrails resolve) plus
 the repo's mock-LLM server, rewrites the ``examples/polly`` bundle to the
-``openai-agents`` harness wired to the mock, then drives ``omnigent run`` turns
+``openai-agents`` harness wired to the mock, then drives ``meow run`` turns
 where the brain is *scripted* (text or tool calls). Because the brain is mocked,
 the loop tests the **substrate / mechanics** of each critical user journey —
 tool dispatch, the three runner-side guardrails, session persistence — not
@@ -232,7 +232,7 @@ _CREDENTIAL_VARS = (
 
 
 def _run_env(mock_url: str) -> dict[str, str]:
-    """Env for the ``omnigent run`` subprocess: isolated config, mock provider."""
+    """Env for the ``meow run`` subprocess: isolated config, mock provider."""
     env = dict(os.environ)
     env["OMNIGENT_SKIP_ONBOARD"] = "1"
     env["OMNIGENT_NO_UPDATE_CHECK"] = "1"
@@ -375,7 +375,7 @@ def _servers(tmp: Path) -> Iterator[_Servers]:
 def _run_polly(
     bundle: Path, server_url: str, prompt: str, mock_url: str
 ) -> subprocess.CompletedProcess:
-    """``omnigent run <bundle> --server <url> -p <prompt>`` against the mock."""
+    """``meow run <bundle> --server <url> -p <prompt>`` against the mock."""
     return subprocess.run(
         [
             sys.executable,

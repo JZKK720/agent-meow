@@ -1,4 +1,4 @@
-package ai.omnigent.android
+package io.cubecloud.agentmeow.android
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -420,7 +420,7 @@ class MainActivity : ComponentActivity() {
         //      these, defaulting them to `env(safe-area-inset-*)`, which Android
         //      WebView reports as 0. Setting them inline (highest priority)
         //      overrides that 0 everywhere the layout already reads them.
-        //   2. `--omnigent-android-safe-area-*` — consumed by the shell's own
+        //   2. `--agentmeow-android-safe-area-*` — consumed by the shell's own
         //      `[data-android-native]` rules when the server IS up to date (folded
         //      via max() in index.css); a harmless no-op otherwise.
         // We deliberately do NOT call `__omnigentNativeEmitInsets` — that feeds the
@@ -437,10 +437,10 @@ class MainActivity : ComponentActivity() {
               const bottom = '${bars.bottom / d}px';
               s.setProperty('--omnigent-safe-top', top);
               s.setProperty('--omnigent-safe-bottom', bottom);
-              s.setProperty('--omnigent-android-safe-area-top', top);
-              s.setProperty('--omnigent-android-safe-area-bottom', bottom);
-              s.setProperty('--omnigent-android-safe-area-left', '${bars.left / d}px');
-              s.setProperty('--omnigent-android-safe-area-right', '${bars.right / d}px');
+              s.setProperty('--agentmeow-android-safe-area-top', top);
+              s.setProperty('--agentmeow-android-safe-area-bottom', bottom);
+              s.setProperty('--agentmeow-android-safe-area-left', '${bars.left / d}px');
+              s.setProperty('--agentmeow-android-safe-area-right', '${bars.right / d}px');
             })();
             """.trimIndent()
         webView.evaluateJavascript(js, null)

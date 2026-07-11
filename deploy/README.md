@@ -15,7 +15,7 @@ agent-meow server is live with HTTPS in a few minutes.
 
 | Platform | Button | Docs |
 |---|---|---|
-| **Render** | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/omnigent-ai/omnigent) | [`render/README.md`](render/README.md) |
+| **Render** | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/JZKK720/agent-meow) | [`render/README.md`](render/README.md) |
 | **Railway** | *(button pending; see below)* | [`railway/README.md`](railway/README.md) |
 
 <!-- TODO(oss-release): publish the Railway template at railway.com/new/template
@@ -98,7 +98,7 @@ deploy/
 │
 └── docker/            ← common Docker image + compose stack
     ├── Dockerfile         multi-stage slim image (node web build → python builder → runtime)
-    ├── docker-compose.yaml   omnigent + postgres for any Docker host
+    ├── docker-compose.yaml   agent-meow + postgres for any Docker host
     ├── entrypoint.py
     ├── .env.example
     ├── README.md
@@ -191,7 +191,7 @@ WebSocket tunnel:
 
 The deploy options here are all about the server. Runners aren't
 deployed; every user launches one on their own machine with
-`omnigent run …  --server <url>` or `omnigent claude  --server <url>`.
+`meow run …  --server <url>` or `meow claude  --server <url>`.
 
 This separation is why the server image is small (no `tmux`, no
 harness SDKs, no LLM API keys in the image) and why no agent code
@@ -203,7 +203,7 @@ Once the server is up, sign in from your machine. The token is reused by
 `run`, `attach`, and `host`:
 
 ```bash
-omnigent login https://your-host
+meow login https://your-host
 ```
 
 `login` detects the server's auth mode automatically. Built-in accounts,
@@ -216,13 +216,13 @@ Then register the machine as a host, so sessions created in the web UI can
 run on it:
 
 ```bash
-omnigent host https://your-host
+meow host https://your-host
 ```
 
 Or point a one-off run at the server directly:
 
 ```bash
-omnigent run path/to/agent.yaml --server https://your-host
+meow run path/to/agent.yaml --server https://your-host
 ```
 
 ## Run hosts in cloud sandboxes
@@ -235,8 +235,8 @@ needed (`pip install 'omnigent[modal]'`, `'omnigent[daytona]'`, or
 (`modal token new`, `DAYTONA_API_KEY`, `ISLO_API_KEY`, or `E2B_API_KEY`), then:
 
 ```bash
-omnigent sandbox create --provider modal     # or --provider daytona / islo / e2b
-omnigent sandbox connect --provider modal --sandbox-id <id> --server https://your-host
+meow sandbox create --provider modal     # or --provider daytona / islo / e2b
+meow sandbox connect --provider modal --sandbox-id <id> --server https://your-host
 ```
 
 > [!NOTE]
@@ -254,7 +254,7 @@ session with `"host_type": "managed"` (e.g.
 server provision a sandbox, start a host in it, and run the session there.
 No laptop, no CLI steps per session; the sandbox is terminated when the
 session is deleted. Configuration is a `sandbox:` section in the server
-config (`omnigent server -c config.yaml`, or `<data_dir>/config.yaml`):
+config (`meow server -c config.yaml`, or `<data_dir>/config.yaml`):
 
 ```yaml
 sandbox:
@@ -270,7 +270,7 @@ Each sandbox authenticates back with a server-minted, per-launch token, so
 no user credentials ever enter the sandbox.
 
 **The host image.** Sandboxes boot from the official prebaked host image
-(`ghcr.io/omnigent-ai/omnigent-host:latest`, published by CI from the `host`
+(`ghcr.io/JZKK720/agent-meow-host:latest`, published by CI from the `host`
 target of [`docker/Dockerfile`](docker/Dockerfile)), so the host starts in
 seconds instead of installing agent-meow at boot. The image ships the
 coding-harness CLIs (`claude`, `codex`, `pi`, `kiro-cli`), so agents on any harness run
@@ -280,8 +280,8 @@ target and point the config at it:
 
 ```bash
 docker build -f docker/Dockerfile --target host \
-  -t docker.io/<you>/omnigent-host:latest .
-docker push docker.io/<you>/omnigent-host:latest
+  -t docker.io/<you>/agent-meow-host:latest .
+docker push docker.io/<you>/agent-meow-host:latest
 ```
 
 ```yaml
@@ -289,7 +289,7 @@ sandbox:
   provider: modal
   server_url: https://your-host
   modal:
-    image: docker.io/<you>/omnigent-host:latest
+    image: docker.io/<you>/agent-meow-host:latest
 ```
 
 For private registries, set `OMNIGENT_MODAL_REGISTRY_SECRET` on the server
@@ -360,7 +360,7 @@ guide lives at [`daytona/README.md`](daytona/README.md); the Islo guide
 ## Auth
 
 Auth is driven by a single switch, `OMNIGENT_AUTH_ENABLED`. The framework
-default (a bare local `omnigent server`) leaves it off: single-user
+default (a bare local `meow server`) leaves it off: single-user
 `header` mode, no login. The containerized deploys here (Docker / HF / Render /
 Railway / Modal / Fly) set `OMNIGENT_AUTH_ENABLED=1` by default in their
 entrypoints,
@@ -427,7 +427,7 @@ admins: [you@yourcompany.com]         # who can manage members
 across when you switch, so they keep their sessions and admin rights:
 
 ```bash
-omnigent debug migrate-accounts-to-oidc <database-url> --domain yourcompany.com
+meow debug migrate-accounts-to-oidc <database-url> --domain yourcompany.com
 ```
 
 For the provider-specific walkthroughs (GitHub OAuth, Google Workspace,

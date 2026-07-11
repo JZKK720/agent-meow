@@ -1,4 +1,4 @@
-package ai.omnigent.android
+package io.cubecloud.agentmeow.androidio.cubecloud.agentmeowio.cubecloud.agentmeow
 
 import android.content.Context
 
@@ -33,7 +33,7 @@ class ServerStore(context: Context) {
     }
 
     private companion object {
-        const val PREFS = "ai.omnigent.android.servers"
+        const val PREFS = "io.cubecloud.agentmeow.android.servers"
         const val KEY_CURRENT = "current_server_url"
         const val KEY_RECENTS = "recent_server_urls"
         const val MAX_RECENTS = 8

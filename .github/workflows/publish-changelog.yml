@@ -78,7 +78,7 @@ jobs:
     # Canonical repo only; skip cleanly where the App isn't configured.
     if: >-
       needs.resolve.outputs.is_final == 'true' &&
-      github.repository == 'omnigent-ai/omnigent' &&
+      github.repository == 'JZKK720/agent-meow' &&
       vars.OMNIGENT_BOT_APP_ID != ''
     env:
       TAG: ${{ needs.resolve.outputs.tag }}

@@ -54,7 +54,7 @@ Then use `.venv/bin/python` / `.venv/bin/omni` below.
 The driver boots a throwaway local agent-meow server (which carries
 `omnigent.inner.nessie.policies` — the module polly's guardrails resolve) plus
 the repo's mock-LLM server, rewrites the polly bundle to the `openai-agents`
-harness wired to the mock, then runs `omnigent run` turns where the brain is
+harness wired to the mock, then runs `meow run` turns where the brain is
 *scripted* (text or tool calls). It prints one `SUMMARY {json}` per scenario and
 exits non-zero if any check failed.
 

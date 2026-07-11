@@ -6,7 +6,7 @@ the editor — an editor-beside pane that iframes the same UI you see at
 (`server/API.md`); there is nothing new to run on the server side.
 
 This is the first, deliberately small donation (tracking
-[omnigent-ai/omnigent#1219](https://github.com/omnigent-ai/omnigent/issues/1219)):
+[JZKK720/agent-meow#1219](https://github.com/JZKK720/agent-meow/issues/1219)):
 localhost discovery, the editor iframe pane, and the activity-bar / editor-title icons.
 Sessions, diffs, send-selection, and remote/embedded rendering are intentionally out of
 scope for now.

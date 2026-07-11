@@ -11,7 +11,7 @@ port-forward` (see [Verify the deployment](#verify-the-deployment)).
 ## What gets provisioned
 
 - **Deployment** — single-replica pod running
-  `ghcr.io/omnigent-ai/omnigent-server`, served on port 8000.
+  `ghcr.io/JZKK720/agent-meow-server`, served on port 8000.
 - **Service** — ClusterIP on port 80 → 8000.
 - **Ingress** *(optional)* — serves the app over HTTPS at a public web address,
   using cert-manager for the certificate. Skip it if the server isn't going on
@@ -247,7 +247,7 @@ kubectl kustomize deploy/kubernetes/overlays/openshift-postgres/ | oc apply -f -
 
 The `overlays/sandbox-runners/` overlay turns on the **`kubernetes`** managed
 sandbox provider: a `host_type: managed` session spawns one runner Pod that runs
-`omnigent host` as its entrypoint and dials back over the launch-token tunnel. It
+`meow host` as its entrypoint and dials back over the launch-token tunnel. It
 adds a dedicated runner namespace, a least-privilege server SA (scoped Pod +
 Secret rights, **no `pods/exec`**), and the `sandbox:` server config. The server
 image must be built with the `kubernetes` extra
@@ -300,8 +300,8 @@ The server is the control plane — agents run on **hosts** that register with i
 A brand-new deployment has none, so connect at least one machine:
 
 ```bash
-omnigent login https://omnigent.example.com          # authenticate the CLI
-omnigent host  --server https://omnigent.example.com # register this machine
+meow login https://omnigent.example.com          # authenticate the CLI
+meow host  --server https://omnigent.example.com # register this machine
 ```
 
 The host then appears in the web UI when you start a new chat. See the

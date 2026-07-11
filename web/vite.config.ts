@@ -141,8 +141,8 @@ const PWA_MANIFEST = {
   scope: "/",
   display: "standalone",
   orientation: "any",
-  theme_color: "#0d1218",
-  background_color: "#0d1218",
+  theme_color: "#1A1410",
+  background_color: "#FFFBF5",
   icons: [
     { src: "/pwa-192.png", sizes: "192x192", type: "image/png" },
     { src: "/pwa-512.png", sizes: "512x512", type: "image/png" },

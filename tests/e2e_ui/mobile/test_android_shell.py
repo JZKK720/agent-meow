@@ -7,7 +7,7 @@ it (``isAndroidShell()`` in ``web/src/lib/nativeBridge.ts``) and, when true, the
 (``web/src/shell/AppShell.tsx``). That attribute gates the Android-specific
 chrome in ``index.css`` — most importantly the safe-area fold: unlike iOS,
 Android WebView reports ``env(safe-area-inset-*)`` as 0, so the shell injects the
-OS-measured inset as ``--omnigent-android-safe-area-*`` and ``index.css`` folds
+OS-measured inset as ``--agentmeow-android-safe-area-*`` and ``index.css`` folds
 it into the shared ``--omnigent-safe-top/bottom`` with ``max()``.
 
 The e2e_ui harness runs the SPA in a plain Chromium browser, not the Android
@@ -75,7 +75,7 @@ def test_android_shell_tags_root_and_folds_os_inset(
 
     Asserts (1) the app-shell carries ``data-android-native="true"`` — i.e.
     ``isAndroidShell()`` -> ``AppShell`` wiring fires — and (2) the OS inset the
-    shell injects as ``--omnigent-android-safe-area-top`` reaches the shared
+    shell injects as ``--agentmeow-android-safe-area-top`` reaches the shared
     ``--omnigent-safe-top`` through the ``index.css`` ``max()`` fold (which is 0
     in a plain browser, where ``env(safe-area-inset-top)`` is also 0).
 
@@ -96,11 +96,11 @@ def test_android_shell_tags_root_and_folds_os_inset(
     assert page.evaluate(_READ_SAFE_TOP_PX) == "0px"
 
     # The native layer pushes the measured OS inset as
-    # --omnigent-android-safe-area-top; index.css folds it into
+    # --agentmeow-android-safe-area-top; index.css folds it into
     # --omnigent-safe-top via max(), so the layout reads the real inset.
     page.evaluate(
         "() => document.documentElement.style"
-        ".setProperty('--omnigent-android-safe-area-top', '40px')"
+        ".setProperty('--agentmeow-android-safe-area-top', '40px')"
     )
     assert page.evaluate(_READ_SAFE_TOP_PX) == "40px"
 
@@ -113,7 +113,7 @@ def test_no_android_tag_or_fold_in_plain_browser(
 
     Without the ``window.omnigentNative`` stub, ``isAndroidShell()`` is false, so
     the app-shell must NOT carry ``data-android-native`` and the
-    ``--omnigent-android-safe-area-*`` fold must contribute nothing — the gate
+    ``--agentmeow-android-safe-area-*`` fold must contribute nothing — the gate
     that keeps the Android chrome off the plain web app. This is the half of the
     contract only an end-to-end browser run can prove.
 
@@ -129,6 +129,6 @@ def test_no_android_tag_or_fold_in_plain_browser(
     expect(shell).to_be_visible()
     assert shell.get_attribute("data-android-native") is None
 
-    # The web app never injects --omnigent-android-safe-area-*, so with
+    # The web app never injects --agentmeow-android-safe-area-*, so with
     # env(safe-area-inset-top) also 0 here the shared inset stays 0.
     assert page.evaluate(_READ_SAFE_TOP_PX) == "0px"

@@ -6,7 +6,7 @@ description: >-
   check that the harness wires up end-to-end on a fresh machine, and as a
   starting point for a real Kimi-backed agent.
 
-# Single-file launcher shape — matches what ``omnigent run --harness kimi``
+# Single-file launcher shape — matches what ``meow run --harness kimi``
 # generates internally. For multi-agent bundles, prefer the directory layout
 # under ``examples/polly/`` / ``examples/debby/``.
 executor:
@@ -40,9 +40,9 @@ prompt: |
 # against agent-meow's dispatch path.
 
 # Try it:
-#   omnigent run examples/kimi_hello.yaml
-#   omnigent run examples/kimi_hello.yaml -p "summarise the README"
-#   omnigent run examples/kimi_hello.yaml -m kimi-k2-turbo
+#   meow run examples/kimi_hello.yaml
+#   meow run examples/kimi_hello.yaml -p "summarise the README"
+#   meow run examples/kimi_hello.yaml -m kimi-k2-turbo
 #
 # Or as a shortcut for any kimi-harness run:
 #   omnigent kimi -p "list the files in the current directory"

@@ -8,7 +8,7 @@
   "icon": "media/omnigent-icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/omnigent-ai/omnigent.git",
+    "url": "https://github.com/JZKK720/agent-meow.git",
     "directory": "editors/vscode"
   },
   "engines": {
@@ -48,7 +48,7 @@
     "viewsWelcome": [
       {
         "view": "omnigent.home",
-        "contents": "Open the running agent-meow server UI in an editor tab.\n[Open agent-meow](command:omnigent.open)\nStart a local server with `omnigent server`, or set `omnigent.serverUrl` to a localhost URL."
+        "contents": "Open the running agent-meow server UI in an editor tab.\n[Open agent-meow](command:omnigent.open)\nStart a local server with `meow server`, or set `omnigent.serverUrl` to a localhost URL."
       }
     ],
     "commands": [
