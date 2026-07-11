@@ -3,7 +3,7 @@
 [CoreWeave Sandbox](https://docs.coreweave.com/products/sandboxes) gives you
 disposable cloud machines for running agent-meow hosts, two ways:
 
-- **CLI-launched**: `omnigent sandbox create` / `connect` provisions a sandbox
+- **CLI-launched**: `meow sandbox create` / `connect` provisions a sandbox
   from your terminal, ships your local checkout into it, and registers it as a
   host with your server.
 - **Server-managed**: the server provisions a sandbox automatically when a
@@ -19,7 +19,7 @@ startup is seconds.
 Two traits shape the rest of this guide:
 
 - **No local port forward.** CoreWeave Sandbox can't forward a sandbox→laptop
-  callback port, so the interactive in-sandbox `omnigent login` / App OAuth step
+  callback port, so the interactive in-sandbox `meow login` / App OAuth step
   is skipped automatically (as on Modal and Daytona) — fine for token/OIDC-auth
   servers.
 - **No egress by default.** CW Sandbox blocks outbound traffic unless asked; the
@@ -43,7 +43,7 @@ export CWSANDBOX_BASE_URL=https://api.cwsandbox.com   # optional (this is the de
 
 ## The host image
 
-Sandboxes boot from `ghcr.io/omnigent-ai/omnigent-host:latest`, published by CI
+Sandboxes boot from `ghcr.io/JZKK720/agent-meow-host:latest`, published by CI
 from the `host` target of [`deploy/docker/Dockerfile`](../docker/Dockerfile)
 with agent-meow and its dependencies preinstalled — including the coding-harness
 CLIs (`claude`, `codex`, `pi`, `kiro-cli`), so agents on any harness run without an
@@ -55,8 +55,8 @@ target and push it anywhere CoreWeave can pull from:
 ```bash
 docker build -f deploy/docker/Dockerfile --target host \
   --platform linux/amd64 \
-  -t docker.io/<you>/omnigent-host:latest .
-docker push docker.io/<you>/omnigent-host:latest
+  -t docker.io/<you>/agent-meow-host:latest .
+docker push docker.io/<you>/agent-meow-host:latest
 ```
 
 Then point agent-meow at it — `OMNIGENT_CWSANDBOX_HOST_IMAGE` for the CLI flow, or
@@ -71,7 +71,7 @@ Then point agent-meow at it — `OMNIGENT_CWSANDBOX_HOST_IMAGE` for the CLI flow
 Provision a sandbox and ship your local checkout into it:
 
 ```bash
-omnigent sandbox create --provider cwsandbox --server https://your-host
+meow sandbox create --provider cwsandbox --server https://your-host
 ```
 
 This pulls the host image, builds wheels from your local checkout, and overlays
@@ -79,12 +79,12 @@ them on top — so the sandbox runs *your* code, not whatever the image was buil
 from. Then register it as a host with your server:
 
 ```bash
-omnigent sandbox connect --provider cwsandbox \
+meow sandbox connect --provider cwsandbox \
   --sandbox-id <id-printed-by-create> \
   --server https://your-host
 ```
 
-`connect` runs `omnigent host` inside the sandbox and holds the connection open
+`connect` runs `meow host` inside the sandbox and holds the connection open
 in your terminal — Ctrl-C tears it down. New sessions targeting that host now run
 in the sandbox.
 
@@ -104,15 +104,15 @@ sandbox).
 
 ### Connecting to an authenticated server
 
-`connect` runs `omnigent host` inside the sandbox, and that host must present
+`connect` runs `meow host` inside the sandbox, and that host must present
 credentials when it dials back to a server that requires authentication. The
-interactive `omnigent login` browser flow can't run inside a sandbox (no callback
+interactive `meow login` browser flow can't run inside a sandbox (no callback
 port forward), so inject the keys for the relevant server instead — name them in
 `OMNIGENT_CWSANDBOX_SANDBOX_ENV` before `create`:
 
 ```bash
 export OMNIGENT_CWSANDBOX_SANDBOX_ENV=DATABRICKS_HOST,DATABRICKS_TOKEN
-omnigent sandbox create --provider cwsandbox --server https://your-host
+meow sandbox create --provider cwsandbox --server https://your-host
 ```
 
 The in-sandbox host mints a fresh bearer token from those credentials on every
@@ -127,7 +127,7 @@ authenticate with a server-minted per-launch token automatically.
 
 ## Server-managed sandboxes
 
-Add a `sandbox:` section to the server config (`omnigent server -c config.yaml`,
+Add a `sandbox:` section to the server config (`meow server -c config.yaml`,
 or `<data_dir>/config.yaml`):
 
 ```yaml
@@ -165,7 +165,7 @@ sandbox:
   provider: cwsandbox
   server_url: https://your-host
   cwsandbox:
-    image: docker.io/<you>/omnigent-host:latest        # default: official image
+    image: docker.io/<you>/agent-meow-host:latest        # default: official image
     env: [OPENAI_API_KEY, ANTHROPIC_API_KEY, GIT_TOKEN]  # server env var NAMES to inject
 ```
 
@@ -193,7 +193,7 @@ So for a managed cwsandbox deployment, front the server with **header or OIDC
 auth** (a reverse proxy / IdP injects the user identity on every request,
 including the runner WebSocket — see
 [`deploy/README.md#auth`](../README.md#auth)), or run it single-user. The
-`accounts` provider is fine for CLI-launched hosts (you `omnigent login`, and
+`accounts` provider is fine for CLI-launched hosts (you `meow login`, and
 that token is what the in-sandbox host forwards), but not yet for the managed
 runner dial-back.
 
@@ -266,7 +266,7 @@ guide](../modal/README.md#git-credentials-private-repositories).
 - **"managed host did not come online within 120s"** — the server waits up to two
   minutes for the in-sandbox host to register. If it times out, check that
   `server_url` is publicly reachable from CoreWeave, then inspect the in-sandbox
-  host log: `/tmp/omnigent-host.log`.
+  host log: `/tmp/agent-meow-host.log`.
 - **Slow first launch** — the first launch from a given image waits on a cold
   registry pull before the sandbox is ready; subsequent launches reuse the cached
   image and start in seconds.

@@ -1,4 +1,4 @@
-package ai.omnigent.android
+package io.cubecloud.agentmeow.android
 
 /**
  * Android `WebView` hands `http(s)` downloads to `DownloadManager`, but

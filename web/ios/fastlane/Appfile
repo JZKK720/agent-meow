@@ -1,5 +1,5 @@
-app_identifier("ai.omnigent.ios")  # The bundle identifier of the app
-team_id("8RMX4WU6F8")               # Apple Developer Portal team (Databricks, Inc.)
+app_identifier("io.cubecloud.agentmeow.ios")  # The bundle identifier of the app
+team_id("<CUBECLOUD_TEAM_ID>")               # Apple Developer Portal team (智方云 (Cubecloud))
 
 # App Store Connect team — only needed if the Apple ID belongs to multiple teams.
 itc_team_id(ENV["ASC_TEAM_ID"]) if ENV["ASC_TEAM_ID"]

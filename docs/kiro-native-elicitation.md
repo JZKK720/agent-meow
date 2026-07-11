@@ -5,7 +5,7 @@
 
 ## Behavior
 
-`omnigent kiro` still runs Kiro's own terminal UI. When Kiro shows a tool approval prompt in the embedded Terminal, agent-meow also mirrors supported one-time approvals into Chat as an approval card. The Terminal prompt remains authoritative and answerable; the Chat card is additive.
+`meow kiro` still runs Kiro's own terminal UI. When Kiro shows a tool approval prompt in the embedded Terminal, agent-meow also mirrors supported one-time approvals into Chat as an approval card. The Terminal prompt remains authoritative and answerable; the Chat card is additive.
 
 Supported today:
 

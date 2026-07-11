@@ -5,7 +5,7 @@ description: >-
   merits, and (during a debate) critiques the other partner's answer.
 
 # Plain responder on the Claude Agent SDK. No model is pinned, so it runs on
-# whatever Claude provider you configured (`omnigent setup`). It has filesystem
+# whatever Claude provider you configured (`meow setup`). It has filesystem
 # access (see the ``os_env`` block below) so it can read reference files while
 # reasoning.
 executor:

@@ -271,7 +271,7 @@ jobs:
         run: |
           set -euo pipefail
           prompt=$(cat /tmp/sec_prompt.txt)
-          uv run omnigent run .github/triage/security/ \
+          uv run meow run .github/triage/security/ \
             -p "$prompt" \
             --no-session \
             2>sec-stderr.log \

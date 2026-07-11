@@ -7,8 +7,8 @@ Hypervisor.framework on macOS) booted from a standard OCI image.
 
 The boxlite provider is **server-managed only**: the server provisions a
 box automatically when a session is created with `"host_type":
-"managed"`, starts `omnigent host` inside it, and removes it when the
-session is deleted. (There is no `omnigent sandbox create` CLI bootstrap
+"managed"`, starts `meow host` inside it, and removes it when the
+session is deleted. (There is no `meow sandbox create` CLI bootstrap
 for boxlite yet — see [Limitations](#limitations).)
 
 A single `boxlite` provider spans **both** runtime targets, chosen by
@@ -48,7 +48,7 @@ host needs no virtualization.
 
 ## Server configuration
 
-Add a `sandbox:` block to your server config (`omnigent server -c …` /
+Add a `sandbox:` block to your server config (`meow server -c …` /
 `OMNIGENT_CONFIG` / `<data_dir>/config.yaml`).
 
 ### Local micro-VMs (no cloud account)
@@ -69,7 +69,7 @@ sandbox:
   provider: boxlite
   server_url: https://omnigent.example.com
   boxlite:
-    image: docker.io/me/omnigent-host:latest     # optional, shared; default: official
+    image: docker.io/me/agent-meow-host:latest     # optional, shared; default: official
     env: [OPENAI_API_KEY, GIT_TOKEN]             # optional, shared; SERVER env var NAMES
     cloud:
       endpoint: https://boxlite.example.com:8100 # selects CLOUD mode
@@ -90,7 +90,7 @@ sandbox:
   provider: boxlite
   server_url: https://omnigent.example.com
   boxlite:
-    image: ghcr.io/acme/omnigent-host:latest   # shared
+    image: ghcr.io/acme/agent-meow-host:latest   # shared
     local:                           # LOCAL mode block (mutually exclusive with `cloud`)
       home_dir: /data/boxlite        # runtime state + image cache (default ~/.boxlite)
       registry:
@@ -135,7 +135,7 @@ values never live in the config file.
    persistent — the managed-session machinery owns teardown.
 2. Network defaults to full egress, so the in-box host can reach
    `server_url`.
-3. The server runs `omnigent host` inside the box (over `box.exec`) with
+3. The server runs `meow host` inside the box (over `box.exec`) with
    a one-time launch token in its environment; the host dials back over
    a WebSocket tunnel and registers. From there the session rides the
    same host/runner machinery every agent-meow host uses — the agent's
@@ -145,11 +145,11 @@ values never live in the config file.
    generation.
 
 Inspect running boxes with the CLI (`boxlite list`, `boxlite logs <id>`);
-the in-box host logs to `/tmp/omnigent-host.log`.
+the in-box host logs to `/tmp/agent-meow-host.log`.
 
 ## Limitations
 
-- **Managed-only.** The `omnigent sandbox create` / `connect` CLI
+- **Managed-only.** The `meow sandbox create` / `connect` CLI
   bootstrap (local wheel shipping + in-sandbox App OAuth) is not
   implemented for boxlite. Use the server-managed flow above. (Adding
   CLI bootstrap later is straightforward — the async `Box.copy_into`

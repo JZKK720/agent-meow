@@ -28,7 +28,7 @@ data:
         # ServiceAccount the runner Pods run as (deliberately powerless).
         service_account: omnigent-runner
         # ── all optional below ──
-        # image: ghcr.io/your-org/omnigent-host:latest  # default: official amd64 host image
+        # image: ghcr.io/your-org/agent-meow-host:latest  # default: official amd64 host image
         # env: [PROXY_URL]           # SERVER env vars injected as literal Pod env (prefer secret_name for creds)
         # node_selector:             # extra node labels, merged with the mandatory kubernetes.io/arch: amd64
         #   disktype: ssd

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-DEFAULT_HOST_IMAGE: str = "ghcr.io/omnigent-ai/omnigent-host:latest"
+DEFAULT_HOST_IMAGE: str = "ghcr.io/JZKK720/agent-meow-host:latest"
 """Default sandbox image across providers: the official prebaked
 agent-meow host image, published by CI from the ``host`` target of
 ``deploy/docker/Dockerfile`` (``:latest`` tracks main; ``:sha-<short>``

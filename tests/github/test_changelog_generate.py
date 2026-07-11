@@ -277,7 +277,7 @@ def test_insert_dev_tag_idempotent() -> None:
 
 # --- render_draft_notes ------------------------------------------------------
 
-_REPO = "omnigent-ai/omnigent"
+_REPO = "JZKK720/agent-meow"
 
 
 def test_draft_notes_groups_into_sections_by_type() -> None:
@@ -308,7 +308,7 @@ def test_draft_notes_groups_into_sections_by_type() -> None:
 def test_draft_notes_has_full_changelog_footer() -> None:
     notes = gen.render_draft_notes([_result(1, "x", ["Feature"])], _REPO)
     assert notes.rstrip().endswith(
-        "Full Changelog: https://github.com/omnigent-ai/omnigent/blob/main/CHANGELOG.md"
+        "Full Changelog: https://github.com/JZKK720/agent-meow/blob/main/CHANGELOG.md"
     )
 
 

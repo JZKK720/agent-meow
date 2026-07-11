@@ -99,12 +99,12 @@ default_platform(:ios)
 #   - internal: a private (custom/unlisted App Store) build for Databricks.
 FLAVORS = {
   public: {
-    bundle_id: "ai.omnigent.ios",
+    bundle_id: "io.cubecloud.agentmeow.ios",
     display_name: "agent-meow",
   },
   internal: {
-    bundle_id: "ai.omnigent.ios.internal",
-    display_name: "agent-meow (Databricks)",
+    bundle_id: "io.cubecloud.agentmeow.ios.internal",
+    display_name: "agent-meow (Internal)",
   },
 }.freeze
 

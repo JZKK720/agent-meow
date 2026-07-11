@@ -117,7 +117,7 @@ runner binding via atomic CAS (`set_runner_id`, `WHERE runner_id IS NULL`).
   (in scope: **claude-native**, **codex-native**.)
 
 CUJs:
-- **Select harness at session start** — `omnigent <harness>` or `omnigent run --harness X`.
+- **Select harness at session start** — `omnigent <harness>` or `meow run --harness X`.
   Aliases `harness_aliases.py:9` (`claude`→`claude-sdk`). Validate `cli.py:5554`;
   ⚠️ native + AGENT-spec combo rejected `cli.py:5874`.
 - **Switch / override model & effort mid-session (from WebUI)** — SDK applies next turn via
@@ -335,11 +335,11 @@ injection (agent holds a placeholder, proxy swaps the real secret). Mapped under
 - **Claude-native subagents** — forwarder watches `<bridge>/subagents/*.meta.json` → POST `external_subagent_start` →
   child Conversation (idempotent by `subagent_id` label) → publishes `session.created`.
 - **Resume dispatch** — `resume_dispatch.py:39 run_resume` reads the wrapper label → dispatches to the native harness
-  (direct-id / picker / remote-server forms). ⚠️ no wrapper label → hint to use `omnigent run --resume`.
+  (direct-id / picker / remote-server forms). ⚠️ no wrapper label → hint to use `meow run --resume`.
 
 ### 2.G  Onboarding, credentials & auth (incl. token refresh) ✅
 
-**First-run setup** — `omnigent setup` wizard (`onboarding/wizard.py`): provider picker, **ambient detection**
+**First-run setup** — `meow setup` wizard (`onboarding/wizard.py`): provider picker, **ambient detection**
 (`onboarding/ambient.py` scans installed CLIs — Claude.app, Codex, LM Studio), saves `~/.omnigent/config.yaml`.
 Databricks profile aliasing reuses same-host profiles to avoid redundant OAuth (`onboarding/setup.py:_alias_profile`).
 
@@ -353,7 +353,7 @@ Databricks profile aliasing reuses same-host profiles to avoid redundant OAuth (
    (handles 401/302, retry-once). ⚠️ **WS tunnel handshake injects the Bearer once at open — no per-message refresh** (§6).
 3. **Client ↔ server** — `server/auth.py:resolve_auth_source` (`:193`), `UnifiedAuthProvider` (`:250`). Three modes:
    **header** (`X-Forwarded-Email` from upstream proxy — default), **accounts** (built-in user/pass → cookie),
-   **oidc** (auth-code+PKCE → cookie). Cookie `__Host-ap_session` (HS256, validated every request). CLI: `omnigent login`
+   **oidc** (auth-code+PKCE → cookie). Cookie `__Host-ap_session` (HS256, validated every request). CLI: `meow login`
    → browser OAuth → token to `auth_tokens.json` (`0600`, with `expires_at`; **no background refresh** — expired →
    re-login). Databricks Apps: stores a *pointer record* (no token; minted fresh) + `?o=` org selector →
    `X-Databricks-Org-Id` header on every request.
@@ -504,7 +504,7 @@ source-of-truth (SoT) anchor → issue/PR refs.
 - 🟠 **Host daemon can't reach backend behind a corporate proxy.** SoT: `cli.py` daemon allowlist has no
   `HTTP(S)_PROXY`/`NO_PROXY`; no config workaround. Issue #1022 · PR #1029.
 - 🟠 **First-run install: Claude CLI via `npm -g` → EACCES.** Issue #890 · PR #891 (native installer). Also live,
-  no PR: #904 (`omnigent claude` config-json crash), #1023 (`[Errno 8]` macOS arm64).
+  no PR: #904 (`meow claude` config-json crash), #1023 (`[Errno 8]` macOS arm64).
 - **(code-pass) Policy-hook static token → fail-closed after ~1 h** — native PreToolUse hook never refreshes its
   snapshot token (`runner/app.py:1137-1145`); tool calls die while chat survives. PR #1439 — **verify live**. [also §2.D]
 - **(code-pass) WS tunnel runner-auth: Bearer injected once at open, no per-message refresh** — survives token expiry?

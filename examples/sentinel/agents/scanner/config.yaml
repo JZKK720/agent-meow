@@ -7,7 +7,7 @@ description: >-
   Never edits files.
 
 # Read-only explorer on the Claude Agent SDK. No model is pinned, so it runs on
-# whatever Claude provider you configured (`omnigent setup`) for agent-meow.
+# whatever Claude provider you configured (`meow setup`) for agent-meow.
 executor:
   type: omnigent
   config:

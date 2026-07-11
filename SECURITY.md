@@ -1,11 +1,11 @@
 # Security Policy
 
 To report a security vulnerability in agent-meow, use
-[GitHub private security advisories](https://github.com/omnigent-ai/omnigent/security/advisories/new).
+[GitHub private security advisories](https://github.com/JZKK720/agent-meow/security/advisories/new).
 
-> agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent).
-> Vulnerabilities inherited from upstream should be reported to the upstream
-> project; agent-meow-specific issues are tracked here.
+> agent-meow is derived from Omnigent (Apache-2.0). Vulnerabilities inherited
+> from the upstream should be reported to the upstream project;
+> agent-meow-specific issues are tracked here.
 
 Please do not open a public issue for security problems, and do not include live
 credentials, tokens, or customer data in any report.

@@ -330,7 +330,7 @@ to a **remote** server never needs the CLI — only "Start locally" and hosting 
 
 ### Start locally
 
-**"Start a server on this machine"** runs `omnigent server start` (idempotent —
+**"Start a server on this machine"** runs `meow server start` (idempotent —
 reuses a healthy one) and then connects this window to its
 `http://127.0.0.1:<port>` URL through the normal connect flow. It does not
 connect this machine as a runner — that stays an explicit step in the app.
@@ -347,7 +347,7 @@ dialog** ("Allow _host_ to manage agent-meow on this machine?") with **Don't All
 (default) / **Allow Once** / **Always Allow**. Only after approval does it — once
 the CLI is authenticated for the server (remote only; local needs none) — either
 adopt a daemon already serving that server (one you started by hand) or spawn
-`omnigent host --server <url>`. **Allow Once** connects this time and re-prompts
+`meow host --server <url>`. **Allow Once** connects this time and re-prompts
 next time; **Always Allow** records the origin in `settings.json`
 (`allowed_hosting_origins`) so later connects skip the prompt. `stop` is
 fail-safe and needs no confirmation. The same bridge exposes `stop` / `restart`.
@@ -382,7 +382,7 @@ macOS Touch ID / keychain dialog, and a native chooser appears when several
 saved passkeys match. Three pieces must agree before this activates:
 
 1. `WEBAUTHN_KEYCHAIN_ACCESS_GROUP` in `src/main.js` —
-   `"<TEAM_ID>.ai.omnigent.desktop"`.
+   `"<TEAM_ID>.io.cubecloud.agentmeow.desktop"`.
 2. The same string in the `keychain-access-groups` entitlement in
    `signing/entitlements.mac.plist`.
 3. An **embedded Developer ID provisioning profile**
@@ -391,7 +391,7 @@ saved passkeys match. Three pieces must agree before this activates:
    entitlement: a Developer ID signature alone doesn't authorize it, and
    AMFI SIGKILLs the app at launch ("Launchd job spawn failed", POSIX
    error 163). Create the profile in the Apple Developer portal: an App ID
-   for `ai.omnigent.desktop` (no extra capabilities — every profile
+   for `io.cubecloud.agentmeow.desktop` (no extra capabilities — every profile
    automatically authorizes keychain groups under `<TEAM_ID>.*`), then
    Profiles → Distribution → Developer ID for that App ID. Verify with
    `security cms -D -i signing/omnigent.provisionprofile`.

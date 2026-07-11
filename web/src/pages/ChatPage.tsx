@@ -58,7 +58,7 @@ import { CompactionMarker, RoutingDecisionChip } from "@/components/blocks/Statu
 import { SystemMessageView } from "@/components/blocks/SystemMessage";
 import { parseSystemMessage } from "@/lib/systemMessage";
 import { Button } from "@/components/ui/button";
-import { OttoIcon } from "@/components/icons/OttoIcon";
+import { MeowCatIcon } from "@/components/icons/MeowCatIcon";
 import { cn } from "@/lib/utils";
 import { validateAttachments } from "@/lib/attachments";
 import { useSurfaceFrontmost } from "@/hooks/useNativeServerSwitcher";
@@ -1852,7 +1852,7 @@ function WorkingStatusPin({ show, suppress = false }: { show: boolean; suppress?
               !visible && "sr-only",
             )}
           >
-            <OttoIcon className="otto-working h-4 w-auto shrink-0" />
+            <MeowCatIcon className="meowcat-working h-4 w-auto shrink-0" />
             <Shimmer className="text-xs font-mono" duration={1.5}>
               Working…
             </Shimmer>
@@ -2236,9 +2236,9 @@ export function JumpToTopButton({
       // top 50px centers the pill on the chat-scroll-fade border (the mask ramps
       // 48px→80px), just below the h-14 ChatHeader. z-40 > header z-30. On the
       // iOS shell the header and fade border shift down by the safe-area inset
-      // (see .chat-scroll-fade in index.css), so add --omnigent-inset-top here
+      // (see .chat-scroll-fade in index.css), so add --agentmeow-inset-top here
       // too to keep the pill centered on the border. The var is 0px off-shell.
-      style={{ top: "calc(50px + var(--omnigent-inset-top))" }}
+      style={{ top: "calc(50px + var(--agentmeow-inset-top))" }}
       className={cn(
         "pointer-events-none absolute inset-x-0 z-40 flex justify-center transition-opacity duration-150",
         visible ? "opacity-100" : "opacity-0",
@@ -2338,7 +2338,7 @@ function WorkingIndicator() {
     <Message from="assistant" data-testid="working-indicator" aria-hidden="true">
       <MessageContent>
         <div className="flex items-center gap-1.5 py-0.5">
-          <OttoIcon className="otto-working h-4 w-auto shrink-0" />
+          <MeowCatIcon className="meowcat-working h-4 w-auto shrink-0" />
           <Shimmer className="text-xs font-mono" duration={1.5}>
             {label}
           </Shimmer>
@@ -2485,8 +2485,8 @@ export function ConnectionIndicator({
         <div
           aria-hidden
           className={cn(
-            "omnigent-native-bottom-spacer",
-            terminalFirst.view === "chat" && "omnigent-native-bottom-spacer--chat",
+            "agentmeow-native-bottom-spacer",
+            terminalFirst.view === "chat" && "agentmeow-native-bottom-spacer--chat",
           )}
         />
       ) : null;

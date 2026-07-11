@@ -1,9 +1,9 @@
 agent-meow
-Copyright (2026) agent-meow contributors
+Copyright (2026) 智方云 (Cubecloud)
 
-agent-meow is a derivative work of Omnigent (https://github.com/omnigent-ai/omnigent),
-originally developed at Databricks, Inc. and its contributors, licensed under
-Apache-2.0. See the LICENSE file for the full license text.
+agent-meow is the agent workspace surface for ColorFire and Meow series AIPC and
+Laptops, developed by 智方云 (Cubecloud). This software is derived from Omnigent,
+licensed under Apache-2.0. See the LICENSE file for the full license text.
 
 This Software includes software developed at Databricks (https://www.databricks.com/)
 and its use is subject to the included LICENSE file.

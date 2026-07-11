@@ -3,7 +3,7 @@
 [E2B](https://e2b.dev) sandboxes give you disposable cloud machines for
 running agent-meow hosts, two ways:
 
-- **CLI-launched**: `omnigent sandbox create` / `connect` provisions a
+- **CLI-launched**: `meow sandbox create` / `connect` provisions a
   sandbox from your terminal, ships your local checkout into it, and
   registers it as a host with your server.
 - **Server-managed**: the server provisions a sandbox automatically when
@@ -13,7 +13,7 @@ running agent-meow hosts, two ways:
 > [!IMPORTANT]
 > **E2B boots from a pre-built *template*, not a registry image.** Unlike
 > the Modal / Daytona / CoreWeave launchers — which pull
-> `ghcr.io/omnigent-ai/omnigent-host` directly — E2B cannot start an
+> `ghcr.io/JZKK720/agent-meow-host` directly — E2B cannot start an
 > arbitrary registry image at create time. You must first build the
 > agent-meow host image into an E2B template (a one-time step, below); the
 > launcher's `template` field then names *that template*, not a
@@ -61,13 +61,13 @@ cat > e2b.Dockerfile <<'EOF'
 # Single-stage, Debian-based — both E2B requirements. The host image
 # already bakes the full omnigent install plus git / tmux / curl, so
 # nothing else is needed here.
-FROM ghcr.io/omnigent-ai/omnigent-host:latest
+FROM ghcr.io/JZKK720/agent-meow-host:latest
 EOF
 
-e2b template build --name omnigent-host --dockerfile e2b.Dockerfile
+e2b template build --name agent-meow-host --dockerfile e2b.Dockerfile
 ```
 
-`omnigent-host` is the default template name the launcher looks for
+`agent-meow-host` is the default template name the launcher looks for
 ([`DEFAULT_E2B_TEMPLATE`](../../omnigent/onboarding/sandboxes/e2b.py)), so
 a deployment that uses that name needs no further config. Use a different
 name (or pin a `:sha-<short>` host image) and point the launcher at it
@@ -86,21 +86,21 @@ rebuild).
 Provision a sandbox and ship your local checkout into it:
 
 ```bash
-omnigent sandbox create --provider e2b
+meow sandbox create --provider e2b
 ```
 
-This starts a sandbox from the `omnigent-host` template, builds wheels
+This starts a sandbox from the `agent-meow-host` template, builds wheels
 from your local checkout, and overlays them on top — so the sandbox runs
 *your* code, not whatever the template was built from. Then register it
 as a host with your server:
 
 ```bash
-omnigent sandbox connect --provider e2b \
+meow sandbox connect --provider e2b \
   --sandbox-id <id-printed-by-create> \
   --server https://your-host
 ```
 
-`connect` runs `omnigent host` inside the sandbox and holds the
+`connect` runs `meow host` inside the sandbox and holds the
 connection open in your terminal — Ctrl-C tears it down (and kills the
 remote process; E2B exposes a real kill handle). New sessions targeting
 that host now run in the sandbox.
@@ -123,13 +123,13 @@ sandbox at provision time.
 > [!NOTE]
 > E2B has no local→sandbox port forward (it exposes sandbox ports
 > *outward* via public URLs only). The interactive in-sandbox
-> `omnigent login` / App OAuth step is therefore skipped automatically
+> `meow login` / App OAuth step is therefore skipped automatically
 > (as on Modal / Daytona): use E2B with servers that don't require
 > in-sandbox App auth, or authenticate via injected credentials (below).
 
 ## Server-managed sandboxes
 
-Add a `sandbox:` section to the server config (`omnigent server -c
+Add a `sandbox:` section to the server config (`meow server -c
 config.yaml`, or `<data_dir>/config.yaml`):
 
 ```yaml
@@ -153,14 +153,14 @@ sandbox:
   provider: e2b
   server_url: https://your-host
   e2b:
-    template: omnigent-host          # E2B template NAME (default: omnigent-host)
+    template: agent-meow-host          # E2B template NAME (default: agent-meow-host)
     env: [OPENAI_API_KEY, ANTHROPIC_API_KEY, GIT_TOKEN]
 ```
 
 > [!NOTE]
 > `sandbox.e2b.template` is an **E2B template name** (built above), not a
 > registry image reference — the field that holds a `ghcr.io/...` ref on
-> the other providers. Omit it to use the default `omnigent-host`
+> the other providers. Omit it to use the default `agent-meow-host`
 > template.
 
 ## Credentials for the sandbox (LLM keys, git tokens)
@@ -241,11 +241,11 @@ Modal guide.
 - **"E2B sandbox creation failed: template '…' is unavailable"** — the
   host image was never built into an E2B template, or the name doesn't
   match. Run the [template build](#build-the-host-template-one-time) with
-  `--name omnigent-host` (or set `sandbox.e2b.template` to your name).
+  `--name agent-meow-host` (or set `sandbox.e2b.template` to your name).
 - **"managed host did not come online within 120s"** — the sandbox
   couldn't dial back to `server_url`. Confirm it's a public HTTPS URL
   reachable from E2B's cloud (not `localhost`), and check
-  `/tmp/omnigent-host.log` inside the sandbox.
+  `/tmp/agent-meow-host.log` inside the sandbox.
 - **Sandbox stops after ~1 hour** — you're on a Hobby account (1 h cap);
   `provision` auto-clamps to it (you'll see a one-line warning). Upgrade
   to Pro for the 24 h maximum, or expect the dead-sandbox relaunch path to
@@ -273,6 +273,6 @@ Modal guide.
 | Variable | Where it's read | Purpose |
 |---|---|---|
 | `E2B_API_KEY` | CLI machine / server | E2B API credentials (required) |
-| `OMNIGENT_E2B_TEMPLATE` | CLI machine / server | E2B template name to provision from (`sandbox.e2b.template` takes precedence; default `omnigent-host`) |
+| `OMNIGENT_E2B_TEMPLATE` | CLI machine / server | E2B template name to provision from (`sandbox.e2b.template` takes precedence; default `agent-meow-host`) |
 | `OMNIGENT_E2B_SANDBOX_ENV` | CLI machine / server | Comma-separated launcher-side env var names to inject (`sandbox.e2b.env` takes precedence for managed) |
 | `OMNIGENT_E2B_MAX_LIFETIME_S` | CLI machine / server | Requested sandbox lifetime in seconds (default 24 h); creation auto-clamps to the account cap if exceeded |

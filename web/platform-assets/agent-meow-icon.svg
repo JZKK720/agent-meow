@@ -1,0 +1,50 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- agent-meow cat icon — 512×512 source for PWA / apple-touch-icon PNG generation -->
+<!-- Warm white background for visibility on dark surfaces (maskable safe zone ~80%) -->
+<rect width="512" height="512" rx="96" fill="#FFFBF5"/>
+<!-- Left ear -->
+<path d="M89.6 140.8 L110.4 60.8 L180.8 124.8 Z" fill="#E8651A"/>
+<!-- Right ear -->
+<path d="M422.4 140.8 L401.6 60.8 L331.2 124.8 Z" fill="#E8651A"/>
+<!-- Inner left ear -->
+<path d="M110.4 124.8 L120 81.6 L160 120 Z" fill="#FFB347" opacity="0.6"/>
+<!-- Inner right ear -->
+<path d="M401.6 124.8 L392 81.6 L352 120 Z" fill="#FFB347" opacity="0.6"/>
+<!-- Head silhouette -->
+<path d="M256 99.2
+  C 190.4 99.2, 140.8 140.8, 124.8 200
+  C 115.2 240, 110.4 280, 120 320
+  C 129.6 360, 160 400, 209.6 419.2
+  C 235.2 430.4, 256 435.2, 256 435.2
+  C 256 435.2, 276.8 430.4, 302.4 419.2
+  C 352 400, 382.4 360, 392 320
+  C 401.6 280, 396.8 240, 387.2 200
+  C 371.2 140.8, 321.6 99.2, 256 99.2
+  Z" fill="#E8651A"/>
+<!-- Right eye sclera -->
+<circle cx="312" cy="232" r="35.2" fill="#FEFEFE"/>
+<!-- Right eye pupil -->
+<circle cx="312" cy="232" r="27.2" fill="black"/>
+<!-- Right eye glint -->
+<circle cx="300.8" cy="220.8" r="9.6" fill="#FEFEFE"/>
+<!-- Left eye sclera -->
+<circle cx="200" cy="232" r="35.2" fill="#FEFEFE"/>
+<!-- Left eye pupil -->
+<circle cx="200" cy="232" r="27.2" fill="black"/>
+<!-- Left eye glint -->
+<circle cx="188.8" cy="220.8" r="9.6" fill="#FEFEFE"/>
+<!-- Nose -->
+<path d="M256 280 L246.4 292.8 L265.6 292.8 Z" fill="#FFB347"/>
+<!-- Mouth left curve -->
+<path d="M256 292.8 C 246.4 304, 233.6 307.2, 225.6 304" stroke="#6B5D4F" stroke-width="6.4" stroke-linecap="round" fill="none" opacity="0.4"/>
+<!-- Mouth right curve -->
+<path d="M256 292.8 C 265.6 304, 278.4 307.2, 286.4 304" stroke="#6B5D4F" stroke-width="6.4" stroke-linecap="round" fill="none" opacity="0.4"/>
+<!-- Whisker dots left -->
+<circle cx="152" cy="304" r="4.8" fill="#FFB347" opacity="0.5"/>
+<circle cx="140.8" cy="320" r="4.8" fill="#FFB347" opacity="0.5"/>
+<circle cx="152" cy="336" r="4.8" fill="#FFB347" opacity="0.5"/>
+<!-- Whisker dots right -->
+<circle cx="360" cy="304" r="4.8" fill="#FFB347" opacity="0.5"/>
+<circle cx="371.2" cy="320" r="4.8" fill="#FFB347" opacity="0.5"/>
+<circle cx="360" cy="336" r="4.8" fill="#FFB347" opacity="0.5"/>
+</svg>

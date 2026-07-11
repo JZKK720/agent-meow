@@ -1,4 +1,4 @@
-package ai.omnigent.android
+package io.cubecloud.agentmeow.android
 
 import android.content.ContentValues
 import android.content.Context

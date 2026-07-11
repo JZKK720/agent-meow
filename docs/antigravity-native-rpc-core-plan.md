@@ -6,7 +6,7 @@
 
 **Architecture:** agy keeps running in a runner-owned tmux terminal (terminal-first UX). A new RPC client (extending `antigravity_native_rpc.py`) drives: read via `GetCascadeTrajectorySteps`/`StreamAgentStateUpdates`, interactions via `HandleCascadeUserInteraction` (surfaced as omnigent elicitations), and interrupt via `CancelCascadeSteps`. A pure step→item mapper replaces `step_to_events`. Turn-send stays on tmux send-keys (pending a confirmed user-turn RPC). The transcript forwarder + durable cursor are retired.
 
-**Tech Stack:** Python 3.13+ (uv), httpx (connect-RPC over HTTP/2, JSON), pytest, existing omnigent server elicitation registry + SSE, agy 1.0.10.
+**Tech Stack:** Python 3.13+ (uv), httpx (connect-RPC over HTTP/2, JSON), pytest, existing meow server elicitation registry + SSE, agy 1.0.10.
 
 **Design spec:** `docs/antigravity-native-rpc-core-design.md`. **Verified wire shapes:** memory `agy-rpc-interaction-bridge.md`.
 

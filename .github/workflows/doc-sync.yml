@@ -45,7 +45,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  CODE_REPO: omnigent-ai/omnigent
+  CODE_REPO: JZKK720/agent-meow
   SITE_REPO_SLUG: ${{ github.repository_owner }}/omnigent-site
   OMNIGENT_SKIP_WEB_UI: "true"
   UV_INDEX_URL: https://pypi.org/simple
@@ -57,7 +57,7 @@ jobs:
     # Cheap pre-gate; the `plan` step refines (no associated PR, or a
     # no-doc-update-labeled merge → no-op).
     if: >-
-      github.repository == 'omnigent-ai/omnigent' &&
+      github.repository == 'JZKK720/agent-meow' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -306,7 +306,7 @@ jobs:
           meta = json.loads(pathlib.Path("/tmp/pr_meta.json").read_text())
           diff = pathlib.Path("/tmp/pr_diff.txt").read_text(encoding="utf-8", errors="replace")
           # The classifier is tools-less (no file access), so its diff must be
-          # inline — but `omnigent run -p` passes the whole prompt as one argv
+          # inline — but `meow run -p` passes the whole prompt as one argv
           # string, and Linux caps a single arg at ~128 KiB (MAX_ARG_STRLEN). Cap
           # the inline diff well under that; a verdict tolerates a partial diff.
           MAX_INLINE_DIFF = 100_000
@@ -339,7 +339,7 @@ jobs:
           pathlib.Path("/tmp/classify_prompt.txt").write_text(prompt)
           PYEOF
           prompt="$(cat /tmp/classify_prompt.txt)"
-          uv run omnigent run .github/agents/doc-classifier \
+          uv run meow run .github/agents/doc-classifier \
             -p "$prompt" --no-session 2>classify-stderr.log | tee /tmp/classify_out.txt \
             || { echo "::warning::classifier exited non-zero"; cat classify-stderr.log; }
           python3 - <<'PYEOF'
@@ -415,7 +415,7 @@ jobs:
             echo "$REASON"
             if [ "$LABEL" = "needs-doc-update" ]; then
               echo ""
-              echo "Drafting a docs PR to \`omnigent-ai/omnigent-site\` (staged on \`${DOCS_BRANCH}\` until release)…"
+              echo "Drafting a docs PR to \`JZKK720/agent-meow-site\` (staged on \`${DOCS_BRANCH}\` until release)…"
             fi
             echo ""
             echo "<sub>Auto-classified on merge. Set the label manually before merging to override. · [run](${RUN_URL})</sub>"
@@ -447,7 +447,7 @@ jobs:
         if: steps.decide.outputs.draft == 'true'
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
-          repository: omnigent-ai/omnigent-site
+          repository: JZKK720/agent-meow-site
           path: omnigent-site
           token: ${{ github.token }}
           persist-credentials: false
@@ -514,7 +514,7 @@ jobs:
         run: |
           set -euo pipefail
           prompt="$(cat /tmp/draft_prompt.txt)"
-          uv run --project "${GITHUB_WORKSPACE}" omnigent run \
+          uv run --project "${GITHUB_WORKSPACE}" meow run \
             "${GITHUB_WORKSPACE}/.github/agents/doc-drafter" \
             -p "$prompt" --no-session \
             2>draft-stderr.log | tee /tmp/draft_out.txt \

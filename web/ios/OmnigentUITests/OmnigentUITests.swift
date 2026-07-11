@@ -7,7 +7,7 @@ final class OmnigentUITests: XCTestCase {
   }
 
   func testLocalServerSnapshot() throws {
-    let app = XCUIApplication(bundleIdentifier: "ai.omnigent.ios")
+    let app = XCUIApplication(bundleIdentifier: "io.cubecloud.agentmeow.ios")
     setupSnapshot(app)
     let serverURL = try XCTUnwrap(
       ScreenshotConfiguration.serverURL(from: app),

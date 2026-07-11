@@ -5,7 +5,7 @@ Tracks pending work and known limitations for the Qwen Code harness
 
 ## What works today
 
-- `omnigent run --harness qwen` / `executor.harness: qwen` (alias `qwen-code`).
+- `meow run --harness qwen` / `executor.harness: qwen` (alias `qwen-code`).
 - ACP executor: streaming turns, system-prompt folding, session-not-found
   reset, missing-binary handling.
 - **Permission gating** (`session/request_permission`): routed through
@@ -13,7 +13,7 @@ Tracks pending work and known limitations for the Qwen Code harness
   (`_decide_permission`), mirroring claude-sdk — a hard policy DENY rejects,
   otherwise the user is asked; default-deny on policy-ASK with no handler.
   Standalone/test use (no bridges wired) falls back to allow.
-- `omnigent setup` → **Qwen Code** row: installs the CLI and guides auth
+- `meow setup` → **Qwen Code** row: installs the CLI and guides auth
   (env vars or interactive `/auth`).
 - Auth via the CLI's own ambient credentials (see Auth model below).
 - **Provider / gateway routing (clean env).** A spec `auth:` / `providers:`

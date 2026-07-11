@@ -21,7 +21,7 @@ import { onNativeInsets } from "@/lib/nativeBridge";
 export function initNativeInsets(): () => void {
   return onNativeInsets(({ topBar, bottomBar }) => {
     const root = document.documentElement.style;
-    root.setProperty("--omnigent-native-top-bar", `${topBar}px`);
-    root.setProperty("--omnigent-native-bottom-bar", `${bottomBar}px`);
+    root.setProperty("--agentmeow-native-top-bar", `${topBar}px`);
+    root.setProperty("--agentmeow-native-bottom-bar", `${bottomBar}px`);
   });
 }
