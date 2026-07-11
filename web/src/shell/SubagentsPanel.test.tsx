@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { OttoIcon } from "@/components/icons/OttoIcon";
+import { MeowCatIcon } from "@/components/icons/MeowCatIcon";
 import { type ChildSessionInfo, useChildSessions } from "@/hooks/useChildSessions";
 import { useSession } from "@/hooks/useSession";
 import { iconForAgentType, SubagentsPanel } from "./SubagentsPanel";
@@ -45,9 +45,9 @@ vi.mock("@/components/icons/KiroIcon", () => ({
 vi.mock("@/components/icons/PiIcon", () => ({
   PiIcon: (props: Record<string, unknown>) => <svg {...props} data-icon="pi" />,
 }));
-// And for the Otto mascot — the generic sub-agent fallback icon.
-vi.mock("@/components/icons/OttoIcon", () => ({
-  OttoIcon: (props: Record<string, unknown>) => <svg {...props} data-icon="otto" />,
+// And for the MeowCat mascot — the generic sub-agent fallback icon.
+vi.mock("@/components/icons/MeowCatIcon", () => ({
+  MeowCatIcon: (props: Record<string, unknown>) => <svg {...props} data-icon="meowcat" />,
 }));
 
 const useChildSessionsMock = vi.mocked(useChildSessions);
@@ -120,8 +120,8 @@ const ICON_CASES: Array<[string | null, ReturnType<typeof iconForAgentType>]> = 
   // dropped without a test failing.
   ["documentation", FileTextIcon],
   ["technical-writer", FileTextIcon],
-  ["general-purpose", OttoIcon],
-  [null, OttoIcon],
+  ["general-purpose", MeowCatIcon],
+  [null, MeowCatIcon],
 ];
 
 beforeEach(() => {
@@ -569,10 +569,10 @@ describe("SubagentsPanel", () => {
     expect(kiroRow.querySelector('[data-icon="kiro"]')).not.toBeNull();
   });
 
-  it("gives native sub-agent children role/Otto icons, not the brand logo", () => {
+  it("gives native sub-agent children role/MeowCat icons, not the brand logo", () => {
     // A native session's sub-agents are all the same brand, so the logo
     // is reserved for full native sessions; sub-agent rows read by role,
-    // with the Otto mascot as the generic fallback.
+    // with the MeowCat mascot as the generic fallback.
     mockChildTree({
       conv_root: [
         childInfo({
@@ -593,7 +593,7 @@ describe("SubagentsPanel", () => {
     const { container } = renderPanel({ rootSessionId: "conv_root" });
 
     const genericRow = childRow(container, "conv_generic");
-    expect(genericRow.querySelector('[data-icon="otto"]')).not.toBeNull();
+    expect(genericRow.querySelector('[data-icon="meowcat"]')).not.toBeNull();
     expect(genericRow.querySelector('[data-icon="claude"]')).toBeNull();
 
     const exploreRow = childRow(container, "conv_explore");
@@ -649,10 +649,10 @@ describe("SubagentsPanel", () => {
     expect(piRow.querySelector('[data-icon="pi"]')).not.toBeNull();
 
     // A substring match (e.g. tool.includes("pi")) would wrongly brand this
-    // row; it must fall back to the generic Otto icon.
+    // row; it must fall back to the generic MeowCat icon.
     const pipelineRow = childRow(container, "conv_pipeline");
     expect(pipelineRow.querySelector('[data-icon="pi"]')).toBeNull();
-    expect(pipelineRow.querySelector('[data-icon="otto"]')).not.toBeNull();
+    expect(pipelineRow.querySelector('[data-icon="meowcat"]')).not.toBeNull();
   });
 
   it("native wrapper labels outrank the pi tool-name match", () => {

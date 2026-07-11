@@ -16,7 +16,7 @@ a managed Postgres, and serves it over HTTPS on `*.up.railway.app`.
 
 ## What gets provisioned
 
-- **omnigent** — web service that pulls `ghcr.io/omnigent-ai/omnigent-server`
+- **agent-meow** — web service that pulls `ghcr.io/JZKK720/agent-meow-server`
   via `deploy/docker/Dockerfile.prebuilt`, served on `https://<project>.up.railway.app`.
 - **Postgres** — Railway-managed PostgreSQL plugin you add to the project.
   Railway links its `DATABASE_URL` into the app as a reference to the database
@@ -83,7 +83,7 @@ your project before completing these steps.
    - Authorization callback URL: `https://<project>.up.railway.app/auth/callback`
    - Click **Register application**, then **Generate a new client secret**.
 
-2. In your Railway project, open the **omnigent** service → **Variables**
+2. In your Railway project, open the **agent-meow** service → **Variables**
    and add:
 
    | Variable | Value |
@@ -134,7 +134,7 @@ propagates.
 Railway redeploys automatically when a new image tag is pushed to GHCR
 (if you've configured a webhook) or on demand:
 
-1. In the Railway dashboard, open the **omnigent** service.
+1. In the Railway dashboard, open the **agent-meow** service.
 2. Click **Deploy** → **Latest** to pull the newest `:latest` image.
 
 ## Cost
@@ -148,7 +148,7 @@ $10–15/month total including the Postgres plugin.
 One-time setup done by the repo owner after the repository is public:
 
 1. Go to `railway.com/new/template` and click **Create template**.
-2. Point it at `github.com/omnigent-ai/omnigent`.
+2. Point it at `github.com/JZKK720/agent-meow`.
 3. Select the **Postgres** plugin.
 4. Pre-fill default env vars with descriptions for the optional OIDC fields.
 5. Click **Publish**. Copy the generated deploy URL and update the badge at the

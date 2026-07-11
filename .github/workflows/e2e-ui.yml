@@ -371,7 +371,7 @@ jobs:
               echo "- 🎬 Playwright trace: _no artifact uploaded (test-results/ was empty)_"
             fi
             if [ -n "${SERVER_LOGS_URL}" ]; then
-              echo "- 📜 [omnigent server log](${SERVER_LOGS_URL})"
+              echo "- 📜 [meow server log](${SERVER_LOGS_URL})"
             else
               echo "- 📜 server.log: _no artifact uploaded (glob matched nothing)_"
             fi

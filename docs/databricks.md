@@ -3,7 +3,7 @@
 A production deployment guide for running omnigent agents on Databricks
 infrastructure. Covers the four canonical integration points:
 
-1. **Databricks Apps** as the managed runtime for the omnigent server
+1. **Databricks Apps** as the managed runtime for the meow server
 2. **Mosaic AI Foundation Model APIs** as the LLM provider
 3. **Mosaic AI Gateway** as the governance and audit layer over LLM calls
 4. **MLflow Tracing in Unity Catalog** as the long-term trace store
@@ -22,7 +22,7 @@ governance, audit, cost tracking, and managed scale matter.
 > is the recommended path for most Databricks users.
 >
 > This guide covers the **self-managed** path: deploying and operating
-> the omnigent server yourself on Databricks Apps. Reach for it when the
+> the meow server yourself on Databricks Apps. Reach for it when the
 > managed service is not available in your region, or when you need
 > something it does not expose today (custom YAML policies, bring-your-own
 > provider API keys, custom egress controls).
@@ -36,7 +36,7 @@ each section.
 
 ## What you get
 
-When omnigent runs on Databricks with the four integration points
+When meow runs on Databricks with the four integration points
 wired:
 
 - **Single trace per agent turn.** Every span the agent emits lands
@@ -50,7 +50,7 @@ wired:
   rate limits, PII guardrails, audit logs, all enforced at the
   gateway. Switching providers or rotating keys is a Gateway config
   change, not an agent change.
-- **Managed runtime with workspace identity.** The omnigent server
+- **Managed runtime with workspace identity.** The meow server
   runs on Databricks Apps with the workspace SSO as the user
   identity. No separate auth to set up.
 - **Lakehouse-native state.** Conversation state, agent bundles, and
@@ -69,7 +69,7 @@ wired:
 
 ## Architecture
 
-The integration is layered. The omnigent server runs on Databricks
+The integration is layered. The meow server runs on Databricks
 Apps. It exports OpenTelemetry traces (via the work landed in [PR
 #1050](https://github.com/omnigent-ai/omnigent/pull/1050)) to MLflow
 Tracing's OTLP receiver. Agent runs make LLM calls through Mosaic AI
@@ -152,7 +152,7 @@ print(r.choices[0].message.content)
 print(f'input={r.usage.prompt_tokens} output={r.usage.completion_tokens}')
 "
 
-# Start the local omnigent server with tracing
+# Start the local meow server with tracing
 omni server
 ```
 
@@ -184,12 +184,12 @@ identity.
 ### Quick deploy
 
 The `deploy/databricks/` directory in the omnigent repository contains
-a complete Databricks Asset Bundle for deploying the omnigent server
+a complete Databricks Asset Bundle for deploying the meow server
 to Apps backed by Lakebase. Use it as-is for a first deploy:
 
 ```bash
-git clone https://github.com/omnigent-ai/omnigent
-cd omnigent
+git clone https://github.com/JZKK720/agent-meow
+cd agent-meow
 uv sync --extra databricks
 
 # Set targets.prod.workspace.host in deploy/databricks/databricks.yml, then run
@@ -207,7 +207,7 @@ the integration knobs you set on top of that deploy.
 
 ### What you get on Databricks vs DIY
 
-Self-hosting the omnigent server (e.g., on a VM or in a container)
+Self-hosting the meow server (e.g., on a VM or in a container)
 works fine. The Apps path adds:
 
 | Capability | Self-hosted | Databricks Apps |
@@ -451,7 +451,7 @@ developers want to keep their consumer subscriptions for personal
 usage, that's fine, but those sessions sit outside the workspace
 audit and cost tracking.
 
-If centralized governance is a hard requirement, the omnigent host
+If centralized governance is a hard requirement, the meow host
 can enforce API-key-only by setting the provider's API-key env var
 (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, etc.) before invoking the SDK
 subprocess and refusing to launch the SDK in OAuth mode. With
@@ -499,7 +499,7 @@ free.
 
 ### Setup
 
-Three env vars on the omnigent server:
+Three env vars on the meow server:
 
 ```bash
 export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
@@ -659,7 +659,7 @@ client = OpenAI(base_url=os.environ['OPENAI_BASE_URL'], api_key=os.environ['DATA
 2. Confirm `OTEL_EXPORTER_OTLP_HEADERS` includes the Bearer token.
 3. Check `mlflow tracking get-uri` returns `databricks`.
 4. Run a small synthetic trace and watch for OTLP export errors in
-   the omnigent server logs.
+   the meow server logs.
 
 ### Apps deployment fails with "permission denied for table agents"
 

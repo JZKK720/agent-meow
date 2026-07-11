@@ -1,4 +1,4 @@
-package ai.omnigent.android
+package io.cubecloud.agentmeow.android
 
 import android.content.Intent
 import android.graphics.Bitmap

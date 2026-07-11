@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "ai.omnigent.android"
+    namespace = "io.cubecloud.agentmeow.android"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "ai.omnigent.android"
+        applicationId = "io.cubecloud.agentmeow.android"
         minSdk = 28
         targetSdk = 35
         versionCode = 1

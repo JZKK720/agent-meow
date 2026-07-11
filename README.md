@@ -1,10 +1,11 @@
 # agent-meow
 
-### An agent workspace runtime with first-class Docs, Images, and Voice surfaces.
+### The agent workspace surface for ColorFire and Meow series AIPC and Laptops.
 
-agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent)
-(Apache-2.0) — the open-source meta-harness for AI agents — extended with
-three new middleware surfaces for content work:
+agent-meow is the agent workspace runtime by 智方云 (Cubecloud), with first-class
+Docs, Images, and Voice surfaces. It is derived from Omnigent (Apache-2.0), the
+open-source meta-harness for AI agents, extended with three new middleware
+surfaces for content work:
 
 - **Docs** — document generation + rich-text editing (Tiptap / ProseMirror kernel)
 - **Images** — image file manager + image editing (Fabric.js canvas kernel)
@@ -21,7 +22,7 @@ and sub-agents inherited from Omnigent.
 ```bash
 uv sync --extra dev
 uv pip install -e .
-omnigent                      # or: omni (short alias)
+meow                          # or: agent-meow / omnigent / omni
 open http://localhost:6767
 ```
 
@@ -30,11 +31,13 @@ cd web && pnpm i && pnpm dev   # web UI dev
 ```
 
 > [!NOTE]
-> The CLI currently installs as `omnigent` / `omni`. A `meow` alias is
-> planned for a follow-up release; see [docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md)
-> for the rename roadmap.
+> The CLI installs four aliases — `meow`, `agent-meow`, `omnigent`, and `omni` —
+> all resolving to the same entry point. `omnigent` / `omni` are retained for
+> compatibility; `meow` / `agent-meow` are the Cubecloud brand commands for
+> ColorFire and Meow series products. See [docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md)
+> for the full rename roadmap.
 
-## What's new vs. agent-meow
+## What's new vs. upstream Omnigent
 
 | Surface | Backend | UI |
 | --- | --- | --- |
@@ -66,14 +69,14 @@ agents can call `text_to_speech` / `speak` to synthesize speech:
 ```bash
 vllm serve microsoft/VibeVoice-Realtime-0.5B --port 8000
 export VIBEVOICE_TTS_URL=http://127.0.0.1:8000/v1
-omnigent
+meow
 ```
 
 ---
 
 ## Why agent-meow?
 
-agent-meow inherits agent-meow's meta-harness runtime and adds content surfaces
+agent-meow inherits Omnigent's meta-harness runtime and adds content surfaces
 on top. The inherited runtime lets you:
 
 - **📱 Work with agents from any device, including your phone.** Sessions
@@ -124,10 +127,10 @@ uv pip install -e .
 - **`uv`** (required). https://docs.astral.sh/uv/getting-started/installation/
 - **`git`** (required).
 - **Node.js 22 LTS or newer** with **`npm`**, for the npm-installed coding
-  harnesses (Claude, Codex, OpenCode, Pi). `omnigent run` installs the
+  harnesses (Claude, Codex, OpenCode, Pi). `meow run` installs the
   harness CLI you pick.
   https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
-- **`tmux`**, required by the native `omnigent <harness>` terminal wrappers
+- **`tmux`**, required by the native `meow <harness>` terminal wrappers
   (`claude`, `codex`, `cursor`, `hermes`, `kiro`, `pi`)
   (`brew install tmux` / `apt install tmux`).
 - **`bubblewrap`** (`bwrap`), **Linux only**. The native terminal wrappers
@@ -148,14 +151,14 @@ uv sync --extra dev
 uv pip install -e .
 ```
 
-What works on Windows: `omnigent server`, the web UI, and the SDK-based
-harnesses (`omnigent run <agent.yaml>` with the claude-sdk / cursor / codex
+What works on Windows: `meow server`, the web UI, and the SDK-based
+harnesses (`meow run <agent.yaml>` with the claude-sdk / cursor / codex
 harnesses). Agents run under a Windows **Job Object** for process-tree
 containment.
 
 What is **not** available on Windows (use Linux/macOS, or WSL, for these):
 
-- the native `omnigent claude` / `omnigent codex` / `omnigent cursor`
+- the native `meow claude` / `meow codex` / `meow cursor`
   tmux/PTY terminal wrappers (run an SDK harness or the web UI instead);
 - `bwrap`/`seatbelt` filesystem & network sandboxing and the L7 egress proxy
   — the Job Object backend contains the process tree and enforces resource
@@ -170,13 +173,13 @@ When a newer release is on PyPI, agent-meow shows a one-line notice (once per
 release) pointing here. To update:
 
 ```bash
-omni upgrade            # detects how you installed, drains & stops the local
+meow upgrade            # detects how you installed, drains & stops the local
                         # server, then runs the matching upgrade command
-omni upgrade --check    # just report whether a newer release is available
+meow upgrade --check    # just report whether a newer release is available
 ```
 
-`omni upgrade` waits for in-flight agent sessions to finish before stopping the
-local server (pass `--force` to stop them immediately); the next `omni` command
+`meow upgrade` waits for in-flight agent sessions to finish before stopping the
+local server (pass `--force` to stop them immediately); the next `meow` command
 brings the server back up on the new version. Source checkouts update with
 `git pull` instead. Silence the notice with `OMNIGENT_NO_UPDATE_CHECK=1`.
 
@@ -189,13 +192,15 @@ brings the server back up on the new version. Source checkouts update with
 
 ### 2. Start your first agent
 
-`omnigent` picks a model with you and starts a session in your terminal. It
+`meow` picks a model with you and starts a session in your terminal. It
 also launches a local web UI at `http://localhost:6767` that shows the same
 session in the browser, or on a phone on your network (step 4).
 
 > [!NOTE]
-> The install puts two names for the same CLI on your PATH: `omnigent` and
-> the shorter `omni`. They're interchangeable.
+> The install puts four names for the same CLI on your PATH: `meow`,
+> `agent-meow`, `omnigent`, and `omni`. They're interchangeable — `meow` /
+> `agent-meow` are the Cubecloud brand commands; `omnigent` / `omni` are
+> retained for compatibility.
 
 > [!TIP]
 > On first run, agent-meow picks up model credentials already in your
@@ -203,18 +208,18 @@ session in the browser, or on a phone on your network (step 4).
 > `codex` CLI you're logged into) and offers one as the default.
 
 ```bash
-omnigent
+meow
 ```
 
 Or launch a specific agent runtime:
 
 ```bash
-omnigent claude                      # Claude Code, in a session your team can join
-omnigent codex                       # Codex
-omnigent cursor                      # Cursor
-omnigent opencode                    # OpenCode
-omnigent hermes                      # Hermes Agent (Nous Research)
-omnigent pi                          # Pi
+meow claude                      # Claude Code, in a session your team can join
+meow codex                       # Codex
+meow cursor                      # Cursor
+meow opencode                    # OpenCode
+meow hermes                      # Hermes Agent (Nous Research)
+meow pi                          # Pi
 ```
 
 #### 🐙 Polly and 🟠🔵 Debby
@@ -222,12 +227,12 @@ omnigent pi                          # Pi
 Two example agents ship with the repo, and they make good first sessions:
 
 ```bash
-omnigent run examples/polly/
-omnigent run examples/debby/
+meow run examples/polly/
+meow run examples/debby/
 
 # ...or on a different harness (sub-agents keep their own):
-omnigent run examples/polly/ --harness <harness>
-omnigent run examples/debby/ --harness <harness>
+meow run examples/polly/ --harness <harness>
+meow run examples/debby/ --harness <harness>
 ```
 
 **🐙 Polly** is a multi-agent coding orchestrator who writes no code herself.
@@ -244,17 +249,17 @@ see step 3.)
 **Prefer the browser?** Start a server and register your machine as a host:
 
 ```bash
-omnigent server start   # start the local server and web UI in the background
-omnigent host           # (separate terminal) register this machine as a host
+meow server start   # start the local server and web UI in the background
+meow host           # (separate terminal) register this machine as a host
 ```
 
 In the web UI, hit **New Chat**, pick your machine, and go. Check status with
-`omnigent server status`; stop everything with `omnigent stop`.
+`meow server status`; stop everything with `meow stop`.
 
 ### 3. Choose & switch models
 
 ```bash
-omnigent setup
+meow setup
 ```
 
 Add a credential, set a default, or remove one, grouped by agent. agent-meow
@@ -273,7 +278,7 @@ can also switch models in the middle of a session with the `/model` command.
 <details>
 <summary>Gateway base URLs (OpenRouter, Ollama)</summary>
 
-When you add a **Gateway** credential, `omnigent setup` asks for a base URL
+When you add a **Gateway** credential, `meow setup` asks for a base URL
 and a key. The base URL depends on which agent you point it at:
 
 | Provider | For | Base URL | Key |
@@ -309,8 +314,8 @@ the sandbox setup live in [`deploy/README.md`](deploy/README.md).
 Once the server is up, sign in and register your laptop as a host:
 
 ```bash
-omnigent login https://your-host    # sign in once; run / attach / host reuse the token
-omnigent host  https://your-host    # new sessions can now run on this machine
+meow login https://your-host    # sign in once; run / attach / host reuse the token
+meow host  https://your-host    # new sessions can now run on this machine
 ```
 
 > [!TIP]
@@ -323,7 +328,7 @@ agent-meow supports **multi-user accounts**, controlled by one environment
 variable:
 
 ```bash
-OMNIGENT_AUTH_ENABLED=1 omnigent server start
+OMNIGENT_AUTH_ENABLED=1 meow server start
 ```
 
 > [!NOTE]
@@ -353,14 +358,14 @@ and they're in. Signup is invite-only.
   keyboard to a domain expert mid-investigation.
 
   ```bash
-  omnigent attach <session_id>
+  meow attach <session_id>
   ```
 
 - **Fork.** Clone a conversation onto your own machine and continue
   independently from the fork point.
 
   ```bash
-  omnigent run --fork <session_id>
+  meow run --fork <session_id>
   ```
 
 > [!TIP]
@@ -448,7 +453,7 @@ tools:
 Run it with:
 
 ```bash
-omnigent run path/to/my_agent.yaml
+meow run path/to/my_agent.yaml
 ```
 
 The same file can declare sub-agents and reviewers. For a fuller example, see
@@ -466,9 +471,9 @@ set up your environment, run the checks, and open a pull request.
 
 ## Attribution
 
-agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent)
-by the Omnigent Authors (Databricks, Inc. and contributors), licensed under
-Apache-2.0. See `LICENSE` and `NOTICE`. The Python package directory
+agent-meow is the agent workspace surface for ColorFire and Meow series AIPC and
+Laptops by 智方云 (Cubecloud). This software is derived from Omnigent, licensed
+under Apache-2.0. See `LICENSE` and `NOTICE`. The Python package directory
 `omnigent/` is retained as a vendored runtime; user-facing strings and the
 CLI entry point have been rebranded. See [docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md)
 for the full rename roadmap and the list of surfaces still carrying the
@@ -476,4 +481,4 @@ upstream name.
 
 ## License
 
-Apache-2.0 (inherited from Omnigent).
+Apache-2.0.

@@ -485,7 +485,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = 8RMX4WU6F8;
+				DEVELOPMENT_TEAM = <CUBECLOUD_TEAM_ID>;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "agent-meow/Info-Debug.plist";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -495,7 +495,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ai.omnigent.ios;
+				PRODUCT_BUNDLE_IDENTIFIER = io.cubecloud.agentmeow.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -516,7 +516,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = 8RMX4WU6F8;
+				DEVELOPMENT_TEAM = <CUBECLOUD_TEAM_ID>;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "agent-meow/Info-Release.plist";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -526,7 +526,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ai.omnigent.ios;
+				PRODUCT_BUNDLE_IDENTIFIER = io.cubecloud.agentmeow.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -551,7 +551,7 @@
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ai.omnigent.ios.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.cubecloud.agentmeow.ios.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -575,7 +575,7 @@
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ai.omnigent.ios.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.cubecloud.agentmeow.ios.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -598,7 +598,7 @@
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ai.omnigent.ios.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.cubecloud.agentmeow.ios.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -621,7 +621,7 @@
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ai.omnigent.ios.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.cubecloud.agentmeow.ios.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

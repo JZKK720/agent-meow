@@ -88,7 +88,7 @@ no-op off a TTY or when `OMNIGENT_NO_BANNER` is set):
   gradient / tagline / epilogue. The hero moment, reserved for the few
   landing surfaces:
   - `omnigent --help` (the top-level group, via `_OmnigentCLI.format_help`)
-  - `omnigent setup` (first-run experience)
+  - `meow setup` (first-run experience)
   - the installer banner
 - **Nothing** — every other command. Regular commands (`version`,
   `upgrade`, `server status`, `config list`, …) print their output

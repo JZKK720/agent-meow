@@ -1,18 +1,18 @@
 # web
 
-The web UI for `omnigent server --agent <agent>`. SPA built with Vite + React + TypeScript +
+The web UI for `meow server --agent <agent>`. SPA built with Vite + React + TypeScript +
 Tailwind v4 + shadcn/ui. Talks to the current agent-meow API surface
 (`/v1/agents`, `/v1/sessions`, session-scoped
 `/v1/sessions/{id}/resources/files`).
 
 ## Develop
 
-In one terminal, start the omnigent server (default port `6767`). Use
+In one terminal, start the agent-meow server (default port `6767`). Use
 `--agent` to pre-register one or more agents at startup (accepts a YAML file or
 an agent-image directory; can be repeated):
 
 ```bash
-.venv/bin/omnigent server --agent examples/hello_world.yaml
+.venv/bin/meow server --agent examples/hello_world.yaml
 ```
 
 In another terminal, start the Vite dev server (port `5173`):
@@ -30,7 +30,7 @@ The Vite dev server proxies `/v1` and `/api` to `http://localhost:6767`. Set
 OMNIGENT_URL=http://localhost:9000 npm run dev
 ```
 
-Additional `omnigent server` options:
+Additional `meow server` options:
 
 | Flag                  | Default                | Description                          |
 | --------------------- | ---------------------- | ------------------------------------ |
@@ -54,7 +54,7 @@ Vite writes the bundle to `../omnigent/server/static/web-ui/` (configured in
 FastAPI app in `omnigent/server/app.py` mounts it at `/`. After a build:
 
 ```bash
-.venv/bin/omnigent server --agent examples/hello_world.yaml
+.venv/bin/meow server --agent examples/hello_world.yaml
 # open http://localhost:6767/
 ```
 

@@ -21,17 +21,18 @@ entry point for the follow-up distribution rename program.
 | 11 | `examples/` agent configs | ✅ Done |
 | 12 | `scripts/` installer and tooling | ✅ Done |
 | 13 | Distribution rename (`meow` / `meow-client` / `meow-ui-sdk`) | ⏳ Deferred |
-| 14 | CLI entry points (`meow`, `agent-meow` console scripts) | ⏳ Deferred |
+| 14 | CLI entry points (`meow`, `agent-meow` console scripts) | ✅ Done |
 | 15 | `OMNIGENT_*` env-var prefix migration | ⏳ Deferred |
-| 16 | GHCR image names (`ghcr.io/omnigent-ai/omnigent-*`) | ⏳ Deferred |
+| 16 | GHCR image names (`ghcr.io/omnigent-ai/omnigent-*`) | ✅ Done |
 | 17 | Python module/import path rename (`omnigent/` → `meow/`) | ⏳ Deferred |
-| 18 | Repo URLs in CI conditionals (`github.repository == 'omnigent-ai/omnigent'`) | ⏳ Deferred |
+| 18 | Repo URLs in CI conditionals (`github.repository == 'omnigent-ai/omnigent'`) | ✅ Done |
+| 19 | Cubecloud legal-clarity rebrand (copyright, bundle IDs, URLs, domain) | ✅ Done |
 
 ## What was changed
 
 ### Phase 1–3: Root docs, legal, and public API metadata
 
-- **README.md** — rewritten as agent-meow-first; embedded upstream agent-meow
+- **README.md** — rewritten as agent-meow-first; embedded upstream Omnigent
   README removed; upstream links replaced with repo-local references or
   attribution-only mentions.
 - **CHANGELOG.md** — product name changed to agent-meow; upstream release
@@ -43,25 +44,25 @@ entry point for the follow-up distribution rename program.
 - **RELEASING.md** — title and intro rewritten; distribution names kept as
   `omnigent*` with a deferred-rename note.
 - **NOTICE** — updated to identify agent-meow as a derivative work of
-  agent-meow (Databricks, Inc.), preserving upstream and third-party notices.
+  Omnigent (Databricks, Inc.), preserving upstream and third-party notices.
 - **.github/pull_request_template.md** — changelog example annotated with
   current CLI name reality.
 - **omnigent/server/app.py** — FastAPI title changed from
-  `"agent-meow Server"` to `"agent-meow Server"`.
+  `"meow server"` to `"agent-meow Server"`.
 - **omnigent/server/static/api_only_landing.html** — page title, heading, and
   upstream repo link replaced with agent-meow naming and repo-local guidance.
 - **openapi.json** — `info.title` and `info.description` updated; all
-  capitalized "agent-meow" in schema descriptions replaced.
+  capitalized "Omnigent" in schema descriptions replaced with "agent-meow".
 
 ### Phase 4: Source code docstrings (228 files, 2147 replacements)
 
-All capitalized "agent-meow" in docstrings and comments across `omnigent/**/*.py`
+All capitalized "Omnigent" in docstrings and comments across `omnigent/**/*.py`
 replaced with "agent-meow". Code identifiers (`OmnigentError`, `OmnigentClient`,
 `omnigent` module paths, CLI commands, env vars, label keys) preserved.
 
 ### Phase 5: Deploy docs and templates (18+ files)
 
-All `deploy/**` READMEs and config files updated. Product name "agent-meow" →
+All `deploy/**` READMEs and config files updated. Product name "Omnigent" →
 "agent-meow" in prose. GHCR image names, CLI commands, env vars, and Docker
 service names preserved.
 
@@ -198,22 +199,97 @@ corresponding code changes, not independently.
    `scripts/update_versions.py`, and release workflows. Decide whether
    `omnigent` / `omni` remain as temporary compatibility aliases.
 
-2. **CLI entry points** — add `meow` and `agent-meow` as first-class console
-   scripts alongside (or replacing) `omnigent` / `omni`.
+2. ~~**CLI entry points** — add `meow` and `agent-meow` as first-class console
+   scripts alongside (or replacing) `omnigent` / `omni`.~~ ✅ Done (Phase 19)
 
 3. **Env-var migration** — introduce a new prefix (e.g. `MEOW_*`) with a
    compatibility shim that reads both `OMNIGENT_*` and `MEOW_*` during a
    deprecation window.
 
-4. **GHCR images** — publish new images under the fork's GHCR namespace;
-   update all deploy templates and sandbox defaults.
+4. ~~**GHCR images** — publish new images under the fork's GHCR namespace;
+   update all deploy templates and sandbox defaults.~~ ✅ Done (Phase 19:
+   `ghcr.io/JZKK720/agent-meow-*`)
 
-5. **Repo URLs** — update all hardcoded `github.com/omnigent-ai/omnigent`
+5. ~~**Repo URLs** — update all hardcoded `github.com/omnigent-ai/omnigent`
    and `omnigent.ai` URLs to the fork's canonical URLs (pending
-   cubecloud.io asset decisions).
+   cubecloud.io asset decisions).~~ ✅ Done (Phase 19: `github.com/JZKK720/agent-meow`
+   + `cubecloud.io`)
 
-6. **CI workflows** — update repository checks, docs staging, and release
-   pipelines for the fork's repo location.
+6. ~~**CI workflows** — update repository checks, docs staging, and release
+   pipelines for the fork's repo location.~~ ✅ Done (Phase 19)
 
-7. **Web/mobile apps** — rename Electron, iOS, and Android apps; update
-   install URLs, deep links, and app store metadata.
+7. ~~**Web/mobile apps** — rename Electron, iOS, and Android apps; update
+   install URLs, deep links, and app store metadata.~~ ✅ Done (Phase 19)
+
+## Phase 19: Cubecloud legal-clarity rebrand
+
+The initial rebrand (Phases 1–12) replaced user-facing strings from "Omnigent"
+to "agent-meow" while retaining the `omnigent/` Python module path and upstream
+attribution. The **Cubecloud legal-clarity rebrand** (Phase 19) redefines the
+legal identity and product positioning for **智方云 (Cubecloud)** as the copyright
+holder, positioning agent-meow as the software surface for **ColorFire** and
+**Meow series AIPC and Laptops**.
+
+### What changed
+
+**Legal identity:**
+- `NOTICE` — copyright holder changed from "agent-meow contributors" to
+  "智方云 (Cubecloud)"; derivative-work attribution simplified to minimal
+  Apache-2.0 §4(c) compliant note (no Databricks, Inc. name in the primary
+  block; third-party dependency notices retained as-is)
+- `pyproject.toml` — `authors` updated to `智方云 (Cubecloud)`; `description`
+  updated with ColorFire/Meow product context
+- `README.md` — Attribution section rewritten for Cubecloud positioning
+
+**Product positioning:**
+- `README.md` — intro repositioned as "agent workspace surface for ColorFire
+  and Meow series AIPC and Laptops"
+- `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `RELEASING.md` — fork
+  attribution replaced with Cubecloud product context
+
+**Repo URLs and domain:**
+- All `github.com/omnigent-ai/omnigent` → `github.com/JZKK720/agent-meow`
+- All `omnigent.ai` → `cubecloud.io`
+- Source code URLs: `omnigent/update_check.py`, `omnigent/onboarding/databricks_config.py`,
+  `omnigent/repl/_repl.py`
+- Deploy templates, SDK READMEs, VS Code extension, Electron/iOS install URLs
+- CI workflow repository conditionals and bot email
+- Test fixtures updated to match new repo URL
+
+**App bundle IDs:**
+- Electron: `ai.omnigent.desktop` → `io.cubecloud.agentmeow.desktop`
+- iOS: `ai.omnigent.ios` → `io.cubecloud.agentmeow.ios` (+ `.tests` / `.uitests`)
+- Android: `ai.omnigent.android` → `io.cubecloud.agentmeow.android`
+  (Kotlin files moved from `ai/omnigent/android/` to `io/cubecloud/agentmeow/`)
+- CSS custom properties: `--omnigent-android-safe-area-*` → `--agentmeow-android-safe-area-*`
+- Apple team ID placeholder `<CUBECLOUD_TEAM_ID>` used throughout (Cubecloud
+  needs its own Apple Developer enrollment)
+
+**CLI entry points:**
+- `meow` and `agent-meow` added as console script aliases alongside `omnigent`
+  and `omni`
+
+**GHCR images:**
+- `ghcr.io/omnigent-ai/omnigent-*` → `ghcr.io/JZKK720/agent-meow-*` in all
+  CI workflows and deploy references
+
+### Out-of-codebase prerequisites
+
+- **Apple Developer enrollment** — Cubecloud needs its own Apple Developer
+  team ID to replace `<CUBECLOUD_TEAM_ID>` in signing configs. The Databricks
+  team ID (`8RMX4WU6F8`) is no longer referenced.
+- **GHCR namespace** — `ghcr.io/JZKK720/agent-meow-*` images need to be
+  published before deploy templates will pull successfully.
+- **Domain** — `cubecloud.io` needs to host the quickstart/install and
+  docs/privacy pages referenced by Electron and iOS apps.
+
+### Still deferred
+
+| Surface | Reason |
+| --- | --- |
+| PyPI distribution name (`omnigent` → `meow`) | Breaks SDK dependency pins; needs co-release |
+| `OMNIGENT_*` env-var prefix → `MEOW_*` | 140+ vars; needs compatibility shim |
+| Python module path (`omnigent/` → `meow/`) | ~228 files; breaks all imports |
+| `omnigent.ai/role` Kubernetes label | Functional runtime identifier (cross-pod contract) |
+| Historical issue/PR links in `designs/` | Factual references to upstream history |
+| Databricks integration code | Functional platform integration, not branding |

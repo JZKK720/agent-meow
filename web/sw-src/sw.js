@@ -12,7 +12,7 @@
 // every code/style deploy. That byte change is what the browser's update
 // algorithm (via workbox-window in the page) detects to fire the prompt.
 const BUILD_VERSION = "__BUILD_VERSION__";
-const CACHE_NAME = `omnigent-pwa-${BUILD_VERSION}`;
+const CACHE_NAME = `agentmeow-pwa-${BUILD_VERSION}`;
 
 self.addEventListener("install", (event) => {
   // Precache ONLY version.json. Two reasons: it gives the worker a real

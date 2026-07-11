@@ -15,7 +15,7 @@ follow-up).
    bundle install
    ```
 3. **Create the app record** in [App Store Connect](https://appstoreconnect.apple.com)
-   for bundle ID `ai.omnigent.ios` (My Apps → +), if it doesn't exist yet.
+   for bundle ID `io.cubecloud.agentmeow.ios` (My Apps → +), if it doesn't exist yet.
 4. **Generate an App Store Connect API key**: Users and Access → Integrations →
    App Store Connect API → generate a key with the **App Manager** role.
    Download the `.p8` (you can only download it once) and place it in
@@ -37,7 +37,7 @@ bundle exec fastlane beta
 ```
 
 This bumps the build number to one past the latest on TestFlight, archives the
-Release configuration (HTTPS-only, automatic signing under team `8RMX4WU6F8`),
+Release configuration (HTTPS-only, automatic signing under team `<CUBECLOUD_TEAM_ID>`),
 and uploads the `.ipa`. The build appears in App Store Connect → TestFlight after
 Apple finishes processing.
 

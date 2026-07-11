@@ -126,7 +126,7 @@ const LNA_PERMISSIONS = new Set(["local-network-access", "loopback-network"]);
 
 /**
  * Keychain access group for the WebAuthn Touch ID platform authenticator
- * (`app.configureWebAuthn`), in the form ``"<TEAM_ID>.ai.omnigent.desktop"``.
+ * (`app.configureWebAuthn`), in the form ``"<TEAM_ID>.io.cubecloud.agentmeow.desktop"``.
  *
  * null disables the platform authenticator: the value only works in a
  * code-signed build whose `keychain-access-groups` entitlement
@@ -140,7 +140,7 @@ const LNA_PERMISSIONS = new Set(["local-network-access", "loopback-network"]);
  * app at launch. Details in signing/entitlements.mac.plist.
  * @type {string | null}
  */
-const WEBAUTHN_KEYCHAIN_ACCESS_GROUP = "8RMX4WU6F8.ai.omnigent.desktop";
+const WEBAUTHN_KEYCHAIN_ACCESS_GROUP = "<CUBECLOUD_TEAM_ID>.io.cubecloud.agentmeow.desktop";
 
 /**
  * Enable the macOS WebAuthn platform authenticator so passkey
@@ -1952,7 +1952,7 @@ if (!gotLock) {
 
   app.whenReady().then(() => {
     // App User Model ID so Windows attributes notifications/taskbar correctly.
-    if (process.platform === "win32") app.setAppUserModelId("ai.omnigent.desktop");
+    if (process.platform === "win32") app.setAppUserModelId("io.cubecloud.agentmeow.desktop");
     applyDockIcon();
     registerPermissions();
     registerLocalhostAccess();

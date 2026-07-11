@@ -16,12 +16,9 @@ downloads that `.vsix`, verifies the checksum, scans it (`databricks/gh-action-s
 and publishes to the VS Code Marketplace and Open VSX. It holds the tokens and
 the approval gate.
 
-Two existing workflows in the secure repo are the reference:
-[`databricks-vscode.yml`](https://github.com/databricks/secure-public-registry-releases-eng/blob/main/.github/workflows/databricks-vscode.yml)
-(the extension publish flow to adapt) and
-[`omnigent.yml`](https://github.com/databricks/secure-public-registry-releases-eng/blob/main/.github/workflows/omnigent.yml)
-(omnigent's PyPI release, which already checks out `omnigent-ai/omnigent`
-cross-org). Both require SAML SSO to view.
+The release pipeline uses the Cubecloud release infrastructure. The legacy
+Databricks secure-public-registry-releases-eng repo is no longer used for
+agent-meow releases.
 
 ## Steps to release
 
@@ -62,7 +59,7 @@ create the release.
    code --install-extension omnigent-vscode-<version>.vsix
    ```
 
-   Reload VS Code, start a local server (`omnigent server`), and run the
+   Reload VS Code, start a local server (`meow server`), and run the
    **agent-meow: Open** command — confirm it opens an editor pane showing the
    running server's UI (not a blank pane or an error). This catches packaging
    problems (missing files, a broken bundle) before anything reaches the

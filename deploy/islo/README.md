@@ -3,7 +3,7 @@
 [Islo](https://islo.dev) sandboxes give you disposable cloud machines for
 running agent-meow hosts, two ways:
 
-- **CLI-launched**: `omnigent sandbox create` / `connect` provisions a
+- **CLI-launched**: `meow sandbox create` / `connect` provisions a
   sandbox from your terminal, ships your local checkout into it, and
   registers it as a host with your server.
 - **Server-managed**: the server provisions a sandbox automatically when
@@ -24,7 +24,7 @@ of this guide:
   credentials (see [Model credentials](#model-credentials-llm-keys)) and
   has no equivalent on Modal or Daytona.
 - **No local port forward.** Islo can't forward a sandbox→laptop callback
-  port, so the interactive in-sandbox `omnigent login` / App OAuth step is
+  port, so the interactive in-sandbox `meow login` / App OAuth step is
   skipped automatically (as on Modal and Daytona).
 - **No lifetime cap.** Islo sandboxes run until deleted (like Daytona,
   unlike Modal's 24 h).
@@ -50,7 +50,7 @@ key is the only required credential — no SDK, no `~/.config` file.
 
 > [!NOTE]
 > **Islo cannot forward a local callback port into the sandbox.** The
-> interactive `omnigent login` browser flow (and the in-sandbox App OAuth
+> interactive `meow login` browser flow (and the in-sandbox App OAuth
 > callback) needs a sandbox→laptop port forward, which Islo doesn't
 > provide — so the CLI skips that step automatically, exactly as it does
 > for Modal and Daytona. For a server that requires authentication, inject
@@ -59,7 +59,7 @@ key is the only required credential — no SDK, no `~/.config` file.
 
 ## The host image
 
-Sandboxes boot from `ghcr.io/omnigent-ai/omnigent-host:latest`, published
+Sandboxes boot from `ghcr.io/JZKK720/agent-meow-host:latest`, published
 by CI from the `host` target of
 [`deploy/docker/Dockerfile`](../docker/Dockerfile) with agent-meow and its
 dependencies preinstalled — including the coding-harness CLIs (`claude`,
@@ -72,8 +72,8 @@ same target and push it anywhere Islo can pull from:
 ```bash
 docker build -f deploy/docker/Dockerfile --target host \
   --platform linux/amd64 \
-  -t docker.io/<you>/omnigent-host:latest .
-docker push docker.io/<you>/omnigent-host:latest
+  -t docker.io/<you>/agent-meow-host:latest .
+docker push docker.io/<you>/agent-meow-host:latest
 ```
 
 Then point agent-meow at it — `OMNIGENT_ISLO_HOST_IMAGE` for the CLI flow,
@@ -95,7 +95,7 @@ pulls the image, not agent-meow).
 Provision a sandbox and ship your local checkout into it:
 
 ```bash
-omnigent sandbox create --provider islo
+meow sandbox create --provider islo
 ```
 
 This pulls the host image, builds wheels from your local checkout, and
@@ -103,12 +103,12 @@ overlays them on top — so the sandbox runs *your* code, not whatever the
 image was built from. Then register it as a host with your server:
 
 ```bash
-omnigent sandbox connect --provider islo \
+meow sandbox connect --provider islo \
   --sandbox-id <id-printed-by-create> \
   --server https://your-host
 ```
 
-`connect` runs `omnigent host` inside the sandbox and holds the
+`connect` runs `meow host` inside the sandbox and holds the
 connection open in your terminal — Ctrl-C tears it down. New sessions
 targeting that host now run in the sandbox.
 
@@ -131,16 +131,16 @@ auth failure inside the sandbox).
 
 ### Connecting to an authenticated server
 
-`connect` runs `omnigent host` inside the sandbox, and that host must
+`connect` runs `meow host` inside the sandbox, and that host must
 present credentials when it dials back to a server that requires
-authentication. The interactive `omnigent login` browser flow can't run
+authentication. The interactive `meow login` browser flow can't run
 inside an Islo sandbox (no callback port forward), so inject the keys for
 the relevant server instead — name them in `OMNIGENT_ISLO_SANDBOX_ENV`
 before `create`:
 
 ```bash
 export OMNIGENT_ISLO_SANDBOX_ENV=DATABRICKS_HOST,DATABRICKS_TOKEN
-omnigent sandbox create --provider islo
+meow sandbox create --provider islo
 ```
 
 The in-sandbox host mints a fresh bearer token from those credentials on
@@ -156,7 +156,7 @@ those authenticate with a server-minted per-launch token automatically.
 
 ## Server-managed sandboxes
 
-Add a `sandbox:` section to the server config (`omnigent server -c
+Add a `sandbox:` section to the server config (`meow server -c
 config.yaml`, or `<data_dir>/config.yaml`):
 
 ```yaml
@@ -196,7 +196,7 @@ sandbox opens two kinds of connections back to the server:
 - one **runner tunnel** per session (`/v1/runners/<token>/tunnel`), opened
   by the runner subprocess the host spawns. The runner authenticates with
   *whatever server credential it can resolve* — a proxy-injected identity
-  (header / OIDC), or a stored `omnigent login` token (local hosts only; a
+  (header / OIDC), or a stored `meow login` token (local hosts only; a
   fresh managed sandbox has none) — **not** the per-launch host token.
 
 The consequence:
@@ -219,7 +219,7 @@ So for a managed Islo deployment, front the server with **header or OIDC
 auth** (a reverse proxy / IdP injects the user identity on every request,
 including the runner WebSocket — see
 [`deploy/README.md#auth`](../README.md#auth)), or run it single-user. The
-`accounts` provider is fine for CLI-launched hosts (you `omnigent login`,
+`accounts` provider is fine for CLI-launched hosts (you `meow login`,
 and that token is what the in-sandbox host forwards), but not yet for the
 managed runner dial-back.
 
@@ -230,7 +230,7 @@ sandbox:
   provider: islo
   server_url: https://your-host
   islo:
-    image: docker.io/<you>/omnigent-host:latest   # default: official image
+    image: docker.io/<you>/agent-meow-host:latest   # default: official image
     env: [OPENAI_API_KEY, GIT_TOKEN]               # copy from server env
     base_url: https://api.islo.dev                 # non-default API endpoint
     gateway_profile: default                       # Islo gateway for egress + credential injection

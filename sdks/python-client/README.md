@@ -1,6 +1,6 @@
 # omnigent-client
 
-Python client SDK for [agent-meow](https://github.com/omnigent-ai/omnigent)
+Python client SDK for [agent-meow](https://github.com/JZKK720/agent-meow)
 server API.
 
 `omnigent-client` is a typed client for driving agent-meow sessions over the
@@ -16,5 +16,5 @@ version:
 pip install omnigent-client
 ```
 
-See the [agent-meow repository](https://github.com/omnigent-ai/omnigent) for full
+See the [agent-meow repository](https://github.com/JZKK720/agent-meow) for full
 documentation.

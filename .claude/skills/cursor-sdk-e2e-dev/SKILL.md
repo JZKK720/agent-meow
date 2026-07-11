@@ -40,7 +40,7 @@ cd /path/to/omnigent
 ```
 
 Use the **printed URL** below as `$SERVER`. (You can also run a foreground
-server on a fixed port with `omnigent server --port 7777 --no-open`.)
+server on a fixed port with `meow server --port 7777 --no-open`.)
 
 ## Step 2 — build a cursor agent bundle
 

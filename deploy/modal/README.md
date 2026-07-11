@@ -33,12 +33,12 @@ Heroku or Cloudflare.
 
 ```bash
 # 1. One secret bundle with the three required values. The app URL is
-#    deterministic: https://<workspace>--omnigent-server.modal.run
+#    deterministic: https://<workspace>--agent-meow-server.modal.run
 #    (your workspace name is shown by `modal profile current`).
 modal secret create omnigent-deploy \
   DATABASE_URL='postgres://…neon.tech/…' \
   OMNIGENT_ACCOUNTS_COOKIE_SECRET="$(openssl rand -hex 32)" \
-  OMNIGENT_ACCOUNTS_BASE_URL='https://<workspace>--omnigent-server.modal.run'
+  OMNIGENT_ACCOUNTS_BASE_URL='https://<workspace>--agent-meow-server.modal.run'
 
 # 2. Ship it.
 modal deploy deploy/modal/modal_app.py
@@ -53,7 +53,7 @@ The first boot runs DB migrations over the network (~1 minute on Neon).
 **Get the admin password:** the first boot prints it to the app log:
 
 ```bash
-modal app logs omnigent
+modal app logs agent-meow
 ```
 
 ```
@@ -117,7 +117,7 @@ per the printed instructions, and update `OMNIGENT_ACCOUNTS_BASE_URL`
 ### Upgrading
 
 `modal deploy deploy/modal/modal_app.py` again — Modal re-resolves
-`ghcr.io/omnigent-ai/omnigent-server:latest`, so a redeploy is an
+`ghcr.io/JZKK720/agent-meow-server:latest`, so a redeploy is an
 upgrade. The rollout replaces the container; runners reconnect.
 
 ### Cost
@@ -160,7 +160,7 @@ flow), Modal credentials must be available — either that file or the
 
 ### The host image
 
-Sandboxes boot from `ghcr.io/omnigent-ai/omnigent-host:latest`, an image
+Sandboxes boot from `ghcr.io/JZKK720/agent-meow-host:latest`, an image
 published by CI from the `host` target of
 [`deploy/docker/Dockerfile`](../docker/Dockerfile) with agent-meow
 and its dependencies preinstalled — including the coding-harness CLIs
@@ -172,8 +172,8 @@ same target and push it anywhere Modal can pull from:
 
 ```bash
 docker build -f deploy/docker/Dockerfile --target host \
-  -t docker.io/<you>/omnigent-host:latest .
-docker push docker.io/<you>/omnigent-host:latest
+  -t docker.io/<you>/agent-meow-host:latest .
+docker push docker.io/<you>/agent-meow-host:latest
 ```
 
 Then point agent-meow at it — `OMNIGENT_MODAL_HOST_IMAGE` for the CLI
@@ -192,7 +192,7 @@ flow (see below). For private registries, set
 Provision a sandbox and ship your local checkout into it:
 
 ```bash
-omnigent sandbox create --provider modal
+meow sandbox create --provider modal
 ```
 
 This pulls the host image, builds wheels from your local checkout, and
@@ -200,12 +200,12 @@ overlays them on top — so the sandbox runs *your* code, not whatever
 the image was built from. Then register it as a host with your server:
 
 ```bash
-omnigent sandbox connect --provider modal \
+meow sandbox connect --provider modal \
   --sandbox-id <id-printed-by-create> \
   --server https://your-host
 ```
 
-`connect` runs `omnigent host` inside the sandbox and holds the
+`connect` runs `meow host` inside the sandbox and holds the
 connection open in your terminal — Ctrl-C tears it down. New sessions
 targeting that host now run in the sandbox.
 
@@ -225,9 +225,9 @@ own tooling — the [Modal dashboard](https://modal.com/sandboxes) or the
 
 ### Connecting to an authenticated server
 
-`connect` runs `omnigent host` inside the sandbox, and that host must
+`connect` runs `meow host` inside the sandbox, and that host must
 present credentials when it dials back to a server that requires
-authentication. The interactive `omnigent login` browser flow can't
+authentication. The interactive `meow login` browser flow can't
 run inside a sandbox, so inject the keys for the relevant server
 instead: park them in a [Modal secret](https://modal.com/secrets) and
 name it in `OMNIGENT_MODAL_SANDBOX_SECRETS` (comma-separated) before
@@ -238,7 +238,7 @@ modal secret create omnigent-server-auth \
   DATABRICKS_HOST=https://example.databricks.com \
   DATABRICKS_TOKEN=<your-pat>
 export OMNIGENT_MODAL_SANDBOX_SECRETS=omnigent-server-auth
-omnigent sandbox create --provider modal
+meow sandbox create --provider modal
 ```
 
 The in-sandbox host mints a fresh bearer token from those credentials
@@ -260,7 +260,7 @@ for managed launches.)
 ### Server-managed sandboxes
 
 With managed hosts, the server does all of the above per session.
-Add a `sandbox:` section to the server config (`omnigent server -c
+Add a `sandbox:` section to the server config (`meow server -c
 config.yaml`, or `<data_dir>/config.yaml`):
 
 ```yaml
@@ -298,7 +298,7 @@ sandbox:
   provider: modal
   server_url: https://your-host
   modal:
-    image: docker.io/<you>/omnigent-host:latest   # default: official image
+    image: docker.io/<you>/agent-meow-host:latest   # default: official image
     secrets: [omnigent-llm]                       # Modal secrets to inject
 ```
 
@@ -453,7 +453,7 @@ users.
 - **Managed launch hangs then fails.** The server waits up to two
   minutes for the in-sandbox host to come online. If it times out,
   check that `server_url` is publicly reachable from Modal, then
-  inspect the host log inside the sandbox: `/tmp/omnigent-host.log`.
+  inspect the host log inside the sandbox: `/tmp/agent-meow-host.log`.
 - **Image pull failures.** Private image without
   `OMNIGENT_MODAL_REGISTRY_SECRET` set, or a secret missing
   `REGISTRY_USERNAME` / `REGISTRY_PASSWORD`.

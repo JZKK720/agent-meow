@@ -48,7 +48,7 @@ def test_is_uv_tool_install(monkeypatch: pytest.MonkeyPatch, prefix: str, expect
 
 def test_installed_vcs_url_git_source(monkeypatch: pytest.MonkeyPatch) -> None:
     """Surfaces the ``vcs_url`` recorded for a git-source install."""
-    url = "git+https://github.com/omnigent-ai/omnigent.git"
+    url = "git+https://github.com/JZKK720/agent-meow.git"
     monkeypatch.setattr(
         "omnigent.update_check._read_installed_wheel_info",
         lambda: SimpleNamespace(vcs_url=url),
@@ -88,7 +88,7 @@ def test_extra_install_command_uv_tool(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_extra_install_command_uv_tool_git_source(monkeypatch: pytest.MonkeyPatch) -> None:
     """A git-source uv tool install reinstalls from that source, not PyPI."""
-    url = "git+https://github.com/omnigent-ai/omnigent.git"
+    url = "git+https://github.com/JZKK720/agent-meow.git"
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: True)
     monkeypatch.setattr(extra_install, "_installed_vcs_url", lambda: url)
     cmd = extra_install_command("cursor")

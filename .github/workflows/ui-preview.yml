@@ -341,7 +341,7 @@ jobs:
 
           > [!NOTE]
           > This preview is only accessible to maintainers with workspace access.
-          > It serves the UI only -- connect your own host (\`omnigent run … --server <url>\`) to drive a real session.
+          > It serves the UI only -- connect your own host (\`meow run … --server <url>\`) to drive a real session.
           > The preview updates automatically when new commits are pushed."
 
           COMMENT_ID=$(gh api --paginate \

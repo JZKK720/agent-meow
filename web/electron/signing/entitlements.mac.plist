@@ -28,12 +28,12 @@
            3. the embedded Developer ID provisioning profile
               (signing/omnigent.provisionprofile, wired via
               `provisioningProfile` in package.json's `build.mac`), whose
-              allowlist `8RMX4WU6F8.*` authorizes the group. The signing
+              allowlist `<CUBECLOUD_TEAM_ID>.*` authorizes the group. The signing
               identity must be the same team (package.json pins
-              "Databricks, Inc. (8RMX4WU6F8)"). -->
+              "智方云 (Cubecloud) (<CUBECLOUD_TEAM_ID>)"). -->
     <key>keychain-access-groups</key>
     <array>
-      <string>8RMX4WU6F8.ai.omnigent.desktop</string>
+      <string><CUBECLOUD_TEAM_ID>.io.cubecloud.agentmeow.desktop</string>
     </array>
   </dict>
 </plist>

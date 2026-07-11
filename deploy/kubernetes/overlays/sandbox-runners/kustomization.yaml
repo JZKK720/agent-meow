@@ -21,7 +21,7 @@ resources:
 # fail to import the client. Build the server WITH it
 # (`--build-arg OMNIGENT_EXTRAS=kubernetes`, see deploy/docker) and set it here.
 images:
-  - name: ghcr.io/omnigent-ai/omnigent-server
+  - name: ghcr.io/JZKK720/agent-meow-server
     newName: ghcr.io/REPLACE_ME/omnigent-server
     newTag: kubernetes
 

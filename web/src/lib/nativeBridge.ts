@@ -352,7 +352,7 @@ function setInsetVar(name: string, value: string): void {
  * simply lack this optional method, so this degrades to a no-op.
  */
 export function setNativeServerSwitcherHidden(hidden: boolean): void {
-  setInsetVar("--omnigent-top-bar-visible", hidden ? "0" : "1");
+  setInsetVar("--agentmeow-top-bar-visible", hidden ? "0" : "1");
   const native = nativeApi();
   const setter = native?.setServerSwitcherHidden ?? native?.setSidebarOpen;
   if (!setter) return;
@@ -376,7 +376,7 @@ export function setNativeSidebarOpen(open: boolean): void {
  * caller renders its own in-page pill there.
  */
 export function setNativeViewMode(params: NativeViewModeParams): void {
-  setInsetVar("--omnigent-bottom-bar-visible", params.visible ? "1" : "0");
+  setInsetVar("--agentmeow-bottom-bar-visible", params.visible ? "1" : "0");
   const native = nativeApi();
   if (!native?.setViewMode) return;
   try {

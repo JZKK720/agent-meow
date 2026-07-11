@@ -3,11 +3,12 @@
 Thanks for your interest in improving agent-meow. Issues and pull requests are
 welcome. For larger changes, open an issue first so we can discuss the approach.
 
-agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent)
-(Apache-2.0). The Python package directory `omnigent/` is retained as a
-vendored runtime; user-facing strings and the CLI entry point have been
-rebranded. See [docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md) for the full
-rename roadmap.
+agent-meow is the agent workspace surface for ColorFire and Meow series AIPC
+and Laptops by 智方云 (Cubecloud). It is derived from Omnigent (Apache-2.0).
+The Python package directory `omnigent/` is retained as a vendored runtime;
+user-facing strings and the CLI entry point have been rebranded to agent-meow
+(with `meow` and `agent-meow` as first-class CLI aliases). See
+[docs/REBRAND_AUDIT.md](docs/REBRAND_AUDIT.md) for the full rename roadmap.
 
 Please don't include secrets, internal URLs, customer data, or private
 configuration in issues, tests, examples, or logs.
@@ -37,9 +38,12 @@ Install local prerequisites first:
 - Node.js 22 LTS or newer with `npm` when working on `web/`.
 
 ```bash
-git clone https://github.com/omnigent-ai/omnigent.git
-cd omnigent
-# agent-meow is developed on a fork of the upstream omnigent-ai/omnigent repo.
+git clone https://github.com/JZKK720/agent-meow.git
+cd agent-meow
+# agent-meow is derived from Omnigent (Apache-2.0) and developed on the
+# JZKK720/agent-meow repo by 智方云 (Cubecloud). The CLI installs as
+# `omnigent` / `omni` / `meow` / `agent-meow` — all four resolve to the
+# same entry point.
 
 uv python install
 uv venv --python "$(cat .python-version)"
@@ -68,10 +72,10 @@ and run the frontend dev server. Use three separate terminals:
 
 ```bash
 # Terminal 1: local server on :6767
-omnigent server
+meow server
 
 # Terminal 2: register your machine as a host
-omnigent host --server http://localhost:6767
+meow host --server http://localhost:6767
 
 # Terminal 3: frontend dev server
 cd web
@@ -83,8 +87,8 @@ Open the Vite URL from the frontend dev server, usually
 your filesystem and start new sessions on your machine — without it, the web UI
 is read/continue-only.
 
-`omni` is an alias for `omnigent`, so `omni host --server ...` works too.
-The host URL can also be passed positionally (`omnigent host
+`meow` and `agent-meow` are aliases for `omnigent`, so `meow host --server ...` works too.
+The host URL can also be passed positionally (`meow host
 http://localhost:6767`). See the [README](README.md) for more on hosts,
 harnesses, and credentials.
 

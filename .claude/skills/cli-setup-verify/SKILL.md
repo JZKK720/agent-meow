@@ -99,10 +99,10 @@ to read it.
 | Scenario | What it drives | Key checks / notes | Maps to findings |
 |---|---|---|---|
 | `check-isolation` | `omnigent config list` in the sandbox (no PTY) | `config_list_ran`, `sandbox_config_home_used`, `real_config_untouched` | safety gate for everything |
-| `cold-start` | `omnigent setup` via PTY on a simulated fresh machine | `onboarding_rendered`, `harness_menu_present`; note `guided_default_affordance` | cold-start dead-end; missing "recommended start here" |
-| `setup-snapshot` | `omnigent setup`, optional `--nav-down N` arrow steps | `menu_rendered`; saves a frame per step | picker markers/footer/alignment; narrow-terminal at 80×24 |
+| `cold-start` | `meow setup` via PTY on a simulated fresh machine | `onboarding_rendered`, `harness_menu_present`; note `guided_default_affordance` | cold-start dead-end; missing "recommended start here" |
+| `setup-snapshot` | `meow setup`, optional `--nav-down N` arrow steps | `menu_rendered`; saves a frame per step | picker markers/footer/alignment; narrow-terminal at 80×24 |
 | `help-snapshot` | `omnigent [--subcommand] --help` (no PTY) | `help_rendered`, `no_param_leak`, `no_update_dup`; note `top_level_command_count` | `:param` leak, duplicate `update`/`upgrade`, command sprawl |
-| `repl-commands` | `omnigent run <agent>` REPL, sends `/help` + `/quit` | `help_lists_commands`; note `quit_advertised` | REPL discoverability (`/help`, `/quit`) |
+| `repl-commands` | `meow run <agent>` REPL, sends `/help` + `/quit` | `help_lists_commands`; note `quit_advertised` | REPL discoverability (`/help`, `/quit`) |
 
 `--list-scenarios` prints them too. Captured frames land in the printed
 `artifacts` dir as both `<name>.txt` (ANSI-stripped, for reading/asserting) and
@@ -170,14 +170,14 @@ sandbox env and the keys the driver exports (`KEY_UP`/`KEY_DOWN`/`KEY_ENTER`/
 ## Teardown — non-negotiable
 
 - The driver force-kills the PTY child and its descendants, and runs
-  `omnigent server stop` against the sandbox to reap any spawned background
+  `meow server stop` against the sandbox to reap any spawned background
   server. After a run, confirm nothing leaked:
   `pgrep -af "omnigent.*(server|runner|host._daemon)"` — anything bound to your
   sandbox's data dir is yours to kill.
 - The sandbox temp dir is deleted unless `--keep-sandbox`. If you keep one for
   inspection, `rm -rf` it when done.
 - Always drive the CLI through the driver (which redirects `HOME` + the
-  config/data knobs), never a bare `omnigent setup` — that would write to the
+  config/data knobs), never a bare `meow setup` — that would write to the
   real `~/.omnigent`. If you pass `--inherit-home`, expect `cli-*.log` writes to
   the real `~/.omnigent/logs` and a `real_config_untouched: false` — that's the
   guard working, not a bug.

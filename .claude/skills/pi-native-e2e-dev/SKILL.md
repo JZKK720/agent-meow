@@ -1,13 +1,13 @@
 ---
 name: pi-native-e2e-dev
-description: Spin up a live local agent-meow server + runner and exercise the native Pi TUI harness (pi-native) end-to-end — launch the real `pi` CLI via `omnigent pi`, drive turns through the web/bridge, smoke-test, and bug-bash. Load when developing, testing, or debugging the pi-native harness (omnigent/inner/pi_native_executor.py, pi_native_harness.py, omnigent/pi_native.py, pi_native_bridge.py, pi_native_credentials.py) or its bridge / extension / auth / model behavior.
+description: Spin up a live local agent-meow server + runner and exercise the native Pi TUI harness (pi-native) end-to-end — launch the real `pi` CLI via `meow pi`, drive turns through the web/bridge, smoke-test, and bug-bash. Load when developing, testing, or debugging the pi-native harness (omnigent/inner/pi_native_executor.py, pi_native_harness.py, omnigent/pi_native.py, pi_native_bridge.py, pi_native_credentials.py) or its bridge / extension / auth / model behavior.
 ---
 
 # Pi native harness: end-to-end dev & testing (local server/runner)
 
 The `pi-native` harness wraps the **real Pi coding-agent TUI**
 (`@earendil-works/pi-coding-agent`, the `pi` CLI). Unlike the SDK harnesses
-(cursor / copilot / antigravity), it does **not** run in-process: `omnigent pi`
+(cursor / copilot / antigravity), it does **not** run in-process: `meow pi`
 ensures a host daemon, the daemon spawns a **runner** that launches `pi` inside a
 runner-owned **tmux** terminal, and your TTY attaches to it. agent-meow's web-UI
 turns are forwarded into that live `pi` process through a **file-inbox bridge** +
@@ -22,7 +22,7 @@ just the unit tests.
 ## What actually runs where
 
 ```
-your TTY ── (attach / pexpect) ──► omnigent pi (CLI, local)
+your TTY ── (attach / pexpect) ──► meow pi (CLI, local)
                                         │ ensures
                                         ▼
                                   host daemon ──► local agent-meow server (AP)
@@ -31,7 +31,7 @@ your TTY ── (attach / pexpect) ──► omnigent pi (CLI, local)
                                   runner ── launches ──► pi (TUI, in tmux)
                                                               │ loads
                                                               ▼
-                                                 omnigent pi-native extension (JS)
+                                                 meow pi-native extension (JS)
 ```
 
 Two ways a turn reaches Pi — test both:
@@ -60,13 +60,13 @@ Two ways a turn reaches Pi — test both:
    by the e2e extension tests). `node --version`.
 5. **Auth is resolvable (booleans/ids only — never print keys).** Native Pi
 normally logs in from its own `~/.pi/agent`. agent-meow bridges the provider you
-   set with `omnigent setup` instead, writing a managed per-session `models.json`
+   set with `meow setup` instead, writing a managed per-session `models.json`
    and passing `--provider omnigent --model <resolved>`. Verify what it will use:
    ```bash
    .venv/bin/python -c "from omnigent.pi_native_credentials import resolve_pi_native_provider as r; p=r(); print('provider:', getattr(p,'provider_id',None), '| api:', getattr(p,'api',None), '| model:', getattr(p,'model',None))"
    ```
    `None` → no omnigent provider configured; Pi falls back to its own `/login`
-   (run `omnigent setup`, or log into `pi` directly). A Databricks default
+   (run `meow setup`, or log into `pi` directly). A Databricks default
    resolves to the AI-Gateway `anthropic-messages` surface with a refreshed
    bearer token.
 6. **Network egress to the model backend.** A turn that hangs/fails to connect on
@@ -82,20 +82,20 @@ SERVER=http://127.0.0.1:6767         # use the printed URL below
 curl -s "$SERVER/health"             # {"status":"ok"}
 ```
 
-(`omnigent pi --server ""` also auto-spawns a persistent local server and uses
+(`meow pi --server ""` also auto-spawns a persistent local server and uses
 it — handy for a one-shot manual run, but a known `$SERVER` URL is better for
 scripted API observation below.)
 
 ## Step 2 — launch the native Pi terminal against the local server
 
-`omnigent pi` **attaches an interactive TUI**, so run it where you can hold it
+`meow pi` **attaches an interactive TUI**, so run it where you can hold it
 open. Two patterns:
 
 **A. Background terminal (recommended for scripted drives).** Launch it in one
 terminal and drive/observe from another:
 
 ```bash
-.venv/bin/omnigent pi --server "$SERVER" 2>&1   # attaches the Pi TUI; leave it running
+.venv/bin/meow pi --server "$SERVER" 2>&1   # attaches the Pi TUI; leave it running
 ```
 
 It prints `Web UI: <url>` and a resume hint to stderr — grab the conversation id
@@ -107,12 +107,12 @@ CONV=conv_xxxxxxxx   # from the "Web UI:" line / resume hint
 
 **B. PTY driver (fully automated).** Drive it under `pexpect` exactly like the
 `claude-native-e2e-test` skill's `cuj_driver.py` (a proven, generalizable base):
-spawn `omnigent pi --server <url>` in a PTY with `cwd=<checkout>`, capture the
+spawn `meow pi --server <url>` in a PTY with `cwd=<checkout>`, capture the
 conv id from the printed URL, send keystrokes / poll the API, then **tear down
 the whole process tree** (see Teardown — pexpect Ctrl-C only *detaches* tmux).
 
 Pass-through Pi CLI args go after the command (persisted as
-`terminal_launch_args`), e.g. `omnigent pi --server "$SERVER" -- --model <id>`;
+`terminal_launch_args`), e.g. `meow pi --server "$SERVER" -- --model <id>`;
 omnigent still injects `--provider omnigent --model <resolved>` when a provider
 is configured (see `pi_native_credentials.py`).
 
@@ -172,7 +172,7 @@ that wires Pi's provider/model. Key env vars: `HARNESS_PI_NATIVE_BRIDGE_DIR`,
 |------|-----|
 | Web→Pi delivery | POST a message (Step 3); confirm a fresh `inbox/*.json` appears then drains and the reply mirrors to `…/items` |
 | Native tools (shell/edit/read) | prompt Pi to create→read→edit a file and run a shell command; confirm it touches disk |
-| Resume | stop the TUI, `omnigent pi --server "$SERVER" --resume "$CONV"` — reattaches; `--resume` (no value) opens the pi-native picker |
+| Resume | stop the TUI, `meow pi --server "$SERVER" --resume "$CONV"` — reattaches; `--resume` (no value) opens the pi-native picker |
 | Interrupt | mid-turn, enqueue an interrupt (`pi_native_bridge.enqueue_interrupt(bridge_dir)`) or use the UI stop; confirm Pi's `abort()` fires and the next turn isn't poisoned (see `test_pi_native_interrupt_replay_e2e.py`) |
 | Policy / guardrail | add a guardrail that denies a keyword; native Pi tool calls are gated by the extension POSTing `…/policies/evaluate` (not the turn-scoped evaluator) — confirm a DENY blocks |
 | Model routing | flip the configured provider/model; re-check the Prereq-5 probe and that the answer still lands |
@@ -180,7 +180,7 @@ that wires Pi's provider/model. Key env vars: `HARNESS_PI_NATIVE_BRIDGE_DIR`,
 
 ## Gotchas (these cost real time)
 
-1. **It's a TUI, not `omni run`.** Use `omnigent pi`. There is no
+1. **It's a TUI, not `omni run`.** Use `meow pi`. There is no
    `omni run <bundle>` path for pi-native; the executor only enqueues into the
    bridge — Pi must be alive (attached) for a turn to be processed.
 2. **`config.yaml`'s `server:` defaults to a remote server.** Always pass
@@ -189,7 +189,7 @@ that wires Pi's provider/model. Key env vars: `HARNESS_PI_NATIVE_BRIDGE_DIR`,
    checkout (allowlist: `omnigent/spec/_omnigent_compat.py`).
 3. **No live LLM without auth.** If the Prereq-5 probe prints `None` and `pi`
    isn't logged in, turns won't get a real answer. Configure a provider via
-   `omnigent setup` or `pi` `/login`.
+   `meow setup` or `pi` `/login`.
 4. **tmux must be reachable from the CLI process.** Direct tmux attach needs the
    runner-owned socket visible locally; a missing socket/`tmux` fails the attach.
 5. **Turns take ~20–90s** — wrap scripted waits/`timeout` generously.

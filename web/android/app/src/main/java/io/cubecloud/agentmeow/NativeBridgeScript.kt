@@ -1,4 +1,4 @@
-package ai.omnigent.android
+package io.cubecloud.agentmeow.android
 
 /**
  * The JavaScript injected into the main frame on every load to expose
@@ -59,11 +59,11 @@ object NativeBridgeScript {
           // The header additionally reads a raw env(safe-area-inset-top), which
           // Android WebView reports as 0, so it needs the override even pre-Tailwind.
           const ensureInsetStyles = () => {
-            if (document.getElementById("omnigent-android-insets")) return;
+            if (document.getElementById("agentmeow-android-insets")) return;
             const T = "var(--omnigent-safe-top, 0px)";
             const B = "var(--omnigent-safe-bottom, 0px)";
             const style = document.createElement("style");
-            style.id = "omnigent-android-insets";
+            style.id = "agentmeow-android-insets";
             style.textContent = [
               ".chat-header{top:max(0px, calc(" + T + " - 0.5rem)) !important}",
               ".chat-conversation-content{padding-top:calc(var(--omnigent-header-height, 3.5rem) + 1.5rem + " + T + ") !important}",

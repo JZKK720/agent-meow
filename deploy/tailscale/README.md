@@ -17,7 +17,7 @@ other device you own.
 
 - Tailscale installed on your server machine and every client device.
   All signed in to the same Tailscale account.
-- agent-meow server running locally (e.g. `omnigent server` or
+- agent-meow server running locally (e.g. `meow server` or
   `docker compose up -d` from `deploy/docker/`).
 
 ## Tailnet-only access (phone / tablet / remote laptop)

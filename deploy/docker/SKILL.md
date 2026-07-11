@@ -18,8 +18,8 @@ boundary clean (server doesn't execute user code), and the deploy
 shape consistent across hosts.
 
 The same Dockerfile also has a `host` target — the prebaked agent-meow
-HOST image (`omnigent-host`) that remote sandboxes boot from
-(`omnigent sandbox create --provider modal`, server-launched managed
+HOST image (`agent-meow-host`) that remote sandboxes boot from
+(`meow sandbox create --provider modal`, server-launched managed
 hosts). It is the inverse profile: full omnigent install plus git +
 tmux, no SPA, no psycopg, no server entrypoint. Both images are
 published by the same workflows with the same `:sha-<short>` /

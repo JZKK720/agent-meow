@@ -18,7 +18,7 @@ below). There is no separate auth-proxy container.
 cd deploy/docker
 ./bootstrap.sh                          # mints POSTGRES_PASSWORD + cookie secret into .env
 docker compose up -d
-docker compose logs -f omnigent       # ctrl-c when boot is clean
+docker compose logs -f agent-meow       # ctrl-c when boot is clean
 ```
 
 `bootstrap.sh` is idempotent — re-running it leaves already-set secrets
@@ -30,7 +30,7 @@ Server is on http://localhost:8000. The web UI prints the CLI command
 to launch a local runner against it. From your laptop:
 
 ```bash
-omnigent run path/to/agent.yaml --server http://localhost:8000
+meow run path/to/agent.yaml --server http://localhost:8000
 ```
 
 Reset everything (drops the DB and the artifact store):
@@ -56,7 +56,7 @@ external URL so invite links resolve correctly:
 OMNIGENT_ACCOUNTS_BASE_URL=https://omnigent.example.com
 
 docker compose up -d
-docker compose logs omnigent | grep -A4 "Created initial admin"
+docker compose logs agent-meow | grep -A4 "Created initial admin"
 ```
 
 Copy the random `password` from the log line into the web UI's
@@ -115,7 +115,7 @@ shim, no oauth2-proxy.
    ```
 
    The server will fail loud at startup if any required OIDC env var
-   is missing — check `docker compose logs omnigent` if it doesn't
+   is missing — check `docker compose logs agent-meow` if it doesn't
    come up.
 
 5. **Visit the URL** → you should be redirected to GitHub to log in,
@@ -248,23 +248,23 @@ included (no SPA bundle, no psycopg, no uvicorn entrypoint).
 
 CI publishes it next to the server image, with the same tag scheme:
 
-- `ghcr.io/omnigent-ai/omnigent-host:latest` — tracks main HEAD
-  (the default for `omnigent sandbox create --provider modal`)
-- `ghcr.io/omnigent-ai/omnigent-host:sha-<short>` — immutable
+- `ghcr.io/JZKK720/agent-meow-host:latest` — tracks main HEAD
+  (the default for `meow sandbox create --provider modal`)
+- `ghcr.io/JZKK720/agent-meow-host:sha-<short>` — immutable
   per-commit pin
-- `ghcr.io/omnigent-ai/omnigent-host:vX.Y.Z` — release tags
+- `ghcr.io/JZKK720/agent-meow-host:vX.Y.Z` — release tags
 
 Build it locally from the repo root:
 
 ```bash
-docker build -t omnigent-host:latest --target host \
+docker build -t agent-meow-host:latest --target host \
              -f deploy/docker/Dockerfile .
 ```
 
 ### Using it with the Modal sandbox provider
 
-`omnigent sandbox create --provider modal` boots sandboxes from
-`ghcr.io/omnigent-ai/omnigent-host:latest` by default. Your local
+`meow sandbox create --provider modal` boots sandboxes from
+`ghcr.io/JZKK720/agent-meow-host:latest` by default. Your local
 checkout's wheels are still built and overlaid on top at create time
 (`pip install --force-reinstall --no-deps`), so the sandbox runs
 exactly your code — the baked image just supplies the dependency
@@ -276,14 +276,14 @@ Two environment variables tune the pull:
 
 | Variable | Purpose |
 |---|---|
-| `OMNIGENT_MODAL_HOST_IMAGE` | Override the image ref, e.g. an org-internal copy (`ghcr.io/<your-org>/omnigent-host:latest`) or a `:sha-<short>` pin. |
+| `OMNIGENT_MODAL_HOST_IMAGE` | Override the image ref, e.g. an org-internal copy (`ghcr.io/<your-org>/agent-meow-host:latest`) or a `:sha-<short>` pin. |
 | `OMNIGENT_MODAL_REGISTRY_SECRET` | Name of a [Modal secret](https://modal.com/secrets) holding registry credentials for private pulls. Create it with keys `REGISTRY_USERNAME` (your registry username) and `REGISTRY_PASSWORD` (for GHCR: a personal access token with `read:packages`). Unset = anonymous pull. |
 
 ### Using it with the Daytona sandbox provider
 
 The same host image backs Daytona-managed sessions (server config
 `sandbox.provider: daytona`; Daytona is managed-only — there is no
-`omnigent sandbox create --provider daytona` CLI flow). Daytona ingests
+`meow sandbox create --provider daytona` CLI flow). Daytona ingests
 the registry image into an internal snapshot on first use (the first
 launch from a given image takes minutes; later launches reuse the
 snapshot and take seconds). Override the ref with

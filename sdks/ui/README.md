@@ -1,7 +1,7 @@
 # omnigent-ui-sdk
 
 Terminal UI components (Rich + prompt_toolkit) for building
-[agent-meow](https://github.com/omnigent-ai/omnigent) frontends.
+[agent-meow](https://github.com/JZKK720/agent-meow) frontends.
 
 `omnigent-ui-sdk` provides the reusable rendering and input building blocks used
 by the agent-meow CLI to display streaming agent output in the terminal. It is
@@ -11,5 +11,5 @@ released in lockstep with the core `omnigent` package at a matching version:
 pip install omnigent-ui-sdk
 ```
 
-See the [agent-meow repository](https://github.com/omnigent-ai/omnigent) for full
+See the [agent-meow repository](https://github.com/JZKK720/agent-meow) for full
 documentation.

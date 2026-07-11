@@ -1,4 +1,4 @@
-package ai.omnigent.android
+package io.cubecloud.agentmeow.android
 
 import android.net.Uri
 import android.webkit.PermissionRequest

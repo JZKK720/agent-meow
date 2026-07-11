@@ -5,16 +5,16 @@ generated at release time from each PR's `## Changelog` section, tagged by the
 PR's `Type of change` (e.g. `[UI]`); the concise, curated highlights live on the
 website under `/releases`.
 
-> agent-meow is a fork of [Omnigent](https://github.com/omnigent-ai/omnigent).
-> Releases prior to the fork are tagged on the upstream repo.
+> agent-meow is derived from Omnigent (Apache-2.0). Releases prior to the
+> fork are tagged on the upstream repo.
 
 ## [v0.3.0] — 2026-06-26
 
-Highlights and full notes: <https://github.com/omnigent-ai/omnigent/releases/tag/v0.3.0>
+Highlights and full notes: <https://github.com/JZKK720/agent-meow/releases/tag/v0.3.0>
 
 ## [v0.2.0] — 2026-06-19
 
-Highlights and full notes: <https://github.com/omnigent-ai/omnigent/releases/tag/v0.2.0>
+Highlights and full notes: <https://github.com/JZKK720/agent-meow/releases/tag/v0.2.0>
 
 ## [v0.1.1] — 2026-06-16
 

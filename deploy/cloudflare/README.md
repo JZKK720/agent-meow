@@ -24,7 +24,7 @@ URL (or your domain), and the container sleeps when idle.
 browser ───────────────►  Worker (src/index.js)
                               │   getContainer("singleton").fetch(req)
                               ▼
-                          Container  ──►  the omnigent server (port 8000)
+                          Container  ──►  the agent-meow server (port 8000)
                           (1 instance)        │            │
                           DATABASE_URL ───────┘            │  S3 API (boto3)
                           cloudflare_d1://…                ▼
@@ -38,7 +38,7 @@ browser ───────────────►  Worker (src/index.js)
 
 - **Worker** — a thin front that proxies every request to **one** container
   instance (agent-meow keeps an in-memory runner registry, so it's single-replica).
-- **Container** — the official `ghcr.io/omnigent-ai/omnigent-server` image plus
+- **Container** — the official `ghcr.io/JZKK720/agent-meow-server` image plus
   the D1 SQLAlchemy dialect, a shim that re-registers it as a proper SQLite
   dialect, and `boto3` (this directory's `Dockerfile`).
 - **D1** is the database. The server reaches it through the
@@ -137,13 +137,13 @@ npx wrangler secret put AWS_SECRET_ACCESS_KEY
 
 ```bash
 npx wrangler deploy
-# -> https://omnigent.<your-subdomain>.workers.dev
+# -> https://agent-meow.\u003cyour-subdomain\u003e.workers.dev
 ```
 
 The container cold-starts on the first request (~10s), then stays warm:
 
 ```bash
-curl https://omnigent.<your-subdomain>.workers.dev/health   # {"status":"ok"}
+curl https://agent-meow.\u003cyour-subdomain\u003e.workers.dev/health   # {"status":"ok"}
 ```
 
 On a brand-new D1, the **first** boot runs all migrations before the server
@@ -157,8 +157,8 @@ Then connect a machine to actually run agents (the server is just the control
 plane):
 
 ```bash
-omnigent login https://omnigent.<your-subdomain>.workers.dev
-omnigent host  --server https://omnigent.<your-subdomain>.workers.dev
+meow login https://agent-meow.\u003cyour-subdomain\u003e.workers.dev
+meow host  --server https://agent-meow.\u003cyour-subdomain\u003e.workers.dev
 ```
 
 ## Verifying durability

@@ -33,9 +33,9 @@ def test_mdx_escape_preserves_blockquote_gt() -> None:
 
 
 def test_linkify_pr_refs() -> None:
-    out = mod.linkify_pr_refs("fixed in #1304 and #20", "omnigent-ai/omnigent")
-    assert "[#1304](https://github.com/omnigent-ai/omnigent/pull/1304)" in out
-    assert "[#20](https://github.com/omnigent-ai/omnigent/pull/20)" in out
+    out = mod.linkify_pr_refs("fixed in #1304 and #20", "JZKK720/agent-meow")
+    assert "[#1304](https://github.com/JZKK720/agent-meow/pull/1304)" in out
+    assert "[#20](https://github.com/JZKK720/agent-meow/pull/20)" in out
 
 
 def test_linkify_leaves_headings_alone() -> None:

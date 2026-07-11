@@ -45,7 +45,7 @@ defaults:
 jobs:
   build-and-release:
     # Inert in forks / mirrors — only the canonical repo cuts releases.
-    if: github.repository == 'omnigent-ai/omnigent'
+    if: github.repository == 'JZKK720/agent-meow'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

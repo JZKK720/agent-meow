@@ -9,11 +9,11 @@ name = "omnigent"
 # (omnigent-client / omnigent-ui-sdk pin omnigent==X). The user-facing
 # brand is "agent-meow" — see README.md and web/index.html.
 version = "0.5.0.dev0"
-description = "agent-meow: agent workspace runtime with Docs, Images, and Voice surfaces"
+description = "agent-meow: agent workspace surface for ColorFire and Meow series AIPC and Laptops, with Docs, Images, and Voice surfaces"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
-    { name = "agent-meow contributors" },
+    { name = "智方云 (Cubecloud)" },
 ]
 keywords = ["agents", "llm", "ai", "docs", "images", "cli"]
 classifiers = [
@@ -247,10 +247,13 @@ dev = [
 # the legacy argparse commands from `omnigent/inner/cli.py` plus the
 # omnigent `ap` subcommands. See designs/UNIFICATION.md § CLI
 # absorption. `omni` is installed as a short alias — both resolve to
-# the same entry point. (No former-name aliases: only `omnigent` and
-# `omni` ship, internal and OSS alike.)
+# the same entry point. `meow` and `agent-meow` are the Cubecloud
+# brand aliases for ColorFire and Meow series products — all four
+# resolve to the same entry point.
 omnigent = "omnigent.cli:main"
 omni = "omnigent.cli:main"
+meow = "omnigent.cli:main"
+agent-meow = "omnigent.cli:main"
 
 # uv path-deps for the sibling SDK packages (renamed in Stage 3).
 [tool.uv.sources]
