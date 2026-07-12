@@ -129,7 +129,7 @@ def _write_context_atomic(bridge_dir: Path, payload: dict[str, object]) -> None:
                 os.unlink(tmp_path)
             raise
     except OSError as exc:
-        print(f"omnigent claude status: write failed: {exc}", file=sys.stderr)
+        print(f"agent-meow claude status: write failed: {exc}", file=sys.stderr)
 
 
 def _chain(command: str, stdin_payload: str) -> None:
@@ -153,7 +153,7 @@ def _chain(command: str, stdin_payload: str) -> None:
             timeout=5.0,
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        print(f"omnigent claude status: chain failed: {exc}", file=sys.stderr)
+        print(f"agent-meow claude status: chain failed: {exc}", file=sys.stderr)
         return
     if proc.stdout:
         sys.stdout.write(proc.stdout)

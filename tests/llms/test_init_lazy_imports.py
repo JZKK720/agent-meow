@@ -1,11 +1,11 @@
 """Regression test for the agent_meow.llms <-> agent_meow.reasoning_effort cycle.
 
-The eager top-level imports in ``omnigent/llms/__init__.py`` created
+The eager top-level imports in ``agent_meow/llms/__init__.py`` created
 a circular load when any caller imported ``agent_meow.llms.errors``
 during the load of ``agent_meow.reasoning_effort`` (which happens on
 every server-routes import via ``server/routes/sessions.py``).
 
-The fix in ``omnigent/llms/__init__.py`` switches to a
+The fix in ``agent_meow/llms/__init__.py`` switches to a
 ``__getattr__`` shim so ``Client`` and ``get_model_context_window``
 are resolved lazily on first access. This test guards against
 re-introducing the cycle by re-importing the affected modules

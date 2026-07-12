@@ -40,7 +40,7 @@ def test_find_repo_root_no_git_integration(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Integration: ``_find_repo_root`` returns None when __file__ is outside any repo."""
-    fake_file = tmp_path / "omnigent" / "update_check.py"
+    fake_file = tmp_path / "agent-meow" / "update_check.py"
     fake_file.parent.mkdir(parents=True)
     fake_file.write_text("")
 
@@ -57,24 +57,24 @@ def test_find_repo_root_ignores_unrelated_ancestor_git(
 
     Regression for the ``uv tool install`` scenario. The previous
     walk-up implementation matched ``~/.git/`` (a dotfiles repo) when
-    omnigent was installed under ``~/.local/share/uv/tools/`` —
+    agent-meow was installed under ``~/.local/share/uv/tools/`` —
     misclassifying the install as a dev clone and writing
     ``kind: "clone"`` to the update-check cache.
 
     Layout:
 
         tmp_path/.git/                      ← unrelated dotfiles-style repo
-        tmp_path/install/site-packages/omnigent/update_check.py
+        tmp_path/install/site-packages/agent_meow/update_check.py
         (no .git/ or pyproject.toml in install/site-packages/)
 
     Expected: returns ``None`` because the direct parent of
-    ``omnigent/`` (i.e. ``install/site-packages/``) is not a
+    ``agent_meow/`` (i.e. ``install/site-packages/``) is not a
     real repo, even though a ``.git/`` exists higher up.
     """
     (tmp_path / ".git").mkdir()
     site_packages = tmp_path / "install" / "site-packages"
     site_packages.mkdir(parents=True)
-    pkg_dir = site_packages / "omnigent"
+    pkg_dir = site_packages / "agent-meow"
     pkg_dir.mkdir()
     fake_file = pkg_dir / "update_check.py"
     fake_file.write_text("")
@@ -88,19 +88,19 @@ def test_find_repo_root_ignores_unrelated_ancestor_git(
 def test_find_repo_root_requires_pyproject_alongside_git(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``.git/`` next to ``omnigent/`` without ``pyproject.toml`` → None.
+    """``.git/`` next to ``agent_meow/`` without ``pyproject.toml`` → None.
 
     Defense in depth against a hypothetical layout where someone
-    has a directory tree like ``some_repo/omnigent/`` (e.g. a
+    has a directory tree like ``some_repo/agent_meow/`` (e.g. a
     monorepo subdir, or an accidentally-named folder) but no
     ``pyproject.toml`` in the candidate. The pyproject check
     confirms we found OUR repo, not just any directory that
-    happens to contain a folder called ``omnigent/``.
+    happens to contain a folder called ``agent_meow/``.
     """
     repo_like = tmp_path
     (repo_like / ".git").mkdir()
     # Deliberately NO pyproject.toml here.
-    pkg_dir = repo_like / "omnigent"
+    pkg_dir = repo_like / "agent-meow"
     pkg_dir.mkdir()
     fake_file = pkg_dir / "update_check.py"
     fake_file.write_text("")
@@ -114,12 +114,12 @@ def test_find_repo_root_requires_pyproject_alongside_git(
 def test_find_repo_root_accepts_git_plus_pyproject(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``.git/`` AND ``pyproject.toml`` directly above ``omnigent/`` → repo root."""
-    repo = tmp_path / "omnigent"
+    """``.git/`` AND ``pyproject.toml`` directly above ``agent_meow/`` → repo root."""
+    repo = tmp_path / "agent-meow"
     repo.mkdir()
     (repo / ".git").mkdir()
-    (repo / "pyproject.toml").write_text('[project]\nname = "omnigent"\n')
-    pkg_dir = repo / "omnigent"
+    (repo / "pyproject.toml").write_text('[project]\nname = "agent-meow"\n')
+    pkg_dir = repo / "agent-meow"
     pkg_dir.mkdir()
     fake_file = pkg_dir / "update_check.py"
     fake_file.write_text("")
@@ -127,7 +127,7 @@ def test_find_repo_root_accepts_git_plus_pyproject(
     import agent_meow.update_check as mod
 
     monkeypatch.setattr(mod, "__file__", str(fake_file))
-    # Returns exactly the repo root — the parent of omnigent/.
+    # Returns exactly the repo root — the parent of agent_meow/.
     assert mod._find_repo_root() == repo
 
 
@@ -520,11 +520,11 @@ def _block_build_info_import(monkeypatch: pytest.MonkeyPatch) -> None:
 
     1. ``sys.modules["agent_meow._build_info"] = None`` — Python's
        documented "this import raises ImportError" sentinel.
-    2. ``delattr(omnigent, "_build_info")`` — once a previous test
+    2. ``delattr(agent-meow, "_build_info")`` — once a previous test
        has done ``from agent_meow import _build_info`` successfully
        (via its own ``sys.modules`` override with a fake module),
        Python *also* sets ``_build_info`` as an attribute on the
-       ``omnigent`` package. Subsequent ``from agent_meow import
+       ``agent-meow`` package. Subsequent ``from agent_meow import
        _build_info`` finds the attribute first and never consults
        ``sys.modules``, defeating the block above. Wiping the
        attribute restores the import to a clean state.
@@ -616,7 +616,7 @@ def _write_fake_dist_info(
     """
     dist_info = tmp_path / "omnigent-0.1.0.dist-info"
     dist_info.mkdir()
-    (dist_info / "METADATA").write_text("Metadata-Version: 2.1\nName: omnigent\nVersion: 0.1.0\n")
+    (dist_info / "METADATA").write_text("Metadata-Version: 2.1\nName: agent-meow\nVersion: 0.1.0\n")
     if installer is not None:
         (dist_info / "INSTALLER").write_text(installer + "\n")
     if direct_url is not None:
@@ -777,7 +777,7 @@ def test_read_wheel_info_editable_install_is_marked(
         tmp_path,
         installer="uv",
         direct_url={
-            "url": "file:///Users/me/omnigent",
+            "url": "file:///Users/me/agent-meow",
             "dir_info": {"editable": True},
         },
     )
@@ -792,7 +792,7 @@ def test_read_wheel_info_editable_install_is_marked(
 def test_read_wheel_info_pip_registry_install(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``pip install omnigent`` from PyPI: no direct_url, mtime fallback."""
+    """``pip install agent-meow`` from PyPI: no direct_url, mtime fallback."""
     # 2 days ago in epoch seconds.
     install_time = time.time() - 2 * 86400
     dist = _write_fake_dist_info(
@@ -833,7 +833,7 @@ def test_read_wheel_info_handles_corrupt_direct_url(
     install_time = time.time() - 86400 - 60  # just over 1 day
     dist_info = tmp_path / "omnigent-0.1.0.dist-info"
     dist_info.mkdir()
-    (dist_info / "METADATA").write_text("Metadata-Version: 2.1\nName: omnigent\nVersion: 0.1.0\n")
+    (dist_info / "METADATA").write_text("Metadata-Version: 2.1\nName: agent-meow\nVersion: 0.1.0\n")
     (dist_info / "INSTALLER").write_text("uv\n")
     (dist_info / "direct_url.json").write_text("{not valid json")
     import os
@@ -859,28 +859,28 @@ def test_read_wheel_info_handles_corrupt_direct_url(
         ("uv", _FAKE_GIT_URL, f"uv tool install --reinstall {_FAKE_GIT_URL}", True),
         # uv + registry install — ``uv tool upgrade`` resolves from the
         # configured index. The user doesn't need to remember the spec.
-        ("uv", None, "uv tool upgrade omnigent", True),
+        ("uv", None, "uv tool upgrade agent-meow", True),
         # pip + git install — pip's ``--force-reinstall`` re-pulls the
         # spec; plain ``pip install`` would no-op because the version
         # tag (or HEAD) is the same string.
         ("pip", _FAKE_GIT_URL, f"pip install --force-reinstall {_FAKE_GIT_URL}", True),
         # pip + registry — the canonical upgrade incantation.
-        ("pip", None, "pip install -U omnigent", True),
+        ("pip", None, "pip install -U agent-meow", True),
         # pipx — pipx has its own subcommands; we never recommend the
         # underlying pip command because pipx wraps the venv.
-        ("pipx", _FAKE_GIT_URL, "pipx reinstall omnigent", True),
-        ("pipx", None, "pipx upgrade omnigent", True),
+        ("pipx", _FAKE_GIT_URL, "pipx reinstall agent-meow", True),
+        ("pipx", None, "pipx upgrade agent-meow", True),
         # poetry path — included for completeness; poetry is rare for
         # CLI tool installs but the format is documented.
-        ("poetry", None, "poetry update omnigent", True),
+        ("poetry", None, "poetry update agent-meow", True),
         # Unknown installer WITH a VCS URL — we know the source but
         # not the tool, so the suggestion is prose ("reinstall X from
         # <url>"), not a command. Must be runnable=False so the
         # interactive prompt doesn't offer to execute prose.
-        ("custom_tool", _FAKE_GIT_URL, f"reinstall omnigent from {_FAKE_GIT_URL}", False),
+        ("custom_tool", _FAKE_GIT_URL, f"reinstall agent-meow from {_FAKE_GIT_URL}", False),
         # Unknown installer with no source URL — honest fallback.
         # Must also be runnable=False.
-        (None, None, "reinstall omnigent from your original source", False),
+        (None, None, "reinstall agent-meow from your original source", False),
     ],
 )
 def test_build_upgrade_suggestion_matrix(
@@ -893,7 +893,7 @@ def test_build_upgrade_suggestion_matrix(
 
     The ``runnable`` half of the assertion guards ``omni upgrade``: if a
     prose-fallback row ever flipped to runnable=True, the command would
-    try to ``subprocess.run`` the literal string "reinstall omnigent
+    try to ``subprocess.run`` the literal string "reinstall agent-meow
     from ...", which would error or worse (if a binary named "reinstall"
     happened to exist on PATH).
     """
@@ -952,7 +952,7 @@ def test_pip_upgrade_suggestions_use_running_interpreter(
 
     assert (
         _build_upgrade_suggestion(_info(None)).command
-        == "/opt/venv/bin/python -m pip install -U omnigent"
+        == "/opt/venv/bin/python -m pip install -U agent-meow"
     )
     assert (
         _build_upgrade_suggestion(_info(_FAKE_GIT_URL)).command
@@ -1019,7 +1019,7 @@ def test_wheel_check_nags_when_newer_release_available(
     err = _strip_rich_panel(capsys.readouterr().err)
     # Names the new release, the installed version, and the command —
     # proves the message pipeline runs end to end.
-    assert "omnigent 0.2.0 is out" in err
+    assert "agent-meow 0.2.0 is out" in err
     assert "you have 0.1.0" in err
     assert "omni upgrade" in err
     # The notified version is stamped so the nag fires once per release.
@@ -1079,7 +1079,7 @@ def test_wheel_check_bails_for_editable_install(
         tmp_path,
         installer="uv",
         direct_url={
-            "url": "file:///Users/me/omnigent",
+            "url": "file:///Users/me/agent-meow",
             "dir_info": {"editable": True},
         },
     )
@@ -1290,7 +1290,7 @@ def test_fetch_latest_version_pep691_json(monkeypatch: pytest.MonkeyPatch) -> No
 
     assert fetch_latest_version() == "0.2.0"
     # Default index + normalized project name + JSON Accept header.
-    assert captured["url"] == "https://pypi.org/simple/omnigent/"
+    assert captured["url"] == "https://pypi.org/simple/agent-meow/"
     assert captured["headers"] == {"Accept": "application/vnd.pypi.simple.v1+json"}
 
 
@@ -1451,17 +1451,17 @@ def test_build_upgrade_suggestion_allow_prerelease() -> None:
         )
 
     # Default (no pre) is unchanged.
-    assert _build_upgrade_suggestion(_info("uv")).command == "uv tool upgrade omnigent"
+    assert _build_upgrade_suggestion(_info("uv")).command == "uv tool upgrade agent-meow"
     # uv / pip registry installs get the right flag appended.
     assert (
         _build_upgrade_suggestion(_info("uv"), allow_prerelease=True).command
-        == "uv tool upgrade omnigent --prerelease allow"
+        == "uv tool upgrade agent-meow --prerelease allow"
     )
     # pip pins the upgrade to the running interpreter (``<python> -m pip``)
     # so it can't land in some other env whose ``pip`` shadows ours on PATH.
     assert (
         _build_upgrade_suggestion(_info("pip"), allow_prerelease=True).command
-        == f"{_pip_invocation()} install -U omnigent --pre"
+        == f"{_pip_invocation()} install -U agent-meow --pre"
     )
     # VCS install carries the flag too.
     assert (
@@ -1660,7 +1660,7 @@ def test_upgrade_command_for_installed(
     monkeypatch.setattr("agent_meow.update_check._get_distribution", lambda: dist)
     suggestion = upgrade_command_for_installed()
     assert suggestion is not None
-    assert suggestion.command == "uv tool upgrade omnigent"
+    assert suggestion.command == "uv tool upgrade agent-meow"
     assert suggestion.runnable is True
 
     monkeypatch.setattr("agent_meow.update_check._get_distribution", lambda: None)
@@ -1846,7 +1846,7 @@ def test_legacy_cache_without_kind_field_defaults_to_clone(
 ) -> None:
     """Cache written before the ``kind`` field existed reads as ``clone``.
 
-    Backward-compat for users whose ``~/.omnigent/.update_check.json``
+    Backward-compat for users whose ``~/.agent_meow/.update_check.json``
     was written by a previous version of this module. If this fails,
     the dispatcher would treat legacy caches as a different kind and
     re-do the (slow) ``git fetch`` on every invocation.
@@ -1953,7 +1953,7 @@ def test_run_upgrade_command_returns_minus_one_when_binary_missing(
     monkeypatch.setattr(_subprocess, "run", _raise)
 
     console = Console(stderr=True)
-    code = _run_upgrade_command("uv tool upgrade omnigent", console)
+    code = _run_upgrade_command("uv tool upgrade agent-meow", console)
 
     # -1 distinguishes "couldn't start" from "ran and exited
     # non-zero" — the latter would be the subprocess's own code.
@@ -1970,11 +1970,11 @@ def test_run_upgrade_command_returns_minus_one_when_binary_missing(
 
 
 def test_format_version_falls_back_to_bare_version_when_build_info_missing() -> None:
-    """Without ``_build_info``, ``--version`` prints ``omnigent <ver>``.
+    """Without ``_build_info``, ``--version`` prints ``agent-meow <ver>``.
 
     Source checkouts (and any wheel built without our setup.py hook)
     hit this path. The line must remain stable across releases —
-    scripts that grep for "omnigent X.Y.Z" must keep working.
+    scripts that grep for "agent-meow X.Y.Z" must keep working.
     """
     # The autouse fixture has already blocked sys.modules['agent_meow.build_info']
     # via the None sentinel, so _read_build_info returns None.
@@ -1982,9 +1982,9 @@ def test_format_version_falls_back_to_bare_version_when_build_info_missing() -> 
 
     out = _format_version()
     # Exact prefix match — if the format ever gains extra content
-    # in the no-build-info case, scripts that look for "omnigent
+    # in the no-build-info case, scripts that look for "agent-meow
     # X.Y.Z" at the start of the line still work.
-    assert out.startswith("omnigent ")
+    assert out.startswith("agent-meow ")
     # The version comes from importlib.metadata; just check it's
     # non-empty and contains no parenthesized build-info suffix.
     assert "(" not in out
@@ -2069,7 +2069,7 @@ def test_split_vcs_url_strips_pip_fragment() -> None:
     """
     from agent_meow.update_check import _split_vcs_url
 
-    assert _split_vcs_url("git+https://github.com/o/agent_meow.git#egg=omnigent") == (
+    assert _split_vcs_url("git+https://github.com/o/agent_meow.git#egg=agent-meow") == (
         "https://github.com/o/agent_meow.git",
         None,
     )

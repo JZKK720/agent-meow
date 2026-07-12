@@ -114,5 +114,5 @@ def test_infer_harness_from_model(model: str, expected_harness: str) -> None:
     assert infer_harness_from_model(model) == expected_harness, (
         f"Model {model!r}: expected harness {expected_harness!r}, "
         f"got {infer_harness_from_model(model)!r}. "
-        "Check _HARNESS_FOR_MODEL_PREFIX in omnigent/llms/routing.py."
+        "Check _HARNESS_FOR_MODEL_PREFIX in agent_meow/llms/routing.py."
     )

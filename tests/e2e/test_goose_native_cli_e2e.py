@@ -1,14 +1,14 @@
-"""End-to-end tests: ``omnigent goose`` drives the native Goose TUI.
+"""End-to-end tests: ``agent-meow goose`` drives the native Goose TUI.
 
 The goose-native sibling of ``test_cursor_native_cli_e2e``. ``goose-native`` is a
-*terminal-first* harness: ``omnigent goose`` launches Block's ``goose session``
+*terminal-first* harness: ``agent-meow goose`` launches Block's ``goose session``
 TUI in a runner-owned tmux pane, and each web-UI turn is injected into that pane
 (bracketed paste + Enter) by
 :class:`~?agent_meow.inner.goose_native_executor.GooseNativeExecutor`. The TUI's own
 SQLite session store is tailed by :mod:`~?agent_meow.goose_native_forwarder`, which
 mirrors Goose's replies back onto the agent-meow conversation as assistant items.
 
-These tests drive the full stack the way a user does — spawn ``omnigent goose``,
+These tests drive the full stack the way a user does — spawn ``agent-meow goose``,
 then talk to the session **through the server** (``POST /v1/sessions/{id}/events``,
 the web-UI path) — and assert on the persisted assistant items.
 
@@ -80,7 +80,7 @@ def test_goose_native_cli_smoke(
 ) -> None:
     """A goose-native turn driven through the server returns the model's reply.
 
-    Spawns a backgrounded ``omnigent goose`` session, waits for its terminal to
+    Spawns a backgrounded ``agent-meow goose`` session, waits for its terminal to
     register, injects (via ``/events`` — the web-UI path) a prompt asking Goose
     to emit a unique marker word, and asserts the marker comes back as an
     assistant item. Covers the whole path from CLI parse through tmux injection
@@ -124,7 +124,7 @@ def test_goose_native_cli_smoke(
                 )
             except AssertionError as exc:
                 raise AssertionError(
-                    f"`omnigent goose` did not return marker {marker!r}. The "
+                    f"`agent-meow goose` did not return marker {marker!r}. The "
                     "goose-native path regressed somewhere between tmux injection, "
                     "the goose turn, and the forwarder mirroring the reply onto the "
                     f"conversation.\n\nCLI output tail:\n{handle.output()[-2000:]}"
@@ -138,9 +138,9 @@ def test_goose_native_cli_runs_in_launch_cwd(
     tmp_path: Path,
     request: pytest.FixtureRequest,
 ) -> None:
-    """``omnigent goose`` launches ``goose session`` in the directory it was run from.
+    """``agent-meow goose`` launches ``goose session`` in the directory it was run from.
 
-    Spawns a backgrounded ``omnigent goose`` whose process cwd is a temp dir
+    Spawns a backgrounded ``agent-meow goose`` whose process cwd is a temp dir
     containing a marker file, then injects (via the server) a request to read it.
     The marker exists only in the launch cwd, so it can come back only if the
     wrapper launched the TUI there *and* Goose's read tool ran. Requires
@@ -188,7 +188,7 @@ def test_goose_native_cli_runs_in_launch_cwd(
                 )
             except AssertionError as exc:
                 raise AssertionError(
-                    f"`omnigent goose` did not return marker {marker!r} from "
+                    f"`agent-meow goose` did not return marker {marker!r} from "
                     f"{_CWD_MARKER_FILE} — it did not run goose in its launch cwd "
                     f"(or GOOSE_MODE!=auto blocked the read tool).\n\n"
                     f"CLI output tail:\n{handle.output()[-2000:]}"

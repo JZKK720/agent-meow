@@ -161,7 +161,7 @@ def _spec_opts_into_harness_override(spec: Any) -> bool:
     The override is allowlist-gated (design D.4): a sub-agent advertises it
     only when its ``executor.config.allowed_harnesses`` declares a non-empty
     allowlist. This mirrors the dispatch-side opt-in read in
-    ``omnigent/runner/tool_dispatch.py`` (``_subagent_allowed_harnesses``) so
+    ``agent_meow/runner/tool_dispatch.py`` (``_subagent_allowed_harnesses``) so
     the schema gate and the runtime guard agree on what "opted in" means.
     Specs without the opt-in keep the base ``{input, purpose, model}`` args
     contract.
@@ -877,7 +877,7 @@ class SysSessionCreateTool(Tool):
                                 "config YAML, agent directory, or "
                                 ".tar.gz bundle, relative to your "
                                 "working directory, e.g. "
-                                "'.omnigent/agent-configs/helper.yaml'. "
+                                "'.agent_meow/agent-configs/helper.yaml'. "
                                 "Uploads it as a fresh agent and "
                                 "launches the child from it. Use "
                                 "instead of agent_id."

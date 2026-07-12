@@ -1,4 +1,4 @@
-"""End-to-end tests for the Host API (``omnigent connect``).
+"""End-to-end tests for the Host API (``agent-meow connect``).
 
 These tests start a real server subprocess, connect a real host
 daemon, create sessions via the REST API, and verify the full
@@ -89,7 +89,7 @@ def _spawn_host_daemon(
         ``"http://127.0.0.1:12345"``.
     :returns: The spawned daemon handle and its host_id.
     """
-    omni_dir = tmp_path / ".omnigent"
+    omni_dir = tmp_path / ".agent-meow"
     omni_dir.mkdir(parents=True, exist_ok=True)
     host_id = f"host_{uuid.uuid4().hex}"
     host_name = f"e2e-host-{uuid.uuid4().hex[:12]}"
@@ -217,7 +217,7 @@ def test_host_connect_and_list(
     mock_llm_server_url: str,
 ) -> None:
     """
-    Start ``omnigent connect`` as a subprocess, verify the host
+    Start ``agent-meow connect`` as a subprocess, verify the host
     appears in ``GET /v1/hosts`` with status online, stop it, and
     verify it goes offline.
 
@@ -679,7 +679,7 @@ def _spawn_host_daemon_for_mock_claude(
         ``"http://127.0.0.1:12345"``.
     :returns: The spawned daemon handle and its host_id.
     """
-    omni_dir = tmp_path / ".omnigent"
+    omni_dir = tmp_path / ".agent-meow"
     omni_dir.mkdir(parents=True, exist_ok=True)
     host_id = f"host_{uuid.uuid4().hex}"
     host_name = f"e2e-host-{uuid.uuid4().hex[:12]}"
@@ -830,7 +830,7 @@ def test_host_native_session_round_trips_after_runner_death(
                 "agent_id": agent_id,
                 "host_id": host_id,
                 "workspace": str(workspace),
-                "labels": {"omnigent.wrapper": "claude-code-native-ui"},
+                "labels": {"agent_meow.wrapper": "claude-code-native-ui"},
             },
             timeout=60.0,
         )

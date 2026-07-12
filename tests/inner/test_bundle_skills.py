@@ -116,7 +116,7 @@ def test_claude_native_skill_args_with_bundle(
 
 def test_claude_native_skill_args_no_bundle_is_empty() -> None:
     """
-    With no bundle (the ``omnigent claude`` CLI path), no plugin args are
+    With no bundle (the ``agent-meow claude`` CLI path), no plugin args are
     produced under the default ``"all"`` filter — Claude launches with its
     own host config untouched.
     """

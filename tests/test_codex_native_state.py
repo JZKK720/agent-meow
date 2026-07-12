@@ -75,7 +75,7 @@ def test_conflicting_launch_state_write_keeps_original(
     # logger with propagation disabled in this xdist worker. The
     # warning is emitted by ``agent_meow.codex_native_state`` and
     # caplog's handler is attached at root.
-    logging.getLogger("omnigent").propagate = True
+    logging.getLogger("agent-meow").propagate = True
     write_launch_state("conv_abc", "/original")
 
     with caplog.at_level(logging.WARNING):

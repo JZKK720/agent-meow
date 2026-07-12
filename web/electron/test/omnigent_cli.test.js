@@ -2,7 +2,7 @@
 // (no extra deps). The spawning functions need a real binary and are covered by
 // the manual verification flow; here we test path resolution order, server-URL
 // matching, and status parsing — the logic that decides "is this machine
-// connected to server X?" and "which omnigent binary do we run?".
+// connected to server X?" and "which agent-meow binary do we run?".
 
 const { describe, it, mock, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
@@ -80,19 +80,19 @@ describe("parseLocalServerPidfile", () => {
 });
 
 describe("candidatePaths", () => {
-  it("probes both the omnigent name and the omni alias in each location", () => {
+  it("probes both the agent-meow name and the omni alias in each location", () => {
     const paths = candidatePaths();
-    // Every well-known dir contributes an `omnigent` and an `omni` entry.
-    assert.ok(paths.some((p) => p.endsWith("/.local/bin/omnigent")));
+    // Every well-known dir contributes an `agent-meow` and an `omni` entry.
+    assert.ok(paths.some((p) => p.endsWith("/.local/bin/agent-meow")));
     assert.ok(paths.some((p) => p.endsWith("/.local/bin/omni")));
-    assert.ok(paths.includes("/opt/homebrew/bin/omnigent"));
+    assert.ok(paths.includes("/opt/homebrew/bin/agent-meow"));
     assert.ok(paths.includes("/opt/homebrew/bin/omni"));
     assert.ok(paths.includes("/usr/local/bin/omni"));
   });
 
-  it("lists the canonical omnigent name before the omni alias within a dir", () => {
+  it("lists the canonical agent-meow name before the omni alias within a dir", () => {
     const paths = candidatePaths();
-    const og = paths.indexOf("/opt/homebrew/bin/omnigent");
+    const og = paths.indexOf("/opt/homebrew/bin/agent-meow");
     const omni = paths.indexOf("/opt/homebrew/bin/omni");
     assert.ok(og !== -1 && omni !== -1 && og < omni);
   });
@@ -103,36 +103,36 @@ describe("resolveCliPath", () => {
     const got = resolveCliPath(null, {
       isExecutableFile: (p) => p === "/home/me/.local/bin/omni",
       whichOmnigent: () => null,
-      candidatePaths: () => ["/home/me/.local/bin/omnigent", "/home/me/.local/bin/omni"],
+      candidatePaths: () => ["/home/me/.local/bin/agent-meow", "/home/me/.local/bin/omni"],
     });
     assert.deepEqual(got, { path: "/home/me/.local/bin/omni", source: "candidate" });
   });
 
   it("prefers a usable configured path", () => {
-    const got = resolveCliPath("/custom/omnigent", {
-      isExecutableFile: (p) => p === "/custom/omnigent",
-      whichOmnigent: () => "/usr/bin/omnigent",
-      candidatePaths: () => ["/home/me/.local/bin/omnigent"],
+    const got = resolveCliPath("/custom/agent-meow", {
+      isExecutableFile: (p) => p === "/custom/agent-meow",
+      whichOmnigent: () => "/usr/bin/agent-meow",
+      candidatePaths: () => ["/home/me/.local/bin/agent-meow"],
     });
-    assert.deepEqual(got, { path: "/custom/omnigent", source: "configured" });
+    assert.deepEqual(got, { path: "/custom/agent-meow", source: "configured" });
   });
 
   it("falls back to PATH when the configured path is unusable", () => {
     const got = resolveCliPath("/bad/path", {
-      isExecutableFile: (p) => p === "/usr/bin/omnigent",
-      whichOmnigent: () => "/usr/bin/omnigent",
-      candidatePaths: () => ["/home/me/.local/bin/omnigent"],
+      isExecutableFile: (p) => p === "/usr/bin/agent-meow",
+      whichOmnigent: () => "/usr/bin/agent-meow",
+      candidatePaths: () => ["/home/me/.local/bin/agent-meow"],
     });
-    assert.deepEqual(got, { path: "/usr/bin/omnigent", source: "path" });
+    assert.deepEqual(got, { path: "/usr/bin/agent-meow", source: "path" });
   });
 
   it("falls back to a candidate when PATH misses (GUI minimal PATH)", () => {
     const got = resolveCliPath(null, {
-      isExecutableFile: (p) => p === "/home/me/.local/bin/omnigent",
+      isExecutableFile: (p) => p === "/home/me/.local/bin/agent-meow",
       whichOmnigent: () => null,
-      candidatePaths: () => ["/home/me/.local/bin/omnigent", "/opt/homebrew/bin/omnigent"],
+      candidatePaths: () => ["/home/me/.local/bin/agent-meow", "/opt/homebrew/bin/agent-meow"],
     });
-    assert.deepEqual(got, { path: "/home/me/.local/bin/omnigent", source: "candidate" });
+    assert.deepEqual(got, { path: "/home/me/.local/bin/agent-meow", source: "candidate" });
   });
 
   it("returns null when nothing is usable", () => {

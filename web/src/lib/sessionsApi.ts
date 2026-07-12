@@ -1,6 +1,6 @@
 // Typed client for the four `/v1/sessions` endpoints introduced in
 // commit `e64a490` ("Migrate session ↔ client interactions to
-// /v1/sessions"). Mirrors `omnigent/server/routes/sessions.py`.
+// /v1/sessions"). Mirrors `agent_meow/server/routes/sessions.py`.
 //
 // All requests go through the existing Vite `/v1` proxy
 // (`web/vite.config.ts`) so no proxy changes are needed when this
@@ -66,7 +66,7 @@ export interface PostEventResponse {
 }
 
 /**
- * Wire shape of `ModelUsage` from `omnigent/server/schemas.py` — one
+ * Wire shape of `ModelUsage` from `agent_meow/server/schemas.py` — one
  * per-model entry in `usage_by_model`. Snake-case; converted to the
  * camelCase `ModelUsage` type at the parse boundary. Every field is
  * optional (absent when that bucket was not recorded for the model).
@@ -82,7 +82,7 @@ interface ModelUsageWire {
 
 /**
  * Wire shape of `SessionResponse` from
- * `omnigent/server/schemas.py`. Snake-case; converted to the
+ * `agent_meow/server/schemas.py`. Snake-case; converted to the
  * camelCase `Session` type at the parse boundary.
  */
 interface SessionResponseWire {
@@ -127,7 +127,7 @@ interface SessionResponseWire {
   /** Worktree branch; ``null`` when the session uses no worktree. */
   git_branch?: string | null;
   items?: SessionItem[];
-  // `queued_items` is documented in `omnigent/server/API.md` but
+  // `queued_items` is documented in `agent_meow/server/API.md` but
   // is not on `SessionResponse` today (migration plan R5). Typed
   // optional so we read it forward-compatibly when added.
   queued_items?: SessionEventInput[];
@@ -209,7 +209,7 @@ interface SessionResponseWire {
   /**
    * Managed-sandbox launch progress while the background launch is in
    * flight or has failed; absent/null otherwise. Mirrors
-   * `omnigent.server.schemas.SandboxStatus`.
+   * `agent_meow.server.schemas.SandboxStatus`.
    */
   sandbox_status?: SandboxStatus | null;
   /**
@@ -713,7 +713,7 @@ export async function bindOnlyOnlineRunner(sessionId: string): Promise<Session |
 
 /**
  * Snapshot a session. Per the reconnect contract
- * (`omnigent/server/API.md` §Reconnect Contract), callers should
+ * (`agent_meow/server/API.md` §Reconnect Contract), callers should
  * open the live stream FIRST, then call this, then dedupe items by
  * `id`. Calling this alone returns committed state at that moment
  * with no transient (delta) coverage.

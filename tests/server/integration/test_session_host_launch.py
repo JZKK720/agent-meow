@@ -439,7 +439,7 @@ async def test_inline_launch_failure_still_returns_bound_session(
 
 
 _HARNESS_REFUSAL = (
-    "harness 'codex' is not configured on host 'laptop' — run `omnigent setup` on that machine"
+    "harness 'codex' is not configured on host 'laptop' — run `agent-meow setup` on that machine"
 )
 
 
@@ -451,7 +451,7 @@ async def test_inline_create_harness_not_configured_stays_lenient(
     """A ``harness_not_configured`` refusal at CREATE is fully lenient.
 
     The picker's readiness data can be stale (the user may have run
-    ``omnigent setup`` since the host last connected), so create never
+    ``agent-meow setup`` since the host last connected), so create never
     gates on it: the session opens (201), the binding is kept, and —
     unlike the earlier design — NO transcript item is written at create
     time. The error is deferred to the first-message relaunch (the real
@@ -465,7 +465,7 @@ async def test_inline_create_harness_not_configured_stays_lenient(
     comm = await _connect_host(app)
     agent = await create_test_agent(
         client,
-        executor={"type": "omnigent", "config": {"harness": "codex"}},
+        executor={"type": "agent-meow", "config": {"harness": "codex"}},
     )
 
     responder = asyncio.create_task(
@@ -513,7 +513,7 @@ async def test_message_relaunch_harness_not_configured_persists_error_turn(
     The first message is the real runner-start attempt. When the host
     refuses the relaunch with ``harness_not_configured``, the server
     consumes the user message AND records a sibling ``type="error"`` item
-    carrying the host's `omnigent setup` message (the web renders it as
+    carrying the host's `agent-meow setup` message (the web renders it as
     an error banner) — instead of timing out into a generic
     ``RUNNER_UNAVAILABLE``. The binding is left intact so a later message
     relaunches once the user has run setup.
@@ -533,7 +533,7 @@ async def test_message_relaunch_harness_not_configured_persists_error_turn(
     comm = await _connect_host(app)
     agent = await create_test_agent(
         client,
-        executor={"type": "omnigent", "config": {"harness": "codex"}},
+        executor={"type": "agent-meow", "config": {"harness": "codex"}},
     )
     # Create with a successful create-time launch so the session binds a
     # runner_id (the fake runner never actually connects).
@@ -593,7 +593,7 @@ async def test_message_relaunch_harness_not_configured_persists_error_turn(
         f"expected exactly one error item for the refused relaunch, got {error_items!r}"
     )
     assert error_items[0]["code"] == "harness_not_configured"
-    assert "omnigent setup" in error_items[0]["message"]
+    assert "agent-meow setup" in error_items[0]["message"]
     assert "harness 'codex' is not configured" in error_items[0]["message"]
 
     # Binding kept so a post-setup message can relaunch.
@@ -742,7 +742,7 @@ async def test_stopped_host_session_writes_no_label_and_host_stays_online(
     """After Stop, no marker is written and the host stays reachable.
 
     Stop is non-sticky (WS-S2): it kills the host-launched runner but
-    writes NO persistent marker. With the host's ``omnigent host``
+    writes NO persistent marker. With the host's ``agent-meow host``
     tunnel still open, ``GET /health`` keeps reporting ``host_online:
     true`` — the relaunch affordance the open-session view needs — so the
     next message auto-relaunches via the normal dispatch path (covered by

@@ -1,6 +1,6 @@
 """Shared machinery for the native-CLI resume end-to-end tests.
 
-Both ``omnigent claude`` and ``omnigent codex`` support resuming a prior
+Both ``agent-meow claude`` and ``agent-meow codex`` support resuming a prior
 conversation (``--resume <conv_id>``). The regression these tests guard: a
 resumed session must come back with its **history intact** — sending a new
 message to the resumed session must let the model answer from the earlier
@@ -70,7 +70,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _PTY_ROWS = 60
 _PTY_COLS = 220
 
-# Env vars that, leaked from a parent omnigent/Claude/Codex process into the
+# Env vars that, leaked from a parent agent_meow/Claude/Codex process into the
 # code under test, would mis-route the runner or shadow the harness's own auth.
 # Stripped from every CLI subprocess env.
 _STALE_ENV_VARS = (
@@ -91,35 +91,35 @@ _STALE_ENV_VARS = (
 
 def omnigent_console_script() -> Path:
     """
-    Return the ``omnigent`` console-script path in the active venv.
+    Return the ``agent-meow`` console-script path in the active venv.
 
-    Driving the installed console script (rather than ``python -m omnigent``)
+    Driving the installed console script (rather than ``python -m agent-meow``)
     matches how users invoke the CLI; ``PYTHONPATH`` (set by :func:`cli_env`)
     points it at the worktree's code.
 
-    :returns: Absolute path to the ``omnigent`` entry point next to the
+    :returns: Absolute path to the ``agent-meow`` entry point next to the
         running interpreter, e.g.
-        ``"/Users/…/omnigent/.venv/bin/omnigent"``.
+        ``"/Users/…/agent_meow/.venv/bin/agent-meow"``.
     :raises RuntimeError: If the console script is not found beside
         ``sys.executable``.
     """
-    candidate = Path(sys.executable).parent / "omnigent"
+    candidate = Path(sys.executable).parent / "agent-meow"
     if not candidate.is_file():
         raise RuntimeError(
-            f"`omnigent` console script not found at {candidate}; the test venv "
-            f"must have omnigent installed."
+            f"`agent-meow` console script not found at {candidate}; the test venv "
+            f"must have agent-meow installed."
         )
     return candidate
 
 
 def cli_env(*, profile: str | None = None) -> dict[str, str]:
     """
-    Build the subprocess environment for an ``omnigent <harness>`` PTY run.
+    Build the subprocess environment for an ``agent-meow <harness>`` PTY run.
 
     Points ``PYTHONPATH`` at the worktree so the CLI and its spawned runner
     load the fixed code; sets a wide PTY geometry so id lines are not
     truncated; and strips runner/tmux/credential env vars that would
-    otherwise leak from this (possibly omnigent-hosted) process into the
+    otherwise leak from this (possibly agent-meow-hosted) process into the
     code under test (:data:`_STALE_ENV_VARS`). ``HOME`` is left intact — the
     native harness's interactive login (Claude Code's OAuth) is anchored to
     the real ``HOME`` and is NOT recoverable by symlinking ``~/.claude`` into
@@ -155,7 +155,7 @@ def cli_env(*, profile: str | None = None) -> dict[str, str]:
 
 def run_cli_oneshot(args: list[str], *, env: dict[str, str], timeout: float) -> str:
     """
-    Run ``omnigent <harness> … -p <prompt>`` under a PTY until it exits.
+    Run ``agent-meow <harness> … -p <prompt>`` under a PTY until it exits.
 
     The native CLIs attach a tmux-backed terminal and need a real TTY to
     render, so they are driven through a pseudo-terminal. With a one-shot
@@ -163,7 +163,7 @@ def run_cli_oneshot(args: list[str], *, env: dict[str, str], timeout: float) -> 
     (the attach ends when the terminal closes) — no interactive keystrokes.
 
     :param args: Full argv, e.g.
-        ``["/…/omnigent", "claude", "--server", url, "-p", "hi"]``.
+        ``["/…/agent-meow", "claude", "--server", url, "-p", "hi"]``.
     :param env: Subprocess environment from :func:`cli_env`.
     :param timeout: Max seconds to wait for the child to exit.
     :returns: The full decoded PTY output (ANSI sequences retained).
@@ -208,7 +208,7 @@ def run_cli_oneshot(args: list[str], *, env: dict[str, str], timeout: float) -> 
 @dataclass
 class PtyHandle:
     """
-    A backgrounded ``omnigent <harness>`` PTY session kept alive for the test.
+    A backgrounded ``agent-meow <harness>`` PTY session kept alive for the test.
 
     A daemon thread drains the PTY master into :attr:`_buf` so the child never
     blocks on a full pty buffer while the test talks to it over HTTP.
@@ -256,7 +256,7 @@ def spawn_cli_background(
     args: list[str], *, env: dict[str, str], cwd: str | None = None
 ) -> PtyHandle:
     """
-    Spawn ``omnigent <harness> …`` under a PTY and keep it running.
+    Spawn ``agent-meow <harness> …`` under a PTY and keep it running.
 
     The session stays running (this does not wait for exit) — it returns a
     :class:`PtyHandle` whose reader thread drains output while the test sends
@@ -264,7 +264,7 @@ def spawn_cli_background(
     :meth:`PtyHandle.terminate` it in a ``finally``.
 
     :param args: Full argv (no ``-p`` — the session stays interactive), e.g.
-        ``["/…/omnigent", "codex", "--server", url, "--resume", "conv_abc"]``.
+        ``["/…/agent-meow", "codex", "--server", url, "--resume", "conv_abc"]``.
     :param env: Subprocess environment from :func:`cli_env`.
     :param cwd: Working directory to ``chdir`` into before exec, e.g.
         ``"/tmp/x/pwd"``. ``None`` inherits the parent's cwd. The native
@@ -618,7 +618,7 @@ def assert_native_cli_resume_restores_history(
     """
     Drive a fresh-then-resume CLI flow and assert the resume restored history.
 
-    Harness-agnostic regression check for ``omnigent <harness> --resume``:
+    Harness-agnostic regression check for ``agent-meow <harness> --resume``:
 
     1. **fresh** — a one-shot ``-p`` run that makes the model *emit* a
        distinctive passphrase as its own reply (so the passphrase lands in the
@@ -642,7 +642,7 @@ def assert_native_cli_resume_restores_history(
     :param server: Base URL of the allow-list-free test server.
     :param profile: Databricks CLI profile for the model gateway, e.g.
         ``"oss"``. Supplied to the spawned CLI via the config-home
-        ``auth:`` block + ``DATABRICKS_CONFIG_PROFILE`` (the omnigent
+        ``auth:`` block + ``DATABRICKS_CONFIG_PROFILE`` (the agent-meow
         CLI no longer accepts ``--profile``).
     :param tmp_path: Per-test temp dir (reserved for per-run artifacts).
     :param force_cold_resume: When ``True``, delete the harness's local
@@ -661,9 +661,9 @@ def assert_native_cli_resume_restores_history(
     # Use the real ``HOME`` so the native harness's interactive login resolves
     # (Claude Code's credentials are anchored to the real HOME and are NOT
     # captured by symlinking ``~/.claude`` into a temp HOME — a relocated HOME
-    # yields "Not logged in"). The cost is that a *concurrent* ``omnigent``
+    # yields "Not logged in"). The cost is that a *concurrent* ``agent-meow``
     # process on the same machine can thrash the shared host daemon
-    # (``~/.omnigent/host.pid``); run this opt-in test on an otherwise-idle
+    # (``~/.agent_meow/host.pid``); run this opt-in test on an otherwise-idle
     # machine.
     env = cli_env(profile=profile)
     # Distinctive passphrase (uppercase + digits, unique per run) so a match in

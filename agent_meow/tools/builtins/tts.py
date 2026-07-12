@@ -10,7 +10,7 @@ ship as schema-only :class:`~?agent_meow.tools.base.Tool` subclasses.
     conversational agents.
 
 The runner's tool dispatch intercepts these calls by name and proxies
-them to the TTS gateway (see ``omnigent/runner/tool_dispatch.py``).
+them to the TTS gateway (see ``agent_meow/runner/tool_dispatch.py``).
 """
 
 from __future__ import annotations

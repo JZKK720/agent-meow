@@ -9,7 +9,7 @@ kind: ClusterRoleBinding
 metadata:
   name: openshell-sandbox-manager
   labels:
-    app: omnigent
+    app: agent-meow
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

@@ -1,6 +1,6 @@
 """Executor that bridges agent-meow web-chat turns into the native Goose TUI.
 
-It does not launch ``goose`` — the ``omnigent goose`` wrapper already launched
+It does not launch ``goose`` — the ``agent-meow goose`` wrapper already launched
 the interactive ``goose session`` TUI in the session terminal. Each web-UI turn
 injects the latest user message into that same tmux pane (bracketed paste +
 Enter), so the message appears in the running Goose TUI (and, since the web UI
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class GooseNativeExecutor(Executor):
-    """Harness-side executor for ``omnigent goose`` web-UI turns.
+    """Harness-side executor for ``agent-meow goose`` web-UI turns.
 
     Injects each web-UI message into the running Goose TUI's tmux pane. Does not
     stream output (the embedded terminal shows it); accepts mid-turn steering.

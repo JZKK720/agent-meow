@@ -2,13 +2,13 @@
 
 Spawned by ``_ensure_host_daemon`` in ``cli.py`` when ``run`` /
 ``claude`` / ``codex`` register this machine as a host. Runs the same
-:class:`HostProcess` loop as ``omnigent host``.
+:class:`HostProcess` loop as ``agent-meow host``.
 
 Two modes:
 
 - ``--server <url>``: connect to an existing (remote or local) agent-meow server.
 - ``--local``: this daemon owns a local agent-meow server — start (or reuse) a
-  persistent background ``omnigent server`` on loopback and connect to
+  persistent background ``agent-meow server`` on loopback and connect to
   it. The CLI discovers the resulting URL via the local-server pidfile.
 """
 

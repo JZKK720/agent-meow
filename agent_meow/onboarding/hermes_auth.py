@@ -1,11 +1,11 @@
-"""Hermes readiness + config reporting for ``omnigent setup``.
+"""Hermes readiness + config reporting for ``agent-meow setup``.
 
 Like :mod:`~?agent_meow.onboarding.goose_auth`, agent-meow manages **no** Hermes
 credentials: Hermes owns its own auth via ``hermes model`` (an interactive
 provider/model picker) which writes the chosen provider + model into
 ``~/.hermes/config.yaml``. This module is a thin, read-only reporter — it
 confirms the ``hermes`` binary is installed and surfaces the configured
-provider/model so ``omnigent setup`` can show Hermes as ready (and which model
+provider/model so ``agent-meow setup`` can show Hermes as ready (and which model
 it will drive) instead of always reading "Not configured" on an installed
 binary.
 

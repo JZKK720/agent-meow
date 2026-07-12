@@ -1,5 +1,5 @@
 """
-Tests for uploaded agent bundle validation (``omnigent/server/bundles.py``).
+Tests for uploaded agent bundle validation (``agent_meow/server/bundles.py``).
 
 ``validate_agent_bundle`` is the untrusted upload entry point, so it
 enforces two protections that trusted spec loading does not:
@@ -52,7 +52,7 @@ def _single_file_yaml_bundle(yaml_text: str) -> bytes:
     """
     Pack *yaml_text* into a ``.tar.gz`` bundle holding one ``agent.yaml``.
 
-    Produces the single-file omnigent YAML shape (no ``config.yaml``),
+    Produces the single-file agent-meow YAML shape (no ``config.yaml``),
     which ``agent_meow.spec.load`` dispatches to the inner loader — the
     parse-time-execution path the handler-allowlist guard must cover.
 
@@ -64,12 +64,12 @@ def _single_file_yaml_bundle(yaml_text: str) -> bytes:
     return _make_bundle_bytes({"agent.yaml": yaml_text})
 
 
-# Minimal omnigent ``config.yaml`` (AGENTSPEC directory shape).
+# Minimal agent-meow ``config.yaml`` (AGENTSPEC directory shape).
 _MIN_CONFIG = (
     "spec_version: 1\n"
     "name: {name}\n"
     "executor:\n"
-    "  type: omnigent\n"
+    "  type: agent-meow\n"
     "  config:\n"
     "    harness: claude-sdk\n"
     "prompt: hi\n"
@@ -100,7 +100,7 @@ def test_validate_agent_bundle_does_not_expand_env(
                 {
                     "spec_version": 1,
                     "name": "uploaded-agent",
-                    "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+                    "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
                 }
             ),
             "tools/mcp/leaky.yaml": yaml.dump(
@@ -141,7 +141,7 @@ def test_validate_bundle_accepts_clean_agent() -> None:
 def test_validate_bundle_allows_custom_handler_when_not_enforced() -> None:
     """``enforce_handler_allowlist=False`` accepts a custom handler.
 
-    This is the trusted single-user / local-server path: ``omnigent
+    This is the trusted single-user / local-server path: ``agent-meow
     run`` uploads the operator's own bundle through this same function,
     so an unregistered custom handler must still load. The routes pass
     ``enforce_handler_allowlist=not local_single_user_enabled()``, so
@@ -300,7 +300,7 @@ def _bundle_with_cwd(cwd: str) -> bytes:
                     "spec_version": 1,
                     "name": "uploaded-agent",
                     "executor": {
-                        "type": "omnigent",
+                        "type": "agent-meow",
                         "config": {"harness": "claude-sdk"},
                     },
                     "prompt": "hi",
@@ -351,7 +351,7 @@ def test_validate_agent_bundle_allows_absolute_cwd_for_trusted_local_server() ->
 # ── no server-side `callable:` tools on the upload path (GHSA-756x) ──
 
 
-# A omnigent function tool whose ``callable:`` is a dotted import path the
+# A agent-meow function tool whose ``callable:`` is a dotted import path the
 # runner resolves with ``importlib`` and invokes — the RCE gadget.
 _CALLABLE_TOOL_YAML = (
     "name: {name}\n"

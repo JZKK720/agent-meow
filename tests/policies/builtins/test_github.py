@@ -686,7 +686,7 @@ def test_shell_gh_extended_groups_read_actions_are_reads(command: str) -> None:
         "gh browse --repo octo/secret",
         "gh copilot explain 'what is git'",
         "gh licenses list",
-        "gh search repos omnigent",
+        "gh search repos agent-meow",
         "gh status",
     ],
 )

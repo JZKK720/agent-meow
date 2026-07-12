@@ -213,7 +213,7 @@ def run_kiro_native(
 
 
 def _materialize_kiro_agent_spec(tmpdir: Path, *, model: str | None = None) -> Path:
-    """Write the terminal-first agent spec used by ``omnigent kiro``."""
+    """Write the terminal-first agent spec used by ``agent-meow kiro``."""
     yaml_path = tmpdir / "kiro-native-ui.yaml"
     executor: dict[str, str] = {"harness": "kiro-native"}
     if model:
@@ -311,7 +311,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the omnigent server at {base_url}. "
+            f"Could not reach the agent-meow server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc

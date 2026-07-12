@@ -153,7 +153,7 @@ export interface CliStatus {
 
 /** This machine's identity, read from local config (fast — no subprocess). */
 export interface HostIdentity {
-  /** Whether the `omnigent` CLI was found and is runnable. */
+  /** Whether the `agent-meow` CLI was found and is runnable. */
   cliInstalled: boolean;
   /** This machine's host id, or null if it has none yet. */
   hostId: string | null;
@@ -337,9 +337,9 @@ export async function setBadgeCount(count: number): Promise<void> {
 /**
  * Set one of the inset-system CSS variables on the document root. Visibility of
  * the native bars is web-owned (the web app is what shows/hides them), so the
- * setters below fold it into `--omnigent-*-bar-visible`; the bars' size comes
+ * setters below fold it into `--agent-meow-*-bar-visible`; the bars' size comes
  * from the native bridge (see {@link onNativeInsets} / nativeInsets.ts). Both
- * combine in `--omnigent-inset-*` (index.css). Harmless off-shell — the size
+ * combine in `--agent-meow-inset-*` (index.css). Harmless off-shell — the size
  * vars stay 0 there, so a stray visibility flag contributes nothing.
  */
 function setInsetVar(name: string, value: string): void {

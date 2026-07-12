@@ -127,7 +127,7 @@ def test_repl_cancel_re_arms_for_next_turn(
     for the cancel gesture to land. The follow-up gets a normal
     text response.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         openai-agents installed.
     :param omnigent_repo_root: Working directory for the
         subprocess.

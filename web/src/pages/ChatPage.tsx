@@ -488,7 +488,7 @@ function truncateTitle(raw: string, max = 60): string {
 // loadingConversation is true, which unmounts the entire chat surface).
 // Text drafts are also persisted to sessionStorage so they survive page
 // refreshes; File objects can't be serialized, so only text round-trips.
-const SESSION_DRAFTS_KEY = "omnigent.sessionDrafts";
+const SESSION_DRAFTS_KEY = "agent_meow.sessionDrafts";
 
 function loadDraftsFromStorage(): Map<string, { text: string; files: File[] }> {
   try {
@@ -662,7 +662,7 @@ export function ChatPage() {
   const conversationLoadError = useChatStore((s) => s.conversationLoadError);
   const boundAgentId = useChatStore((s) => s.boundAgentId);
   const boundAgentName = useChatStore((s) => s.boundAgentName);
-  // Fallback for session-scoped agents (created by `omnigent run --server`):
+  // Fallback for session-scoped agents (created by `agent-meow run --server`):
   // the sessions-derived list only carries id+name, so fetch the full
   // agent object for the active session. Drives the picker's
   // name/description; the same react-query cache also feeds the header
@@ -713,7 +713,7 @@ export function ChatPage() {
   // picker alone in those cases.
   //
   // If the bound agent isn't in the cached list (e.g. a new agent was
-  // registered by a fresh `omnigent run` after the page loaded),
+  // registered by a fresh `agent-meow run` after the page loaded),
   // refetch so the list stays current. staleTime: Infinity means the
   // query won't self-update, so we do it manually on demand.
   useEffect(() => {
@@ -858,8 +858,8 @@ export function ChatPage() {
   // NOT sufficient to decide whether to OPEN the picker. Prefer the
   // snapshot's labels, falling back to the sidebar row.
   const forkSourceId =
-    activeSession?.labels?.["omnigent.fork.source_id"] ??
-    activeConv?.labels?.["omnigent.fork.source_id"] ??
+    activeSession?.labels?.["agent_meow.fork.source_id"] ??
+    activeConv?.labels?.["agent_meow.fork.source_id"] ??
     null;
   // Only an *unbound* fork (no workspace yet) routes the offline guard to
   // the directory picker — which binds + launches. A bound fork that is
@@ -1108,7 +1108,7 @@ export function ChatPage() {
         onOpenChange={setReconnectDialogOpen}
         conversationId={urlConvId}
         serverUrl={getCliServerUrl()}
-        wrapper={activeConv?.labels?.["omnigent.wrapper"]}
+        wrapper={activeConv?.labels?.["agent_meow.wrapper"]}
         state={reconnectState}
         isOwner={reconnectIsOwner}
         // Source prefill for the Clone tab's fork form. Mirrors AppShell's
@@ -1126,7 +1126,7 @@ export function ChatPage() {
           sessionId={urlConvId}
           sourceSessionId={forkSourceId}
           serverUrl={getCliServerUrl()}
-          wrapper={activeConv?.labels?.["omnigent.wrapper"]}
+          wrapper={activeConv?.labels?.["agent_meow.wrapper"]}
         />
       )}
     </SessionSharedContext.Provider>
@@ -4855,7 +4855,7 @@ export function dispatchInitialPrompt(
  * Whether a session is an *unbound* coding fork — one that still needs the
  * directory picker to bind a host + workspace before it can run.
  *
- * The ``omnigent.fork.source_id`` label is *provenance*: it stays on the
+ * The ``agent_meow.fork.source_id`` label is *provenance*: it stays on the
  * clone forever, including after it is bound. So the label alone can't gate
  * the picker — a bound fork whose runner is merely offline would wrongly
  * open the picker, and the bind endpoint would 400 with "session already
@@ -4865,7 +4865,7 @@ export function dispatchInitialPrompt(
  * returns false, routing an offline bound fork to the CLI reconnect dialog
  * like any other session.
  *
- * @param forkSourceId - The `omnigent.fork.source_id` label value, or null.
+ * @param forkSourceId - The `agent_meow.fork.source_id` label value, or null.
  * @param workspace - The session's bound workspace, or null/undefined when
  *   never bound.
  */
@@ -4891,7 +4891,7 @@ type LabelSource = { labels?: Record<string, string | null> | null } | null | un
  * The live session snapshot is checked first because child sessions do
  * not appear in the sidebar list and because labels can change after
  * initial navigation (for example ``sys_session_close`` marks a child
- * ``omnigent.closed=true``). The sidebar row is only a fallback.
+ * ``agent_meow.closed=true``). The sidebar row is only a fallback.
  *
  * @param activeSession - Live session snapshot, if loaded.
  * @param activeConv - Sidebar/session-list row fallback.
@@ -4903,10 +4903,10 @@ export function readOnlyReasonForSessionLabels(
   activeConv: LabelSource,
 ): string | null {
   const closed =
-    activeSession?.labels?.["omnigent.closed"] ?? activeConv?.labels?.["omnigent.closed"];
+    activeSession?.labels?.["agent_meow.closed"] ?? activeConv?.labels?.["agent_meow.closed"];
   if (closed === "true") return "This sub-agent session is closed";
   const wrapper =
-    activeSession?.labels?.["omnigent.wrapper"] ?? activeConv?.labels?.["omnigent.wrapper"];
+    activeSession?.labels?.["agent_meow.wrapper"] ?? activeConv?.labels?.["agent_meow.wrapper"];
   if (wrapper === "claude-code-native-ui-subagent") {
     return "Claude Code sub-agents are read-only";
   }
@@ -4918,7 +4918,7 @@ export function effortLevelsForConv(
   codexModelOptions: readonly CodexModelOption[] = [],
   currentModel: string | null = null,
 ): readonly string[] {
-  switch (conv?.labels?.["omnigent.wrapper"]) {
+  switch (conv?.labels?.["agent_meow.wrapper"]) {
     case "claude-code-native-ui":
       return CLAUDE_NATIVE_EFFORT_LEVELS;
     case "codex-native-ui":
@@ -4931,14 +4931,14 @@ export function effortLevelsForConv(
 /**
  * Which native model picker should be visible for *conv*?
  *
- * Gated on the wrapper label, not `omnigent.ui === "terminal"`:
+ * Gated on the wrapper label, not `agent_meow.ui === "terminal"`:
  * other terminal-first wrappers may not be Claude/Codex-native (see
  * `TerminalFirstContext.tsx`).
  */
 export function modelPickerKindForConv(
   conv: { labels?: Record<string, string | null> | null } | null | undefined,
 ): NativeModelPickerKind | null {
-  switch (conv?.labels?.["omnigent.wrapper"]) {
+  switch (conv?.labels?.["agent_meow.wrapper"]) {
     case "claude-code-native-ui":
       return "claude";
     case "codex-native-ui":

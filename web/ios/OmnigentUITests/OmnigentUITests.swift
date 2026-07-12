@@ -11,10 +11,10 @@ final class OmnigentUITests: XCTestCase {
     setupSnapshot(app)
     let serverURL = try XCTUnwrap(
       ScreenshotConfiguration.serverURL(from: app),
-      "Pass --omnigent-server-url or OMNIGENT_SCREENSHOT_APP_URL for screenshot tests."
+      "Pass --agent-meow-server-url or OMNIGENT_SCREENSHOT_APP_URL for screenshot tests."
     )
     app.launchArguments += [
-      "--omnigent-server-url",
+      "--agent-meow-server-url",
       serverURL,
     ]
     NSLog("agent-meow screenshot server URL: \(serverURL)")
@@ -99,10 +99,10 @@ private enum ScreenshotConfiguration {
 
 extension [String] {
   fileprivate var omnigentServerURL: String? {
-    omnigentArgumentValue(after: "--omnigent-server-url")
+    omnigentArgumentValue(after: "--agent-meow-server-url")
       ?? compactMap { argument -> String? in
-        guard argument.hasPrefix("--omnigent-server-url=") else { return nil }
-        return String(argument.dropFirst("--omnigent-server-url=".count)).nonEmpty
+        guard argument.hasPrefix("--agent-meow-server-url=") else { return nil }
+        return String(argument.dropFirst("--agent-meow-server-url=".count)).nonEmpty
       }.first
       ?? firstWebURL
   }

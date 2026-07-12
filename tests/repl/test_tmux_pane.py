@@ -2,9 +2,9 @@
 Unit tests for the REPL's tmux pane integration helpers.
 
 The integration's job is to (a) advertise this REPL's pane as an
-omnigent context source via custom pane options and (b) wrap the
+agent-meow context source via custom pane options and (b) wrap the
 user's prefix-table ``split-window`` / ``new-window`` bindings with
-``if-shell -F`` conditionals that route to ``omnigent pane-split``
+``if-shell -F`` conditionals that route to ``agent-meow pane-split``
 when the focused pane has ``@omnigent-conv-id`` set, and otherwise
 run the user's exact original command.
 
@@ -222,7 +222,7 @@ def test_classify_returns_none_for_non_split_commands(tokens: list[str]) -> None
     Claim: custom split wrappers, kill-pane, lambda blocks, and
     empty token lists all return ``None``. A regression that
     classified custom commands as splittable would silently
-    rewrite them, breaking the user's exotic setups in non-omnigent
+    rewrite them, breaking the user's exotic setups in non-agent-meow
     panes too.
     """
     assert _classify(tokens) is None
@@ -242,8 +242,8 @@ def test_wrap_binding_constructs_if_shell_wrapper(
 
     This is the load-bearing call: get the if-shell argv shape
     right and the chooser routes correctly; get it wrong and
-    either non-omnigent panes break (lost original) or
-    omnigent panes never see the chooser.
+    either non-agent-meow panes break (lost original) or
+    agent-meow panes never see the chooser.
 
     Claim: the subprocess is called with the exact 10-element
     argv specified in the design doc. A regression that swapped
@@ -267,7 +267,7 @@ def test_wrap_binding_constructs_if_shell_wrapper(
         direction="v",
         original_command='split-window -c "#{pane_current_path}"',
     )
-    _wrap_binding(binding, ["/venv/bin/omnigent"])
+    _wrap_binding(binding, ["/venv/bin/agent-meow"])
 
     # Single subprocess call: the bind-key invocation.
     assert len(captured) == 1, (
@@ -291,7 +291,7 @@ def test_wrap_binding_constructs_if_shell_wrapper(
     # tmux server's PATH, which usually doesn't include the venv
     # bin/), and direction code 'v' must appear so the user's
     # vertical-split key opens a vertical split.
-    assert cmd[8] == ("run-shell '/venv/bin/omnigent pane-split -v -p #{pane_id}'"), (
+    assert cmd[8] == ("run-shell '/venv/bin/agent-meow pane-split -v -p #{pane_id}'"), (
         f"chooser command regressed; got {cmd[8]!r}. If the path is "
         f'missing or relative, ``run-shell`` will exit 127 ("command '
         f"not found\") because the tmux server's PATH typically "
@@ -302,7 +302,7 @@ def test_wrap_binding_constructs_if_shell_wrapper(
     # from the original tokens.
     assert cmd[9] == 'split-window -c "#{pane_current_path}"', (
         f"original-command branch regressed; got {cmd[9]!r}. The user's "
-        f"binding must be preserved exactly so non-omnigent panes get "
+        f"binding must be preserved exactly so non-agent-meow panes get "
         f"identical behavior to before — that's what makes the global "
         f"prefix-table mutation behaviorally invisible."
     )
@@ -328,9 +328,9 @@ def test_wrap_binding_uses_horizontal_direction_code(
     )
     _wrap_binding(
         SplitBinding(key="%", direction="h", original_command="split-window -h"),
-        ["/venv/bin/omnigent"],
+        ["/venv/bin/agent-meow"],
     )
-    assert captured[0][8] == ("run-shell '/venv/bin/omnigent pane-split -h -p #{pane_id}'")
+    assert captured[0][8] == ("run-shell '/venv/bin/agent-meow pane-split -h -p #{pane_id}'")
 
 
 def test_wrap_binding_uses_window_direction_code(
@@ -348,22 +348,22 @@ def test_wrap_binding_uses_window_direction_code(
     )
     _wrap_binding(
         SplitBinding(key="c", direction="w", original_command="new-window"),
-        ["/venv/bin/omnigent"],
+        ["/venv/bin/agent-meow"],
     )
-    assert captured[0][8] == ("run-shell '/venv/bin/omnigent pane-split -w -p #{pane_id}'")
+    assert captured[0][8] == ("run-shell '/venv/bin/agent-meow pane-split -w -p #{pane_id}'")
 
 
 def test_wrap_binding_quotes_paths_with_spaces(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A venv path like ``/Users/me/My Project/.venv/bin/omnigent``
+    A venv path like ``/Users/me/My Project/.venv/bin/agent-meow``
     has a space and would tokenize wrong without ``shlex.quote``.
 
     Claim: the wrapper escapes spaces in the binary path so the
     embedded shell command stays a single token. A regression
     that used naive f-string interpolation would produce
-    ``run-shell '/Users/me/My Project/.venv/bin/omnigent pane-split …'``
+    ``run-shell '/Users/me/My Project/.venv/bin/agent-meow pane-split …'``
     where shell-word boundaries split the path mid-way and the
     binding fails.
     """
@@ -371,7 +371,7 @@ def test_wrap_binding_quotes_paths_with_spaces(
     monkeypatch.setattr(subprocess, "run", _make_capturing_runner(captured))
     _wrap_binding(
         SplitBinding(key="|", direction="v", original_command="split-window -h"),
-        ["/Users/me/My Project/.venv/bin/omnigent"],
+        ["/Users/me/My Project/.venv/bin/agent-meow"],
     )
     chooser = captured[0][8]
     # The chooser is shell-escaped (whole inner string passed via
@@ -383,11 +383,11 @@ def test_wrap_binding_quotes_paths_with_spaces(
     outer = shlex.split(chooser)
     assert outer[0] == "run-shell", f"chooser must start with run-shell: {outer!r}"
     inner_argv = shlex.split(outer[1])
-    assert inner_argv[0] == "/Users/me/My Project/.venv/bin/omnigent", (
+    assert inner_argv[0] == "/Users/me/My Project/.venv/bin/agent-meow", (
         f"path-with-space did not round-trip as a single shell token; "
         f"inner argv[0]={inner_argv[0]!r}, full inner={inner_argv!r}. If "
         f"the path got split, the wrapper produces a broken binding that "
-        f"fires ``cd: /Users/me/My`` instead of running the omnigent "
+        f"fires ``cd: /Users/me/My`` instead of running the agent-meow "
         f"binary."
     )
     # The pane-split subcommand + direction also survive.
@@ -436,7 +436,7 @@ def test_resolve_argv_uses_abspath_when_argv0_is_path_shaped(
 ) -> None:
     """
     When ``sys.argv[0]`` contains a path separator (e.g.
-    ``./.venv/bin/omnigent`` or already absolute), the resolver
+    ``./.venv/bin/agent-meow`` or already absolute), the resolver
     abspath's it directly without consulting ``shutil.which``.
 
     Claim: the result is the absolute form of argv[0], length 1.
@@ -446,9 +446,9 @@ def test_resolve_argv_uses_abspath_when_argv0_is_path_shaped(
     """
     from agent_meow.repl._tmux_pane import _resolve_omnigent_argv
 
-    monkeypatch.setattr("sys.argv", ["/some/abs/path/omnigent", "run"])
+    monkeypatch.setattr("sys.argv", ["/some/abs/path/agent-meow", "run"])
     argv = _resolve_omnigent_argv()
-    assert argv == ["/some/abs/path/omnigent"], (
+    assert argv == ["/some/abs/path/agent-meow"], (
         f"path-shaped argv0 should pass through to abspath; got {argv!r}"
     )
 
@@ -457,7 +457,7 @@ def test_resolve_argv_uses_which_when_argv0_is_bare_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    When ``sys.argv[0]`` is a bare name like ``"omnigent"`` (the
+    When ``sys.argv[0]`` is a bare name like ``"agent-meow"`` (the
     shell already resolved it via PATH but didn't pass the
     absolute path along), the resolver does its own
     :func:`shutil.which` lookup.
@@ -469,10 +469,10 @@ def test_resolve_argv_uses_which_when_argv0_is_bare_name(
     """
     from agent_meow.repl._tmux_pane import _resolve_omnigent_argv
 
-    monkeypatch.setattr("sys.argv", ["omnigent", "run"])
-    monkeypatch.setattr(shutil, "which", lambda name: "/resolved/bin/omnigent")
+    monkeypatch.setattr("sys.argv", ["agent-meow", "run"])
+    monkeypatch.setattr(shutil, "which", lambda name: "/resolved/bin/agent-meow")
     argv = _resolve_omnigent_argv()
-    assert argv == ["/resolved/bin/omnigent"]
+    assert argv == ["/resolved/bin/agent-meow"]
 
 
 def test_resolve_argv_falls_back_to_python_m_when_which_misses(
@@ -492,13 +492,13 @@ def test_resolve_argv_falls_back_to_python_m_when_which_misses(
     """
     from agent_meow.repl._tmux_pane import _resolve_omnigent_argv
 
-    monkeypatch.setattr("sys.argv", ["omnigent", "run"])
+    monkeypatch.setattr("sys.argv", ["agent-meow", "run"])
     monkeypatch.setattr(shutil, "which", lambda name: None)
     monkeypatch.setattr("sys.executable", "/path/to/python")
     argv = _resolve_omnigent_argv()
     assert argv == ["/path/to/python", "-m", "agent_meow.cli"], (
         f"python-m fallback regressed; got {argv!r}. The fallback is "
-        f"the only path that works in environments where the omnigent "
+        f"the only path that works in environments where the agent-meow "
         f"binary isn't directly findable, so silent breakage here means "
         f"silent UX degradation everywhere."
     )
@@ -534,7 +534,7 @@ def test_discover_unwraps_existing_wrapper_to_recover_original(
         # "#{pane_current_path}"`` original.
         'bind-key -T prefix \\" if-shell -F '
         '"#{?#{@omnigent-conv-id},1,0}" '
-        "\"run-shell 'omnigent pane-split -v -p #{pane_id}'\" "
+        "\"run-shell 'agent-meow pane-split -v -p #{pane_id}'\" "
         '"split-window -c \\"#{pane_current_path}\\""'
     )
     monkeypatch.setattr(
@@ -616,7 +616,7 @@ def test_register_pane_strips_existing_python_m_prefix_idempotently(
         conv_id="conv_x",
         agent_name="a",
         agent_yaml=None,
-        launch_argv=["/p/python", "-m", "agent_meow.cli", "run", "/x.yaml", "--omnigent"],
+        launch_argv=["/p/python", "-m", "agent_meow.cli", "run", "/x.yaml", "--agent-meow"],
         server_url=None,
     )
 
@@ -629,7 +629,7 @@ def test_register_pane_strips_existing_python_m_prefix_idempotently(
         "agent_meow.cli",
         "run",
         "/x.yaml",
-        "--omnigent",
+        "--agent-meow",
     ], (
         f"launch-argv regressed to a doubled form: {stored_argv!r}. The "
         f"picker calls ``os.execvp(argv[0], argv)``, so a doubled "
@@ -689,7 +689,7 @@ def test_register_pane_repairs_already_doubled_prefix(
             "agent_meow.cli",
             "run",
             "/x.yaml",
-            "--omnigent",
+            "--agent-meow",
             "--profile",
             "test-profile",
         ],
@@ -705,7 +705,7 @@ def test_register_pane_repairs_already_doubled_prefix(
         "agent_meow.cli",
         "run",
         "/x.yaml",
-        "--omnigent",
+        "--agent-meow",
         "--profile",
         "test-profile",
     ], (
@@ -768,7 +768,7 @@ def test_discover_split_bindings_picks_user_custom_keys(
     """
     Many users rebind splits to ``|`` (vertical) and ``-`` /
     ``_`` (horizontal). Discovery must mirror those custom keys
-    so muscle memory works inside the omnigent pane.
+    so muscle memory works inside the agent-meow pane.
 
     Claim: ``|`` and ``_`` get classified by the user's actual
     flag, not the key character. A regression that hardcoded
@@ -837,7 +837,7 @@ def test_register_pane_no_op_when_kill_switch_disabled_outside_tmux(
         conv_id="conv_x",
         agent_name="a",
         agent_yaml=None,
-        launch_argv=["omnigent", "run"],
+        launch_argv=["agent-meow", "run"],
         server_url=None,
     )
     assert captured == [], f"kill-switch + outside-tmux must be a complete no-op; got {captured!r}"
@@ -856,7 +856,7 @@ def test_register_pane_unmarks_pane_when_kill_switch_disabled_inside_tmux(
     current pane — and does NOT install any wrapper bindings,
     write new options, or run discovery. This is the cleanup path
     that makes "the feature is disabled" mean what users expect:
-    pressing the split key in an omnigent pane stops opening
+    pressing the split key in an agent-meow pane stops opening
     the chooser, even if a prior flag-on run installed wrappers
     that are still in the running tmux server.
     """
@@ -870,7 +870,7 @@ def test_register_pane_unmarks_pane_when_kill_switch_disabled_inside_tmux(
         conv_id="conv_x",
         agent_name="a",
         agent_yaml=None,
-        launch_argv=["omnigent", "run"],
+        launch_argv=["agent-meow", "run"],
         server_url=None,
     )
 
@@ -929,7 +929,7 @@ def test_register_pane_no_op_outside_tmux(
         conv_id="conv_xyz",
         agent_name="test-agent",
         agent_yaml=Path("/tmp/x.yaml"),
-        launch_argv=["omnigent", "run", "/tmp/x.yaml"],
+        launch_argv=["agent-meow", "run", "/tmp/x.yaml"],
         server_url="http://127.0.0.1:9000",
     )
     assert captured == [], (
@@ -961,7 +961,7 @@ def test_register_pane_skips_when_tmux_pane_unset(
         conv_id="conv_xyz",
         agent_name="test-agent",
         agent_yaml=None,
-        launch_argv=["omnigent", "run"],
+        launch_argv=["agent-meow", "run"],
         server_url=None,
     )
     assert captured == []
@@ -996,8 +996,8 @@ def test_register_pane_advertises_options_and_wraps_bindings(
     # absolute path. This is the path register_pane will splice
     # into ``launch_argv[0]`` and the wrapper's chooser command
     # so the assertions below can predict the exact stored value.
-    monkeypatch.setattr("sys.argv", ["omnigent", "run", "/agents/cs.yaml", "--omnigent"])
-    monkeypatch.setattr(shutil, "which", lambda name: "/venv/bin/omnigent")
+    monkeypatch.setattr("sys.argv", ["agent-meow", "run", "/agents/cs.yaml", "--agent-meow"])
+    monkeypatch.setattr(shutil, "which", lambda name: "/venv/bin/agent-meow")
 
     list_keys_output = "\n".join(
         [
@@ -1024,7 +1024,7 @@ def test_register_pane_advertises_options_and_wraps_bindings(
         conv_id="conv_abc123",
         agent_name="coding-supervisor",
         agent_yaml=Path("/agents/cs.yaml"),
-        launch_argv=["omnigent", "run", "/agents/cs.yaml", "--omnigent"],
+        launch_argv=["agent-meow", "run", "/agents/cs.yaml", "--agent-meow"],
         server_url="http://127.0.0.1:8123",
     )
 
@@ -1041,10 +1041,10 @@ def test_register_pane_advertises_options_and_wraps_bindings(
     # for the resolved absolute path so the picker's later
     # ``os.execvp`` works regardless of the new pane's PATH.
     parsed_argv = json.loads(set_option_values[OPT_LAUNCH_ARGV])
-    assert parsed_argv == ["/venv/bin/omnigent", "run", "/agents/cs.yaml", "--omnigent"], (
+    assert parsed_argv == ["/venv/bin/agent-meow", "run", "/agents/cs.yaml", "--agent-meow"], (
         f"launch-argv[0] must be normalized to the resolved absolute "
         f"path so the picker's exec doesn't depend on tmux's PATH; got "
-        f"{parsed_argv!r}. If argv[0] is still 'omnigent' (bare), the "
+        f"{parsed_argv!r}. If argv[0] is still 'agent-meow' (bare), the "
         f"picker will hit exit 127 when it tries to relaunch."
     )
     assert set_option_values[OPT_SERVER_URL] == "http://127.0.0.1:8123"
@@ -1070,7 +1070,7 @@ def test_register_pane_advertises_options_and_wraps_bindings(
         )
         # The wrapper's conditional must be the ``@omnigent-conv-id``
         # truthy check — that's what keeps the wrapper inert in
-        # non-omnigent panes.
+        # non-agent-meow panes.
         if_shell_idx = call.index("if-shell")
         assert call[if_shell_idx + 1] == "-F"
         assert call[if_shell_idx + 2] == "#{?#{@omnigent-conv-id},1,0}"
@@ -1107,7 +1107,7 @@ def test_register_pane_skips_on_old_tmux(
         conv_id="conv_abc",
         agent_name="agent",
         agent_yaml=None,
-        launch_argv=["omnigent", "run"],
+        launch_argv=["agent-meow", "run"],
         server_url=None,
     )
 

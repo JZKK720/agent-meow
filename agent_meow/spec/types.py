@@ -445,7 +445,7 @@ class ProviderAuth:
     Executor authentication via a named generic model provider.
 
     References a provider declared in the ``providers:`` block of
-    ``~/.omnigent/config.yaml`` (see
+    ``~/.agent_meow/config.yaml`` (see
     ``designs/oss-cuj/04-model-selection-implementation.md``). The
     provider entry carries a ``kind`` (``key`` / ``subscription`` /
     ``gateway`` / ``local`` / ``databricks``) and, for the inline
@@ -473,7 +473,7 @@ class ProviderAuth:
         :class:`ApiKeyAuth` / :class:`DatabricksAuth`.
     """
 
-    # Required: provider name from ~/.omnigent/config.yaml providers:.
+    # Required: provider name from ~/.agent_meow/config.yaml providers:.
     name: str
     type: Literal["provider"] = "provider"
 
@@ -492,7 +492,7 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
     it determines which other top-level sections and fields are
     valid. Invalid fields are rejected by the validator.
 
-    :param type: Executor type. ``"omnigent"`` (default),
+    :param type: Executor type. ``"agent-meow"`` (default),
         ``"claude_sdk"``, or ``"agents_sdk"``.
     :param timeout: Task deadline in seconds (wall-clock limit for
         the entire agent loop), e.g. ``3600``.
@@ -501,7 +501,7 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
     :param profile: The Databricks workspace profile name from
         ``~/.databrickscfg``, e.g. ``"dev"``. During the
         omnigent-compat sunset this is lifted from raw YAML's
-        ``executor.profile`` in the omnigent path too. ``None``
+        ``executor.profile`` in the agent-meow path too. ``None``
         means resolve via env vars / DEFAULT section.
 
         .. deprecated::
@@ -509,15 +509,15 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
             instead. Direct ``executor.profile`` / ``executor.config.profile``
             will be removed once all callers migrate.
     :param config: Executor-type-specific configuration. For
-        ``type == "omnigent"`` this carries ``"harness"`` (e.g.
+        ``type == "agent-meow"`` this carries ``"harness"`` (e.g.
         ``"claude-sdk"`` or ``"codex"``), optional ``"profile"``
         (e.g. ``"<your-profile>"``), and optional ``"os_env"`` — the
-        latter is a nested mapping mirroring the omnigent
+        latter is a nested mapping mirroring the agent-meow
         ``OSEnvSpec`` shape (``{type, cwd, sandbox: {...}}``) or
         the literal string ``"inherit"`` on inline-AgentTool
         sub-specs. Empty dict for other executor types.
 
-        🚨 **TECH DEBT — REMOVE WHEN OMNIGENT COMPAT ENDS.**
+        🚨 **TECH DEBT — REMOVE WHEN agent-meow COMPAT ENDS.**
         This field exists *solely* to carry harness / profile /
         os_env data for the agent-meow integration (see
         ``designs/OMNIGENT_INTEGRATION.md``). A free-form
@@ -565,20 +565,20 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
         Supports three types: :class:`ApiKeyAuth` (inline bearer token),
         :class:`DatabricksAuth` (Databricks profile, ucode-backed), and
         :class:`ProviderAuth` (a named generic provider from
-        ``~/.omnigent/config.yaml``). ``None`` means fall back to
+        ``~/.agent_meow/config.yaml``). ``None`` means fall back to
         environment variable / profile defaults.
     """
 
-    type: str = "omnigent"
+    type: str = "agent-meow"
     timeout: int = 3600
     max_iterations: int = 1000
     # Databricks workspace profile name from ~/.databrickscfg.
     # During the omnigent-compat sunset, lifted from raw YAML's
-    # executor.profile in the omnigent path too. None = resolve
+    # executor.profile in the agent-meow path too. None = resolve
     # via env vars / DEFAULT section. See class docstring.
     # DEPRECATED: use executor.auth: {type: databricks, profile: <name>} instead.
     profile: str | None = None
-    # TECH DEBT (omnigent compat only — see class docstring).
+    # TECH DEBT (agent-meow compat only — see class docstring).
     # Remove when agent-meow consolidation lands; do NOT extend.
     # Any: opaque per-type executor config passed through to adapters.
     config: dict[str, Any] = field(default_factory=dict)  # type: ignore[explicit-any]
@@ -601,7 +601,7 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
         """
         The agent's harness/kind for display and discovery.
 
-        For ``type == "omnigent"`` the kind lives in
+        For ``type == "agent-meow"`` the kind lives in
         ``config["harness"]`` (e.g. ``"codex"``, ``"codex-native"``,
         ``"claude-native"``); for every other executor type the kind
         *is* the executor type (e.g. ``"claude_sdk"``,
@@ -858,14 +858,14 @@ class MCPServerConfig:
       ``args`` describe the program to run; ``env`` supplies
       per-process environment variables on top of the parent's
       environment. The subprocess runs unsandboxed — same as the
-      legacy inner stack at ``omnigent/inner/mcp_tools.py``
+      legacy inner stack at ``agent_meow/inner/mcp_tools.py``
       (which has never sandboxed stdio MCPs). The previous
       AP-only ``sandbox: bool`` field that wrapped the spawn
       with ``srt`` was removed in step 7 of the harness contract
       migration: srt's default policy blocks outbound network
       (which every useful MCP needs to reach its backend), so
       sandboxing was producing silent hangs in practice. Per-MCP
-      sandboxing through the ``omnigent/environments/``
+      sandboxing through the ``agent_meow/environments/``
       primitive with explicit outbound-host allowlists is the
       eventual replacement; left to a future design.
 
@@ -1324,7 +1324,7 @@ class FunctionPolicySpec(PolicySpec):
         means no writes declared (any key the callable emits
         that has a ``LabelDef`` will still validate against
         that LabelDef, but keys without a LabelDef are set
-        freely per omnigent parity).
+        freely per agent-meow parity).
     :param config: Runtime configuration key-value pairs passed
         to the callable as the second argument on every
         invocation. Declared at policy attachment time (in the
@@ -1408,7 +1408,7 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
         ``async:``; the dataclass field avoids the Python
         keyword. **Defaults to ``True``** to match the legacy
         inner-stack default at
-        ``omnigent/inner/datamodel.py::AgentDef.async_enabled``
+        ``agent_meow/inner/datamodel.py::AgentDef.async_enabled``
         — the same YAML must produce the same tool surface
         whether the user opts into agent-meow mode or runs the legacy
         path. Agents that want to suppress the async surface
@@ -1447,7 +1447,7 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
         (``sys_timer_set``, ``sys_timer_cancel``) are
         registered. YAML key is ``timers:``. **Defaults to
         ``False``** to match the legacy inner-stack default at
-        ``omnigent/inner/datamodel.py::AgentDef.timers`` —
+        ``agent_meow/inner/datamodel.py::AgentDef.timers`` —
         agents opt into the timer surface explicitly. Step 10
         of the harness contract migration adds the AP-side
         port; firings durable across server restarts via the

@@ -1,4 +1,4 @@
-"""Tests for the built-in agent bundle builders in ``omnigent/server/app.py``.
+"""Tests for the built-in agent bundle builders in ``agent_meow/server/app.py``.
 
 The server seeds Web-UI-launchable agents (claude-native, codex-native, and
 the shipped ``debby`` / ``polly`` examples) by materializing each spec into a
@@ -171,7 +171,7 @@ def test_shipped_example_survives_unknown_harness_sub_agent(
                 "spec_version": 1,
                 "name": "future_worker",
                 "executor": {
-                    "type": "omnigent",
+                    "type": "agent-meow",
                     "config": {"harness": "harness-from-a-newer-server"},
                 },
             }

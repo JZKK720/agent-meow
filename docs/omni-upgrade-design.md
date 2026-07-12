@@ -12,21 +12,21 @@ across PyPI releases. Three pieces ship together:
 
 ## Background
 
-- The CLI ships as `omnigent` / `omni` → `omnigent.cli:main()`; the installed
-  version comes from `importlib.metadata.version("omnigent")`.
-- Releases publish three lockstep packages (`omnigent`, `omnigent-client`,
-  `omnigent-ui-sdk`) to PyPI via `.github/workflows/release-omnigent.yml`.
+- The CLI ships as `agent-meow` / `omni` → `agent_meow.cli:main()`; the installed
+  version comes from `importlib.metadata.version("agent-meow")`.
+- Releases publish three lockstep packages (`agent-meow`, `agent-meow-client`,
+  `agent-meow-ui-sdk`) to PyPI via `.github/workflows/release-agent_meow.yml`.
   **No GitHub Releases are cut**, so the source of truth for "latest version"
-  is the PyPI JSON API: `https://pypi.org/pypi/omnigent/json` → `info.version`.
+  is the PyPI JSON API: `https://pypi.org/pypi/agent_meow/json` → `info.version`.
 - The local server is a detached process on `:6767`, tracked by
-  `~/.omnigent/local_server.pid` plus a config-signature sidecar
+  `~/.agent_meow/local_server.pid` plus a config-signature sidecar
   (`local_server.sig`). `ensure_local_omnigent_server()` reuses a healthy
   server **iff its recorded signature matches**; otherwise it stops it and
-  respawns. All durable state lives in sqlite (`~/.omnigent/chat.db`), not in
+  respawns. All durable state lives in sqlite (`~/.agent_meow/chat.db`), not in
   process memory — which is what makes cycling a server safe.
 - PR #172 removed an earlier startup check that nagged on *install age* (it
   fired even when you were already on the latest version) and did a synchronous
-  `git fetch` on the hot path. The module (`omnigent/update_check.py`) stayed in
+  `git fetch` on the hot path. The module (`agent_meow/update_check.py`) stayed in
   the tree, dormant. This work rewires it correctly.
 
 ## Key constraint
@@ -41,7 +41,7 @@ servers/daemons/runners gracefully" really means **cycle them**:
 
 ## 1. Version-aware server signature
 
-`server_config_signature()` (`omnigent/host/local_server.py`) now folds the
+`server_config_signature()` (`agent_meow/host/local_server.py`) now folds the
 installed package version into the signature alongside the resolved auth source:
 
 ```python
@@ -57,7 +57,7 @@ no registered distribution contributes an empty version and is unaffected.)
 
 ## 2. `omni upgrade`
 
-`omnigent/cli.py`, command `upgrade`. Flow:
+`agent_meow/cli.py`, command `upgrade`. Flow:
 
 1. Bail on a source checkout / editable install (`_find_repo_root()` /
    `is_editable`) → tell the user to `git pull`.
@@ -72,8 +72,8 @@ no registered distribution contributes an empty version and is unaffected.)
 4. Stop the server + daemon (`_stop_local_server_and_daemon`) — *before*
    swapping code, so the live process never serves half-upgraded modules.
 5. Run the installer-appropriate command (`_build_upgrade_suggestion` +
-   `_run_upgrade_command`): `uv tool upgrade omnigent`, `pip install -U
-   omnigent`, `pipx upgrade omnigent`, `--reinstall <vcs_url>`, etc.
+   `_run_upgrade_command`): `uv tool upgrade agent-meow`, `pip install -U
+   agent-meow`, `pipx upgrade agent-meow`, `--reinstall <vcs_url>`, etc.
 6. **Lazy respawn**: do not restart the server. The next `omni` command spawns
    a fresh new-code server via the signature change above.
 
@@ -81,7 +81,7 @@ Most of steps 2/5 reuse helpers that already existed in `update_check.py`.
 
 ## 3. "Release available" notice (the PR #172 redo)
 
-`omnigent/update_check.py`, installed-wheel path; wired into `main()` behind
+`agent_meow/update_check.py`, installed-wheel path; wired into `main()` behind
 `_should_skip_update_check(argv)` and a `sys.stderr.isatty()` gate.
 
 - **Only when newer**: compares installed vs. the cached latest version;

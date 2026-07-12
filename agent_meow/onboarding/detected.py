@@ -121,7 +121,7 @@ def _synthesize_entry(det: DetectedProvider) -> dict[str, object] | None:
     :param det: A credential found by
         :func:`~?agent_meow.onboarding.ambient.detect_providers`.
     :returns: A raw provider entry body (config shape), or ``None`` when the
-        detection maps to no omnigent harness surface (a ``family``-less
+        detection maps to no agent-meow harness surface (a ``family``-less
         ``key`` detection).
     """
     if det.kind == "subscription":
@@ -145,7 +145,7 @@ def _synthesize_entry(det: DetectedProvider) -> dict[str, object] | None:
 
     if det.family is None:
         # An env key we detect but can't route to a harness (a detection
-        # whose provider maps to no omnigent family).
+        # whose provider maps to no agent-meow family).
         return None
 
     if det.kind == "key":
@@ -207,7 +207,7 @@ def synthesize_detected_entries(
         "subscription", "cli": "codex"}}``. A detected GEMINI_API_KEY is
         adopted as a ``gemini``-family ``key`` provider (the antigravity-sdk
         surface) — see :data:`~?agent_meow.onboarding.ambient._ENV_KEY_FAMILY`.
-        Only detections that map to no omnigent family at all (a ``family``-less
+        Only detections that map to no agent-meow family at all (a ``family``-less
         :class:`DetectedProvider`) are skipped. The mapping preserves detection
         order.
     """

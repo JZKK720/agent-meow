@@ -40,7 +40,7 @@ export class EditorPanelController {
       return;
     }
     const panel = vscode.window.createWebviewPanel(
-      "omnigent",
+      "agent-meow",
       "agent-meow",
       vscode.ViewColumn.Beside,
       {
@@ -57,7 +57,7 @@ export class EditorPanelController {
       }
     });
     this.render(panel.webview);
-    this.output.appendLine("[omnigent] opened editor-beside panel");
+    this.output.appendLine("[agent-meow] opened editor-beside panel");
   }
 
   /** Whether the editor panel is currently open. */

@@ -43,7 +43,7 @@ _MANIFEST_KW = {
     "harness_secret": "omnigent-creds",
     "env_literals": {},
     "node_selector": None,
-    "workspace": "/home/omnigent/workspace",
+    "workspace": "/home/agent_meow/workspace",
 }
 
 
@@ -60,9 +60,9 @@ def test_build_pod_manifest_runs_host_under_reaper_as_container_command() -> Non
     command = host["command"]
     assert command[:2] == ["bash", "-lc"]
     script = command[2]
-    # exec the reaper (so it is PID 1) which then runs `omnigent host`.
+    # exec the reaper (so it is PID 1) which then runs `agent-meow host`.
     assert "exec python3 -c" in script
-    assert "omnigent host --server http://srv.example.com" in script
+    assert "agent-meow host --server http://srv.example.com" in script
     # The reaper source rides the command (spawns sys.argv[1:] + reaps children).
     assert "os.wait()" in script
 
@@ -70,7 +70,7 @@ def test_build_pod_manifest_runs_host_under_reaper_as_container_command() -> Non
 def test_build_pod_manifest_init_container_prepares_and_clones_workspace() -> None:
     """The init container makes the workspace and clones the repo before the host."""
     manifest = build_pod_manifest(
-        **{**_MANIFEST_KW, "clone_dir": "/home/omnigent/workspace/repo"},
+        **{**_MANIFEST_KW, "clone_dir": "/home/agent_meow/workspace/repo"},
         repo_url="https://github.com/org/repo.git",
         repo_branch="main",
     )
@@ -78,16 +78,16 @@ def test_build_pod_manifest_init_container_prepares_and_clones_workspace() -> No
     assert len(init) == 1
     assert init[0]["name"] == "workspace-prep"
     script = init[0]["command"][2]
-    assert "mkdir -p /home/omnigent/workspace" in script
+    assert "mkdir -p /home/agent_meow/workspace" in script
     assert "git clone --branch main --single-branch -- " in script
-    assert "https://github.com/org/repo.git /home/omnigent/workspace/repo" in script
+    assert "https://github.com/org/repo.git /home/agent_meow/workspace/repo" in script
 
 
 def test_build_pod_manifest_without_repo_has_no_clone() -> None:
     """No repo → the init container only makes the workspace, no git clone."""
     manifest = build_pod_manifest(**_MANIFEST_KW)
     script = manifest["spec"]["initContainers"][0]["command"][2]
-    assert "mkdir -p /home/omnigent/workspace" in script
+    assert "mkdir -p /home/agent_meow/workspace" in script
     assert "git clone" not in script
 
 
@@ -113,7 +113,7 @@ def test_build_token_secret_manifest_carries_token_in_stringdata() -> None:
         secret_name="omnigent-pod-token", namespace="omnigent-sandboxes", token=_TOKEN
     )
     assert secret["stringData"] == {HOST_TOKEN_ENV_VAR: _TOKEN}
-    assert secret["metadata"]["labels"]["app.kubernetes.io/managed-by"] == "omnigent"
+    assert secret["metadata"]["labels"]["app.kubernetes.io/managed-by"] == "agent-meow"
     assert secret["type"] == "Opaque"
 
 
@@ -363,7 +363,7 @@ def test_launch_host_creates_secret_then_pod_and_returns_workspace(
         host_name="managed-1",
         server_url="http://srv.example.com",
     )
-    assert workspace == "/home/omnigent/workspace"
+    assert workspace == "/home/agent_meow/workspace"
     # Secret is created before the Pod (so the secretKeyRef resolves immediately).
     assert fake_core.calls.index("create_secret") < fake_core.calls.index("create_pod")
     assert fake_core.created_secrets[0]["stringData"] == {HOST_TOKEN_ENV_VAR: _TOKEN}
@@ -384,7 +384,7 @@ def test_launch_host_with_repo_returns_clone_dir(fake_core: _FakeCore) -> None:
         repo_url="https://github.com/org/repo.git",
         repo_name="repo",
     )
-    assert workspace == "/home/omnigent/workspace/repo"
+    assert workspace == "/home/agent_meow/workspace/repo"
 
 
 def test_launch_host_cleans_up_on_create_failure(fake_core: _FakeCore) -> None:

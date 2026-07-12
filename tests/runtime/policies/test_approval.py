@@ -1,7 +1,7 @@
 """
 Tests for :func:`_await_elicitation` and the verdict parser.
 
-Ports these omnigent ``test_labels_and_policies.py`` cases:
+Ports these agent-meow ``test_labels_and_policies.py`` cases:
 
 - ``test_label_policy_ask_approve`` — accept round-trip
   applies set_labels
@@ -387,7 +387,7 @@ def test_elicitation_request_event_no_session_id_stays_form(
 async def test_accept_applies_labels(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Ports omnigent
+    """Ports agent-meow
     ``test_label_policy_ask_approve``. On accept, the
     ASK-accumulated set_labels reach the store."""
     policy = _ask_policy("gate", set_labels={"integrity": "0"})
@@ -487,7 +487,7 @@ async def test_cancel_does_not_apply_labels(
 async def test_timeout_does_not_apply_labels(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Ports omnigent ``test_ask_timeout``. Park raises
+    """Ports agent-meow ``test_ask_timeout``. Park raises
     TimeoutError → helper returns False without applying
     labels."""
     policy = _ask_policy("gate", set_labels={"integrity": "0"})
@@ -518,7 +518,7 @@ async def test_timeout_does_not_apply_labels(
 async def test_missing_verdict_row_denies(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Ports omnigent ``test_no_handler_denies``. Park
+    """Ports agent-meow ``test_no_handler_denies``. Park
     returns None (cancelled / missing row) → helper returns
     False. Covers the cancel-during-elicitation path where
     the pending row was advanced to ``cancelled`` by the

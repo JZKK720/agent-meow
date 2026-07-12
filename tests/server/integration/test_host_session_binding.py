@@ -395,7 +395,7 @@ async def managed_session_env(
             {
                 "provider": "modal",
                 "server_url": "https://managed-test.example.com",
-                "modal": {"image": "docker.io/test/omnigent-host:latest"},
+                "modal": {"image": "docker.io/test/agent-meow-host:latest"},
             }
         ),
     )
@@ -452,7 +452,7 @@ async def _fake_sandbox_host(
     from agent_meow.runner.identity import token_bound_runner_id
 
     scope = _websocket_scope(f"/v1/hosts/{host_id}/tunnel")
-    scope["headers"] = [(b"x-omnigent-host-token", token.encode("ascii"))]
+    scope["headers"] = [(b"x-agent-meow-host-token", token.encode("ascii"))]
     comm = ApplicationCommunicator(app, scope)
     await comm.send_input({"type": "websocket.connect"})
     accepted = await comm.receive_output(timeout=5.0)

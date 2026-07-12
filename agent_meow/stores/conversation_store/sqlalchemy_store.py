@@ -2350,7 +2350,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             skipped and the runner builds the native transcript from the
             copied agent-meow items instead.
         :param presentation_labels: When not ``None``, drop the source's
-            ``agent_meow.ui`` / ``omnigent.wrapper`` labels from the clone
+            ``agent_meow.ui`` / ``agent_meow.wrapper`` labels from the clone
             and apply these instead, so the clone's Web UI mode matches the
             switched-to TARGET harness (native → ``{ui: terminal, wrapper:
             ...}``; SDK → ``{}``). ``None`` keeps the copied labels (same-
@@ -2559,7 +2559,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             if carry_history_into_native:
                 fork_labels[FORK_CARRY_HISTORY_LABEL_KEY] = "1"
             # On an agent switch, the harness-presentation labels
-            # (agent_meow.ui / omnigent.wrapper) must reflect the TARGET
+            # (agent_meow.ui / agent_meow.wrapper) must reflect the TARGET
             # harness, not the source's: copying the source's would leave an
             # SDK clone of a claude-native session wrongly in terminal-first
             # mode (a stale interactive terminal + the source's transcript).

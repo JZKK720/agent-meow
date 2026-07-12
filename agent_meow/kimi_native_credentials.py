@@ -53,13 +53,13 @@ def render_kimi_hooks_toml(*, bridge_dir: Path, python_executable: str | None = 
 
     :param bridge_dir: The kimi-native bridge dir the hook commands read.
     :param python_executable: Interpreter to run the hook module; ``None`` uses
-        :data:`sys.executable` (the runner's interpreter, which has omnigent).
+        :data:`sys.executable` (the runner's interpreter, which has agent-meow).
     :returns: TOML text starting with a leading newline, safe to append.
     """
     python = python_executable or sys.executable
     # ``-I`` (isolated mode) is REQUIRED, not cosmetic: kimi runs the hook with
     # ``cwd`` set to the session workspace, and ``python -m`` puts cwd on
-    # ``sys.path[0]``. A workspace that contains its own ``omnigent/`` directory
+    # ``sys.path[0]``. A workspace that contains its own ``agent_meow/`` directory
     # (another checkout, a vendored copy) would otherwise shadow the installed
     # package and the hook dies on ``ImportError`` before it can POST — so the
     # approval card never publishes. ``-I`` drops cwd + PYTHONPATH + user-site

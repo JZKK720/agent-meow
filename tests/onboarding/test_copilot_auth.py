@@ -1,7 +1,7 @@
-"""Tests for ``omnigent/onboarding/copilot_auth.py`` — the Copilot token store.
+"""Tests for ``agent_meow/onboarding/copilot_auth.py`` — the Copilot token store.
 
 Copilot's GitHub token lives in a dedicated top-level ``copilot:`` config block
-(not the shared global ``auth:``) and the omnigent secret store, resolved with
+(not the shared global ``auth:``) and the agent-meow secret store, resolved with
 the same ``resolve_secret`` resolver the provider families use. These tests
 isolate the config + secret store to a tmp dir (file backend, no OS keychain)
 and assert the read/resolve/configured helpers behave — including the **soft**
@@ -145,7 +145,7 @@ def test_settings_shape() -> None:
 def test_copilot_extra_install_command_targets_extra() -> None:
     """The install command targets the optional ``copilot`` extra."""
     cmd = copilot_install_command()
-    assert "omnigent[copilot]" in cmd
+    assert "agent-meow[copilot]" in cmd
     assert "install" in cmd
 
 
@@ -182,7 +182,7 @@ def test_copilot_install_command_prefers_uv(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: "/usr/bin/uv")
     cmd = copilot_install_command()
-    assert cmd == ["uv", "pip", "install", "omnigent[copilot]"]
+    assert cmd == ["uv", "pip", "install", "agent-meow[copilot]"]
     assert not any("index" in part or "://" in part for part in cmd)
 
 
@@ -196,7 +196,7 @@ def test_copilot_install_command_falls_back_to_pip(monkeypatch: pytest.MonkeyPat
         "-m",
         "pip",
         "install",
-        "omnigent[copilot]",
+        "agent-meow[copilot]",
     ]
     assert not any("index" in part or "://" in part for part in cmd)
 
@@ -211,8 +211,8 @@ def test_copilot_install_command_uv_tool(monkeypatch: pytest.MonkeyPatch) -> Non
         "tool",
         "install",
         "--with",
-        "omnigent[copilot]",
-        "omnigent",
+        "agent-meow[copilot]",
+        "agent-meow",
         "--force",
     ]
 
@@ -241,7 +241,7 @@ def test_install_copilot_sdk_runs_command_then_rechecks(
     monkeypatch.setattr(copilot_auth, "copilot_sdk_installed", lambda: state["installed"])
 
     assert install_copilot_sdk() is True
-    assert calls == [[extra_install.sys.executable, "-m", "pip", "install", "omnigent[copilot]"]]
+    assert calls == [[extra_install.sys.executable, "-m", "pip", "install", "agent-meow[copilot]"]]
 
 
 def test_install_copilot_sdk_false_on_spawn_failure(monkeypatch: pytest.MonkeyPatch) -> None:

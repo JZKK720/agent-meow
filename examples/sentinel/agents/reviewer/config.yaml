@@ -11,7 +11,7 @@ description: >-
 # configured (`meow setup`). Booting this agent needs an OpenAI provider; if
 # none is configured, Sentinel finalizes without the cross-check.
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: codex
 

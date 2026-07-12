@@ -1,7 +1,7 @@
 """
-Interactive setup flow for ``omnigent``.
+Interactive setup flow for ``agent-meow``.
 
-``omnigent setup`` helps users create a coding agent configuration. It detects
+``agent-meow setup`` helps users create a coding agent configuration. It detects
 locally installed CLI tools, generates a YAML agent spec, and starts
 the server + REPL + web UI.
 
@@ -420,7 +420,7 @@ def _detect_api_harnesses() -> dict[str, bool]:
     return result
 
 
-_AGENTS_DIR = Path.home() / ".omnigent" / "agents"
+_AGENTS_DIR = Path.home() / ".agent-meow" / "agents"
 
 
 @dataclass
@@ -513,7 +513,7 @@ def _prompt_global_auth() -> tuple[dict[str, str], None] | tuple[None, None]:
     1. Credentials for chosen type.
 
     :returns: ``(auth_dict, None)`` where *auth_dict* is the ``auth:``
-        mapping to write to ``~/.omnigent/config.yaml``, e.g.
+        mapping to write to ``~/.agent_meow/config.yaml``, e.g.
         ``{"type": "api_key", "api_key": "sk-...", "base_url": "..."}``.
         Returns ``(None, None)`` when the user presses Escape at the
         top level (caller may skip auth configuration).
@@ -527,7 +527,7 @@ def _prompt_global_auth() -> tuple[dict[str, str], None] | tuple[None, None]:
         try:
             if sub == 0:
                 console.print()
-                console.print("  [bold]How will omnigent authenticate with the LLM?[/bold]")
+                console.print("  [bold]How will agent-meow authenticate with the LLM?[/bold]")
                 console.print()
 
                 # Menu label only (display text, not a credential). Named to
@@ -556,7 +556,7 @@ def _prompt_global_auth() -> tuple[dict[str, str], None] | tuple[None, None]:
                     # API key path
                     console.print()
                     console.print(
-                        "  [dim]Tip: the key is stored in ~/.omnigent/config.yaml,"
+                        "  [dim]Tip: the key is stored in ~/.agent_meow/config.yaml,"
                         " not in the agent YAML.[/dim]"
                     )
                     console.print()
@@ -601,7 +601,7 @@ def _prompt_server_url(current: str | None) -> str | None:
     Skipped when *current* is already set and the user presses Enter to
     accept it. The user can type a new value to override.
 
-    :param current: The server URL already in ``~/.omnigent/config.yaml``,
+    :param current: The server URL already in ``~/.agent_meow/config.yaml``,
         or ``None`` if not configured yet.
     :returns: The server URL the user confirmed or typed, or ``None`` if
         they pressed Escape without providing one.
@@ -647,7 +647,7 @@ def _section() -> None:
 
 
 def _find_existing_configs() -> list[Path]:
-    """Return YAML files in ~/.omnigent/agents/, newest first."""
+    """Return YAML files in ~/.agent_meow/agents/, newest first."""
     if not _AGENTS_DIR.is_dir():
         return []
     return sorted(
@@ -715,7 +715,7 @@ def _show_welcome() -> None:
 
     banner = startup_banner_strings(
         "Welcome to agent-meow!",
-        hint_line="skip anytime: omnigent run <agent.yaml>",
+        hint_line="skip anytime: agent-meow run <agent.yaml>",
         art_color=MASCOT_ART_COLOR,
     )
     console.print()
@@ -751,7 +751,7 @@ def _show_welcome() -> None:
     console.print()
     console.print("  This setup flow will help you create your first YAML config.")
     console.print("  Once you're familiar, just write your own and run:")
-    console.print("  [dim]omnigent run <your-agent.yaml>[/dim]")
+    console.print("  [dim]agent-meow run <your-agent.yaml>[/dim]")
     console.print()
     console.print("  [dim]Check out examples/ in the repo for ready-to-run agent configs.[/dim]")
 
@@ -1298,7 +1298,7 @@ def _generate_multi_agent_yaml(
 
 
 def _save_yaml(content: str, filename: str) -> Path:
-    """Write YAML content to ~/.omnigent/agents/<filename>."""
+    """Write YAML content to ~/.agent_meow/agents/<filename>."""
     _AGENTS_DIR.mkdir(parents=True, exist_ok=True)
     path = _AGENTS_DIR / filename
     path.write_text(content)
@@ -1316,7 +1316,7 @@ def _store_default_config(yaml_path: Path, supervisor: _SupervisorConfig | None 
 
     Writes ``default_agent`` and, when *supervisor* carries auth info,
     the ``auth:`` block so agents that omit ``executor.auth`` inherit
-    credentials from ``~/.omnigent/config.yaml``.
+    credentials from ``~/.agent_meow/config.yaml``.
 
     :param yaml_path: Absolute path to the generated agent YAML.
     :param supervisor: Optional supervisor config from the wizard.
@@ -1333,7 +1333,7 @@ def _store_default_config(yaml_path: Path, supervisor: _SupervisorConfig | None 
             settings["auth"] = {"type": "api_key", "api_key": "$OPENAI_API_KEY"}
     _save_global_config(settings)
     console.print(f"  [green]✓ stored default_agent in {_GLOBAL_CONFIG_PATH}[/green]")
-    console.print("  [dim]Type `omnigent` to start a new session.[/dim]\n")
+    console.print("  [dim]Type `agent-meow` to start a new session.[/dim]\n")
 
 
 def _finish_new_setup(
@@ -1347,7 +1347,7 @@ def _finish_new_setup(
     :param yaml_path: Absolute path to the generated agent YAML.
     :param yaml_content: YAML text to display in the preview panel.
     :param supervisor: Optional supervisor config whose auth is persisted
-        into ``~/.omnigent/config.yaml`` as the global default.
+        into ``~/.agent_meow/config.yaml`` as the global default.
     """
     console.print()
     file_uri = yaml_path.resolve().as_uri()
@@ -1361,8 +1361,8 @@ def _finish_new_setup(
     console.print(
         "  [dim]Tip: Edit this YAML directly to change harness,"
         " model, add policies, tools, and more.[/dim]\n"
-        f"  [dim]Run it anytime with:[/dim] omnigent run [link={file_uri}]{yaml_path}[/link]\n"
-        "  [dim]See examples:[/dim] omnigent/examples/ in the repo, or omnigent run --help\n"
+        f"  [dim]Run it anytime with:[/dim] agent-meow run [link={file_uri}]{yaml_path}[/link]\n"
+        "  [dim]See examples:[/dim] agent_meow/examples/ in the repo, or agent-meow run --help\n"
     )
 
     _store_default_config(yaml_path, supervisor=supervisor)
@@ -1386,7 +1386,7 @@ def run_wizard_and_launch() -> None:
     Run the simplified first-time setup flow.
 
     Asks for three things in order, then writes them to
-    ``~/.omnigent/config.yaml``:
+    ``~/.agent_meow/config.yaml``:
 
     1. **Server URL** — the agent-meow server to connect to (optional;
        blank means run locally).
@@ -1395,11 +1395,11 @@ def run_wizard_and_launch() -> None:
        same profile is reused automatically for agent-meow server OAuth so no
        separate ``profile:`` key is needed.
     3. **Agent YAML** — path to the agent spec file that becomes
-       ``default_agent`` so ``omnigent run`` uses it without an
+       ``default_agent`` so ``agent-meow run`` uses it without an
        argument.
 
     All three prompts are skippable by pressing Enter or Escape; the
-    user can re-run ``omnigent setup --no-internal-beta`` at any time
+    user can re-run ``agent-meow setup --no-internal-beta`` at any time
     to update the values.
     """
     from agent_meow.cli import _GLOBAL_CONFIG_PATH, _load_global_config, _save_global_config
@@ -1457,7 +1457,7 @@ def run_wizard_and_launch() -> None:
             "  [dim]Path to your agent YAML file (e.g. examples/hello_world.yaml).[/dim]"
         )
         console.print(
-            "  [dim]Leave blank to skip — run ``omnigent run <yaml>`` directly later.[/dim]"
+            "  [dim]Leave blank to skip — run ``agent-meow run <yaml>`` directly later.[/dim]"
         )
         console.print()
     try:
@@ -1480,9 +1480,9 @@ def run_wizard_and_launch() -> None:
     console.print()
     if save_settings.get("default_agent"):
         console.print(
-            f"  Run your agent:  [bold]omnigent run {save_settings['default_agent']}[/bold]"
+            f"  Run your agent:  [bold]agent-meow run {save_settings['default_agent']}[/bold]"
         )
     else:
-        console.print("  Run an agent:  [bold]omnigent run <your-agent.yaml>[/bold]")
-    console.print("  See examples:   [bold]omnigent/examples/[/bold] in the repo")
+        console.print("  Run an agent:  [bold]agent-meow run <your-agent.yaml>[/bold]")
+    console.print("  See examples:   [bold]agent_meow/examples/[/bold] in the repo")
     console.print()

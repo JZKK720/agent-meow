@@ -15,8 +15,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # text, so without filtering them a session started with an image is
 # titled by a temp-file path instead of what the user typed. Matched per
 # line by synthesize_conversation_title; keep in sync with
-# omnigent/inner/claude_native_executor.py and
-# omnigent/inner/codex_native_executor.py.
+# agent_meow/inner/claude_native_executor.py and
+# agent_meow/inner/codex_native_executor.py.
 _ATTACHMENT_MARKER_RE = re.compile(r"^\[Attached(?: file)?: .+\]$")
 
 # ── Conversation ──────────────────────────────────────
@@ -59,7 +59,7 @@ class Conversation:
     :param host_id: Host that launched (or should launch) the
         runner for this session. Set when a session is created
         from the Web UI targeting a specific host. ``None`` for
-        sessions started via ``omnigent run`` (the CLI
+        sessions started via ``agent-meow run`` (the CLI
         orchestrates runner spawning directly). Used for
         retry-on-reconnect: if the server restarts before the
         runner connects, the server re-sends the launch request
@@ -119,7 +119,7 @@ class Conversation:
         ``POST /v1/sessions`` (the new-chat harness picker) and
         immutable thereafter — the runner spawns the harness on the
         first turn, so a later switch would orphan the running
-        process. Only valid for ``executor.type: omnigent`` agents;
+        process. Only valid for ``executor.type: agent-meow`` agents;
         the create route validates against ``OMNIGENT_HARNESSES``.
         Sub-agent sessions never *inherit* the parent brain's override,
         so e.g. polly's workers keep their declared harnesses when the
@@ -138,7 +138,7 @@ class Conversation:
         (RUNNER_SUBAGENT_DISPATCH.md).
     :param external_session_id: Runtime-native session id this
         conversation wraps, e.g. Claude Code's session uuid for
-        ``omnigent claude`` sessions. ``None`` for regular
+        ``agent-meow claude`` sessions. ``None`` for regular
         AP-only conversations. Populated by the wrapper bridge
         from the underlying runtime and used by ``--resume`` to
         recover the external session's prior transcript on a

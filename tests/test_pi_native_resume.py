@@ -154,12 +154,12 @@ def test_assistant_message_has_required_metadata() -> None:
         session_id="conv_abc",
         external_session_id=_EXTERNAL_ID,
         cwd=Path("/repo"),
-        provider="omnigent",
+        provider="agent-meow",
     )
     msg = records[1]["message"]
     assert msg["role"] == "assistant"
     assert msg["content"] == [{"type": "text", "text": "ok"}]
-    assert msg["provider"] == "omnigent"
+    assert msg["provider"] == "agent-meow"
     # per-item model wins over the default
     assert msg["model"] == "some-model"
     assert msg["stopReason"] == "stop"

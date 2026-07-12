@@ -27,7 +27,7 @@ from agent_meow.pi_native_bridge import (
 
 class PiNativeExecutor(Executor):
     """
-    Harness-side executor for ``omnigent pi`` web UI turns.
+    Harness-side executor for ``agent-meow pi`` web UI turns.
 
     The native Pi process is already running in the session terminal with
     the agent-meow Pi extension loaded. Each turn queues the latest user

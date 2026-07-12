@@ -1,8 +1,8 @@
 """
-Compatibility shim: legacy omnigent ``(content, phase)`` policy
-callables → omnigent ``(ctx, context)`` convention.
+Compatibility shim: legacy agent-meow ``(content, phase)`` policy
+callables → agent-meow ``(ctx, context)`` convention.
 
-Legacy omnigent function policies were written like::
+Legacy agent-meow function policies were written like::
 
     def block_long_sleep(content, phase):
         if phase != "tool_call":
@@ -15,12 +15,12 @@ The ``content`` is a phase-shaped dict (``{"tool": ..., "args":
 ``input`` / ``output``). Agent-plane's :class:`FunctionPolicy`
 dispatcher passes ``(EvaluationContext, engine_context)``
 instead — same arity, totally different semantics. When a legacy
-callable runs under omnigent it silently short-circuits to
+callable runs under agent-meow it silently short-circuits to
 ``"allow"`` on the very first phase check (``phase`` is a dict
 there, not a string) and any policy written in the old style
 becomes a no-op.
 
-This module bridges the gap. The omnigent→omnigent
+This module bridges the gap. The agent-meow→agent-meow
 translator in :mod:`~?agent_meow.spec.omnigent` routes every
 function policy through :func:`build` below; at policy-build
 time :func:`build` imports the author's callable, inspects its
@@ -47,7 +47,7 @@ from typing import Any
 from agent_meow.policies.types import EvaluationContext
 from agent_meow.spec.types import Phase
 
-# Parameter names that identify a legacy omnigent policy
+# Parameter names that identify a legacy agent-meow policy
 # callable — the first two positional parameters must be exactly
 # ``content`` then ``phase``. A callable whose first two params
 # are ``(foo, bar)`` is treated as omnigent-native even though
@@ -82,7 +82,7 @@ def build(
 
     Imports *target*, optionally unwraps a factory call with
     *factory_kwargs*, then decides whether the resolved callable
-    is a legacy omnigent policy (parameter names
+    is a legacy agent-meow policy (parameter names
     ``(content, phase)``) or an omnigent-native one
     (``(ctx)`` / ``(ctx, context)``). Legacy callables come
     back wrapped; modern callables come back unchanged.
@@ -133,7 +133,7 @@ def build(
 def _has_legacy_signature(fn: Callable[..., Any]) -> bool:
     """
     True iff *fn*'s first two positional parameters are named
-    ``content`` then ``phase`` (the legacy omnigent convention).
+    ``content`` then ``phase`` (the legacy agent-meow convention).
 
     Signature-introspection failures (C builtins, Cython objects
     without ``__signature__``) return False — those are treated
@@ -201,9 +201,9 @@ def _wrap_legacy(
     flags — no per-call introspection.
 
     Forwards a ``reset_turn`` attribute from *fn* onto the
-    wrapper when present, so the omnigent ``FunctionPolicy``
+    wrapper when present, so the agent-meow ``FunctionPolicy``
     can call it at turn boundaries — preserving the legacy
-    omnigent per-turn-reset contract for stateful policies
+    agent-meow per-turn-reset contract for stateful policies
     like ``max_tool_calls_per_turn``.
 
     :param fn: The legacy callable.
@@ -218,7 +218,7 @@ def _wrap_legacy(
     """
     wants_context = _positional_arity(fn) >= 3
     is_async = inspect.iscoroutinefunction(fn)
-    # Capture once at wrap time. The omnigent FunctionPolicy
+    # Capture once at wrap time. The agent-meow FunctionPolicy
     # looks up ``reset_turn`` via ``getattr`` on the wrapper.
     reset_turn_fn = getattr(fn, "reset_turn", None)
 
@@ -341,7 +341,7 @@ def _convert_args(
     Handles two calling conventions:
 
     - Agent-plane: ``ctx`` is an :class:`EvaluationContext`.
-    - Inner system: the omnigent :class:`FunctionPolicy` builds an
+    - Inner system: the agent-meow :class:`FunctionPolicy` builds an
       event dict and calls the wrapped function as ``fn(event, config)``
       (arity-2 dispatch). In that case ``ctx`` is the event dict and
       ``context`` is the config dict (ignored for legacy context).
@@ -392,29 +392,29 @@ def _legacy_content(ctx: EvaluationContext) -> Any:
     Agent-plane's workflow already normalizes ``ctx.content``
     into phase-specific shapes at policy-evaluation sites (see
     :func:`~?agent_meow.runtime.workflow._enforce_tool_call_policy`
-    and siblings). The legacy omnigent shape matches those
+    and siblings). The legacy agent-meow shape matches those
     normalized shapes almost exactly — this helper bridges the
     per-phase differences:
 
-    - ``INPUT`` / ``OUTPUT``: omnigent passes the message
-      text directly; legacy omnigent expects the same. Pass
+    - ``INPUT`` / ``OUTPUT``: agent-meow passes the message
+      text directly; legacy agent-meow expects the same. Pass
       through.
-    - ``TOOL_CALL``: omnigent passes
+    - ``TOOL_CALL``: agent-meow passes
       ``{"tool": name, "args": parsed_args_dict}``; legacy
-      omnigent expects the same. Pass through.
-    - ``TOOL_RESULT``: omnigent passes the raw tool output
-      string. Legacy omnigent passes the parsed result *dict*
+      agent-meow expects the same. Pass through.
+    - ``TOOL_RESULT``: agent-meow passes the raw tool output
+      string. Legacy agent-meow passes the parsed result *dict*
       via
       :func:`~?agent_meow.inner.mcp_tools._extract_call_result_payload`
       — when an MCP server emits a single JSON-formatted text
       block (the common shape for the Databricks Google /
       Glean MCP tools and any FastMCP-based server returning a
-      structured payload), native omnigent hands the policy
+      structured payload), native agent-meow hands the policy
       a dict, not a string. Mirror that here so legacy
       callables that branch on ``isinstance(content, dict)``
       (e.g. the Databricks ``google_policy``'s
       file-id tracking on ``tool_result``) keep working.
-      JSON-parse the omnigent string; on parse failure pass
+      JSON-parse the agent-meow string; on parse failure pass
       the raw string through (matches native fallback).
 
     :param ctx: The evaluation context.
@@ -460,12 +460,12 @@ def _legacy_context(
     """
     Build the ``context`` dict a 3-arg legacy callable expects.
 
-    Legacy omnigent passed ``{"labels": {...},
+    Legacy agent-meow passed ``{"labels": {...},
     "configured_phases": [...], "tool_name": "sleep"}`` — but
     ``tool_name`` is *only* added on ``TOOL_RESULT`` (see
     :meth:`~?agent_meow.inner.session.Session._apply_tool_result_policy`,
     which builds ``context = {"tool_name": tool_name}`` for
-    that phase). On ``TOOL_CALL``, native omnigent passes no
+    that phase). On ``TOOL_CALL``, native agent-meow passes no
     extra context — the legacy callable reads the tool name
     from ``content["tool"]`` instead (see
     :meth:`Session._apply_tool_call_policy`,
@@ -490,7 +490,7 @@ def _legacy_context(
     legacy: dict[str, Any] = {"labels": engine_context.get("labels", {})}
     if configured_phases is not None:
         legacy["configured_phases"] = list(configured_phases)
-    # Native omnigent only adds ``tool_name`` on
+    # Native agent-meow only adds ``tool_name`` on
     # ``TOOL_RESULT``. Mirror that exactly so callables that
     # use ``"tool_name" in context`` to discriminate phase
     # behave identically across legacy and agent-meow mode.

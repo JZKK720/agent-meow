@@ -166,8 +166,8 @@ def test_runner_startup_progress_plain_mode_prints_to_stderr(
     # to consumers that should see only the agent's reply).
     assert captured.out == ""
     # Both phases land on stderr with the standard prefix.
-    assert "omnigent: Starting local runner" in captured.err
-    assert "omnigent: Waiting for runner to register" in captured.err
+    assert "agent-meow: Starting local runner" in captured.err
+    assert "agent-meow: Waiting for runner to register" in captured.err
 
 
 def test_runner_startup_progress_plain_mode_does_not_swallow_exceptions(
@@ -190,7 +190,7 @@ def test_runner_startup_progress_plain_mode_does_not_swallow_exceptions(
             raise RuntimeError("boom")
     # The initial message still printed; the exception did not
     # suppress it.
-    assert "omnigent: Starting" in capsys.readouterr().err
+    assert "agent-meow: Starting" in capsys.readouterr().err
 
 
 def test_runner_startup_progress_rich_mode_writes_only_to_stderr(
@@ -247,7 +247,7 @@ def test_startup_phase_labels_avoid_internal_jargon(label: str) -> None:
     """
     # Internal nouns that mean nothing to an end user staring at startup.
     # "server" is intentionally NOT here: "local server" is user-facing
-    # vocabulary (it is the ``omnigent server`` they may run directly).
+    # vocabulary (it is the ``agent-meow server`` they may run directly).
     jargon = {
         "daemon",
         "host",
@@ -322,4 +322,4 @@ def test_runner_startup_progress_auto_detects_tty(monkeypatch, capsys) -> None:
     monkeypatch.setattr(sys.stderr, "isatty", lambda: False, raising=False)
     with runner_startup_progress(initial_message="Starting\u2026"):
         pass
-    assert "omnigent: Starting" in capsys.readouterr().err
+    assert "agent-meow: Starting" in capsys.readouterr().err

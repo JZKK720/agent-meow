@@ -147,7 +147,7 @@ class _ConversationRow(Protocol):
     :param created_at: Creation time as seconds since epoch.
         Both row sources expose this as :class:`int`.
     :param labels: Session-scoped labels (read for the Runtime
-        metadata badge — the ``omnigent.wrapper`` key identifies
+        metadata badge — the ``agent_meow.wrapper`` key identifies
         wrapper-style sessions like claude-native). Empty dict
         when the row has no labels; ``None`` is tolerated for
         callers (legacy fakes in tests) that do not surface
@@ -226,7 +226,7 @@ def pick_conversation(
     :param show_runtime: When ``True``, render runtime metadata
         showing ``[claude]`` for claude-native conversations
         and ``[chat]`` for everything else. Used by the cross-agent
-        picker (``omnigent resume``) where a user is choosing
+        picker (``agent-meow resume``) where a user is choosing
         across multiple wrappers and needs to see which runtime each
         row belongs to. Per-agent pickers leave this off because the
         runtime is implicit from the agent.
@@ -912,7 +912,7 @@ async def pick_conversation_by_wrapper_label_from_sdk(
     out: IO[str] | None = None,
     in_: IO[str] | None = None,
 ) -> str | None:
-    """Picker scoped to one wrapper kind (``omnigent.wrapper=<value>``).
+    """Picker scoped to one wrapper kind (``agent_meow.wrapper=<value>``).
 
     Wrapper invocations (claude-native today) upload a fresh agent
     bundle per session, so ``agents.get_by_name`` returns no canonical
@@ -924,7 +924,7 @@ async def pick_conversation_by_wrapper_label_from_sdk(
     with the original session, and the row-level hint prepares the
     user for the chdir prompt the wrapper raises after they pick.
     The cwd comes from the wrapper's client-side persistent state
-    (``~/.omnigent/claude-native/``); sessions created on a
+    (``~/.agent_meow/claude-native/``); sessions created on a
     different machine will show as having no recorded cwd."""
     all_convos = await client.sessions.list(limit=200, agent_id=None, order="desc")
     convos = [
@@ -952,7 +952,7 @@ async def pick_conversation_cross_agent_from_sdk(
 ) -> str | None:
     """Cross-agent variant: lists every session the caller can see
     via ``/v1/sessions`` and renders runtime metadata for
-    ``omnigent resume``'s runtime-dispatch UX."""
+    ``agent-meow resume``'s runtime-dispatch UX."""
     convos = await client.sessions.list(limit=200, agent_id=None, order="desc")
     previews = await _collect_previews_async(client, convos)
     # Header label is intentionally generic — "resume" describes the
@@ -1351,7 +1351,7 @@ def _render_workspace_cell(row: _ConversationRow, *, current_cwd: Path) -> Any |
     Reads happen once per row at render time. With the default
     :data:`_PREVIEW_PREFETCH_CAP` of 100 conversations the picker
     issues at most 100 small JSON reads from
-    ``~/.omnigent/claude-native/<hash>/launch.json`` -- fast on
+    ``~/.agent_meow/claude-native/<hash>/launch.json`` -- fast on
     local disk. We deliberately do not async / parallelize these
     because the picker is single-threaded and a stat+read of a
     sub-200-byte file is microseconds on any reasonable storage.

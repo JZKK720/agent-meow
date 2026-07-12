@@ -1,7 +1,7 @@
 """
 Persistent store for host registrations.
 
-Hosts are machines connected via ``omnigent host``. The store
+Hosts are machines connected via ``agent-meow host``. The store
 tracks which hosts have ever connected, their names, owners, and
 online/offline status. The ``hosts`` table is the source of truth
 for ``GET /v1/hosts`` — all server replicas query it. Live WebSocket
@@ -42,7 +42,7 @@ class Host:
     A registered host machine.
 
     :param host_id: Stable identifier from the host's local
-        ``~/.omnigent/config.yaml``, e.g. ``"host_a1b2c3d4..."``.
+        ``~/.agent_meow/config.yaml``, e.g. ``"host_a1b2c3d4..."``.
     :param name: Human-readable name, e.g. ``"corey-laptop"``.
     :param owner: User ID from the Databricks auth Bearer token,
         e.g. ``"corey.zumar@databricks.com"``.

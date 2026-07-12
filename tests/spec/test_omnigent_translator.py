@@ -33,7 +33,7 @@ from agent_meow.spec import (
     ToolRuntime,
     ToolsConfig,
 )
-from agent_meow.spec.omnigent import (
+from agent_meow.spec.agent-meow import (
     agent_def_to_agent_spec,
     agent_spec_to_agent_def,
 )
@@ -70,10 +70,10 @@ behavior when the dotted path resolves to a non-callable object."""
 @pytest.fixture()
 def basic_spec() -> AgentSpec:
     """
-    Minimal ``AgentSpec`` targeting the omnigent executor.
+    Minimal ``AgentSpec`` targeting the agent-meow executor.
 
     :returns: A spec with name, instructions, one ``llm.model``, and
-        ``executor.type == "omnigent"`` carrying harness+profile.
+        ``executor.type == "agent-meow"`` carrying harness+profile.
     """
     return AgentSpec(
         spec_version=1,
@@ -81,7 +81,7 @@ def basic_spec() -> AgentSpec:
         instructions="You are a helpful assistant.",
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             model="databricks-claude-sonnet-4-6",
             config={
                 "harness": "claude-sdk",
@@ -101,7 +101,7 @@ def test_basic_spec_produces_agent_def_with_name_and_prompt(
     The translator copies ``name`` and ``instructions`` into
     ``AgentDef.name`` and ``AgentDef.prompt``.
 
-    **What breaks if this fails**: the omnigent harness can
+    **What breaks if this fails**: the agent-meow harness can
     start with an unnamed/unprompted agent, silently degrading
     to whatever default the harness falls back to — the exact
     behavior the "fail loud on missing data" principle tries to
@@ -121,7 +121,7 @@ def test_basic_spec_maps_llm_and_executor_config(
     ``llm.model``, ``executor.config.harness``, and
     ``executor.config.profile`` populate ``AgentDef.executor``.
 
-    **What breaks if this fails**: the omnigent
+    **What breaks if this fails**: the agent-meow
     ``create_executor`` factory selects the wrong harness (or
     falls back to a MockExecutor), and the agent runs with the
     wrong backend.
@@ -138,7 +138,7 @@ def test_missing_profile_maps_to_none(
 ) -> None:
     """
     ``executor.config`` may omit ``profile``; the translator
-    surfaces ``None`` so the omnigent
+    surfaces ``None`` so the agent-meow
     :class:`~?agent_meow.datamodel.ExecutorSpec.profile` field
     reflects absence faithfully rather than coercing to a
     sentinel string.
@@ -194,17 +194,17 @@ def test_policies_dropped_from_forward_translation(
     A spec with ``guardrails.policies`` translates successfully
     to an :class:`AgentDef` and the resulting def carries NO
     policy metadata — the harness is agnostic to policies
-    because omnigent enforces them upstream of the executor.
+    because agent-meow enforces them upstream of the executor.
 
     **What breaks if this fails**: two regressions to guard
     against:
     1. The translator starts rejecting again (``OmnigentError``
-       with ``"policies"``) — the omnigent executor would then
+       with ``"policies"``) — the agent-meow executor would then
        be unusable for any spec carrying a ``guardrails:`` block,
        which the whole policy-lift pipeline just enabled.
     2. The translator starts round-tripping policies INTO the
-       AgentDef — meaning both the omnigent workflow AND the
-       omnigent runtime would enforce them, double-counting
+       AgentDef — meaning both the agent-meow workflow AND the
+       agent-meow runtime would enforce them, double-counting
        every DENY.
     """
     basic_spec.guardrails = GuardrailsSpec(
@@ -247,7 +247,7 @@ def test_mcp_server_rejected_with_clear_message(
 ) -> None:
     """
     A spec that declares an MCP server translates into an
-    omnigent MCP tool.
+    agent-meow MCP tool.
 
     **What breaks if this fails**: MCP tools disappear from the
     translated agent, so the LLM loses advertised capabilities.
@@ -318,7 +318,7 @@ def test_tool_pointing_at_non_callable_rejected(
     have a fallback. The translator fails loud rather than
     wrapping a non-callable in a tool the harness can't invoke.
 
-    **What breaks if this fails**: the omnigent harness
+    **What breaks if this fails**: the agent-meow harness
     registers a FunctionTool whose ``callable`` is a string,
     dict, or other non-callable — every invocation fails with
     ``TypeError`` inside the harness.
@@ -342,8 +342,8 @@ def test_tool_pointing_at_non_callable_rejected(
 
 def test_missing_llm_rejected(basic_spec: AgentSpec) -> None:
     """
-    A spec with ``executor.type='omnigent'`` but no ``llm``
-    block is rejected — the omnigent harness needs a model
+    A spec with ``executor.type='agent-meow'`` but no ``llm``
+    block is rejected — the agent-meow harness needs a model
     name. We fail loud at translation time, not deep inside the
     harness constructor.
     """
@@ -371,7 +371,7 @@ def test_native_omnigent_spec_infers_harness_from_model(
     expected_harness: str,
 ) -> None:
     """
-    Native agent-meow v1 specs use ``executor.type="omnigent"`` with no harness in
+    Native agent-meow v1 specs use ``executor.type="agent-meow"`` with no harness in
     ``executor.config``.  :func:`agent_spec_to_agent_def` must infer
     the harness from the model prefix so Claude models don't fall back
     to ``DatabricksExecutor``.
@@ -384,7 +384,7 @@ def test_native_omnigent_spec_infers_harness_from_model(
         name="test-agent",
         instructions="You are helpful.",
         llm=LLMConfig(model=model),
-        executor=ExecutorSpec(type="omnigent", model=model, config={}),
+        executor=ExecutorSpec(type="agent-meow", model=model, config={}),
     )
     agent_def = agent_spec_to_agent_def(spec)
     assert agent_def.executor is not None
@@ -415,7 +415,7 @@ def test_sub_agent_infers_harness_and_forwards_os_env() -> None:
         name="backend_engineer",
         instructions="You write code.",
         llm=LLMConfig(model="databricks-claude-sonnet-4"),
-        executor=ExecutorSpec(type="omnigent", model="databricks-claude-sonnet-4", config={}),
+        executor=ExecutorSpec(type="agent-meow", model="databricks-claude-sonnet-4", config={}),
         os_env=sub_os_env,
     )
     parent_spec = AgentSpec(
@@ -423,7 +423,7 @@ def test_sub_agent_infers_harness_and_forwards_os_env() -> None:
         name="root",
         instructions="You delegate.",
         llm=LLMConfig(model="databricks-gpt-5-4"),
-        executor=ExecutorSpec(type="omnigent", model="databricks-gpt-5-4", config={}),
+        executor=ExecutorSpec(type="agent-meow", model="databricks-gpt-5-4", config={}),
         tools=ToolsConfig(agents=["backend_engineer"]),
         sub_agents=[sub_spec],
     )

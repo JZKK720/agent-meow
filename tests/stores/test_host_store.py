@@ -140,7 +140,7 @@ def test_upsert_reconnect_overwrites_and_nulls_configured_harnesses(
         owner="alice@example.com",
         configured_harnesses={"codex": False},
     )
-    # Reconnect with fresh values — the user ran `omnigent setup`.
+    # Reconnect with fresh values — the user ran `agent-meow setup`.
     host_store.upsert_on_connect(
         host_id="host_ch2",
         name="laptop2",

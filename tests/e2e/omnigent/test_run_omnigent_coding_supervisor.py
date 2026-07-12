@@ -1,5 +1,5 @@
-"""End-to-end test: ``omnigent run examples/coding_supervisor.yaml
---omnigent`` works.
+"""End-to-end test: ``agent-meow run examples/coding_supervisor.yaml
+--agent-meow`` works.
 
 Exercises the full pipeline that was failing in user-reported bugs:
 
@@ -9,11 +9,11 @@ Exercises the full pipeline that was failing in user-reported bugs:
    these as "AgentTool: expected FunctionTool after fail-loud
    filtering" and "async_enabled not modeled by AgentSpec."
 2. Non-interactive ``run -p <prompt>`` path — POSTs to
-   ``/v1/responses`` on an in-process omnigent server.
+   ``/v1/responses`` on an in-process agent-meow server.
 3. The bidirectional translator: YAML → AgentDef →
    :func:`agent_def_to_agent_spec` → AgentSpec → (registered with
-   omnigent server) → :func:`agent_spec_to_agent_def` (inside
-   :class:`OmnigentExecutor.from_spec`) → AgentDef → omnigent
+   agent-meow server) → :func:`agent_spec_to_agent_def` (inside
+   :class:`OmnigentExecutor.from_spec`) → AgentDef → agent-meow
    executor_factory → actual harness.
 
 Two test scenarios:
@@ -31,7 +31,7 @@ Two test scenarios:
   translator — coding-supervisor-shaped YAMLs with inline
   sub-agent-as-tool declarations stop loading under agent-meow mode.
 - ``_run_agent_via_omnigent`` regresses to the "requires a prompt"
-  hard-error path — interactive ``omnigent run <yaml>``
+  hard-error path — interactive ``agent-meow run <yaml>``
   starts exiting non-zero instead of opening the REPL.
 - The plain ``FunctionTool`` → ``LocalToolInfo`` translation
   breaks — YAMLs with ``type: function`` tools (``sleep``-style)
@@ -118,11 +118,11 @@ _CODEX_REGRESSION_TODO_BODY = (
 # The error string codex emits when it can't hydrate its
 # workspace because shell_tool was disabled. Its appearance in
 # output is a definitive regression signal for the
-# ``omnigent codex`` fix.
+# ``agent-meow codex`` fix.
 _CODEX_NONEXISTENT_ERROR = "/nonexistent"
 
 # Expected root entries for the file listing test.
-_EXPECTED_ROOT_ENTRIES = ("openapi.json", "omnigent", "pyproject.toml")
+_EXPECTED_ROOT_ENTRIES = ("openapi.json", "agent-meow", "pyproject.toml")
 
 
 def test_run_omnigent_coding_supervisor_oneshot(
@@ -132,7 +132,7 @@ def test_run_omnigent_coding_supervisor_oneshot(
     mock_llm_server_url: str,
 ) -> None:
     """
-    ``omnigent run examples/coding_supervisor.yaml -p ...``
+    ``agent-meow run examples/coding_supervisor.yaml -p ...``
     completes successfully end-to-end.
 
     coding_supervisor.yaml exercises every concept the phase 0-5
@@ -140,8 +140,8 @@ def test_run_omnigent_coding_supervisor_oneshot(
     ``AgentTool`` sub-agents with per-worker executor configs. The
     test fails loudly if any of those regress.
 
-    :param omnigent_python: Interpreter with both omnigent and
-        omnigent installed (from the shared conftest).
+    :param omnigent_python: Interpreter with both agent-meow and
+        agent-meow installed (from the shared conftest).
     :param omnigent_repo_root: agent-meow repo root. Used as cwd
         so relative YAML paths resolve.
     :param mock_credentials_env: Mock-LLM env vars pointing at the
@@ -163,7 +163,7 @@ def test_run_omnigent_coding_supervisor_oneshot(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             # Ephemeral DBOS state — see comment in
@@ -188,7 +188,7 @@ def test_run_omnigent_coding_supervisor_oneshot(
     # validator → registration → executor construction →
     # /v1/responses → assistant text extraction) succeeded.
     assert result.returncode == 0, (
-        f"`omnigent run --omnigent` exited {result.returncode}. "
+        f"`agent-meow run --agent-meow` exited {result.returncode}. "
         f"stderr tail:\n{result.stderr[-2000:]}\n"
         f"stdout tail:\n{result.stdout[-1000:]}"
     )
@@ -216,9 +216,9 @@ def test_run_omnigent_coding_supervisor_exposes_subagent_tools(
     """
     Ask the LLM to list its tools. The response must include both
     the inline ``AgentTool`` sub-agents (``claude_worker``,
-    ``codex_worker``) AND at least one omnigent task-lifecycle
+    ``codex_worker``) AND at least one agent-meow task-lifecycle
     builtin (``check_task``) — proves :class:`OmnigentExecutor`
-    advertises both surfaces to the inner omnigent harness.
+    advertises both surfaces to the inner agent-meow harness.
 
     The mock LLM is configured to return a response listing
     ``sys_session_send`` and ``list_tasks`` so the assertions pass
@@ -235,8 +235,8 @@ def test_run_omnigent_coding_supervisor_exposes_subagent_tools(
         ``/v1/responses`` request body to see what tools were
         advertised to the LLM.
 
-    :param omnigent_python: Interpreter with omnigent +
-        omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow +
+        agent-meow installed.
     :param omnigent_repo_root: agent-meow repo root.
     :param mock_credentials_env: Mock-LLM env vars pointing at the
         mock server.
@@ -255,7 +255,7 @@ def test_run_omnigent_coding_supervisor_exposes_subagent_tools(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             # Ephemeral DBOS state — see comment in
@@ -306,7 +306,7 @@ def test_run_omnigent_coding_supervisor_spawns_codex_worker_to_list_files(
     mock_llm_server_url: str,
 ) -> None:
     """
-    Infrastructure smoke test: ``omnigent run`` on
+    Infrastructure smoke test: ``agent-meow run`` on
     coding_supervisor.yaml boots the agent-meow stack, the mock
     supervisor LLM responds with a file listing, and that listing
     flows through stdout without error.
@@ -349,7 +349,7 @@ def test_run_omnigent_coding_supervisor_spawns_codex_worker_to_list_files(
     reset_mock_llm(mock_llm_server_url)
     configure_mock_llm(
         mock_llm_server_url,
-        [{"text": "openapi.json omnigent pyproject.toml"}],
+        [{"text": "openapi.json agent-meow pyproject.toml"}],
     )
 
     yaml_path = omnigent_repo_root / _YAML_PATH_REL
@@ -376,7 +376,7 @@ def test_run_omnigent_coding_supervisor_spawns_codex_worker_to_list_files(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             # Ephemeral DBOS state — see comment in
@@ -400,7 +400,7 @@ def test_run_omnigent_coding_supervisor_spawns_codex_worker_to_list_files(
     assert "Codex App Server error" not in combined, (
         f"Codex App Server error surfaced — profile propagation "
         f"regressed. Check _propagate_profile_to_environment in "
-        f"omnigent/cli.py. "
+        f"agent_meow/cli.py. "
         f"stderr tail:\n{result.stderr[-2000:]}"
     )
     assert "403 Invalid access token" not in combined, (
@@ -412,7 +412,7 @@ def test_run_omnigent_coding_supervisor_spawns_codex_worker_to_list_files(
     # Exit 0 proves no PermanentLLMError bubbled up from the Codex
     # sub-agent's workflow.
     assert result.returncode == 0, (
-        f"`omnigent run --omnigent` exited {result.returncode}. "
+        f"`agent-meow run --agent-meow` exited {result.returncode}. "
         f"stderr tail:\n{result.stderr[-2000:]}\n"
         f"stdout tail:\n{result.stdout[-1500:]}"
     )
@@ -436,7 +436,7 @@ def test_run_omnigent_coding_supervisor_interactive_enters_repl(
     mock_credentials_env: dict[str, str],
 ) -> None:
     """
-    ``omnigent run examples/coding_supervisor.yaml`` (no
+    ``agent-meow run examples/coding_supervisor.yaml`` (no
     prompt) enters the interactive REPL via the SSE bridge. Exit
     cleanly on Ctrl+D.
 
@@ -444,10 +444,10 @@ def test_run_omnigent_coding_supervisor_interactive_enters_repl(
     without a prompt hard-errored with "requires a prompt" —
     the shim must instead delegate to
     :func:`_run_chat_via_omnigent` so interactive semantics match the
-    legacy ``omnigent run`` no-prompt behavior.
+    legacy ``agent-meow run`` no-prompt behavior.
 
-    :param omnigent_python: Interpreter with omnigent +
-        omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow +
+        agent-meow installed.
     :param omnigent_repo_root: Cwd for the subprocess.
     :param mock_credentials_env: Mock-LLM env vars pointing at the
         mock server.
@@ -487,7 +487,7 @@ def test_run_omnigent_coding_supervisor_interactive_enters_repl(
         buffered = child.before or ""
 
         assert index == 0, (
-            f"`omnigent run --omnigent` (no prompt) did not reach the "
+            f"`agent-meow run --agent-meow` (no prompt) did not reach the "
             f"REPL ready state within {_REPL_BOOT_TIMEOUT}s. "
             f"Match index={index} "
             f"(0=ready, 1=legacy-hard-error, 2=EOF). "
@@ -530,15 +530,15 @@ def test_run_omnigent_coding_supervisor_codex_shell_not_disabled(
 
     Background: ``codex_executor`` historically disabled
     ``shell_tool`` whenever any tools were passed. Under agent-meow
-    mode, :class:`OmnigentExecutor` always injects omnigent
+    mode, :class:`OmnigentExecutor` always injects agent-meow
     builtins (``check_task``, ``sys_session_send``, etc.) into the
     tools list — even for codex sub-agents whose YAML declares no
     tools of their own. This test exercises that path to confirm the
     server boots and the mock response flows through without a
     ``/nonexistent`` error surfacing.
 
-    :param omnigent_python: Interpreter with omnigent +
-        omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow +
+        agent-meow installed.
     :param omnigent_repo_root: agent-meow repo root — also the
         cwd the supervisor YAML's ``os_env: {cwd: .}`` resolves
         to.
@@ -575,7 +575,7 @@ def test_run_omnigent_coding_supervisor_codex_shell_not_disabled(
             [
                 str(omnigent_python),
                 "-m",
-                "omnigent",
+                "agent-meow",
                 "run",
                 str(yaml_path),
                 "-p",
@@ -600,12 +600,12 @@ def test_run_omnigent_coding_supervisor_codex_shell_not_disabled(
         f"codex sub-agent emitted the {_CODEX_NONEXISTENT_ERROR!r} "
         f"workspace-hydration error — shell_tool was disabled and "
         f"codex had nothing to read the file with. Regression in "
-        f"omnigent/codex_executor.py.\n"
+        f"agent_meow/codex_executor.py.\n"
         f"stdout tail:\n{result.stdout[-2500:]}\n"
         f"stderr tail:\n{result.stderr[-1500:]}"
     )
     assert result.returncode == 0, (
-        f"--omnigent exited {result.returncode}. stderr tail:\n"
+        f"--agent-meow exited {result.returncode}. stderr tail:\n"
         f"{result.stderr[-2000:]}\nstdout tail:\n"
         f"{result.stdout[-1000:]}"
     )

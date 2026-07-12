@@ -92,7 +92,7 @@ def test_build_helper_env_active_drops_binding_token() -> None:
 
 
 def test_build_helper_env_active_passes_omnigent_session_marker() -> None:
-    """The ``OMNIGENT`` session marker survives the active allowlist.
+    """The ``agent-meow`` session marker survives the active allowlist.
 
     The marker (set once on the runner process) must reach an agent's
     sandboxed shell so code running there can detect it is inside an

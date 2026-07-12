@@ -1,9 +1,9 @@
 """
 Tests for the generic-provider routing branch of the per-harness spawn-env
-builders in ``omnigent/runtime/workflow.py``.
+builders in ``agent_meow/runtime/workflow.py``.
 
 Chunk 1b wires the kind-typed provider config
-(``omnigent/onboarding/provider_config.py``) into the four
+(``agent_meow/onboarding/provider_config.py``) into the four
 ``_build_*_spawn_env`` builders so that a configured ``providers:`` entry —
 either named explicitly via ``executor.auth: {type: provider, name: X}`` or
 selected as the per-family global default — emits the per-harness
@@ -118,7 +118,7 @@ def _make_spec(
         spec_version=1,
         name=f"test-{harness}",
         instructions="You are a test agent.",
-        executor=ExecutorSpec(type="omnigent", config=config, model=model, auth=auth),
+        executor=ExecutorSpec(type="agent-meow", config=config, model=model, auth=auth),
         llm=LLMConfig(model=model) if model is not None else None,
         os_env=os_env,  # type: ignore[arg-type]
     )
@@ -247,7 +247,7 @@ def test_global_databricks_auth_beats_ambient_key(
 ) -> None:
     """An explicit global ``auth:`` block wins over an ambient-detected key.
 
-    Regression guard for the databricks/ucode user: ``omnigent setup``
+    Regression guard for the databricks/ucode user: ``agent-meow setup``
     writes a global ``auth: {type: databricks, profile: oss}`` block (not a
     providers: entry). A spec with NO executor.auth must route through that
     explicit databricks auth, NOT through a stray ``ANTHROPIC_API_KEY`` that
@@ -297,7 +297,7 @@ def test_codex_falls_back_to_first_available_openai_credential(
     A configured-but-not-default openai credential routes the codex head at spawn.
 
     The headline fix: a user who configured an openai-family credential via
-    ``omnigent setup`` (a Databricks workspace, or any key/gateway) but never
+    ``agent-meow setup`` (a Databricks workspace, or any key/gateway) but never
     marked it ``default`` would otherwise launch Debby's GPT (codex) head with NO
     credential — codex's own "Invalid API key". The spawn-env builder now falls
     back to the first credential that can serve the head's family, so the head

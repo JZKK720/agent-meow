@@ -280,7 +280,7 @@ def _launch_runner(
 @contextmanager
 def _host_daemon(tmp_path: Path, live_server: str) -> Iterator[None]:
     """
-    Spawn an ``omnigent connect`` daemon for the test's duration.
+    Spawn an ``agent-meow connect`` daemon for the test's duration.
 
     :param tmp_path: Per-test temp dir for the daemon log.
     :param live_server: Test server URL the daemon registers with.

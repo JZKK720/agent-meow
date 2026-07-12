@@ -1,9 +1,9 @@
 """Server-launched sandbox hosts for ``host_type="managed"`` sessions.
 
-The external host flow has a human run ``omnigent host`` on their own
+The external host flow has a human run ``agent-meow host`` on their own
 machine. The managed flow replaces the human: when a session is created
 with ``host_type="managed"``, the server provisions a cloud sandbox,
-starts ``omnigent host`` inside it, and waits for that host to
+starts ``agent-meow host`` inside it, and waits for that host to
 register — after which the session rides the exact same host-launch
 machinery an external host uses (binding token, ``host.launch_runner``
 frame, runner tunnel).
@@ -28,29 +28,29 @@ stores into ``create_app``):
 
 1. **Server YAML** (OSS / self-hosted): :func:`parse_sandbox_config`
    builds the config from the ``sandbox:`` section
-   (``omnigent server -c`` / ``OMNIGENT_CONFIG`` /
+   (``agent-meow server -c`` / ``OMNIGENT_CONFIG`` /
    ``<data_dir>/config.yaml``)::
 
        sandbox:
          provider: modal          # lakebox|modal|daytona|boxlite|cwsandbox|islo|e2b|openshell
          server_url: https://agent_meow.example.com
          modal:                   # optional block
-           image: docker.io/me/omnigent-host:latest  # default: official image
+           image: docker.io/me/agent-meow-host:latest  # default: official image
            secrets: [omnigent-llm]  # Modal secrets injected as sandbox env
                                      # (harness LLM keys, gateway URLs)
          boxlite:                 # optional block (provider: boxlite)
-           image: docker.io/me/omnigent-host:latest    # shared; default: official
+           image: docker.io/me/agent-meow-host:latest    # shared; default: official
            env: [OPENAI_API_KEY, GIT_TOKEN]            # shared; SERVER env var NAMES
            # exactly one mode (mutually exclusive):
            cloud: {endpoint: https://boxlite.example.com:8100}  # CLOUD; key: BOXLITE_API_KEY env
            # local: {home_dir: /data/boxlite, registry: {...}}  # LOCAL (default if omitted)
          daytona:                 # optional block (provider: daytona)
-           image: docker.io/me/omnigent-host:latest  # default: official image
+           image: docker.io/me/agent-meow-host:latest  # default: official image
            env: [OPENAI_API_KEY, GIT_TOKEN]  # SERVER env var NAMES whose
                                              # values are injected as
                                              # sandbox env
          islo:                    # optional block (provider: islo)
-           image: docker.io/me/omnigent-host:latest  # default: official image
+           image: docker.io/me/agent-meow-host:latest  # default: official image
            env: [OPENAI_API_KEY, GIT_TOKEN]  # SERVER env var NAMES injected
                                              # as sandbox env
            base_url: https://api.islo.dev    # optional API override
@@ -61,7 +61,7 @@ stores into ``create_app``):
            memory_mb: 4096
            disk_gb: 20
          openshell:               # optional block (provider: openshell)
-           image: docker.io/me/omnigent-host:latest  # default: official image
+           image: docker.io/me/agent-meow-host:latest  # default: official image
            env: [OPENAI_API_KEY, GIT_TOKEN]  # SERVER env var NAMES injected
                                              # as sandbox env
            cluster: my-gateway              # optional OpenShell gateway name
@@ -206,7 +206,7 @@ KUBERNETES_MANAGED_TOKEN_TTL_S = 7 * 24 * 3600
 
 # Where the in-sandbox host process logs — named in launch-failure
 # errors so an operator knows where to look inside the sandbox.
-_HOST_LOG_PATH = "/tmp/omnigent-host.log"
+_HOST_LOG_PATH = "/tmp/agent-meow-host.log"
 
 # How long a message POST waits for an in-flight managed launch to
 # settle before giving up (see ManagedLaunchTracker). Covers the full
@@ -555,8 +555,8 @@ def _modal_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: modal`` path.
 
-    :param image: Registry image reference with omnigent pre-installed,
-        e.g. ``"docker.io/me/omnigent-host:latest"``, or ``None`` to
+    :param image: Registry image reference with agent-meow pre-installed,
+        e.g. ``"docker.io/me/agent-meow-host:latest"``, or ``None`` to
         use the official prebaked host image (env-overridable; see
         :func:`~?agent_meow.onboarding.sandboxes.modal._build_sandbox_image`).
     :param secrets: Modal secret names whose env vars (harness LLM
@@ -610,7 +610,7 @@ def parse_sandbox_config(raw: object) -> ManagedSandboxConfig | None:
 
     :param raw: The raw ``sandbox`` value from the server config YAML,
         e.g. ``{"provider": "modal", "server_url": "https://…",
-        "modal": {"image": "docker.io/me/omnigent-host:latest"}}``.
+        "modal": {"image": "docker.io/me/agent-meow-host:latest"}}``.
         ``None`` when the section is absent.
     :returns: The parsed config, or ``None`` when *raw* is ``None``
         (managed hosts not configured).
@@ -751,8 +751,8 @@ def _parse_modal_image(raw: dict[str, object]) -> str | None:
     if not isinstance(image, str) or not image.strip():
         raise ValueError(
             "server config 'sandbox.modal.image' must be a registry image "
-            "reference with omnigent pre-installed, e.g. "
-            "'docker.io/me/omnigent-host:latest' (omit it to use the "
+            "reference with agent-meow pre-installed, e.g. "
+            "'docker.io/me/agent-meow-host:latest' (omit it to use the "
             "official image)"
         )
     return image.strip()
@@ -801,8 +801,8 @@ def _daytona_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: daytona`` path.
 
-    :param image: Registry image reference with omnigent pre-installed,
-        e.g. ``"docker.io/me/omnigent-host:latest"``, or ``None`` to
+    :param image: Registry image reference with agent-meow pre-installed,
+        e.g. ``"docker.io/me/agent-meow-host:latest"``, or ``None`` to
         use the official prebaked host image (env-overridable; see
         :class:`~?agent_meow.onboarding.sandboxes.daytona.DaytonaSandboxLauncher`).
     :param env: Names of server-process environment variables (harness
@@ -851,8 +851,8 @@ def _parse_daytona_image(raw: dict[str, object]) -> str | None:
     if not isinstance(image, str) or not image.strip():
         raise ValueError(
             "server config 'sandbox.daytona.image' must be a registry image "
-            "reference with omnigent pre-installed, e.g. "
-            "'docker.io/me/omnigent-host:latest' (omit it to use the "
+            "reference with agent-meow pre-installed, e.g. "
+            "'docker.io/me/agent-meow-host:latest' (omit it to use the "
             "official image)"
         )
     return image.strip()
@@ -909,9 +909,9 @@ def _boxlite_launcher_factory(
     Build the launcher factory for the YAML ``provider: boxlite`` path.
 
     :param endpoint: Remote ``boxlite serve`` URL (cloud mode), or ``None`` for
-        LOCAL mode — boxes run on the omnigent-server host as embedded micro-VMs
+        LOCAL mode — boxes run on the agent-meow-server host as embedded micro-VMs
         (no daemon, no ``boxlite serve``).
-    :param image: Registry image reference with omnigent pre-installed, or
+    :param image: Registry image reference with agent-meow pre-installed, or
         ``None`` to use the official prebaked host image (env-overridable; see
         :class:`~?agent_meow.onboarding.sandboxes.boxlite.BoxliteSandboxLauncher`).
     :param env: Names of server-process environment variables (harness LLM
@@ -1032,8 +1032,8 @@ def _parse_boxlite_image(section: dict[str, object]) -> str | None:
     if not isinstance(image, str) or not image.strip():
         raise ValueError(
             "server config 'sandbox.boxlite.image' must be a registry image "
-            "reference with omnigent pre-installed, e.g. "
-            "'docker.io/me/omnigent-host:latest' (omit it to use the official image)"
+            "reference with agent-meow pre-installed, e.g. "
+            "'docker.io/me/agent-meow-host:latest' (omit it to use the official image)"
         )
     return image.strip()
 
@@ -1159,7 +1159,7 @@ def _parse_cwsandbox_image(raw: dict[str, object]) -> str | None:
     if not isinstance(image, str) or not image.strip():
         raise ValueError(
             "server config 'sandbox.cwsandbox.image' must be a registry image "
-            "reference with omnigent pre-installed (omit it to use the official image)"
+            "reference with agent-meow pre-installed (omit it to use the official image)"
         )
     return image.strip()
 
@@ -1242,8 +1242,8 @@ def _parse_e2b_template(raw: dict[str, object]) -> str | None:
     if not isinstance(template, str) or not template.strip():
         raise ValueError(
             "server config 'sandbox.e2b.template' must be the NAME of a pre-built "
-            "E2B template the omnigent host image was built into (e.g. "
-            "'omnigent-host'; see deploy/e2b/README.md) — NOT a registry image "
+            "E2B template the agent-meow host image was built into (e.g. "
+            "'agent-meow-host'; see deploy/e2b/README.md) — NOT a registry image "
             "reference (omit it to use the default template)"
         )
     return template.strip()
@@ -1264,8 +1264,8 @@ def _islo_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: islo`` path.
 
-    :param image: Registry image reference with omnigent pre-installed,
-        e.g. ``"docker.io/me/omnigent-host:latest"``, or ``None`` to
+    :param image: Registry image reference with agent-meow pre-installed,
+        e.g. ``"docker.io/me/agent-meow-host:latest"``, or ``None`` to
         use the official prebaked host image (env-overridable; see
         :class:`~?agent_meow.onboarding.sandboxes.islo.IsloSandboxLauncher`).
     :param env: Names of server-process environment variables injected
@@ -1310,8 +1310,8 @@ def _openshell_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: openshell`` path.
 
-    :param image: Registry image reference with omnigent pre-installed,
-        e.g. ``"docker.io/me/omnigent-host:latest"``, or ``None`` to use
+    :param image: Registry image reference with agent-meow pre-installed,
+        e.g. ``"docker.io/me/agent-meow-host:latest"``, or ``None`` to use
         the official prebaked host image (env-overridable).
     :param env: Names of server-process environment variables injected
         into every sandbox, e.g. ``["OPENAI_API_KEY", "GIT_TOKEN"]``, or
@@ -1368,8 +1368,8 @@ def _parse_provider_image(raw: dict[str, object], provider: str) -> str | None:
     if not isinstance(image, str) or not image.strip():
         raise ValueError(
             f"server config 'sandbox.{provider}.image' must be a registry image "
-            "reference with omnigent pre-installed, e.g. "
-            "'docker.io/me/omnigent-host:latest' (omit it to use the "
+            "reference with agent-meow pre-installed, e.g. "
+            "'docker.io/me/agent-meow-host:latest' (omit it to use the "
             "official image)"
         )
     return image.strip()
@@ -1647,7 +1647,7 @@ def _kubernetes_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: kubernetes`` path.
 
-    :param image: Registry image with omnigent pre-installed, or ``None`` for
+    :param image: Registry image with agent-meow pre-installed, or ``None`` for
         the official prebaked host image (env-overridable).
     :param env: Names of server-process environment variables injected into
         every Pod as literal ``env``, or ``None``. Prefer *secret_name* for
@@ -1701,7 +1701,7 @@ async def launch_managed_host(
     Sequence: provision sandbox → pre-register the host row with its
     launch-token digest (so the credential resolves by the time the
     host dials the tunnel) → optionally clone the requested repository
-    → start ``omnigent host`` inside the sandbox with the token +
+    → start ``agent-meow host`` inside the sandbox with the token +
     identity in its environment → poll the hosts table until the host
     is online. Any failure after provisioning terminates the sandbox
     and deletes the host row (which revokes the token) before
@@ -2042,7 +2042,7 @@ async def resume_managed_host(
     sandbox idle-stops but retains its persistent volume
     (:attr:`SandboxLauncher.can_resume`) — and is currently offline, this
     resumes the sandbox under the SAME sandbox id, re-arms its launch token,
-    re-execs ``omnigent host``, and waits for it to re-register. The caller's
+    re-execs ``agent-meow host``, and waits for it to re-register. The caller's
     existing relaunch then spawns a fresh runner.
 
     No-op when the host is already online, is unknown, or its provider cannot

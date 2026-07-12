@@ -1,5 +1,5 @@
-# Build the `omnigent` release distributions (core wheel with the web
-# UI bundled in, plus the `omnigent-client` and `omnigent-ui-sdk` SDK
+# Build the `agent-meow` release distributions (core wheel with the web
+# UI bundled in, plus the `agent-meow-client` and `agent-meow-ui-sdk` SDK
 # wheels it depends on), run the readiness gates, and publish all three to
 # (Test)PyPI via OIDC Trusted Publishing. The three version-lock together,
 # so every release publishes all three at the same version. Self-contained:
@@ -18,7 +18,7 @@
 # release-agent_meow.yml + the test-pypi/pypi environment (unclaimed names
 # reserved via a pending publisher); GitHub envs test-pypi (unprotected)
 # and pypi (required reviewer). Actions are SHA-pinned per repo convention.
-name: Release omnigent (PyPI)
+name: Release agent-meow (PyPI)
 
 on:
   # PyPI publishing moved to the central secure-release repo; the tag-push
@@ -47,7 +47,7 @@ permissions:
 
 # Serialize releases on the same ref so two triggers can't race the same tag.
 concurrency:
-  group: release-omnigent-${{ github.ref }}
+  group: release-agent-meow-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -86,9 +86,9 @@ jobs:
       #    rejects the lockfile ("Missing: yaml@1.10.3 from lock file").
       - name: Build web UI (clean, fresh)
         run: |
-          rm -rf omnigent/server/static/web-ui
+          rm -rf agent_meow/server/static/web-ui
           npm --prefix web ci --legacy-peer-deps
-          npm --prefix web run build # Vite outDir -> omnigent/server/static/web-ui
+          npm --prefix web run build # Vite outDir -> agent_meow/server/static/web-ui
 
       # 2. Tag-driven: the tag must match the version in all three pyprojects
       #    and the core package's `==` sibling-SDK pins, so the lockstep
@@ -104,9 +104,9 @@ jobs:
           # Every package carries the tag's version; every cross-package
           # dep is an exact `==tag` pin (the lockstep contract).
           packages = {
-              "pyproject.toml": ("omnigent-client", "omnigent-ui-sdk"),
-              "sdks/python-client/pyproject.toml": ("omnigent",),
-              "sdks/ui/pyproject.toml": ("omnigent-client",),
+              "pyproject.toml": ("agent-meow-client", "agent-meow-ui-sdk"),
+              "sdks/python-client/pyproject.toml": ("agent-meow",),
+              "sdks/ui/pyproject.toml": ("agent-meow-client",),
           }
           errors = []
           for path, sibling_pins in packages.items():
@@ -148,9 +148,9 @@ jobs:
           import sys
           import zipfile
 
-          whls = sorted(glob.glob("dist/omnigent-*.whl"))
+          whls = sorted(glob.glob("dist/agent-meow-*.whl"))
           if not whls:
-              sys.exit("no core omnigent wheel found in dist/")
+              sys.exit("no core agent-meow wheel found in dist/")
           whl = whls[-1]
           names = zipfile.ZipFile(whl).namelist()
           ui = [n for n in names if "server/static/web-ui/" in n]
@@ -163,15 +163,15 @@ jobs:
       #    resolving deps from public PyPI (catches proxy-only deps).
       - name: Smoke-install the built wheels
         run: |
-          uv venv --python 3.12 /tmp/omnigent-smoke
-          uv pip install --python /tmp/omnigent-smoke/bin/python dist/*.whl
-          /tmp/omnigent-smoke/bin/omnigent --version
+          uv venv --python 3.12 /tmp/agent-meow-smoke
+          uv pip install --python /tmp/agent-meow-smoke/bin/python dist/*.whl
+          /tmp/agent-meow-smoke/bin/agent-meow --version
 
       # 7. Persist the built artifacts for inspection.
       - name: Upload built distributions
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dist-omnigent
+          name: dist-agent-meow
           path: dist/
 
       # PUBLISH via OIDC Trusted Publishing (no token; id-token: write granted

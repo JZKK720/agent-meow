@@ -153,7 +153,7 @@ async def test_create_claude_session_persists_terminal_launch_args() -> None:
     The daemon-flow create persists pass-through args and omits the
     bridge-id label.
 
-    ``omnigent claude --server X <flags>`` must carry the flags to a
+    ``agent-meow claude --server X <flags>`` must carry the flags to a
     daemon-spawned runner: they're written to the session's
     ``terminal_launch_args`` at create so the runner applies them when it
     auto-launches the terminal. The bridge-id label is omitted
@@ -342,7 +342,7 @@ def test_run_with_remote_server_detach_prints_resume_hint(
     # Exact resume command: server + session only — a --profile part
     # here would tell the user to run a flag that no longer exists.
     assert (
-        "Resume with: omnigent claude --server https://example.com --resume conv_existing"
+        "Resume with: agent-meow claude --server https://example.com --resume conv_existing"
     ) in err
 
 
@@ -395,6 +395,6 @@ def test_run_with_remote_server_unreachable_server_raises_clean_error(
             claude_args=(),
         )
 
-    assert "Could not reach the omnigent server at https://unreachable.example" in str(
+    assert "Could not reach the agent-meow server at https://unreachable.example" in str(
         exc_info.value
     )

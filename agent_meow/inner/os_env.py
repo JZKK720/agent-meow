@@ -49,7 +49,7 @@ from .sandbox import (
 )
 
 # Any JSON-shaped leaf — used for the encode/decode serializer helpers that
-# mirror the pattern in ``omnigent/sandbox.py`` and ``omnigent/uc_tools.py``.
+# mirror the pattern in ``agent_meow/sandbox.py`` and ``agent_meow/uc_tools.py``.
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 # Result dict returned by ``read`` / ``write`` / ``edit`` / ``shell`` and the
@@ -1419,8 +1419,8 @@ def _shell_argv(shell_path: str, command: str) -> list[str]:
 
 
 def _project_root() -> Path:
-    # File lives at omnigent/inner/os_env.py; climb two levels to the
-    # repo root that hosts `omnigent/` as a package.
+    # File lives at agent_meow/inner/os_env.py; climb two levels to the
+    # repo root that hosts `agent_meow/` as a package.
     return Path(__file__).resolve().parents[2]
 
 
@@ -1516,7 +1516,7 @@ def _run_helper(config: JsonValue) -> int:
             parts = urlparse(current)
             if not parts.hostname:
                 continue
-            netloc = f"omnigent:{token_value}@{parts.hostname}"
+            netloc = f"agent-meow:{token_value}@{parts.hostname}"
             if parts.port is not None:
                 netloc += f":{parts.port}"
             os.environ[env_key] = urlunparse(parts._replace(netloc=netloc))

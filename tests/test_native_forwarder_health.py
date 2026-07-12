@@ -1,6 +1,6 @@
 """Tests for the process-local native-forwarder POST-failure record.
 
-``omnigent/_native_forwarder_health.py`` is the small shared sink that lets a
+``agent_meow/_native_forwarder_health.py`` is the small shared sink that lets a
 native forwarder report a connectivity failure to the harness idle-turn
 watchdog (issue #1119). These cover its record / recency / clear contract; the
 writer (forwarder retry loops) and reader (watchdog) integrations are tested in

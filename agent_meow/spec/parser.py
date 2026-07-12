@@ -192,7 +192,7 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
     # Top-level ``async:`` flag gates the LLM-callable async-dispatch
     # builtins (``sys_call_async``, ``sys_read_inbox``,
     # ``sys_cancel_async``). Defaults to True to match
-    # ``omnigent/inner/datamodel.py::AgentDef.async_enabled`` — the
+    # ``agent_meow/inner/datamodel.py::AgentDef.async_enabled`` — the
     # same YAML must produce the same tool surface under agent-meow mode and
     # the legacy inner stack. Agents that want to suppress the surface
     # declare ``async: false`` explicitly. ``bool()`` accepts YAML
@@ -202,7 +202,7 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
     # Top-level ``timers:`` flag gates the LLM-callable timer
     # builtins (``sys_timer_set``, ``sys_timer_cancel``).
     # Defaults to False to match
-    # ``omnigent/inner/datamodel.py::AgentDef.timers`` — agents
+    # ``agent_meow/inner/datamodel.py::AgentDef.timers`` — agents
     # opt into the timer surface explicitly. See step 10 of the
     # harness contract migration.
     timers = bool(raw.get("timers", False))
@@ -492,25 +492,25 @@ def _parse_executor(
     """
     Parse the ``executor:`` block into an :class:`ExecutorSpec`.
 
-    Returns defaults (``type="omnigent"``) when *raw* is ``None``.
+    Returns defaults (``type="agent-meow"``) when *raw* is ``None``.
 
     Lifts a top-level ``executor.profile`` into the concrete
     :attr:`ExecutorSpec.profile` field for ALL executor types. For
-    ``type == "omnigent"`` ALSO mirrors that value into
-    ``config["profile"]`` (back-compat — the omnigent executor
+    ``type == "agent-meow"`` ALSO mirrors that value into
+    ``config["profile"]`` (back-compat — the agent-meow executor
     reads ``config["profile"]`` today; will be migrated when the
     omnigent-compat sunset lands).
 
     :param raw: The raw ``executor:`` mapping, or ``None`` if
-        absent. Example: ``{"type": "omnigent"}``.
+        absent. Example: ``{"type": "agent-meow"}``.
     :returns: A populated :class:`ExecutorSpec`.
     """
     if raw is None:
         return ExecutorSpec()
-    etype = str(raw.get("type", "omnigent"))
+    etype = str(raw.get("type", "agent-meow"))
     # ``config`` is a free-form dict[str, Any] owned by each executor
     # type. Scalar values are coerced to strings so YAML booleans /
-    # numbers round-trip as their string form (the omnigent
+    # numbers round-trip as their string form (the agent-meow
     # harness/profile fields are both strings in the source YAML).
     # Structured keys whose consumer needs the nested shape are kept
     # verbatim: ``cost_optimize`` is the cost advisor's tier config (a
@@ -524,14 +524,14 @@ def _parse_executor(
         }
     # Top-level ``executor.profile`` populates the concrete
     # ``ExecutorSpec.profile`` field for every executor type. For
-    # ``omnigent`` we ALSO mirror it into ``config["profile"]``
-    # so the existing omnigent executor (which still reads from
+    # ``agent-meow`` we ALSO mirror it into ``config["profile"]``
+    # so the existing agent-meow executor (which still reads from
     # ``config["profile"]``) keeps working until it is migrated.
     profile_raw = raw.get("profile")
     profile: str | None = None
     if profile_raw is not None:
         profile = str(profile_raw)
-    if etype == "omnigent" and profile is not None and "profile" not in config:
+    if etype == "agent-meow" and profile is not None and "profile" not in config:
         config["profile"] = profile
     raw_cw = raw.get("context_window")
     context_window: int | None = int(raw_cw) if raw_cw is not None else None
@@ -578,7 +578,7 @@ def _parse_executor_auth(
       ``True``.
     - ``type: databricks`` — requires ``profile``.
     - ``type: provider`` — requires ``name`` (a provider declared in
-      the ``providers:`` block of ``~/.omnigent/config.yaml``).
+      the ``providers:`` block of ``~/.agent_meow/config.yaml``).
 
     :param raw: The raw ``executor:`` mapping already read from YAML.
         Example: ``{"harness": "openai-agents", "auth": {"type": "api_key",
@@ -646,7 +646,7 @@ def _parse_os_env(
     """
     Parse the top-level ``os_env:`` block into an :class:`OSEnvSpec`.
 
-    Native agent-meow YAML mirrors the omnigent YAML shape so users
+    Native agent-meow YAML mirrors the agent-meow YAML shape so users
     moving from one to the other don't have to relearn the
     config surface — a top-level ``os_env:`` mapping with
     ``type``, ``cwd``, ``sandbox: {...}``, ``fork``, and
@@ -2570,7 +2570,7 @@ def _discover_sub_agents(
 # spec load — these helpers raise ``OmnigentError`` on
 # malformed input rather than silently coercing to defaults.
 # The exception is ``_parse_condition``, which permissively
-# coerces scalar / list values to strings (matching omnigent
+# coerces scalar / list values to strings (matching agent-meow
 # parity for label values — see §14 of the audit).
 
 
@@ -2922,7 +2922,7 @@ def _parse_function_policy(
     """
     # Accept both ``function:`` and ``handler:`` for the callable path.
     # ``handler`` is the proto/service-policies convention; ``function``
-    # is the original omnigent YAML convention.
+    # is the original agent-meow YAML convention.
     function_raw = data.get("function") or data.get("handler")
     if function_raw is None:
         raise OmnigentError(
@@ -3078,7 +3078,7 @@ def _parse_condition(
     string-valued, and a YAML author writing
     ``condition: {integrity: 0}`` (unquoted int) would
     otherwise produce a silent runtime mismatch against the
-    stored ``"0"``. The coercion matches omnigent parity
+    stored ``"0"``. The coercion matches agent-meow parity
     for label values.
 
     :param raw: The ``condition:`` value from YAML, or

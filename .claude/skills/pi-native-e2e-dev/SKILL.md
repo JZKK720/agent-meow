@@ -1,6 +1,6 @@
 ---
 name: pi-native-e2e-dev
-description: Spin up a live local agent-meow server + runner and exercise the native Pi TUI harness (pi-native) end-to-end — launch the real `pi` CLI via `meow pi`, drive turns through the web/bridge, smoke-test, and bug-bash. Load when developing, testing, or debugging the pi-native harness (omnigent/inner/pi_native_executor.py, pi_native_harness.py, omnigent/pi_native.py, pi_native_bridge.py, pi_native_credentials.py) or its bridge / extension / auth / model behavior.
+description: Spin up a live local agent-meow server + runner and exercise the native Pi TUI harness (pi-native) end-to-end — launch the real `pi` CLI via `meow pi`, drive turns through the web/bridge, smoke-test, and bug-bash. Load when developing, testing, or debugging the pi-native harness (agent_meow/inner/pi_native_executor.py, pi_native_harness.py, agent_meow/pi_native.py, pi_native_bridge.py, pi_native_credentials.py) or its bridge / extension / auth / model behavior.
 ---
 
 # Pi native harness: end-to-end dev & testing (local server/runner)
@@ -46,13 +46,13 @@ Two ways a turn reaches Pi — test both:
 ## Prerequisites (check these first)
 
 1. **You're on the branch you want to test**, and running from that checkout
-   (`.venv/bin/omnigent` / `.venv/bin/python` from this repo).
+   (`.venv/bin/meow` / `.venv/bin/python` from this repo).
 2. **The `pi` CLI is on PATH** — the harness can't launch without it:
    ```bash
    which pi && pi --version
    # install if missing:  npm install -g @earendil-works/pi-coding-agent
    # or point at an explicit binary:  export OMNIGENT_PI_PATH=/path/to/pi
-   .venv/bin/python -c "from omnigent.onboarding.harness_readiness import harness_is_configured; print('pi-native ready:', harness_is_configured('pi-native'))"
+   .venv/bin/python -c "from agent_meow.onboarding.harness_readiness import harness_is_configured; print('pi-native ready:', harness_is_configured('pi-native'))"
    ```
 3. **`tmux` is on PATH.** The native wrapper attaches your TTY to the
    runner-owned Pi tmux pane (`_preflight_local_tools` hard-fails without it).
@@ -61,11 +61,11 @@ Two ways a turn reaches Pi — test both:
 5. **Auth is resolvable (booleans/ids only — never print keys).** Native Pi
 normally logs in from its own `~/.pi/agent`. agent-meow bridges the provider you
    set with `meow setup` instead, writing a managed per-session `models.json`
-   and passing `--provider omnigent --model <resolved>`. Verify what it will use:
+   and passing `--provider agent-meow --model <resolved>`. Verify what it will use:
    ```bash
-   .venv/bin/python -c "from omnigent.pi_native_credentials import resolve_pi_native_provider as r; p=r(); print('provider:', getattr(p,'provider_id',None), '| api:', getattr(p,'api',None), '| model:', getattr(p,'model',None))"
+   .venv/bin/python -c "from agent_meow.pi_native_credentials import resolve_pi_native_provider as r; p=r(); print('provider:', getattr(p,'provider_id',None), '| api:', getattr(p,'api',None), '| model:', getattr(p,'model',None))"
    ```
-   `None` → no omnigent provider configured; Pi falls back to its own `/login`
+   `None` → no agent-meow provider configured; Pi falls back to its own `/login`
    (run `meow setup`, or log into `pi` directly). A Databricks default
    resolves to the AI-Gateway `anthropic-messages` surface with a refreshed
    bearer token.
@@ -75,7 +75,7 @@ normally logs in from its own `~/.pi/agent`. agent-meow bridges the provider you
 ## Step 1 — start a local server (real server + runner)
 
 ```bash
-cd /path/to/omnigent
+cd /path/to/agent-meow
 .venv/bin/omni server start          # detached managed server on a free loopback port
 .venv/bin/omni server status         # prints the URL, e.g. http://127.0.0.1:6767
 SERVER=http://127.0.0.1:6767         # use the printed URL below
@@ -113,7 +113,7 @@ the whole process tree** (see Teardown — pexpect Ctrl-C only *detaches* tmux).
 
 Pass-through Pi CLI args go after the command (persisted as
 `terminal_launch_args`), e.g. `meow pi --server "$SERVER" -- --model <id>`;
-omnigent still injects `--provider omnigent --model <resolved>` when a provider
+agent-meow still injects `--provider agent-meow --model <resolved>` when a provider
 is configured (see `pi_native_credentials.py`).
 
 ## Step 3 — drive a turn (and smoke-test)
@@ -151,13 +151,13 @@ render the message in the attached TUI.
 Everything the harness writes for a session lives under a hashed bridge dir:
 
 ```bash
-.venv/bin/python -c "from omnigent.pi_native import pi_bridge_dir_for_session as d; print(d('$CONV'))"
-# ~/.omnigent/pi-native/<sha256(conv)[:32]>/
+.venv/bin/python -c "from agent_meow.pi_native import pi_bridge_dir_for_session as d; print(d('$CONV'))"
+# ~/.agent_meow/pi-native/<sha256(conv)[:32]>/
 #   inbox/                 <- *.json user_message / interrupt payloads (poller drains + deletes)
 #   sessions/              <- pi --session-dir state
 #   config.json            <- sessionId, serverUrl, inboxDir, authHeaders (extension config)
 #   omnigent_pi_native_extension.js
-ls -la "$(.venv/bin/python -c "from omnigent.pi_native import pi_bridge_dir_for_session as d; print(d('$CONV'))")/inbox"
+ls -la "$(.venv/bin/python -c "from agent_meow.pi_native import pi_bridge_dir_for_session as d; print(d('$CONV'))")/inbox"
 ```
 
 If a queued message never reaches Pi, watch whether `inbox/*.json` drains. The
@@ -186,7 +186,7 @@ that wires Pi's provider/model. Key env vars: `HARNESS_PI_NATIVE_BRIDGE_DIR`,
 2. **`config.yaml`'s `server:` defaults to a remote server.** Always pass
    `--server "$SERVER"` (or `--server ""` to auto-spawn local). If a *local*
    server rejects `pi-native`, it's running stale code — restart it from your
-   checkout (allowlist: `omnigent/spec/_omnigent_compat.py`).
+   checkout (allowlist: `agent_meow/spec/_omnigent_compat.py`).
 3. **No live LLM without auth.** If the Prereq-5 probe prints `None` and `pi`
    isn't logged in, turns won't get a real answer. Configure a provider via
    `meow setup` or `pi` `/login`.
@@ -198,15 +198,15 @@ that wires Pi's provider/model. Key env vars: `HARNESS_PI_NATIVE_BRIDGE_DIR`,
 
 ## Code & tests
 
-- **Executor (bridge enqueue):** `omnigent/inner/pi_native_executor.py`
-- **Harness wrap (`harness: pi-native`):** `omnigent/inner/pi_native_harness.py`
-- **CLI launch / daemon-runner / tmux attach:** `omnigent/pi_native.py`
-  (`run_pi_native`); CLI command `pi(...)` in `omnigent/cli.py`
-- **Bridge (inbox, extension/config writers):** `omnigent/pi_native_bridge.py`
-- **Auth/model → Pi `models.json`:** `omnigent/pi_native_credentials.py`
+- **Executor (bridge enqueue):** `agent_meow/inner/pi_native_executor.py`
+- **Harness wrap (`harness: pi-native`):** `agent_meow/inner/pi_native_harness.py`
+- **CLI launch / daemon-runner / tmux attach:** `agent_meow/pi_native.py`
+  (`run_pi_native`); CLI command `pi(...)` in `agent_meow/cli.py`
+- **Bridge (inbox, extension/config writers):** `agent_meow/pi_native_bridge.py`
+- **Auth/model → Pi `models.json`:** `agent_meow/pi_native_credentials.py`
 - **Extension (JS, polls inbox, posts events/policies):**
-  `omnigent/resources/pi_native/omnigent_pi_native_extension.js`
-- **Readiness gate:** `omnigent/onboarding/harness_readiness.py`
+  `agent_meow/resources/pi_native/omnigent_pi_native_extension.js`
+- **Readiness gate:** `agent_meow/onboarding/harness_readiness.py`
 
 ```bash
 .venv/bin/python -m pytest \
@@ -214,7 +214,7 @@ that wires Pi's provider/model. Key env vars: `HARNESS_PI_NATIVE_BRIDGE_DIR`,
   tests/test_pi_native_credentials.py \
   tests/test_pi_native_extension.py \
   tests/test_pi_native_interrupt_replay_e2e.py -q   # interrupt e2e needs `node`
-# JS unit tests: node omnigent/resources/pi_native/omnigent_pi_native_extension.test.js
+# JS unit tests: node agent_meow/resources/pi_native/omnigent_pi_native_extension.test.js
 ```
 
 ## Bug-bash (fan out)
@@ -248,7 +248,7 @@ keep running. Tear down the process tree from the child PID
 .venv/bin/omni server stop                 # stop the managed server + local daemon
 pgrep -af "(^|/)pi( |$)|harnesses\._runner|runner\._entry|tmux"   # confirm no orphans
 # remove a session's bridge dir if you want a clean slate:
-# rm -rf "$(.venv/bin/python -c "from omnigent.pi_native import pi_bridge_dir_for_session as d; print(d('$CONV'))")"
+# rm -rf "$(.venv/bin/python -c "from agent_meow.pi_native import pi_bridge_dir_for_session as d; print(d('$CONV'))")"
 ```
 
 ## Honesty

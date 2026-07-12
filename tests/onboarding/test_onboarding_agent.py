@@ -13,9 +13,9 @@ def onboarding_agent_dir() -> Path:
     """
     Return the path to the built-in onboarding agent directory.
 
-    :returns: Absolute path to ``omnigent/onboarding/agent/``.
+    :returns: Absolute path to ``agent_meow/onboarding/agent/``.
     """
-    return Path(__file__).parent.parent.parent / "omnigent" / "onboarding" / "agent"
+    return Path(__file__).parent.parent.parent / "agent-meow" / "onboarding" / "agent"
 
 
 def test_onboarding_agent_parses_successfully(
@@ -38,7 +38,7 @@ def test_onboarding_agent_has_expected_skills(
     skill_names = sorted(s.name for s in spec.skills)
     # These are the three skills defined in the design doc, in sorted order.
     assert skill_names == [
-        "build-omnigent",
+        "build-agent-meow",
         "detect-framework",
         "omnigent-knowledge",
     ], f"Expected exactly the three designed skills, got {skill_names}."

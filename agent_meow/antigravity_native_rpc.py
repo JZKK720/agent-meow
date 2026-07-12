@@ -1325,7 +1325,7 @@ def resolve_cold_start_agy_rpc_port(
     check that normally disambiguates several agys
     (:func:`resolve_language_server_port`) is not yet usable. To avoid binding a
     FOREIGN agy on a host running several (sub-agent fan-out / shared runner /
-    ``omnigent run --server`` multi-session), this scopes the port to THIS
+    ``agent-meow run --server`` multi-session), this scopes the port to THIS
     session's own agy via its tmux pane
     (:func:`resolve_pane_agy_rpc_port_state`), distinguishing three outcomes:
 

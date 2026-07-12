@@ -1176,7 +1176,7 @@ class ClaudeSDKExecutor(Executor):
                 f"Model {model!r} is a Databricks-hosted model but gateway "
                 "routing is disabled (gateway=False). "
                 "Set executor.profile in the agent spec, or configure a "
-                "Databricks provider with `omnigent setup`, to route through "
+                "Databricks provider with `agent-meow setup`, to route through "
                 "the Databricks Anthropic gateway."
             )
         self._cwd = cwd
@@ -1696,14 +1696,14 @@ class ClaudeSDKExecutor(Executor):
         policy event).
 
         Double-evaluation guard: agent-meow's OWN tools are exposed as the
-        single ``omnigent`` SDK MCP server (the model sees
+        single ``agent-meow`` SDK MCP server (the model sees
         ``mcp__omnigent__*``). When the model calls one, the SDK wrapper
         routes it back through agent-meow's dispatch bridge
         (``_stable_tool_executor`` -> ``TurnContext.dispatch_tool`` ->
         ``action_required``), and the runner re-dispatches it via
         ``ProxyMcpManager``, which enforces TOOL_CALL + TOOL_RESULT
         policies server-side before forwarding to ``/mcp/execute``
-        (see ``omnigent/runner/app.py`` "All tool calls go through AP:/mcp
+        (see ``agent_meow/runner/app.py`` "All tool calls go through AP:/mcp
         ... which enforces TOOL_CALL + TOOL_RESULT policies server-side").
         Spec-declared MCP tools are surfaced through that same
         ``mcp__omnigent__*`` server, so they are covered there too.
@@ -1861,8 +1861,8 @@ class ClaudeSDKExecutor(Executor):
         # whatever ``create_sdk_mcp_server`` returns.
         mcp_servers: dict[str, Any] = {}  # type: ignore[explicit-any]
         if mcp_tools:
-            mcp_servers["omnigent"] = sdk.create_sdk_mcp_server(
-                name="omnigent",
+            mcp_servers["agent-meow"] = sdk.create_sdk_mcp_server(
+                name="agent-meow",
                 version="1.0.0",
                 tools=mcp_tools,
             )
@@ -1955,7 +1955,7 @@ class ClaudeSDKExecutor(Executor):
         # plugin sync, and auto-memory — exactly the host config
         # users expect to leak through to a ``claude-sdk`` harness
         # they explicitly opted into. ``no-session-persistence``
-        # stays because omnigent owns conversation persistence
+        # stays because agent-meow owns conversation persistence
         # via its own conversation store.
         # OS-environment tools are provided via agent-meow ``sys_os_*``
         # MCP tools (declared via ``os_env`` in the spec), not the

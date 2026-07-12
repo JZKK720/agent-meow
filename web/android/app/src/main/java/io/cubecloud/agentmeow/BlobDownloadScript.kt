@@ -3,7 +3,7 @@ package io.cubecloud.agentmeow.android
 /**
  * Android `WebView` hands `http(s)` downloads to `DownloadManager`, but
  * `blob:` / `data:` URLs — how the agent's generated files come down — are
- * dropped by default (the same gap that leaves omnigent-ai/omnigent#969
+ * dropped by default (the same gap that leaves JZKK720/agent-meow#969
  * unfixed on iOS). A blob URL is origin-scoped and only readable from page
  * context, so we fetch it there, base64-encode it, and post it over the same
  * origin-allowlisted bridge ([OmnigentBridgeListener]) for [BlobSaver] to write.

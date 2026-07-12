@@ -134,7 +134,7 @@ async def test_create_qwen_session_returns_id_and_sends_labels() -> None:
     import json as _json
 
     meta = _json.loads(kw["data"]["metadata"])
-    assert meta["labels"]["omnigent.wrapper"] == "qwen-native-ui"
+    assert meta["labels"]["agent_meow.wrapper"] == "qwen-native-ui"
     assert meta["terminal_launch_args"] == ["-m", "x"]
 
 
@@ -272,7 +272,7 @@ def _aret(value: object):
 
 async def test_prepare_reattaches_running_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        qn, "_fetch_qwen_session", _aret({"labels": {"omnigent.wrapper": "qwen-native-ui"}})
+        qn, "_fetch_qwen_session", _aret({"labels": {"agent_meow.wrapper": "qwen-native-ui"}})
     )
     term = qn.LaunchedQwenTerminal(
         terminal_id="terminal_qwen_main", tmux_socket=Path("/s"), tmux_target="t:0"
@@ -295,7 +295,7 @@ async def test_prepare_reattaches_running_terminal(monkeypatch: pytest.MonkeyPat
 
 async def test_prepare_rejects_non_qwen_session(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        qn, "_fetch_qwen_session", _aret({"labels": {"omnigent.wrapper": "claude-code-native-ui"}})
+        qn, "_fetch_qwen_session", _aret({"labels": {"agent_meow.wrapper": "claude-code-native-ui"}})
     )
     with pytest.raises(click.ClickException, match="not a qwen-native session"):
         await qn._prepare_qwen_terminal_via_daemon(

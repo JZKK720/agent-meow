@@ -767,7 +767,7 @@ async def test_get_terminal_by_id_returns_404_when_tmux_exited(
     """
     GET verifies live tmux state instead of trusting a stale flag.
 
-    This is the signal ``omnigent claude`` uses after its attach
+    This is the signal ``agent-meow claude`` uses after its attach
     WebSocket closes cleanly. If this endpoint returns 200 after the
     command's tmux server has exited, the native wrapper treats normal
     Claude exit as a server bounce and reconnects forever.
@@ -928,7 +928,7 @@ async def test_create_terminal_uses_runner_workspace_as_default_cwd(
     """
     Runner-created terminals default to the local runner workspace.
 
-    This is the resource endpoint used by ``omnigent claude``. The
+    This is the resource endpoint used by ``agent-meow claude``. The
     request body intentionally avoids embedding the client's cwd, so
     the runner must supply its own workspace default before launching
     tmux.
@@ -1024,7 +1024,7 @@ async def test_create_terminal_threads_agent_parent_os_env_through(
     ``TerminalEnvSpec`` from the body with **no** sandbox at all,
     so every REST-launched terminal ran completely outside the
     agent's configured sandbox — operator/API callers (e.g. the
-    ``omnigent claude`` wrapper) could spawn an unsandboxed
+    ``agent-meow claude`` wrapper) could spawn an unsandboxed
     terminal in a session whose YAML declared an egress allow-list.
     """
     from agent_meow.inner.datamodel import AgentDef, OSEnvSandboxSpec, OSEnvSpec
@@ -1883,7 +1883,7 @@ async def test_concurrent_resource_reads_share_one_session_snapshot(
         return AgentSpec(
             spec_version=1,
             name="burst-agent",
-            executor=ExecutorSpec(type="omnigent", config={"harness": "runner-test-default"}),
+            executor=ExecutorSpec(type="agent-meow", config={"harness": "runner-test-default"}),
         )
 
     server_client = httpx.AsyncClient(
@@ -1983,7 +1983,7 @@ async def test_failed_session_snapshot_is_not_cached_and_retries(
         return AgentSpec(
             spec_version=1,
             name="retry-agent",
-            executor=ExecutorSpec(type="omnigent", config={"harness": "runner-test-default"}),
+            executor=ExecutorSpec(type="agent-meow", config={"harness": "runner-test-default"}),
         )
 
     server_client = httpx.AsyncClient(
@@ -2079,7 +2079,7 @@ async def test_unbound_agent_snapshot_is_not_cached_and_retries(
         return AgentSpec(
             spec_version=1,
             name="late-bind-agent",
-            executor=ExecutorSpec(type="omnigent", config={"harness": "runner-test-default"}),
+            executor=ExecutorSpec(type="agent-meow", config={"harness": "runner-test-default"}),
         )
 
     server_client = httpx.AsyncClient(

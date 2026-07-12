@@ -1,7 +1,7 @@
 """
 E2E-test-only policy callables.
 
-Lives under the ``omnigent`` package so the server
+Lives under the ``agent-meow`` package so the server
 subprocess (which imports from agent_meow, not tests/) can
 resolve the dotted path. The module itself has no production
 value — it exists solely so

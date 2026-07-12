@@ -1755,7 +1755,7 @@ async def test_codex_top_level_session_needs_runner_terminal_for_all_session_sha
 
     A top-level CLI session has no ``host_id`` and no parent, but the
     runner must still create the app-server and TUI terminal. If the old
-    host-id gate returns ``False`` here, ``omnigent codex`` falls back to
+    host-id gate returns ``False`` here, ``agent-meow codex`` falls back to
     a CLI-owned app-server.
     """
     from agent_meow.runner.app import _codex_session_needs_runner_terminal
@@ -1997,7 +1997,7 @@ async def test_auto_create_codex_terminal_uses_persisted_resume_launch_config(
         spec_version=1,
         name="codex",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "codex-native", "model": "gpt-5-default"},
         ),
     )
@@ -2280,7 +2280,7 @@ async def test_auto_create_codex_terminal_fork_clones_rollout_and_resumes(
         spec_version=1,
         name="codex",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "codex-native", "model": "gpt-5-default"},
         ),
     )
@@ -2525,7 +2525,7 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
         spec_version=1,
         name="codex",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "codex-native", "model": "gpt-5-default"},
         ),
     )
@@ -2780,7 +2780,7 @@ async def test_auto_create_codex_terminal_uses_worktree_workspace_not_bundle_dir
             spec_version=1,
             name="codex",
             executor=ExecutorSpec(
-                type="omnigent",
+                type="agent-meow",
                 config={"harness": "codex-native", "model": "gpt-5-default"},
             ),
             os_env=codex_os_env,
@@ -2948,7 +2948,7 @@ async def test_auto_create_codex_terminal_starts_relay_at_session_creation(
         spec_version=1,
         name="codex",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "codex-native", "model": "gpt-5-default"},
         ),
     )
@@ -3048,7 +3048,7 @@ async def test_claude_native_first_turn_not_blocked_by_cold_bridge_notify(
     spec = AgentSpec(
         spec_version=1,
         name="claude",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -3882,7 +3882,7 @@ async def test_auto_create_antigravity_wires_omnigent_mcp_relay(
     mcp_config = iso_home / ".gemini" / "config" / "mcp_config.json"
     assert mcp_config.is_file()
     payload = json.loads(mcp_config.read_text(encoding="utf-8"))
-    server = payload["mcpServers"]["omnigent"]
+    server = payload["mcpServers"]["agent-meow"]
     assert server["args"][:4] == ["-I", "-m", "agent_meow.claude_native_bridge", "serve-mcp"]
     assert str(bridge_dir) in server["args"]
     assert "sys_session_create" in server["enabledTools"]
@@ -4038,7 +4038,7 @@ async def test_codex_subagent_always_needs_runner_terminal(
 
     The ``parent_host_id=None`` case is the regression: gating the child
     on the parent's ``host_id`` made codex-native sub-agents under a CLI-driven
-    parent (e.g. nessie run via ``omnigent run --server``) silently never get
+    parent (e.g. nessie run via ``agent-meow run --server``) silently never get
     a terminal, so ``sys_session_send`` dispatch no-op'd. If that case returns
     ``False``, the regression has reappeared.
 
@@ -5110,7 +5110,7 @@ def _build_native_app(
     spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "codex-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "codex-native"}),
     )
     harness_client = _NativeBlockingHarnessClient(gate)
     pm = _FakeProcessManager(harness_client)
@@ -5282,7 +5282,7 @@ async def test_messages_reach_harness_in_submission_order() -> None:
     """Two messages must reach the harness in the order they were sent.
 
     Repro for the web→TUI / claude-native out-of-order symptom. In
-    ``post_session_events`` (omnigent/runner/app.py) the turn-vs-buffer
+    ``post_session_events`` (agent_meow/runner/app.py) the turn-vs-buffer
     decision (the ``if conversation_id in _active_turns`` check at ~4237)
     runs *after* ``await _resolve_forwarded_message_content`` (~4230).
     A message with slow content resolution (e.g. a remote runner inlining
@@ -5607,7 +5607,7 @@ def _build_recovery_app(
     }
     if harness_name is not None:
         spec_kwargs["executor"] = ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": harness_name},
         )
     spec = AgentSpec(**spec_kwargs)
@@ -5723,7 +5723,7 @@ async def test_session_creation_does_not_replay_trailing_user_for_codex_native(
     Native transcripts are mirrored from Codex. If a Codex turn errors before
     producing an assistant item, agent-meow history can end with the user prompt even
     though Codex already consumed it. Generic crash recovery would treat that
-    as an unanswered agent-meow turn and resend the same prompt when ``omnigent
+    as an unanswered agent-meow turn and resend the same prompt when ``agent-meow
     codex`` reattaches.
 
     :param monkeypatch: Pytest monkeypatch fixture used to bypass real
@@ -5805,7 +5805,7 @@ async def test_catch_up_scan_skips_codex_native_history_entries(
         spec_version=1,
         name="catchup-codex-native",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "codex-native"},
         ),
     )
@@ -8640,14 +8640,14 @@ async def test_events_interrupt_on_native_session_injects_escape_without_marker(
 
     monkeypatch.setattr(claude_native_bridge, "inject_interrupt", _fake_inject)
 
-    # Native spec: executor.type="omnigent" + config.harness="claude-native"
+    # Native spec: executor.type="agent-meow" + config.harness="claude-native"
     # is the canonical shape the runner reads at session start to
     # populate _session_spec_cache; _session_harness_name reads it
     # back at interrupt time to pick the right dispatch branch.
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -8811,11 +8811,11 @@ async def test_message_turn_lifecycle_status_suppressed_for_terminal_backed_harn
     spec = AgentSpec(
         spec_version=1,
         name="t",
-        # executor.type="omnigent" + config.harness=<harness> is the
+        # executor.type="agent-meow" + config.harness=<harness> is the
         # canonical shape the runner reads at session start to populate
         # _session_spec_cache; _session_harness_name reads it back to
         # decide whether a PTY watcher owns this session's status.
-        executor=ExecutorSpec(type="omnigent", config={"harness": harness}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": harness}),
     )
     stream_finished = asyncio.Event()
     harness_client = _ScriptedHarnessClient([], stream_finished=stream_finished)
@@ -8924,7 +8924,7 @@ async def test_events_interrupt_on_native_session_503_skips_cleanup_when_inject_
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -9148,7 +9148,7 @@ async def test_events_codex_native_settings_change_uses_thread_settings_update(
     def _fake_client_for_transport(
         transport: str,
         *,
-        client_name: str = "omnigent",
+        client_name: str = "agent-meow",
     ) -> _RecordingCodexAppServerClient:
         """
         Return the fake Codex app-server client for the recorded bridge state.
@@ -9173,7 +9173,7 @@ async def test_events_codex_native_settings_change_uses_thread_settings_update(
         spec_version=1,
         name="t",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "codex-native", "model": "gpt-5.4"},
         ),
     )
@@ -9237,7 +9237,7 @@ async def test_codex_native_model_options_returns_503_until_bridge_state_exists(
     def _client_for_transport(
         transport: str,
         *,
-        client_name: str = "omnigent",
+        client_name: str = "agent-meow",
     ) -> _RecordingCodexAppServerClient:
         """
         Fail the test if the endpoint reaches Codex without bridge state.
@@ -9262,7 +9262,7 @@ async def test_codex_native_model_options_returns_503_until_bridge_state_exists(
     codex_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "codex-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "codex-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -9369,7 +9369,7 @@ async def test_codex_native_model_options_query_model_list(
     def _fake_client_for_transport(
         transport: str,
         *,
-        client_name: str = "omnigent",
+        client_name: str = "agent-meow",
     ) -> _RecordingCodexAppServerClient:
         """
         Return the fake Codex app-server client for the recorded bridge state.
@@ -9393,7 +9393,7 @@ async def test_codex_native_model_options_query_model_list(
     codex_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "codex-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "codex-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -9470,7 +9470,7 @@ async def test_events_codex_native_plan_mode_requires_loaded_bridge(
         spec_version=1,
         name="t",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "codex-native", "model": "gpt-5.4"},
         ),
     )
@@ -9557,7 +9557,7 @@ async def test_events_interrupt_on_codex_native_uses_turn_interrupt_without_mark
     def _fake_client_for_transport(
         transport: str,
         *,
-        client_name: str = "omnigent",
+        client_name: str = "agent-meow",
     ) -> _RecordingCodexAppServerClient:
         """
         Return the fake Codex app-server client for the recorded bridge state.
@@ -9581,7 +9581,7 @@ async def test_events_interrupt_on_codex_native_uses_turn_interrupt_without_mark
     codex_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "codex-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "codex-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -9705,7 +9705,7 @@ async def test_events_stop_session_on_codex_native_uses_turn_interrupt_without_m
     def _fake_client_for_transport(
         transport: str,
         *,
-        client_name: str = "omnigent",
+        client_name: str = "agent-meow",
     ) -> _RecordingCodexAppServerClient:
         """
         Return the fake Codex app-server client for the stop-session path.
@@ -9729,7 +9729,7 @@ async def test_events_stop_session_on_codex_native_uses_turn_interrupt_without_m
     codex_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "codex-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "codex-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -9846,7 +9846,7 @@ async def test_events_interrupt_and_stop_on_pi_native_enqueue_bridge_interrupt(
     pi_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "pi-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "pi-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -9980,7 +9980,7 @@ async def test_events_stop_session_on_native_kills_tmux_and_publishes_idle(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -10093,7 +10093,7 @@ async def test_stop_session_on_native_subagent_reclaims_work_entry(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -10166,7 +10166,7 @@ async def test_stop_session_on_native_subagent_without_parent_inbox_returns_204(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -10243,7 +10243,7 @@ async def test_events_stop_session_on_native_returns_503_when_kill_fails(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -10326,7 +10326,7 @@ async def test_events_stop_session_on_non_native_session_is_204_noop(
     default_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={}),
+        executor=ExecutorSpec(type="agent-meow", config={}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -10400,7 +10400,7 @@ async def test_events_stop_session_closes_terminal_and_publishes_deleted(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -10936,7 +10936,7 @@ async def test_events_effort_change_on_native_session_types_slash_command(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11059,7 +11059,7 @@ async def test_events_effort_change_on_native_session_skips_inject_for_unsupport
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11128,7 +11128,7 @@ async def test_events_effort_change_on_native_session_returns_503_when_bridge_no
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11204,7 +11204,7 @@ async def test_events_effort_change_on_non_native_session_is_204_noop(
     default_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={}),
+        executor=ExecutorSpec(type="agent-meow", config={}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11281,7 +11281,7 @@ async def test_events_compact_on_native_session_types_slash_command(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11384,7 +11384,7 @@ async def test_events_compact_on_native_session_returns_503_when_bridge_not_read
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11450,7 +11450,7 @@ async def test_events_compact_on_codex_native_injects_slash_command(
     codex_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "codex-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "codex-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11533,7 +11533,7 @@ async def test_events_compact_on_codex_native_returns_204_when_no_terminal() -> 
     codex_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "codex-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "codex-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11595,7 +11595,7 @@ async def test_events_compact_on_codex_native_returns_503_on_tmux_failure(
     codex_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "codex-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "codex-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11688,7 +11688,7 @@ async def test_events_compact_on_cursor_native_pastes_summarize_and_raises_spinn
     cursor_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "cursor-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "cursor-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11807,7 +11807,7 @@ async def test_events_compact_on_cursor_native_503_dismisses_spinner_on_inject_f
     cursor_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "cursor-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "cursor-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11896,7 +11896,7 @@ async def test_events_compact_on_pi_native_enqueues_compact_payload(
     pi_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "pi-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "pi-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -11988,7 +11988,7 @@ async def test_events_compact_on_pi_native_returns_503_when_inbox_unwritable(
     pi_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "pi-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "pi-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -12056,7 +12056,7 @@ async def test_events_compact_on_qwen_native_submits_compress_and_raises_spinner
     qwen_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "qwen-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "qwen-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -12127,7 +12127,7 @@ async def test_events_compact_on_qwen_native_503_dismisses_spinner_on_submit_fai
     qwen_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "qwen-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "qwen-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -12276,7 +12276,7 @@ async def _drive_opencode_native_compact(
     opencode_native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "opencode-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "opencode-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -12628,7 +12628,7 @@ async def test_events_compact_on_non_native_session_is_204_noop(
     default_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={}),
+        executor=ExecutorSpec(type="agent-meow", config={}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -12737,7 +12737,7 @@ async def test_events_native_dispatch_resolves_bridge_id_via_label_lookup(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -12820,7 +12820,7 @@ async def test_events_model_change_on_native_session_types_slash_command(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -12904,7 +12904,7 @@ async def test_events_model_change_on_kiro_session_types_slash_command(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "kiro-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "kiro-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -12984,7 +12984,7 @@ async def test_events_model_change_on_native_session_skips_inject_for_empty_or_n
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -13049,7 +13049,7 @@ async def test_events_model_change_on_native_session_returns_503_when_bridge_not
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -13121,7 +13121,7 @@ async def test_events_model_change_on_non_native_session_is_204_noop(
     default_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={}),
+        executor=ExecutorSpec(type="agent-meow", config={}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -13179,7 +13179,7 @@ async def test_events_model_change_on_cursor_native_session_types_slash_command(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "cursor-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "cursor-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -13241,7 +13241,7 @@ async def test_events_model_change_on_cursor_native_session_skips_inject_for_emp
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "cursor-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "cursor-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -13297,7 +13297,7 @@ async def test_events_model_change_on_cursor_native_session_returns_503_when_not
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "cursor-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "cursor-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -13351,7 +13351,7 @@ async def test_events_effort_change_on_cursor_native_session_is_disabled_noop(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "cursor-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "cursor-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -13393,7 +13393,7 @@ async def test_auto_create_claude_terminal_registers_permission_hook(
 
     The runner's ``_auto_create_claude_terminal`` is the launch path
     used when a claude-native session is created with no CLI client
-    present (web-UI sessions, the ``omnigent host`` host API). It
+    present (web-UI sessions, the ``agent-meow host`` host API). It
     must pass the agent-meow server URL into ``augment_claude_args`` so
     ``build_hook_settings`` registers the ``PermissionRequest`` command
     hook and writes permission_hook.json. Without it, approval prompts
@@ -13724,7 +13724,7 @@ async def test_auto_create_kiro_terminal_launches_required_terminal_with_isolate
     workspace_mcp = tmp_path / ".kiro" / "settings" / "mcp.json"
     assert workspace_mcp.exists()
     mcp_servers = json.loads(workspace_mcp.read_text())["mcpServers"]
-    assert "serve-mcp" in mcp_servers["omnigent"]["args"]
+    assert "serve-mcp" in mcp_servers["agent-meow"]["args"]
 
 
 @pytest.mark.asyncio
@@ -13892,7 +13892,7 @@ async def test_auto_create_pi_terminal_inherits_agent_sandbox(
         spec_version=1,
         name="pi_code",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "pi-native", "model": "pi-default"},
         ),
         os_env=agent_os_env,
@@ -14014,7 +14014,7 @@ def test_agent_os_env_from_spec_unwraps_resolved_and_handles_none() -> None:
     bare = AgentSpec(
         spec_version=1,
         name="agent",
-        executor=ExecutorSpec(type="omnigent", config={}),
+        executor=ExecutorSpec(type="agent-meow", config={}),
         os_env=os_env,
     )
 
@@ -14028,7 +14028,7 @@ def test_agent_os_env_from_spec_unwraps_resolved_and_handles_none() -> None:
     no_os_env = AgentSpec(
         spec_version=1,
         name="agent",
-        executor=ExecutorSpec(type="omnigent", config={}),
+        executor=ExecutorSpec(type="agent-meow", config={}),
     )
     assert _agent_os_env_from_spec(no_os_env) is None
 
@@ -14119,7 +14119,7 @@ async def test_auto_create_claude_terminal_inherits_agent_sandbox(
         spec_version=1,
         name="claude_code",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "claude-native", "model": "claude-default"},
         ),
         os_env=agent_os_env,
@@ -14172,7 +14172,7 @@ async def test_auto_create_claude_terminal_injects_ucode_gateway_config(
     monkeypatch.setattr(claude_native_bridge, "_BRIDGE_ROOT", tmp_path / "root")
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://127.0.0.1:8000")
     # The supported credential source for a host-spawned runner: the
-    # global config's ``auth:`` block (written by ``omnigent setup``),
+    # global config's ``auth:`` block (written by ``agent-meow setup``),
     # isolated to a temp config home so the developer's real config
     # can't leak in.
     config_home = tmp_path / "config-home"
@@ -15292,7 +15292,7 @@ async def test_create_session_auto_create_guard_skips_rotation_targets(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -15548,7 +15548,7 @@ async def test_create_session_antigravity_auto_create_guard_skips_rotation_targe
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "antigravity-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "antigravity-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -16162,10 +16162,10 @@ async def test_auto_create_repl_terminal_launches_attach_and_stamps_label(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    The REPL terminal hosts ``omnigent attach`` and stamps the UI label.
+    The REPL terminal hosts ``agent-meow attach`` and stamps the UI label.
 
     The web UI embeds the framework's own TUI for SDK sessions through
-    this terminal: the spec must run ``omnigent attach <session_id>
+    this terminal: the spec must run ``agent-meow attach <session_id>
     --server <runner's server URL>`` (a co-drive client of the live
     session), defer the process to first attach, pin the cwd to the
     runner workspace, stamp the ``agent_meow.ui: terminal`` label that
@@ -16265,7 +16265,7 @@ async def test_auto_create_repl_terminal_launches_attach_and_stamps_label(
     assert launched.command == sys.executable
     assert launched.args == [
         "-m",
-        "omnigent",
+        "agent-meow",
         "attach",
         session_id,
         "--server",
@@ -16373,7 +16373,7 @@ async def test_auto_create_repl_terminal_inherits_agent_sandbox(
         spec_version=1,
         name="sdk_worker",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "openai-agents", "model": "claude-default"},
         ),
         os_env=agent_os_env,
@@ -16445,7 +16445,7 @@ async def test_create_session_repl_terminal_dispatch(
     spec = AgentSpec(
         spec_version=1,
         name="dispatch-agent",
-        executor=ExecutorSpec(type="omnigent", config={"harness": harness}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": harness}),
     )
     pm = _FakeProcessManager(_ScriptedHarnessClient([]))
 
@@ -16787,7 +16787,7 @@ def _advisor_orchestrator_spec(*, mode: str = "optimize") -> AgentSpec:
         spec_version=1,
         name="advisor-orchestrator",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={
                 "harness": "claude-sdk",
                 "cost_optimize": {**_ADVISOR_TIERS_YAML, "mode": mode},
@@ -16797,7 +16797,7 @@ def _advisor_orchestrator_spec(*, mode: str = "optimize") -> AgentSpec:
             AgentSpec(
                 spec_version=1,
                 name="worker",
-                executor=ExecutorSpec(type="omnigent", config={"harness": "codex"}),
+                executor=ExecutorSpec(type="agent-meow", config={"harness": "codex"}),
             ),
         ],
     )
@@ -17675,7 +17675,7 @@ async def test_auto_create_codex_terminal_recreate_cancels_prior_forwarder(
         spec_version=1,
         name="codex",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "codex-native", "model": "gpt-5-default"},
         ),
     )
@@ -17748,7 +17748,7 @@ async def test_events_interrupt_on_kiro_native_routes_to_escape(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "kiro-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "kiro-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -17807,7 +17807,7 @@ async def test_events_stop_session_on_kiro_native_kills_tmux_and_publishes_idle(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "kiro-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "kiro-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -17877,7 +17877,7 @@ async def test_events_interrupt_on_kiro_native_503_skips_idle_when_inject_fails(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "kiro-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "kiro-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
@@ -17947,7 +17947,7 @@ async def test_events_stop_session_on_kiro_native_503_when_kill_fails(
     native_spec = AgentSpec(
         spec_version=1,
         name="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "kiro-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "kiro-native"}),
     )
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:

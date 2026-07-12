@@ -1,4 +1,4 @@
-"""Tests for pi-native fork/resume wiring in ``omnigent/runner/app.py``.
+"""Tests for pi-native fork/resume wiring in ``agent_meow/runner/app.py``.
 
 Covers reading the fork labels into ``_PiNativeLaunchConfig`` and the
 ``_resolve_pi_resume_session`` decision (cold resume, fork rebuild, fresh).

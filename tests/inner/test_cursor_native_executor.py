@@ -245,7 +245,7 @@ class TestBridge:
 
     def test_build_mcp_config_registers_omnigent_relay(self, tmp_path: Path) -> None:
         config = build_mcp_config(tmp_path, python_executable="python-test")
-        server = config["mcpServers"]["omnigent"]
+        server = config["mcpServers"]["agent-meow"]
         assert server["command"] == "python-test"
         assert server["args"] == [
             "-I",
@@ -271,7 +271,7 @@ class TestBridge:
 
         assert path == workspace / ".cursor" / "mcp.json"
         payload = json.loads(path.read_text(encoding="utf-8"))
-        assert payload["mcpServers"]["omnigent"]["command"] == "python-test"
+        assert payload["mcpServers"]["agent-meow"]["command"] == "python-test"
         assert json.loads((bridge_dir / "bridge.json").read_text(encoding="utf-8"))["token"]
 
     def test_write_mcp_bridge_config_is_idempotent(self, tmp_path: Path) -> None:
@@ -291,7 +291,7 @@ class TestBridge:
             tmp_path / ".cursor" / "projects" / "Users-corey.zumar" / "mcp-disabled.json"
         )
         disabled_path.parent.mkdir(parents=True)
-        disabled_path.write_text('["omnigent", "other"]\n', encoding="utf-8")
+        disabled_path.write_text('["agent-meow", "other"]\n', encoding="utf-8")
 
         enable_mcp_for_workspace(Path("/Users/corey.zumar"))
 
@@ -304,7 +304,7 @@ class TestBridge:
         config_path = tmp_path / ".cursor" / "cli-config.json"
         config_path.parent.mkdir(parents=True)
         config_path.write_text(
-            '{"permissions": {"allow": ["Shell(ls)", "Mcp(omnigent:sys_os_read)"]}}\n',
+            '{"permissions": {"allow": ["Shell(ls)", "Mcp(agent-meow:sys_os_read)"]}}\n',
             encoding="utf-8",
         )
 
@@ -312,8 +312,8 @@ class TestBridge:
 
         allow = json.loads(config_path.read_text(encoding="utf-8"))["permissions"]["allow"]
         assert "Shell(ls)" in allow
-        assert allow.count("Mcp(omnigent:sys_os_read)") == 1
-        assert "Mcp(omnigent:sys_session_send)" in allow
+        assert allow.count("Mcp(agent-meow:sys_os_read)") == 1
+        assert "Mcp(agent-meow:sys_session_send)" in allow
 
     def test_approve_mcp_server_for_workspace_uses_cursor_cli(
         self, tmp_path: Path, monkeypatch
@@ -335,7 +335,7 @@ class TestBridge:
 
         assert calls == [
             {
-                "args": (["/bin/cursor-agent-test", "mcp", "enable", "omnigent"],),
+                "args": (["/bin/cursor-agent-test", "mcp", "enable", "agent-meow"],),
                 "kwargs": {
                     "cwd": tmp_path,
                     "stdin": subprocess.DEVNULL,
@@ -360,7 +360,7 @@ class TestRegistration:
         assert "cursor-native" in OMNIGENT_HARNESSES
 
     def test_cursor_native_is_terminal_native(self) -> None:
-        # cursor-native launches the cursor-agent TUI in an omnigent terminal
+        # cursor-native launches the cursor-agent TUI in an agent-meow terminal
         # (like claude/codex/pi-native), so the runner must treat it as a native
         # terminal harness.
         from agent_meow.harness_aliases import is_native_harness

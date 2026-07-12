@@ -161,7 +161,7 @@ def _assert_cross_family_fork_labels(
         f"cross-family fork must NOT stamp the source's native session id, got labels {labels!r}"
     )
     # The clone's UI mode must reflect the TARGET harness, not the source's.
-    assert labels.get("omnigent.wrapper") == expected_wrapper, (
+    assert labels.get("agent_meow.wrapper") == expected_wrapper, (
         f"fork should present as the TARGET harness {expected_wrapper!r}, got labels {labels!r}"
     )
 

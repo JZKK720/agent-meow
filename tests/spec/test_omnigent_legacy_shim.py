@@ -1,12 +1,12 @@
 """
 Tests for :mod:`~?agent_meow.spec._omnigent_legacy_shim` — the
-compatibility layer that lets legacy omnigent
+compatibility layer that lets legacy agent-meow
 ``(content, phase)`` function-policy callables run under
 agent-meow' ``(ctx, context)`` convention.
 
 Each test pins one of the shim's contracts. The e2e integration
 that exercises the full translator → engine pipeline lives in
-``tests/e2e/omnigent/test_run_omnigent_policy_enforcement.py``.
+``tests/e2e/agent_meow/test_run_omnigent_policy_enforcement.py``.
 """
 
 from __future__ import annotations
@@ -107,7 +107,7 @@ def test_has_legacy_signature_matches_only_exact_param_names(
 
 
 def test_legacy_content_input_passes_string_through() -> None:
-    """REQUEST: omnigent puts the raw text in ``ctx.content``; legacy expects the same."""
+    """REQUEST: agent-meow puts the raw text in ``ctx.content``; legacy expects the same."""
     ctx = EvaluationContext(phase=Phase.REQUEST, content="user said hello", tool_name=None)
     assert _legacy_content(ctx) == "user said hello"
 
@@ -120,9 +120,9 @@ def test_legacy_content_output_passes_string_through() -> None:
 
 def test_legacy_content_tool_call_passes_dict_through() -> None:
     """
-    TOOL_CALL: omnigent already normalizes to
+    TOOL_CALL: agent-meow already normalizes to
     ``{"tool": name, "args": parsed_args}`` at the enforcement
-    site (see ``_enforce_tool_call_policy``). Legacy omnigent
+    site (see ``_enforce_tool_call_policy``). Legacy agent-meow
     expects the same shape — pass the dict through verbatim.
 
     What breaks if this fails: ``block_long_sleep`` reads
@@ -138,7 +138,7 @@ def test_legacy_content_tool_call_passes_dict_through() -> None:
 
 def test_legacy_content_tool_result_plain_string_passes_through() -> None:
     """
-    TOOL_RESULT: omnigent passes the raw tool output string
+    TOOL_RESULT: agent-meow passes the raw tool output string
     (no longer wrapped — kasey bug #4 fix). Non-JSON strings
     pass through to the legacy callable unchanged so callables
     branching on ``isinstance(content, str)`` still work.
@@ -246,7 +246,7 @@ def test_legacy_context_does_not_mutate_engine_context() -> None:
     engine's dict — if it did, ``tool_name`` would persist
     between evaluations and cross-contaminate policy calls.
     Uses ``TOOL_RESULT`` because that's the phase native
-    omnigent adds ``tool_name`` on (see
+    agent-meow adds ``tool_name`` on (see
     :meth:`Session._apply_tool_result_policy`); on
     ``TOOL_CALL`` the legacy context has no ``tool_name`` key,
     so a mutation test there couldn't observe the leakage
@@ -271,7 +271,7 @@ def test_legacy_context_threads_configured_phases_when_provided() -> None:
     ``configured_phases``, the legacy context dict carries it
     through to the callable on every evaluation.
 
-    Why this matters: legacy omnigent callables that read
+    Why this matters: legacy agent-meow callables that read
     ``context["configured_phases"]`` (notably the Databricks
     ``google_policy``) deny by default unless the caller
     advertises which phases they hooked. Without this, every
@@ -286,7 +286,7 @@ def test_legacy_context_threads_configured_phases_when_provided() -> None:
     engine_ctx = {"labels": {}, "conversation_id": "c_abc"}
     # ``TOOL_RESULT`` chosen because that's the phase that
     # populates ``tool_name`` in the legacy context (matching
-    # native omnigent — see ``_legacy_context``'s docstring),
+    # native agent-meow — see ``_legacy_context``'s docstring),
     # so this test exercises both ``configured_phases`` AND
     # ``tool_name`` plumbing in the same call.
     ctx = EvaluationContext(
@@ -330,7 +330,7 @@ def test_legacy_context_omits_configured_phases_when_not_provided() -> None:
 
 def test_legacy_context_omits_tool_name_on_tool_call() -> None:
     """
-    Native omnigent adds ``tool_name`` to the legacy context
+    Native agent-meow adds ``tool_name`` to the legacy context
     ONLY on ``TOOL_RESULT`` (see
     :meth:`Session._apply_tool_result_policy`'s ``context =
     {"tool_name": tool_name}`` setup). On ``TOOL_CALL`` no
@@ -365,7 +365,7 @@ def test_legacy_context_omits_tool_name_on_input_and_output() -> None:
 
     Also verifies the shim doesn't accidentally fabricate a
     tool name on these phases — ``ctx.tool_name`` is ``None``
-    on REQUEST/RESPONSE in omnigent today, and any future change
+    on REQUEST/RESPONSE in agent-meow today, and any future change
     that populated it should still result in the legacy
     context omitting the key.
     """

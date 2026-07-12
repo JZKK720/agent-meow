@@ -1,14 +1,14 @@
-"""Persistent client-side state for ``omnigent codex`` sessions.
+"""Persistent client-side state for ``agent-meow codex`` sessions.
 
 The native Codex wrapper records the cwd used to create a session so a
-later ``omnigent codex --resume <conv_id>`` can launch Codex from the
+later ``agent-meow codex --resume <conv_id>`` can launch Codex from the
 same workspace. This state is intentionally client-side: local
 filesystem paths belong to the user's machine and should not be stored
 on the shared agent-meow server.
 
 Layout (per conversation):
 
-    ~/.omnigent/codex-native/<sha256(conv_id)[:32]>/launch.json
+    ~/.agent_meow/codex-native/<sha256(conv_id)[:32]>/launch.json
 """
 
 from __future__ import annotations
@@ -44,14 +44,14 @@ def _codex_native_state_root() -> Path:
     Return the root directory for persistent codex-native state.
 
     Honors :data:`_STATE_ROOT_ENV_VAR` for tests and advanced local
-    setups. Production defaults to ``~/.omnigent/codex-native``.
+    setups. Production defaults to ``~/.agent_meow/codex-native``.
 
     :returns: Absolute path to the state root.
     """
     override = os.environ.get(_STATE_ROOT_ENV_VAR)
     if override:
         return Path(override)
-    return Path.home() / ".omnigent" / "codex-native"
+    return Path.home() / ".agent-meow" / "codex-native"
 
 
 def _state_dir_for_conversation_id(conversation_id: str) -> Path:

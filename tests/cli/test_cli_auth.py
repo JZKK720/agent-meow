@@ -1,7 +1,7 @@
-"""Unit tests for CLI OIDC token storage (omnigent/cli_auth.py).
+"""Unit tests for CLI OIDC token storage (agent_meow/cli_auth.py).
 
 Tests the store/load/clear lifecycle for session tokens persisted
-by ``omnigent login``.
+by ``agent-meow login``.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ def token_dir(tmp_path, monkeypatch):
     """Redirect the token file to a temp directory.
 
     Patches ``state_dir`` to return ``tmp_path`` so tests don't
-    touch ``~/.omnigent``.
+    touch ``~/.agent-meow``.
 
     :param tmp_path: Pytest temp directory.
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -32,8 +32,8 @@ def token_dir(tmp_path, monkeypatch):
 def test_store_and_load_token(token_dir) -> None:
     """A stored token can be loaded back by server URL.
 
-    This is the happy path: ``omnigent login`` stores a token,
-    ``omnigent run --server`` loads it.
+    This is the happy path: ``agent-meow login`` stores a token,
+    ``agent-meow run --server`` loads it.
     """
     from agent_meow.cli_auth import load_token, store_token
 
@@ -52,8 +52,8 @@ def test_store_and_load_token(token_dir) -> None:
 def test_load_returns_none_when_no_file(token_dir) -> None:
     """load_token returns None when no token file exists.
 
-    The first time a user runs ``omnigent run --server`` without
-    having run ``omnigent login``, there should be no crash.
+    The first time a user runs ``agent-meow run --server`` without
+    having run ``agent-meow login``, there should be no crash.
     """
     from agent_meow.cli_auth import load_token
 
@@ -81,7 +81,7 @@ def test_load_returns_none_for_expired_token(token_dir) -> None:
     """load_token returns None when the stored token has expired.
 
     Expired tokens must not be used — the user needs to re-run
-    ``omnigent login``.
+    ``agent-meow login``.
     """
     from agent_meow.cli_auth import load_token, store_token
 
@@ -159,7 +159,7 @@ def test_file_permissions(token_dir) -> None:
 def test_store_overwrites_existing(token_dir) -> None:
     """Storing a token for the same server overwrites the old one.
 
-    Re-running ``omnigent login`` should update the token, not
+    Re-running ``agent-meow login`` should update the token, not
     append.
     """
     from agent_meow.cli_auth import load_token, store_token
@@ -210,7 +210,7 @@ def test_multiple_servers(token_dir) -> None:
 def test_store_and_load_databricks_record(token_dir) -> None:
     """A stored Databricks pointer record resolves back to its workspace.
 
-    ``omnigent login <apps-url>`` stores the record; the server-auth
+    ``agent-meow login <apps-url>`` stores the record; the server-auth
     chain looks up the workspace host to mint fresh tokens.
     """
     from agent_meow.cli_auth import load_databricks_workspace_host, store_databricks_auth
@@ -238,19 +238,19 @@ def test_databricks_request_headers_org_only(token_dir) -> None:
     from agent_meow.cli_auth import databricks_request_headers, store_databricks_auth
 
     store_databricks_auth(
-        server_url="https://acme.databricks.com/api/2.0/omnigent",
+        server_url="https://acme.databricks.com/api/2.0/agent-meow",
         workspace_host="https://acme.databricks.com",
         org_id="2850744067564480",
     )
-    assert databricks_request_headers("https://acme.databricks.com/api/2.0/omnigent") == {
+    assert databricks_request_headers("https://acme.databricks.com/api/2.0/agent-meow") == {
         "X-Databricks-Org-Id": "2850744067564480"
     }
 
     store_databricks_auth(
-        server_url="https://single.databricks.com/api/2.0/omnigent",
+        server_url="https://single.databricks.com/api/2.0/agent-meow",
         workspace_host="https://single.databricks.com",
     )
-    assert databricks_request_headers("https://single.databricks.com/api/2.0/omnigent") == {}
+    assert databricks_request_headers("https://single.databricks.com/api/2.0/agent-meow") == {}
 
 
 def test_databricks_request_headers_pairs_bearer_and_org(token_dir) -> None:
@@ -264,11 +264,11 @@ def test_databricks_request_headers_pairs_bearer_and_org(token_dir) -> None:
     from agent_meow.cli_auth import databricks_request_headers, store_databricks_auth
 
     store_databricks_auth(
-        server_url="https://acme.databricks.com/api/2.0/omnigent",
+        server_url="https://acme.databricks.com/api/2.0/agent-meow",
         workspace_host="https://acme.databricks.com",
         org_id="2850744067564480",
     )
-    recorded = "https://acme.databricks.com/api/2.0/omnigent"
+    recorded = "https://acme.databricks.com/api/2.0/agent-meow"
     # Bearer + org travel together.
     assert databricks_request_headers(recorded, bearer_token="tok") == {
         "Authorization": "Bearer tok",

@@ -17,7 +17,7 @@ renders, and the fork's labels route the runner correctly —
   - native targets that can replay fork history stamp
     ``agent_meow.fork.carry_history`` (the runner must rebuild the native
     transcript; absent → the clone would launch fresh and lose history) and
-    every native target stamps the TARGET ``omnigent.wrapper`` (so the clone
+    every native target stamps the TARGET ``agent_meow.wrapper`` (so the clone
     opens in the right UI mode, not the source's chat mode);
   - the SDK target stamps neither (an SDK target replays the transcript as
     context, and plain chat has no wrapper).
@@ -46,7 +46,7 @@ from tests.e2e_ui.conftest import _FILES_PROBE_ENV_AGENT_NAME
 # another test's message.
 _MARKER = "tangerine-switch-marker"
 
-_WRAPPER_LABEL_KEY = "omnigent.wrapper"
+_WRAPPER_LABEL_KEY = "agent_meow.wrapper"
 _CARRY_HISTORY_LABEL_KEY = "agent_meow.fork.carry_history"
 _SOURCE_EXTERNAL_SESSION_LABEL_KEY = "agent_meow.fork.source_external_session_id"
 
@@ -108,7 +108,7 @@ def test_fork_switch_agent_carries_history(
     :param seeded_session: ``(base_url, session_id)`` for a pre-created
         runner-bound ``hello_world`` (openai-agents SDK) session.
     :param target_name: Built-in agent name to switch the fork onto.
-    :param expected_wrapper: TARGET ``omnigent.wrapper`` value, or ``None``
+    :param expected_wrapper: TARGET ``agent_meow.wrapper`` value, or ``None``
         when the target runs as plain chat (SDK).
     :param expect_carry_history: Whether the fork must stamp the
         carry-history label (true for native targets that rebuild a resumable

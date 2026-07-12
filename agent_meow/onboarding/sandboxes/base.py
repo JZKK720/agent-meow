@@ -33,7 +33,7 @@ DEFAULT_HOST_IMAGE: str = "ghcr.io/JZKK720/agent-meow-host:latest"
 """Default sandbox image across providers: the official prebaked
 agent-meow host image, published by CI from the ``host`` target of
 ``deploy/docker/Dockerfile`` (``:latest`` tracks main; ``:sha-<short>``
-pins a commit). It bakes the full omnigent install plus git / tmux /
+pins a commit). It bakes the full agent-meow install plus git / tmux /
 curl and the coding-harness CLIs, so sandbox creation skips the
 in-sandbox dependency install. Providers layer their own override
 mechanisms (env var / server config) on top of this default."""
@@ -50,7 +50,7 @@ def host_image_wheel_install_command(remote_tgz_path: str) -> str:
     not the provider.
 
     ``--force-reinstall`` is required because the host image bakes
-    omnigent at the same ``0.1.0`` version. Without it, pip sees the
+    agent-meow at the same ``0.1.0`` version. Without it, pip sees the
     version satisfied and silently skips, leaving the sandbox on the
     baked code while the CLI reports success.
 
@@ -178,7 +178,7 @@ class SandboxLauncher(ABC):
     supports_local_port_forward: ClassVar[bool] = False
 
     # Whether this provider supports the CLI bootstrap flow
-    # (``omnigent sandbox create`` / ``connect``: wheel shipping via
+    # (``agent-meow sandbox create`` / ``connect``: wheel shipping via
     # ``put`` + ``wheel_install_command``, streaming attach via
     # ``stream_exec`` / ``exec_foreground``). Managed-only providers
     # (e.g. Daytona) implement just the server-managed subset
@@ -221,7 +221,7 @@ class SandboxLauncher(ABC):
         the host dial-back race by construction.
 
         :param name: Human-readable label for the sandbox, e.g.
-            ``"omnigent-host"``.
+            ``"agent-meow-host"``.
         :returns: The provider-assigned (or reserved) sandbox id, e.g.
             ``"lovable-wattlebird-1530"``.
         :raises click.ClickException: If provisioning fails.
@@ -241,7 +241,7 @@ class SandboxLauncher(ABC):
         on_stage: Callable[[str], None] | None = None,
     ) -> str:
         """
-        Start ``omnigent host`` in the sandbox and return the workspace path.
+        Start ``agent-meow host`` in the sandbox and return the workspace path.
 
         The default is the EXEC model: probe ``$HOME``, create
         ``<HOME>/workspace``, optionally clone the repository into it, and start
@@ -323,7 +323,7 @@ class SandboxLauncher(ABC):
         )
         self.run_background(
             sandbox_id,
-            f"{env_prefix} omnigent host --server {shlex.quote(server_url)}",
+            f"{env_prefix} agent-meow host --server {shlex.quote(server_url)}",
         )
         return workspace
 
@@ -377,7 +377,7 @@ class SandboxLauncher(ABC):
         """
 
     def run_background(
-        self, sandbox_id: str, command: str, *, log_path: str = "/tmp/omnigent-host.log"
+        self, sandbox_id: str, command: str, *, log_path: str = "/tmp/agent-meow-host.log"
     ) -> RemoteCommandResult:
         """
         Start *command* as a detached background process in the sandbox.
@@ -385,7 +385,7 @@ class SandboxLauncher(ABC):
         The default wraps the command in ``setsid nohup sh -c '…' & echo
         launched`` so it survives the exec session ending. The ``sh -c`` wrapper
         is load-bearing: callers pass env-prefixed commands (e.g.
-        ``"ENV=val omnigent host …"``), and ``nohup`` does NOT honor shell
+        ``"ENV=val agent-meow host …"``), and ``nohup`` does NOT honor shell
         ``VAR=val`` assignment syntax — ``nohup ENV=val cmd`` makes nohup try to
         exec a program literally named ``ENV=val`` ("No such file or directory").
         Re-parsing the command under ``sh -c`` lets the inner shell apply the
@@ -395,7 +395,7 @@ class SandboxLauncher(ABC):
 
         :param sandbox_id: Target sandbox.
         :param command: Shell command to background, e.g.
-            ``"ENV=val omnigent host --server https://…"``.
+            ``"ENV=val agent-meow host --server https://…"``.
         :param log_path: Where stdout/stderr of the backgrounded process
             are redirected inside the sandbox.
         :returns: A synthetic result with ``stdout="launched\\n"`` on success.
@@ -530,13 +530,13 @@ class SandboxLauncher(ABC):
         current terminal, blocking until it exits (Ctrl-C detaches and
         tears the remote process down).
 
-        Used to hold ``omnigent host`` open while the sandbox is
+        Used to hold ``agent-meow host`` open while the sandbox is
         registered with the App. CLI-bootstrap capability —
         managed-only launchers need not override the raising default.
 
         :param sandbox_id: Target sandbox.
         :param command: Shell command to execute remotely, e.g.
-            ``"omnigent host --server https://… --profile oss"``.
+            ``"agent-meow host --server https://… --profile oss"``.
         :returns: The remote command's exit code.
         :raises SandboxCapabilityError: When the provider does not
             support foreground execs.
@@ -549,7 +549,7 @@ class SandboxLauncher(ABC):
         tarball and pip-installs the wheels.
 
         Provider-specific because the right pip flags depend on the
-        sandbox image (e.g. the Lakebox image bakes omnigent and its
+        sandbox image (e.g. the Lakebox image bakes agent-meow and its
         deps, requiring ``--force-reinstall --no-deps``).
         CLI-bootstrap capability — managed-only launchers run from
         pre-baked images and need not override the raising default.

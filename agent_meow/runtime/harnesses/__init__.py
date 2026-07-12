@@ -35,28 +35,28 @@ from agent_meow.harness_plugins import harness_modules
 # mutation in conftest fixtures).
 _HARNESS_MODULES: dict[str, str] = {
     # Step 4b: claude-sdk harness wrap. See
-    # omnigent/inner/claude_sdk_harness.py.
+    # agent_meow/inner/claude_sdk_harness.py.
     "claude-sdk": "agent_meow.inner.claude_sdk_harness",
     # User-facing alias accepted in specs / agent-meow harness dispatch.
     "claude": "agent_meow.inner.claude_sdk_harness",
-    # Native Claude Code terminal bridge used by ``omnigent claude``.
+    # Native Claude Code terminal bridge used by ``agent-meow claude``.
     "claude-native": "agent_meow.inner.claude_native_harness",
-    # Native Codex TUI terminal bridge used by ``omnigent codex``.
+    # Native Codex TUI terminal bridge used by ``agent-meow codex``.
     "codex-native": "agent_meow.inner.codex_native_harness",
     # Step 4c: codex harness wrap. See
-    # omnigent/inner/codex_harness.py.
+    # agent_meow/inner/codex_harness.py.
     "codex": "agent_meow.inner.codex_harness",
     # Step 4d: pi harness wrap. See
-    # omnigent/inner/pi_harness.py.
+    # agent_meow/inner/pi_harness.py.
     "pi": "agent_meow.inner.pi_harness",
-    # Native Pi TUI bridge used by ``omnigent pi``.
+    # Native Pi TUI bridge used by ``agent-meow pi``.
     "pi-native": "agent_meow.inner.pi_native_harness",
     # Native Antigravity (agy) TUI terminal bridge used by
-    # ``omnigent antigravity``. The in-process SDK counterpart is the
+    # ``agent-meow antigravity``. The in-process SDK counterpart is the
     # canonical ``antigravity`` harness registered below.
     "antigravity-native": "agent_meow.inner.antigravity_native_harness",
     # Step 4e: openai-agents harness wrap. See
-    # omnigent/inner/openai_agents_sdk_harness.py. Registry
+    # agent_meow/inner/openai_agents_sdk_harness.py. Registry
     # key is the agent-meow-side spelling (``openai-agents``,
     # no ``-sdk`` suffix) to match
     # ``OmnigentExecutor``'s harness allowlist and the
@@ -66,10 +66,10 @@ _HARNESS_MODULES: dict[str, str] = {
     # executor class is :class:`OpenAIAgentsSDKExecutor`.
     "openai-agents": "agent_meow.inner.openai_agents_sdk_harness",
     # cursor harness wrap (Cursor's ``cursor-agent`` CLI, headless). See
-    # omnigent/inner/cursor_harness.py.
+    # agent_meow/inner/cursor_harness.py.
     "cursor": "agent_meow.inner.cursor_harness",
     # Kimi Code CLI harness wrap (Moonshot AI's ``kimi`` CLI, headless). See
-    # omnigent/inner/kimi_harness.py. Drives ``kimi --print --output-format
+    # agent_meow/inner/kimi_harness.py. Drives ``kimi --print --output-format
     # stream-json`` per turn; resumes via ``--session <uuid>`` captured from
     # the prior turn's stderr.
     "kimi": "agent_meow.inner.kimi_harness",
@@ -78,55 +78,55 @@ _HARNESS_MODULES: dict[str, str] = {
     # cursor-native harness wrap. Drives the resident ``cursor-agent`` TUI by
     # injecting each web-UI turn into its tmux pane and mirroring the transcript
     # back — a native-CLI harness like claude/codex/pi-native, so it IS in
-    # ``NATIVE_HARNESSES``. See omnigent/inner/cursor_native_harness.py.
+    # ``NATIVE_HARNESSES``. See agent_meow/inner/cursor_native_harness.py.
     "cursor-native": "agent_meow.inner.cursor_native_harness",
-    # Native Kiro TUI bridge used by ``omnigent kiro``.
+    # Native Kiro TUI bridge used by ``agent-meow kiro``.
     "kiro-native": "agent_meow.inner.kiro_native_harness",
     # goose-native harness wrap. Drives the resident ``goose session`` TUI by
     # injecting each web-UI turn into its tmux pane and mirroring the transcript
     # back from Goose's SQLite session store — a native-CLI harness like
     # cursor-native, so it IS in ``NATIVE_HARNESSES``. See
-    # omnigent/inner/goose_native_harness.py.
+    # agent_meow/inner/goose_native_harness.py.
     "goose-native": "agent_meow.inner.goose_native_harness",
     # qwen-native harness wrap. Drives the resident ``qwen`` TUI by appending
     # JSONL ``submit`` commands to its ``--input-file`` and mirroring the
     # transcript back from its ``--json-file`` event stream — a native-CLI
     # harness like goose-native, so it IS in ``NATIVE_HARNESSES``. The bare
     # ``qwen`` name stays the ACP-piped harness. See
-    # omnigent/inner/qwen_native_harness.py.
+    # agent_meow/inner/qwen_native_harness.py.
     "qwen-native": "agent_meow.inner.qwen_native_harness",
-    # Native Kimi Code TUI bridge used by ``omnigent kimi``. Drives the resident
+    # Native Kimi Code TUI bridge used by ``agent-meow kimi``. Drives the resident
     # ``kimi`` TUI by injecting each web-UI turn into its tmux pane (tmux paste)
     # — a native-CLI harness like claude/codex/cursor-native, so it IS in
     # ``NATIVE_HARNESSES``. Distinct from the headless ``kimi`` SDK harness
-    # above. See omnigent/inner/kimi_native_harness.py.
+    # above. See agent_meow/inner/kimi_native_harness.py.
     "kimi-native": "agent_meow.inner.kimi_native_harness",
     # Google Antigravity SDK harness wrap. See
-    # omnigent/inner/antigravity_harness.py. In-process SDK harness
+    # agent_meow/inner/antigravity_harness.py. In-process SDK harness
     # (``google-antigravity``), like openai-agents — agent-meow spawns no CLI
     # binary or sandbox subprocess (the SDK itself launches a native
     # localharness binary; needs glibc >=~2.36). Drives Gemini 3.5 Flash by
     # default (also Claude / GPT-OSS), with Gemini API-key or Vertex AI auth.
     "antigravity": "agent_meow.inner.antigravity_harness",
-    # Qwen Code harness wrap. See omnigent/inner/qwen_harness.py.
+    # Qwen Code harness wrap. See agent_meow/inner/qwen_harness.py.
     # Drives the ``qwen`` CLI in ACP mode (``qwen --acp``) for agent execution.
     "qwen": "agent_meow.inner.qwen_harness",
-    # Headless Goose harness wrap. See omnigent/inner/goose_harness.py.
+    # Headless Goose harness wrap. See agent_meow/inner/goose_harness.py.
     # Drives Block's ``goose`` CLI in ACP mode (``goose acp``) — the chat-first
     # counterpart to the terminal-first ``goose-native`` TUI harness. Tool
     # approvals surface as web elicitation cards via session/request_permission.
     "goose": "agent_meow.inner.goose_harness",
-    # Native OpenCode server bridge used by ``omnigent opencode``. The runner
+    # Native OpenCode server bridge used by ``agent-meow opencode``. The runner
     # owns ``opencode serve`` + an SSE forwarder and this harness injects each
     # web-UI turn over loopback HTTP — a native-server harness like
     # codex-native, so both ``opencode-native`` and its ``native-opencode``
     # alias are in ``NATIVE_HARNESSES``. See
-    # omnigent/inner/opencode_native_harness.py.
+    # agent_meow/inner/opencode_native_harness.py.
     "opencode-native": "agent_meow.inner.opencode_native_harness",
     # ``opencode`` is accepted as a friendly alias for the canonical
     # ``opencode-native`` (there is no separate SDK ``opencode`` harness).
     "opencode": "agent_meow.inner.opencode_native_harness",
-    # GitHub Copilot SDK harness wrap. See omnigent/inner/copilot_harness.py.
+    # GitHub Copilot SDK harness wrap. See agent_meow/inner/copilot_harness.py.
     # In-process SDK harness (``github-copilot-sdk``), like cursor / antigravity:
     # the SDK bundles the Copilot CLI binary it drives as a backing server, so
     # agent-meow spawns no separately-installed CLI. Authenticates against GitHub's
@@ -134,8 +134,8 @@ _HARNESS_MODULES: dict[str, str] = {
     "copilot": "agent_meow.inner.copilot_harness",
     # Hermes Agent harness wrap. Runs the ``hermes`` CLI as a subprocess
     # for each turn, managing its own session state via Hermes' SQLite
-    # session store. See omnigent/inner/hermes_harness.py and
-    # omnigent/inner/hermes_executor.py. The ``hermes`` binary must be
+    # session store. See agent_meow/inner/hermes_harness.py and
+    # agent_meow/inner/hermes_executor.py. The ``hermes`` binary must be
     # on PATH (or set by HARNESS_HERMES_PATH).
     "hermes": "agent_meow.inner.hermes_harness",
     # hermes-native harness wrap. Drives the resident ``hermes`` TUI by
@@ -143,7 +143,7 @@ _HARNESS_MODULES: dict[str, str] = {
     # back from Hermes' SQLite ``state.db`` session store — a native-CLI harness
     # like goose-native, so it IS in ``NATIVE_HARNESSES``. The bare ``hermes``
     # name stays the headless subprocess harness. See
-    # omnigent/inner/hermes_native_harness.py.
+    # agent_meow/inner/hermes_native_harness.py.
     "hermes-native": "agent_meow.inner.hermes_native_harness",
 }
 

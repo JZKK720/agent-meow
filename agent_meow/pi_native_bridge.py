@@ -24,7 +24,7 @@ PI_NATIVE_BRIDGE_DIR_ENV_VAR = "HARNESS_PI_NATIVE_BRIDGE_DIR"
 PI_NATIVE_REQUEST_SESSION_ID_ENV_VAR = "HARNESS_PI_NATIVE_REQUEST_SESSION_ID"
 PI_NATIVE_CONFIG_ENV_VAR = "OMNIGENT_PI_NATIVE_CONFIG"
 
-_BRIDGE_ROOT = Path.home() / ".omnigent" / "pi-native"
+_BRIDGE_ROOT = Path.home() / ".agent-meow" / "pi-native"
 _CONFIG_FILE = "config.json"
 _EXTENSION_FILE = "omnigent_pi_native_extension.js"
 _EXTENSION_PACKAGE = "agent_meow.resources.pi_native"
@@ -37,7 +37,7 @@ def bridge_dir_for_session_id(session_id: str) -> Path:
     Return the bridge directory for a native Pi session.
 
     :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
-    :returns: Absolute bridge directory under ``~/.omnigent/pi-native``.
+    :returns: Absolute bridge directory under ``~/.agent_meow/pi-native``.
     """
     digest = hashlib.sha256(session_id.encode("utf-8")).hexdigest()[:32]
     return _BRIDGE_ROOT / digest

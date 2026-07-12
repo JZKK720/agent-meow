@@ -18,7 +18,7 @@ Opt-in (needs a pinned ``opencode`` binary + LLM credentials)::
         -v
 
 Running under an isolated ``$HOME`` keeps the runner-owned ``opencode serve``
-bridge dirs (``~/.omnigent/opencode-native``) and the daemon registry off the
+bridge dirs (``~/.agent_meow/opencode-native``) and the daemon registry off the
 developer's real ones, so a co-resident daemon is never disturbed.
 """
 
@@ -49,7 +49,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def _spawn_host_daemon(*, tmp_path: Path, live_server: str) -> subprocess.Popen[bytes]:
-    """Spawn an ``omnigent host`` daemon pointed at the test server."""
+    """Spawn an ``agent-meow host`` daemon pointed at the test server."""
     repo_root = Path(__file__).resolve().parents[2]
     env = os.environ.copy()
     env["PYTHONPATH"] = f"{repo_root}{os.pathsep}{env.get('PYTHONPATH', '')}"
@@ -267,7 +267,7 @@ def test_opencode_native_host_session_auto_creates_terminal(
             resource_id=terminal_id,
             timeout=90.0,
         )
-        # The `omnigent opencode` CLI launcher attaches this TTY directly to the
+        # The `agent-meow opencode` CLI launcher attaches this TTY directly to the
         # runner-owned tmux pane, so the terminal resource must expose the tmux
         # socket + target — assert that prerequisite is present.
         detail = http_client.get(f"/v1/sessions/{session_id}/resources/terminals/{terminal_id}")

@@ -8,7 +8,7 @@ description: OpenCode coding sub-agent — implements, cross-vendor reviews, or 
 # OpenCode's permission prompts surface as web approval cards (and agent-meow
 # policies apply), so risky actions are gated rather than auto-bypassed.
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: opencode-native
 

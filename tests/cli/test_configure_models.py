@@ -1,8 +1,8 @@
-"""Tests for ``omnigent setup --no-internal-beta`` (CLI model-provider config).
+"""Tests for ``agent-meow setup --no-internal-beta`` (CLI model-provider config).
 
 Drives the click command tree with :class:`click.testing.CliRunner` and
 piped stdin, then asserts on the **exact config mutations** written to a
-tmp ``~/.omnigent/config.yaml`` (isolated via ``OMNIGENT_CONFIG_HOME``)
+tmp ``~/.agent_meow/config.yaml`` (isolated via ``OMNIGENT_CONFIG_HOME``)
 and the secret store (forced to the file backend via
 ``OMNIGENT_DISABLE_KEYRING``). Each test asserts on the persisted YAML
 shape, not just the command's exit code, so a regression in the
@@ -145,7 +145,7 @@ def _config_yaml(config_home) -> dict[str, object]:
 
 
 def test_configure_models_list_groups_configured_providers(isolated_config) -> None:
-    """``omnigent config list`` renders each configured provider grouped by harness.
+    """``agent-meow config list`` renders each configured provider grouped by harness.
 
     Seeds two providers directly, then asserts the listing shows both
     names, their kind words, the Claude/Codex harness groups, and the
@@ -2530,9 +2530,9 @@ def test_cursor_overview_install_command_is_selection_only(
     options, selectable, descriptions, _, _max_visible = _capture_setup_overview(monkeypatch)
     names = _overview_row_names(options, selectable)
     cursor = names.index("Cursor")
-    assert "omnigent[cursor]" in Text.from_markup(descriptions[cursor]).plain
+    assert "agent-meow[cursor]" in Text.from_markup(descriptions[cursor]).plain
     # The command lives in the description only — never the always-visible row.
-    assert "omnigent[cursor]" not in Text.from_markup(options[cursor]).plain
+    assert "agent-meow[cursor]" not in Text.from_markup(options[cursor]).plain
 
 
 def test_cursor_drillin_offers_install_when_sdk_missing(
@@ -2549,7 +2549,7 @@ def test_cursor_drillin_offers_install_when_sdk_missing(
     assert result.exit_code == 0, result.output
     out = result.output
     assert "isn't installed" in out
-    assert "omnigent[cursor]" in out
+    assert "agent-meow[cursor]" in out
 
 
 def test_cursor_key_settable_when_sdk_missing(isolated_config, _cursor_sdk_absent) -> None:
@@ -2573,7 +2573,7 @@ def test_cursor_key_settable_when_sdk_missing(isolated_config, _cursor_sdk_absen
 def test_cursor_install_now_invokes_runner_without_index(
     isolated_config, _cursor_sdk_absent, monkeypatch
 ) -> None:
-    """Choosing "install it now" shells the install with ``omnigent[cursor]``.
+    """Choosing "install it now" shells the install with ``agent-meow[cursor]``.
 
     Mocks the subprocess and asserts the argv targets the extra and carries NO
     hardcoded index URL / proxy. Forces the ``uv``-absent path for determinism.
@@ -2597,7 +2597,7 @@ def test_cursor_install_now_invokes_runner_without_index(
 
     assert len(calls) == 1, f"expected exactly one install invocation, got {calls}"
     argv = calls[0]
-    assert "omnigent[cursor]" in argv
+    assert "agent-meow[cursor]" in argv
     assert "install" in argv
     # No index URL / proxy is baked into committed code.
     assert not any("index" in part or "://" in part for part in argv)
@@ -2774,8 +2774,8 @@ def test_antigravity_overview_install_command_is_selection_only(
     options, selectable, descriptions, _, _max_visible = _capture_setup_overview(monkeypatch)
     names = _overview_row_names(options, selectable)
     antigravity = names.index("Antigravity")
-    assert "omnigent[antigravity]" in Text.from_markup(descriptions[antigravity]).plain
-    assert "omnigent[antigravity]" not in Text.from_markup(options[antigravity]).plain
+    assert "agent-meow[antigravity]" in Text.from_markup(descriptions[antigravity]).plain
+    assert "agent-meow[antigravity]" not in Text.from_markup(options[antigravity]).plain
 
 
 @pytest.fixture()
@@ -2801,7 +2801,7 @@ def test_copilot_overview_install_command_is_selection_only(
     """With the copilot extra absent, the Copilot row's install command is its description.
 
     Mirrors the Cursor / Antigravity selection-only-hint contract for the third
-    soft-SDK-extra harness: the ``omnigent[copilot]`` install command is the
+    soft-SDK-extra harness: the ``agent-meow[copilot]`` install command is the
     per-row description (shown only when highlighted), never baked into the
     always-visible row label.
     """
@@ -2810,7 +2810,7 @@ def test_copilot_overview_install_command_is_selection_only(
     options, selectable, descriptions, _, _max_visible = _capture_setup_overview(monkeypatch)
     names = _overview_row_names(options, selectable)
     copilot = names.index("Copilot")
-    assert "omnigent[copilot]" in Text.from_markup(descriptions[copilot]).plain
+    assert "agent-meow[copilot]" in Text.from_markup(descriptions[copilot]).plain
     assert "pip install" not in Text.from_markup(options[copilot]).plain
 
 
@@ -2863,7 +2863,7 @@ def test_antigravity_drillin_offers_install_when_sdk_missing(
     assert result.exit_code == 0, result.output
     out = result.output
     assert "isn't installed" in out
-    assert "omnigent[antigravity]" in out
+    assert "agent-meow[antigravity]" in out
 
 
 def test_antigravity_key_settable_when_sdk_missing(
@@ -2889,7 +2889,7 @@ def test_antigravity_key_settable_when_sdk_missing(
 def test_antigravity_install_now_invokes_runner_without_index(
     isolated_config, _antigravity_sdk_absent, monkeypatch
 ) -> None:
-    """Choosing "install it now" shells the install with ``omnigent[antigravity]``.
+    """Choosing "install it now" shells the install with ``agent-meow[antigravity]``.
 
     Mocks the subprocess and asserts the argv targets the extra and carries NO
     hardcoded index URL / proxy. Forces the ``uv``-absent path for a deterministic argv.
@@ -2914,7 +2914,7 @@ def test_antigravity_install_now_invokes_runner_without_index(
 
     assert len(calls) == 1, f"expected exactly one install invocation, got {calls}"
     argv = calls[0]
-    assert "omnigent[antigravity]" in argv
+    assert "agent-meow[antigravity]" in argv
     assert "install" in argv
     # No index URL / proxy is baked into committed code.
     assert not any("index" in part or "://" in part for part in argv)
@@ -2946,7 +2946,7 @@ def test_configure_harnesses_add_other_key_no_remaining_providers_aborts_cleanly
     Regression for #820: when every catch-all key provider is already configured,
     ``other_key_providers()`` returns ``[]`` and the secondary ``select`` was
     handed an empty option list, raising ``ValueError: select() requires at least
-    one option`` out of ``omnigent setup``. The add branch must detect the empty
+    one option`` out of ``agent-meow setup``. The add branch must detect the empty
     list, tell the user, and return — exit code 0, no traceback. Driven under Pi
     (the surface from the report), with the harness CLI forced installed so the
     drill-in reaches the add menu.

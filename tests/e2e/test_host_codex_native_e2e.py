@@ -54,7 +54,7 @@ def _spawn_host_daemon(
     live_server: str,
 ) -> subprocess.Popen[bytes]:
     """
-    Spawn an ``omnigent host`` daemon for the codex-native test.
+    Spawn an ``agent-meow host`` daemon for the codex-native test.
 
     :param tmp_path: Per-test temp dir for the daemon log.
     :param live_server: Test server URL.
@@ -529,8 +529,8 @@ def test_codex_native_builtin_session_can_be_created(
     session_data = session_resp.json()
     assert session_data["agent_id"] == agent_id
     labels = session_data.get("labels", {})
-    assert labels.get("omnigent.wrapper") == "codex-native-ui", (
-        f"Expected wrapper label 'codex-native-ui', got {labels.get('omnigent.wrapper')!r}"
+    assert labels.get("agent_meow.wrapper") == "codex-native-ui", (
+        f"Expected wrapper label 'codex-native-ui', got {labels.get('agent_meow.wrapper')!r}"
     )
 
 

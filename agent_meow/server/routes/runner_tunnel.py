@@ -56,7 +56,7 @@ _MANAGED_RUNNER_TOKEN_TTL_S = 1800
 def _is_loopback_websocket_client(ws: WebSocket) -> bool:
     """Return whether the WebSocket peer is a loopback client.
 
-    Local ``omnigent server`` starts an unauthenticated runner that
+    Local ``agent-meow server`` starts an unauthenticated runner that
     connects over loopback. Remote ``run --server`` runners reach
     shared App servers through the auth proxy and must present the
     tunnel binding token.
@@ -98,7 +98,7 @@ def _resolve_tunnel_owner(
     :param auth_provider: Active auth provider, or ``None`` for a
         single-user / no-auth deployment.
     :param is_loopback: Whether the peer is a loopback client, e.g.
-        the unauthenticated local runner started by ``omnigent server``.
+        the unauthenticated local runner started by ``agent-meow server``.
     :returns: The owner user id, e.g. ``"alice@example.com"``;
         :data:`RESERVED_USER_LOCAL` for an unauthenticated loopback
         peer; or ``None`` when auth is enabled and a non-loopback peer

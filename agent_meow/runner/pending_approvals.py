@@ -57,7 +57,7 @@ _pending: dict[str, asyncio.Future[bool]] = {}
 # perturbed by a mid-turn message injection (e.g. a parent agent's
 # ``sys_session_send`` to a blocked child — that message would otherwise
 # steer the parked turn past the human gate). See the ingest guard in
-# ``omnigent/runner/app.py``.
+# ``agent_meow/runner/app.py``.
 _session_pending: dict[str, int] = {}
 
 

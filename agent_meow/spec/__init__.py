@@ -10,7 +10,7 @@ from agent_meow.errors import ErrorCode, OmnigentError
 
 # agent-meow compat: imported surgically from a dedicated module so
 # the integration's tech debt is removable in one shot. See
-# omnigent/spec/_omnigent_compat.py.
+# agent_meow/spec/_omnigent_compat.py.
 from agent_meow.spec._omnigent_compat import (
     diagnose_yaml_rejection,
     is_omnigent_yaml,
@@ -95,11 +95,11 @@ def materialize_bundle(source: Path, dest: Path) -> Path:
     Copy a spec source into *dest* as a uniform bundle directory.
 
     Agent-plane accepts two source shapes: an agent-image directory
-    (``config.yaml`` + bundled assets) or a standalone omnigent
+    (``config.yaml`` + bundled assets) or a standalone agent-meow
     YAML file. Downstream code (``_preregister_agent``,
     ``_prepare_omnigent_yaml_bundle``) always wants to operate on a
     directory it can tar, mutate, or hand to the in-process
-    omnigent server.
+    agent-meow server.
 
     Taking the file-vs-directory branch once — here — means every
     caller downstream is uniform: "materialize, then operate on the
@@ -107,8 +107,8 @@ def materialize_bundle(source: Path, dest: Path) -> Path:
     input shape.
 
     :param source: The spec source. Either a directory containing
-        ``config.yaml`` (standard omnigent shape) or a standalone
-        omnigent YAML file (e.g.
+        ``config.yaml`` (standard agent-meow shape) or a standalone
+        agent-meow YAML file (e.g.
         ``examples/coding_supervisor.yaml``). Must exist.
     :param dest: Destination directory to populate. Created if it
         does not exist; may be empty or already contain the copied
@@ -134,19 +134,19 @@ def materialize_bundle(source: Path, dest: Path) -> Path:
 
 def _find_omnigent_yaml_in_dir(root: Path) -> Path | None:
     """
-    Return the omnigent YAML inside *root* when the directory is
-    a single-file omnigent bundle, or ``None`` otherwise.
+    Return the agent-meow YAML inside *root* when the directory is
+    a single-file agent-meow bundle, or ``None`` otherwise.
 
-    A directory qualifies as a single-file omnigent bundle when
+    A directory qualifies as a single-file agent-meow bundle when
     there is no ``config.yaml`` at the root and exactly one file
     at the root is recognised by :func:`is_omnigent_yaml`. Any
-    other shape (``config.yaml`` present, zero or multiple omnigent
+    other shape (``config.yaml`` present, zero or multiple agent-meow
     YAMLs, YAMLs in subdirectories) returns ``None`` and the caller
-    falls through to the standard omnigent directory-parse path.
+    falls through to the standard agent-meow directory-parse path.
 
     :param root: Path to an extracted bundle directory.
-    :returns: The matched omnigent YAML path, or ``None`` if the
-        directory is not a single-file omnigent bundle.
+    :returns: The matched agent-meow YAML path, or ``None`` if the
+        directory is not a single-file agent-meow bundle.
     """
     if (root / "config.yaml").exists():
         return None
@@ -169,20 +169,20 @@ def load(
     bytes.
 
     If *source* is a directory, parse and validate it directly.
-    If *source* is a file path (tarball or omnigent YAML) or raw
+    If *source* is a file path (tarball or agent-meow YAML) or raw
     bytes, dispatch accordingly.
 
     :param source: Path to an agent image directory, ``.tar.gz``
-        bundle, omnigent single-file YAML, or raw tarball bytes
+        bundle, agent-meow single-file YAML, or raw tarball bytes
         (e.g. from an HTTP upload).
     :param dest: Extraction destination -- required when *source*
         is a tarball or bytes, ignored when *source* is a directory
-        or omnigent YAML.
+        or agent-meow YAML.
     :param expand_env: Whether to expand ``${VAR}`` references in
         connection blocks, MCP headers, and MCP ``env`` against the
         current process environment. ``True`` (the default) is for
         operator-authored specs whose author is the process owner
-        (local ``omnigent run``, ``--agent`` preregistration). It
+        (local ``agent-meow run``, ``--agent`` preregistration). It
         MUST be ``False`` for tenant-supplied / HTTP-uploaded
         bundles: expanding their ``${VAR}`` against the server or
         runner process environment leaks server-side secrets into a
@@ -193,11 +193,11 @@ def load(
         registered policy handler. This is the guard for the
         untrusted agent-bundle upload path — set by
         :func:`~?agent_meow.server.bundles.validate_agent_bundle`. It is
-        applied for both bundle shapes: the omnigent single-file YAML
+        applied for both bundle shapes: the agent-meow single-file YAML
         path (before the inner loader resolves/calls the handler at
         parse time) and the ``config.yaml`` path (post-parse, since
         that parser does not resolve handlers). Defaults to ``False``
-        so trusted spec loading (local ``omnigent run``, operator
+        so trusted spec loading (local ``agent-meow run``, operator
         configs) keeps supporting custom handlers.
     :param prune_invalid_sub_agents: When ``True``, a sub-agent that
         fails validation is **dropped** from the spec (removed from
@@ -215,7 +215,7 @@ def load(
         sub-agent lets the parent agent launch with the capabilities
         this client *does* support, rather than the whole agent failing
         to start. Defaults to ``False`` so authoring/upload paths
-        (``omnigent run``,
+        (``agent-meow run``,
         :func:`~?agent_meow.server.bundles.validate_agent_bundle`) stay
         strict and surface real authoring mistakes to the author.
     :returns: A validated :class:`AgentSpec`.
@@ -241,7 +241,7 @@ def load(
     elif source.is_file():
         # agent-meow single-file YAML dispatch — see
         # agent_meow.spec._omnigent_compat. Tech-debt aside;
-        # remove this branch when omnigent compat ends.
+        # remove this branch when agent-meow compat ends.
         if is_omnigent_yaml(source):
             return load_omnigent_yaml(
                 source,
@@ -249,7 +249,7 @@ def load(
                 prune_invalid_sub_agents=prune_invalid_sub_agents,
             )
         if source.suffix.lower() in {".yaml", ".yml"}:
-            # The path is a YAML file but failed the omnigent check
+            # The path is a YAML file but failed the agent-meow check
             # (missing required key, ``spec_version`` set, malformed,
             # etc.). Falling through to the tarball-extraction branch
             # would surface the misleading "dest is required when
@@ -257,7 +257,7 @@ def load(
             # tarball. Diagnose the actual reason and surface it.
             reason = diagnose_yaml_rejection(source)
             raise OmnigentError(
-                f"{source}: not a valid omnigent YAML — {reason}",
+                f"{source}: not a valid agent-meow YAML — {reason}",
                 code=ErrorCode.INVALID_INPUT,
             )
         if dest is None:
@@ -272,13 +272,13 @@ def load(
 
     # agent-meow single-file YAML dispatch (extracted-bundle variant)
     # — when a bundle (directory, tarball, or raw bytes) resolves to
-    # a root that contains exactly one omnigent YAML and no
-    # ``config.yaml``, route to the omnigent adapter. This is the
-    # shape produced by ``omnigent server --agent`` when it wraps a
+    # a root that contains exactly one agent-meow YAML and no
+    # ``config.yaml``, route to the agent-meow adapter. This is the
+    # shape produced by ``agent-meow server --agent`` when it wraps a
     # YAML into a single-file tarball for the agent store. See
-    # omnigent/spec/_omnigent_compat.py for the tech-debt
-    # ownership; remove when omnigent compat ends.
-    # The omnigent single-file path (load_omnigent_yaml) copies
+    # agent_meow/spec/_omnigent_compat.py for the tech-debt
+    # ownership; remove when agent-meow compat ends.
+    # The agent-meow single-file path (load_omnigent_yaml) copies
     # headers / connection verbatim and never expands ``${VAR}``
     # against the process env, so it is safe regardless of
     # *expand_env* and the flag does not apply.
@@ -305,7 +305,7 @@ def load(
         # strings without resolving them (resolution happens later at
         # engine build), so a post-parse scan is safe and sufficient —
         # it stops an unregistered handler from ever being stored/run.
-        # The single-file omnigent YAML path is guarded earlier, inside
+        # The single-file agent-meow YAML path is guarded earlier, inside
         # the loader, because that loader executes factories at parse.
         _reject_unregistered_spec_policy_handlers(spec)
     return spec

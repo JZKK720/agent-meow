@@ -5,7 +5,7 @@ Implements :class:`~?agent_meow.onboarding.sandboxes.base.SandboxLauncher`
 for `NVIDIA OpenShell <https://github.com/NVIDIA/openshell>`_ sandboxes
 on top of the official ``openshell`` Python SDK. Same posture as the
 Modal, Daytona, and CoreWeave launchers: the SDK is an optional
-dependency (``pip install 'omnigent[openshell]'``) imported lazily, so
+dependency (``pip install 'agent-meow[openshell]'``) imported lazily, so
 the provider can be listed and the module probed without it.
 
 OpenShell is self-hosted: a gateway control plane manages sandbox
@@ -74,7 +74,7 @@ overrides ``~/.config/openshell/active_gateway``."""
 
 _READY_TIMEOUT_S = 300
 _EXEC_TIMEOUT_S = 300
-# A foreground host (`omnigent host`) is held open until Ctrl-C, so its
+# A foreground host (`agent-meow host`) is held open until Ctrl-C, so its
 # exec stream must not hit a gRPC deadline mid-session — give it a long
 # ceiling. The pidfile records the in-sandbox pid so Ctrl-C can kill the
 # remote process (cancelling the local stream doesn't stop it).
@@ -85,7 +85,7 @@ _FOREGROUND_PIDFILE_TEMPLATE = "/tmp/oa-openshell-foreground-{sandbox_id}.pid"
 # contract; see deploy/docker/Dockerfile), whose home is ``/home/sandbox``.
 # The host image keeps ``WORKDIR /root`` for the root-based providers, so we
 # pin every exec's cwd + ``$HOME`` to the sandbox user's writable home here
-# rather than changing the shared image — otherwise ``omnigent host`` resolves
+# rather than changing the shared image — otherwise ``agent-meow host`` resolves
 # its config under ``/root`` (unreadable to the sandbox user) and crashes, and
 # the managed flow's ``$HOME/workspace`` lands somewhere unwritable.
 _SANDBOX_HOME = "/home/sandbox"
@@ -100,7 +100,7 @@ def _ensure_sdk() -> None:
     except ImportError as exc:
         raise click.ClickException(
             "The openshell SDK is required for the 'openshell' sandbox provider. "
-            "Install it with `pip install 'omnigent[openshell]'`, then select a "
+            "Install it with `pip install 'agent-meow[openshell]'`, then select a "
             "gateway with `openshell gateway select <name>` (or set OPENSHELL_GATEWAY)."
         ) from exc
 
@@ -378,7 +378,7 @@ class OpenShellSandboxLauncher(SandboxLauncher):
         )
 
     def run_background(
-        self, sandbox_id: str, command: str, *, log_path: str = "/tmp/omnigent-host.log"
+        self, sandbox_id: str, command: str, *, log_path: str = "/tmp/agent-meow-host.log"
     ) -> RemoteCommandResult:
         """Hold *command* on a long-lived exec stream instead of detaching.
 
@@ -413,7 +413,7 @@ class OpenShellSandboxLauncher(SandboxLauncher):
         """
         Run *command* in the sandbox, streaming its output, until it exits.
 
-        Holds ``omnigent host`` open for ``omnigent sandbox connect``;
+        Holds ``agent-meow host`` open for ``agent-meow sandbox connect``;
         Ctrl-C kills the remote process and re-raises ``KeyboardInterrupt``.
         """
         client = self._openshell()

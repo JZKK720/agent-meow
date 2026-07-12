@@ -54,7 +54,7 @@ class _FakeCodexNativeClient:
         socket_path: Path | None = None,
         *,
         ws_url: str | None = None,
-        client_name: str = "omnigent",
+        client_name: str = "agent-meow",
     ) -> None:
         """
         Initialize one fake client connection.

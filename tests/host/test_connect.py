@@ -186,7 +186,7 @@ async def test_handle_launch_refuses_unconfigured_harness(
     """
     Verify _handle_launch refuses to spawn when the frame's harness is
     not configured, with the structured error_code and a message that
-    names the harness, the host, and the `omnigent setup` fix.
+    names the harness, the host, and the `agent-meow setup` fix.
 
     If this regresses, an unconfigured launch spawns a runner whose
     first turn dies inside the executor — the exact dead-session UX
@@ -219,7 +219,7 @@ async def test_handle_launch_refuses_unconfigured_harness(
     # harness, the host, and the remediation command.
     assert "'codex'" in (result.error or "")
     assert "test-laptop" in (result.error or "")
-    assert "omnigent setup" in (result.error or "")
+    assert "agent-meow setup" in (result.error or "")
     assert result.runner_id is None
     # No runner subprocess may exist after a refusal.
     assert host._runners == {}
@@ -231,7 +231,7 @@ async def test_handle_launch_native_cursor_message_points_at_cursor_installer(
 ) -> None:
     """
     A native-Cursor refusal must name the ``cursor-agent`` installer and
-    login, not ``omnigent setup`` — which only configures the SDK ``cursor``
+    login, not ``agent-meow setup`` — which only configures the SDK ``cursor``
     harness and never installs the ``cursor-agent`` CLI ``omni cursor`` boots.
 
     Here ``harness_setup_hint`` is the real function (only the readiness check
@@ -260,7 +260,7 @@ async def test_handle_launch_native_cursor_message_points_at_cursor_installer(
     assert "test-laptop" in message
     assert "cursor.com/install" in message
     assert "cursor-agent login" in message
-    assert "omnigent setup" not in message
+    assert "agent-meow setup" not in message
     assert host._runners == {}
 
 
@@ -386,7 +386,7 @@ async def test_handle_launch_prints_exact_runner_log_path(
     real output — the agent turn, tracebacks — lands only in the per-runner
     log file. The user needs that precise path to tail it, so the launch
     print must include it. We repoint ``Path.home`` so the log lands under
-    tmp (no write to the developer's real ``~/.omnigent``).
+    tmp (no write to the developer's real ``~/.agent-meow``).
     """
     monkeypatch.setattr(Path, "home", classmethod(lambda _cls: tmp_path))
     host = _make_host_process()
@@ -419,13 +419,13 @@ async def test_handle_launch_prints_exact_runner_log_path(
 
     assert result.status == "launched", result.error
     # Exactly one runner-*.log was created under the host-runner dir.
-    runner_log_dir = tmp_path / ".omnigent" / "logs" / "host-runner"
+    runner_log_dir = tmp_path / ".agent-meow" / "logs" / "host-runner"
     log_files = list(runner_log_dir.glob("runner-*.log"))
     assert len(log_files) == 1
     out = capsys.readouterr().out
     assert "↑ Runner started:" in out
     # The exact file path is printed, home-collapsed to ``~`` for readability.
-    assert f"log: ~/.omnigent/logs/host-runner/{log_files[0].name}" in out
+    assert f"log: ~/.agent_meow/logs/host-runner/{log_files[0].name}" in out
 
     _cleanup_host(host)
 
@@ -513,7 +513,7 @@ async def test_handle_launch_immediate_exit_reports_exit_code_and_log_tail(
     # The exit code identifies the failure class without log-reading.
     assert "code 7" in error
     # The log path lets the user fetch the full log on the host.
-    assert "~/.omnigent/logs/host-runner/runner-" in error
+    assert "~/.agent_meow/logs/host-runner/runner-" in error
     # The tail carries the actual cause — the whole point of the report.
     assert "RuntimeError: boom-traceback" in error
 
@@ -673,7 +673,7 @@ async def test_unreported_exit_flushes_after_reconnect(
 
 
 async def test_hello_advertises_installed_version() -> None:
-    """The ``host.hello`` frame reports the omnigent version, not a placeholder.
+    """The ``host.hello`` frame reports the agent-meow version, not a placeholder.
 
     A hard-coded placeholder would make every host look like the same
     stale build in the server's version popover. The hello must carry the
@@ -1261,7 +1261,7 @@ def test_build_runner_env_allowlists_host_env_and_strips_secrets() -> None:
     # sandbox containers. Only the baked host image ever sets it.
     assert env["IS_SANDBOX"] == "1"
     # The claude-sdk sandbox bypass flag forwards — it is read inside the
-    # harness, so a bare ``OMNIGENT_CLAUDE_SDK_NO_SANDBOX=1 omnigent run …``
+    # harness, so a bare ``OMNIGENT_CLAUDE_SDK_NO_SANDBOX=1 agent-meow run …``
     # must reach the runner without also forcing
     # ``OMNIGENT_RUNNER_ENV_PASSTHROUGH=OMNIGENT_CLAUDE_SDK_NO_SANDBOX``.
     assert env["OMNIGENT_CLAUDE_SDK_NO_SANDBOX"] == "1"
@@ -1425,7 +1425,7 @@ def test_build_runner_env_propagates_data_dir_paths_not_db_uri() -> None:
     embed a password) does not.
 
     Regression guard: ``OMNIGENT_CONFIG_HOME`` was absent from the
-    allowlist, so the daemon/runner used ``~/.omnigent`` while a CLI run
+    allowlist, so the daemon/runner used ``~/.agent-meow`` while a CLI run
     under an isolated config home read the local-server pidfile elsewhere —
     discovery then timed out (the e2e ``OMNIGENT_CONFIG_HOME`` isolation
     case). A failure of the first two asserts means that regression is back;
@@ -2034,7 +2034,7 @@ def test_build_connect_headers_adds_org_header(monkeypatch: pytest.MonkeyPatch) 
         "agent_meow.cli_auth.load_databricks_org_id", lambda _url: "2850744067564480"
     )
 
-    headers = _host("https://acme.databricks.com/api/2.0/omnigent")._build_connect_headers()
+    headers = _host("https://acme.databricks.com/api/2.0/agent-meow")._build_connect_headers()
 
     assert headers["X-Databricks-Org-Id"] == "2850744067564480"
 
@@ -2050,7 +2050,7 @@ async def test_run_retries_on_login_redirect(
     ``InvalidURI`` because the redirect scheme isn't ws/wss. This can
     happen transiently during server restarts, so the host must retry
     with backoff rather than dying. The warning still surfaces the single
-    ``omnigent login`` remediation so the operator can act if the cause
+    ``agent-meow login`` remediation so the operator can act if the cause
     is persistent.
     """
     monkeypatch.setattr("agent_meow.host.connect._RECONNECT_BASE_S", 0.0)
@@ -2069,10 +2069,10 @@ async def test_run_retries_on_login_redirect(
     # 2 = redirect attempt + cancel attempt → it genuinely reconnected.
     assert spy.call_count == 2
     # The warning surfaces the login-page cause and the credentials hint —
-    # the single remediation message recommending `omnigent login <url>`.
+    # the single remediation message recommending `agent-meow login <url>`.
     assert any("login page" in r.message for r in caplog.records)
     assert any(
-        "omnigent login https://app.example.databricks.com" in r.message for r in caplog.records
+        "agent-meow login https://app.example.databricks.com" in r.message for r in caplog.records
     )
 
 
@@ -2083,10 +2083,10 @@ async def test_login_redirect_prints_warning_to_terminal(
     """The first login redirect of a streak warns on stderr, not just the log.
 
     ``_logger.warning`` goes to the CLI log file, so before this fix a
-    not-logged-in ``omnigent host`` sat completely silent on the terminal
+    not-logged-in ``agent-meow host`` sat completely silent on the terminal
     while retrying (the user's only signal was Ctrl-C and reading the log).
     The terminal warning must name the cause and the copy-pasteable
-    ``omnigent login <url>`` remedy.
+    ``agent-meow login <url>`` remedy.
     """
     monkeypatch.setattr("agent_meow.host.connect._RECONNECT_BASE_S", 0.0)
     spy = _ConnectSpy(
@@ -2105,7 +2105,7 @@ async def test_login_redirect_prints_warning_to_terminal(
     # regression is back (warning only in the log file).
     assert "login page" in err
     # The exact remedy command, URL included, so the user can copy-paste.
-    assert "omnigent login https://app.example.databricks.com" in err
+    assert "agent-meow login https://app.example.databricks.com" in err
 
 
 async def test_fresh_host_fails_loud_after_persistent_login_redirects(
@@ -2132,7 +2132,7 @@ async def test_fresh_host_fails_loud_after_persistent_login_redirects(
     message = str(excinfo.value)
     # The fatal message identifies the auth cause and the exact remedy.
     assert "login page" in message
-    assert "omnigent login https://app.example.databricks.com" in message
+    assert "agent-meow login https://app.example.databricks.com" in message
     # 3 = _LOGIN_REDIRECT_FATAL_ATTEMPTS: enough retries to absorb a
     # one-off proxy blip, then fail. 1 would mean the blip
     # tolerance regressed; more (or no raise at all) would mean the
@@ -2231,7 +2231,7 @@ async def test_run_fails_loud_on_permanent_4xx(
 async def test_auth_rejection_suggests_omnigent_login(
     monkeypatch: pytest.MonkeyPatch, status: int
 ) -> None:
-    """401/403 rejections point the user at ``omnigent login``.
+    """401/403 rejections point the user at ``agent-meow login``.
 
     Both statuses are auth failures the user can resolve by logging in to
     an accounts/OIDC-mode server (a Databricks profile token may
@@ -2249,13 +2249,13 @@ async def test_auth_rejection_suggests_omnigent_login(
 
     # The exact, copy-pasteable command — URL included — must be present,
     # not just the bare word "login".
-    assert f"omnigent login {server_url}" in str(excinfo.value)
+    assert f"agent-meow login {server_url}" in str(excinfo.value)
 
 
 async def test_non_auth_permanent_4xx_omits_login_hint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A non-auth permanent 4xx (404) does NOT suggest ``omnigent login``.
+    """A non-auth permanent 4xx (404) does NOT suggest ``agent-meow login``.
 
     The login remedy is specific to credential/authorization failures;
     surfacing it on a 404 ("wrong URL / route missing") would misdirect
@@ -2272,7 +2272,7 @@ async def test_non_auth_permanent_4xx_omits_login_hint(
     # Confirm we got the actual 404 fatal message (not some unrelated
     # error that happens to lack "login") before asserting the absence.
     assert "HTTP 404" in message
-    assert "omnigent login" not in message
+    assert "agent-meow login" not in message
 
 
 @pytest.mark.parametrize("status", [408, 429, 500, 503])
@@ -2329,9 +2329,9 @@ def test_run_host_process_exits_nonzero_on_fatal(
 def test_run_host_process_announces_session_log_dir_on_start(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """``omnigent host`` names the session-log dir on start (was silent).
+    """``agent-meow host`` names the session-log dir on start (was silent).
 
-    The reported regression: ``omnigent host`` ran completely silently, so a
+    The reported regression: ``agent-meow host`` ran completely silently, so a
     quiet/stuck host gave no hint where to look. The startup banner now points
     at the per-session runner log dir up front; the exact ``runner-*.log`` is
     printed later when each runner launches. We stub the tunnel to a clean
@@ -2349,4 +2349,4 @@ def test_run_host_process_announces_session_log_dir_on_start(
     )
 
     out = capsys.readouterr().out
-    assert "Session logs: ~/.omnigent/logs/host-runner/" in out
+    assert "Session logs: ~/.agent_meow/logs/host-runner/" in out

@@ -274,7 +274,7 @@ export interface ChatState {
   backgroundTaskCount: number;
   /**
    * Whether the active session is a native-terminal wrapper
-   * (claude-native / codex-native), derived from the `omnigent.wrapper`
+   * (claude-native / codex-native), derived from the `agent_meow.wrapper`
    * label on bind. Web messages on these sessions are NOT persisted at
    * POST time — they round-trip through the vendor TUI and reconcile via
    * the transcript forwarder's `session.input.consumed` event, which can
@@ -343,7 +343,7 @@ export interface ChatState {
   costControlModeOverride: "on" | "off" | null;
   /**
    * Per-session Codex collaboration-mode flag. Hydrated from
-   * ``omnigent.codex_native.collaboration_mode`` on bind and updated by the
+   * ``agent_meow.codex_native.collaboration_mode`` on bind and updated by the
    * web toggle or native Codex TUI events. False for non-Codex sessions.
    */
   codexPlanMode: boolean;
@@ -428,7 +428,7 @@ export interface ChatState {
    */
   gitBranch: string | null;
   /**
-   * Current Claude Code todo list for `omnigent claude` sessions.
+   * Current Claude Code todo list for `agent-meow claude` sessions.
    * Populated from the session snapshot on bind and updated by
    * `session.todos` SSE events. Empty array for non-claude-native
    * sessions or before the first poll tick from the forwarder.
@@ -596,8 +596,8 @@ const STREAM_RECONNECT_MAX_MS = 5_000;
 
 // Sticky picker prefs — persisted so a new chat inherits the user's
 // last pick across reloads and across sessions.
-const PICKER_PREF_EFFORT_KEY = "omnigent.picker.effort";
-const PICKER_PREF_MODEL_KEY = "omnigent.picker.model";
+const PICKER_PREF_EFFORT_KEY = "agent_meow.picker.effort";
+const PICKER_PREF_MODEL_KEY = "agent_meow.picker.model";
 
 function loadPickerPref(key: string): string | null {
   try {
@@ -1486,7 +1486,7 @@ type NativeModelFamily = "claude" | "codex";
  * :returns: ``"claude"`` / ``"codex"`` for native wrappers, else ``null``.
  */
 function nativeModelFamilyForSession(session: Pick<Session, "labels">): NativeModelFamily | null {
-  switch (session.labels?.["omnigent.wrapper"]) {
+  switch (session.labels?.["agent_meow.wrapper"]) {
     case "claude-code-native-ui":
       return "claude";
     case "codex-native-ui":
@@ -1709,7 +1709,7 @@ function sessionBindingPatch(
   | "terminalPending"
   | "sandboxStatus"
 > {
-  const wrapper = session.labels?.["omnigent.wrapper"];
+  const wrapper = session.labels?.["agent_meow.wrapper"];
   return {
     isNativeTerminalSession: isNativeWrapper(wrapper),
     // Native wrapper whose model lives in the vendor TUI (no agent-meow picker):
@@ -4198,7 +4198,7 @@ function finalizeActive(
   });
 }
 
-// Mirrors the server's ErrorCode.RUNNER_UNAVAILABLE (omnigent/errors.py) —
+// Mirrors the server's ErrorCode.RUNNER_UNAVAILABLE (agent_meow/errors.py) —
 // the 503 returned by POST /events when a host-bound runner never connects
 // within the connect-grace + relaunch window.
 const RUNNER_UNAVAILABLE_CODE = "runner_unavailable";

@@ -8,25 +8,25 @@ import urllib.parse
 import webbrowser
 from collections.abc import Callable
 
-# Databricks workspace-hosted omnigent: the API proxy and the web UI are
+# Databricks workspace-hosted agent-meow: the API proxy and the web UI are
 # mounted on different workspace paths. ``conversation_url`` maps the
 # server (API) base onto the UI mount so browser links land on the SPA
 # instead of the JSON API.
-WORKSPACE_API_PATH = "/api/2.0/omnigent"
-WORKSPACE_UI_PATH = "/omnigent"
+WORKSPACE_API_PATH = "/api/2.0/agent-meow"
+WORKSPACE_UI_PATH = "/agent-meow"
 
 
 def is_workspace_hosted_url(base_url: str) -> bool:
     """
     Whether *base_url* is a Databricks workspace-hosted agent-meow mount.
 
-    True for the API proxy mount (``https://<ws>/api/2.0/omnigent``) the
+    True for the API proxy mount (``https://<ws>/api/2.0/agent-meow``) the
     CLI connects to on a workspace. Used to suppress UI a workspace
     deployment shouldn't surface (e.g. the startup banner's server-version
     row, since a workspace build reports no meaningful version string).
 
     :param base_url: agent-meow server base URL, e.g.
-        ``"https://example.databricks.com/api/2.0/omnigent"``.
+        ``"https://example.databricks.com/api/2.0/agent-meow"``.
     :returns: ``True`` when the URL path is the workspace API mount.
     """
     return urllib.parse.urlsplit(base_url.rstrip("/")).path == WORKSPACE_API_PATH
@@ -37,19 +37,19 @@ def display_server_url(base_url: str) -> str:
     Map an agent-meow server base URL to the user-facing form to show.
 
     Databricks workspace-hosted servers are connected to on the API proxy
-    mount (``https://<ws>/api/2.0/omnigent``), but the URL a user
+    mount (``https://<ws>/api/2.0/agent-meow``), but the URL a user
     recognizes — and that the web UI lives on — is the workspace SPA mount
-    (``https://<ws>/omnigent``). Rewrites the API path to the UI path for
+    (``https://<ws>/agent-meow``). Rewrites the API path to the UI path for
     those (dropping any ``?o=<org>`` query), so the startup banner shows
-    the clean ``/omnigent`` URL instead of the internal API path. Every
+    the clean ``/agent-meow`` URL instead of the internal API path. Every
     other URL (local ``http://127.0.0.1:<port>``, a custom remote) is
     returned unchanged apart from a trailing-slash trim.
 
     :param base_url: agent-meow server base URL, e.g.
-        ``"https://example.databricks.com/api/2.0/omnigent"`` or
+        ``"https://example.databricks.com/api/2.0/agent-meow"`` or
         ``"http://127.0.0.1:6767"``.
     :returns: The display URL, e.g.
-        ``"https://example.databricks.com/omnigent"`` or
+        ``"https://example.databricks.com/agent-meow"`` or
         ``"http://127.0.0.1:6767"``.
     """
     parsed = urllib.parse.urlsplit(base_url.rstrip("/"))
@@ -63,10 +63,10 @@ def conversation_url(base_url: str, conversation_id: str) -> str:
     Build the browser URL for an agent-meow conversation.
 
     For Databricks workspace-hosted servers
-    (``https://<ws>/api/2.0/omnigent``) the web UI lives on the
+    (``https://<ws>/api/2.0/agent-meow``) the web UI lives on the
     workspace SPA mount, so the link becomes
-    ``https://<ws>/omnigent/c/<id>`` — with the ``?o=<org>``
-    workspace selector appended when ``omnigent login`` recorded the
+    ``https://<ws>/agent_meow/c/<id>`` — with the ``?o=<org>``
+    workspace selector appended when ``agent-meow login`` recorded the
     org id.
 
     :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:6767"``.

@@ -7,7 +7,7 @@ user-supplied sync ``@tool`` function inline, blocking the
 event loop on every invocation. Concurrent invocations (e.g.
 a parallel fan-out of async client tools) serialized instead
 of running in parallel — and any render loop sharing the
-event loop (``omnigent chat`` TUI) froze for the duration.
+event loop (``agent-meow chat`` TUI) froze for the duration.
 
 Fix: ``execute`` now checks ``inspect.iscoroutinefunction``
 and dispatches sync bodies to ``asyncio.to_thread``.

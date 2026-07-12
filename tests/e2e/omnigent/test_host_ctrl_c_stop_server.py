@@ -1,6 +1,6 @@
-"""E2E coverage for the ``omnigent host`` Ctrl+C stop-server prompt.
+"""E2E coverage for the ``agent-meow host`` Ctrl+C stop-server prompt.
 
-``omnigent host ""`` (local mode) spawns a *detached* background local
+``agent-meow host ""`` (local mode) spawns a *detached* background local
 AP server (:func:`~?agent_meow.host.local_server.ensure_local_omnigent_server`) that
 intentionally outlives the foreground host daemon so sessions and the Web
 UI stay reachable across ``host`` / ``run``. Because users expect Ctrl+C
@@ -21,7 +21,7 @@ and verify the branches against the *actual* server process:
    shows NO prompt and leaves that server running — connect must never
    offer to stop a server it didn't start.
 
-The detached server is the genuine production object (a real ``omnigent
+The detached server is the genuine production object (a real ``agent-meow
 server`` subprocess), so these tests fail loudly if the prompt is dropped,
 wired to the wrong default, fires for a reused server, or if ``y`` fails to
 actually terminate the server — none of which a mock-based test would catch.
@@ -71,7 +71,7 @@ def _connect_env(base_env: Mapping[str, str], home: Path) -> dict[str, str]:
 
     Isolates ``HOME`` so the local-server pidfile, host registry, and sqlite
     db land under the per-test directory (``ensure_local_omnigent_server`` keys its
-    data dir off ``~/.omnigent`` when ``OMNIGENT_DATA_DIR`` is unset),
+    data dir off ``~/.agent-meow`` when ``OMNIGENT_DATA_DIR`` is unset),
     keeping the test from touching the developer's real local server.
 
     :param base_env: Fixture-provided credentials environment, e.g.
@@ -93,12 +93,12 @@ def _spawn_connect(
     env: Mapping[str, str],
 ) -> pexpect.spawn:
     """
-    Spawn ``omnigent host ""`` (local mode) under a real PTY.
+    Spawn ``agent-meow host ""`` (local mode) under a real PTY.
 
     The empty positional argument selects local mode — connect spawns (or
     reuses) the detached local agent-meow server and connects the foreground daemon
     to it. Databricks auth comes from the env (the ``--profile`` flag was
-    removed from the omnigent CLI).
+    removed from the agent-meow CLI).
 
     :param omnigent_python: Python interpreter with agent-meow installed.
     :param repo_root: Checkout root used as the subprocess cwd.
@@ -107,7 +107,7 @@ def _spawn_connect(
     """
     return pexpect.spawn(
         str(omnigent_python),
-        ["-m", "omnigent", "host", ""],
+        ["-m", "agent-meow", "host", ""],
         env=dict(env),
         cwd=str(repo_root),
         encoding="utf-8",
@@ -125,7 +125,7 @@ def _read_local_server_record(home: Path) -> tuple[int, int]:
     :returns: ``(pid, port)`` recorded by ``ensure_local_omnigent_server``.
     :raises AssertionError: If the pidfile is missing or malformed.
     """
-    pid_path = home / ".omnigent" / "local_server.pid"
+    pid_path = home / ".agent-meow" / "local_server.pid"
     try:
         lines = pid_path.read_text().strip().splitlines()
         return int(lines[0]), int(lines[1])

@@ -180,7 +180,7 @@ def _databrickscfg_path() -> Path:
     """Return the active Databricks config file path.
 
     Honors ``DATABRICKS_CONFIG_FILE`` so callers that want to operate on
-    a temporary copy (e.g. during ``omnigent setup``) can redirect all
+    a temporary copy (e.g. during ``agent-meow setup``) can redirect all
     direct configparser writes without touching the user's real file.
     """
     env = os.environ.get("DATABRICKS_CONFIG_FILE")
@@ -525,7 +525,7 @@ def login_databricks_workspace(workspace_url: str, *, console: Console | None = 
     persist a ``kind: databricks`` provider keyed on it. This is the only
     place agent-meow triggers a Databricks CLI login: it fires solely when
     a user explicitly adds a Databricks provider in
-    ``omnigent setup --no-internal-beta``, never on a bare ``omnigent run``.
+    ``agent-meow setup --no-internal-beta``, never on a bare ``agent-meow run``.
 
     Idempotent: when a profile already points at this host (the OAuth token
     cache is host-keyed, so the login is still valid), it is reused without
@@ -591,7 +591,7 @@ def login_databricks_workspace(workspace_url: str, *, console: Console | None = 
 
 def maybe_run_onboarding() -> None:
     """
-    Pre-flight onboarding for ``omnigent run``.
+    Pre-flight onboarding for ``agent-meow run``.
 
     Fast path on every call: read ``~/.databrickscfg``, classify
     profiles, and:
@@ -624,7 +624,7 @@ def maybe_run_onboarding() -> None:
         n = _apply_silent_aliases(actions.aliasable, console)
         if n:
             console.print(
-                f"omnigent: aliased {n} existing profile(s) "
+                f"agent-meow: aliased {n} existing profile(s) "
                 f"to agent-meow names: "
                 f"{', '.join(spec.name for _, spec in actions.aliasable)}"
             )
@@ -648,6 +648,6 @@ def maybe_run_onboarding() -> None:
         run_onboarding()
     else:
         console.print(
-            "  [dim]run `omnigent setup --internal-beta` when ready "
+            "  [dim]run `agent-meow setup --internal-beta` when ready "
             f"(or `{SKIP_ENV_VAR}=1` to silence).[/dim]"
         )

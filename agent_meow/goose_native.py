@@ -1,8 +1,8 @@
 """Native Goose TUI wrapper for the agent-meow CLI.
 
-``omnigent goose`` launches Block's Goose CLI interactive TUI (``goose session``)
+``agent-meow goose`` launches Block's Goose CLI interactive TUI (``goose session``)
 inside an agent-meow-runner-owned tmux terminal and attaches the local TTY — the
-goose analog of ``omnigent cursor`` / ``omnigent codex`` / ``omnigent pi``. The
+goose analog of ``agent-meow cursor`` / ``agent-meow codex`` / ``agent-meow pi``. The
 runner spawns the process (see
 :func:`~?agent_meow.runner.app._auto_create_goose_terminal`); this module owns the
 CLI-side orchestration: session create/resume, daemon runner bind, terminal-ready
@@ -187,7 +187,7 @@ def run_goose_native(
 
 def _materialize_goose_agent_spec(tmpdir: Path) -> Path:
     """
-    Write the terminal-first agent spec used by ``omnigent goose``.
+    Write the terminal-first agent spec used by ``agent-meow goose``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :returns: Path to the generated YAML spec.
@@ -292,7 +292,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the omnigent server at {base_url}. "
+            f"Could not reach the agent-meow server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc

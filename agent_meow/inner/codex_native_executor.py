@@ -36,7 +36,7 @@ _logger = logging.getLogger(__name__)
 
 class CodexNativeExecutor(Executor):
     """
-    Harness-side executor for ``omnigent codex`` web UI turns.
+    Harness-side executor for ``agent-meow codex`` web UI turns.
 
     :param bridge_dir: Optional bridge directory override. ``None``
         reads :data:`CODEX_NATIVE_BRIDGE_DIR_ENV_VAR`.
@@ -344,7 +344,7 @@ def _latest_user_input_items(messages: list[Message], bridge_dir: Path) -> list[
 
     :param messages: Executor message list.
     :param bridge_dir: Bridge directory for materializing image/file
-        attachments, e.g. ``Path("/tmp/omnigent/codex-native/<digest>")``.
+        attachments, e.g. ``Path("/tmp/agent_meow/codex-native/<digest>")``.
     :returns: Codex ``turn/start``/``turn/steer`` input items, or ``[]``
         when there is no user content to send.
     """
@@ -429,6 +429,6 @@ def _file_block_to_input_item(block: dict[str, Any], bridge_dir: Path) -> dict[s
         # Marker format is load-bearing: codex echoes this text item back
         # in the mirrored user message, and title seeding strips lines
         # matching _ATTACHMENT_MARKER_RE in
-        # omnigent/entities/conversation.py. Keep in sync.
+        # agent_meow/entities/conversation.py. Keep in sync.
         return {"type": "text", "text": f"[Attached file: {path}]"}
     return None

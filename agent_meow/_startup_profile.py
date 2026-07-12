@@ -22,7 +22,7 @@ class StartupProfiler:
     helpers are initialized.
 
     :param name: Human-readable launch name, e.g.
-        ``"omnigent claude"``.
+        ``"agent-meow claude"``.
     :param enabled: Whether calls to :meth:`mark` should print.
     :param clock: Monotonic clock returning seconds, e.g.
         :func:`time.perf_counter`.
@@ -63,7 +63,7 @@ class StartupProfiler:
         Build a profiler from an explicit flag or environment variable.
 
         :param name: Human-readable launch name, e.g.
-            ``"omnigent claude"``.
+            ``"agent-meow claude"``.
         :param env_var: Environment variable that enables profiling,
             e.g. ``"OMNIGENT_CLAUDE_STARTUP_PROFILE"``.
         :param explicit: ``True`` when the caller requested profiling

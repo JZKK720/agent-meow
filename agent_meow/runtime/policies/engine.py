@@ -495,7 +495,7 @@ class PolicyEngine:
         - The key has a declared ``LabelDef.values`` list and
           the new value is not in it.
 
-        Keys with no ``LabelDef`` are set freely (omnigent
+        Keys with no ``LabelDef`` are set freely (agent-meow
         parity — "unschema'd labels set freely"). The engine
         applies the filtered dict in a single UPSERT through
         the store so either every surviving write lands or

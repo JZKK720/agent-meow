@@ -1,6 +1,6 @@
-"""E2E test for ``omnigent chat`` — local mode with mock LLM.
+"""E2E test for ``agent-meow chat`` — local mode with mock LLM.
 
-Verifies that ``omnigent chat ./agent-dir/`` starts a server, opens the
+Verifies that ``agent-meow chat ./agent-dir/`` starts a server, opens the
 REPL, and the agent responds. Since the REPL is interactive, we
 test by directly calling the local mode components rather than
 launching the full CLI.
@@ -132,11 +132,11 @@ def test_chat_local_starts_server_and_agent_responds(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent chat ./agent-dir/`` starts a local server with the agent
+    ``agent-meow chat ./agent-dir/`` starts a local server with the agent
     and the agent can respond to messages.
 
     Tests the server startup and agent registration path used by
-    ``omnigent chat`` in local mode. Since the REPL itself is interactive,
+    ``agent-meow chat`` in local mode. Since the REPL itself is interactive,
     we verify the underlying server works by sending a direct HTTP
     request through the sessions API.
 
@@ -211,8 +211,8 @@ def test_chat_local_accepts_omnigent_yaml_file(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent chat examples/coding_supervisor.yaml`` (or any
-    standalone omnigent YAML) now starts the local server and
+    ``agent-meow chat examples/coding_supervisor.yaml`` (or any
+    standalone agent-meow YAML) now starts the local server and
     registers the agent under its spec-declared name.
 
     The YAML path exercises the new ``materialize_bundle`` code
@@ -226,7 +226,7 @@ def test_chat_local_accepts_omnigent_yaml_file(
     - ``materialize_bundle``'s file branch produces the wrong
       dir shape and ``_find_omnigent_yaml_in_dir`` misses the
       YAML.
-    - Agent-plane's spec dispatch stops routing omnigent YAMLs
+    - Agent-plane's spec dispatch stops routing agent-meow YAMLs
       through ``load_omnigent_yaml``.
 
     :param mock_llm_server_url: Mock LLM server base URL.
@@ -242,7 +242,7 @@ def test_chat_local_accepts_omnigent_yaml_file(
     model = f"mock-chat-yaml-{uuid.uuid4().hex[:6]}"
     agent_name = "yaml-e2e-probe"
 
-    # Inline fixture: minimal omnigent YAML with the openai-agents harness
+    # Inline fixture: minimal agent-meow YAML with the openai-agents harness
     # wired to the mock server. Self-contained so an edit to the real
     # ``examples/hello_world.yaml`` can't flake this test.
     yaml_path = tmp_path / "yaml-e2e-probe.yaml"

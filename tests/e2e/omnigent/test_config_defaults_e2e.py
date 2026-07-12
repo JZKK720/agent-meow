@@ -1,12 +1,12 @@
-"""E2E tests for ``omnigent config --global`` defaults (mock LLM).
+"""E2E tests for ``agent-meow config --global`` defaults (mock LLM).
 
 Migrated to mock LLM: tests 1 and 2 never used LLM (config commands
-only). Test 3 uses ``omnigent run`` with a mock model so no real
+only). Test 3 uses ``agent-meow run`` with a mock model so no real
 credentials are needed.
 
 Unit-level coverage of the config command lives in
 ``tests/cli/test_cli.py``. These tests close the subprocess boundary
-gap: does one ``omnigent config`` invocation write a file that the
+gap: does one ``agent-meow config`` invocation write a file that the
 next invocation reads back correctly?
 """
 
@@ -49,9 +49,9 @@ def _run_omnigent(
     args: list[str],
     stdin: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Spawn ``python -m omnigent <args>`` with the given env."""
+    """Spawn ``python -m agent-meow <args>`` with the given env."""
     return subprocess.run(
-        [str(omnigent_python), "-m", "omnigent", *args],
+        [str(omnigent_python), "-m", "agent-meow", *args],
         env=env,
         cwd=str(omnigent_repo_root),
         input=stdin,
@@ -93,7 +93,7 @@ def test_global_config_write_then_list_roundtrips(
         f"config set --global write failed: stdout={write.stdout!r} stderr={write.stderr!r}"
     )
 
-    config_path = home / ".omnigent" / "config.yaml"
+    config_path = home / ".agent-meow" / "config.yaml"
     assert config_path.is_file(), f"Expected config at {config_path} after write; not found."
 
     listed = _run_omnigent(
@@ -171,7 +171,7 @@ def test_global_config_unknown_key_rejected_at_subprocess_boundary(
         f"Expected the unknown key name in the error message; "
         f"got stdout={result.stdout!r} stderr={result.stderr!r}"
     )
-    config_path = home / ".omnigent" / "config.yaml"
+    config_path = home / ".agent-meow" / "config.yaml"
     assert not config_path.exists() or "bogus_key" not in config_path.read_text(), (
         f"Invalid key was persisted to {config_path}; write should "
         f"have been rejected before touching the file."
@@ -187,7 +187,7 @@ def test_global_config_default_agent_drives_bare_omnigent(
 ) -> None:
     """
     A ``default_agent`` set via ``config set --global`` is honored by
-    bare ``omnigent -p ...`` (no AGENT arg).
+    bare ``agent-meow -p ...`` (no AGENT arg).
 
     Uses mock LLM so the run path exercises the full pipeline
     without real credentials.
@@ -230,7 +230,7 @@ def test_global_config_default_agent_drives_bare_omnigent(
         args=["run", "-p", "say hi in 5 words", "--no-session", "--no-log"],
     )
     assert run.returncode == 0, (
-        f"bare ``omnigent run`` with global default_agent failed: "
+        f"bare ``agent-meow run`` with global default_agent failed: "
         f"stdout={run.stdout!r} stderr={run.stderr!r}"
     )
     assert len(run.stdout.strip()) >= 4, (

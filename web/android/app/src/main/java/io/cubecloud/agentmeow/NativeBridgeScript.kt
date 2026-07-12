@@ -48,7 +48,7 @@ object NativeBridgeScript {
           else document.addEventListener("DOMContentLoaded", ensureViewportFit, { once: true });
 
           // Apply the OS safe area to the layout from the native side. emitInsets
-          // feeds --omnigent-safe-top/bottom (the app's own inset vars), but on a
+          // feeds --agent-meow-safe-top/bottom (the app's own inset vars), but on a
           // server whose web build predates the Android shell the inset-aware rules
           // lose the cascade: their semantic selectors (.chat-conversation-content
           // etc., specificity 0,1,0) tie with the Tailwind utility classes on the
@@ -60,13 +60,13 @@ object NativeBridgeScript {
           // Android WebView reports as 0, so it needs the override even pre-Tailwind.
           const ensureInsetStyles = () => {
             if (document.getElementById("agentmeow-android-insets")) return;
-            const T = "var(--omnigent-safe-top, 0px)";
-            const B = "var(--omnigent-safe-bottom, 0px)";
+            const T = "var(--agent-meow-safe-top, 0px)";
+            const B = "var(--agent-meow-safe-bottom, 0px)";
             const style = document.createElement("style");
             style.id = "agentmeow-android-insets";
             style.textContent = [
               ".chat-header{top:max(0px, calc(" + T + " - 0.5rem)) !important}",
-              ".chat-conversation-content{padding-top:calc(var(--omnigent-header-height, 3.5rem) + 1.5rem + " + T + ") !important}",
+              ".chat-conversation-content{padding-top:calc(var(--agent-meow-header-height, 3.5rem) + 1.5rem + " + T + ") !important}",
               ".main-terminal-view{padding-top:calc(3.25rem + " + T + ") !important}",
               // Bottom inset belongs on whichever element is bottom-most per mode:
               // the composer in regular chat, the switcher pill in terminal-first

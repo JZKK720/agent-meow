@@ -683,7 +683,7 @@ def test_candidate_agy_rpc_ports_falls_back_to_proc_net_tcp(
     monkeypatch.setattr(rpc, "_list_agy_pids", lambda: [72753])
     monkeypatch.setattr(rpc, "_run_lsof_listen_ports", lambda pid: "")  # lsof attributes nothing
     monkeypatch.setattr(rpc, "_list_loopback_listen_ports", lambda: [6767, 44955, 37479])
-    # Only agy's TLS connect-RPC port answers Heartbeat (6767=omnigent, 37479=agy plain-HTTP).
+    # Only agy's TLS connect-RPC port answers Heartbeat (6767=agent-meow, 37479=agy plain-HTTP).
     monkeypatch.setattr(rpc, "_heartbeat_ok", lambda port: port == 44955)
     assert rpc._candidate_agy_rpc_ports() == [44955]
 

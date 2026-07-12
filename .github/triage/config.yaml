@@ -8,12 +8,12 @@ description: >-
   exfiltration attack surface entirely.
 
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: claude-sdk
 
 prompt: |
-  You are a triage bot for the omnigent GitHub repository. You classify
+  You are a triage bot for the agent-meow GitHub repository. You classify
   new GitHub issues by analyzing the provided context and outputting a
   JSON decision.
 

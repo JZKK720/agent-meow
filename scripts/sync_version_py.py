@@ -1,4 +1,4 @@
-"""Sync ``omnigent/version.py``'s ``VERSION`` to the canonical pyproject version.
+"""Sync ``agent_meow/version.py``'s ``VERSION`` to the canonical pyproject version.
 
 The root ``pyproject.toml``'s ``[project].version`` is the single source of
 truth for the release version (stamped in lockstep with the SDK packages by
@@ -35,9 +35,9 @@ import tomllib
 # scripts/sync_version_py.py -> repo root is one level up.
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _PYPROJECT = _REPO_ROOT / "pyproject.toml"
-_VERSION_PY = _REPO_ROOT / "omnigent" / "version.py"
+_VERSION_PY = _REPO_ROOT / "agent-meow" / "version.py"
 
-# The ``VERSION = "..."`` assignment (its own line) in omnigent/version.py.
+# The ``VERSION = "..."`` assignment (its own line) in agent_meow/version.py.
 _VERSION_ASSIGN = re.compile(r'^VERSION = "[^"]*"$', re.MULTILINE)
 
 
@@ -49,7 +49,7 @@ def _canonical_version() -> str:
 def _current_constant(text: str) -> str:
     """Return the ``VERSION`` literal currently in *text*.
 
-    :param text: Contents of ``omnigent/version.py``.
+    :param text: Contents of ``agent_meow/version.py``.
     :returns: The quoted value of the ``VERSION`` assignment.
     :raises ValueError: If the assignment is missing or not unique.
     """

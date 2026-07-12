@@ -1,4 +1,4 @@
-"""Goose readiness + config reporting for ``omnigent setup``.
+"""Goose readiness + config reporting for ``agent-meow setup``.
 
 Unlike :mod:`~?agent_meow.onboarding.cursor_auth`, agent-meow manages **no** Goose
 credentials: Goose owns its own auth via ``goose configure`` (keyring or

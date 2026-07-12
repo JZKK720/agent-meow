@@ -1016,7 +1016,7 @@ def test_translate_event_mcp_tool_call_request_emits_observed_with_bare_name() -
     What this proves: the user sees ``⏵ sys_terminal_launch`` in
     the REPL, not ``⏵ mcp__omnigent__sys_terminal_launch`` — the
     agent-meow wire shape and persisted store items carry the bare name
-    (per ``omnigent/runtime/workflow.py``'s
+    (per ``agent_meow/runtime/workflow.py``'s
     ``_observed_tool_call_sse_dicts``); a regression that
     surfaced the MCP-prefixed name in the SSE event would
     cause the REPL's `⏵` line to display the noisy prefix.

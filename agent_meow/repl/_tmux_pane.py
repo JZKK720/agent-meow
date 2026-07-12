@@ -4,20 +4,20 @@ Tmux pane integration for the REPL.
 When the REPL boots inside a tmux pane (``$TMUX`` set), this module:
 
 1. Marks the pane with custom options so other tooling can identify
-   it as an omnigent pane and recover the launch args.
+   it as an agent-meow pane and recover the launch args.
 2. Discovers the user's existing prefix-table ``split-window`` /
    ``new-window`` bindings and rewrites each one with an
    ``if-shell -F`` wrapper that:
 
    - When the focused pane has the ``@omnigent-conv-id`` option set
-     (i.e. it's an omnigent pane), runs ``omnigent pane-split``
+     (i.e. it's an agent-meow pane), runs ``agent-meow pane-split``
      to launch the chooser in a new pane.
    - Otherwise, runs the user's exact original command unchanged.
 
 The wrap-not-replace mechanism preserves bit-identical behavior in
-non-omnigent panes (the else branch is the user's untouched
+non-agent-meow panes (the else branch is the user's untouched
 command), so the global mutation of the ``prefix`` table is
-behaviorally invisible everywhere except inside an omnigent pane.
+behaviorally invisible everywhere except inside an agent-meow pane.
 
 See ``designs/REPL_TMUX_PANE_SPLIT.md`` for the full design.
 """
@@ -48,23 +48,23 @@ _LOGGER = logging.getLogger(__name__)
 # they survive until the user restarts tmux or runs
 # ``tmux unbind-key -T prefix '"'`` (etc.) by hand. That's fine
 # for the disabled-default state because the wrappers' false
-# branch is the user's exact original command, so non-omnigent
+# branch is the user's exact original command, so non-agent-meow
 # panes keep working.
 PANE_INTEGRATION_ENABLED = False
 
-# Pane-option keys we set on the omnigent pane. Each is read by
-# ``omnigent pane-picker`` to reconstruct the launch context for
+# Pane-option keys we set on the agent-meow pane. Each is read by
+# ``agent-meow pane-picker`` to reconstruct the launch context for
 # the new pane.
 OPT_CONV_ID = "@omnigent-conv-id"
 OPT_AGENT_NAME = "@omnigent-agent-name"
 OPT_AGENT_YAML = "@omnigent-agent-yaml"
 OPT_LAUNCH_ARGV = "@omnigent-launch-argv"
-OPT_SERVER_URL = "@omnigent-server-url"
+OPT_SERVER_URL = "@agent-meow-server-url"
 
 # Sentinel value for ``OPT_CONV_ID`` before the first conversation
 # id is known. The wrapper's ``#{?#{@omnigent-conv-id},...}``
 # truthiness check fires for any non-empty string, so this
-# preserves "yes, this is an omnigent pane" even when there's no
+# preserves "yes, this is an agent-meow pane" even when there's no
 # real conv id yet.
 _PENDING_CONV_ID = "pending"
 
@@ -86,11 +86,11 @@ class SplitBinding:
     :param key: The tmux key spec, e.g. ``'"'`` or ``'|'`` or ``'c'``.
     :param direction: One of ``'v'`` (vertical split), ``'h'``
         (horizontal split), or ``'w'`` (new window/tab) — the flag
-        value passed to ``omnigent pane-split``.
+        value passed to ``agent-meow pane-split``.
     :param original_command: The full command string from the
         user's existing binding, e.g. ``'split-window -c
         "#{pane_current_path}"'`` — re-emitted verbatim in the
-        wrapper's else branch so non-omnigent panes get
+        wrapper's else branch so non-agent-meow panes get
         bit-identical behavior.
     """
 
@@ -143,16 +143,16 @@ def _tmux_version_ok() -> bool:
 def _resolve_omnigent_argv() -> list[str]:
     """
     Resolve a callable argv prefix for invoking the running
-    omnigent installation from a context that doesn't share our
+    agent-meow installation from a context that doesn't share our
     PATH (tmux's ``run-shell`` and ``split-window`` inherit the
     tmux server's environment, not the calling user's shell).
 
     Resolution order:
 
     1. ``sys.argv[0]`` is path-shaped (contains ``/``) — abspath
-       it. Covers ``./.venv/bin/omnigent …`` and absolute-path
+       it. Covers ``./.venv/bin/agent-meow …`` and absolute-path
        invocations.
-    2. ``sys.argv[0]`` is a bare name like ``"omnigent"`` — try
+    2. ``sys.argv[0]`` is a bare name like ``"agent-meow"`` — try
        :func:`shutil.which` against the running process's PATH.
        The Python process inherits PATH from the user's shell at
        launch, so an activated venv typically resolves correctly.
@@ -193,7 +193,7 @@ def _resolve_omnigent_argv() -> list[str]:
 
 # User-facing click subcommand names that mark the start of the
 # user's args inside a ``launch_argv``. Anything BEFORE the first
-# match is the launcher prefix (the omnigent binary, ``python
+# match is the launcher prefix (the agent-meow binary, ``python
 # -m agent_meow.cli``, etc.) and gets stripped during
 # normalization. Keep in sync with ``cli.py:_CLICK_SUBCOMMANDS``;
 # duplicating the set here avoids importing ``cli`` from this
@@ -219,7 +219,7 @@ def _user_args_after_launcher(launch_argv: list[str]) -> list[str]:
     there.
 
     :param launch_argv: ``sys.argv`` (or stored ``launch_argv``)
-        of the running ``omnigent`` invocation.
+        of the running ``agent-meow`` invocation.
     :returns: The user's portion of the argv. Empty list when
         no recognized subcommand is found (degenerate input —
         the caller writes the empty list to the pane option,
@@ -328,11 +328,11 @@ def _classify(cmd_tokens: list[str]) -> str | None:
     commands, custom shell wrappers all return ``None`` and are
     left untouched. The user's exotic split commands keep their
     original behavior in all panes; they just don't get chooser
-    routing in omnigent panes. Acceptable v1 limitation.
+    routing in agent-meow panes. Acceptable v1 limitation.
 
     :param cmd_tokens: The command portion of a bind-key line,
         e.g. ``['split-window', '-h', '-c', '#{pane_current_path}']``.
-    :returns: Direction code consumed by ``omnigent pane-split``,
+    :returns: Direction code consumed by ``agent-meow pane-split``,
         or ``None``.
     """
     if not cmd_tokens:
@@ -362,7 +362,7 @@ _WRAPPER_MARKER_FORMAT = "#{?#{@omnigent-conv-id},1,0}"
 
 def _unwrap_existing_wrapper(cmd_tokens: list[str]) -> list[str] | None:
     """
-    Peel off an existing omnigent wrapper to recover the user's
+    Peel off an existing agent-meow wrapper to recover the user's
     original command tokens.
 
     Detection: ``cmd_tokens`` starts with ``if-shell -F
@@ -396,13 +396,13 @@ def _discover_split_bindings() -> list[SplitBinding]:
     Walk ``tmux list-keys -T prefix`` and yield user bindings that
     map to ``split-window`` / ``new-window``. Mirroring the user's
     existing keys preserves their muscle memory inside the
-    omnigent pane.
+    agent-meow pane.
 
     Bindings whose command can't be tokenized (lambda blocks),
     isn't a top-level ``split-window`` / ``new-window``, or has
-    an unfamiliar flag set, are silently skipped. Non-omnigent
+    an unfamiliar flag set, are silently skipped. Non-agent-meow
     panes still see those bindings unchanged (they're never
-    rewritten); omnigent panes just don't get chooser routing
+    rewritten); agent-meow panes just don't get chooser routing
     on those keys.
     """
     out: list[SplitBinding] = []
@@ -438,23 +438,23 @@ def _wrap_binding(binding: SplitBinding, omnigent_argv: list[str]) -> None:
     Replace one of the user's prefix-table bindings with an
     ``if-shell -F`` wrapper.
 
-    True branch (focused pane is an omnigent — the
+    True branch (focused pane is an agent-meow — the
     ``@omnigent-conv-id`` option is set and non-empty): run
-    the resolved ``omnigent pane-split`` invocation via
+    the resolved ``agent-meow pane-split`` invocation via
     ``run-shell``. False branch: the user's exact original
     command, unchanged.
 
     Using ``if-shell -F`` makes the conditional a pure tmux
     format-string evaluation — no shell process is spawned for
     the dispatch, only for the chooser's ``run-shell`` itself
-    when the omnigent branch fires.
+    when the agent-meow branch fires.
 
     :param binding: One of the user's prefix-table split-window /
         new-window bindings.
     :param omnigent_argv: Argv prefix for invoking the running
-        omnigent installation, as returned by
+        agent-meow installation, as returned by
         :func:`_resolve_omnigent_argv`. Length 1 (e.g.
-        ``["/venv/bin/omnigent"]``) for a direct binary
+        ``["/venv/bin/agent-meow"]``) for a direct binary
         invocation, or length 3 (``[sys.executable, "-m",
         "agent_meow.cli"]``) for the python-m fallback. Either
         works because the entire prefix is shlex-quoted into
@@ -503,7 +503,7 @@ def register_pane(
     server_url: str | None,
 ) -> None:
     """
-    Mark the current tmux pane as an omnigent pane and wrap the
+    Mark the current tmux pane as an agent-meow pane and wrap the
     user's prefix-table split bindings.
 
     No-op when:
@@ -527,7 +527,7 @@ def register_pane(
         running against a remote URL where the spec lives on the
         server. Forwarded to chooser-launched siblings via
         ``OPT_AGENT_YAML``.
-    :param launch_argv: ``sys.argv`` of the running ``omnigent
+    :param launch_argv: ``sys.argv`` of the running ``agent-meow
         run`` process. Re-played verbatim by the chooser when the
         user picks "new conversation with same agent".
     :param server_url: agent-meow server base URL (e.g.
@@ -559,22 +559,22 @@ def register_pane(
         return
     pane_id = _tmux_pane_id()
     if pane_id is None:
-        _LOGGER.warning("$TMUX is set but $TMUX_PANE is not — skipping omnigent pane integration")
+        _LOGGER.warning("$TMUX is set but $TMUX_PANE is not — skipping agent-meow pane integration")
         return
     if not _tmux_version_ok():
         _LOGGER.warning(
-            "tmux >= %s required for omnigent pane integration; skipping",
+            "tmux >= %s required for agent-meow pane integration; skipping",
             ".".join(str(n) for n in _MIN_TMUX_VERSION),
         )
         return
 
-    # Resolve a callable ``omnigent`` argv prefix. tmux's
+    # Resolve a callable ``agent-meow`` argv prefix. tmux's
     # ``run-shell`` (used by the wrapper) and ``split-window``
     # (used by ``pane-split``) inherit the tmux server's PATH,
     # which typically doesn't include the venv ``bin/`` where
-    # ``omnigent`` lives — so a bare ``omnigent`` exits 127.
+    # ``agent-meow`` lives — so a bare ``agent-meow`` exits 127.
     # ``sys.argv[0]`` is the bare name when the user invoked us
-    # via ``$PATH`` (e.g. typed ``omnigent`` after activating
+    # via ``$PATH`` (e.g. typed ``agent-meow`` after activating
     # a venv), so we can't just pass through ``launch_argv[0]``.
     # See :func:`_resolve_omnigent_argv` for the resolution
     # ladder (abspath → ``shutil.which`` → ``python -m`` fallback).
@@ -587,7 +587,7 @@ def register_pane(
     # (``run agent.yaml …``) survive untouched.
     #
     # Idempotency under repeat calls: ``_user_args_after_launcher``
-    # walks past leading launcher tokens (the omnigent binary,
+    # walks past leading launcher tokens (the agent-meow binary,
     # ``python``, ``-m``, ``agent_meow.cli`` — including doubled
     # forms left by an earlier buggy register_pane) and returns
     # everything from the first user-facing click subcommand
@@ -638,7 +638,7 @@ def read_pane_option(pane_id: str, name: str) -> str | None:
     Read one custom option from a tmux pane.
 
     Returns ``None`` when the option isn't set or when the tmux
-    invocation fails. Used by ``omnigent pane-picker`` to
+    invocation fails. Used by ``agent-meow pane-picker`` to
     recover the parent pane's launch context.
 
     :param pane_id: Target pane, e.g. ``"%0"``.

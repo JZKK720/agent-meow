@@ -1,4 +1,4 @@
-"""Extended tests for database utilities (omnigent/db/utils.py).
+"""Extended tests for database utilities (agent_meow/db/utils.py).
 
 Covers public utilities NOT already tested in test_utils.py:
 - normalize_database_url

@@ -304,7 +304,7 @@ def write_policy_hook_config(
 
     1. A ``pre_tool_call`` shell hook that evaluates tool calls against the
        agent-meow policy engine (same hook the headless ``hermes`` harness uses).
-    2. An ``mcp_servers.omnigent`` entry that launches the agent-meow MCP stdio
+    2. An ``mcp_servers.agent-meow`` entry that launches the agent-meow MCP stdio
        server (``serve-mcp``), exposing agent-meow builtin tools
        (``sys_session_*``, ``sys_agent_*``, ``load_skill``, ``web_fetch``, etc.)
        to the Hermes model.
@@ -354,7 +354,7 @@ def write_policy_hook_config(
     # agent-meow builtin tools (sys_session_*, sys_agent_*, load_skill, etc.).
     config["mcp_servers"] = {
         **config.get("mcp_servers", {}),
-        "omnigent": {
+        "agent-meow": {
             "command": sys.executable,
             "args": [
                 "-m",

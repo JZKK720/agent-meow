@@ -50,7 +50,7 @@ _TEST_HARNESS_MODULE = "tests.runtime.harnesses._test_scaffold_harnesses"
 # Unit tests for cap_tool_output itself live in tests/runtime/test_tool_output.py
 # (mirroring its source module). The integration test below proves the cap is
 # wired into the scaffold's dispatch_tool emit path.
-_TRUNCATION_MARKER = "[output truncated by omnigent:"
+_TRUNCATION_MARKER = "[output truncated by agent-meow:"
 
 
 @dataclass

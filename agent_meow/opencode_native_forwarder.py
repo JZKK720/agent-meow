@@ -68,7 +68,7 @@ _STATUS_FAILED = "failed"
 # Appended to a failed edge's output when opencode reports a provider-auth
 # error so the web surface can prompt a re-auth (matches the codex-native
 # ``_CODEX_REAUTH_HINT`` phrasing; ``opencode auth login`` per
-# ``omnigent/onboarding/opencode_auth.py``).
+# ``agent_meow/onboarding/opencode_auth.py``).
 _OPENCODE_REAUTH_HINT = (
     "OpenCode needs you to re-authenticate. Run `opencode auth login` and retry."
 )
@@ -469,7 +469,7 @@ class OpenCodeNativeForwarder:
         part_type = part.get("type")
         if part_type == "text":
             # A native-server forwarder is the SOLE source of the conversation
-            # transcript (omnigent persists no separate user item for these
+            # transcript (agent-meow persists no separate user item for these
             # harnesses — mirrors codex-native). So the USER message must be
             # posted here, BEFORE its assistant reply, or the chat shows the
             # assistant turns with no/late user messages. Assistant text is

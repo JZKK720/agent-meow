@@ -1,13 +1,13 @@
-"""CLI-side auth storage for ``omnigent login``.
+"""CLI-side auth storage for ``agent-meow login``.
 
-Persists per-server auth state in ``~/.omnigent/auth_tokens.json``
+Persists per-server auth state in ``~/.agent_meow/auth_tokens.json``
 keyed by server URL. Two record shapes live side by side:
 
 - **Session JWTs** from the browser-based OIDC / accounts login flow
   (``{"token": ..., "user_id": ..., "expires_at": ...}``).
 - **Databricks Apps pointer records**
   (``{"auth_type": "databricks", "workspace_host": ...}``) written by
-  ``omnigent login <apps-url>``. These deliberately store NO token:
+  ``agent-meow login <apps-url>``. These deliberately store NO token:
   Databricks OAuth access tokens expire after ~1 hour, so the record
   just names the workspace whose host-keyed Databricks CLI OAuth cache
   (``databricks auth login --host <ws>``) mints fresh bearers on
@@ -32,9 +32,9 @@ _TOKEN_FILE_NAME = "auth_tokens.json"
 def _token_file_path() -> Path:
     """Return the path to the auth token storage file.
 
-    Uses the shared ``~/.omnigent`` state directory.
+    Uses the shared ``~/.agent-meow`` state directory.
 
-    :returns: Path to ``~/.omnigent/auth_tokens.json``.
+    :returns: Path to ``~/.agent_meow/auth_tokens.json``.
     """
     from omnigent_ui_sdk.terminal._config import state_dir
 
@@ -56,7 +56,7 @@ def _normalize_server_url(server_url: str) -> str:
 def _store_entry(server_url: str, entry: dict[str, str | float]) -> None:
     """Create or update a server's record in the auth-tokens file.
 
-    Writes ``~/.omnigent/auth_tokens.json`` with user-only
+    Writes ``~/.agent_meow/auth_tokens.json`` with user-only
     read/write permissions (``0o600``) — the file may hold session
     JWTs, which are sensitive.
 
@@ -208,7 +208,7 @@ def load_databricks_org_id(server_url: str) -> str | None:
     """Load the workspace org id from a Databricks pointer record.
 
     :param server_url: The server URL, e.g.
-        ``"https://example.databricks.com/api/2.0/omnigent"``.
+        ``"https://example.databricks.com/api/2.0/agent-meow"``.
     :returns: The org id, e.g. ``"2850744067564480"``, or ``None``
         when the stored record (if any) is not a Databricks pointer
         record or carries no org id.
@@ -233,7 +233,7 @@ def databricks_request_headers(
 
     The single source of truth for server-request headers. It always
     includes the :data:`DATABRICKS_ORG_ID_HEADER` workspace-routing header
-    when ``omnigent login https://<host>/?o=<id>`` recorded a selector, and
+    when ``agent-meow login https://<host>/?o=<id>`` recorded a selector, and
     adds ``Authorization`` when a bearer is supplied. Folding both into one
     builder makes routing travel with auth: a caller that has a token gets
     routing for free, and a caller whose credential is set elsewhere (an
@@ -244,7 +244,7 @@ def databricks_request_headers(
     local-unauthenticated callers get ``{}`` and are unaffected.
 
     :param server_url: The server URL, e.g.
-        ``"https://example.databricks.com/api/2.0/omnigent"``.
+        ``"https://example.databricks.com/api/2.0/agent-meow"``.
     :param bearer_token: The workspace bearer token, or ``None`` when the
         credential is supplied by a separate mechanism (or there is none).
     :returns: A header dict carrying ``Authorization`` and/or

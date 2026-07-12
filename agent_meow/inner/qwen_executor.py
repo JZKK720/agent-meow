@@ -552,7 +552,7 @@ class QwenExecutor(Executor):
             _AGENT_METHOD_INITIALIZE,
             {
                 "protocolVersion": _PROTOCOL_VERSION,
-                "clientInfo": {"name": "omnigent", "version": "1.0"},
+                "clientInfo": {"name": "agent-meow", "version": "1.0"},
                 # Advertise fs delegation so qwen routes file reads/writes back
                 # to us (executed via the OSEnvironment) rather than touching
                 # disk directly. qwen's AcpFileSystemService swaps in only when
@@ -662,7 +662,7 @@ class QwenExecutor(Executor):
             else:
                 error = {
                     "code": -32601,
-                    "message": f"omnigent: unsupported ACP request method {method!r}",
+                    "message": f"agent-meow: unsupported ACP request method {method!r}",
                 }
         except _AcpRequestError as exc:
             # A handler-raised, client-facing failure (e.g. file not found):
@@ -696,7 +696,7 @@ class QwenExecutor(Executor):
         if self._os_environment is None:
             env = create_os_environment(self._os_env)
             if env is None:
-                raise _AcpRequestError(-32603, "omnigent: no os_env for fs delegation")
+                raise _AcpRequestError(-32603, "agent-meow: no os_env for fs delegation")
             self._os_environment = env
         return self._os_environment
 

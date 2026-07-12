@@ -26,7 +26,7 @@ import pytest
 from agent_meow.spec import load
 from agent_meow.spec.types import AgentSpec
 
-# tests/e2e/omnigent/test_example_scribe.py -> repo root is 3 parents up.
+# tests/e2e/agent_meow/test_example_scribe.py -> repo root is 3 parents up.
 _SCRIBE_BUNDLE = Path(__file__).resolve().parents[3] / "examples" / "scribe"
 
 

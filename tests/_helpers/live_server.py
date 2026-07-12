@@ -184,7 +184,7 @@ def start_live_server(
             str(artifact_dir),
         ],
         env=env,
-        # Compat mode: neutral CWD so the worktree's omnigent/ on sys.path[0]
+        # Compat mode: neutral CWD so the worktree's agent_meow/ on sys.path[0]
         # doesn't shadow the pinned old install. None (inherit) otherwise.
         cwd=compat_server_cwd(),
         stdout=log_handle,

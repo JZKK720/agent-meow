@@ -71,7 +71,7 @@ def _extract_response_text(response: Any) -> str:
     Handles two shapes:
 
     - ``output_text`` property (OpenAI SDK ``Response``).
-    - ``output[0].content[0].text`` (omnigent
+    - ``output[0].content[0].text`` (agent-meow
       :class:`~?agent_meow.llms.types.Response`).
 
     :param response: The response object from

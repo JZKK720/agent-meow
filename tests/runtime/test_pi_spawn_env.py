@@ -1,5 +1,5 @@
 """
-Tests for ``_build_pi_spawn_env`` in ``omnigent/runtime/workflow.py``.
+Tests for ``_build_pi_spawn_env`` in ``agent_meow/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec.executor`` fields to ``HARNESS_PI_*``
 env vars that the pi harness wrap reads at executor-construction time.
@@ -23,7 +23,7 @@ from agent_meow.spec.types import AgentSpec, ExecutorSpec, LLMConfig
 def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """
     Point OMNIGENT_CONFIG_HOME at an empty temp dir for every test in
-    this file so the developer's real ``~/.omnigent/config.yaml`` (e.g.
+    this file so the developer's real ``~/.agent_meow/config.yaml`` (e.g.
     a default provider) cannot hijack the legacy-profile path under test.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -52,7 +52,7 @@ def _make_spec(*, model: str | None = None, profile: str | None = None) -> Agent
         spec_version=1,
         name="test-pi",
         instructions="You are a test agent.",
-        executor=ExecutorSpec(type="omnigent", config=config, model=model),
+        executor=ExecutorSpec(type="agent-meow", config=config, model=model),
         llm=LLMConfig(model=model) if model is not None else None,
     )
 

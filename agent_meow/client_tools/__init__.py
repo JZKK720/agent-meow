@@ -26,7 +26,7 @@ def get_tool_set(name: str) -> ModuleType:
 
     :param name: Tool set name, e.g. ``"coding"``. Must correspond
         to a module in this package
-        (``omnigent.client_tools.coding``).
+        (``agent_meow.client_tools.coding``).
     :returns: The tool set module with ``TOOLS`` and ``execute_tool``.
     :raises SystemExit: If the tool set is not found.
     """

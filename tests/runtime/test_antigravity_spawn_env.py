@@ -1,6 +1,6 @@
 """
 Tests for ``_build_antigravity_spawn_env`` in
-``omnigent/runtime/workflow.py``.
+``agent_meow/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec.executor`` fields to ``HARNESS_ANTIGRAVITY_*``
 env vars the antigravity harness wrap reads at first-turn time. Auth is
@@ -81,7 +81,7 @@ def _make_spec(
         spec_version=1,
         name="test-antigravity",
         instructions="You are a test agent.",
-        executor=ExecutorSpec(type="omnigent", config=config, model=model, auth=auth),
+        executor=ExecutorSpec(type="agent-meow", config=config, model=model, auth=auth),
         llm=LLMConfig(model=model) if model is not None else None,
     )
 
@@ -207,7 +207,7 @@ def test_provider_routing_for_antigravity_fails_loud() -> None:
 def test_stored_gemini_key_used_when_spec_has_no_auth(
     monkeypatch: pytest.MonkeyPatch, _isolate_global_config: Path
 ) -> None:
-    """A Gemini key registered via ``omnigent setup`` (the ``antigravity:``
+    """A Gemini key registered via ``agent-meow setup`` (the ``antigravity:``
     block) flows when the spec declares no auth — so a user need not export it
     in every shell."""
     monkeypatch.setenv("GEMINI_KEY_SRC", "AIza_stored_123")

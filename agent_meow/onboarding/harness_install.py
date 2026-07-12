@@ -9,8 +9,8 @@ A coding harness is "ready" along two independent axes:
   that axis, mirroring how ``ucode`` checks (``shutil.which(binary)``) and the
   npm packages it installs.
 
-``omnigent setup --no-internal-beta`` uses this to mark an uninstalled harness and
-offer to ``npm install`` it; the first-run ``omnigent run`` flow uses the
+``agent-meow setup --no-internal-beta`` uses this to mark an uninstalled harness and
+offer to ``npm install`` it; the first-run ``agent-meow run`` flow uses the
 same map so the two surfaces never disagree about what the machine can launch.
 
 This module also owns the per-harness **CLI binary name**, so it is the natural
@@ -63,7 +63,7 @@ CURSOR_KEY = "cursor"
 KIMI_KEY = "kimi"
 
 # Kiro authenticates against its own backend and ships as a standalone native
-# installer, not an npm package managed by ``omnigent setup``.
+# installer, not an npm package managed by ``agent-meow setup``.
 KIRO_KEY = "kiro"
 
 # OpenCode native harness CLI (``opencode serve`` / ``opencode attach``),
@@ -321,21 +321,21 @@ def harness_setup_hint(harness: str | None) -> str:
     """Return actionable remediation when *harness* can't launch on a machine.
 
     Most CLI harnesses (``claude``/``codex``/``pi``) install via npm and a
-    model credential, both of which ``omnigent setup`` handles — so they route
+    model credential, both of which ``agent-meow setup`` handles — so they route
     there. But a harness whose CLI ships out-of-band (``cursor-agent``, via
     Cursor's own curl installer rather than npm — it carries an ``install_hint``
-    and no ``package``) is **not** installed by ``omnigent setup``: pointing a
+    and no ``package``) is **not** installed by ``agent-meow setup``: pointing a
     native-Cursor user there is a dead end, since setup only configures the
     SDK-based ``cursor`` harness (``cursor-sdk`` + ``CURSOR_API_KEY``). For
     those, name the vendor installer and the CLI's own login instead.
 
     :param harness: An executor harness identifier, e.g. ``"cursor-native"``,
         ``"claude-native"``, or ``"codex"``; ``None`` falls back to the
-        ``omnigent setup`` hint.
+        ``agent-meow setup`` hint.
     :returns: A remediation clause for the "harness not configured" message,
         e.g. ``"install the cursor-agent CLI on that machine with `curl
         https://cursor.com/install -fsS | bash`, then run `cursor-agent
-        login`"`` for native Cursor, or the ``omnigent setup`` hint otherwise.
+        login`"`` for native Cursor, or the ``agent-meow setup`` hint otherwise.
     """
     spec = required_cli_for_harness(harness or "")
     if spec is not None and spec.package is None and spec.install_hint:
@@ -345,7 +345,7 @@ def harness_setup_hint(harness: str | None) -> str:
         elif spec.auth_hint:
             login = f", then {spec.auth_hint}"
         return f"install the {spec.binary} CLI on that machine with `{spec.install_hint}`{login}"
-    return "run `omnigent setup` on that machine to install the CLI and set a default credential"
+    return "run `agent-meow setup` on that machine to install the CLI and set a default credential"
 
 
 def harness_install_spec(key: str) -> HarnessInstallSpec | None:

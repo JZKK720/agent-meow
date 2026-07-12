@@ -3,7 +3,7 @@
 
 This is the *reproducible loop* half of the ``polly-e2e-dev`` skill. It boots a
 throwaway local agent-meow server from the current checkout (which carries
-``omnigent.inner.nessie.policies`` — the module polly's guardrails resolve) plus
+``agent_meow.inner.nessie.policies`` — the module polly's guardrails resolve) plus
 the repo's mock-LLM server, rewrites the ``examples/polly`` bundle to the
 ``openai-agents`` harness wired to the mock, then drives ``meow run`` turns
 where the brain is *scripted* (text or tool calls). Because the brain is mocked,
@@ -260,13 +260,13 @@ def _runner_pids() -> set[int]:
     """PIDs of runner/harness subprocesses spawned by *this* interpreter.
 
     Scoped to ``sys.executable`` so a sweep can never touch another worktree's
-    server or a real ``omnigent`` session running under a different venv.
+    server or a real ``agent-meow`` session running under a different venv.
     """
     pids: set[int] = set()
     for module in (
-        "omnigent.host._daemon_entry",
-        "omnigent.runner._entry",
-        "omnigent.runtime.harnesses._runner",
+        "agent_meow.host._daemon_entry",
+        "agent_meow.runner._entry",
+        "agent_meow.runtime.harnesses._runner",
     ):
         try:
             out = subprocess.run(
@@ -337,7 +337,7 @@ def _servers(tmp: Path) -> Iterator[_Servers]:
         [
             sys.executable,
             "-m",
-            "omnigent",
+            "agent-meow",
             "server",
             "--host",
             "127.0.0.1",
@@ -380,7 +380,7 @@ def _run_polly(
         [
             sys.executable,
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(bundle),
             "--server",

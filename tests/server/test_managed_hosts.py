@@ -93,9 +93,9 @@ def test_parse_valid_modal_config_builds_image_parameterized_factory(
         {
             "provider": "modal",
             # Trailing slash is normalized: the URL is interpolated into
-            # `omnigent host --server <url>` and double slashes break joins.
+            # `agent-meow host --server <url>` and double slashes break joins.
             "server_url": "https://srv.example.com/",
-            "modal": {"image": "docker.io/me/omnigent-host:latest"},
+            "modal": {"image": "docker.io/me/agent-meow-host:latest"},
         }
     )
     assert cfg is not None
@@ -112,7 +112,7 @@ def test_parse_valid_modal_config_builds_image_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_modal_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.image == "docker.io/me/omnigent-host:latest"
+    assert fake.image == "docker.io/me/agent-meow-host:latest"
     # No secrets configured → None reaches the launcher (its env-var
     # fallback applies), not an empty list.
     assert fake.secrets is None
@@ -171,7 +171,7 @@ def test_parse_valid_daytona_config_builds_parameterized_factory(
             "provider": "daytona",
             "server_url": "https://srv.example.com/",
             "daytona": {
-                "image": "docker.io/me/omnigent-host:latest",
+                "image": "docker.io/me/agent-meow-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
             },
         }
@@ -183,7 +183,7 @@ def test_parse_valid_daytona_config_builds_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_daytona_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.image == "docker.io/me/omnigent-host:latest"
+    assert fake.image == "docker.io/me/agent-meow-host:latest"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
 
 
@@ -218,7 +218,7 @@ def test_parse_valid_boxlite_cloud_config_builds_parameterized_factory(
             "provider": "boxlite",
             "server_url": "https://srv.example.com/",
             "boxlite": {
-                "image": "docker.io/me/omnigent-host:latest",
+                "image": "docker.io/me/agent-meow-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
                 "cloud": {"endpoint": "https://boxlite.example.com:8100"},
             },
@@ -233,7 +233,7 @@ def test_parse_valid_boxlite_cloud_config_builds_parameterized_factory(
     install_fake_boxlite_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
     assert fake.endpoint == "https://boxlite.example.com:8100"
-    assert fake.image == "docker.io/me/omnigent-host:latest"
+    assert fake.image == "docker.io/me/agent-meow-host:latest"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
 
 
@@ -303,7 +303,7 @@ def test_parse_valid_islo_config_builds_parameterized_factory(
             "provider": "islo",
             "server_url": "https://srv.example.com/",
             "islo": {
-                "image": "docker.io/me/omnigent-host:latest",
+                "image": "docker.io/me/agent-meow-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
                 "base_url": "https://api.islo.dev/",
                 "gateway_profile": "default",
@@ -323,7 +323,7 @@ def test_parse_valid_islo_config_builds_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_islo_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.image == "docker.io/me/omnigent-host:latest"
+    assert fake.image == "docker.io/me/agent-meow-host:latest"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
     assert fake.base_url == "https://api.islo.dev/"
     assert fake.gateway_profile == "default"
@@ -372,7 +372,7 @@ def test_parse_valid_e2b_config_builds_parameterized_factory(
             "provider": "e2b",
             "server_url": "https://srv.example.com/",
             "e2b": {
-                "template": "omnigent-host",
+                "template": "agent-meow-host",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
             },
         }
@@ -385,7 +385,7 @@ def test_parse_valid_e2b_config_builds_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_e2b_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.template == "omnigent-host"
+    assert fake.template == "agent-meow-host"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
 
 
@@ -431,7 +431,7 @@ def test_parse_valid_openshell_config_builds_parameterized_factory(
             "provider": "openshell",
             "server_url": "https://srv.example.com/",
             "openshell": {
-                "image": "docker.io/me/omnigent-host:latest",
+                "image": "docker.io/me/agent-meow-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
                 "cluster": "my-gateway",
             },
@@ -445,7 +445,7 @@ def test_parse_valid_openshell_config_builds_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_openshell_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.image == "docker.io/me/omnigent-host:latest"
+    assert fake.image == "docker.io/me/agent-meow-host:latest"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
     assert fake.cluster == "my-gateway"
 
@@ -481,7 +481,7 @@ def test_parse_valid_kubernetes_config_builds_parameterized_factory(
             "provider": "kubernetes",
             "server_url": "http://agent_meow.agent_meow.svc.cluster.local/",
             "kubernetes": {
-                "image": "ghcr.io/me/omnigent-host:latest",
+                "image": "ghcr.io/me/agent-meow-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
                 "namespace": "omnigent-sandboxes",
                 "secret_name": "omnigent-creds",
@@ -500,7 +500,7 @@ def test_parse_valid_kubernetes_config_builds_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_kubernetes_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.image == "ghcr.io/me/omnigent-host:latest"
+    assert fake.image == "ghcr.io/me/agent-meow-host:latest"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
     assert fake.namespace == "omnigent-sandboxes"
     assert fake.secret_name == "omnigent-creds"
@@ -1187,7 +1187,7 @@ async def test_launch_with_repo_clones_into_workspace(db_uri: str) -> None:
     assert clone_cmd in fake.commands
     # Clone runs before the host starts — the workspace must be ready
     # by the time the runner can launch on the registered host.
-    host_start_index = next(i for i, c in enumerate(fake.commands) if "omnigent host" in c)
+    host_start_index = next(i for i, c in enumerate(fake.commands) if "agent-meow host" in c)
     assert fake.commands.index(clone_cmd) < host_start_index
     assert fake.terminated == []
 
@@ -1274,7 +1274,7 @@ class _EntrypointFakeLauncher(FakeSandboxLauncher):
         self.token_resolved_at_start = self._host_store.resolve_launch_token(token) is not None
         # Simulate the host's entrypoint dialing back over the tunnel.
         self._host_store.upsert_on_connect(host_id=host_id, name=host_name, owner=_OWNER)
-        return f"/home/omnigent/workspace/{repo_name}" if repo_name else "/home/omnigent/workspace"
+        return f"/home/agent_meow/workspace/{repo_name}" if repo_name else "/home/agent_meow/workspace"
 
 
 async def test_launch_entrypoint_provider_arms_token_before_launch_host(db_uri: str) -> None:
@@ -1303,7 +1303,7 @@ async def test_launch_entrypoint_provider_arms_token_before_launch_host(db_uri: 
     # The token was already resolvable when start_host ran (no dial-back race).
     assert fake.token_resolved_at_start is True
     # The workspace (cloned dir) is returned and the host is online + bound.
-    assert result.workspace == "/home/omnigent/workspace/repo"
+    assert result.workspace == "/home/agent_meow/workspace/repo"
     host = host_store.get_host(result.host_id)
     assert host is not None
     assert host.status == "online"

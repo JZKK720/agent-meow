@@ -1,5 +1,5 @@
 """
-Interactive provider and model selection for ``omnigent create``.
+Interactive provider and model selection for ``agent-meow create``.
 
 Prompts the user to pick a provider, supply credentials, and
 select a chat-capable model. Uses Rich for polished terminal output.

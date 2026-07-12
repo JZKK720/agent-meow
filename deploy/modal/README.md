@@ -35,7 +35,7 @@ Heroku or Cloudflare.
 # 1. One secret bundle with the three required values. The app URL is
 #    deterministic: https://<workspace>--agent-meow-server.modal.run
 #    (your workspace name is shown by `modal profile current`).
-modal secret create omnigent-deploy \
+modal secret create agent-meow-deploy \
   DATABASE_URL='postgres://…neon.tech/…' \
   OMNIGENT_ACCOUNTS_COOKIE_SECRET="$(openssl rand -hex 32)" \
   OMNIGENT_ACCOUNTS_BASE_URL='https://<workspace>--agent-meow-server.modal.run'
@@ -65,7 +65,7 @@ Log in as the admin and invite teammates from **Members** in the web UI.
 
 > To set a known admin password instead, add
 > `OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD=<password>` to the
-> `omnigent-deploy` secret before the first deploy.
+> `agent-meow-deploy` secret before the first deploy.
 
 ### Modal-specific caveats
 
@@ -88,18 +88,18 @@ Log in as the admin and invite teammates from **Members** in the web UI.
 
 ### Use your own IdP instead (OIDC)
 
-Add the OIDC values to the `omnigent-deploy` secret (Modal secrets are
+Add the OIDC values to the `agent-meow-deploy` secret (Modal secrets are
 key-value bundles; `modal secret create` with the same name replaces it)
 and redeploy:
 
 ```bash
-modal secret create omnigent-deploy \
+modal secret create agent-meow-deploy \
   DATABASE_URL='…' \
   OMNIGENT_AUTH_PROVIDER=oidc \
   OMNIGENT_OIDC_ISSUER='https://github.com' \
   OMNIGENT_OIDC_CLIENT_ID='…' \
   OMNIGENT_OIDC_CLIENT_SECRET='…' \
-  OMNIGENT_OIDC_REDIRECT_URI='https://<workspace>--omnigent-server.modal.run/auth/callback' \
+  OMNIGENT_OIDC_REDIRECT_URI='https://<workspace>--agent-meow-server.modal.run/auth/callback' \
   OMNIGENT_OIDC_COOKIE_SECRET="$(openssl rand -hex 32)"
 ```
 
@@ -109,7 +109,7 @@ allow-listing) are identical to the other platforms — see
 
 ### Custom domain
 
-Pass `custom_domains=["omnigent.example.com"]` to `@modal.web_server`
+Pass `custom_domains=["agent_meow.example.com"]` to `@modal.web_server`
 in `modal_app.py` (requires a paid Modal plan), point your DNS at Modal
 per the printed instructions, and update `OMNIGENT_ACCOUNTS_BASE_URL`
 (or the OIDC redirect URI) to match.
@@ -149,7 +149,7 @@ not minutes.
 ### Sandbox prerequisites
 
 ```bash
-pip install 'omnigent[modal]'   # installs the modal SDK extra
+pip install 'agent-meow[modal]'   # installs the modal SDK extra
 modal token new                  # one-time browser auth with Modal
 ```
 
@@ -234,10 +234,10 @@ name it in `OMNIGENT_MODAL_SANDBOX_SECRETS` (comma-separated) before
 running `create`:
 
 ```bash
-modal secret create omnigent-server-auth \
+modal secret create agent-meow-server-auth \
   DATABRICKS_HOST=https://example.databricks.com \
   DATABRICKS_TOKEN=<your-pat>
-export OMNIGENT_MODAL_SANDBOX_SECRETS=omnigent-server-auth
+export OMNIGENT_MODAL_SANDBOX_SECRETS=agent-meow-server-auth
 meow sandbox create --provider modal
 ```
 
@@ -299,7 +299,7 @@ sandbox:
   server_url: https://your-host
   modal:
     image: docker.io/<you>/agent-meow-host:latest   # default: official image
-    secrets: [omnigent-llm]                       # Modal secrets to inject
+    secrets: [agent-meow-llm]                       # Modal secrets to inject
 ```
 
 ### LLM credentials for managed sandboxes
@@ -311,7 +311,7 @@ sandbox, and the in-sandbox host forwards the standard harness
 credential vars to its runners:
 
 ```bash
-modal secret create omnigent-llm \
+modal secret create agent-meow-llm \
   OMNIGENT_ANTHROPIC_API_KEY=sk-ant-… OPENAI_API_KEY=sk-…
 ```
 
@@ -381,7 +381,7 @@ push` the agent runs later — put an HTTPS token in a Modal secret as
 `GIT_TOKEN`:
 
 ```bash
-modal secret create omnigent-git GIT_TOKEN=github_pat_…
+modal secret create agent-meow-git GIT_TOKEN=github_pat_…
 ```
 
 and list the secret under `sandbox.modal.secrets` (multiple secrets
@@ -393,7 +393,7 @@ sandbox:
   provider: modal
   server_url: https://your-host
   modal:
-    secrets: [omnigent-llm, omnigent-git]
+    secrets: [agent-meow-llm, agent-meow-git]
 ```
 
 The host image ships a git credential helper that answers HTTPS

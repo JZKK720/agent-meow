@@ -611,7 +611,7 @@ def _run_runner_with_request(tool_path: Path, tool_name: str, arguments: dict) -
     Uses fd 3 protocol so the test mirrors the real production
     invocation path, not the Docker fallback.
     """
-    runner = Path(__file__).parent.parent.parent / "omnigent" / "tools" / "_runner.py"
+    runner = Path(__file__).parent.parent.parent / "agent-meow" / "tools" / "_runner.py"
     request = json.dumps(
         {
             "module_path": str(tool_path),

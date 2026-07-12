@@ -275,7 +275,7 @@ server from this repo:
 
 ```bash
 # from the repo root, with the project venv:
-.venv/bin/python -m omnigent.server   # serves on http://localhost:8000
+.venv/bin/python -m agent_meow.server   # serves on http://localhost:8000
 ```
 
 Then enter `http://localhost:8000` in the setup page.
@@ -283,7 +283,7 @@ Then enter `http://localhost:8000` in the setup page.
 ## Managing servers and hosting
 
 Beyond pointing at an already-running server, the shell can drive the local
-`omnigent` CLI to start a server and register this machine as a **host** (a
+`agent-meow` CLI to start a server and register this machine as a **host** (a
 machine that runs the agent work a server dispatches). Two concepts stay
 deliberately separate:
 
@@ -300,9 +300,9 @@ deliberately separate:
 
 ### Detecting the CLI and customizing its path
 
-The CLI ships under two names that resolve to the same entry point — `omnigent`
+The CLI ships under two names that resolve to the same entry point — `agent-meow`
 (canonical) and `omni` (short alias) — and the shell probes **both**:
-`settings.omnigent_path` first, then `PATH` (`omnigent` then `omni`), then the
+`settings.omnigent_path` first, then `PATH` (`agent-meow` then `omni`), then the
 well-known install locations (`~/.local/bin`, `~/.cargo/bin`, Homebrew,
 `/usr/local/bin`, each tried under both names). A GUI-launched app inherits a
 minimal `PATH`, which is why the install locations are probed directly. The path
@@ -316,7 +316,7 @@ You can see and change which binary is used in two places:
   free-text or a native file picker. When nothing is found the gear gets an
   accent dot and the modal shows the install one-liner
   ```bash
-  curl -fsSL https://raw.githubusercontent.com/omnigent-ai/omnigent/main/scripts/install_oss.sh | sh
+  curl -fsSL https://raw.githubusercontent.com/JZKK720/agent-meow/main/scripts/install_oss.sh | sh
   ```
 - **In-app** — **Settings → Local CLI** (desktop only): shows the resolved path
   and version, a **Change…** button (native file picker) and **Reset to
@@ -386,7 +386,7 @@ saved passkeys match. Three pieces must agree before this activates:
 2. The same string in the `keychain-access-groups` entitlement in
    `signing/entitlements.mac.plist`.
 3. An **embedded Developer ID provisioning profile**
-   (`signing/omnigent.provisionprofile`, wired via `provisioningProfile`
+   (`signing/agent_meow.provisionprofile`, wired via `provisioningProfile`
    in `package.json`). `keychain-access-groups` is a _restricted_
    entitlement: a Developer ID signature alone doesn't authorize it, and
    AMFI SIGKILLs the app at launch ("Launchd job spawn failed", POSIX
@@ -394,7 +394,7 @@ saved passkeys match. Three pieces must agree before this activates:
    for `io.cubecloud.agentmeow.desktop` (no extra capabilities — every profile
    automatically authorizes keychain groups under `<TEAM_ID>.*`), then
    Profiles → Distribution → Developer ID for that App ID. Verify with
-   `security cms -D -i signing/omnigent.provisionprofile`.
+   `security cms -D -i signing/agent_meow.provisionprofile`.
 
 The signing identity's team must match the group prefix —
 `package.json` pins `"identity"` for this reason (with several certs in

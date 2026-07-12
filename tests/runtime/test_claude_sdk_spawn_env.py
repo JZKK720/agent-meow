@@ -1,6 +1,6 @@
 """
 Tests for ``_build_claude_sdk_spawn_env`` in
-``omnigent/runtime/workflow.py``.
+``agent_meow/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec.executor`` fields to
 ``HARNESS_CLAUDE_SDK_*`` env vars that the claude-sdk harness wrap reads
@@ -32,7 +32,7 @@ def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     """
     Point OMNIGENT_CONFIG_HOME at an empty temp dir for every test in
     this file so tests that don't explicitly set up a global config are
-    not affected by the developer's real ``~/.omnigent/config.yaml``.
+    not affected by the developer's real ``~/.agent_meow/config.yaml``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory for the isolated config.
@@ -66,7 +66,7 @@ def _make_spec(
         spec_version=1,
         name="test-claude-sdk",
         instructions="You are a test agent.",
-        executor=ExecutorSpec(type="omnigent", config=config, model=model, auth=auth),
+        executor=ExecutorSpec(type="agent-meow", config=config, model=model, auth=auth),
         llm=LLMConfig(model=model) if model is not None else None,
     )
 
@@ -132,7 +132,7 @@ def test_global_config_databricks_auth_applied_when_spec_has_no_auth(
     When the spec declares no auth, ``_load_global_auth()`` is consulted
     and a global ``auth: {type: databricks, profile: …}`` is applied.
 
-    Failure means ``omnigent setup`` auth configuration is silently
+    Failure means ``agent-meow setup`` auth configuration is silently
     ignored for claude-sdk agents (it was applied to openai-agents but
     not claude-sdk before this fix).
     """

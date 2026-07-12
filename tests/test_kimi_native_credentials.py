@@ -37,7 +37,7 @@ def test_render_hooks_toml_is_valid_and_complete() -> None:
         assert "/tmp/b r" in hook["command"]  # space-bearing path round-trips
         # ``-I`` (isolated mode) is mandatory: kimi runs the hook with cwd set to
         # the session workspace, so without it a workspace containing its own
-        # ``omnigent/`` shadows the install and the hook dies on ImportError
+        # ``agent_meow/`` shadows the install and the hook dies on ImportError
         # before publishing the approval card.
         assert " -I -m agent_meow.kimi_native_hook" in hook["command"]
         # Pinned above kimi's 30s default so the permission hook survives a slow

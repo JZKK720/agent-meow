@@ -504,7 +504,7 @@ def parse_provider_name(model: str) -> tuple[str, str]:
 
 def trace_id_from_response_id(response_id: str) -> str:
     """
-    Extract the 32-char hex trace ID from an omnigent response ID.
+    Extract the 32-char hex trace ID from an agent-meow response ID.
 
     Response IDs have the format ``resp_<32-char hex>`` (generated
     via ``generate_task_id``). The hex suffix is a valid 128-bit
@@ -671,7 +671,7 @@ def get_traceparent_env() -> dict[str, str]:
 
     Used by executor subprocess launchers (Claude Agent SDK) to
     propagate the parent trace into a child process that emits its
-    own OTel spans — the child's spans nest under the omnigent
+    own OTel spans — the child's spans nest under the agent-meow
     root span in the same trace.
 
     :returns: A dict with ``TRACEPARENT`` (and optionally
@@ -811,7 +811,7 @@ def span(
         return
     from opentelemetry import trace as otel_trace
 
-    tracer = otel_trace.get_tracer("omnigent")
+    tracer = otel_trace.get_tracer("agent-meow")
     with tracer.start_as_current_span(name) as started:
         for key, value in (attributes or {}).items():
             started.set_attribute(key, value)
@@ -914,7 +914,7 @@ def _init_otel_traces(endpoint: str) -> None:
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-            service_name = os.environ.get("OTEL_SERVICE_NAME", "omnigent")
+            service_name = os.environ.get("OTEL_SERVICE_NAME", "agent-meow")
             provider = TracerProvider(resource=Resource.create({SERVICE_NAME: service_name}))
             # Enrich every span with session.id from the active context (set via
             # session_scope at the request hook / executor turn / forwarder).
@@ -962,7 +962,7 @@ def _init_otel_metrics() -> None:
 
         exporter = _create_otlp_metric_exporter()
         reader = PeriodicExportingMetricReader(exporter)
-        service_name = os.environ.get("OTEL_SERVICE_NAME", "omnigent")
+        service_name = os.environ.get("OTEL_SERVICE_NAME", "agent-meow")
         provider = MeterProvider(
             metric_readers=[reader],
             resource=Resource.create({SERVICE_NAME: service_name}),
@@ -1053,7 +1053,7 @@ def _init_otel_logs() -> None:
         from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
         from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
-        service_name = os.environ.get("OTEL_SERVICE_NAME", "omnigent")
+        service_name = os.environ.get("OTEL_SERVICE_NAME", "agent-meow")
         provider = LoggerProvider(
             resource=Resource.create({SERVICE_NAME: service_name}),
         )
@@ -1078,7 +1078,7 @@ def _init_otel_logs() -> None:
 
 def init(service_name: str | None = None) -> None:
     """
-    Initialize OpenTelemetry tracing for the omnigent runtime.
+    Initialize OpenTelemetry tracing for the agent-meow runtime.
 
     Gated by the ``OMNIGENT_TELEMETRY_ENABLED`` master opt-in (off by
     default): when it is unset/false this is a no-op — no provider is
@@ -1095,7 +1095,7 @@ def init(service_name: str | None = None) -> None:
         itself so the trace backend can attribute spans to a component;
         a child process overrides the parent's inherited name with its
         own. When ``None``, an operator-set ``OTEL_SERVICE_NAME`` is
-        honored, otherwise it defaults to ``"omnigent"``. Deployment-
+        honored, otherwise it defaults to ``"agent-meow"``. Deployment-
         level identity (environment, region) belongs in
         ``OTEL_RESOURCE_ATTRIBUTES``.
 
@@ -1131,7 +1131,7 @@ def init(service_name: str | None = None) -> None:
     # runner / harness / host) is attributable in the trace backend
     # instead of collapsing to one anonymous service.
     os.environ["OTEL_SERVICE_NAME"] = (
-        service_name or os.environ.get("OTEL_SERVICE_NAME") or "omnigent"
+        service_name or os.environ.get("OTEL_SERVICE_NAME") or "agent-meow"
     )
 
     endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip()
@@ -1147,7 +1147,7 @@ def init(service_name: str | None = None) -> None:
 
     _initialized = True
     _logger.info(
-        "omnigent telemetry initialized (endpoint=%s, capture_content=%s)",
+        "agent-meow telemetry initialized (endpoint=%s, capture_content=%s)",
         endpoint or "<none>",
         _capture_content,
     )

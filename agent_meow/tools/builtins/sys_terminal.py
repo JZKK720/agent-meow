@@ -126,7 +126,7 @@ def _format_launch_envelope(
     Centralizes the success-shape so :meth:`SysTerminalLaunchTool._spawn_and_format`
     stays under the 40-line ceiling. The envelope mirrors the
     legacy inner Session ``terminal_launch`` shape
-    (``omnigent/inner/session.py:3242``).
+    (``agent_meow/inner/session.py:3242``).
 
     :param validated: Validated launch args used to populate the
         envelope's terminal/session fields.

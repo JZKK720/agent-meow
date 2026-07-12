@@ -1,15 +1,15 @@
 ---
 # ConfigMap supplying the server's `sandbox:` section. The managed-sandbox backend
-# is read from the OMNIGENT_CONFIG file (not the env-based omnigent-config
-# ConfigMap); deployment-patch.yaml mounts this at /etc/omnigent and points
+# is read from the OMNIGENT_CONFIG file (not the env-based agent-meow-config
+# ConfigMap); deployment-patch.yaml mounts this at /etc/agent-meow and points
 # OMNIGENT_CONFIG at it.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: omnigent-sandbox-config
-  namespace: omnigent # mounted by the server Pod
+  name: agent-meow-sandbox-config
+  namespace: agent-meow # mounted by the server Pod
   labels:
-    app.kubernetes.io/name: omnigent
+    app.kubernetes.io/name: agent-meow
     app.kubernetes.io/component: server
 data:
   config.yaml: |
@@ -18,15 +18,15 @@ data:
       # URL the runner Pod's host dials back to. In-cluster service DNS (the base
       # Service listens on port 80) is simplest; use your ingress URL if runner
       # Pods must reach the server through it.
-      server_url: http://omnigent.omnigent.svc.cluster.local
+      server_url: http://agent_meow.agent_meow.svc.cluster.local
       kubernetes:
         # Runner-Pod namespace (secret_name / service_account resolve here).
-        namespace: omnigent-sandboxes
+        namespace: agent-meow-sandboxes
         # Harness LLM/git creds projected into every Pod via envFrom. Created out
         # of band (see README "Apply") — separate from the per-Pod launch-token Secret.
-        secret_name: omnigent-creds
+        secret_name: agent-meow-creds
         # ServiceAccount the runner Pods run as (deliberately powerless).
-        service_account: omnigent-runner
+        service_account: agent-meow-runner
         # ── all optional below ──
         # image: ghcr.io/your-org/agent-meow-host:latest  # default: official amd64 host image
         # env: [PROXY_URL]           # SERVER env vars injected as literal Pod env (prefer secret_name for creds)

@@ -4,7 +4,7 @@
 # persistent volume by default — no separate database app. Full walkthrough
 # (volume, memory, and the web-UI Launch path): deploy/fly/README.md.
 
-app = "omnigent"           # change to your app name
+app = "agent-meow"           # change to your app name
 primary_region = "iad"       # pick a region: fly platform regions
 
 [build]

@@ -10,14 +10,14 @@
 # cheap, and can't hang. The workflow drops its output into the GitHub Release
 # DRAFT body; a human reviews and edits before publishing.
 #
-# Run headlessly:  omnigent run .github/agents/release-notes-drafter -p "<pr list>" --no-session
+# Run headlessly:  agent-meow run .github/agents/release-notes-drafter -p "<pr list>" --no-session
 #
 # Security posture (mirrors doc-classifier / doc-drafter, a STRONGER trust position
 # than polly-review):
 #   - Runs only on ALREADY-MERGED, released history (a maintainer reviewed + merged
 #     every PR it sees), and only at release-cut on the trusted default branch.
 #   - The only secret in this process's env is LLM_API_KEY (same as Polly/doc-sync).
-#     The omnigent write-token that opens the CHANGELOG PR / edits the release is
+#     The agent-meow write-token that opens the CHANGELOG PR / edits the release is
 #     minted by the workflow AFTER this agent finishes, so it never coexists with
 #     model input.
 #   - Its input is author-written text (PR titles + `## Changelog` lines) — a prose
@@ -39,7 +39,7 @@ description: >-
   markers. No tools, no sub-agents — a pure synthesis turn.
 
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: claude-sdk
 

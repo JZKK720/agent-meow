@@ -566,7 +566,7 @@ def _get_openai_async_client(
             "The 'databricks-sdk' package is required for Databricks "
             "authentication but is not installed, and no OPENAI_API_KEY or "
             "OPENAI_BASE_URL environment variables are set. Either install "
-            "the package (`pip install 'omnigent[databricks]'`) or set "
+            "the package (`pip install 'agent-meow[databricks]'`) or set "
             "OPENAI_API_KEY/OPENAI_BASE_URL for non-Databricks OpenAI access."
         ) from exc
     return AsyncOpenAI(

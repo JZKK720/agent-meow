@@ -6,7 +6,7 @@
 # ``ValueError: digital envelope routines: EVP_DigestInit_ex disabled
 # for FIPS``, which crashes the entire framework boot. Patch md5 here,
 # at the package import boundary, so every consumer — including
-# subprocesses spawned via ``-m omnigent`` in e2e tests — picks up
+# subprocesses spawned via ``-m agent-meow`` in e2e tests — picks up
 # the fix before any dependency import touches it. The flag is the
 # standard Python 3.9+ opt-out for non-security md5 calls and is a
 # harmless no-op on non-FIPS hosts.

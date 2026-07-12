@@ -28,7 +28,7 @@ def test_format_native_resume_command_includes_remote_context() -> None:
         session_id="conv_abc",
     )
 
-    assert command == ("omnigent claude --server https://example.databricks.com --resume conv_abc")
+    assert command == ("agent-meow claude --server https://example.databricks.com --resume conv_abc")
 
 
 def test_cold_resume_hint_not_restored_is_honest_on_stderr(

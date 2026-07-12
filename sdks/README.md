@@ -98,7 +98,7 @@ Provides:
 pip install -e sdks/ui
 ```
 
-(Pulls in `omnigent-client` as a dependency.)
+(Pulls in `agent-meow-client` as a dependency.)
 
 ### Minimal REPL
 
@@ -162,6 +162,6 @@ stream = pipe(
 
 ## Reference Implementation
 
-The built-in REPL at `omnigent/repl/` demonstrates all features:
+The built-in REPL at `agent_meow/repl/` demonstrates all features:
 streaming, tool calls, reasoning, slash commands, conversation
-switching, elapsed timer. See `omnigent/repl/_repl.py`.
+switching, elapsed timer. See `agent_meow/repl/_repl.py`.

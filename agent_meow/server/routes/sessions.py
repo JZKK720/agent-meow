@@ -369,7 +369,7 @@ _EXTERNAL_ELICITATION_RESOLVED_TYPE: str = "external_elicitation_resolved"
 
 # Internal input used by terminal-backed integrations to publish a
 # session.status event observed outside the agent-meow task runtime
-# (e.g. ``omnigent claude`` mirroring Claude Code's Stop hook into
+# (e.g. ``agent-meow claude`` mirroring Claude Code's Stop hook into
 # the session stream so the web UI's idle/running indicator updates).
 # Payload shape: ``{"status": "idle" | "running" | "waiting" | "failed"}``.
 # ``launching`` is runner-local sub-agent bookkeeping (it rides in a child's
@@ -513,11 +513,11 @@ _LABEL_VALUE_MAX_LEN: int = LABEL_VALUE_MAX_LEN
 # shape: ``{"todos": [{"content": "...", "status": "...", "activeForm": ...}]}``.
 _EXTERNAL_SESSION_TODOS_TYPE: str = "external_session_todos"
 
-# Session labels stamped by ``omnigent claude``. A matching session
+# Session labels stamped by ``agent-meow claude``. A matching session
 # is terminal-owned: agent-meow web-chat input must be forwarded to the local
 # runner for tmux injection, and rendered transcript items must come
 # back through ``external_conversation_item`` only.
-_CLAUDE_NATIVE_WRAPPER_LABEL_KEY = "omnigent.wrapper"
+_CLAUDE_NATIVE_WRAPPER_LABEL_KEY = "agent_meow.wrapper"
 _CLAUDE_NATIVE_WRAPPER_LABEL_VALUE = CLAUDE_NATIVE_CODING_AGENT.wrapper_label
 # Marks a session as terminal-first in the Web UI (AppShell renders the
 # Claude Code terminal pane via TerminalFirstContext). Stamped alongside
@@ -714,7 +714,7 @@ def _claude_native_remember_host(tool_name: str, tool_input: Any) -> str | None:
 
 
 # Server-side wait budget for Codex app-server requests forwarded by
-# ``omnigent codex``. Held at one day like the Claude permission hook:
+# ``agent-meow codex``. Held at one day like the Claude permission hook:
 # a terminal-side answer ends the wait early via the app-server's
 # explicit ``serverRequest/resolved`` notification, so the long park
 # never blocks the TUI path — while the old 300s cap silently abandoned
@@ -1420,7 +1420,7 @@ async def _publish_and_wait_for_harness_elicitation(
     """
     Publish one harness-originated elicitation and wait for web verdict.
 
-    Mirrors the ``omnigent claude`` permission hook contract: the
+    Mirrors the ``agent-meow claude`` permission hook contract: the
     hook parks a server-side Future, publishes the standard
     ``response.elicitation_request`` event, waits until the session
     ``approval`` event resolves the Future, and always publishes
@@ -2776,8 +2776,8 @@ def _validated_harness_override(value: str | None, agent: Agent) -> str | None:
     Validate + canonicalize a session-create ``harness_override``.
 
     Mirrors the CLI's ``--harness`` rules (``_apply_harness_override_to_executor``
-    in ``omnigent/chat.py``): the canonical name must be a known bundle
-    harness, and the bound agent must be an ``executor.type: omnigent``
+    in ``agent_meow/chat.py``): the canonical name must be a known bundle
+    harness, and the bound agent must be an ``executor.type: agent-meow``
     spec — other executor types have no ``config.harness``, so an
     override there would be a silent no-op.
 
@@ -2786,7 +2786,7 @@ def _validated_harness_override(value: str | None, agent: Agent) -> str | None:
     :param agent: The bound agent row (already fetched by the caller).
     :returns: The canonical harness id, or ``None`` when *value* is.
     :raises OmnigentError: ``invalid_input`` for an unknown harness, a
-        non-omnigent executor type, or an unloadable agent bundle.
+        non-agent-meow executor type, or an unloadable agent bundle.
     """
     if value is None:
         return None
@@ -3657,12 +3657,12 @@ async def _persist_model_change_note(
     SSE so connected clients render it live.
 
     The caller gates this to **non-native** sessions (those WITHOUT an
-    ``omnigent.wrapper`` native label, via ``_is_native_terminal_session``)
+    ``agent_meow.wrapper`` native label, via ``_is_native_terminal_session``)
     and to real ``/model`` commands: claude-native / codex-native manage
     their model through the in-TUI picker / launch flag and must not receive
     an injected AP-side item, and ``silent`` bind-time auto-applies are
     skipped (see the ``live_forward`` guard in ``update_session``). The gate
-    keys on ``omnigent.wrapper`` rather than ``agent_meow.ui == "terminal"``
+    keys on ``agent_meow.wrapper`` rather than ``agent_meow.ui == "terminal"``
     because the latter is also set on chat-first SDK sessions that expose a
     REPL terminal view (e.g. polly / debby), which DO want the note. The note
     is a user-role message, so the agent sees it in history on the next turn —
@@ -4502,7 +4502,7 @@ async def _persist_external_subagent_start(
     parent's on-disk ``subagents/`` directory and calls this handler
     when a new ``.meta.json`` appears. We reuse the parent's
     ``agent_id`` (claude-native sub-agents don't have their own
-    omnigent agent), stamp identifying labels, and publish the
+    agent-meow agent), stamp identifying labels, and publish the
     same ``session.created`` event omnigent-spawned children fire
     so the rail's ``child_sessions`` cache invalidates.
 
@@ -4557,7 +4557,7 @@ async def _persist_external_subagent_start(
         )
     if parent_conv.agent_id is None:
         # claude-native parents are always created with an agent_id
-        # by ``omnigent claude`` (the synthetic Claude bundle).
+        # by ``agent-meow claude`` (the synthetic Claude bundle).
         # A null agent_id here means we're being called against a
         # legacy / corrupt row — fail loud rather than silently
         # mint a child without a parent agent.
@@ -4970,7 +4970,7 @@ async def _persist_external_conversation_item(
 
 def _is_kiro_native_session(conv: Conversation) -> bool:
     """Return whether a conversation is backed by the native Kiro terminal."""
-    return conv.labels.get("omnigent.wrapper") == "kiro-native-ui"
+    return conv.labels.get("agent_meow.wrapper") == "kiro-native-ui"
 
 
 async def _persist_skipped_kiro_pending_input(
@@ -5817,7 +5817,7 @@ def _publish_session_superseded(session_id: str, target_conversation_id: str) ->
 
     Emitted when a Claude ``/clear`` rotates a session away (see
     ``_post_clear_supersession`` in
-    ``omnigent/claude_native_forwarder.py``): a client actively viewing
+    ``agent_meow/claude_native_forwarder.py``): a client actively viewing
     ``session_id`` follows to ``target_conversation_id``. Live-only —
     there is no SSE replay, so a client connecting after the rotation
     relies on the persisted notice message instead.
@@ -6104,7 +6104,7 @@ class _HostLaunchAttempt:
         no code.
     :param error: Human-readable failure message from the host, e.g.
         ``"harness 'codex' is not configured on host 'laptop' — run
-        `omnigent setup` ..."``; ``None`` when there was no error.
+        `agent-meow setup` ..."``; ``None`` when there was no error.
     """
 
     runner_id: str
@@ -7101,8 +7101,8 @@ def _native_coding_agent_for_session(conv: Conversation) -> NativeCodingAgent | 
     Two independent signals identify a native session, because native message
     handling must NOT be coupled to the terminal-first presentation labels:
 
-    * the ``omnigent.wrapper`` presentation label — set for the built-in
-      terminal-first wrapper sessions (``omnigent claude`` / ``omnigent
+    * the ``agent_meow.wrapper`` presentation label — set for the built-in
+      terminal-first wrapper sessions (``agent-meow claude`` / ``agent-meow
       codex``); resolved directly and cheaply here (short-circuits the harness
       load below); and
     * the bound agent's RESOLVED harness — for a CUSTOM agent that declares a
@@ -7131,7 +7131,7 @@ def _is_native_terminal_session(conv: Conversation) -> bool:
     """
     Return whether a session's turns are driven by a native terminal harness.
 
-    True for both a built-in terminal-first wrapper (``omnigent.wrapper``
+    True for both a built-in terminal-first wrapper (``agent_meow.wrapper``
     label) and a custom chat-first agent bound to a native harness — see
     :func:`_native_coding_agent_for_session` for why routing keys on the
     resolved harness, not the presentation labels.
@@ -7500,7 +7500,7 @@ async def _persist_host_launch_failure_turn(
     boot (:func:`_persist_native_terminal_failure`) — the server records
     the user's message (so the input is consumed, not silently dropped)
     and a sibling ``type="error"`` item carrying the host's message
-    (which names the fix, ``omnigent setup``), then publishes the same
+    (which names the fix, ``agent-meow setup``), then publishes the same
     live error/status events the web renders as an error banner. The host
     binding is left intact so a later message relaunches once the user has
     run setup.
@@ -7512,8 +7512,8 @@ async def _persist_host_launch_failure_turn(
     :param conversation_store: Store used for the durable append.
     :param host_error: The host's human-readable refusal, e.g.
         ``"harness 'codex' is not configured on host 'laptop' — run
-        `omnigent setup` ..."``. ``None`` falls back to a generic
-        ``omnigent setup`` pointer so the banner is never empty.
+        `agent-meow setup` ..."``. ``None`` falls back to a generic
+        ``agent-meow setup`` pointer so the banner is never empty.
     :param runner_router: Router used to resolve a sub-agent's runner for
         the parent-wake forward, or ``None`` in in-process / test setups.
     :param created_by: Authenticated posting actor, e.g.
@@ -7532,7 +7532,7 @@ async def _persist_host_launch_failure_turn(
             # the code, but the banner must stay actionable if a
             # third-party host omits it.
             else (
-                "the agent's harness is not configured on the selected host — run `omnigent setup`"
+                "the agent's harness is not configured on the selected host — run `agent-meow setup`"
             )
         ),
     )
@@ -8038,7 +8038,7 @@ async def _stop_session_host_runner(
     Best-effort by design: the pane is already gone before this runs, so a
     host that is offline, was replaced, or is slow to acknowledge is logged
     and swallowed rather than failing the whole Stop. In the common case —
-    the host's ``omnigent host`` tunnel is open while the user drives
+    the host's ``agent-meow host`` tunnel is open while the user drives
     the web UI — the stop is delivered and the runner exits. The runner this
     targets is read from the caller's own (owner-gated) session row, so it
     can only ever stop the runner bound to that session.
@@ -10318,7 +10318,7 @@ def _agent_is_native(agent: Agent) -> bool:
 # native ids through unchanged; pi-native needs only the one canonical id
 # ("native-pi" is aliased to "pi-native") — same reasoning as
 # model_override._CLAUDE_FAMILY_HARNESSES. pi-native rebuilds the Pi CLI's JSONL
-# session file from copied items (omnigent/pi_native_resume.py), the same
+# session file from copied items (agent_meow/pi_native_resume.py), the same
 # file-based mechanism claude/codex use.
 #
 # cursor is intentionally absent here: its conversation is server-backed (a
@@ -10434,7 +10434,7 @@ def _presentation_labels_for_agent(agent: Agent) -> dict[str, str]:
 
     A native-CLI agent runs **terminal-first** (the inline terminal is the
     main view), gated on ``agent_meow.ui == "terminal"`` plus the matching
-    ``omnigent.wrapper`` value; an SDK agent runs as plain chat (no such
+    ``agent_meow.wrapper`` value; an SDK agent runs as plain chat (no such
     labels). Used by the fork route so a switched clone's UI mode matches
     the TARGET harness instead of inheriting the source's — otherwise an SDK
     clone of a claude-native session renders a stale interactive terminal.
@@ -11859,7 +11859,7 @@ def _spec_config_flag_explicitly_disabled(spec: AgentSpec, key: str) -> bool:
     Return whether an ``executor.config`` flag is explicitly set false.
 
     The spec parser stringifies every ``executor.config`` value (see
-    ``omnigent/spec/parser.py`` — ``{str(k): str(v) ...}``), so a YAML
+    ``agent_meow/spec/parser.py`` — ``{str(k): str(v) ...}``), so a YAML
     ``yolo: false`` arrives here as the string ``"False"``. A naive
     ``not bool(value)`` is wrong: ``bool("False")`` is ``True`` (so a
     naive truthiness test would read ``"False"`` as enabled). This
@@ -11933,7 +11933,7 @@ def _derive_terminal_launch_args_from_spec(sub_spec: AgentSpec) -> list[str] | N
         # Headless default: full bypass. The terminal_launch_args set the
         # codex --remote TUI's launch flags, which is what creates the
         # app-server thread and fixes its approval/sandbox stance for the
-        # session; the omnigent executor's later turn/start inherits that
+        # session; the agent-meow executor's later turn/start inherits that
         # stance (codex_native_executor.run_turn carries no per-turn
         # approval/sandbox). Without the flag the thread is created at
         # codex's on-request + own-sandbox default and a headless worker
@@ -11976,7 +11976,7 @@ def _native_subagent_wrapper_labels(
     native terminal harness (``claude-native`` / ``codex-native``) must
     render with the Chat/Terminal pill in the web UI, exactly like a
     top-level ``claude-native-ui`` / ``codex-native-ui`` wrapper session.
-    The pill is gated on the conversation's ``omnigent.wrapper`` +
+    The pill is gated on the conversation's ``agent_meow.wrapper`` +
     ``agent_meow.ui`` labels (see ``web`` ``TerminalFirstContext``), but
     the sub-agent create path never stamps them. This resolves the child
     sub-agent's spec from the parent bundle and returns the labels to stamp,
@@ -12193,7 +12193,7 @@ async def _create_session_from_existing_agent(
         body.cost_control_mode_override
     )
 
-    # Validated against the loaded spec (known harness + omnigent
+    # Validated against the loaded spec (known harness + agent-meow
     # executor type) before any row exists, mirroring the CLI's
     # --harness fail-loud rules.
     harness_override = await asyncio.to_thread(
@@ -12444,7 +12444,7 @@ def _create_session_from_bundle(
     Each upload creates a session-scoped agent row, even when a
     template agent with the same spec name already exists. Agent
     names are user-authored labels, not global content identities:
-    reusing a template by name would make a fresh ``omnigent run
+    reusing a template by name would make a fresh ``agent-meow run
     <yaml>`` session execute whatever bundle that template currently
     points at, silently discarding the uploaded bundle and coupling
     unrelated users who chose the same name.
@@ -12470,7 +12470,7 @@ def _create_session_from_bundle(
     """
     # Enforce the policy-handler allowlist only on a shared /
     # multi-user server. On a trusted single-user/local server,
-    # ``omnigent run`` uploads the operator's own bundle through this same
+    # ``agent-meow run`` uploads the operator's own bundle through this same
     # path, so custom handlers must keep working (the operator already has
     # code execution — the restriction would add no security there).
     spec = validate_agent_bundle(
@@ -14173,7 +14173,7 @@ def create_sessions_router(
                 if result.get("status") == "failed":
                     # Lenient on every create-time launch failure, including
                     # an unconfigured harness: the picker's readiness data
-                    # can be stale (the user may have run `omnigent setup`
+                    # can be stale (the user may have run `agent-meow setup`
                     # since the host last connected), so we never block the
                     # create. The session opens with the binding intact; the
                     # first message drives the real runner start, and if the
@@ -15055,7 +15055,7 @@ def create_sessions_router(
             ):
                 raise OmnigentError(
                     f"Only the session owner can attach a runner to session {session_id!r}. "
-                    f"To fork this session instead, run: omnigent run --fork {session_id}",
+                    f"To fork this session instead, run: agent-meow run --fork {session_id}",
                     code=ErrorCode.FORBIDDEN,
                 )
         if body.labels:
@@ -16457,7 +16457,7 @@ def create_sessions_router(
         Codex app-server elicitation request endpoint.
 
         Receives server-to-client JSON-RPC request envelopes forwarded
-        by ``omnigent codex`` (for example
+        by ``agent-meow codex`` (for example
         ``mcpServer/elicitation/request`` and
         ``item/tool/requestUserInput``), publishes the standard
         ``response.elicitation_request`` session event for the web UI,
@@ -17398,7 +17398,7 @@ def create_sessions_router(
         access: the requested ``terminal`` must be one of the names
         declared in the agent spec's ``terminals:`` block. Native
         harness bootstrap requests (marked ``ensure_native_terminal``
-        or ``bridge_inject_dir`` — the ``omnigent claude`` / ``codex``
+        or ``bridge_inject_dir`` — the ``agent-meow claude`` / ``codex``
         wrappers launching the session's own CLI terminal) are exempt:
         they launch undeclared names via the runner's
         synthesize-from-body path and predate the gate. The markers
@@ -18476,7 +18476,7 @@ def create_sessions_router(
           it writes no persistent marker, so the next message
           auto-relaunches the session on its (still-online) host via
           the normal message-dispatch relaunch path.
-        - ``"message"`` on an ``omnigent claude`` terminal session
+        - ``"message"`` on an ``agent-meow claude`` terminal session
           is forwarded to the bound runner for tmux injection only;
           the accepted prompt is persisted later when Claude records
           it in the terminal transcript.
@@ -19236,7 +19236,7 @@ def create_sessions_router(
                         # configured there. This message was the real
                         # runner-start attempt, so consume it and record a
                         # transcript error (the host's message names the
-                        # fix, `omnigent setup`) the web renders as a
+                        # fix, `agent-meow setup`) the web renders as a
                         # banner — instead of timing out into a generic
                         # RUNNER_UNAVAILABLE. The binding stays so a later
                         # message relaunches once setup is done.
@@ -19481,7 +19481,7 @@ def create_sessions_router(
         viewer list. Presence is scoped to the session tree's root
         conversation, so viewers of different agents/sub-agents in
         one session see each other. See
-        ``omnigent/server/presence.py``.
+        ``agent_meow/server/presence.py``.
 
         :param request: The FastAPI request, used to detect
             disconnect.

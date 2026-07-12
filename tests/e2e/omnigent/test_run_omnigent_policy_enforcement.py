@@ -1,10 +1,10 @@
 """
-End-to-end proof that policies declared in an omnigent YAML
-are enforced by the omnigent workflow under agent-meow mode.
+End-to-end proof that policies declared in an agent-meow YAML
+are enforced by the agent-meow workflow under agent-meow mode.
 
-The adapter in :mod:`~?agent_meow.spec.omnigent` lifts the
+The adapter in :mod:`~?agent_meow.spec.agent-meow` lifts the
 YAML's ``policies:`` block into
-:attr:`AgentSpec.guardrails.policies`; the omnigent runtime
+:attr:`AgentSpec.guardrails.policies`; the agent-meow runtime
 builds a :class:`PolicyEngine` over those specs and enforces at
 the four hook points (``input``, ``tool_call``, ``tool_result``,
 ``output``). This test drives the whole path with a real LLM
@@ -12,7 +12,7 @@ call and asserts the policy actually fires.
 
 **Why this test exists separately from the per-YAML example
 sweep**: the stock ``examples/*.yaml`` policy fixtures rely on
-the legacy omnigent ``(content, phase)`` callable signature
+the legacy agent-meow ``(content, phase)`` callable signature
 (``examples.tool_functions.block_long_sleep`` et al.), which
 agent-meow' :class:`FunctionPolicy` dispatcher can't invoke
 (it passes ``(ctx, context)`` where ``ctx`` is an
@@ -30,7 +30,7 @@ portability gap. That gap is tracked in ``TODO_omnigent_coverage.md``.
   ``guardrails.policies`` → the engine sees zero policies and
   the sentinel-blocked prompt gets an assistant reply.
 - The runtime stops reading ``guardrails`` from specs
-  synthesized via the omnigent adapter.
+  synthesized via the agent-meow adapter.
 - The DENY sentinel format changes (``[Denied by policy: ...]``
   → something else) without the hook point being updated.
 """
@@ -56,13 +56,13 @@ _HARNESS_HARNESS_MODELS = [("openai-agents", "mock-model")]
 _HARNESS_IDS = ["openai-agents"]
 
 # Sentinel token that the ``block_on_sentinel`` policy callable
-# in ``omnigent/_e2e_policy_callables.py`` DENYs on. The token
+# in ``agent_meow/_e2e_policy_callables.py`` DENYs on. The token
 # is deliberately unlikely to appear in model output; a real LLM
 # could otherwise generate it incidentally and mask a true
 # regression.
 _BLOCK_TOKEN = "BLOCK_THIS_TOKEN"
 
-# The standard DENY sentinel text the omnigent workflow
+# The standard DENY sentinel text the agent-meow workflow
 # stamps into the response when a policy returns DENY. See
 # :func:`~?agent_meow.runtime.workflow._build_deny_sentinel` —
 # all four enforcement hook points use the same shape so this
@@ -76,7 +76,7 @@ def policy_enforcement_yaml_factory(tmp_path: Path) -> Callable[[str, str], Path
     """
     Factory that writes an omnigent-shaped YAML registering one
     function policy on the ``input`` phase pointing at the
-    omnigent e2e callable.
+    agent-meow e2e callable.
 
     Returns a builder function so the parametrized test can
     materialize a YAML with the harness + model under test
@@ -87,8 +87,8 @@ def policy_enforcement_yaml_factory(tmp_path: Path) -> Callable[[str, str], Path
     ``prompt``, ``executor``, and single-entry ``policies`` —
     so a regression surfaces here rather than via incidental
     interactions with other fields. The callable
-    (``block_on_sentinel``) is already on ``omnigent`` and
-    matches the omnigent FunctionPolicy calling convention.
+    (``block_on_sentinel``) is already on ``agent-meow`` and
+    matches the agent-meow FunctionPolicy calling convention.
 
     :param tmp_path: Pytest's per-test temp dir — the YAML is
         single-use so there's no need to track it across runs.
@@ -131,10 +131,10 @@ def test_policy_denies_input_containing_sentinel(
     model: str,
 ) -> None:
     """
-    ``omnigent run <yaml> -p "<sentinel>..."`` produces
+    ``agent-meow run <yaml> -p "<sentinel>..."`` produces
     the DENY-by-policy sentinel in output — proof that the
     translator lifted the YAML's ``policies:`` into
-    ``AgentSpec.guardrails.policies`` AND the omnigent
+    ``AgentSpec.guardrails.policies`` AND the agent-meow
     workflow enforced it at INPUT.
 
     The policy fires before any LLM call, so no mock response
@@ -148,7 +148,7 @@ def test_policy_denies_input_containing_sentinel(
         agent_meow.
     :param mock_credentials_env: Mock-LLM env vars.
     :param policy_enforcement_yaml_factory: Builder for the
-        harness-specific omnigent YAML.
+        harness-specific agent-meow YAML.
     :param harness: The harness identifier.
     :param model: The model identifier.
     """
@@ -158,7 +158,7 @@ def test_policy_denies_input_containing_sentinel(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--no-session",
@@ -178,7 +178,7 @@ def test_policy_denies_input_containing_sentinel(
     # mean a translator regression or an executor-construction
     # bug that prevents us from even reaching enforcement.
     assert result.returncode == 0, (
-        f"--omnigent exited {result.returncode} before reaching "
+        f"--agent-meow exited {result.returncode} before reaching "
         f"enforcement. stderr tail:\n{result.stderr[-2000:]}"
     )
 
@@ -297,7 +297,7 @@ def test_policy_denies_tool_call_by_name(
     model: str,
 ) -> None:
     """
-    ``omnigent run <yaml> -p "<arithmetic prompt>"``
+    ``agent-meow run <yaml> -p "<arithmetic prompt>"``
     intercepts the LLM's ``calculate`` tool call, returns the
     DENY sentinel as tool output, and the final assistant reply
     reflects that — proving end-to-end that:
@@ -369,7 +369,7 @@ def test_policy_denies_tool_call_by_name(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--no-session",
@@ -388,7 +388,7 @@ def test_policy_denies_tool_call_by_name(
     # tool call that was intercepted, one LLM continuation that
     # produced the final reply).
     assert result.returncode == 0, (
-        f"--omnigent exited {result.returncode}. stderr tail:\n{result.stderr[-2000:]}"
+        f"--agent-meow exited {result.returncode}. stderr tail:\n{result.stderr[-2000:]}"
     )
 
     # The final assistant reply must mention the denial. If

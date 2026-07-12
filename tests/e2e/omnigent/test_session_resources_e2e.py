@@ -1,6 +1,6 @@
-"""E2E test -- Session Resources API against ``omnigent server`` (mock LLM).
+"""E2E test -- Session Resources API against ``agent-meow server`` (mock LLM).
 
-Boots ``omnigent server --agent <yaml>`` as a subprocess and
+Boots ``agent-meow server --agent <yaml>`` as a subprocess and
 exercises every session-resource endpoint. No LLM calls are made --
 the test only needs the server to boot and register the agent.
 
@@ -96,9 +96,9 @@ def _omnigent_server(
     runner_id: str,
     binding_token: str,
 ) -> Iterator[subprocess.Popen[str]]:
-    """Spawn ``omnigent server --agent <agent_path>`` and a sibling runner.
+    """Spawn ``agent-meow server --agent <agent_path>`` and a sibling runner.
 
-    :param python: Interpreter with omnigent installed.
+    :param python: Interpreter with agent-meow installed.
     :param agent_path: Absolute path to the agent directory.
     :param port: Bind port.
     :param env: Subprocess environment (without runner-specific vars).
@@ -114,7 +114,7 @@ def _omnigent_server(
         [
             str(python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "server",
             "--agent",
             str(agent_path),

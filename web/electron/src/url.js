@@ -105,11 +105,11 @@
    * ``https://<ws>.azuredatabricks.net``) lands on a 404 unless this suffix is
    * appended.
    *
-   * NOTE: the Python CLI records the UI mount as ``/omnigent`` in
-   * ``omnigent/conversation_browser.py`` (WORKSPACE_UI_PATH), whereas the
+   * NOTE: the Python CLI records the UI mount as ``/agent-meow`` in
+   * ``agent_meow/conversation_browser.py`` (WORKSPACE_UI_PATH), whereas the
    * desktop deliberately keeps ``/ml/omnigents`` for now — that is the path the
    * live workspace serves the embedded SPA on. The two are intentionally
-   * divergent pending reconciliation; do not "fix" this to ``/omnigent``
+   * divergent pending reconciliation; do not "fix" this to ``/agent-meow``
    * without verifying what the workspace actually serves to the desktop shell.
    */
   const WORKSPACE_UI_PATH = "/ml/omnigents";
@@ -134,7 +134,7 @@
    * Expand a bare Databricks workspace URL to its agent-meow web-UI mount.
    *
    * Mirrors the omni CLI's behavioral detection
-   * (``omnigent/cli.py:_workspace_api_server_url``): rather than match
+   * (``agent_meow/cli.py:_workspace_api_server_url``): rather than match
    * hostnames, probe the URL and adopt the mount only when the host answers
    * like a Databricks workspace — a response carrying the ``server: databricks``
    * header. URLs that already carry a path, or aren't https, are returned

@@ -43,7 +43,7 @@ def test_session_start_hook_records_transcript_state_without_output(
     """
     SessionStart records Claude state without printing hook output.
 
-    This fails if the ``omnigent claude`` hook reintroduces
+    This fails if the ``agent-meow claude`` hook reintroduces
     ``systemMessage`` output, which Claude renders with the noisy
     ``SessionStart:startup says:`` prefix.
     """
@@ -78,7 +78,7 @@ def test_session_start_hook_emits_conversation_url_system_message(
     """
     SessionStart emits Claude hook output when a conversation URL exists.
 
-    This fails if ``omnigent claude`` stops routing the web URL
+    This fails if ``agent-meow claude`` stops routing the web URL
     through Claude's hook output path, leaving users with no startup
     pointer back to the agent-meow conversation.
     """
@@ -121,9 +121,9 @@ def test_session_start_hook_maps_workspace_hosted_server_to_ui_mount(
     """
     SessionStart links to the SPA mount for workspace-hosted servers.
 
-    ``ap_server_url`` is the API proxy base (``/api/2.0/omnigent``);
+    ``ap_server_url`` is the API proxy base (``/api/2.0/agent-meow``);
     pointing the "Open this session" message there returns JSON, not
-    the web UI. The message must land on the ``/omnigent`` SPA mount
+    the web UI. The message must land on the ``/agent-meow`` SPA mount
     with the ``?o=<org>`` selector — matching the CLI's ``Web UI:``
     line and the tmux status bar.
     """
@@ -135,7 +135,7 @@ def test_session_start_hook_maps_workspace_hosted_server_to_ui_mount(
         "agent_meow.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
-    server = "https://example.databricks.com/api/2.0/omnigent"
+    server = "https://example.databricks.com/api/2.0/agent-meow"
     store_databricks_auth(
         server,
         "https://example.databricks.com",
@@ -160,7 +160,7 @@ def test_session_start_hook_maps_workspace_hosted_server_to_ui_mount(
     assert json.loads(captured.out) == {
         "systemMessage": (
             "Open this session in agent-meow: "
-            "https://example.databricks.com/omnigent/c/conv_abc?o=2850744067564480"
+            "https://example.databricks.com/agent_meow/c/conv_abc?o=2850744067564480"
         )
     }
 

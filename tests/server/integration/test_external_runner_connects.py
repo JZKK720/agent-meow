@@ -1,7 +1,7 @@
 """Integration test: an external runner connects to a local server.
 
 Verifies the ``run --server http://127.0.0.1:...`` scenario end-to-end
-by spawning a real ``omnigent server`` subprocess (no ``--agent``),
+by spawning a real ``agent-meow server`` subprocess (no ``--agent``),
 then launching an external runner via ``_start_cli_runner_process``.
 The test asserts the runner registers in the tunnel registry and the
 server reports it as online via ``GET /v1/runners/{id}/status``.
@@ -36,7 +36,7 @@ from tests._helpers.live_server import HarnessCredentials, start_live_server
 @pytest.fixture
 def local_server(tmp_path: Path) -> tuple[str, int]:
     """
-    Spawn a bare ``omnigent server`` (no ``--agent``) and yield
+    Spawn a bare ``agent-meow server`` (no ``--agent``) and yield
     ``(base_url, server_pid)``.
 
     Teardown sends SIGTERM with a 5s grace period.
@@ -72,7 +72,7 @@ def test_external_runner_connects_to_local_server(
 ) -> None:
     """
     An external runner launched via ``_start_cli_runner_process``
-    registers with a local ``omnigent server`` and is reported
+    registers with a local ``agent-meow server`` and is reported
     online.
 
     This is the ``run --server http://127.0.0.1:...`` code path.

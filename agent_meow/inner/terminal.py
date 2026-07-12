@@ -70,7 +70,7 @@ _VALID_TERMINAL_TRANSPORTS = frozenset({TERMINAL_TRANSPORT_PTY, TERMINAL_TRANSPO
 # reads as PTY. Any other value (including ``control`` and truthy spellings)
 # falls through to the control default.
 _TRANSPORT_PTY_ALIASES = frozenset({TERMINAL_TRANSPORT_PTY, "0", "false", "no", "off"})
-# Config-file location for the global default (``~/.omnigent/config.yaml``,
+# Config-file location for the global default (``~/.agent_meow/config.yaml``,
 # honoring ``OMNIGENT_CONFIG_HOME`` for test isolation — same resolution the
 # runner and CLI use). The transport lives under the ``terminal:`` table as
 # ``terminal.transport``.
@@ -84,20 +84,20 @@ def _global_config_path() -> Path:
 
     Mirrors :func:`agent_meow.runner._entry._runner_config_path` (kept local to
     avoid an inner→runner import): honors :envvar:`OMNIGENT_CONFIG_HOME` for
-    test isolation and subprocess consistency, else ``~/.omnigent/config.yaml``.
+    test isolation and subprocess consistency, else ``~/.agent_meow/config.yaml``.
 
-    :returns: Config path, e.g. ``Path("~/.omnigent/config.yaml")``.
+    :returns: Config path, e.g. ``Path("~/.agent_meow/config.yaml")``.
     """
     config_home = os.environ.get(_CONFIG_HOME_ENV_VAR)
     if config_home:
         return Path(config_home).expanduser() / "config.yaml"
-    return Path.home() / ".omnigent" / "config.yaml"
+    return Path.home() / ".agent-meow" / "config.yaml"
 
 
 def _global_terminal_transport_default() -> str:
     """Resolve the process-wide default web-terminal transport from config.
 
-    Reads ``terminal.transport`` from ``~/.omnigent/config.yaml`` at call time
+    Reads ``terminal.transport`` from ``~/.agent_meow/config.yaml`` at call time
     (not import time) so a config edit takes effect on the next attach without
     a restart, and tests can point :envvar:`OMNIGENT_CONFIG_HOME` at a scratch
     config. Control mode is the default; set ``terminal.transport`` to a PTY
@@ -163,7 +163,7 @@ def resolve_terminal_transport(
     2. ``spec_transport`` — the per-terminal / per-harness
        :attr:`TerminalEnvSpec.terminal_transport`, the gradual-rollout dial.
     3. The global default from :func:`_global_terminal_transport_default`
-       — ``control`` unless ``terminal.transport`` in ``~/.omnigent/config.yaml``
+       — ``control`` unless ``terminal.transport`` in ``~/.agent_meow/config.yaml``
        opts out to ``pty``.
 
     Unrecognized values at any level are ignored (fall through) so a stray
@@ -815,7 +815,7 @@ def build_terminal_os_env_spec(
             raise ValueError("This terminal does not allow sandbox overrides")
         sandbox = effective_os_env_spec.sandbox or OSEnvSandboxSpec(type="none")
         # Defense in depth on top of the parse-time check
-        # (omnigent/inner/loader.py rejects allow_sandbox_override:
+        # (agent_meow/inner/loader.py rejects allow_sandbox_override:
         # true paired with egress_rules at agent-load time). This
         # branch also fires for specs built programmatically without
         # going through the loader and catches any future code path
@@ -1874,7 +1874,7 @@ def create_terminal_instance(
     if IS_WINDOWS:
         raise RuntimeError(
             "Native terminal harnesses (tmux/PTY) are not supported on Windows. "
-            "Run an SDK-based harness via `omnigent run <agent.yaml>` (e.g. the "
+            "Run an SDK-based harness via `agent-meow run <agent.yaml>` (e.g. the "
             "claude-sdk, cursor, copilot, or codex harness) or use the web UI."
         )
     if not _tmux_available():

@@ -1,6 +1,6 @@
 """E2E test — ``--harness claude-sdk`` alias works end-to-end.
 
-Runs ``omnigent run hello_world.yaml --harness claude-sdk -p <prompt>``
+Runs ``agent-meow run hello_world.yaml --harness claude-sdk -p <prompt>``
 as a real subprocess and verifies it exits 0 with non-trivial assistant output.
 This proves the "claude" alias is canonicalized to "claude-sdk" through the
 full CLI → harness → LLM path.
@@ -12,7 +12,7 @@ CLI flag).
 
 Run with:
 
-    pytest tests/e2e/omnigent/test_claude_harness_alias_e2e.py -v --profile oss
+    pytest tests/e2e/agent_meow/test_claude_harness_alias_e2e.py -v --profile oss
 """
 
 from __future__ import annotations
@@ -83,7 +83,7 @@ def _clean_env(profile: str) -> dict[str, str]:
     ):
         env.pop(var, None)
     env["DATABRICKS_CONFIG_PROFILE"] = profile
-    # The omnigent CLI no longer accepts ``--profile``; write the
+    # The agent-meow CLI no longer accepts ``--profile``; write the
     # supported replacement — an ``auth:`` block in an isolated
     # ``OMNIGENT_CONFIG_HOME`` — so the spawned CLI routes the
     # claude-sdk harness through this Databricks profile.
@@ -102,7 +102,7 @@ def _clean_env(profile: str) -> dict[str, str]:
 def test_run_with_claude_alias_produces_output(
     request: pytest.FixtureRequest,
 ) -> None:
-    """``omnigent run --harness claude-sdk`` exits 0 with assistant text.
+    """``agent-meow run --harness claude-sdk`` exits 0 with assistant text.
 
     Proves the "claude" alias is canonicalized through the full
     CLI → agent-meow server → harness spawn → LLM call → output path.
@@ -121,7 +121,7 @@ def test_run_with_claude_alias_produces_output(
         [
             str(python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--harness",

@@ -22,7 +22,7 @@ def _column_names(conn: sa.Connection, table: str) -> list[str]:
 
 def _alembic_cfg(uri: str) -> Config:
     cfg = Config()
-    cfg.set_main_option("script_location", "omnigent/db/migrations")
+    cfg.set_main_option("script_location", "agent_meow/db/migrations")
     cfg.set_main_option("sqlalchemy.url", uri)
     return cfg
 

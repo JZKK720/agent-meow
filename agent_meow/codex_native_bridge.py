@@ -29,7 +29,7 @@ _MCP_CONFIG_FILE = "bridge.json"
 # prep time (the agent-meow URL + auth do not change across thread rotations),
 # whereas ``state.json`` mutates on every turn/thread change.
 _POLICY_HOOK_FILE = "policy_hook.json"
-_BRIDGE_ROOT = Path.home() / ".omnigent" / "codex-native"
+_BRIDGE_ROOT = Path.home() / ".agent-meow" / "codex-native"
 
 
 def bridge_root() -> Path:
@@ -39,7 +39,7 @@ def bridge_root() -> Path:
     Tests may monkeypatch :data:`_BRIDGE_ROOT` to isolate bridge files.
 
     :returns: Absolute root for Codex-native bridge directories, e.g.
-        ``Path("~/.omnigent/codex-native")``.
+        ``Path("~/.agent_meow/codex-native")``.
     """
     return _BRIDGE_ROOT
 
@@ -52,11 +52,11 @@ class CodexNativeBridgeState:
     :param session_id: agent-meow conversation id, e.g.
         ``"conv_abc123"``.
     :param socket_path: Unix socket path for the Codex app-server,
-        e.g. ``"/home/user/.omnigent/codex-native/x/app-server.sock"``.
+        e.g. ``"/home/user/.agent_meow/codex-native/x/app-server.sock"``.
     :param thread_id: Codex app-server thread id, e.g.
         ``"0196..."``.
     :param codex_home: Private per-session ``CODEX_HOME`` path, e.g.
-        ``"/home/user/.omnigent/codex-native/x/codex-home"``.
+        ``"/home/user/.agent_meow/codex-native/x/codex-home"``.
     :param active_turn_id: Current Codex turn id, if one is running,
         e.g. ``"turn_abc123"``.
     """
@@ -74,7 +74,7 @@ def bridge_dir_for_bridge_id(bridge_id: str) -> Path:
 
     :param bridge_id: Opaque bridge id, e.g. ``"bridge_abc123"``.
     :returns: Absolute bridge directory under
-        ``~/.omnigent/codex-native``.
+        ``~/.agent_meow/codex-native``.
     """
     digest = hashlib.sha256(bridge_id.encode("utf-8")).hexdigest()[:32]
     return _BRIDGE_ROOT / digest
@@ -129,7 +129,7 @@ def write_mcp_bridge_config(bridge_dir: Path) -> None:
     a token that the relay HTTP server was started with).
 
     :param bridge_dir: Codex bridge directory, e.g.
-        ``Path("~/.omnigent/codex-native/<hash>")``.
+        ``Path("~/.agent_meow/codex-native/<hash>")``.
     """
     config_path = bridge_dir / _MCP_CONFIG_FILE
     if config_path.exists():
@@ -194,7 +194,7 @@ def write_policy_hook_config(
     here and read by :func:`read_policy_hook_config` at hook time.
 
     :param bridge_dir: Native Codex bridge directory, e.g.
-        ``Path("~/.omnigent/codex-native/<hash>")``.
+        ``Path("~/.agent_meow/codex-native/<hash>")``.
     :param ap_server_url: agent-meow server base URL the hook POSTs to, e.g.
         ``"http://127.0.0.1:8787"``.
     :param ap_auth_headers: Outbound auth headers for agent-meow requests, e.g.

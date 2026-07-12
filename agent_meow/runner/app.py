@@ -203,7 +203,7 @@ _NATIVE_TERMINAL_START_FAILED_CODE = "native_terminal_start_failed"
 _ASK_GATE_DELIVERY_READ_TIMEOUT_S: float = 86400.0
 _ASK_GATE_DELIVERY_TIMEOUT = httpx.Timeout(_ASK_GATE_DELIVERY_READ_TIMEOUT_S, connect=30.0)
 # Terminal resource hosting the framework's own TUI (the agent-meow REPL,
-# ``omnigent attach``) for runner-hosted SDK sessions — the SDK mirror of
+# ``agent-meow attach``) for runner-hosted SDK sessions — the SDK mirror of
 # the claude-/codex-native embedded terminals. Resource id derives as
 # ``terminal_tui_main`` (see ``terminal_resource_id``).
 _REPL_TERMINAL_NAME = "tui"
@@ -1213,7 +1213,7 @@ async def _auto_create_opencode_terminal(
                     # below instead of silently starting empty.
                     resume_lost_history = True
             if opencode_session_id is None:
-                created = await client.create_session({"title": f"omnigent:{session_id}"})
+                created = await client.create_session({"title": f"agent-meow:{session_id}"})
                 opencode_session_id = created.id
                 # Rehydrate prior context (text-prefix replay) when this is a
                 # lost-session resume OR a forked clone carrying history — both
@@ -1678,7 +1678,7 @@ def _pi_args_have_provider(args: list[str]) -> bool:
     """Return whether user Pi args already pin a provider/model/key.
 
     When the user passes their own ``--provider`` / ``--model`` / ``--api-key``,
-    agent-meow must not inject the ``omnigent setup`` provider on top — the
+    agent-meow must not inject the ``agent-meow setup`` provider on top — the
     explicit choice wins.
 
     :param args: User pass-through Pi CLI args.
@@ -1963,7 +1963,7 @@ async def _auto_create_pi_terminal(
         "OMNIGENT_PI_NATIVE_BRIDGE_DIR": str(bridge_dir),
     }
     # Route the runner-owned Pi process through the provider configured by
-    # ``omnigent setup`` (Databricks gateway / API key), so a separate
+    # ``agent-meow setup`` (Databricks gateway / API key), so a separate
     # ``pi /login`` isn't required — the parity codex-native/claude-native
     # already have. Skipped when the user pinned their own provider/model via
     # terminal_launch_args, or when no usable provider is configured (Pi then
@@ -2175,7 +2175,7 @@ async def _auto_create_cursor_terminal(
     # codex-native path above: the persisted ``/model`` override
     # (``model_override``) wins, falling back to the spec's pinned model
     # (``--model`` flag / config.yaml ``model:``). An explicit model in the
-    # passthrough launch args (``omnigent cursor -- --model X`` or the joined
+    # passthrough launch args (``agent-meow cursor -- --model X`` or the joined
     # ``--model=X`` form) wins over both, so only inject when the user did not
     # already pin one — otherwise cursor-agent would see two ``--model`` values.
     if not any(arg in ("--model", "-m") or arg.startswith("--model=") for arg in cursor_args):
@@ -3303,7 +3303,7 @@ async def _auto_create_kimi_terminal(
     workspace = os.path.realpath(str(launch_config.workspace))
     kimi_command = resolve_kimi_executable()
     # No subcommand: bare ``kimi`` launches the interactive TUI. Pass-through
-    # launch args (``omnigent kimi -- <args>``) are persisted on the session
+    # launch args (``agent-meow kimi -- <args>``) are persisted on the session
     # snapshot and threaded here.
     kimi_args = list(launch_config.terminal_launch_args or [])
 
@@ -3469,7 +3469,7 @@ async def _auto_create_codex_terminal(
     bridge_dir = prepare_bridge_dir(session_id)
     socket_path = socket_path_for_bridge_dir(bridge_dir)
     codex_home = codex_home_for_bridge_dir(bridge_dir)
-    # Route across all offerings: a configured provider (omnigent setup),
+    # Route across all offerings: a configured provider (agent-meow setup),
     # a Databricks ucode profile from provider config, or Codex's own
     # login — parity with the in-process codex harness and the CLI path.
     # Resolved before the fork/cold-resume branches below so any rollout
@@ -3784,7 +3784,7 @@ async def _auto_create_codex_terminal(
                     config_overrides=tuple(app_server.config_overrides),
                 ),
                 env=codex_terminal_env(app_server),
-                # Match the local ``omnigent codex`` terminal scrollback.
+                # Match the local ``agent-meow codex`` terminal scrollback.
                 scrollback=100_000,
                 # Enable tmux passthrough so the Codex TUI's escape sequences
                 # reach the web xterm.
@@ -4062,7 +4062,7 @@ async def _run_antigravity_reader(
 
     A thin wrapper over the shared
     :func:`~?agent_meow.antigravity_native_reader.run_reader_with_bridge` (used by both
-    this runner path and the CLI ``omnigent antigravity`` attach fallback); it
+    this runner path and the CLI ``agent-meow antigravity`` attach fallback); it
     exists only to name the runner-side entry point and keep its task name stable
     for the single-instance task registry. See the helper for the full wiring
     (client lifecycle, elicitation bridge, ``supervise_reader`` spawn).
@@ -4355,7 +4355,7 @@ async def _auto_create_antigravity_terminal(
             command=argv[0],
             args=list(argv[1:]),
             env=env_overrides,
-            # Match the local ``omnigent antigravity`` terminal scrollback.
+            # Match the local ``agent-meow antigravity`` terminal scrollback.
             scrollback=100_000,
             # Let agy's full-screen TUI escape sequences reach the web xterm.
             tmux_allow_passthrough=True,
@@ -4368,7 +4368,7 @@ async def _auto_create_antigravity_terminal(
             # not the user has opened the Terminal panel. agy runs headlessly in
             # the tmux pane (the pty is enough; verified against agy 1.0.10), and a
             # later web attach simply views the already-running pane. (The CLI
-            # ``omnigent antigravity`` path keeps start-on-attach: there a human
+            # ``agent-meow antigravity`` path keeps start-on-attach: there a human
             # TTY is the driver.)
             tmux_start_on_attach=False,
         ),
@@ -4786,7 +4786,7 @@ async def _codex_session_needs_runner_terminal(
       so the runner must create it regardless of whether the *parent* was
       host- or CLI-spawned. (Gating on the parent's ``host_id`` was a
       regression: codex-native sub-agents under a CLI-driven parent —
-      e.g. polly run via ``omnigent run --server`` — silently never got
+      e.g. polly run via ``agent-meow run --server`` — silently never got
       a terminal and the dispatch no-op'd.)
 
     - **CLI top-level sessions** have neither ``host_id`` nor
@@ -5254,12 +5254,12 @@ def _ensure_orchestrator_skills_in_bundle(
     agent_spec: Any,
 ) -> None:
     """
-    Link the ``build-omnigent`` skill into a bundle's ``skills/`` dir.
+    Link the ``build-agent-meow`` skill into a bundle's ``skills/`` dir.
 
     Called before native bridge launches so ``--plugin-dir`` (claude) or
     ``CODEX_HOME/skills/`` (codex) picks up the skill. Injects
-    unconditionally for every agent — every ``omnigent claude`` /
-    ``omnigent codex`` user should be able to author new agents. The
+    unconditionally for every agent — every ``agent-meow claude`` /
+    ``agent-meow codex`` user should be able to author new agents. The
     skill isn't already present guard is idempotent. Best-effort: a
     failure to link is logged but does not abort the terminal launch.
 
@@ -5269,7 +5269,7 @@ def _ensure_orchestrator_skills_in_bundle(
         removal; retained for call-site compat).
     """
     del agent_spec  # no longer gated; inject unconditionally
-    skill_name = "build-omnigent"
+    skill_name = "build-agent-meow"
     target_dir = bundle_dir / "skills" / skill_name
     if target_dir.exists():
         return
@@ -5674,7 +5674,7 @@ async def _auto_create_claude_terminal(
     # provider/session vars to unset before the gateway env applies.
     # See designs/NATIVE_RUNNER_SERVER_LAUNCH.md.
     # Resolve the launch config across all offerings — a configured provider
-    # (omnigent setup), a Databricks ucode profile from provider config, or
+    # (agent-meow setup), a Databricks ucode profile from provider config, or
     # Claude's own login — so a host-spawned native-claude session honors the
     # provider selection just like the in-process claude-sdk harness and the
     # CLI path.
@@ -5686,7 +5686,7 @@ async def _auto_create_claude_terminal(
             "native-claude: could not derive a provider/ucode launch config "
             "— FALLING BACK to Claude Code's own login; "
             "your configured provider will NOT be used. Check "
-            "`omnigent setup --no-internal-beta` "
+            "`agent-meow setup --no-internal-beta` "
             "and that the secret resolves in this process.",
             exc_info=True,
         )
@@ -5911,7 +5911,7 @@ async def _auto_create_repl_terminal(
 
     Called when the runner receives a non-native (SDK-harness) top-level
     session via ``POST /v1/sessions`` and no REPL terminal exists yet. The
-    terminal hosts the framework's own TUI (``omnigent attach
+    terminal hosts the framework's own TUI (``agent-meow attach
     <session_id> --server <url>``) in a tmux pane, exposed through the
     standard terminal-attach WebSocket so the web UI embeds it exactly
     like the claude-/codex-native terminals — with the agent-meow REPL as
@@ -5922,13 +5922,13 @@ async def _auto_create_repl_terminal(
     the embedded terminal stay in sync. The tmux command is deferred until
     the first client attaches (``tmux_start_on_attach``): a session whose
     terminal is never opened pays only for an idle tmux pane, and by first
-    attach the session is fully live (``omnigent attach`` fails loud on a
+    attach the session is fully live (``agent-meow attach`` fails loud on a
     non-live session) with the REPL sized to the real attached terminal.
 
-    Auth parity with the native terminals: the spawned ``omnigent
+    Auth parity with the native terminals: the spawned ``agent-meow
     attach`` resolves credentials for ``--server`` the same way a
     user-launched CLI does (``OMNIGENT_REMOTE_AUTH_TOKEN`` env → stored
-    OIDC token from ``omnigent login`` → ``~/.databrickscfg``), which
+    OIDC token from ``agent-meow login`` → ``~/.databrickscfg``), which
     holds because the runner lives on the user's machine.
 
     :param session_id: Session/conversation identifier,
@@ -5961,11 +5961,11 @@ async def _auto_create_repl_terminal(
             cwd=workspace,
             sandbox=(agent_os_env.sandbox if agent_os_env is not None else None),
         ),
-        # The runner's interpreter is the venv with omnigent installed;
+        # The runner's interpreter is the venv with agent-meow installed;
         # ``python -m agent_meow`` avoids depending on the console script
         # being on the tmux pane's PATH.
         command=sys.executable,
-        args=["-m", "omnigent", "attach", session_id, "--server", server_url],
+        args=["-m", "agent-meow", "attach", session_id, "--server", server_url],
         scrollback=50000,
         # Defer the REPL process until the first web client attaches (see
         # docstring): no cost for never-opened terminals, and the REPL
@@ -5987,7 +5987,7 @@ async def _auto_create_repl_terminal(
     # pill (web TerminalFirstContext). Stamped here — not at session
     # creation — so only sessions whose runner actually hosts a REPL
     # terminal get the toggle; in-process (runner-less) sessions never
-    # show a dead pill. The ``omnigent.wrapper`` label is deliberately
+    # show a dead pill. The ``agent_meow.wrapper`` label is deliberately
     # NOT set: these sessions stay chat-first, the terminal is a
     # secondary view.
     try:
@@ -6016,7 +6016,7 @@ async def _auto_create_repl_terminal(
         },
     )
     _logger.info(
-        "Auto-created omnigent REPL terminal for session %s: terminal_id=%s "
+        "Auto-created agent-meow REPL terminal for session %s: terminal_id=%s "
         "server_url=%s elapsed_ms=%.0f",
         session_id,
         terminal_payload.get("id"),
@@ -6035,7 +6035,7 @@ async def _delete_native_bridge_dirs(
     Remove any native-harness bridge dirs left behind by a session.
 
     Each native harness keeps a per-conversation bridge dir under
-    ``/tmp/omnigent-<uid>/<harness>-native/<digest>`` (some use ``~/.omnigent``)
+    ``/tmp/omnigent-<uid>/<harness>-native/<digest>`` (some use ``~/.agent-meow``)
     holding a bridge token / auth secret + MCP config — secret material. Closing
     the pane does not remove it, so without this they accumulate even on a clean
     session delete (issue #1350). We don't know which harness this session used,
@@ -6647,10 +6647,10 @@ class _SessionSnapshot:
     agent_name: str | None = None
 
 
-# Language constant the omnigent YAML translator stamps on callable-backed
-# tools (omnigent/spec/agent_meow.py:OMNIGENT_TOOL_LANGUAGE). Duplicated rather
+# Language constant the agent-meow YAML translator stamps on callable-backed
+# tools (agent_meow/spec/agent_meow.py:OMNIGENT_TOOL_LANGUAGE). Duplicated rather
 # than imported to avoid pulling the heavy translator module in for one
-# string — same rationale as omnigent/tools/local_callable.py.
+# string — same rationale as agent_meow/tools/local_callable.py.
 _OMNIGENT_CALLABLE_LANGUAGE = "omnigent-python-callable"
 
 
@@ -7204,7 +7204,7 @@ def register_subagent_work(
         ``"conv_child456"``.
     :param agent: Sub-agent name, e.g. ``"researcher"``.
     :param title: Sub-agent instance title, e.g. ``"auth"``.
-    :param wrapper_label: Optional child ``omnigent.wrapper``
+    :param wrapper_label: Optional child ``agent_meow.wrapper``
         label, e.g. ``"claude-code-native-ui"``.
     :returns: The registered work entry.
     """
@@ -8034,7 +8034,7 @@ def create_runner_app(
     # leaked Lock per session otherwise accumulates for the app's lifetime).
     _antigravity_terminal_ensure_locks: dict[str, asyncio.Lock] = {}
     app.state.antigravity_terminal_ensure_locks = _antigravity_terminal_ensure_locks
-    # Same guard for the agent-meow REPL (``omnigent attach``) terminal
+    # Same guard for the agent-meow REPL (``agent-meow attach``) terminal
     # auto-created for non-native SDK sessions.
     _repl_terminal_ensure_locks: dict[str, asyncio.Lock] = {}
     # Turn sequencing (SESSION_REARCHITECTURE Step 5 / SESSION_STEERING_MIGRATION Step 1)
@@ -9147,14 +9147,14 @@ def create_runner_app(
                         )
                         _native_agent_name = getattr(_native_spec, "name", None)
                         _native_skills_filter = getattr(_native_spec, "skills_filter", "all")
-                    # Auto-inject orchestrator skills (build-omnigent)
+                    # Auto-inject orchestrator skills (build-agent-meow)
                     # into the bundle so Claude discovers them via
                     # --plugin-dir — mirrors _inject_orchestrator_skills
                     # in the load_skill dispatch path.
                     # When no bundle dir exists (single-YAML agents like
                     # claude-native-ui), create a synthetic bundle root in
                     # the session's bridge dir so the skill link +
-                    # --plugin-dir still fires. Every omnigent agent
+                    # --plugin-dir still fires. Every agent-meow agent
                     # should discover the platform skills without needing a
                     # bundled skills/ directory.
                     if _native_bundle_dir is None:
@@ -9648,7 +9648,7 @@ def create_runner_app(
 
         # Auto-bootstrap the agent-meow REPL terminal for non-native
         # (SDK-harness) top-level sessions: host the framework's own TUI
-        # (``omnigent attach``) in a tmux pane so the web UI can embed it
+        # (``agent-meow attach``) in a tmux pane so the web UI can embed it
         # — the SDK mirror of the claude-/codex-native terminals above.
         # Sub-agent sessions are skipped (their I/O surfaces through the
         # parent's transcript), as are the spec-less test scaffold and
@@ -9688,7 +9688,7 @@ def create_runner_app(
                         # launch failure must not fail the session (no
                         # ``session.status: failed`` publication).
                         _logger.exception(
-                            "Failed to auto-create omnigent REPL terminal for %s",
+                            "Failed to auto-create agent-meow REPL terminal for %s",
                             session_id,
                         )
                     finally:
@@ -13241,7 +13241,7 @@ def create_runner_app(
         - ``create_session_terminal`` (the ``bridge_inject_dir`` branch), which
           fires as the Claude terminal launches — after the client has reset
           the bridge dir and before Claude Code's MCP client performs its
-          initial ``tools/list``. This is the normal ``omnigent claude``
+          initial ``tools/list``. This is the normal ``agent-meow claude``
           path: the comment tools land on that first list with no notification
           race, so the notification is sent in the background (the bridge
           server is not up yet, and awaiting it would block the launch).
@@ -13974,8 +13974,8 @@ def create_runner_app(
         # Fallback for native sessions whose terminal was launched
         # outside the runner terminal route (e.g. tests, UI-launched
         # terminals): make sure the comment-tool relay is running before the
-        # user message is injected. The normal ``omnigent claude`` /
-        # ``omnigent codex`` path already started it at terminal launch, in
+        # user message is injected. The normal ``agent-meow claude`` /
+        # ``agent-meow codex`` path already started it at terminal launch, in
         # which case this is a no-op. ``await_notify=False``: a UI-launched
         # terminal is never pre-warmed, so on its first turn Claude Code's MCP
         # bridge has not published ``server.json`` yet and awaiting the
@@ -15145,7 +15145,7 @@ def create_runner_app(
                     # running with only this message.
                     #
                     # The just-posted message may already be persisted in the
-                    # store (invariant I1, omnigent/server/routes/sessions.py:
+                    # store (invariant I1, agent_meow/server/routes/sessions.py:
                     # persist-before-forward), but in its PRE-resolution body
                     # (e.g. ``file_id`` blocks the runner has since resolved to
                     # ``image_url`` / ``file_data``) — so that reloaded copy
@@ -16249,7 +16249,7 @@ def create_runner_app(
             and session_key == "main"
             # Only the web-UI / message-path ensure probe (which sends no
             # ``spec``) boots the runner-owned agy terminal here. The
-            # ``omnigent antigravity`` CLI wrapper POSTs ``ensure_native_terminal``
+            # ``agent-meow antigravity`` CLI wrapper POSTs ``ensure_native_terminal``
             # WITH a full ``spec`` (it owns the agy launch + its own client-side
             # forwarder) and must fall through to the generic launch below —
             # exactly the behavior its launch comment documents. Gating on the
@@ -16438,7 +16438,7 @@ def create_runner_app(
             # No matching terminal in the YAML: synthesise from the
             # body but inherit the agent's sandbox so we don't punch
             # a hole in the policy. The wrapper use case
-            # (omnigent claude) lands here; the launched terminal
+            # (agent-meow claude) lands here; the launched terminal
             # picks up the agent's sandbox/egress instead of running
             # completely unsandboxed.
             spec_cwd = spec.get("cwd")
@@ -16459,7 +16459,7 @@ def create_runner_app(
                 tmux_allow_passthrough=bool(spec.get("tmux_allow_passthrough", False)),
                 tmux_start_on_attach=bool(spec.get("tmux_start_on_attach", False)),
             )
-        # Opt-in: callers (e.g. the ``omnigent claude`` wrapper) can ask the
+        # Opt-in: callers (e.g. the ``agent-meow claude`` wrapper) can ask the
         # runner to publish the launched terminal's tmux socket + target into a
         # bridge directory on this host, and to expose the comment tools to
         # Claude Code. Any truthy value (including a legacy path string from
@@ -16496,7 +16496,7 @@ def create_runner_app(
                 cwd_override=cwd_override,
                 sandbox_override=sandbox_override,
                 parent_os_env=agent_os_env,
-                # The bridge-inject path is the ``omnigent claude``
+                # The bridge-inject path is the ``agent-meow claude``
                 # wrapper launching the claude-native agent terminal —
                 # mark it so its pane activity drives the session's
                 # PTY-derived working status.
@@ -16738,7 +16738,7 @@ def create_runner_app(
 
         The REPL terminal is runner-owned plumbing behind the web UI's
         Terminal view. Its tmux session dies whenever the REPL process
-        exits — the user pressing Ctrl+C inside the REPL, or ``omnigent
+        exits — the user pressing Ctrl+C inside the REPL, or ``agent-meow
         attach`` failing at deferred start — but the registry keeps
         reporting the dead instance as running, so the web Terminal pill
         stays enabled while every attach is rejected, leaving a
@@ -16792,7 +16792,7 @@ def create_runner_app(
                     # PATCH failure) must degrade to the pre-existing 4404
                     # close on this attach — never crash the WS route.
                     _logger.exception(
-                        "Failed to recreate omnigent REPL terminal for %s",
+                        "Failed to recreate agent-meow REPL terminal for %s",
                         session_id,
                     )
                     return None
@@ -16853,7 +16853,7 @@ def create_runner_app(
                     # pre-existing 4404 close on this attach - never
                     # crash the WS route.
                     _logger.exception(
-                        "Failed to recreate omnigent qwen terminal for %s",
+                        "Failed to recreate agent-meow qwen terminal for %s",
                         session_id,
                     )
                     return None
@@ -17818,7 +17818,7 @@ def create_runner_app(
 
     # Note: cursor-native has no model-options route. Its catalog is a curated
     # *static* base list served directly by the AP server (see
-    # ``_fetch_model_options`` in omnigent/server/routes/sessions.py), so it
+    # ``_fetch_model_options`` in agent_meow/server/routes/sessions.py), so it
     # needs no runner round-trip and stays immune to the runner-backed cache
     # invalidation that would otherwise blank the picker on an effort change.
 
@@ -18534,7 +18534,7 @@ def create_runner_app(
         summarization uses the same credentials as normal agent turns:
 
         1. :class:`ProviderAuth` — resolve named provider from
-           ``~/.omnigent/config.yaml``, extract ``api_key`` + ``base_url``
+           ``~/.agent_meow/config.yaml``, extract ``api_key`` + ``base_url``
            from the ``openai`` family.
         2. :class:`DatabricksAuth` — resolve the named profile from
            ``~/.databrickscfg`` into ``base_url`` + ``api_key``.
@@ -18611,7 +18611,7 @@ def create_runner_app(
         """
         Resolve connection from a named provider's family.
 
-        Loads providers from ``~/.omnigent/config.yaml`` and extracts
+        Loads providers from ``~/.agent_meow/config.yaml`` and extracts
         ``api_key`` + ``base_url`` from the matching family entry.
         Tries the ``anthropic`` family for ``anthropic/`` or
         ``claude`` models, otherwise ``openai``. Returns ``None``

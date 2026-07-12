@@ -1,10 +1,10 @@
-"""OpenCode readiness + credential reporting for ``omnigent setup``.
+"""OpenCode readiness + credential reporting for ``agent-meow setup``.
 
 Like :mod:`~?agent_meow.onboarding.goose_auth`, agent-meow stores **no** OpenCode
 credentials: OpenCode owns its own provider auth via ``opencode auth login``
 (stored in ``~/.local/share/opencode/auth.json``) or ambient provider env vars
 (``OPENAI_API_KEY`` / ``ANTHROPIC_API_KEY`` / …). This module is a thin,
-read-only reporter so ``omnigent setup`` can show which providers OpenCode can
+read-only reporter so ``agent-meow setup`` can show which providers OpenCode can
 reach and offer to run its native login — without ever touching its secrets.
 
 It reads ``auth.json`` directly (a JSON object keyed by provider id — see

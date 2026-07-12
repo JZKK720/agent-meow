@@ -9,7 +9,7 @@ The callable follows the Service Policies V0 contract:
 
 Gates on the agent-facing tool name ``search_web`` rather than
 ``web_search`` because the latter is a reserved agent-meow built-in (see
-``omnigent/tools/builtins/__init__.py:BUILTIN_NAMES``); the example
+``agent_meow/tools/builtins/__init__.py:BUILTIN_NAMES``); the example
 YAML names its local search tool ``search_web`` to avoid the
 collision.
 """

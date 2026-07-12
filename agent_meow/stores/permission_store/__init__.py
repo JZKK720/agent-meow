@@ -22,7 +22,7 @@ class PermissionStore(ABC):
         """Initialize the permission store.
 
         :param storage_location: Backend-specific storage URI,
-            e.g. ``"sqlite:///omnigent.db"``.
+            e.g. ``"sqlite:///agent_meow.db"``.
         """
         self.storage_location = storage_location
 

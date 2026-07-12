@@ -618,7 +618,7 @@ async def test_external_subagent_start_mints_child_session(
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "claude-code-native-ui"},
+        labels={"agent_meow.wrapper": "claude-code-native-ui"},
     )
 
     resp = await client.post(
@@ -678,7 +678,7 @@ async def test_external_subagent_start_handles_duplicate_agent_type_and_descript
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "claude-code-native-ui"},
+        labels={"agent_meow.wrapper": "claude-code-native-ui"},
     )
 
     common_data = {
@@ -732,7 +732,7 @@ async def test_external_subagent_start_is_idempotent_on_subagent_id(
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "claude-code-native-ui"},
+        labels={"agent_meow.wrapper": "claude-code-native-ui"},
     )
     payload = {
         "type": "external_subagent_start",
@@ -775,7 +775,7 @@ async def test_external_subagent_start_adopts_unlabeled_title_collision(
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "claude-code-native-ui"},
+        labels={"agent_meow.wrapper": "claude-code-native-ui"},
     )
 
     # Seed the wedge state through the public create endpoint: a
@@ -840,7 +840,7 @@ async def test_external_subagent_start_idempotency_pages_beyond_first_100(
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "claude-code-native-ui"},
+        labels={"agent_meow.wrapper": "claude-code-native-ui"},
     )
 
     older = await client.post(
@@ -909,7 +909,7 @@ async def test_external_subagent_start_rejects_missing_required_keys(
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "claude-code-native-ui"},
+        labels={"agent_meow.wrapper": "claude-code-native-ui"},
     )
     data = {
         "subagent_id": "a5c7effac5a9a35ab",
@@ -1886,7 +1886,7 @@ async def test_claude_native_session_discoverable_with_terminal_metadata(
         # UI's terminal-first layout key off of.
         labels={
             "agent_meow.ui": "terminal",
-            "omnigent.wrapper": "claude-code-native-ui",
+            "agent_meow.wrapper": "claude-code-native-ui",
         },
     )
     session_id = session["id"]
@@ -1905,7 +1905,7 @@ async def test_claude_native_session_discoverable_with_terminal_metadata(
     assert row is not None, f"session not in list: {list_resp.json()}"
     assert row["title"] == "universe @ lakebox"
     assert row["agent_name"] == "claude-native-ui"
-    assert row["labels"]["omnigent.wrapper"] == "claude-code-native-ui"
+    assert row["labels"]["agent_meow.wrapper"] == "claude-code-native-ui"
     assert row["labels"]["agent_meow.ui"] == "terminal"
     assert row["external_session_id"] == "11111111-2222-3333-4444-555555555555"
     assert row["status"] in ("idle", "running", "failed")
@@ -1914,7 +1914,7 @@ async def test_claude_native_session_discoverable_with_terminal_metadata(
     snap = (await client.get(f"/v1/sessions/{session_id}")).json()
     assert snap["title"] == "universe @ lakebox"
     assert snap["agent_name"] == "claude-native-ui"
-    assert snap["labels"]["omnigent.wrapper"] == "claude-code-native-ui"
+    assert snap["labels"]["agent_meow.wrapper"] == "claude-code-native-ui"
     assert snap["labels"]["agent_meow.ui"] == "terminal"
     assert snap["external_session_id"] == "11111111-2222-3333-4444-555555555555"
 
@@ -2312,7 +2312,7 @@ async def test_post_external_assistant_message_persists_and_streams(
     """
     External assistant output appends history without starting a task.
 
-    This is the path used by ``omnigent claude`` to mirror real
+    This is the path used by ``agent-meow claude`` to mirror real
     Claude terminal transcript text into the web UI. It must publish
     a completed output item so connected clients render the text
     immediately without a duplicate synthetic text delta, while
@@ -2560,7 +2560,7 @@ async def test_post_external_function_call_output_caps_oversized_output(
     assert snap.status_code == 200
     persisted = snap.json()["items"][0]
     assert persisted["type"] == "function_call_output"
-    assert "[output truncated by omnigent:" in persisted["data"]["output"]
+    assert "[output truncated by agent-meow:" in persisted["data"]["output"]
     assert len(persisted["data"]["output"].encode("utf-8")) <= MAX_TOOL_OUTPUT_BYTES + 200
     assert len(persisted["data"]["output"].encode("utf-8")) < len(big_output)
 
@@ -2575,7 +2575,7 @@ async def test_post_external_function_call_output_caps_oversized_output(
     assert len(fco_events) == 1, (
         f"expected one broadcast function_call_output; got {len(fco_events)}"
     )
-    assert "[output truncated by omnigent:" in fco_events[0]
+    assert "[output truncated by agent-meow:" in fco_events[0]
     assert len(fco_events[0].encode("utf-8")) < len(big_output)
 
 
@@ -2680,7 +2680,7 @@ async def test_post_external_session_status_publishes_session_status(
     StopFailure hooks fire so the web UI's idle/running indicator
     updates without going through the agent-meow task lifecycle.
     A regression here would break the idle indicator for
-    ``omnigent claude`` sessions: agent-meow would never learn Claude
+    ``agent-meow claude`` sessions: agent-meow would never learn Claude
     finished and the UI would stay stuck on whatever transient
     state it last saw.
     """
@@ -2896,7 +2896,7 @@ async def test_patch_runner_rebind_clears_stale_failed_status(
     """
     CLI resume rebind clears a stale failed status after runner init.
 
-    ``omnigent codex --resume`` binds a newly launched runner through
+    ``agent-meow codex --resume`` binds a newly launched runner through
     ``PATCH /v1/sessions/{id}``. That path has its own runner-init POST,
     separate from ``_resume_session_on_host``. If it succeeds but does not
     publish the recovery transition, a stale ``failed`` cache entry keeps
@@ -4824,7 +4824,7 @@ async def test_external_session_usage_rejects_malformed_cumulative(
 
 
 # Cost-budget policy. Enforcement moved to the ``tool_call`` gate (the
-# PreToolUse hook) — see omnigent/policies/builtins/cost.py. The old
+# PreToolUse hook) — see agent_meow/policies/builtins/cost.py. The old
 # post-hoc ``output_logged`` path that stopped the whole session is gone:
 # an over-budget tool call is DENYed (prompting a /model downgrade), while
 # logged usage on its own never stops the session.
@@ -5211,7 +5211,7 @@ async def test_post_external_model_change_does_not_forward_to_runner(
             agent["id"],
             labels={
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "claude-code-native-ui",
+                "agent_meow.wrapper": "claude-code-native-ui",
             },
         )
         runner_paths.clear()  # ignore any bind-time runner traffic
@@ -5492,7 +5492,7 @@ async def test_patch_model_override_skips_note_for_native_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A native-wrapper session (``omnigent.wrapper`` set, here alongside
+    A native-wrapper session (``agent_meow.wrapper`` set, here alongside
     ``agent_meow.ui == "terminal"``) must NOT get an injected note —
     claude-native uses the picker and codex-native pins its model at launch,
     so an AP-side ``[System: ...]`` item would be a stray/misleading record
@@ -5521,7 +5521,7 @@ async def test_patch_model_override_skips_note_for_native_session(
         agent["id"],
         labels={
             "agent_meow.ui": "terminal",
-            "omnigent.wrapper": "claude-code-native-ui",
+            "agent_meow.wrapper": "claude-code-native-ui",
         },
     )
 
@@ -5540,16 +5540,16 @@ async def test_patch_model_override_records_note_for_terminal_view_sdk_session(
 ) -> None:
     """
     A chat-first SDK session that merely exposes a REPL terminal view
-    (``agent_meow.ui == "terminal"`` but NO ``omnigent.wrapper``) DOES get the
+    (``agent_meow.ui == "terminal"`` but NO ``agent_meow.wrapper``) DOES get the
     note.
 
     This is the polly / debby case: when such an agent is launched via
-    ``omnigent run``, the runner stamps ``agent_meow.ui: terminal`` to enable
+    ``agent-meow run``, the runner stamps ``agent_meow.ui: terminal`` to enable
     the web Chat/Terminal toggle (runner ``app.py``), but the brain is an
     in-process claude-sdk agent whose history agent-meow writes — so a web
     ``/model`` switch should land a durable ``[System: ...]`` note. Gating on
     ``agent_meow.ui`` (the pre-fix behavior) wrongly suppressed it; the gate
-    must key on the ``omnigent.wrapper`` native label instead.
+    must key on the ``agent_meow.wrapper`` native label instead.
     """
     published: list[tuple[str, dict[str, Any]]] = []
     monkeypatch.setattr(
@@ -5569,7 +5569,7 @@ async def test_patch_model_override_records_note_for_terminal_view_sdk_session(
         client,
         agent["id"],
         # Terminal VIEW only — no native wrapper. Mirrors a polly/debby
-        # session launched via `omnigent run`.
+        # session launched via `agent-meow run`.
         labels={"agent_meow.ui": "terminal"},
     )
 
@@ -5640,7 +5640,7 @@ async def test_post_external_session_todos_publishes_session_todos(
 
     The claude-native forwarder posts this on every PostToolUse / TodoWrite
     hook so the web todo panel updates in real time. A regression here
-    would break the panel for ``omnigent claude`` sessions: the UI would
+    would break the panel for ``agent-meow claude`` sessions: the UI would
     never receive a ``session.todos`` broadcast and the panel would stay
     blank even when Claude has active tasks.
     """
@@ -5849,7 +5849,7 @@ async def test_external_user_message_seeds_title_on_claude_native_session(
     """
     First forwarded user message seeds the title on a claude-native session.
 
-    With the placeholder carve-out removed, ``omnigent claude``
+    With the placeholder carve-out removed, ``agent-meow claude``
     creates sessions without a title — same shape as every other
     untitled session. The transcript forwarder's first
     ``external_conversation_item`` user-message POST must trigger
@@ -5867,7 +5867,7 @@ async def test_external_user_message_seeds_title_on_claude_native_session(
         # No title — claude-native wrapper no longer stamps one.
         labels={
             "agent_meow.ui": "terminal",
-            "omnigent.wrapper": "claude-code-native-ui",
+            "agent_meow.wrapper": "claude-code-native-ui",
         },
     )
     # Precondition: the session was created with no title. If this fails,
@@ -5952,7 +5952,7 @@ async def test_interrupt_on_claude_native_session_skips_idle_publish_on_runner_f
             agent["id"],
             labels={
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "claude-code-native-ui",
+                "agent_meow.wrapper": "claude-code-native-ui",
             },
         )
 
@@ -6021,7 +6021,7 @@ async def test_stop_session_forwards_stop_session_event_to_runner(
             agent["id"],
             labels={
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "claude-code-native-ui",
+                "agent_meow.wrapper": "claude-code-native-ui",
             },
         )
 
@@ -6109,7 +6109,7 @@ async def test_stop_session_surfaces_runner_failure_as_error(
             agent["id"],
             labels={
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "claude-code-native-ui",
+                "agent_meow.wrapper": "claude-code-native-ui",
             },
         )
 
@@ -6369,7 +6369,7 @@ async def test_patch_collaboration_mode_persists_label_and_forwards_event(
             agent["id"],
             labels={
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "codex-native-ui",
+                "agent_meow.wrapper": "codex-native-ui",
             },
         )
         captured.clear()
@@ -6450,7 +6450,7 @@ async def test_patch_collaboration_mode_requires_live_runner_before_persisting(
             agent["id"],
             labels={
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "codex-native-ui",
+                "agent_meow.wrapper": "codex-native-ui",
             },
         )
 
@@ -6579,7 +6579,7 @@ async def test_patch_reasoning_effort_forwards_effort_change_event(
             {
                 "labels": {
                     "agent_meow.ui": "terminal",
-                    "omnigent.wrapper": "claude-code-native-ui",
+                    "agent_meow.wrapper": "claude-code-native-ui",
                 },
             }
             if native_session
@@ -6689,7 +6689,7 @@ async def test_silent_patch_skips_effort_change_forward(
             agent["id"],
             labels={
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "claude-code-native-ui",
+                "agent_meow.wrapper": "claude-code-native-ui",
             },
         )
         captured.clear()
@@ -6774,7 +6774,7 @@ async def test_patch_reasoning_effort_swallows_runner_failure(
             agent["id"],
             labels={
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "claude-code-native-ui",
+                "agent_meow.wrapper": "claude-code-native-ui",
             },
         )
 
@@ -6855,7 +6855,7 @@ async def test_external_codex_subagent_start_mints_child_session(
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "codex-native-ui"},
+        labels={"agent_meow.wrapper": "codex-native-ui"},
     )
 
     resp = await client.post(
@@ -6921,7 +6921,7 @@ async def test_external_codex_subagent_start_is_idempotent_and_upserts_labels(
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "codex-native-ui"},
+        labels={"agent_meow.wrapper": "codex-native-ui"},
     )
 
     # First registration — sparse (no nickname yet).
@@ -6989,7 +6989,7 @@ async def test_external_codex_subagent_start_adopts_unlabeled_title_collision(
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "codex-native-ui"},
+        labels={"agent_meow.wrapper": "codex-native-ui"},
     )
 
     # Seed the wedge: the exact collision title, no codex labels.
@@ -7058,7 +7058,7 @@ async def test_external_codex_subagent_start_rejects_missing_thread_id(
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "codex-native-ui"},
+        labels={"agent_meow.wrapper": "codex-native-ui"},
     )
 
     resp = await client.post(
@@ -7108,7 +7108,7 @@ async def test_external_codex_subagent_terminal_status_accepted_without_runner(
     parent = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "codex-native-ui"},
+        labels={"agent_meow.wrapper": "codex-native-ui"},
     )
     start_resp = await client.post(
         f"/v1/sessions/{parent['id']}/events",
@@ -7158,7 +7158,7 @@ async def test_native_message_persisted_when_runner_offline(
     session = await _create_session(
         client,
         agent["id"],
-        labels={"omnigent.wrapper": "claude-code-native-ui"},
+        labels={"agent_meow.wrapper": "claude-code-native-ui"},
     )
     sid = session["id"]
 

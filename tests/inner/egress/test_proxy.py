@@ -495,11 +495,11 @@ async def test_s2_dns_rebinding_fail_then_loopback_is_blocked_e2e(
 
 def _basic_auth_header_bytes(token: str) -> bytes:
     """Construct the header bytes a well-behaved HTTP client emits
-    when the proxy URL is ``http://omnigent:<token>@host:port``.
+    when the proxy URL is ``http://agent-meow:<token>@host:port``.
     """
     import base64
 
-    return b"Basic " + base64.b64encode(f"omnigent:{token}".encode())
+    return b"Basic " + base64.b64encode(f"agent-meow:{token}".encode())
 
 
 @pytest.mark.asyncio
@@ -535,7 +535,7 @@ async def test_s4_proxy_returns_407_without_proxy_authorization(
             f"request. Got: {response[:200]!r}. Regression: a "
             f"same-UID attacker can now use the proxy."
         )
-        assert b'Proxy-Authenticate: Basic realm="omnigent"' in response
+        assert b'Proxy-Authenticate: Basic realm="agent-meow"' in response
     finally:
         await proxy.stop()
 
@@ -681,9 +681,9 @@ def test_s4_check_proxy_auth_is_case_insensitive_on_header_name() -> None:
     proxy._auth_token = "tok"
     import base64
 
-    proxy._expected_auth_value = b"Basic " + base64.b64encode(b"omnigent:tok")
+    proxy._expected_auth_value = b"Basic " + base64.b64encode(b"agent-meow:tok")
 
-    expected = b"Basic " + base64.b64encode(b"omnigent:tok")
+    expected = b"Basic " + base64.b64encode(b"agent-meow:tok")
     lower = b"proxy-authorization: " + expected + b"\r\n\r\n"
     mixed = b"Proxy-Authorization: " + expected + b"\r\n\r\n"
     upper = b"PROXY-AUTHORIZATION: " + expected + b"\r\n\r\n"

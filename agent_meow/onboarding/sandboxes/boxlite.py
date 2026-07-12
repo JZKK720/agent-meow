@@ -4,14 +4,14 @@ Implements the managed-launch subset of
 :class:`~?agent_meow.onboarding.sandboxes.base.SandboxLauncher` for
 `BoxLite <https://github.com/boxlite-ai/boxlite>`_ — an embeddable micro-VM +
 OCI runtime. This module ships in the OSS build; the boxlite SDK itself is an
-optional dependency (``pip install 'omnigent[boxlite]'``) imported lazily, so
+optional dependency (``pip install 'agent-meow[boxlite]'``) imported lazily, so
 the provider can be listed and the module probed without it.
 
 BoxLite uniquely covers BOTH runtime targets through one launcher, selected by
 config:
 
 - **Local** (no ``endpoint``): ``Boxlite.default()`` — boxes are micro-VMs on
-  the omnigent-server host itself (KVM on Linux / Hypervisor.framework on
+  the agent-meow-server host itself (KVM on Linux / Hypervisor.framework on
   macOS). BoxLite is embedded in-process: NO daemon, NO ``boxlite serve``. The
   first local, hardware-isolated, persistent provider — no cloud account.
 - **Cloud** (``endpoint`` set): ``Boxlite.rest(BoxliteRestOptions)`` — a thin
@@ -20,14 +20,14 @@ config:
 
 Managed-only (``supports_cli_bootstrap=False``): the server-managed flow only
 calls ``prepare`` / ``provision`` / ``run`` / ``terminate`` — it boots the
-prebaked host image and starts ``omnigent host`` over ``run``; it never ships
+prebaked host image and starts ``agent-meow host`` over ``run``; it never ships
 wheels (``put``) or runs the in-sandbox App OAuth (``stream_exec`` /
 ``forward_local_port``). Those CLI-bootstrap primitives keep the base class's
 raising defaults.
 
 Concurrency model: BoxLite's async API drives a tokio runtime bridged to a
 Python asyncio loop, and (mirroring the SDK's own ``SyncBoxlite``) wants a
-stable, long-lived loop. omnigent calls launcher methods synchronously off its
+stable, long-lived loop. agent-meow calls launcher methods synchronously off its
 own event loop (via ``asyncio.to_thread``), and a launcher is constructed PER
 launch, so a per-launcher background loop would leak a thread per session.
 Instead every boxlite call is marshalled onto a single PROCESS-LIFETIME loop
@@ -69,7 +69,7 @@ HOST_IMAGE_ENV_VAR: str = "OMNIGENT_BOXLITE_HOST_IMAGE"
 """Environment variable overriding
 :data:`~?agent_meow.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE` for boxlite
 boxes, e.g. an org-internal copy of the host image
-(``ghcr.io/<your-org>/omnigent-host:latest``)."""
+(``ghcr.io/<your-org>/agent-meow-host:latest``)."""
 
 SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_BOXLITE_SANDBOX_ENV"
 """Environment variable naming (comma-separated) the SERVER-process environment
@@ -158,7 +158,7 @@ def _ensure_sdk() -> None:
     Verify the boxlite SDK is importable, with an install hint when not.
 
     Called at the top of every launcher entry point because the SDK is an
-    optional dependency — the base ``omnigent`` install does not pull it in.
+    optional dependency — the base ``agent-meow`` install does not pull it in.
 
     :raises click.ClickException: When the ``boxlite`` package is not installed.
     """
@@ -167,7 +167,7 @@ def _ensure_sdk() -> None:
     except ImportError as exc:
         raise click.ClickException(
             "The boxlite SDK is required for the 'boxlite' sandbox provider. "
-            "Install it with `pip install 'omnigent[boxlite]'`. Local mode also "
+            "Install it with `pip install 'agent-meow[boxlite]'`. Local mode also "
             "needs hardware virtualization (KVM on Linux, Hypervisor.framework "
             "on macOS)."
         ) from exc
@@ -207,12 +207,12 @@ class BoxliteSandboxLauncher(SandboxLauncher):
 
         :param endpoint: Remote ``boxlite serve`` URL, e.g.
             ``"https://boxlite.example.com:8100"``. ``None`` selects LOCAL mode
-            (boxes run on the omnigent-server host via ``Boxlite.default()``).
+            (boxes run on the agent-meow-server host via ``Boxlite.default()``).
             In cloud mode the API key is read from ``BOXLITE_API_KEY`` in the
             server environment (12-factor; never in the config file) via
             ``ApiKeyCredential.from_env()``.
-        :param image: Registry image reference with omnigent pre-installed, e.g.
-            ``"docker.io/me/omnigent-host:latest"`` — the server's
+        :param image: Registry image reference with agent-meow pre-installed, e.g.
+            ``"docker.io/me/agent-meow-host:latest"`` — the server's
             ``sandbox.boxlite.image`` config. ``None`` resolves
             :data:`HOST_IMAGE_ENV_VAR` and falls back to
             :data:`~?agent_meow.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE`.

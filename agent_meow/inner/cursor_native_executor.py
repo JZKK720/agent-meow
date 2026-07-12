@@ -1,6 +1,6 @@
 """Executor that bridges agent-meow web-chat turns into the native Cursor TUI.
 
-It does not launch cursor-agent — the ``omnigent cursor`` wrapper already
+It does not launch cursor-agent — the ``agent-meow cursor`` wrapper already
 launched the interactive TUI in the session terminal. Each web-UI turn injects
 the latest user message into that same tmux pane (bracketed paste + Enter), so
 the message appears in the running Cursor TUI (and, since the web UI embeds the
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 class CursorNativeExecutor(Executor):
-    """Harness-side executor for ``omnigent cursor`` web-UI turns.
+    """Harness-side executor for ``agent-meow cursor`` web-UI turns.
 
     Injects each web-UI message into the running Cursor TUI's tmux pane. Does not
     stream output (the embedded terminal shows it); accepts mid-turn steering.

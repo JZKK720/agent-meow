@@ -2036,7 +2036,7 @@ async def _ensure_catalog(state: _ReaderState) -> dict[str, object]:
 
 # ── Shared reader wiring (elicitation bridge + supervise_reader spawn) ────────
 #
-# The runner's host-spawned web path and the CLI's ``omnigent antigravity``
+# The runner's host-spawned web path and the CLI's ``agent-meow antigravity``
 # attach fallback both run the SAME thing once agy is live: an agent-meow HTTP
 # client, a ``supervise_reader`` loop, and an ``on_pending_interaction`` callback
 # wired to the Task 8 interaction bridge (real-time elicitation over the Task 9
@@ -2300,7 +2300,7 @@ async def _record_external_session_id(
     """
     Best-effort record the agy cascade id as the session's ``external_session_id``.
 
-    So a later ``omnigent antigravity --resume`` / omnigent server restart
+    So a later ``agent-meow antigravity --resume`` / agent-meow server restart
     relaunches agy with ``--conversation <cascade_id>`` and continues THIS
     conversation. Called on first-cascade adoption with the TUI-minted cascade.
 
@@ -2353,7 +2353,7 @@ async def _rotate_session_for_cascade(
     the SAME live agy process, this moves agent-meow ownership onto a fresh
     conversation bound to that cascade, MIRRORING claude's
     ``_create_clear_replacement_session`` (verified against
-    ``omnigent/claude_native_forwarder.py``). agy — like claude — is ONE long-lived
+    ``agent_meow/claude_native_forwarder.py``). agy — like claude — is ONE long-lived
     process hosting multiple cascades; a ``/clear`` mints a new cascade on that same
     process, so the rotation TRANSFERS the existing terminal onto the new session
     (it does NOT re-spawn agy) and rewrites bridge state so the reader rebinds to the
@@ -2614,7 +2614,7 @@ async def run_reader_with_bridge(
                 # TUI and the web mirror then share ONE cascade (#1156/#1158).
                 _adopt_cascade_in_place(bridge_dir, current["session_id"], new_cascade_id)
                 # Record the adopted (TUI-minted) cascade as the session's
-                # external_session_id so a later --resume / omnigent server
+                # external_session_id so a later --resume / agent-meow server
                 # restart relaunches agy with --conversation <this cascade> and
                 # continues THIS conversation — NOT the headless cold-start
                 # StartCascade phantom the cold-start used to record, which a

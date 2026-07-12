@@ -1,7 +1,7 @@
 # Create a GitHub Release entry (the `…/releases` page) when a version tag is
 # pushed. This is METADATA ONLY — it does NOT build or publish any installable
 # artifact. PyPI publishing lives in the central secure-release repo
-# (databricks/secure-public-registry-releases-eng → `omnigent` workflow — the
+# (databricks/secure-public-registry-releases-eng → `agent-meow` workflow — the
 # release-agent_meow.yml workflow name is kept as-is), on
 # hardened runners with OIDC Trusted Publishing and a mandatory dependency
 # scan. Keeping those concerns separate is deliberate (see RELEASING.md):

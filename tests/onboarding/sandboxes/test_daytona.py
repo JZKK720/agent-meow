@@ -794,7 +794,7 @@ def test_put_wraps_sdk_errors_with_provider_reason(fake_daytona: _FakeDaytonaSta
 def test_wheel_install_command_overlays_baked_install(fake_daytona: _FakeDaytonaState) -> None:
     """
     The install command must force-reinstall without deps: the host
-    image bakes omnigent at the same version, so plain pip would
+    image bakes agent-meow at the same version, so plain pip would
     silently skip the freshly-shipped wheels.
     """
     command = DaytonaSandboxLauncher().wheel_install_command("/tmp/oa-wheels.tgz")
@@ -822,7 +822,7 @@ def test_exec_foreground_runs_command_over_pty(
         _FakePtyResult(exit_code=7), output_chunks=[b"host registered\r\n"]
     )
 
-    returncode = launcher.exec_foreground(sandbox_id, "omnigent host --server u")
+    returncode = launcher.exec_foreground(sandbox_id, "agent-meow host --server u")
 
     assert returncode == 7
     # One fresh session per call — a fixed id would collide with the
@@ -832,7 +832,7 @@ def test_exec_foreground_runs_command_over_pty(
     # command's own exit code; TERM is required for tmux-spawning
     # harnesses downstream.
     assert process.pty_handle.sent_inputs == [
-        "TERM=xterm-256color exec omnigent host --server u\n"
+        "TERM=xterm-256color exec agent-meow host --server u\n"
     ]
     # Remote output reached the local terminal — a silent foreground
     # attach would hide the host's registration banner and errors.
@@ -844,7 +844,7 @@ def test_exec_foreground_runs_command_over_pty(
 def test_exec_foreground_kills_remote_on_interrupt(fake_daytona: _FakeDaytonaState) -> None:
     """
     Ctrl-C during the blocking PTY read kills the remote process and
-    re-raises — otherwise a detached `omnigent host` would keep the
+    re-raises — otherwise a detached `agent-meow host` would keep the
     sandbox registered with a dead terminal.
     """
     launcher = DaytonaSandboxLauncher()
@@ -855,7 +855,7 @@ def test_exec_foreground_kills_remote_on_interrupt(fake_daytona: _FakeDaytonaSta
     )
 
     with pytest.raises(KeyboardInterrupt):
-        launcher.exec_foreground(sandbox_id, "omnigent host --server u")
+        launcher.exec_foreground(sandbox_id, "agent-meow host --server u")
 
     # The remote process was killed AND the websocket released — a
     # missing kill leaves the host running headless; a missing
@@ -879,7 +879,7 @@ def test_exec_foreground_missing_exit_code_fails_loud(
     )
 
     with pytest.raises(click.ClickException, match="connection reset"):
-        launcher.exec_foreground(sandbox_id, "omnigent host --server u")
+        launcher.exec_foreground(sandbox_id, "agent-meow host --server u")
 
 
 def test_exec_foreground_wraps_pty_create_errors(fake_daytona: _FakeDaytonaState) -> None:

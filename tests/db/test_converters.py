@@ -1,4 +1,4 @@
-"""Tests for entity <-> ORM row converters (omnigent/db/converters.py).
+"""Tests for entity <-> ORM row converters (agent_meow/db/converters.py).
 
 The converter layer currently provides ``sql_agent_to_entity``.
 Tests verify round-trip fidelity: entity -> ORM row -> entity, and

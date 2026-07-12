@@ -1,5 +1,5 @@
 """
-Tests for the OTel GenAI semantic-convention attributes on omnigent's
+Tests for the OTel GenAI semantic-convention attributes on agent-meow's
 AGENT and TOOL spans (PR #1050).
 
 Each test installs a fresh TracerProvider with an InMemorySpanExporter

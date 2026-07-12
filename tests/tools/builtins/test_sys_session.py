@@ -233,7 +233,7 @@ def test_send_schema_gates_harness_field_behind_allowlist_opt_in() -> None:
         name="codex",
         description="Codex coding sub-agent.",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={
                 "harness": "codex-native",
                 "allowed_harnesses": ["codex-native", "opencode-native"],

@@ -91,7 +91,7 @@ def _mint_bearer(profile: str) -> str:
     """Mint a Databricks bearer for *profile* via the CLI (isolated from ambient token env).
 
     ``env -u DATABRICKS_TOKEN -u DATABRICKS_BEARER`` guards against a stale
-    ambient credential shadowing profile auth (see omnigent issue #1781).
+    ambient credential shadowing profile auth (see agent-meow issue #1781).
     """
     proc = subprocess.run(
         ["databricks", "auth", "token", "--profile", profile, "--output", "json"],
@@ -111,7 +111,7 @@ def _mint_bearer(profile: str) -> str:
 def spawn_omnigent_server(
     tmp: Path, port: int, base_env: dict[str, str], binding_token: str
 ) -> subprocess.Popen[bytes]:
-    """Spawn an ``omnigent server`` subprocess writing state under *tmp*.
+    """Spawn an ``agent-meow server`` subprocess writing state under *tmp*.
 
     Shared by the full-server and native-tui drivers (both need the same
     server; only what connects to it differs — a bare runner vs a host
@@ -324,7 +324,7 @@ class FullServerDriver:
             "name": name,
             "prompt": "You are a helpful assistant used for capability testing.",
             "executor": {
-                "type": "omnigent",
+                "type": "agent-meow",
                 "model": self._profile.model,
                 "profile": self._db_profile,
                 "config": {"harness": self._profile.harness},

@@ -483,7 +483,7 @@ class TestPostModelChangeIfNew:
     @pytest.mark.asyncio
     async def test_first_observation_is_posted(self) -> None:
         # Unlike claude-native, cursor posts the FIRST observed model so an
-        # un-pinned session shows the real cursor model instead of omnigent's
+        # un-pinned session shows the real cursor model instead of agent-meow's
         # default ("fable") in the Web UI pill.
         client = _RecordingClient()
         state = fwd._ModelMirrorState()

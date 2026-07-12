@@ -2,7 +2,7 @@
 
 The opencode-native harness's HTTP+SSE client (``agent_meow.opencode_native_client``)
 is hand-shaped from the pinned OpenCode OpenAPI (vendored at
-``omnigent/opencode/openapi-1.17.7.json``), so the rest of the suite exercises it
+``agent_meow/opencode/openapi-1.17.7.json``), so the rest of the suite exercises it
 only against in-process fakes. This test boots a real ``opencode serve`` via the
 PR's own :class:`~?agent_meow.opencode_native_app_server.OpenCodeNativeServer` and
 drives the provider-independent endpoints the harness relies on, validating the

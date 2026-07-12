@@ -22,7 +22,7 @@ _TMUX_FILE = "tmux.json"
 _FORWARDER_READY_FILE = "kiro_session_forwarder_ready.json"
 _ACP_RECORD_FILE = "kiro_acp_record.jsonl"
 # Shared agent-meow MCP relay (serve-mcp) registration for kiro.
-_MCP_SERVER_NAME = "omnigent"
+_MCP_SERVER_NAME = "agent-meow"
 _MCP_BRIDGE_CONFIG_FILE = "bridge.json"
 # kiro reads workspace-scoped MCP servers from ``<workspace>/.kiro/settings/mcp.json``
 # (confirmed against kiro-cli 2.10.0). Mirrors cursor-native's ``.cursor/mcp.json``.

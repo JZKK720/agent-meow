@@ -11,13 +11,13 @@ rail tab.
 ```
 agent-meow Docs surface
 ├── Backend
-│   ├── omnigent/entities/document.py          — Document dataclass
-│   ├── omnigent/db/db_models.py               — SqlDocument table
-│   ├── omnigent/stores/document_store/        — DocumentStore (abstract + SQLAlchemy)
-│   ├── omnigent/server/routes/documents.py    — REST routes (/v1/sessions/{id}/resources/documents)
-│   └── omnigent/tools/builtins/docs.py        — doc_create / doc_get / doc_list / doc_update / doc_generate tools
+│   ├── agent_meow/entities/document.py          — Document dataclass
+│   ├── agent_meow/db/db_models.py               — SqlDocument table
+│   ├── agent_meow/stores/document_store/        — DocumentStore (abstract + SQLAlchemy)
+│   ├── agent_meow/server/routes/documents.py    — REST routes (/v1/sessions/{id}/resources/documents)
+│   └── agent_meow/tools/builtins/docs.py        — doc_create / doc_get / doc_list / doc_update / doc_generate tools
 ├── Migration
-│   └── omnigent/db/migrations/versions/o1a2b3c4d5e6_add_documents_and_images.py
+│   └── agent_meow/db/migrations/versions/o1a2b3c4d5e6_add_documents_and_images.py
 ├── Frontend
 │   ├── web/src/lib/documentsApi.ts            — typed API client
 │   ├── web/src/hooks/useDocuments.ts          — react-query hooks
@@ -48,7 +48,7 @@ agent-meow Docs surface
 | `doc_generate` | Generate a markdown document from a topic + outline (LLM-driven) |
 
 Tools are runner-dispatched (schema-only `Tool` subclasses); the runner
-proxies the server's REST endpoints via `omnigent/runner/tool_dispatch.py`
+proxies the server's REST endpoints via `agent_meow/runner/tool_dispatch.py`
 (`_execute_doc_tool`). `doc_generate` persists a structured placeholder
 document (topic + outline + instructions) in v1; a future version can
 route it back into the agent's own LLM loop for full generation.

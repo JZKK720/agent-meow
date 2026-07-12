@@ -44,7 +44,7 @@ from agent_meow.stores.conversation_store.sqlalchemy_store import (
 
 def test_default_log_path_uses_default_dir_when_none() -> None:
     """
-    ``log_dir=None`` resolves to ``~/.omnigent/logs/`` — the same
+    ``log_dir=None`` resolves to ``~/.agent_meow/logs/`` — the same
     directory the legacy non-AP path writes to. Keeps the
     user's mental model consistent across paths.
     """
@@ -89,7 +89,7 @@ def test_default_log_path_strips_path_separators(tmp_path: Path) -> None:
     Defensive: a conversation id that somehow contains a ``/``
     must not produce a file path that escapes the log directory.
     Mirrors the legacy ``session.id.replace("/", "_")`` defense in
-    ``omnigent/inner/cli.py::_default_session_log_path``.
+    ``agent_meow/inner/cli.py::_default_session_log_path``.
     """
     path = default_log_path("conv/with/slashes", tmp_path)
     assert "/" not in path.name, (
@@ -309,7 +309,7 @@ def test_write_session_log_walks_sub_agent_children(
         f"handle, got {len(children)}: {children!r}. If 0, the parser "
         f"didn't recognize the sub_agent handle (check that the JSON "
         f"shape still matches `_parse_sub_agent_handle` in "
-        f"omnigent/repl/_repl.py — the format the spawn tool "
+        f"agent_meow/repl/_repl.py — the format the spawn tool "
         f"persists may have changed)."
     )
     child_node = children[0]

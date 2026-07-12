@@ -26,7 +26,7 @@ spawn: true
 # no model named the claude-sdk harness resolves the configured provider's
 # default Claude model (the bundled catalog default is claude-opus-4-8).
 executor:
-  type: omnigent
+  type: agent-meow
   context_window: 1000000
   config:
     harness: claude-sdk

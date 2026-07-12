@@ -177,7 +177,7 @@ class TestSettlePaneReadiness:
     def test_marker_matches_live_kimi_footer(self) -> None:
         # Footer chrome captured verbatim from a live K2.7 session.
         footer = (
-            " K2.7 Code thinking  ~/omnigent  pr521-kimi-native [+61 -8]"
+            " K2.7 Code thinking  ~/agent-meow  pr521-kimi-native [+61 -8]"
             '   ask Kimi to schedule tasks, e.g. "remind me at 5pm"\n'
             "   context: 6.5% (17.0k/262.1k)"
         )
@@ -218,7 +218,7 @@ class TestRegistration:
         assert "kimi-native" in OMNIGENT_HARNESSES
 
     def test_kimi_native_is_terminal_native(self) -> None:
-        # kimi-native launches the kimi TUI in an omnigent terminal (like
+        # kimi-native launches the kimi TUI in an agent-meow terminal (like
         # claude/codex/cursor-native), so the runner must treat it as a native
         # terminal harness.
         from agent_meow.harness_aliases import is_native_harness

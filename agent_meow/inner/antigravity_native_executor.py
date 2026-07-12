@@ -1,6 +1,6 @@
 """Executor that delivers agent-meow web/mobile turns into a native Antigravity agy.
 
-``omnigent antigravity`` runs the Antigravity ``agy`` CLI in a runner-owned tmux
+``agent-meow antigravity`` runs the Antigravity ``agy`` CLI in a runner-owned tmux
 terminal and mirrors its transcript into the agent-meow session via the RPC read
 driver (the read path). This executor is the **write path**: when a turn is
 submitted from the agent-meow web/mobile UI it delivers the user's message by
@@ -95,7 +95,7 @@ _USER_INPUT_STEP_TYPE = "CORTEX_STEP_TYPE_USER_INPUT"
 
 class AntigravityNativeExecutor(Executor):
     """
-    Harness-side executor for ``omnigent antigravity`` web UI turns.
+    Harness-side executor for ``agent-meow antigravity`` web UI turns.
 
     Delivers the latest web/mobile user message to the running agy over its
     connect-RPC ``SendUserCascadeMessage``; agy's reply is mirrored back by the

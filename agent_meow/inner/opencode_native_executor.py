@@ -34,7 +34,7 @@ OPENCODE_NATIVE_HARNESS_ID = "opencode-native"
 
 class OpenCodeNativeExecutor(NativeServerHarness):
     """
-    Harness-side executor for ``omnigent opencode`` web UI turns.
+    Harness-side executor for ``agent-meow opencode`` web UI turns.
 
     :param bridge_dir: Optional bridge directory override. ``None`` reads
         :data:`OPENCODE_NATIVE_BRIDGE_DIR_ENV_VAR`.

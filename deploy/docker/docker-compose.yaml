@@ -62,7 +62,7 @@ services:
       PORT: "8000"
       # Pin the admin-credentials path to the persistent volume so
       # the file survives container restarts. Empty/unset would
-      # write to /root/.omnigent/ inside the ephemeral container.
+      # write to /root/.agent_meow/ inside the ephemeral container.
       OMNIGENT_ADMIN_CREDENTIALS_PATH: /data/admin-credentials
 
       # ── Auth ─────────────────────────────────────────

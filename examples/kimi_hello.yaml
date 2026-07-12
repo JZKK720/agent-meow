@@ -45,4 +45,4 @@ prompt: |
 #   meow run examples/kimi_hello.yaml -m kimi-k2-turbo
 #
 # Or as a shortcut for any kimi-harness run:
-#   omnigent kimi -p "list the files in the current directory"
+#   agent-meow kimi -p "list the files in the current directory"

@@ -5,7 +5,7 @@ Two entry points:
 - :func:`startup_theme_picker` — interactive arrow-key menu shown on
   first launch (before the REPL's prompt-toolkit Application starts).
   Uses raw termios for keypress reading and OSC 11 detection for
-  default selection.  Persists the choice to ``~/.omnigent/config.yaml``.
+  default selection.  Persists the choice to ``~/.agent_meow/config.yaml``.
 
 - The ``/theme`` slash command in ``_repl.py`` uses
   :func:`_build_preview` and :func:`build_theme_confirmation` to

@@ -8,7 +8,7 @@ agent spec). The Option-C fix has the runner mint a short-lived owner JWT from
 ``POST /v1/runners/{id}/token`` (authenticated by its binding token) and present
 it as ``Authorization: Bearer`` on every callback.
 
-This test proves that fix works against a **real** ``omnigent server``
+This test proves that fix works against a **real** ``agent-meow server``
 subprocess with accounts auth enabled, driving the runner's **real** outbound
 code over a **real** TCP socket — no transports are stubbed:
 
@@ -16,7 +16,7 @@ code over a **real** TCP socket — no transports are stubbed:
   ``_mint_managed_owner_token`` (a real ``httpx`` POST to the mint endpoint), and
 * ``_RunnerDatabricksAuth`` on a real ``httpx.AsyncClient`` GET.
 
-The only thing simulated is the managed-sandbox *condition* — no ``omnigent
+The only thing simulated is the managed-sandbox *condition* — no ``agent-meow
 login`` token and no Databricks config on disk — which is exactly what makes the
 fix necessary (and what a fresh sandbox actually looks like).
 
@@ -92,7 +92,7 @@ def _await_health(base_url: str, log_path: Path) -> None:
 
 @pytest.fixture()
 def accounts_server(tmp_path: Path) -> Iterator[tuple[str, str]]:
-    """Run a real ``omnigent server`` subprocess with accounts auth enabled.
+    """Run a real ``agent-meow server`` subprocess with accounts auth enabled.
 
     Accounts mode is selected by ``OMNIGENT_AUTH_PROVIDER=accounts`` plus a
     shared cookie secret; the subprocess handles the full runtime lifecycle

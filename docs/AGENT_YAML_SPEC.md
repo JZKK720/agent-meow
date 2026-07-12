@@ -78,7 +78,7 @@ TUI/flag actions. See `kiro-native-elicitation.md`.
 
 `harness: antigravity` runs the agent through Google's
 [Antigravity SDK](https://pypi.org/project/google-antigravity/)
-(`pip install "omnigent[antigravity]"`). It defaults to **Gemini 3.5 Flash**
+(`pip install "agent-meow[antigravity]"`). It defaults to **Gemini 3.5 Flash**
 and can also drive Claude / GPT-OSS. Authenticate with an Antigravity /
 Gemini API key, or Vertex AI (`project` / `location`) — the SDK is
 Gemini-native and has no OpenAI-compatible gateway / Databricks path.
@@ -96,7 +96,7 @@ executor:
 
 `harness: copilot` runs the agent through the
 [GitHub Copilot SDK](https://pypi.org/project/github-copilot-sdk/)
-(`pip install "omnigent[copilot]"`). The SDK bundles the Copilot CLI it drives
+(`pip install "agent-meow[copilot]"`). The SDK bundles the Copilot CLI it drives
 as a backing server, so no separate CLI install is needed. Like cursor and
 antigravity it talks only to GitHub's Copilot backend — there is no Databricks
 gateway / `auth.type: databricks` path. Authenticate with a **GitHub token** that
@@ -118,7 +118,7 @@ executor:
 ```
 
 To route through OpenRouter / a gateway, declare a key/gateway provider in
-`~/.omnigent/config.yaml` and reference it (`auth: {type: provider, name: …}`),
+`~/.agent_meow/config.yaml` and reference it (`auth: {type: provider, name: …}`),
 or set `auth.base_url` to the OpenAI-compatible endpoint alongside the key.
 For Databricks, use `auth: {type: databricks, profile: …}`.
 
@@ -139,7 +139,7 @@ executor:
 By default Kimi authenticates against Moonshot AI's backend — agent-meow
 declares no `executor.auth` block. To route through a gateway, either set
 `HARNESS_KIMI_GATEWAY_BASE_URL` + `HARNESS_KIMI_GATEWAY_API_KEY` in the
-shell, declare a key/gateway provider in `~/.omnigent/config.yaml`, or use
+shell, declare a key/gateway provider in `~/.agent_meow/config.yaml`, or use
 `executor.auth: {type: databricks, profile: …}` and let agent-meow resolve
 the workspace.
 
@@ -195,7 +195,7 @@ You usually don't need to choose a `sandbox.type` — omit it and agent-meow pic
 the platform default (`linux_bwrap` on Linux, `darwin_seatbelt` on macOS), so the
 same YAML works across platforms. For the full set of sandbox options, how to
 share one policy across `sys_os_*` and terminals, and how to set up network
-egress rules, see the `sandbox:` examples below and the sandbox source under `omnigent/inner/`.
+egress rules, see the `sandbox:` examples below and the sandbox source under `agent_meow/inner/`.
 
 ## Tools
 

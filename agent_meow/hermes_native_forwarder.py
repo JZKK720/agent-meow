@@ -1,6 +1,6 @@
 """TUI→web forwarder for the hermes-native harness.
 
-The ``omnigent hermes`` wrapper launches the real ``hermes`` TUI in a runner-owned
+The ``agent-meow hermes`` wrapper launches the real ``hermes`` TUI in a runner-owned
 tmux pane, and :mod:`~?agent_meow.hermes_native_bridge` injects web-UI messages into
 it. That covers the web→TUI direction, but the *embedded terminal* is then the
 only surface that reflects the agent's work — the agent-meow conversation view (chat

@@ -277,7 +277,7 @@ class OIDCConfig:
             )
 
         # Opt-in individual invites (admin pre-authorizes an off-domain
-        # email; see omnigent/server/oidc_access.py). Off by default.
+        # email; see agent_meow/server/oidc_access.py). Off by default.
         # Imported lazily to avoid a circular import (auth imports oidc).
         from agent_meow.server.auth import env_var_is_truthy
 

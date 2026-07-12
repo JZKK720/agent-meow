@@ -1,8 +1,8 @@
 """Native Hermes TUI wrapper for the agent-meow CLI.
 
-``omnigent hermes`` launches Nous Research's Hermes Agent interactive TUI (the bare
+``agent-meow hermes`` launches Nous Research's Hermes Agent interactive TUI (the bare
 ``hermes`` command) inside an agent-meow-runner-owned tmux terminal and attaches the
-local TTY — the Hermes analog of ``omnigent goose`` / ``omnigent cursor``. The
+local TTY — the Hermes analog of ``agent-meow goose`` / ``agent-meow cursor``. The
 runner spawns the process (see
 :func:`~?agent_meow.runner.app._auto_create_hermes_terminal`); this module owns the
 CLI-side orchestration: session create/resume, daemon runner bind, terminal-ready
@@ -186,7 +186,7 @@ def run_hermes_native(
 
 def _materialize_hermes_agent_spec(tmpdir: Path) -> Path:
     """
-    Write the terminal-first agent spec used by ``omnigent hermes``.
+    Write the terminal-first agent spec used by ``agent-meow hermes``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :returns: Path to the generated YAML spec.
@@ -290,7 +290,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the omnigent server at {base_url}. "
+            f"Could not reach the agent-meow server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc

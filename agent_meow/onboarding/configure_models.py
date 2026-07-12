@@ -1,9 +1,9 @@
-"""Rendering + flow helpers for ``omnigent setup --no-internal-beta``.
+"""Rendering + flow helpers for ``agent-meow setup --no-internal-beta``.
 
 The user-facing model-selection surface (chunk 2b of
 ``designs/oss-cuj/04-model-selection-implementation.md``) has two pieces:
 
-- the ``omnigent setup --no-internal-beta`` CLI command (interactive
+- the ``agent-meow setup --no-internal-beta`` CLI command (interactive
   add/set-default/remove + a scriptable ``list`` subcommand), and
 - the ``/model`` REPL readout/switch (in :mod:`~?agent_meow.repl._repl`).
 
@@ -143,9 +143,9 @@ _FAMILY_DEFAULT_BASE_URL: dict[str, str] = {
 
 # Maps a catalog provider name (from
 # :func:`~?agent_meow.onboarding.providers.get_all_providers`) to the
-# omnigent family it serves for a ``key`` provider. Anthropic serves the
+# agent-meow family it serves for a ``key`` provider. Anthropic serves the
 # Claude (anthropic) surface; OpenAI and OpenAI-compatible vendors serve
-# the Codex (openai) surface. Providers absent here have no omnigent
+# the Codex (openai) surface. Providers absent here have no agent-meow
 # harness family yet and are not offered for a ``key`` add.
 _CATALOG_PROVIDER_FAMILY: dict[str, str] = {
     "anthropic": ANTHROPIC_FAMILY,
@@ -213,7 +213,7 @@ def key_providers() -> list[str]:
     """Return catalog provider names eligible for a ``key`` add.
 
     A ``key`` provider is a direct vendor API key reached via an
-    omnigent family. Only providers in :data:`_CATALOG_PROVIDER_FAMILY`
+    agent-meow family. Only providers in :data:`_CATALOG_PROVIDER_FAMILY`
     (those that map to the ``anthropic`` or ``openai`` surface) qualify;
     the order follows the catalog's popular-first ordering.
 
@@ -226,7 +226,7 @@ def key_providers() -> list[str]:
 
 
 def family_for_key_provider(provider: str) -> str:
-    """Return the omnigent family a ``key`` *provider* serves.
+    """Return the agent-meow family a ``key`` *provider* serves.
 
     :param provider: Catalog provider name, e.g. ``"anthropic"`` or
         ``"openrouter"``.
@@ -479,7 +479,7 @@ def add_menu_options() -> list[AddOption]:
             if databricks_sdk_installed()
             # Markup-safe (rendered via Text.from_markup): no literal
             # brackets, so the extra is named in prose here and the exact
-            # `omnigent[databricks]` command appears on selection.
+            # `agent-meow[databricks]` command appears on selection.
             else "Requires the Databricks extra — select for the install command.",
             DATABRICKS_KIND,
         ),
@@ -490,12 +490,12 @@ def add_menu_options() -> list[AddOption]:
             other=True,
         ),
         # AWS Bedrock / Bedrock-compatible gateway — anthropic-only, drives the
-        # native ``omnigent claude`` terminal in Bedrock mode. Listed last so it
+        # native ``agent-meow claude`` terminal in Bedrock mode. Listed last so it
         # never shifts the first-party / extras order users already know.
         _opt(
             "AWS Bedrock — API key",
             "AWS Bedrock or a Bedrock-compatible gateway for the native Claude "
-            "terminal (omnigent claude). Claude only.",
+            "terminal (agent-meow claude). Claude only.",
             BEDROCK_KIND,
         ),
     ]
@@ -593,7 +593,7 @@ def render_provider_listing_by_harness(
     accent ``Credentials (by harness)`` header, then one bold surface header
     per harness (Claude, Codex, Pi) followed by the providers that can drive
     it, each with the per-surface default marked. A provider that serves
-    several surfaces is listed under each. Used by ``omnigent config list``.
+    several surfaces is listed under each. Used by ``agent-meow config list``.
 
     :param config: The parsed config mapping (``providers:`` block), used to
         resolve per-surface defaults.
@@ -792,7 +792,7 @@ def build_bedrock_provider_entry(
     """Build a ``kind: bedrock`` provider entry body (config shape).
 
     A Bedrock provider serves only the ``anthropic`` family and drives the
-    native ``omnigent claude`` terminal in AWS Bedrock mode (the in-process /
+    native ``agent-meow claude`` terminal in AWS Bedrock mode (the in-process /
     gateway harnesses reject it). ``base_url`` is the regional Bedrock-runtime
     endpoint or a Bedrock-compatible gateway; ``api_key_ref`` resolves the AWS
     bearer token delivered via ``AWS_BEARER_TOKEN_BEDROCK``.

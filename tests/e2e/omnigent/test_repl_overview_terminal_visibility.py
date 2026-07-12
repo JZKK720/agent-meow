@@ -86,7 +86,7 @@ def test_repl_overview_terminal_visibility(
     the overview, cycle to the terminal target, and verify the tmux
     attach instructions render.
 
-    :param omnigent_python: Interpreter with omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow installed.
     :param omnigent_repo_root: Working directory for the subprocess.
     :param mock_credentials_env: Mock-LLM env vars.
     :param mock_llm_server_url: Mock server URL.

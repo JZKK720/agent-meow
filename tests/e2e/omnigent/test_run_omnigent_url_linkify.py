@@ -1,6 +1,6 @@
 """
 End-to-end test for OSC 8 hyperlink rendering under
-``omnigent run``.
+``agent-meow run``.
 
 Drives a real REPL session: the agent calls ``sys_os_shell`` to
 print a URL through bash, the REPL renders the tool-result
@@ -118,7 +118,7 @@ def test_run_omnigent_url_linkify_emits_osc_8_in_pty(
 
     Strategy:
 
-    1. Spawn ``omnigent run --omnigent`` via pexpect.
+    1. Spawn ``agent-meow run --agent-meow`` via pexpect.
     2. Configure mock LLM to call ``sys_os_shell`` with the
        echo command, then acknowledge with DONE.
     3. Capture all PTY output via ``logfile_read`` (a
@@ -143,7 +143,7 @@ def test_run_omnigent_url_linkify_emits_osc_8_in_pty(
     :param omnigent_python: Path to the worktree's
         ``.venv/bin/python``.
     :param omnigent_repo_root: Repo root used as cwd so the
-        subprocess imports this worktree's ``omnigent``
+        subprocess imports this worktree's ``agent-meow``
         package, not the editable-install one.
     :param mock_credentials_env: Mock-LLM env vars pointing at
         the mock server.

@@ -498,7 +498,7 @@ async def test_context_window_override_bypasses_declared_window(
     agent = await create_test_agent(
         client,
         name="declared-window-agent",
-        executor={"type": "omnigent", "context_window": 1_000_000},
+        executor={"type": "agent-meow", "context_window": 1_000_000},
     )
     session = await _create_session(client, agent["id"])
     sid = session["id"]
@@ -575,7 +575,7 @@ async def test_silent_patch_skips_claude_native_forward(
         # Mark the session as claude-native so the forward gate is True.
         await client.patch(
             f"/v1/sessions/{sid}",
-            json={"labels": {"omnigent.wrapper": "claude-code-native-ui"}},
+            json={"labels": {"agent_meow.wrapper": "claude-code-native-ui"}},
         )
         captured.clear()
 

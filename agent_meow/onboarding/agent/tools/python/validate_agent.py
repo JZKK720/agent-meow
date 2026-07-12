@@ -1,7 +1,7 @@
 """Validate an agent directory's config.yaml.
 
 Parses and validates the agent spec using the same parser and
-validator that ``omnigent server`` uses. A passing validation means
+validator that ``agent-meow server`` uses. A passing validation means
 the agent will load and serve correctly.
 """
 

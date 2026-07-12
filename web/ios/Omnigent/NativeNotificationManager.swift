@@ -26,7 +26,7 @@ final class NativeNotificationManager: NSObject, UNUserNotificationCenterDelegat
       do {
         try await center.setBadgeCount(max(0, count))
       } catch {
-        NSLog("[omnigent] failed to set badge count: \(String(describing: error))")
+        NSLog("[agent-meow] failed to set badge count: \(String(describing: error))")
       }
     }
   }
@@ -45,7 +45,7 @@ final class NativeNotificationManager: NSObject, UNUserNotificationCenterDelegat
       }
 
       let request = UNNotificationRequest(
-        identifier: "omnigent.\(UUID().uuidString)",
+        identifier: "agent_meow.\(UUID().uuidString)",
         content: content,
         trigger: nil
       )
@@ -53,7 +53,7 @@ final class NativeNotificationManager: NSObject, UNUserNotificationCenterDelegat
       do {
         try await center.add(request)
       } catch {
-        NSLog("[omnigent] failed to add notification: \(String(describing: error))")
+        NSLog("[agent-meow] failed to add notification: \(String(describing: error))")
       }
     }
   }

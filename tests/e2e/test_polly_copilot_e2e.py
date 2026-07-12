@@ -4,7 +4,7 @@ Unlike the mock-LLM smoke in ``test_polly_e2e.py`` (which swaps polly's brain to
 ``openai-agents`` against a fake server), the Copilot SDK talks only to GitHub's
 Copilot backend, so this exercises the REAL harness. It is **skipped** unless a
 Copilot-capable GitHub token is resolvable — the ``copilot:`` config block
-written by ``omnigent setup``, or an ambient ``COPILOT_GITHUB_TOKEN`` /
+written by ``agent-meow setup``, or an ambient ``COPILOT_GITHUB_TOKEN`` /
 ``GH_TOKEN`` / ``GITHUB_TOKEN`` — so CI without a token skips it, mirroring how
 the harness probes skip when a CLI binary is absent from ``PATH``.
 
@@ -71,7 +71,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture
 def local_polly_server_real(tmp_path: Path) -> Iterator[str]:
-    """Boot a throwaway local ``omnigent server`` from this working tree.
+    """Boot a throwaway local ``agent-meow server`` from this working tree.
 
     Unlike ``test_polly_e2e.local_polly_server`` this does NOT strip the
     developer's credentials — the Copilot harness needs the real GitHub token to
@@ -87,7 +87,7 @@ def local_polly_server_real(tmp_path: Path) -> Iterator[str]:
         [
             sys.executable,
             "-m",
-            "omnigent",
+            "agent-meow",
             "server",
             "--host",
             "127.0.0.1",
@@ -130,7 +130,7 @@ def test_polly_brain_on_copilot_boots_and_responds(local_polly_server_real: str)
         [
             sys.executable,
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(_POLLY),
             "--server",

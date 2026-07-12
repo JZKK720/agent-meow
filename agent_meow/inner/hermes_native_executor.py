@@ -1,6 +1,6 @@
 """Executor that bridges agent-meow web-chat turns into the native Hermes TUI.
 
-It does not launch ``hermes`` — the ``omnigent hermes`` wrapper already launched
+It does not launch ``hermes`` — the ``agent-meow hermes`` wrapper already launched
 the interactive ``hermes`` TUI in the session terminal. Each web-UI turn injects
 the latest user message into that same tmux pane (bracketed paste + Enter), so the
 message appears in the running Hermes TUI (and, since the web UI embeds the pane,
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class HermesNativeExecutor(Executor):
-    """Harness-side executor for ``omnigent hermes`` web-UI turns.
+    """Harness-side executor for ``agent-meow hermes`` web-UI turns.
 
     Injects each web-UI message into the running Hermes TUI's tmux pane. Does not
     stream output (the embedded terminal shows it); accepts mid-turn steering.

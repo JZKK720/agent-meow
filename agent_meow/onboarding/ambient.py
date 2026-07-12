@@ -1,6 +1,6 @@
 """Detect AI credentials already present on the machine.
 
-For the ``omnigent setup --no-internal-beta`` first-run experience, this module
+For the ``agent-meow setup --no-internal-beta`` first-run experience, this module
 discovers credentials a user already has — vendor API keys in the
 environment, a logged-in ``claude`` / ``codex`` CLI, or a local Ollama
 server — so the setup flow can offer them as one-tap choices instead of
@@ -98,7 +98,7 @@ class DetectedProvider:
         ``"local"`` (a self-hosted endpoint).
     :param family: The model family this credential serves
         (``"anthropic"`` / ``"openai"`` / ``"gemini"``), or ``None`` when the
-        credential is detected but maps to no omnigent harness surface.
+        credential is detected but maps to no agent-meow harness surface.
     :param source: A human-readable descriptor of where the credential
         comes from, e.g. ``"$ANTHROPIC_API_KEY"``, ``"claude CLI login"``,
         or ``"http://localhost:11434"``.

@@ -79,7 +79,7 @@ def materialize_attachment(block: dict[str, Any], bridge_dir: Path) -> Path | No
         ``filename``, e.g. ``"diagram.png"``.
     :param bridge_dir: Bridge directory path. Files are written to an
         ``uploads/`` subdirectory underneath it,
-        e.g. ``Path("/tmp/omnigent/codex-native/<digest>")``.
+        e.g. ``Path("/tmp/agent_meow/codex-native/<digest>")``.
     :returns: Path to the written file, or ``None`` if the block could
         not be materialized (missing data URI, decode error).
     """

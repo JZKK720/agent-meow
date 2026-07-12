@@ -1,7 +1,7 @@
 """
 In-process callable tools for the omnigent-style spec adapter.
 
-The omnigent YAML translator stores user-declared function
+The agent-meow YAML translator stores user-declared function
 tools as :class:`~?agent_meow.spec.types.LocalToolInfo` entries
 with ``language == "omnigent-python-callable"`` and ``path``
 holding a dotted-import string (e.g.
@@ -31,7 +31,7 @@ Why a separate module: ``local.py`` is dedicated to subprocess-
 isolated file-based tools (PEP 723 deps, srt sandbox, docker,
 etc.). Mixing in-process callable dispatch there would muddle
 its responsibilities. Keeping it separate makes deletion clean
-when the omnigent compat path retires (the legacy executor
+when the agent-meow compat path retires (the legacy executor
 already reads from ``agent_def`` directly; this module exists
 only to bridge the new harness path).
 """
@@ -49,8 +49,8 @@ from agent_meow.tools.base import Tool, ToolContext
 
 _logger = logging.getLogger(__name__)
 
-# Match the language constant used by the omnigent YAML
-# translator (omnigent/spec/agent_meow.py:OMNIGENT_TOOL_LANGUAGE).
+# Match the language constant used by the agent-meow YAML
+# translator (agent_meow/spec/agent_meow.py:OMNIGENT_TOOL_LANGUAGE).
 # Duplicated here because importing from spec/agent_meow.py would
 # pull in the heavy translator module just to read one string.
 _OMNIGENT_CALLABLE_LANGUAGE = "omnigent-python-callable"
@@ -69,7 +69,7 @@ class LocalCallableTool(Tool):
     wouldn't add a meaningful trust boundary.
 
     :param info: The :class:`LocalToolInfo` produced by the
-        omnigent YAML translator.
+        agent-meow YAML translator.
     """
 
     def __init__(self, info: LocalToolInfo) -> None:
@@ -123,7 +123,7 @@ class LocalCallableTool(Tool):
         ``parameters`` block on :class:`LocalToolInfo` when the
         YAML supplied one; otherwise the empty
         ``{"type": "object", "properties": {}}`` placeholder is
-        used (matching what the omnigent harness advertises
+        used (matching what the agent-meow harness advertises
         when introspection fails).
 
         :returns: OpenAI Chat-Completions tool schema, e.g.
@@ -227,9 +227,9 @@ def load_local_callable_tools(
     local_tools: list[LocalToolInfo],
 ) -> list[LocalCallableTool]:
     """
-    Build :class:`LocalCallableTool` instances for omnigent tools.
+    Build :class:`LocalCallableTool` instances for agent-meow tools.
 
-    Filters *local_tools* to the ones the omnigent YAML
+    Filters *local_tools* to the ones the agent-meow YAML
     translator produced — entries whose ``language`` is
     ``"omnigent-python-callable"``. Other entries (native AP
     file-based tools with ``language == "python"``) are
@@ -263,7 +263,7 @@ def _stringify(value: Any) -> str:
     Strings pass through; ``None`` becomes the empty string;
     everything else routes through :func:`json.dumps` with a
     fallback to :func:`repr` for objects JSON cannot encode.
-    The legacy omnigent path stringifies tool results the same
+    The legacy agent-meow path stringifies tool results the same
     way, so behavior round-trips cleanly between paths.
 
     :param value: The wrapped callable's return value.

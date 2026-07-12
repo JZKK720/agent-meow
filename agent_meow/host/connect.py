@@ -1,4 +1,4 @@
-"""Host process main loop for ``omnigent host``.
+"""Host process main loop for ``agent-meow host``.
 
 Connects to the server via WebSocket, registers as a host, and
 listens for ``host.launch_runner`` / ``host.stop_runner`` frames.
@@ -88,17 +88,17 @@ def _runner_log_dir() -> Path:
     override.
 
     :returns: The host-runner log directory, e.g.
-        ``Path.home() / ".omnigent" / "logs" / "host-runner"``.
+        ``Path.home() / ".agent-meow" / "logs" / "host-runner"``.
     """
-    return Path.home() / ".omnigent" / "logs" / "host-runner"
+    return Path.home() / ".agent-meow" / "logs" / "host-runner"
 
 
 def _display_log_path(path: Path) -> str:
     """Format a log path for display, collapsing the home prefix to ``~``.
 
     :param path: Absolute path, typically under the user's state dir, e.g.
-        ``Path("/Users/alice/.omnigent/logs/host-runner/runner-ab12.log")``.
-    :returns: ``"~/.omnigent/..."`` when *path* is under ``$HOME``,
+        ``Path("/Users/alice/.agent_meow/logs/host-runner/runner-ab12.log")``.
+    :returns: ``"~/.agent_meow/..."`` when *path* is under ``$HOME``,
         otherwise ``str(path)``.
     """
     try:
@@ -168,7 +168,7 @@ def _read_log_tail(path: Path, max_bytes: int = _LOG_TAIL_MAX_BYTES) -> str:
     """Read the last portion of a runner log file for diagnostics.
 
     :param path: The runner's captured stdout/stderr log file, e.g.
-        ``Path("~/.omnigent/logs/host-runner/runner-ab12.log")``.
+        ``Path("~/.agent_meow/logs/host-runner/runner-ab12.log")``.
     :param max_bytes: Max bytes to read from the end of the file,
         e.g. ``4096``.
     :returns: The decoded tail (lossy UTF-8 — runner output may
@@ -305,7 +305,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # Multi-user opt-in switch (create_auth_provider): OMNIGENT_AUTH_ENABLED
         # turns the env-unset header/local default into accounts (or oidc, when
         # OMNIGENT_OIDC_* is set); =0 opts back out. Must propagate down the
-        # CLI → daemon → local-server chain or `omnigent run`/`connect` would
+        # CLI → daemon → local-server chain or `agent-meow run`/`connect` would
         # spawn the wrong auth mode while the operator set the switch on the CLI.
         # Not a secret. OMNIGENT_ACCOUNTS_ENABLED is the deprecated pre-rename
         # alias, still propagated so existing setups keep working.
@@ -323,7 +323,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # secret — a plain boolean) read inside the harness to decide
         # whether to wrap the brain CLI in sandbox-exec. Without it in
         # the allowlist the daemon→runner env strip drops it, so a bare
-        # ``OMNIGENT_CLAUDE_SDK_NO_SANDBOX=1 omnigent run …`` had no
+        # ``OMNIGENT_CLAUDE_SDK_NO_SANDBOX=1 agent-meow run …`` had no
         # effect (the operator also had to set
         # ``OMNIGENT_RUNNER_ENV_PASSTHROUGH=OMNIGENT_CLAUDE_SDK_NO_SANDBOX``).
         # Safe to propagate: not a secret.
@@ -451,7 +451,7 @@ class HostConnectError(Exception):
     a login page (wrong/absent workspace credentials), or the server
     returned a permanent ``4xx`` (unauthenticated, unauthorized, or a
     build that predates the host API). The reconnect loop re-raises this
-    instead of backing off, so ``omnigent host`` exits with an
+    instead of backing off, so ``agent-meow host`` exits with an
     actionable message rather than looping silently forever.
 
     The message is the full, user-facing explanation including the
@@ -577,7 +577,7 @@ class _RunnerHandle:
 
     :param proc: The runner subprocess handle.
     :param log_path: File capturing the runner's stdout/stderr, e.g.
-        ``Path("~/.omnigent/logs/host-runner/runner-ab12.log")``.
+        ``Path("~/.agent_meow/logs/host-runner/runner-ab12.log")``.
         Read back for diagnostics when the runner dies before
         connecting its tunnel.
     """
@@ -852,18 +852,18 @@ class HostProcess:
         Shared by the login-redirect and HTTP 401 messages.
 
         :returns: An actionable remedy sentence naming the exact
-            command, e.g. ``"Run `omnigent login <url>` ..."``.
+            command, e.g. ``"Run `agent-meow login <url>` ..."``.
         """
         return (
-            f"Run `omnigent login {self._server_url}` to authenticate (it "
+            f"Run `agent-meow login {self._server_url}` to authenticate (it "
             "detects Databricks-fronted servers and logs in to the right "
             "workspace), or check your ambient Databricks credentials."
         )
 
     def _login_fix_hint(self) -> str:
-        """Suggest ``omnigent login`` as a remedy for an auth rejection.
+        """Suggest ``agent-meow login`` as a remedy for an auth rejection.
 
-        The host tunnel's bearer is resolved from a stored ``omnigent
+        The host tunnel's bearer is resolved from a stored ``agent-meow
         login`` record first, then ambient Databricks credentials (see
         :func:`agent_meow.runner._entry._make_auth_token_factory`). When
         the server runs agent-meow accounts or OIDC auth, a Databricks
@@ -873,11 +873,11 @@ class HostProcess:
 
         :returns: A one-sentence remedy naming the exact command, e.g.
             ``"If this server uses agent-meow accounts or OIDC login, run
-            `omnigent login http://localhost:6767` to authenticate."``.
+            `agent-meow login http://localhost:6767` to authenticate."``.
         """
         return (
             "If this server uses agent-meow accounts or OIDC login, run "
-            f"`omnigent login {self._server_url}` to authenticate."
+            f"`agent-meow login {self._server_url}` to authenticate."
         )
 
     def _fatal_upgrade_error(self, exc: InvalidURI | InvalidStatus) -> HostConnectError | None:
@@ -932,7 +932,7 @@ class HostProcess:
             if self._login_redirect_streak == 1:
                 # The warning above lands in the CLI log file, not the
                 # terminal — print once per redirect streak so a foreground
-                # `omnigent host` shows the auth problem and its fix instead
+                # `agent-meow host` shows the auth problem and its fix instead
                 # of sitting silent while it retries.
                 print(
                     f"⚠ {cause} Retrying — this also happens briefly while "
@@ -1727,7 +1727,7 @@ class HostProcess:
             # Pass server_url explicitly. The factory's OIDC-token path
             # would otherwise look up ``RUNNER_SERVER_URL`` from env,
             # which only the runner subprocess sets — without it the
-            # stored ``omnigent login`` token is silently skipped and
+            # stored ``agent-meow login`` token is silently skipped and
             # the factory falls through to the Databricks path.
             factory = _make_auth_token_factory(server_url=self._server_url)
             token = factory() if factory else None
@@ -1756,7 +1756,7 @@ class HostProcess:
             name=self._identity.name,
             runners=self._alive_runner_ids(),
             # Off the event loop: probes PATH (shutil.which) and reads
-            # ~/.omnigent/config.yaml. Recomputed on every (re)connect, so
+            # ~/.agent_meow/config.yaml. Recomputed on every (re)connect, so
             # the server's view refreshes whenever the tunnel does; the
             # launch-time check above stays the authoritative gate.
             configured_harnesses=await asyncio.to_thread(configured_harness_map),
@@ -1864,15 +1864,15 @@ def run_host_process(
     server_url: str,
     config_path: Path | None = None,
 ) -> None:
-    """Entry point for ``omnigent host``.
+    """Entry point for ``agent-meow host``.
 
     Loads (or creates) the host identity from the ``host`` section
-    of ``~/.omnigent/config.yaml``, then runs the host process.
+    of ``~/.agent_meow/config.yaml``, then runs the host process.
 
     :param server_url: Server URL to connect to, e.g.
         ``"https://omnigent-app.databricksapps.com"``.
     :param config_path: Optional path to ``config.yaml``.
-        Defaults to ``~/.omnigent/config.yaml``.
+        Defaults to ``~/.agent_meow/config.yaml``.
     :raises SystemExit: With code 1 when the tunnel fails permanently
         (auth / authorization / outdated server). The
         actionable cause is printed to stderr first.
@@ -1892,7 +1892,7 @@ def run_host_process(
     if not path.exists():
         print(f"Auto-generated {path} ({identity.host_id}, name: {identity.name})")
     print(f"Connecting to {server_url} as {identity.name!r} ({identity.host_id})")
-    # Tell the user where logs land up front — `omnigent host` used to run
+    # Tell the user where logs land up front — `agent-meow host` used to run
     # silently, so a stuck/quiet host gave no hint where to look. Session
     # work goes to per-runner files under the host-runner dir (the exact
     # file is printed when each runner launches). The foreground process's

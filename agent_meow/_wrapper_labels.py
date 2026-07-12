@@ -1,10 +1,10 @@
 """Single source of truth for agent-meow wrapper-session labels.
 
-Wrapper-style sessions (``omnigent claude`` today; future
-``codex`` / ``pi`` wrappers tomorrow) stamp an ``omnigent.wrapper``
+Wrapper-style sessions (``agent-meow claude`` today; future
+``codex`` / ``pi`` wrappers tomorrow) stamp an ``agent_meow.wrapper``
 label on the conversation row at creation time. The server reads it
 to gate behavior (claude-native message bypass at
-``omnigent/server/routes/sessions.py:182-183``); the chat redirect
+``agent_meow/server/routes/sessions.py:182-183``); the chat redirect
 and resume dispatcher read it to route a resume to the right
 runtime.
 
@@ -25,7 +25,7 @@ from __future__ import annotations
 # Label key stamped on every wrapper-owned conversation. Reserved
 # for the ``agent_meow.*`` namespace; never reused for guardrails /
 # policy labels.
-WRAPPER_LABEL_KEY = "omnigent.wrapper"
+WRAPPER_LABEL_KEY = "agent_meow.wrapper"
 
 # Label key + value that put the Web UI in terminal-first mode (the inline
 # native-CLI terminal renders as the main view; the Web UI gates on
@@ -36,51 +36,51 @@ WRAPPER_LABEL_KEY = "omnigent.wrapper"
 UI_MODE_LABEL_KEY = "agent_meow.ui"
 UI_MODE_TERMINAL_VALUE = "terminal"
 
-# Value the ``omnigent claude`` wrapper writes into
+# Value the ``agent-meow claude`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``. Treated as a string
 # literal on the wire (see API.md "Bind Session Runner") so changes
 # here are a server-side contract break.
 CLAUDE_NATIVE_WRAPPER_VALUE = "claude-code-native-ui"
 
-# Value the ``omnigent codex`` wrapper writes into
+# Value the ``agent-meow codex`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 CODEX_NATIVE_WRAPPER_VALUE = "codex-native-ui"
 
-# Value the ``omnigent pi`` wrapper writes into
+# Value the ``agent-meow pi`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 PI_NATIVE_WRAPPER_VALUE = "pi-native-ui"
 
-# Value the ``omnigent opencode`` wrapper writes into
+# Value the ``agent-meow opencode`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 OPENCODE_NATIVE_WRAPPER_VALUE = "opencode-native-ui"
 
-# Value the ``omnigent cursor`` wrapper writes into
+# Value the ``agent-meow cursor`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 CURSOR_NATIVE_WRAPPER_VALUE = "cursor-native-ui"
 
-# Value the ``omnigent kiro`` wrapper writes into
+# Value the ``agent-meow kiro`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 KIRO_NATIVE_WRAPPER_VALUE = "kiro-native-ui"
 
-# Value the ``omnigent goose`` wrapper writes into
+# Value the ``agent-meow goose`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 GOOSE_NATIVE_WRAPPER_VALUE = "goose-native-ui"
 
-# Value the ``omnigent antigravity`` native (agy TUI) wrapper writes into
+# Value the ``agent-meow antigravity`` native (agy TUI) wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 ANTIGRAVITY_NATIVE_WRAPPER_VALUE = "antigravity-native-ui"
 
-# Value the ``omnigent qwen`` wrapper writes into
+# Value the ``agent-meow qwen`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 QWEN_NATIVE_WRAPPER_VALUE = "qwen-native-ui"
 
-# Value the ``omnigent kimi`` wrapper writes into
+# Value the ``agent-meow kimi`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 KIMI_NATIVE_WRAPPER_VALUE = "kimi-native-ui"
-# Value the ``omnigent hermes`` wrapper writes into
+# Value the ``agent-meow hermes`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 HERMES_NATIVE_WRAPPER_VALUE = "hermes-native-ui"
 
-# Value the ``omnigent ironclaw`` wrapper writes into
+# Value the ``agent-meow ironclaw`` wrapper writes into
 # ``conversations.labels[WRAPPER_LABEL_KEY]``.
 IRONCLAW_NATIVE_WRAPPER_VALUE = "ironclaw-native-ui"

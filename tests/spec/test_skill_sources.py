@@ -331,7 +331,7 @@ def test_pi_provider_is_bundle_only_noop(tmp_path: Path) -> None:
     """
     Pi loads skills from the bundle (already carried by ``spec.skills``,
     the base layer) and auto-discovers host skills internally — but
-    omnigent can't enumerate Pi's host-skill layout to name/resolve them,
+    agent-meow can't enumerate Pi's host-skill layout to name/resolve them,
     so the provider surfaces nothing extra (under-report rather than list
     a command that won't resolve).
     """

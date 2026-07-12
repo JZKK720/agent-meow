@@ -1,6 +1,6 @@
 """Phase 0 characterization test — REPL smoke under pexpect.
 
-Spawns ``omnigent run <yaml>`` under a PTY, waits for the
+Spawns ``agent-meow run <yaml>`` under a PTY, waits for the
 REPL's ``❯`` input prompt, types a prompt, awaits the turn
 completion, then exits cleanly via Ctrl+D. Proves the REPL's
 basic input/output pipeline works end-to-end. The full
@@ -93,7 +93,7 @@ def test_repl_smoke_single_prompt(
 
     Uses the mock LLM server for deterministic responses.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         openai-agents installed.
     :param omnigent_repo_root: Working directory for the
         subprocess.

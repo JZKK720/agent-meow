@@ -5,7 +5,7 @@ to Claude Code when running in an agent-meow claude-native session.
 These tools are advertised via the MCP tool relay
 (``tool_relay.json``) that the runner writes before Claude Code
 starts. The test launches Claude Code in a headless tmux window,
-sends a prompt asking it to list its omnigent MCP tools, and
+sends a prompt asking it to list its agent-meow MCP tools, and
 asserts that the response mentions ``sys_session_get_history``.
 
 Requirements
@@ -69,7 +69,7 @@ def claude_native_ui_agent(
     """
     Upload the ``claude-native-ui`` agent spec and return its name.
 
-    Mirrors what ``omnigent claude`` materialises at runtime (harness
+    Mirrors what ``agent-meow claude`` materialises at runtime (harness
     ``claude-native``, ``os_env.type: caller_process`` with no sandbox)
     EXCEPT that it deliberately omits the wrapper's ``spawn: true``
     opt-in — this module's relay test pins the no-opt-in gate (spawn
@@ -270,7 +270,7 @@ def test_claude_native_session_tools_visible(
     2. Create a runner-bound session with ``claude-native-ui``.
     3. Launch Claude Code in a private tmux window with mock LLM routing.
     4. Verify ``tool_relay.json`` contains ``sys_session_get_history``.
-    5. Send a prompt asking Claude to list its omnigent MCP tools.
+    5. Send a prompt asking Claude to list its agent-meow MCP tools.
     6. Poll session items until Claude's response mentions
        ``sys_session_get_history``.
     7. Assert the response text contains ``sys_session_get_history``.
@@ -359,13 +359,13 @@ def test_claude_native_session_tools_visible(
             f"tool_relay.json does not advertise sys_session_list. Found tools: {relay_tools}."
         )
 
-        # ── Step 5: Ask Claude to list its omnigent MCP tools ──────────
+        # ── Step 5: Ask Claude to list its agent-meow MCP tools ──────────
         send_user_message_to_session(
             http_client,
             session_id=session_id,
             content=(
                 "List the names of ALL tools available to you from the "
-                "'omnigent' MCP server. Just list the tool names, one per "
+                "'agent-meow' MCP server. Just list the tool names, one per "
                 "line, nothing else. Be complete — include every tool."
             ),
         )
@@ -394,7 +394,7 @@ def test_claude_native_session_tools_visible(
             f"Assistant text: {assistant_text[:500]!r}"
         )
         # sys_session_list should also be mentioned since we asked for
-        # ALL omnigent tools.
+        # ALL agent-meow tools.
         assert "sys_session_list" in assistant_text, (
             f"Claude's response does not mention sys_session_list. "
             f"Assistant text: {assistant_text[:500]!r}"
@@ -434,7 +434,7 @@ def test_claude_native_relay_advertises_broadened_orchestrator_surface(
     arm (no ``tools.agents``, no top-level ``spawn: true``), so the
     gated spawn-writes (``sys_session_create`` / ``send`` / ``close``)
     must be ABSENT — proving native honours the same gate as
-    ``request.tools`` on non-native harnesses. (The real ``omnigent
+    ``request.tools`` on non-native harnesses. (The real ``agent-meow
     claude`` wrapper spec sets ``spawn: true`` and DOES get them.)
 
     :param http_client: HTTP client pointed at the live server.

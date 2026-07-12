@@ -91,10 +91,10 @@ def _read_stdin_payload() -> dict[str, object] | None:
     try:
         payload = json.loads(raw or "{}")
     except json.JSONDecodeError as exc:
-        print(f"omnigent kimi hook: malformed JSON: {exc}", file=sys.stderr)
+        print(f"agent-meow kimi hook: malformed JSON: {exc}", file=sys.stderr)
         return None
     if not isinstance(payload, dict):
-        print("omnigent kimi hook: expected JSON object", file=sys.stderr)
+        print("agent-meow kimi hook: expected JSON object", file=sys.stderr)
         return None
     return payload
 
@@ -162,7 +162,7 @@ def _main_evaluate_policy(argv: list[str]) -> int:
     try:
         eval_response = resp.json()
     except json.JSONDecodeError:
-        print("omnigent kimi evaluate-policy hook: malformed agent-meow response", file=sys.stderr)
+        print("agent-meow kimi evaluate-policy hook: malformed agent-meow response", file=sys.stderr)
         return _fail_closed()
 
     hook_output = evaluation_response_to_hook_output(hook_event, eval_response)
@@ -234,7 +234,7 @@ def _main_permission_request(argv: list[str]) -> int:
         inject_approval_keystroke(bridge_dir, key=key, timeout_s=_SURFACE_TIMEOUT_S)
     except RuntimeError as exc:
         print(
-            f"omnigent kimi permission-request hook: keystroke inject failed: {exc}",
+            f"agent-meow kimi permission-request hook: keystroke inject failed: {exc}",
             file=sys.stderr,
         )
     return 0
@@ -256,7 +256,7 @@ def _request_web_approval(
             resp.raise_for_status()
     except httpx.HTTPError as exc:
         print(
-            f"omnigent kimi permission-request hook: approval request failed: {exc}",
+            f"agent-meow kimi permission-request hook: approval request failed: {exc}",
             file=sys.stderr,
         )
         return None
@@ -316,7 +316,7 @@ def main(argv: list[str] | None = None) -> int:
         return _main_evaluate_policy(rest)
     if subcommand == "permission-request":
         return _main_permission_request(rest)
-    print(f"omnigent kimi hook: unknown subcommand {subcommand!r}", file=sys.stderr)
+    print(f"agent-meow kimi hook: unknown subcommand {subcommand!r}", file=sys.stderr)
     return 2
 
 

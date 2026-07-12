@@ -230,7 +230,7 @@ def test_prepare_raises_install_hint_when_sdk_missing(monkeypatch: pytest.Monkey
     # A None entry in sys.modules makes `import e2b` raise ImportError.
     monkeypatch.setitem(sys.modules, "e2b", None)
     monkeypatch.setenv("E2B_API_KEY", "k")
-    with pytest.raises(click.ClickException, match=r"pip install 'omnigent\[e2b\]'"):
+    with pytest.raises(click.ClickException, match=r"pip install 'agent-meow\[e2b\]'"):
         E2BSandboxLauncher().prepare()
 
 
@@ -284,7 +284,7 @@ def test_provision_missing_template_points_at_build(sdk: _State) -> None:
     # A missing/unbuilt template is a PLAIN SandboxException ("404: template
     # '…' not found"), not TemplateException — the most common first-run
     # failure must still surface the build hint.
-    sdk.create_raises = _SandboxException("404: template 'omnigent-host' not found")
+    sdk.create_raises = _SandboxException("404: template 'agent-meow-host' not found")
     with pytest.raises(click.ClickException, match="e2b template build"):
         E2BSandboxLauncher().provision("x")
 
@@ -354,7 +354,7 @@ def test_lifetime_cap_from_error_branches(message: str, expected: int | None) ->
 @pytest.mark.parametrize(
     ("message", "expected"),
     [
-        ("404: template 'omnigent-host' not found", True),
+        ("404: template 'agent-meow-host' not found", True),
         ("Template 'x' Not Found", True),  # case-insensitive
         ("400: Timeout cannot be greater than 1 hours", False),
         ("429: rate limited", False),
@@ -483,18 +483,18 @@ def test_exec_foreground_echoes_and_returns_exit_code(
     sdk: _State, capsys: pytest.CaptureFixture[str]
 ) -> None:
     sdk.stream_result = _FakeCommandResult(stdout="line-1\n", exit_code=0)
-    code = E2BSandboxLauncher().exec_foreground("sb-e2b-1", "omnigent host")
+    code = E2BSandboxLauncher().exec_foreground("sb-e2b-1", "agent-meow host")
     assert code == 0
     assert "line-1" in capsys.readouterr().out
     # TERM is forced and the command is exec'd inside the login shell.
     foreground_cmd = sdk.run_calls[-1]["cmd"]
-    assert "TERM=xterm-256color exec omnigent host" in foreground_cmd
+    assert "TERM=xterm-256color exec agent-meow host" in foreground_cmd
 
 
 def test_stream_exec_disables_per_command_timeout(sdk: _State) -> None:
     # The streaming path backs the long-lived foreground host; it must disable
     # the SDK's default 60s per-command cap (timeout=0), like run() does.
-    E2BSandboxLauncher().stream_exec("sb-e2b-1", "omnigent host")
+    E2BSandboxLauncher().stream_exec("sb-e2b-1", "agent-meow host")
     assert sdk.run_calls[-1]["background"] is True
     assert sdk.run_calls[-1]["timeout"] == 0
 
@@ -558,7 +558,7 @@ def test_exec_foreground_kills_on_keyboard_interrupt(
         E2BSandboxLauncher, "stream_exec", lambda self, sid, cmd, *, pty=False: _Interrupting()
     )
     with pytest.raises(KeyboardInterrupt):
-        E2BSandboxLauncher().exec_foreground("sb-e2b-1", "omnigent host")
+        E2BSandboxLauncher().exec_foreground("sb-e2b-1", "agent-meow host")
     assert closed == [True]
 
 

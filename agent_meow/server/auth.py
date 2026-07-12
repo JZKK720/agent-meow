@@ -48,9 +48,9 @@ _RESERVED_USERS = frozenset({RESERVED_USER_LOCAL, RESERVED_USER_PUBLIC})
 _TRUTHY_STRINGS = ("1", "true", "yes")
 
 # Explicit single-user marker. Set by the managed local-server spawn
-# paths (`omnigent run` in chat.py, the daemon's
+# paths (`agent-meow run` in chat.py, the daemon's
 # host/local_server.py) and by the canonical bare loopback
-# `omnigent server` (cli.py) — never by deployed multi-user servers.
+# `agent-meow server` (cli.py) — never by deployed multi-user servers.
 # Gates the header-mode "local" fallback (see
 # :meth:`UnifiedAuthProvider._check_header`) and host_id re-owning in
 # routes/host_tunnel.py.
@@ -407,7 +407,7 @@ class UnifiedAuthProvider(AuthProvider):
 
         Checks the session cookie first (browser clients), then
         falls back to ``Authorization: Bearer <jwt>`` (CLI clients
-        authenticated via ``omnigent login``). Both carry the same
+        authenticated via ``agent-meow login``). Both carry the same
         HS256-signed JWT.
 
         Uses a TTL credential cache keyed by HMAC-SHA256 digest of
@@ -516,14 +516,14 @@ def create_auth_provider() -> AuthProvider:
     :class:`UnifiedAuthProvider` configured for the selected source.
 
     Defaults to ``"header"`` when the env var is unset — a bare
-    ``omnigent server`` is single-user, no-login out of the box.
+    ``agent-meow server`` is single-user, no-login out of the box.
     Header mode rejects requests without the configured identity
     header (default ``X-Forwarded-Email``, overridable via
     ``OMNIGENT_AUTH_HEADER``) — 401, fail closed; see
     :meth:`UnifiedAuthProvider._check_header` — unless the server
     is an explicit single-user local runtime
     (``OMNIGENT_LOCAL_SINGLE_USER=1``, set by the managed local
-    spawn paths and the canonical bare loopback ``omnigent
+    spawn paths and the canonical bare loopback ``agent-meow
     server``), where the absent header falls back to the reserved
     ``"local"`` user — the convenient posture for local development
     without minting cookies / typing passwords.

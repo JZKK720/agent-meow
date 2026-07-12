@@ -1,4 +1,4 @@
-"""End-to-end smoke test: ``omnigent kiro`` drives the native Kiro TUI.
+"""End-to-end smoke test: ``agent-meow kiro`` drives the native Kiro TUI.
 
 This opt-in test covers the user-facing Kiro native path: the CLI starts a
 runner-owned ``kiro-cli chat --tui`` terminal, the server accepts a web-style
@@ -89,7 +89,7 @@ def test_kiro_native_cli_smoke(
                 )
             except AssertionError as exc:
                 raise AssertionError(
-                    f"`omnigent kiro` did not return marker {marker!r}. The "
+                    f"`agent-meow kiro` did not return marker {marker!r}. The "
                     "kiro-native path regressed somewhere between tmux input, "
                     "the Kiro TUI turn, and session-forwarder mirroring.\n\n"
                     f"CLI output tail:\n{handle.output()[-2000:]}"

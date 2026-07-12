@@ -196,7 +196,7 @@ _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
     # ``ToolManager._register_comment_tools`` — they are reserved
     # here so user specs cannot shadow them. (Policy ASKs are
     # surfaced as MCP-shape elicitations on the SSE stream — not
-    # via the tool registry — see omnigent/runtime/policies/approval.py.)
+    # via the tool registry — see agent_meow/runtime/policies/approval.py.)
     "web_fetch": None,
     "list_comments": None,
     "update_comment": None,

@@ -649,7 +649,7 @@ def create_hosts_router(
             if result.get("error_code") == HARNESS_NOT_CONFIGURED_ERROR_CODE:
                 # Categorical refusal: the harness isn't configured on
                 # the host, so a retry can't succeed without user action
-                # (`omnigent setup` on the host machine). Surface the
+                # (`agent-meow setup` on the host machine). Surface the
                 # specific code (412) instead of the generic 502.
                 raise OmnigentError(
                     f"host failed to launch runner: {result.get('error')}",

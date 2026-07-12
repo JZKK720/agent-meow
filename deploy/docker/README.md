@@ -6,7 +6,7 @@ compose` runs.
 
 The stack:
 - `postgres` — persistent DB on a Docker volume
-- `omnigent` — the server image (built from `../Dockerfile`)
+- `agent-meow` — the server image (built from `../Dockerfile`)
 
 Auth is in-process — the server has both header-proxy and native
 OIDC modes built in (see [Multi-user mode](#multi-user-mode-oidc)
@@ -53,7 +53,7 @@ external URL so invite links resolve correctly:
 
 ```bash
 # Add to .env (bootstrap.sh already minted the cookie secret for you):
-OMNIGENT_ACCOUNTS_BASE_URL=https://omnigent.example.com
+OMNIGENT_ACCOUNTS_BASE_URL=https://agent_meow.example.com
 
 docker compose up -d
 docker compose logs agent-meow | grep -A4 "Created initial admin"
@@ -105,7 +105,7 @@ shim, no oauth2-proxy.
    OMNIGENT_OIDC_ISSUER=https://github.com
    OMNIGENT_OIDC_CLIENT_ID=Iv1.abc123…
    OMNIGENT_OIDC_CLIENT_SECRET=…
-   OMNIGENT_OIDC_REDIRECT_URI=https://omnigent.example.com/auth/callback
+   OMNIGENT_OIDC_REDIRECT_URI=https://agent_meow.example.com/auth/callback
    # OMNIGENT_OIDC_COOKIE_SECRET is already set by bootstrap.sh — leave it alone.
    ```
 
@@ -128,7 +128,7 @@ OMNIGENT_AUTH_PROVIDER=oidc
 OMNIGENT_OIDC_ISSUER=https://accounts.google.com
 OMNIGENT_OIDC_CLIENT_ID=…apps.googleusercontent.com
 OMNIGENT_OIDC_CLIENT_SECRET=…
-OMNIGENT_OIDC_REDIRECT_URI=https://omnigent.example.com/auth/callback
+OMNIGENT_OIDC_REDIRECT_URI=https://agent_meow.example.com/auth/callback
 OMNIGENT_OIDC_COOKIE_SECRET=<64-hex-chars>
 OMNIGENT_OIDC_ALLOWED_DOMAINS=example.com,subsidiary.example.com
 ```
@@ -147,7 +147,7 @@ OMNIGENT_AUTH_PROVIDER=oidc
 OMNIGENT_OIDC_ISSUER=https://your-tenant.okta.com
 OMNIGENT_OIDC_CLIENT_ID=…
 OMNIGENT_OIDC_CLIENT_SECRET=…
-OMNIGENT_OIDC_REDIRECT_URI=https://omnigent.example.com/auth/callback
+OMNIGENT_OIDC_REDIRECT_URI=https://agent_meow.example.com/auth/callback
 OMNIGENT_OIDC_COOKIE_SECRET=<64-hex-chars>
 ```
 
@@ -162,7 +162,7 @@ accept over HTTPS. Three options:
 
    ```bash
    # In .env:
-   OMNIGENT_DOMAIN=omnigent.example.com
+   OMNIGENT_DOMAIN=agent_meow.example.com
    OMNIGENT_ACME_EMAIL=you@example.com      # optional, for Let's Encrypt notices
 
    # Point DNS A/AAAA records at the host, then:
@@ -170,12 +170,12 @@ accept over HTTPS. Three options:
    ```
 
    Caddy auto-provisions and renews a Let's Encrypt cert; the
-   omnigent container stops being directly exposed and only :80 +
+   agent-meow container stops being directly exposed and only :80 +
    :443 are published. Requires Docker Compose 2.24+ for the overlay's
    `!reset` directive. See `Caddyfile` for the (3-line) config.
 
 2. **Behind an existing reverse proxy** — point your proxy at
-   `omnigent:8000` over the docker network (or `127.0.0.1:8000`
+   `agent-meow:8000` over the docker network (or `127.0.0.1:8000`
    from the host). Examples: AWS ALB with ACM cert, Cloudflare in
    "Full" SSL mode, Fly.io / Cloud Run / Render platform certs.
 
@@ -221,7 +221,7 @@ trusts whatever value reaches it.
 | Variable | Default | Purpose |
 |---|---|---|
 | `POSTGRES_PASSWORD` | *required* | DB password for the bundled Postgres container. |
-| `POSTGRES_USER` / `POSTGRES_DB` | `omnigent` | DB user + database name. |
+| `POSTGRES_USER` / `POSTGRES_DB` | `agent-meow` | DB user + database name. |
 | `OMNIGENT_PORT` | `8000` | Host port the server is published on. |
 | `OMNIGENT_AUTH_ENABLED` | `1` (in compose) | Master auth switch. `1` → accounts (or oidc if `OMNIGENT_OIDC_ISSUER` is set); `0` → single-user local mode (every request is the shared `local` user — local dev only, never shared deploys). |
 | `OMNIGENT_AUTH_PROVIDER` | unset | Escape hatch to pin a mode explicitly: `header` / `accounts` / `oidc`. Overrides the `AUTH_ENABLED` auto-selection. |
@@ -238,7 +238,7 @@ injected into the container.
 The same Dockerfile publishes a second image: the official agent-meow
 **host** image, which remote sandboxes boot from so they start in
 seconds instead of paying an in-sandbox dependency install. It bakes
-the full omnigent install (all three packages + deps, `python` and
+the full agent-meow install (all three packages + deps, `python` and
 `pip` on PATH), `git` (workspaces / worktrees), `tmux` (terminal
 sessions spawned by native harnesses), and the coding-harness CLIs —
 `claude`, `codex`, `pi`, and `kiro-cli`, with the runtime they need — so

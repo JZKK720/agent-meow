@@ -8,7 +8,7 @@ description: >-
   No ironclaw code is vendored — the gateway is reached over HTTP.
 
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: openai-agents
   model: ironclaw-agent

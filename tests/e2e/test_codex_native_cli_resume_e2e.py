@@ -1,4 +1,4 @@
-"""End-to-end regression test: ``omnigent codex --resume`` restores history.
+"""End-to-end regression test: ``agent-meow codex --resume`` restores history.
 
 The codex-native sibling of ``test_claude_native_cli_resume_e2e``. Codex
 resumes by a different mechanism than Claude — it re-opens a thread via its
@@ -10,7 +10,7 @@ and confirm the model answers with the passphrase.
 
 Codex-native already gated its runner-side terminal auto-create on
 host-spawned sessions (the gate Claude was missing), so this test is a
-guard/confirmation rather than a fix — it pins that ``omnigent codex
+guard/confirmation rather than a fix — it pins that ``agent-meow codex
 --resume`` keeps restoring history, parallel to the Claude regression test.
 The shared flow lives in :func:`assert_native_cli_resume_restores_history`
 (see ``tests/e2e/_native_resume_helpers.py``).
@@ -63,7 +63,7 @@ def test_codex_native_cli_resume_restores_history(
     """
     Resuming a codex-native conversation via the CLI restores its history.
 
-    Drives ``omnigent codex --server …`` (gateway routing via the
+    Drives ``agent-meow codex --server …`` (gateway routing via the
     config-home auth block from the pytest ``--profile``) to teach Codex a
     passphrase, resumes the conversation, sends a recall message through the
     server, and asserts Codex replies with the passphrase — proving the

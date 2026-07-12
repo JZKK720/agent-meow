@@ -1,7 +1,7 @@
 """Shared UX helpers for local-runner startup.
 
 The CLI flows that spawn the laptop-side runner subprocess
-(``omnigent run --server``, ``omnigent claude --server``)
+(``agent-meow run --server``, ``agent-meow claude --server``)
 share two needs:
 
 1. A progress indicator while waiting for the runner to come up,
@@ -14,7 +14,7 @@ share two needs:
    runner log when something goes wrong. Today the timeout
    surface is ``"Local runner did not register within 60s"`` and
    the log file (with the actual root cause) sits unreferenced in
-   ``~/.omnigent/logs/runner/``.
+   ``~/.agent_meow/logs/runner/``.
 
 Both behaviors live here so the run / claude / runner paths
 stay in sync.
@@ -180,7 +180,7 @@ def runner_startup_progress(
         from agent_meow.inner.mascots import MASCOT_ART_COLOR
 
         # ``Console(stderr=True)`` keeps the spinner off stdout so piped
-        # one-shot output (``omnigent run … -p "…"``) stays clean.
+        # one-shot output (``agent-meow run … -p "…"``) stays clean.
         # ``transient=True`` erases the spinner line on stop. We drive a
         # ``Live`` directly (rather than ``console.status``) for two
         # reasons: (1) ``finish()`` can stop it mid-block, so one spinner
@@ -235,7 +235,7 @@ def runner_startup_progress(
     # No clear-on-success because the line was the user's only
     # signal that something was happening — leaving it in the
     # scrollback is the right behavior for a log capture.
-    click.echo(f"omnigent: {initial_message}", err=True)
+    click.echo(f"agent-meow: {initial_message}", err=True)
 
     def _update_plain(msg: str) -> None:
         """
@@ -245,7 +245,7 @@ def runner_startup_progress(
             ``"Launching your agent…"``.
         :returns: None.
         """
-        click.echo(f"omnigent: {msg}", err=True)
+        click.echo(f"agent-meow: {msg}", err=True)
 
     # Plain mode has no live region to tear down, so ``finish`` is a
     # no-op (the printed lines stay in scrollback by design).
@@ -269,14 +269,14 @@ def format_runner_log_tail(log_path: Path | None) -> str:
     ``agent_meow.cli`` keep working unchanged.
 
     :param log_path: Path to the captured runner log, e.g.
-        ``Path("/home/u/.omnigent/logs/runner/runner-abcd.log")``.
+        ``Path("/home/u/.agent_meow/logs/runner/runner-abcd.log")``.
         ``None`` returns an empty string (no log was captured —
         usually because the runner was started with stdio
         inherited).
     :returns: A formatted block ready to append to an exception
         message, e.g.::
 
-            \nRunner log: /home/u/.omnigent/logs/runner/runner-abcd.log
+            \nRunner log: /home/u/.agent_meow/logs/runner/runner-abcd.log
 
         The hint sits flush with the surrounding error and
         setup-suggestion lines so the three pieces read as one

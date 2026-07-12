@@ -204,7 +204,7 @@ def test_prepare_bridge_dir_preserves_token_and_updates_runtime(
     """
     Bridge setup is stable across wrapper re-runs for one session.
 
-    If this regresses, reattaching ``omnigent claude`` can rotate the
+    If this regresses, reattaching ``agent-meow claude`` can rotate the
     bearer token while the already-running MCP server still expects the
     old token.
     """
@@ -1990,7 +1990,7 @@ def test_augment_claude_args_injects_mcp_and_hooks(tmp_path: Path) -> None:
 
     assert args[:2] == ["--resume", "abc"]
     mcp_config = json.loads(args[args.index("--mcp-config") + 1])
-    server = mcp_config["mcpServers"]["omnigent"]
+    server = mcp_config["mcpServers"]["agent-meow"]
     assert server["command"] == "/venv/bin/python"
     assert server["args"][-2:] == ["--bridge-dir", str(tmp_path)]
     # Web-UI input does not flow through Claude Channels — that
@@ -3507,7 +3507,7 @@ async def test_start_tool_relay_accepts_codex_native_bridge_root(
     Relay startup accepts Codex-native's persistent bridge root.
 
     Codex-native reuses the Claude MCP relay but stores bridge files in
-    ``~/.omnigent/codex-native`` instead of Claude's ``/tmp`` bridge
+    ``~/.agent_meow/codex-native`` instead of Claude's ``/tmp`` bridge
     root. A regression here logs "Failed to start comment relay" and
     leaves Codex without comment/session tools.
 
@@ -3518,7 +3518,7 @@ async def test_start_tool_relay_accepts_codex_native_bridge_root(
     """
     from agent_meow import codex_native_bridge
 
-    codex_root = tmp_path / ".omnigent" / "codex-native"
+    codex_root = tmp_path / ".agent-meow" / "codex-native"
     monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", codex_root)
     bridge_dir = codex_native_bridge.prepare_bridge_dir("conv_codex")
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
@@ -3568,7 +3568,7 @@ async def test_start_tool_relay_accepts_antigravity_native_bridge_root(
     Relay startup accepts Antigravity-native's persistent bridge root (#1194).
 
     Antigravity-native reuses the Claude MCP relay but stores bridge files in
-    ``~/.omnigent/antigravity-native`` (the same ``$HOME/.omnigent/<harness>``
+    ``~/.agent_meow/antigravity-native`` (the same ``$HOME/.agent_meow/<harness>``
     shape codex uses). A regression in :func:`_trusted_parent_for_bridge_dir`
     would reject the bridge dir, the relay would fail to write
     ``tool_relay.json``, and the wrapped agy would get no ``sys_*`` tools.
@@ -3580,7 +3580,7 @@ async def test_start_tool_relay_accepts_antigravity_native_bridge_root(
     """
     from agent_meow import antigravity_native_bridge
 
-    antigravity_root = tmp_path / ".omnigent" / "antigravity-native"
+    antigravity_root = tmp_path / ".agent-meow" / "antigravity-native"
     monkeypatch.setattr("agent_meow.antigravity_native_bridge._BRIDGE_ROOT", antigravity_root)
     bridge_dir = antigravity_native_bridge.prepare_bridge_dir("conv_agy")
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
@@ -3631,7 +3631,7 @@ async def test_start_tool_relay_accepts_opencode_native_bridge_root(
     Relay startup accepts OpenCode-native's persistent bridge root.
 
     opencode-native reuses the Claude MCP relay but stores bridge files in
-    ``~/.omnigent/opencode-native`` (the same ``$HOME/.omnigent/<harness>``
+    ``~/.agent_meow/opencode-native`` (the same ``$HOME/.agent_meow/<harness>``
     shape codex/antigravity use). The missing allowlist entry made ``serve-mcp``
     crash on startup (``_ensure_secure_dir`` → "not under an allowed bridge
     root"), which opencode surfaced as ``MCP error -32000: Connection closed``
@@ -3643,7 +3643,7 @@ async def test_start_tool_relay_accepts_opencode_native_bridge_root(
     """
     from agent_meow import opencode_native_bridge
 
-    opencode_root = tmp_path / ".omnigent" / "opencode-native"
+    opencode_root = tmp_path / ".agent-meow" / "opencode-native"
     monkeypatch.setattr("agent_meow.opencode_native_bridge._BRIDGE_ROOT", opencode_root)
     bridge_dir = opencode_native_bridge.prepare_bridge_dir("conv_oc")
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
@@ -4517,7 +4517,7 @@ def test_ensure_trusted_creates_config_when_missing(
     """
     A fresh host (no ``~/.claude.json``) gets both first-run gates set.
 
-    This is the core workspace-trust case: an ``omnigent host`` machine that
+    This is the core workspace-trust case: an ``agent-meow host`` machine that
     has never run Claude interactively. Both the global onboarding gate
     and the per-workspace trust gate must be pre-accepted so Claude does
     not block on its TUI prompts.

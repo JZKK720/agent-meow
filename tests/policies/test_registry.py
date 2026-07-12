@@ -181,7 +181,7 @@ def test_is_registered_handler_false_for_unregistered_first_party() -> None:
     """A first-party path that is not a registry entry is NOT registered.
 
     The registry check is exact: ``make_fixed_action_callable`` lives in
-    the ``omnigent`` package but is not a browsable registry entry, so the
+    the ``agent-meow`` package but is not a browsable registry entry, so the
     write APIs (which enforce this check) reject it. Such handlers are
     reachable only via operator-run / declarative specs, not the
     user-facing write APIs.

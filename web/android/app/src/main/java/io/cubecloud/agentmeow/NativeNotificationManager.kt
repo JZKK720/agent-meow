@@ -108,7 +108,7 @@ class NativeNotificationManager(private val context: Context) {
 
     companion object {
         const val EXTRA_NAVIGATE_PATH = "io.cubecloud.agentmeow.android.NAVIGATE_PATH"
-        private const val CHANNEL_ID = "omnigent.sessions"
+        private const val CHANNEL_ID = "agent_meow.sessions"
         private const val BADGE_NOTIFICATION_ID = 1
     }
 }

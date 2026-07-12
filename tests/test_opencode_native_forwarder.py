@@ -123,7 +123,7 @@ async def test_each_assistant_message_gets_its_own_response_id() -> None:
 async def test_user_text_part_is_mirrored_before_the_assistant() -> None:
     """The forwarder is the transcript source: it posts the user message too.
 
-    For native-server harnesses omnigent persists no separate user item, so the
+    For native-server harnesses agent-meow persists no separate user item, so the
     forwarder must mirror the user message (role=user) — posted eagerly so it
     precedes its assistant reply (correct chat ordering). Deduped by part id.
     """

@@ -55,7 +55,7 @@ def labels_with_closed_status(
     same label for clients and write guards.
 
     :param labels: Persisted session labels, e.g.
-        ``{"omnigent.wrapper": "codex-native-ui"}``.
+        ``{"agent_meow.wrapper": "codex-native-ui"}``.
     :param title: Stored conversation title, e.g.
         ``"researcher:auth:closed:conv_abc123"``.
     :returns: A mutable labels dict with ``agent_meow.closed=true``

@@ -4,13 +4,13 @@ description: >
   Fixture agent for the tool_call DENY-policy e2e test. The calculate tool
   ships as Python source under tools/python/ (auto-discovered) so the server
   loads it by file path from the unpacked bundle on any server version — no
-  dependency on the repo's tests/ tree. The DENY policy below uses an omnigent
+  dependency on the repo's tests/ tree. The DENY policy below uses an agent-meow
   built-in policy callable (resolves on any server).
 
 # executor.model and an executor.auth api-key block are stamped per-test by
 # register_dir_agent_with_mock_llm. config.harness selects openai-agents.
 executor:
-  type: omnigent
+  type: agent-meow
   model: mock-model
   config:
     harness: openai-agents

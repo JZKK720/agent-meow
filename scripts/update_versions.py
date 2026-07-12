@@ -1,12 +1,12 @@
 """
-Bump the omnigent project version across all packages in lockstep.
+Bump the agent-meow project version across all packages in lockstep.
 
 The three distributions in this repo release together at a single
 version:
 
-- ``omnigent``         — root ``pyproject.toml``
-- ``omnigent-client``  — ``sdks/python-client/pyproject.toml``
-- ``omnigent-ui-sdk``  — ``sdks/ui/pyproject.toml``
+- ``agent-meow``         — root ``pyproject.toml``
+- ``agent-meow-client``  — ``sdks/python-client/pyproject.toml``
+- ``agent-meow-ui-sdk``  — ``sdks/ui/pyproject.toml``
 
 Each declares its own ``[project].version`` and ``==``-pins its
 siblings — the lockstep contract that
@@ -65,11 +65,11 @@ class Package:
     """
     One lockstep-versioned distribution in the repo.
 
-    :param name: Distribution name, e.g. ``"omnigent"``.
+    :param name: Distribution name, e.g. ``"agent-meow"``.
     :param pyproject: Path to the package's ``pyproject.toml``, e.g.
         ``Path("sdks/python-client/pyproject.toml")``.
     :param sibling_pins: Sibling distribution names this package
-        ``==``-pins, e.g. ``("omnigent-client", "omnigent-ui-sdk")``.
+        ``==``-pins, e.g. ``("agent-meow-client", "agent-meow-ui-sdk")``.
         Empty for a package that pins no siblings.
     """
 
@@ -87,19 +87,19 @@ def packages(root: Path) -> list[Package]:
     """
     return [
         Package(
-            "omnigent",
+            "agent-meow",
             root / "pyproject.toml",
-            ("omnigent-client", "omnigent-ui-sdk"),
+            ("agent-meow-client", "agent-meow-ui-sdk"),
         ),
         Package(
-            "omnigent-client",
+            "agent-meow-client",
             root / "sdks" / "python-client" / "pyproject.toml",
-            ("omnigent",),
+            ("agent-meow",),
         ),
         Package(
-            "omnigent-ui-sdk",
+            "agent-meow-ui-sdk",
             root / "sdks" / "ui" / "pyproject.toml",
-            ("omnigent-client",),
+            ("agent-meow-client",),
         ),
     ]
 
@@ -108,13 +108,13 @@ def packages(root: Path) -> list[Package]:
 _VERSION_LINE = re.compile(r'^version = "[^"]*"$', re.MULTILINE)
 
 # ``VERSION = "..."`` on its own line — the runtime constant in
-# ``omnigent/version.py`` that mirrors the canonical [project].version.
+# ``agent_meow/version.py`` that mirrors the canonical [project].version.
 _VERSION_CONSTANT = re.compile(r'^VERSION = "[^"]*"$', re.MULTILINE)
 
 
 def _version_py(root: Path) -> Path:
     """Return the path to the runtime version constant module."""
-    return root / "omnigent" / "version.py"
+    return root / "agent-meow" / "version.py"
 
 
 def _pin_pattern(name: str) -> re.Pattern[str]:
@@ -125,7 +125,7 @@ def _pin_pattern(name: str) -> re.Pattern[str]:
     literal is never matched, and capturing the leading indent so it
     is preserved on rewrite.
 
-    :param name: Distribution name to match, e.g. ``"omnigent-client"``.
+    :param name: Distribution name to match, e.g. ``"agent-meow-client"``.
     :returns: A compiled multiline pattern.
     """
     return re.compile(rf'^(?P<indent>\s*)"{re.escape(name)}==[^"]*",$', re.MULTILINE)
@@ -168,7 +168,7 @@ def set_version(root: Path, new_version: str) -> list[Path]:
     """
     Rewrite every package's version + sibling pins to *new_version*.
 
-    Also rewrites the runtime ``VERSION`` constant in ``omnigent/version.py``
+    Also rewrites the runtime ``VERSION`` constant in ``agent_meow/version.py``
     so the value the runtime imports stays equal to ``[project].version`` —
     the automated bump path must keep both in lockstep (the ``sync-version-py``
     pre-commit fixer only fires in the local dev flow).
@@ -226,7 +226,7 @@ def next_dev_version(released: str) -> str:
 
 def _read_version_constant(root: Path) -> str:
     """
-    Return the ``VERSION`` literal from ``omnigent/version.py``.
+    Return the ``VERSION`` literal from ``agent_meow/version.py``.
 
     :param root: Repo root.
     :returns: The quoted value of the ``VERSION`` assignment.
@@ -245,7 +245,7 @@ def check(root: Path, expect: str | None = None) -> str:
     """
     Verify every package agrees on the version and pins its siblings.
 
-    Also checks the runtime ``VERSION`` constant in ``omnigent/version.py``
+    Also checks the runtime ``VERSION`` constant in ``agent_meow/version.py``
     against the resolved version, so a bump that forgets it fails here rather
     than in the ``test_version_matches_pyproject`` backstop on the bot PR.
 
@@ -273,7 +273,7 @@ def check(root: Path, expect: str | None = None) -> str:
     constant = _read_version_constant(root)
     if Version(constant) != Version(resolved):
         raise ValueError(
-            f"omnigent/version.py VERSION {constant!r} != [project].version {resolved!r}"
+            f"agent_meow/version.py VERSION {constant!r} != [project].version {resolved!r}"
         )
     if expect is not None and Version(resolved) != Version(expect):
         raise ValueError(f"resolved version {resolved} != expected {expect}")
@@ -332,7 +332,7 @@ def main(argv: list[str] | None = None) -> None:
 
     :param argv: Argument list (defaults to ``sys.argv[1:]``).
     """
-    parser = argparse.ArgumentParser(description="Bump omnigent package versions in lockstep")
+    parser = argparse.ArgumentParser(description="Bump agent-meow package versions in lockstep")
     sub = parser.add_subparsers(dest="command", required=True)
 
     pre = sub.add_parser("pre-release", help="Stamp an exact version across all packages")

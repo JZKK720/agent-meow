@@ -1,4 +1,4 @@
-"""Tests for agent_meow.chat — omnigent chat CLI logic."""
+"""Tests for agent_meow.chat — agent-meow chat CLI logic."""
 
 from __future__ import annotations
 
@@ -295,12 +295,12 @@ def test_raise_server_failed_truncates_log_to_tail(tmp_path: Path) -> None:
     tail_lines = [
         "ERROR: spec parse failed at line 3",
         "Traceback (most recent call last):",
-        "  File omnigent/server/app.py, line 42, in create_app",
+        "  File agent_meow/server/app.py, line 42, in create_app",
         "RuntimeError: missing required field 'agent'",
     ]
     log.write_text("\n".join(head_lines + tail_lines) + "\n")
     server = SimpleNamespace(
-        proc=SimpleNamespace(args=["python", "-m", "omnigent", "server"]),
+        proc=SimpleNamespace(args=["python", "-m", "agent-meow", "server"]),
         log_path=log,
     )
 
@@ -318,7 +318,7 @@ def test_raise_server_failed_truncates_log_to_tail(tmp_path: Path) -> None:
         f"truncation didn't drop the head; banner-line-0 leaked into message:\n{msg}"
     )
     # The cmd display and log path are still in the message.
-    assert "python -m omnigent server" in msg
+    assert "python -m agent-meow server" in msg
     assert str(log) in msg
 
 
@@ -329,7 +329,7 @@ def test_raise_server_failed_handles_unreadable_log(tmp_path: Path) -> None:
     """
     missing = tmp_path / "does-not-exist.log"
     server = SimpleNamespace(
-        proc=SimpleNamespace(args=["python", "-m", "omnigent", "server"]),
+        proc=SimpleNamespace(args=["python", "-m", "agent-meow", "server"]),
         log_path=missing,
     )
 
@@ -340,7 +340,7 @@ def test_raise_server_failed_handles_unreadable_log(tmp_path: Path) -> None:
     assert "could not read log file" in msg
     # Path and cmd display still surface so the user can investigate.
     assert str(missing) in msg
-    assert "python -m omnigent server" in msg
+    assert "python -m agent-meow server" in msg
 
 
 def test_wait_for_server_waits_for_runner_tunnel_status(
@@ -936,7 +936,7 @@ def test_chat_via_daemon_uses_directory_bundle_for_root_config_yaml(
         "name: orchestrator\n"
         "prompt: orchestrate\n"
         "executor:\n"
-        "  type: omnigent\n"
+        "  type: agent-meow\n"
         "  config:\n"
         "    harness: claude-sdk\n"
     )
@@ -945,7 +945,7 @@ def test_chat_via_daemon_uses_directory_bundle_for_root_config_yaml(
         "name: worker\n"
         "prompt: work\n"
         "executor:\n"
-        "  type: omnigent\n"
+        "  type: agent-meow\n"
         "  config:\n"
         "    harness: codex-native\n"
     )
@@ -1000,7 +1000,7 @@ def test_run_local_headless_prompt_uses_directory_bundle_for_root_config_yaml(
 ) -> None:
     """One-shot local prompt mode also preserves directory-agent siblings.
 
-    This covers ``omnigent run bundle/config.yaml -p ...``. Without the
+    This covers ``agent-meow run bundle/config.yaml -p ...``. Without the
     canonicalization in the headless helper, interactive runs would upload the
     full bundle while one-shot runs would silently upload only ``config.yaml``.
     """
@@ -1012,7 +1012,7 @@ def test_run_local_headless_prompt_uses_directory_bundle_for_root_config_yaml(
         "name: orchestrator\n"
         "prompt: orchestrate\n"
         "executor:\n"
-        "  type: omnigent\n"
+        "  type: agent-meow\n"
         "  config:\n"
         "    harness: claude-sdk\n"
     )
@@ -1098,7 +1098,7 @@ def test_chat_local_uses_directory_bundle_for_root_config_yaml(
         "name: orchestrator\n"
         "prompt: orchestrate\n"
         "executor:\n"
-        "  type: omnigent\n"
+        "  type: agent-meow\n"
         "  config:\n"
         "    harness: claude-sdk\n"
     )
@@ -1404,7 +1404,7 @@ def test_prepare_chat_session_via_daemon_binds_runner_to_clear_stopped_marker(
 
     # The launched runner is re-bound to the resumed session through the
     # PATCH chokepoint that clears agent_meow.stopped — same pattern as
-    # ``omnigent claude`` (claude_native.py's bind_session_runner call).
+    # ``agent-meow claude`` (claude_native.py's bind_session_runner call).
     assert captured["bind"] == {"session_id": "conv_resume", "runner_id": "runner_daemon"}
 
 
@@ -1445,9 +1445,9 @@ def test_prepare_chat_session_via_daemon_fork_wins_over_resume(
 # ── OMNIGENT_MODEL env-var fallback ───────────────────
 #
 # These tests pin the env-var contract on the
-# ``omnigent/cli.py`` → ``run_chat`` direct path. Without
+# ``agent_meow/cli.py`` → ``run_chat`` direct path. Without
 # them, ``OMNIGENT_MODEL=foo`` was silently dropped on the
-# ``omnigent`` console-script default agent-meow path because
+# ``agent-meow`` console-script default agent-meow path because
 # ``_apply_overrides_to_raw`` used the hardcoded
 # ``_DEFAULT_AD_HOC_MODEL`` instead of the env-var-aware
 # helper. See ``designs/RUN_OMNIGENT_REPL_PARITY.md``.
@@ -1463,7 +1463,7 @@ def test_default_cli_model_returns_hardcoded_default_when_env_unset(
     What this proves: the existing default behavior (the model
     that ships in the README example) is preserved when no env
     var is set. If this fails, users running
-    ``omnigent run hello.yaml`` without setting the env var
+    ``agent-meow run hello.yaml`` without setting the env var
     would suddenly land on a different model than they did
     before — silently breaking their workflows.
     """
@@ -1499,7 +1499,7 @@ def test_apply_overrides_uses_env_var_when_yaml_has_no_model_or_harness(
     ``_apply_overrides_to_raw`` to the executor block. If this
     fails with the assertion showing ``databricks-gpt-5-4``
     (the hardcoded default), the helper isn't being called —
-    line 756 of ``omnigent/chat.py`` reverted to the literal
+    line 756 of ``agent_meow/chat.py`` reverted to the literal
     ``_DEFAULT_AD_HOC_MODEL`` and the env var is dropped again.
     """
     monkeypatch.setenv("OMNIGENT_MODEL", "databricks-claude-sonnet-4-6")
@@ -1517,9 +1517,9 @@ def test_apply_overrides_uses_env_var_when_yaml_has_no_model_or_harness(
         f"Expected env-var override 'databricks-claude-sonnet-4-6' to "
         f"land in executor.model; got {executor.get('model')!r}. If "
         f"this is 'databricks-gpt-5-4' (the hardcoded default), line "
-        f"756 of omnigent/chat.py is back to the literal "
+        f"756 of agent_meow/chat.py is back to the literal "
         f"_DEFAULT_AD_HOC_MODEL and OMNIGENT_MODEL is silently dropped "
-        f"on the omnigent/cli.py → run_chat path."
+        f"on the agent_meow/cli.py → run_chat path."
     )
 
 
@@ -1568,7 +1568,7 @@ def test_apply_overrides_writes_nested_config_harness_for_spec_version_bundle() 
     ``executor.config.harness`` — the ONLY harness location that
     format's parser reads.
 
-    Regression guard for the polly no-op: ``omnigent run
+    Regression guard for the polly no-op: ``agent-meow run
     examples/polly --harness pi`` used to write the flat
     ``executor.harness`` key, which ``_parse_executor`` ignores for
     spec_version specs — the brain silently stayed on claude-sdk.
@@ -1578,7 +1578,7 @@ def test_apply_overrides_writes_nested_config_harness_for_spec_version_bundle() 
         "name": "polly",
         "prompt": "orchestrate",
         "executor": {
-            "type": "omnigent",
+            "type": "agent-meow",
             "context_window": 1000000,
             "config": {"harness": "claude-sdk", "profile": "my-profile"},
         },
@@ -1610,7 +1610,7 @@ def test_apply_overrides_writes_nested_config_harness_for_spec_version_bundle() 
 
 def test_apply_overrides_flat_harness_creates_no_config_for_single_file_yaml() -> None:
     """
-    Single-file omnigent YAMLs (no ``spec_version``) keep the flat
+    Single-file agent-meow YAMLs (no ``spec_version``) keep the flat
     ``executor.harness`` write and gain no ``config`` block.
 
     If a ``config`` key appears here, the spec-format detection in
@@ -1657,7 +1657,7 @@ def test_apply_overrides_canonicalizes_alias_into_spec_version_config(
         "spec_version": 1,
         "name": "bundle",
         "prompt": "hi",
-        "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+        "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
     }
 
     _apply_overrides_to_raw(raw, ChatOverrides(harness=alias))
@@ -1678,14 +1678,14 @@ def test_apply_overrides_harness_and_model_together_for_spec_version_bundle() ->
     parser-read locations: nested ``config.harness`` and flat
     ``executor.model``.
 
-    This is the polly-on-GPT invocation shape: ``omnigent run
+    This is the polly-on-GPT invocation shape: ``agent-meow run
     examples/polly --harness openai-agents --model <gpt>``.
     """
     raw: dict[str, object] = {
         "spec_version": 1,
         "name": "polly",
         "prompt": "orchestrate",
-        "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+        "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
     }
 
     _apply_overrides_to_raw(raw, ChatOverrides(harness="pi", model="databricks-claude-sonnet-4-6"))
@@ -1699,7 +1699,7 @@ def test_apply_overrides_harness_and_model_together_for_spec_version_bundle() ->
 
 def test_apply_overrides_rejects_harness_for_non_omnigent_executor_type() -> None:
     """
-    A spec_version bundle with a non-omnigent ``executor.type`` fails
+    A spec_version bundle with a non-agent-meow ``executor.type`` fails
     loud on ``--harness`` instead of silently no-opping.
 
     Those executor types have no ``config.harness``; writing one
@@ -1766,7 +1766,7 @@ def test_materialize_override_bundle_bakes_env_var_into_yaml(
     What this proves: the env var survives the
     ``mkdtemp`` → ``yaml.safe_load`` → ``_apply_overrides_to_raw``
     → ``yaml.safe_dump`` round-trip and lands as a real,
-    on-disk override the omnigent server reads. If the
+    on-disk override the agent-meow server reads. If the
     written YAML has ``model: databricks-gpt-5-4``, the env-var
     fallback regressed somewhere in the materialization
     pipeline.
@@ -1829,7 +1829,7 @@ def test_nested_config_harness_skips_ad_hoc_model_fallback(
     src = tmp_path / "config.yaml"
     src.write_text(
         "spec_version: 1\nname: nested-harness\nprompt: hi\n"
-        "executor:\n  type: omnigent\n  config:\n    harness: claude-sdk\n"
+        "executor:\n  type: agent-meow\n  config:\n    harness: claude-sdk\n"
     )
 
     materialized = _materialize_override_bundle(src, ChatOverrides())
@@ -1875,7 +1875,7 @@ def test_apply_overrides_skips_default_for_nested_harness(
         "spec_version": 1,
         "name": "debby",
         "prompt": "hi",
-        "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+        "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
     }
 
     _apply_overrides_to_raw(raw, ChatOverrides())
@@ -1931,7 +1931,7 @@ def test_materialize_directory_bundle_with_override_keeps_nested_harness_unpinne
         "name: debby\n"
         "prompt: hi\n"
         "executor:\n"
-        "  type: omnigent\n"
+        "  type: agent-meow\n"
         "  config:\n"
         "    harness: claude-sdk\n"
     )
@@ -1992,7 +1992,7 @@ def test_materialize_bundle_overrides_brain_harness(
 
     End-to-end through the production pipeline: ``copytree`` →
     ``_apply_overrides_to_raw`` → ``yaml.safe_dump`` → ``agent_meow.spec.load``
-    → ``validate``. This is the exact path ``omnigent run examples/polly
+    → ``validate``. This is the exact path ``agent-meow run examples/polly
     --harness pi`` (or ``examples/debby``) takes before the bundle reaches
     a server.
 
@@ -2012,7 +2012,7 @@ def test_materialize_bundle_overrides_brain_harness(
     """
     import importlib.resources
 
-    # Isolate from the developer's omnigent config and ambient creds so
+    # Isolate from the developer's agent-meow config and ambient creds so
     # env-auth baking / model fallback can't make the result machine-dependent.
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config"))
     monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
@@ -2318,7 +2318,7 @@ def test_remote_headers_adds_org_id_header(monkeypatch: pytest.MonkeyPatch) -> N
         "agent_meow.cli_auth.load_databricks_org_id", lambda _url: "2850744067564480"
     )
 
-    headers = _remote_headers(server_url="https://acme.databricks.com/api/2.0/omnigent")
+    headers = _remote_headers(server_url="https://acme.databricks.com/api/2.0/agent-meow")
 
     assert headers == {
         "Authorization": "Bearer rec-tok",
@@ -2339,7 +2339,7 @@ def test_remote_headers_omits_org_when_no_record(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(chat_module, "_stored_databricks_record_token", lambda _url: "rec-tok")
     monkeypatch.setattr("agent_meow.cli_auth.load_databricks_org_id", lambda _url: None)
 
-    headers = _remote_headers(server_url="https://single.databricks.com/api/2.0/omnigent")
+    headers = _remote_headers(server_url="https://single.databricks.com/api/2.0/agent-meow")
 
     assert headers == {"Authorization": "Bearer rec-tok"}
     assert "X-Databricks-Org-Id" not in headers
@@ -2518,7 +2518,7 @@ def _make_run_context(**params: object) -> click.Context:
     # Start with the declared defaults, then overlay the caller's overrides.
     merged = {p.name: p.default for p in run_cmd.params}
     merged.update(params)
-    ctx = click.Context(run_cmd, info_name="run", parent=click.Context(cli, info_name="omnigent"))
+    ctx = click.Context(run_cmd, info_name="run", parent=click.Context(cli, info_name="agent-meow"))
     ctx.params = merged
     return ctx
 
@@ -2538,7 +2538,7 @@ def test_build_resume_parts_preserves_flags() -> None:
     # A missing pair means _build_resume_parts dropped a live override;
     # an extra entry means a default leaked into the resume command.
     assert parts == [
-        "omnigent",
+        "agent-meow",
         "run",
         "agent.yaml",
         "--harness",
@@ -2603,7 +2603,7 @@ def test_build_resume_parts_omits_defaults() -> None:
     with ctx:
         parts = _build_resume_parts()
     # Only the command path + the target.
-    assert parts == ["omnigent", "run", "agent.yaml"]
+    assert parts == ["agent-meow", "run", "agent.yaml"]
 
 
 # ---------------------------------------------------------------------------
@@ -2658,7 +2658,7 @@ def test_run_repl_passes_resume_parts_to_run_repl(
     """_run_repl threads resume_parts to run_repl."""
     captured: dict[str, object] = {}
     _stub_run_repl_deps(monkeypatch, conversation_id="conv_1", captured_kwargs=captured)
-    parts = ["omnigent", "run", "agent.yaml", "--server", "https://example.com"]
+    parts = ["agent-meow", "run", "agent.yaml", "--server", "https://example.com"]
 
     chat_module._run_repl(
         "http://127.0.0.1:9999",
@@ -2885,10 +2885,10 @@ def test_databricks_token_auth_sets_org_header(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(chat_module._DatabricksTokenAuth, "_sdk_token", lambda self: None)
 
     auth = chat_module._DatabricksTokenAuth(
-        server_url="https://acme.databricks.com/api/2.0/omnigent"
+        server_url="https://acme.databricks.com/api/2.0/agent-meow"
     )
     flow = auth.auth_flow(
-        httpx.Request("GET", "https://acme.databricks.com/api/2.0/omnigent/v1/sessions")
+        httpx.Request("GET", "https://acme.databricks.com/api/2.0/agent_meow/v1/sessions")
     )
     request = next(flow)
     flow.close()
@@ -2916,7 +2916,7 @@ def test_spec_used_families_multi_vendor_directory_agent(tmp_path) -> None:
         "name: orchestrator\n"
         "prompt: orchestrate\n"
         "executor:\n"
-        "  type: omnigent\n"
+        "  type: agent-meow\n"
         "  config:\n"
         "    harness: claude-sdk\n"
         "tools:\n"
@@ -2928,14 +2928,14 @@ def test_spec_used_families_multi_vendor_directory_agent(tmp_path) -> None:
         "name: worker\n"
         "prompt: work\n"
         "executor:\n"
-        "  type: omnigent\n"
+        "  type: agent-meow\n"
         "  config:\n"
         "    harness: codex-native\n"
     )
 
     # Both the orchestrator (anthropic) and its sub-agent (openai) count,
     # whether the caller passes the config.yaml or the directory itself
-    # (the latter is what `omnigent run <dir>` threads through).
+    # (the latter is what `agent-meow run <dir>` threads through).
     assert _spec_used_families(root / "config.yaml") == ["anthropic", "openai"]
     assert _spec_used_families(root) == ["anthropic", "openai"]
 
@@ -3467,7 +3467,7 @@ async def test_query_sessions_once_reconciles_persisted_text_on_failed_status(
 ) -> None:
     """A spurious ``failed`` after a completed turn returns the persisted text.
 
-    This is the exact reported bug: ``omnigent run -p`` printed
+    This is the exact reported bug: ``agent-meow run -p`` printed
     "Error: turn failed" while the remote session held the response. If
     this fails, the ``-p`` path is again raising on a transport-induced
     ``session.status: failed`` instead of recovering the saved answer.
@@ -3676,7 +3676,7 @@ def test_spec_used_families_pi_brain_agent_contributes_pi_surface(tmp_path) -> N
         "name: polly-like\n"
         "prompt: orchestrate\n"
         "executor:\n"
-        "  type: omnigent\n"
+        "  type: agent-meow\n"
         "  config:\n"
         "    harness: pi\n"
         "tools:\n"
@@ -3688,7 +3688,7 @@ def test_spec_used_families_pi_brain_agent_contributes_pi_surface(tmp_path) -> N
         "name: worker\n"
         "prompt: work\n"
         "executor:\n"
-        "  type: omnigent\n"
+        "  type: agent-meow\n"
         "  config:\n"
         "    harness: codex-native\n"
     )
@@ -3703,7 +3703,7 @@ def test_env_auth_injection_skipped_when_global_auth_configured(
 ) -> None:
     """An ambient OPENAI_API_KEY must not be baked over configured auth.
 
-    With a global ``auth:`` block (written by ``omnigent setup``), the
+    With a global ``auth:`` block (written by ``agent-meow setup``), the
     user's configured Databricks routing is the explicit choice; baking
     the shell's env key into the materialized spec as ``executor.auth``
     would silently hijack it — the exact failure mode that produced
@@ -3756,7 +3756,7 @@ def test_env_auth_injection_applies_when_nothing_configured(
 
 
 def test_redirect_native_resume_handles_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A cursor-native resume hands off to ``omnigent cursor`` (direct attach).
+    """A cursor-native resume hands off to ``agent-meow cursor`` (direct attach).
 
     Regression: without a cursor branch in ``_redirect_native_resume_if_needed``
     the resume fell through to the agent-meow REPL, which drove an agent-meow turn

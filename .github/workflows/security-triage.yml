@@ -223,7 +223,7 @@ jobs:
         env:
           GATEWAY_BASE_URL: ${{ secrets.GATEWAY_BASE_URL }}
         run: |
-          mkdir -p "$HOME/.omnigent"
+          mkdir -p "$HOME/.agent-meow"
           python3 -c "
           import pathlib, os, json
           gw = os.environ['GATEWAY_BASE_URL']
@@ -240,7 +240,7 @@ jobs:
                   }
               }
           }
-          pathlib.Path.home().joinpath('.omnigent', 'config.yaml').write_text(
+          pathlib.Path.home().joinpath('.agent-meow', 'config.yaml').write_text(
               json.dumps(cfg, indent=2)
           )
           "

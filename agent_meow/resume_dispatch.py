@@ -1,4 +1,4 @@
-"""Top-level ``omnigent resume`` dispatch.
+"""Top-level ``agent-meow resume`` dispatch.
 
 Glue layer that converts the user's "take me back to where I was"
 intent into the right wrapper invocation. Lives outside ``cli.py`` so
@@ -8,15 +8,15 @@ not need to import the claude-native wrapper at every CLI startup.
 
 The dispatch contract:
 
-- ``omnigent resume <conv_id>`` — fetch the conversation, read its
-  ``omnigent.wrapper`` label, and dispatch by runtime.
-- ``omnigent resume`` (no id) — open the cross-agent picker (see
+- ``agent-meow resume <conv_id>`` — fetch the conversation, read its
+  ``agent_meow.wrapper`` label, and dispatch by runtime.
+- ``agent-meow resume`` (no id) — open the cross-agent picker (see
   :func:`~?agent_meow.repl._resume_picker.pick_conversation_cross_agent_from_sdk`)
   and dispatch the selection the same way.
 
 Terminal-native conversations are dispatched in-process today.
 Everything else surfaces a copy-pasteable hint to the existing
-``omnigent run --resume`` invocation — the agentless ``run
+``agent-meow run --resume`` invocation — the agentless ``run
 --resume`` shape is tracked separately.
 """
 
@@ -49,7 +49,7 @@ def run_resume(
     server once for the wrapper label and route to the right wrapper.
     Picker form (``target`` is None) requires ``--server`` because
     starting an empty local server just to host the picker would
-    leak state and collide with any other in-flight ``omnigent``
+    leak state and collide with any other in-flight ``agent-meow``
     process the user has running.
 
     :param target: Optional conversation id, e.g. ``"conv_abc123"``.
@@ -69,8 +69,8 @@ def run_resume(
     if target is None:
         if server is None:
             raise click.UsageError(
-                "`omnigent resume` (no id) requires `--server <url>`. "
-                "Pass a conversation id (`omnigent resume conv_...`) "
+                "`agent-meow resume` (no id) requires `--server <url>`. "
+                "Pass a conversation id (`agent-meow resume conv_...`) "
                 "to use the persistent local store.",
             )
         target = _pick_conversation_for_resume(server=server)
@@ -118,7 +118,7 @@ def _pick_conversation_for_resume(
         """
         # Deferred import: ``omnigent_client`` carries the full SDK
         # surface and is only needed for the picker, not for every
-        # ``omnigent`` invocation.
+        # ``agent-meow`` invocation.
         from omnigent_client import OmnigentClient
 
         async with OmnigentClient(base_url=base_url, headers=headers) as client:
@@ -155,7 +155,7 @@ def _dispatch_by_runtime(
     Terminal-native sessions route into their wrapper entry point
     carrying ``--server`` through. Non-wrapper
     conversations surface a clear ``ClickException`` pointing at
-    the existing ``omnigent run --resume`` invocation — the
+    the existing ``agent-meow run --resume`` invocation — the
     agentless ``run --resume`` (drops the ``AGENT`` requirement
     via server-side agent lookup) is tracked separately and not in
     this PR's scope.
@@ -179,7 +179,7 @@ def _dispatch_by_runtime(
         raise click.ClickException(
             f"Conversation {target!r} is not a terminal-native session "
             f"(wrapper={wrapper!r}). To resume it, run "
-            f"`omnigent run --resume {target} <agent.yaml> --server "
+            f"`agent-meow run --resume {target} <agent.yaml> --server "
             f"{server}`. The agentless form is tracked separately.",
         )
 
@@ -193,7 +193,7 @@ def _dispatch_by_runtime(
     raise click.ClickException(
         f"Conversation {target!r} is not a terminal-native session "
         f"(wrapper={wrapper!r}). To resume it, run "
-        f"`omnigent run --resume {target} <agent.yaml>`. "
+        f"`agent-meow run --resume {target} <agent.yaml>`. "
         "The agentless form is tracked separately.",
     )
 
@@ -207,7 +207,7 @@ def _dispatch_wrapper(
     """
     Dispatch a terminal-native wrapper session.
 
-    :param wrapper: Value from ``labels.omnigent.wrapper``.
+    :param wrapper: Value from ``labels.agent_meow.wrapper``.
     :param server: agent-meow server base URL without trailing slash, or
         ``None`` for the local persistent server path.
     :param session_id: agent-meow conversation id.
@@ -314,7 +314,7 @@ def _read_wrapper_label_local(*, conv_id: str) -> str | None:
     Read a conversation's wrapper label from the local persistent store.
 
     :param conv_id: Local agent-meow conversation id, e.g. ``"conv_abc123"``.
-    :returns: Value of ``labels.omnigent.wrapper``, or ``None`` when
+    :returns: Value of ``labels.agent_meow.wrapper``, or ``None`` when
         no wrapper label is present.
     :raises click.ClickException: If the conversation id is not found
         in the local persistent store.
@@ -353,7 +353,7 @@ def _read_wrapper_label_remote(
     :param server: Remote agent-meow server URL.
     :param conv_id: agent-meow conversation id.
     :returns: Wrapper label string, or ``None`` when no
-        ``omnigent.wrapper`` label is present on the row.
+        ``agent_meow.wrapper`` label is present on the row.
     :raises click.ClickException: On 404 (conv not found), other
         non-200 status, or a non-JSON / non-object response body.
     """

@@ -34,7 +34,7 @@ def test_send_message_renders_assistant_response(
     A failure here means one of:
 
     - The SPA didn't boot (build missing or static mount broken in
-      ``omnigent/server/app.py``'s ``_SPAStaticFiles``).
+      ``agent_meow/server/app.py``'s ``_SPAStaticFiles``).
     - The composer is mis-wired (``ChatPage.tsx`` regression).
     - The agent never received the request (server / runtime
       regression — check the live_server log).

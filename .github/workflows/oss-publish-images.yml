@@ -9,7 +9,7 @@
 #   :sha-<short>    immutable per-commit pin, published on EVERY qualifying build.
 #   :vX.Y.Z[rcN]    immutable version pin, published for every release + pre-release tag.
 #   :latest         the highest FINAL release (max over vX.Y.Z) — tracks what
-#                   `pip install omnigent` resolves to. Pre-releases never move it.
+#                   `pip install agent-meow` resolves to. Pre-releases never move it.
 #   :latest-rc      the highest version OVERALL, max(release, rc) — the newest
 #                   thing tagged, pre-release or not.
 #   :latest-dev     the most recent main build (bleeding edge); moves on every
@@ -32,7 +32,7 @@ on:
     paths:
       - 'deploy/docker/Dockerfile'
       - 'deploy/docker/entrypoint.py'
-      - 'omnigent/**'
+      - 'agent_meow/**'
       - 'web/**'
       - 'sdks/**'
       - 'pyproject.toml'

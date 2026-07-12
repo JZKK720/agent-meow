@@ -79,7 +79,7 @@ def test_yaml_hello_world_real(
     model: str,
 ) -> None:
     """
-    ``omnigent run hello_world.yaml --harness <harness> --model
+    ``agent-meow run hello_world.yaml --harness <harness> --model
     <model> -p <prompt>`` exits 0 and emits a non-trivial
     assistant reply using the mock LLM.
 
@@ -109,7 +109,7 @@ def test_yaml_hello_world_real(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--model",
