@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.runner.tool_dispatch import (
+from agent_meow.runner.tool_dispatch import (
     _execute_doc_tool,
     _execute_image_tool,
     _execute_voice_tool,

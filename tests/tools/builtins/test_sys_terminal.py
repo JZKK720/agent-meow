@@ -22,16 +22,16 @@ from typing import Any
 
 import pytest
 
-from omnigent.entities.conversation import MessageData
-from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from omnigent.runtime import _globals
-from omnigent.spec.types import AgentSpec
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.entities.conversation import MessageData
+from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
+from agent_meow.runtime import _globals
+from agent_meow.spec.types import AgentSpec
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from omnigent.terminals.registry import TerminalRegistry
-from omnigent.tools.base import Tool, ToolContext
-from omnigent.tools.builtins.sys_terminal import (
+from agent_meow.terminals.registry import TerminalRegistry
+from agent_meow.tools.base import Tool, ToolContext
+from agent_meow.tools.builtins.sys_terminal import (
     SysTerminalCloseTool,
     SysTerminalLaunchTool,
     SysTerminalListTool,

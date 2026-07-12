@@ -1,5 +1,5 @@
 """
-Unit tests for :mod:`omnigent.spec.types`.
+Unit tests for :mod:`~?agent_meow.spec.types`.
 
 Currently focused on :class:`RetryPolicy` behaviors that the
 parser tests don't cover — JSON round-trip (Phase 1f wire
@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from omnigent.spec.types import ExecutorSpec, RetryPolicy
+from agent_meow.spec.types import ExecutorSpec, RetryPolicy
 
 
 @pytest.mark.parametrize(

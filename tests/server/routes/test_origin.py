@@ -2,7 +2,7 @@
 Unit tests for the ``require_trusted_origin`` CSRF guard dependency.
 
 The dependency adapts the shared, protocol-neutral
-:func:`omnigent.server.ws_origin.origin_allowed` policy into a FastAPI
+:func:`~?agent_meow.server.ws_origin.origin_allowed` policy into a FastAPI
 dependency for HTTP routes that accept ``multipart/form-data`` (which the
 JSON Content-Type guard cannot protect, because multipart is
 CORS-safelisted).
@@ -35,8 +35,8 @@ import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
-from omnigent.server.routes._origin import require_trusted_origin
+from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.server.routes._origin import require_trusted_origin
 
 _LOCAL_ENV = "OMNIGENT_LOCAL_SINGLE_USER"
 _ALLOWLIST_ENV = "OMNIGENT_WS_ALLOWED_ORIGINS"

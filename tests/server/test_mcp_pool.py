@@ -26,9 +26,9 @@ from typing import Any
 import pytest
 from mcp.types import Tool as McpToolDef
 
-from omnigent.server import mcp_pool as _mcp_pool_module
-from omnigent.server.mcp_pool import McpToolEntry, ServerMcpPool
-from omnigent.spec.types import AgentSpec, MCPServerConfig
+from agent_meow.server import mcp_pool as _mcp_pool_module
+from agent_meow.server.mcp_pool import McpToolEntry, ServerMcpPool
+from agent_meow.spec.types import AgentSpec, MCPServerConfig
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -178,7 +178,7 @@ def patch_mcp_connection(
             return await conns[self._name].call_tool(name, arguments)
 
     monkeypatch.setattr(
-        "omnigent.server.mcp_pool.McpServerConnection",
+        "agent_meow.server.mcp_pool.McpServerConnection",
         _FakeMcpServerConnection,
     )
     return conns

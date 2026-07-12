@@ -2,7 +2,7 @@
 End-to-end proof that policies declared in an omnigent YAML
 are enforced by the omnigent workflow under agent-meow mode.
 
-The adapter in :mod:`omnigent.spec.omnigent` lifts the
+The adapter in :mod:`~?agent_meow.spec.omnigent` lifts the
 YAML's ``policies:`` block into
 :attr:`AgentSpec.guardrails.policies`; the omnigent runtime
 builds a :class:`PolicyEngine` over those specs and enforces at
@@ -18,7 +18,7 @@ agent-meow' :class:`FunctionPolicy` dispatcher can't invoke
 (it passes ``(ctx, context)`` where ``ctx`` is an
 :class:`EvaluationContext` dataclass, not a dict). This test
 uses the omnigent-shaped
-``omnigent._e2e_policy_callables.block_on_sentinel``
+``agent_meow._e2e_policy_callables.block_on_sentinel``
 callable — an arity-1 callable matching agent-meow'
 convention — so the test proves the translator + engine
 integration works and isn't muddied by a separate callable-
@@ -44,7 +44,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.e2e.omnigent.conftest import configure_mock_llm
+from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 _TIMEOUT_SEC = 180
 
@@ -64,7 +64,7 @@ _BLOCK_TOKEN = "BLOCK_THIS_TOKEN"
 
 # The standard DENY sentinel text the omnigent workflow
 # stamps into the response when a policy returns DENY. See
-# :func:`omnigent.runtime.workflow._build_deny_sentinel` —
+# :func:`~?agent_meow.runtime.workflow._build_deny_sentinel` —
 # all four enforcement hook points use the same shape so this
 # single substring catches INPUT / TOOL_CALL / TOOL_RESULT /
 # OUTPUT DENYs alike.
@@ -110,7 +110,7 @@ def policy_enforcement_yaml_factory(tmp_path: Path) -> Callable[[str, str], Path
                 "block_sentinel_input": {
                     "type": "function",
                     "on": ["request"],
-                    "handler": ("omnigent._e2e_policy_callables.block_on_sentinel"),
+                    "handler": ("agent_meow._e2e_policy_callables.block_on_sentinel"),
                 },
             },
         }
@@ -145,7 +145,7 @@ def test_policy_denies_input_containing_sentinel(
     :param omnigent_repo_root: Subprocess cwd — the YAML's
         callable import path resolves relative to
         PYTHONPATH, which conftest anchors at the repo root +
-        omnigent.
+        agent_meow.
     :param mock_credentials_env: Mock-LLM env vars.
     :param policy_enforcement_yaml_factory: Builder for the
         harness-specific omnigent YAML.
@@ -268,7 +268,7 @@ def tool_ban_yaml_factory(tmp_path: Path) -> Callable[[str, str], Path]:
                     "type": "function",
                     "on": ["tool_call:calculate"],
                     "function": {
-                        "path": "omnigent.policies.function.make_fixed_action_callable",
+                        "path": "agent_meow.policies.function.make_fixed_action_callable",
                         "arguments": {
                             "action": "deny",
                             "reason": _TOOL_BAN_REASON_SENTINEL,

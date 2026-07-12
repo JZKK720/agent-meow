@@ -21,8 +21,8 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.spec import load
-from omnigent.spec.types import AgentSpec
+from agent_meow.spec import load
+from agent_meow.spec.types import AgentSpec
 
 # tests/e2e/omnigent/test_example_debby.py -> repo root is 3 parents up.
 _DEBBY_BUNDLE = Path(__file__).resolve().parents[3] / "examples" / "debby"

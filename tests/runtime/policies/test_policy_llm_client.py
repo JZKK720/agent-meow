@@ -20,17 +20,17 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from omnigent.policies.function import FunctionPolicy, _build_event
-from omnigent.policies.types import EvaluationContext, PolicyLLMClient
-from omnigent.runtime.caps import RuntimeCaps
-from omnigent.runtime.policies.builder import (
+from agent_meow.policies.function import FunctionPolicy, _build_event
+from agent_meow.policies.types import EvaluationContext, PolicyLLMClient
+from agent_meow.runtime.caps import RuntimeCaps
+from agent_meow.runtime.policies.builder import (
     _build_policy_llm_client,
     _resolve_server_llm_connection,
     build_policy_engine,
 )
-from omnigent.runtime.policies.engine import PolicyEngine
-from omnigent.spec import parse_server_llm
-from omnigent.spec.types import (
+from agent_meow.runtime.policies.engine import PolicyEngine
+from agent_meow.spec import parse_server_llm
+from agent_meow.spec.types import (
     AgentSpec,
     FunctionPolicySpec,
     FunctionRef,
@@ -39,7 +39,7 @@ from omnigent.spec.types import (
     Phase,
     PhaseSelector,
 )
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -579,10 +579,10 @@ def test_resolve_server_llm_connection_resolves_databricks_profile(
     get ``connection=None`` and fall back to env var / OpenAI
     defaults instead of the gateway.
     """
-    from omnigent.runtime.credentials.databricks import WorkspaceCreds
+    from agent_meow.runtime.credentials.databricks import WorkspaceCreds
 
     monkeypatch.setattr(
-        "omnigent.runtime.policies.builder.resolve_databricks_workspace",
+        "agent_meow.runtime.policies.builder.resolve_databricks_workspace",
         lambda profile: WorkspaceCreds(
             host="https://example.cloud.databricks.com",
             token="dapi-test-token",

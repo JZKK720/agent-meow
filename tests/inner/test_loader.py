@@ -11,10 +11,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from omnigent.inner.datamodel import ExecutorSpec, OSEnvSandboxSpec, OSEnvSpec
-from omnigent.inner.loader import load_agent_def
-from omnigent.inner.policies import FunctionPolicy, PromptPolicy
-from omnigent.inner.tools import (
+from agent_meow.inner.datamodel import ExecutorSpec, OSEnvSandboxSpec, OSEnvSpec
+from agent_meow.inner.loader import load_agent_def
+from agent_meow.inner.policies import FunctionPolicy, PromptPolicy
+from agent_meow.inner.tools import (
     AgentTool,
     CancellableFunctionTool,
     FunctionTool,
@@ -1060,7 +1060,7 @@ def test_load_agent_def_enforce_allows_registered_handler() -> None:
             "policies": {
                 "ask_os": {
                     "type": "function",
-                    "handler": "omnigent.policies.builtins.safety.ask_on_os_tools",
+                    "handler": "agent_meow.policies.builtins.safety.ask_on_os_tools",
                 }
             },
         },

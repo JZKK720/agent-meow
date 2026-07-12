@@ -5,7 +5,7 @@ from __future__ import annotations
 import click
 import pytest
 
-from omnigent import hermes_native as hn
+from agent_meow import hermes_native as hn
 
 
 def test_resolve_hermes_executable_found() -> None:
@@ -44,13 +44,13 @@ def test_terminal_resource_id_stable() -> None:
 
 
 def test_harness_registry_has_hermes_native() -> None:
-    from omnigent.runtime.harnesses import _HARNESS_MODULES
+    from agent_meow.runtime.harnesses import _HARNESS_MODULES
 
-    assert _HARNESS_MODULES["hermes-native"] == "omnigent.inner.hermes_native_harness"
+    assert _HARNESS_MODULES["hermes-native"] == "agent_meow.inner.hermes_native_harness"
 
 
 def test_alias_and_native_membership() -> None:
-    from omnigent.harness_aliases import (
+    from agent_meow.harness_aliases import (
         NATIVE_HARNESSES,
         canonicalize_harness,
         is_native_harness,
@@ -66,14 +66,14 @@ def test_alias_and_native_membership() -> None:
 
 
 def test_native_coding_agent_resolves() -> None:
-    from omnigent._wrapper_labels import (
+    from agent_meow._wrapper_labels import (
         HERMES_NATIVE_WRAPPER_VALUE,
         UI_MODE_LABEL_KEY,
         UI_MODE_TERMINAL_VALUE,
         WRAPPER_LABEL_KEY,
     )
-    from omnigent.harness_plugins import HERMES_NATIVE_CODING_AGENT
-    from omnigent.native_coding_agents import native_coding_agent_for_harness
+    from agent_meow.harness_plugins import HERMES_NATIVE_CODING_AGENT
+    from agent_meow.native_coding_agents import native_coding_agent_for_harness
 
     agent = native_coding_agent_for_harness("native-hermes")
     assert agent is HERMES_NATIVE_CODING_AGENT
@@ -87,7 +87,7 @@ def test_native_coding_agent_resolves() -> None:
 
 
 def test_create_app_builds() -> None:
-    from omnigent.inner.hermes_native_harness import create_app
+    from agent_meow.inner.hermes_native_harness import create_app
 
     assert create_app() is not None
 

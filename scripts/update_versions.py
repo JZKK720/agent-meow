@@ -10,7 +10,7 @@ version:
 
 Each declares its own ``[project].version`` and ``==``-pins its
 siblings — the lockstep contract that
-``.github/workflows/release-omnigent.yml`` verifies at tag time. This
+``.github/workflows/release-agent_meow.yml`` verifies at tag time. This
 script rewrites every one of those locations at once so they never
 drift.
 

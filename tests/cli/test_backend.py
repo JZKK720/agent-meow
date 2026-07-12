@@ -22,13 +22,13 @@ from click.testing import CliRunner
 from rich.console import Console
 
 # Import the daemon's module chain eagerly: ``_ensure_host_daemon`` imports
-# ``omnigent.host.connect`` lazily, and the daemon-spawn tests below patch
+# ``agent_meow.host.connect`` lazily, and the daemon-spawn tests below patch
 # the process-wide ``subprocess.Popen``. Running that import for the first
 # time *while* Popen is patched would evaluate ``subprocess.Popen[...]``
 # generic aliases in the import chain against the stub (not subscriptable).
-import omnigent.host.connect  # noqa: F401
-from omnigent import cli
-from omnigent.cli import (
+import agent_meow.host.connect  # noqa: F401
+from agent_meow import cli
+from agent_meow.cli import (
     _build_host_daemon_env,
     _discover_local_server_url,
     _ensure_backend,
@@ -36,10 +36,10 @@ from omnigent.cli import (
     _resolve_attach_server,
     _resolve_host_server,
 )
-from omnigent.cli import (
+from agent_meow.cli import (
     cli as cli_group,
 )
-from omnigent.host.local_server import LocalServerStartup
+from agent_meow.host.local_server import LocalServerStartup
 
 
 @pytest.fixture(autouse=True)
@@ -675,7 +675,7 @@ def test_foreground_connect_registers_status_record(
         observed.extend(cli._list_daemon_records(include_legacy=False))
         assert server_url == "https://server.example.com"
 
-    monkeypatch.setattr("omnigent.host.connect.run_host_process", _fake_run_host_process)
+    monkeypatch.setattr("agent_meow.host.connect.run_host_process", _fake_run_host_process)
 
     result = CliRunner().invoke(
         cli_group,
@@ -711,7 +711,7 @@ def test_foreground_connect_refuses_duplicate_live_daemon(
         raise AssertionError(f"unexpected foreground connect: {server_url}")
 
     monkeypatch.setattr(
-        "omnigent.host.connect.run_host_process",
+        "agent_meow.host.connect.run_host_process",
         _unexpected_run_host_process,
     )
 
@@ -751,7 +751,7 @@ def _patch_foreground_host_local(
         "ensure_local_omnigent_server",
         lambda: LocalServerStartup(url="http://127.0.0.1:8000", spawned=spawned),
     )
-    monkeypatch.setattr("omnigent.host.connect.run_host_process", run_host_process)
+    monkeypatch.setattr("agent_meow.host.connect.run_host_process", run_host_process)
 
 
 def test_foreground_connect_local_prompts_and_stops_server_on_yes(
@@ -932,7 +932,7 @@ def test_foreground_connect_remote_omits_local_server_prompt(
         lambda: pytest.fail("remote mode must not probe the local server"),
     )
     monkeypatch.setattr(
-        "omnigent.host.connect.run_host_process",
+        "agent_meow.host.connect.run_host_process",
         lambda server_url: None,
     )
 
@@ -1285,14 +1285,14 @@ def test_claude_command_routes_server_through_ensure_backend(
     The empty/local value must be turned into the concrete daemon-backed URL
     and passed to ``run_claude_native`` — never forwarded raw.
     """
-    monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
+    monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     monkeypatch.setattr(
-        "omnigent.cli._ensure_backend",
+        "agent_meow.cli._ensure_backend",
         lambda server: "http://127.0.0.1:8123",
     )
     captured: dict[str, object] = {}
     monkeypatch.setattr(
-        "omnigent.claude_native.run_claude_native",
+        "agent_meow.claude_native.run_claude_native",
         _fake_run_claude_native_capture(captured),
     )
 
@@ -1313,7 +1313,7 @@ def _capture_run_chat(monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
     def _stub(**kwargs: object) -> None:
         captured.update(kwargs)
 
-    monkeypatch.setattr("omnigent.chat.run_chat", _stub)
+    monkeypatch.setattr("agent_meow.chat.run_chat", _stub)
     return captured
 
 
@@ -1326,7 +1326,7 @@ def test_run_reads_server_from_config(monkeypatch: pytest.MonkeyPatch) -> None:
     reach ``run_chat`` as ``server_url``.
     """
     monkeypatch.setattr(
-        "omnigent.cli._load_effective_config",
+        "agent_meow.cli._load_effective_config",
         lambda: {
             "server": "https://config-default.example.com",
             "model": "databricks-claude-sonnet-4-6",
@@ -1344,7 +1344,7 @@ def test_run_reads_server_from_config(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_run_explicit_server_overrides_config(monkeypatch: pytest.MonkeyPatch) -> None:
     """An explicit ``--server`` wins over the configured default."""
     monkeypatch.setattr(
-        "omnigent.cli._load_effective_config",
+        "agent_meow.cli._load_effective_config",
         lambda: {"server": "https://config-default.example.com"},
     )
     captured = _capture_run_chat(monkeypatch)
@@ -1405,7 +1405,7 @@ def _patch_auth_preflight(
     import httpx
 
     monkeypatch.setattr(
-        "omnigent.chat._remote_headers",
+        "agent_meow.chat._remote_headers",
         lambda server_url=None: {},
     )
     monkeypatch.setattr(httpx, "get", lambda url, **kw: _databricks_probe_response(probe_status))
@@ -1526,7 +1526,7 @@ def _patch_foreground_host(
     monkeypatch.setattr(cli, "local_server_url_if_healthy", lambda: None)
     connected: list[str] = []
     monkeypatch.setattr(
-        "omnigent.host.connect.run_host_process",
+        "agent_meow.host.connect.run_host_process",
         lambda server_url: connected.append(server_url),
     )
     return connected
@@ -1800,7 +1800,7 @@ def test_host_command_defaults_scheme_and_accepts_omnigent_web_url(
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
     observed: list[str] = []
     monkeypatch.setattr(
-        "omnigent.host.connect.run_host_process",
+        "agent_meow.host.connect.run_host_process",
         lambda server_url: observed.append(server_url),
     )
 
@@ -1824,7 +1824,7 @@ def test_resume_command_expands_server_url(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(cli, "_workspace_api_server_url", _expand_marker)
     captured: dict[str, object] = {}
     monkeypatch.setattr(
-        "omnigent.resume_dispatch.run_resume",
+        "agent_meow.resume_dispatch.run_resume",
         lambda **kwargs: captured.update(kwargs),
     )
 
@@ -1848,7 +1848,7 @@ def test_resume_command_without_server_skips_expansion(
     )
     captured: dict[str, object] = {}
     monkeypatch.setattr(
-        "omnigent.resume_dispatch.run_resume",
+        "agent_meow.resume_dispatch.run_resume",
         lambda **kwargs: captured.update(kwargs),
     )
 
@@ -1864,7 +1864,7 @@ def test_resume_command_defaults_scheme_https(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
     captured: dict[str, object] = {}
     monkeypatch.setattr(
-        "omnigent.resume_dispatch.run_resume",
+        "agent_meow.resume_dispatch.run_resume",
         lambda **kwargs: captured.update(kwargs),
     )
 

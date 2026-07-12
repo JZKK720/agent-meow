@@ -9,9 +9,9 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from omnigent.inner.datamodel import AgentDef, ExecutorSpec
-from omnigent.inner.executor import MockExecutor
-from omnigent.inner.policies import (
+from agent_meow.inner.datamodel import AgentDef, ExecutorSpec
+from agent_meow.inner.executor import MockExecutor
+from agent_meow.inner.policies import (
     FunctionPolicy,
     PolicyAction,
     PolicyResult,
@@ -244,7 +244,7 @@ class TestPromptPolicy(unittest.TestCase):
         _run(_t())
 
     def test_prompt_policy_loader_fields(self):
-        from omnigent.inner.loader import load_agent_def
+        from agent_meow.inner.loader import load_agent_def
 
         agent = load_agent_def(
             {

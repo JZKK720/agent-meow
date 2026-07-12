@@ -1,10 +1,10 @@
-"""Unit tests for omnigent.policies.builtins.context."""
+"""Unit tests for agent_meow.policies.builtins.context."""
 
 from __future__ import annotations
 
 import pytest
 
-from omnigent.policies.builtins.context import (
+from agent_meow.policies.builtins.context import (
     _TASK_SWITCH_HISTORY_KEY,
     _strip_code_fences,
     detect_task_switch,

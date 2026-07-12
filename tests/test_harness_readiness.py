@@ -1,10 +1,10 @@
-"""Tests for omnigent.onboarding.harness_readiness gating."""
+"""Tests for agent_meow.onboarding.harness_readiness gating."""
 
 from __future__ import annotations
 
 import pytest
 
-from omnigent.onboarding import harness_readiness as hr
+from agent_meow.onboarding import harness_readiness as hr
 
 
 @pytest.mark.parametrize("harness", ["pi", "pi-native", "native-pi"])

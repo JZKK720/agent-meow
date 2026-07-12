@@ -30,7 +30,7 @@ from tests.e2e._run_with_group_timeout import run_with_group_timeout
 # Several examples (databricks_mcps_agent,
 # databricks_mcps_agent_with_google_policy, glean_mcp_agent,
 # databricks_coding_agent) hardcode
-#   args: [-m, omnigent.inner.databricks_mcps.<X>, --profile,
+#   args: [-m, agent_meow.inner.databricks_mcps.<X>, --profile,
 #          <profile-name>]
 # in their YAMLs. The Databricks MCP subprocess has three auth
 # modes (see omnigent/inner/databricks_mcps/common/workspace.py):
@@ -286,7 +286,7 @@ def validate_agent_def_structure(
 import json
 import sys
 sys.path.insert(0, {str(omnigent_repo_root)!r})
-from omnigent.inner.loader import load_agent_def_from_path
+from agent_meow.inner.loader import load_agent_def_from_path
 
 agent_def = load_agent_def_from_path({str(yaml_path)!r})
 assert agent_def is not None, "load returned None"
@@ -471,7 +471,7 @@ def mcp_auth_override() -> McpAuthOverride:
 def _rewrite_mcp_auth_in_place(yaml_obj: object, override: McpAuthOverride) -> int:
     """
     Walk a parsed YAML structure and rewrite the auth args for
-    every ``-m omnigent.inner.databricks_mcps.*`` subprocess.
+    every ``-m agent_meow.inner.databricks_mcps.*`` subprocess.
 
     Strips any existing ``--profile / --host / --token`` arg
     pairs from the MCP's ``args:`` list and appends the ones
@@ -505,7 +505,7 @@ def _rewrite_args_list(args: list[object], override: McpAuthOverride) -> int:
     :returns: 1 if this list was an MCP-subprocess args list, else 0.
     """
     if not any(
-        isinstance(x, str) and x.startswith("omnigent.inner.databricks_mcps.") for x in args
+        isinstance(x, str) and x.startswith("agent_meow.inner.databricks_mcps.") for x in args
     ):
         return 0
 

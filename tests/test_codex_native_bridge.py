@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.codex_native_bridge import (
+from agent_meow.codex_native_bridge import (
     CodexNativeBridgeState,
     clear_active_turn_id_if_matches,
     clear_bridge_state,
@@ -52,7 +52,7 @@ def bridge_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     :param monkeypatch: pytest monkeypatch fixture.
     :returns: Prepared bridge directory.
     """
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
     return prepare_bridge_dir("bridge_test")
 
 

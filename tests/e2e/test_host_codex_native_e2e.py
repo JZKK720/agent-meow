@@ -30,7 +30,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from omnigent.entities.session_resources import terminal_resource_id
+from agent_meow.entities.session_resources import terminal_resource_id
 from tests._helpers.compat import apply_runner_env, compat_runner_cwd, runner_executable
 from tests.e2e.helpers import POLL_INTERVAL_S
 
@@ -72,7 +72,7 @@ def _spawn_host_daemon(
             [
                 runner_executable(),
                 "-m",
-                "omnigent.host._daemon_entry",
+                "agent_meow.host._daemon_entry",
                 "--server",
                 live_server,
             ],

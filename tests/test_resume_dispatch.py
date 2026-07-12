@@ -1,5 +1,5 @@
 """
-Tests for :mod:`omnigent.resume_dispatch` — the top-level
+Tests for :mod:`~?agent_meow.resume_dispatch` — the top-level
 ``omnigent resume`` dispatcher.
 
 The dispatcher's job is to translate the user's "take me back to
@@ -19,7 +19,7 @@ import click
 import httpx
 import pytest
 
-from omnigent import resume_dispatch
+from agent_meow import resume_dispatch
 
 # ── run_resume — top-level entry ──────────────────────────
 
@@ -66,7 +66,7 @@ def test_run_resume_picker_cancel_exits_cleanly(monkeypatch: pytest.MonkeyPatch)
         invoked.append("run_claude_native")
 
     monkeypatch.setattr(
-        "omnigent.claude_native.run_claude_native",
+        "agent_meow.claude_native.run_claude_native",
         _fail_if_called,
     )
 
@@ -109,7 +109,7 @@ def test_dispatch_by_runtime_claude_native_remote_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("omnigent.claude_native.run_claude_native", _capture)
+    monkeypatch.setattr("agent_meow.claude_native.run_claude_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_abc",
@@ -149,7 +149,7 @@ def test_dispatch_by_runtime_codex_native_remote_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("omnigent.codex_native.run_codex_native", _capture)
+    monkeypatch.setattr("agent_meow.codex_native.run_codex_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_abc",
@@ -186,7 +186,7 @@ def test_dispatch_by_runtime_codex_native_local_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("omnigent.codex_native.run_codex_native", _capture)
+    monkeypatch.setattr("agent_meow.codex_native.run_codex_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_codex",
@@ -212,7 +212,7 @@ def test_dispatch_by_runtime_kiro_native_remote_routes_to_wrapper(
     def _capture(**kwargs: Any) -> None:
         captured.update(kwargs)
 
-    monkeypatch.setattr("omnigent.kiro_native.run_kiro_native", _capture)
+    monkeypatch.setattr("agent_meow.kiro_native.run_kiro_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_kiro",
@@ -253,7 +253,7 @@ def test_dispatch_by_runtime_antigravity_native_remote_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("omnigent.antigravity_native.run_antigravity_native", _capture)
+    monkeypatch.setattr("agent_meow.antigravity_native.run_antigravity_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_agy",
@@ -290,7 +290,7 @@ def test_dispatch_by_runtime_antigravity_native_local_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("omnigent.antigravity_native.run_antigravity_native", _capture)
+    monkeypatch.setattr("agent_meow.antigravity_native.run_antigravity_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_agy_local",
@@ -327,7 +327,7 @@ def test_dispatch_by_runtime_claude_native_local_still_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("omnigent.claude_native.run_claude_native", _capture)
+    monkeypatch.setattr("agent_meow.claude_native.run_claude_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_claude",
@@ -377,8 +377,8 @@ def test_read_wrapper_label_local_reads_persistent_store(
     :param tmp_path: Temporary persistent agent-meow directory.
     :returns: None.
     """
-    import omnigent.chat as chat_mod
-    from omnigent.stores.conversation_store.sqlalchemy_store import (
+    import agent_meow.chat as chat_mod
+    from agent_meow.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
 
@@ -422,7 +422,7 @@ def test_dispatch_by_runtime_non_claude_native_remote_raises_with_hint(
         del kwargs
         raise AssertionError("run_claude_native invoked on non-claude conv")
 
-    monkeypatch.setattr("omnigent.claude_native.run_claude_native", _fail_if_called)
+    monkeypatch.setattr("agent_meow.claude_native.run_claude_native", _fail_if_called)
 
     with pytest.raises(click.ClickException) as excinfo:
         resume_dispatch._dispatch_by_runtime(
@@ -472,7 +472,7 @@ def test_read_wrapper_label_remote_returns_label_when_present(
 
     monkeypatch.setattr(httpx, "get", _fake_get)
     monkeypatch.setattr(
-        "omnigent.chat._remote_headers",
+        "agent_meow.chat._remote_headers",
         lambda *, server_url: {},
     )
 
@@ -509,7 +509,7 @@ def test_read_wrapper_label_remote_returns_none_when_label_missing(
 
     monkeypatch.setattr(httpx, "get", _fake_get)
     monkeypatch.setattr(
-        "omnigent.chat._remote_headers",
+        "agent_meow.chat._remote_headers",
         lambda *, server_url: {},
     )
 
@@ -538,7 +538,7 @@ def test_read_wrapper_label_remote_raises_on_404(
 
     monkeypatch.setattr(httpx, "get", _fake_get)
     monkeypatch.setattr(
-        "omnigent.chat._remote_headers",
+        "agent_meow.chat._remote_headers",
         lambda *, server_url: {},
     )
 

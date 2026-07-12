@@ -116,7 +116,7 @@ def _spawn_host_daemon(
             # else the test process's python. apply_runner_env drops the inherited
             # worktree PYTHONPATH in that mode; the old host launches old runners
             # (colocated) from its own venv.
-            [runner_executable(), "-m", "omnigent.host._daemon_entry", "--server", live_server],
+            [runner_executable(), "-m", "agent_meow.host._daemon_entry", "--server", live_server],
             env=apply_runner_env(env),
             cwd=compat_runner_cwd(),
             stdout=subprocess.DEVNULL,
@@ -709,7 +709,7 @@ def _spawn_host_daemon_for_mock_claude(
             # else the test process's python. apply_runner_env drops the inherited
             # worktree PYTHONPATH in that mode; the old host launches old runners
             # (colocated) from its own venv.
-            [runner_executable(), "-m", "omnigent.host._daemon_entry", "--server", live_server],
+            [runner_executable(), "-m", "agent_meow.host._daemon_entry", "--server", live_server],
             env=apply_runner_env(env),
             cwd=compat_runner_cwd(),
             stdout=subprocess.DEVNULL,

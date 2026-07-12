@@ -39,7 +39,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.e2e.omnigent.conftest import configure_mock_llm
+from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 _ONESHOT_TIMEOUT_SEC = 240
 

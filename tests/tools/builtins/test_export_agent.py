@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`omnigent.tools.builtins.export_agent`."""
+"""Unit tests for :mod:`~?agent_meow.tools.builtins.export_agent`."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.tools.base import ToolContext
-from omnigent.tools.builtins.export_agent import ExportAgentTool
+from agent_meow.tools.base import ToolContext
+from agent_meow.tools.builtins.export_agent import ExportAgentTool
 
 
 @pytest.fixture()

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from omnigent.entities.conversation import (
+from agent_meow.entities.conversation import (
     ConversationItem,
     MessageData,
     synthesize_conversation_title,

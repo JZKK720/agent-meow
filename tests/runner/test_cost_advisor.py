@@ -1,4 +1,4 @@
-"""Tests for :mod:`omnigent.runner.cost_advisor` — the v3 cost advisor.
+"""Tests for :mod:`~?agent_meow.runner.cost_advisor` — the v3 cost advisor.
 
 Covers:
 
@@ -28,19 +28,19 @@ from typing import Any
 import httpx
 import pytest
 
-from omnigent.cost_plan import AdvisorVerdict, parse_verdict
-from omnigent.entities.conversation import NON_CONTENT_ITEM_TYPES, parse_item_data
-from omnigent.runner.cost_advisor import (
+from agent_meow.cost_plan import AdvisorVerdict, parse_verdict
+from agent_meow.entities.conversation import NON_CONTENT_ITEM_TYPES, parse_item_data
+from agent_meow.runner.cost_advisor import (
     AdvisorConfig,
     maybe_run_advisor,
     parse_advisor_config,
     routing_decision_event,
 )
-from omnigent.runner.identity import (
+from agent_meow.runner.identity import (
     RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR,
     RUNNER_TUNNEL_TOKEN_HEADER,
 )
-from omnigent.spec.types import AgentSpec, ExecutorSpec
+from agent_meow.spec.types import AgentSpec, ExecutorSpec
 
 _TIERS_YAML: dict[str, Any] = {  # type: ignore[explicit-any]  # YAML-shaped config payload
     "mode": "optimize",
@@ -144,7 +144,7 @@ class _PatchCapture:
 
 def _client(transport: httpx.BaseTransport) -> httpx.AsyncClient:
     """Build a server client over a test transport."""
-    return httpx.AsyncClient(transport=transport, base_url="http://omnigent.test")
+    return httpx.AsyncClient(transport=transport, base_url="http://agent_meow.test")
 
 
 async def _run(
@@ -480,11 +480,11 @@ async def test_default_judge_build_threads_brain_databricks_profile(
         captured.update(kwargs)
         return _NullJudge()
 
-    monkeypatch.setattr("omnigent.runner.cost_advisor.build_llm_judge", _capture_build)
+    monkeypatch.setattr("agent_meow.runner.cost_advisor.build_llm_judge", _capture_build)
     monkeypatch.setattr(
         # The profile resolver reads the user-level provider config; stub it
         # so the test is hermetic on any box.
-        "omnigent.runner.cost_advisor._databricks_profile_for_spec",
+        "agent_meow.runner.cost_advisor._databricks_profile_for_spec",
         lambda spec: "brain-profile",
     )
     async with _client(_raising_transport()) as client:

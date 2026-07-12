@@ -1,9 +1,9 @@
 """
-Tests for :class:`omnigent.runtime.harnesses._executor_adapter.ExecutorAdapter`.
+Tests for :class:`~?agent_meow.runtime.harnesses._executor_adapter.ExecutorAdapter`.
 
 End-to-end through real subprocesses spawned via the same
 :class:`HarnessProcessManager` used in production. Uses
-:class:`omnigent.inner.executor.MockExecutor` as the inner
+:class:`~?agent_meow.inner.executor.MockExecutor` as the inner
 executor — no real LLM SDK required. The adapter's per-event
 translation contract is what's under test; per-harness
 configuration (Claude SDK CLI discovery, Codex subprocess setup,
@@ -25,9 +25,9 @@ from typing import Any
 import httpx
 import pytest
 
-from omnigent.inner.executor import Executor
-from omnigent.runtime.harnesses import _HARNESS_MODULES
-from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
+from agent_meow.inner.executor import Executor
+from agent_meow.runtime.harnesses import _HARNESS_MODULES
+from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
 
 _TEST_HARNESS_NAME = "executor_adapter_fixture"
 _TEST_HARNESS_MODULE = "tests.runtime.harnesses._test_executor_adapter_harness"
@@ -446,9 +446,9 @@ def test_build_error_detail_uses_omnigent_error_code() -> None:
     timeout as permanent. The whole point of step 5j is the
     structured ``code + retryable`` flowing through.
     """
-    from omnigent.llms.errors import LLMErrorDetail, RetryableLLMError
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
-    from omnigent.runtime.harnesses._scaffold import HarnessApp
+    from agent_meow.llms.errors import LLMErrorDetail, RetryableLLMError
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.runtime.harnesses._scaffold import HarnessApp
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     error = RetryableLLMError(
@@ -487,7 +487,7 @@ def test_classify_openai_exception_maps_known_types() -> None:
     """
     import openai
 
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _classify_openai_exception,
     )
 
@@ -535,7 +535,7 @@ def test_classify_openai_exception_context_length_exceeded_direct() -> None:
     """
     import openai
 
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _classify_openai_exception,
     )
 
@@ -559,7 +559,7 @@ def test_classify_openai_exception_context_length_exceeded_wrapped() -> None:
     """
     import openai
 
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _classify_openai_exception,
     )
 
@@ -590,7 +590,7 @@ def test_classify_claude_sdk_exception_maps_connection_error() -> None:
     """
     import claude_agent_sdk
 
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _classify_claude_sdk_exception,
     )
 
@@ -616,7 +616,7 @@ def test_classify_httpx_exception_maps_timeout_and_connect() -> None:
     httpx layer (rather than inside the SDK's wrapper) would
     not be retryable.
     """
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _classify_httpx_exception,
     )
 
@@ -643,7 +643,7 @@ def test_classify_anthropic_exception_returns_none_when_sdk_not_installed() -> N
     error in environments that don't ship the SDK (e.g. the
     openai-agents wrap deployment).
     """
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _classify_anthropic_exception,
     )
 
@@ -710,7 +710,7 @@ def test_classify_anthropic_exception_maps_known_types(
     fake_anthropic.InternalServerError = _InternalServer  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "anthropic", fake_anthropic)
 
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _classify_anthropic_exception,
     )
 
@@ -747,7 +747,7 @@ def test_classify_inner_exception_dispatches_across_sdks(
 
     import openai
 
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         classify_inner_exception,
     )
 
@@ -827,7 +827,7 @@ def test_translate_input_to_messages_reconstructs_full_history() -> None:
     context and answers "What?" the way the user reported
     against ``--resume``.
     """
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _translate_input_to_messages,
     )
 
@@ -877,7 +877,7 @@ def test_translate_input_to_messages_string_input_fallback() -> None:
     user-role :class:`Message` so the inner executor's
     single-turn path keeps working.
     """
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _translate_input_to_messages,
     )
 
@@ -897,7 +897,7 @@ def test_translate_input_to_messages_legacy_content_blocks_fallback() -> None:
     future cleanup doesn't accidentally drop bare-block
     callers.
     """
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _translate_input_to_messages,
     )
 
@@ -927,7 +927,7 @@ def test_translate_input_to_messages_drops_empty_message_blocks() -> None:
     serialized "Conversation so far:" prefix focused on the
     parts the LLM actually benefits from.
     """
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         _translate_input_to_messages,
     )
 
@@ -1023,8 +1023,8 @@ def test_translate_event_mcp_tool_call_request_emits_observed_with_bare_name() -
     Pinning the bare-name contract here keeps the adapter's
     emission consistent with the rest of the agent-meow wire path.
     """
-    from omnigent.inner.executor import ToolCallRequest
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.inner.executor import ToolCallRequest
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     ctx = _RecordingTurnContext(response_id="resp_test")
@@ -1074,8 +1074,8 @@ def test_tool_call_complete_suppressed_for_dispatched_executor() -> None:
     """A normal internally-handling executor's ``ToolCallComplete`` is
     suppressed mid-turn (its tools round-trip through dispatch_tool, which
     emits the output) — the existing dedup contract."""
-    from omnigent.inner.executor import ToolCallComplete, ToolCallStatus
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.inner.executor import ToolCallComplete, ToolCallStatus
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     adapter._executor = _StubExecutor()  # type: ignore[assignment]
@@ -1103,8 +1103,8 @@ def test_translate_event_mcp_request_queues_tool_use_id_for_dispatch() -> None:
     observed call_id — and the SDK client can't dedupe, so the
     REPL renders ``⏵ tool_name`` twice.
     """
-    from omnigent.inner.executor import ToolCallRequest
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.inner.executor import ToolCallRequest
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     ctx = _RecordingTurnContext()
@@ -1159,8 +1159,8 @@ def test_translate_event_non_mcp_request_queues_tool_use_id() -> None:
     that call), the push is harmless — the queue entry just
     sits there until a real bridged-tool call drains it.
     """
-    from omnigent.inner.executor import ToolCallRequest
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.inner.executor import ToolCallRequest
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     ctx = _RecordingTurnContext()
@@ -1196,8 +1196,8 @@ def test_translate_event_request_without_tool_use_id_does_not_queue() -> None:
     to correlate, and pushing ``None`` (or any sentinel)
     would mis-pair a later dispatch against a non-existent id.
     """
-    from omnigent.inner.executor import ToolCallRequest
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.inner.executor import ToolCallRequest
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     ctx = _RecordingTurnContext()
@@ -1239,7 +1239,7 @@ def test_run_turn_clears_mcp_queue_at_turn_start() -> None:
     state-check is more decisive than threading a complete
     turn through HarnessProcessManager.
     """
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     # Simulate stale state from a prior turn that never drained.
@@ -1284,7 +1284,7 @@ async def test_stable_tool_executor_pops_queue_for_bare_tool_name() -> None:
     callback receives the bare name, so the pop must NOT gate
     on the prefix.
     """
-    from omnigent.runtime.harnesses._executor_adapter import (
+    from agent_meow.runtime.harnesses._executor_adapter import (
         ExecutorAdapter,
         _bridge_one_dispatch,
     )
@@ -1386,8 +1386,8 @@ async def test_observed_and_dispatched_call_ids_match_for_openai_agents() -> Non
     MCP-prefix gate on the queue push will fail this test
     immediately.
     """
-    from omnigent.inner.executor import ToolCallRequest
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.inner.executor import ToolCallRequest
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     ctx = _RecordingTurnContext()
@@ -1476,10 +1476,10 @@ async def test_observed_and_dispatched_call_ids_match_for_openai_agents() -> Non
 @pytest.mark.asyncio
 async def test_executor_adapter_builds_config_from_request() -> None:
     """Forwards request controls but not agent name as executor model."""
-    from omnigent.inner.executor import Executor, ExecutorConfig, Message, ToolSpec, TurnComplete
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
-    from omnigent.runtime.harnesses._scaffold import TurnContext
-    from omnigent.server.schemas import CreateResponseRequest
+    from agent_meow.inner.executor import Executor, ExecutorConfig, Message, ToolSpec, TurnComplete
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.runtime.harnesses._scaffold import TurnContext
+    from agent_meow.server.schemas import CreateResponseRequest
 
     captured: dict[str, object] = {}
 
@@ -1527,10 +1527,10 @@ async def test_executor_adapter_forwards_model_override_to_config() -> None:
     Without this, every harness-backed agent silently ignores
     ``/model``.
     """
-    from omnigent.inner.executor import Executor, ExecutorConfig, Message, ToolSpec, TurnComplete
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
-    from omnigent.runtime.harnesses._scaffold import TurnContext
-    from omnigent.server.schemas import CreateResponseRequest
+    from agent_meow.inner.executor import Executor, ExecutorConfig, Message, ToolSpec, TurnComplete
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.runtime.harnesses._scaffold import TurnContext
+    from agent_meow.server.schemas import CreateResponseRequest
 
     captured: dict[str, object] = {}
 
@@ -1637,8 +1637,8 @@ async def test_watch_injections_emits_consumed_marker_on_accept() -> None:
     """
     import asyncio as _aio
 
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
-    from omnigent.server.schemas import CreateResponseRequest, InjectionConsumedEvent
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.server.schemas import CreateResponseRequest, InjectionConsumedEvent
 
     executor = _AcceptingInjectionExecutor()
     adapter = ExecutorAdapter(executor_factory=lambda: executor, session_key="sk")
@@ -1681,8 +1681,8 @@ async def test_watch_injections_drops_injection_when_turn_cancelled() -> None:
     """
     import asyncio as _aio
 
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
-    from omnigent.server.schemas import CreateResponseRequest
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.server.schemas import CreateResponseRequest
 
     executor = _AcceptingInjectionExecutor()
     adapter = ExecutorAdapter(executor_factory=lambda: executor, session_key="sk")
@@ -1712,8 +1712,8 @@ async def test_watch_injections_no_marker_without_injection_id() -> None:
     """
     import asyncio as _aio
 
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
-    from omnigent.server.schemas import CreateResponseRequest
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.server.schemas import CreateResponseRequest
 
     executor = _AcceptingInjectionExecutor()
     adapter = ExecutorAdapter(executor_factory=lambda: executor, session_key="sk")
@@ -1769,8 +1769,8 @@ async def test_interrupt_drops_inner_session_synchronously() -> None:
     """
     import asyncio as _aio
 
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
-    from omnigent.runtime.harnesses._scaffold import TurnContext
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.runtime.harnesses._scaffold import TurnContext
 
     executor = _InterruptTrackingExecutor()
     adapter = ExecutorAdapter(executor_factory=lambda: executor, session_key="sk")
@@ -1810,8 +1810,8 @@ def test_internal_errored_tool_complete_emits_output_with_real_call_id() -> None
     id and is NEVER ``call_id == ""`` (the pre-fix coercion that orphaned the
     result and left the call a perpetual in-progress card).
     """
-    from omnigent.inner.executor import ToolCallComplete, ToolCallRequest, ToolCallStatus
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.inner.executor import ToolCallComplete, ToolCallRequest, ToolCallStatus
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     ctx = _RecordingTurnContext()
@@ -1881,8 +1881,8 @@ def test_dispatched_id_tool_complete_is_suppressed() -> None:
     stream and produce a ghost "Waiting for output" card in the Web UI. So a
     ``ToolCallComplete`` carrying a dispatched id must produce NO emit.
     """
-    from omnigent.inner.executor import ToolCallComplete, ToolCallStatus
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.inner.executor import ToolCallComplete, ToolCallStatus
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     ctx = _RecordingTurnContext()
@@ -1918,8 +1918,8 @@ def test_non_dispatched_id_tool_complete_emits_output() -> None:
     ``dispatch_tool`` round-trip) has its completion as the ONLY output source, so
     it must surface a paired ``function_call_output``.
     """
-    from omnigent.inner.executor import ToolCallComplete, ToolCallStatus
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.inner.executor import ToolCallComplete, ToolCallStatus
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     ctx = _RecordingTurnContext()
@@ -1957,8 +1957,8 @@ def test_idless_tool_complete_is_suppressed() -> None:
     id-scoped suppression must keep doing so (the ``or ""`` coercion alone left
     this path unguarded).
     """
-    from omnigent.inner.executor import ToolCallComplete, ToolCallStatus
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.inner.executor import ToolCallComplete, ToolCallStatus
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     ctx = _RecordingTurnContext()
@@ -1988,7 +1988,7 @@ async def test_policy_evaluator_no_active_turn_context_is_phase_aware() -> None:
     phases and the post-execution result phase fail open so a transient desync
     does not needlessly wedge them — matching the runner's phase-aware default.
     """
-    from omnigent.runtime.harnesses._executor_adapter import ExecutorAdapter
+    from agent_meow.runtime.harnesses._executor_adapter import ExecutorAdapter
 
     adapter = ExecutorAdapter(executor_factory=lambda: _StubExecutor())
     adapter._current_ctx = None

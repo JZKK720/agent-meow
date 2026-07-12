@@ -1,4 +1,4 @@
-"""Tests for :mod:`omnigent.onboarding.sandboxes.e2b`."""
+"""Tests for :mod:`~?agent_meow.onboarding.sandboxes.e2b`."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 import click
 import pytest
 
-from omnigent.onboarding.sandboxes.base import SandboxCapabilityError
-from omnigent.onboarding.sandboxes.e2b import (
+from agent_meow.onboarding.sandboxes.base import SandboxCapabilityError
+from agent_meow.onboarding.sandboxes.e2b import (
     _HOBBY_FALLBACK_LIFETIME_S,
     DEFAULT_E2B_TEMPLATE,
     SANDBOX_ENV_PASSTHROUGH_ENV_VAR,

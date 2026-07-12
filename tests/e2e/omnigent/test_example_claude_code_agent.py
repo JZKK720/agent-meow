@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 
 from tests.e2e.conftest import configure_mock_llm, reset_mock_llm
-from tests.e2e.omnigent._example_helpers import (
+from tests.e2e.agent_meow._example_helpers import (
     assert_completed_one_shot,
     require_claude_sdk,
     run_one_shot,

@@ -22,8 +22,8 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.spec import load
-from omnigent.spec.types import AgentSpec
+from agent_meow.spec import load
+from agent_meow.spec.types import AgentSpec
 
 # tests/e2e/omnigent/test_example_swe_org.py -> repo root is 3 parents up.
 _SWE_ORG_YAML = (

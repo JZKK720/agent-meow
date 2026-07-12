@@ -279,7 +279,7 @@ def _respawned_server_pids(home: Path) -> set[int]:
     respawn that preserved the pidfile (e.g. a stray bound to a random port).
 
     :param home: The test's isolated home dir.
-    :returns: PIDs of live ``omnigent.cli ... server`` processes whose
+    :returns: PIDs of live ``agent_meow.cli ... server`` processes whose
         command line references ``home``; empty when ``connect`` reused.
     """
     # ``ww`` disables ps's column-width truncation: the home path sits late in
@@ -298,7 +298,7 @@ def _respawned_server_pids(home: Path) -> set[int]:
     home_prefix = f"{home}{os.sep}"
     pids: set[int] = set()
     for line in out.splitlines():
-        if "omnigent.cli" not in line or home_prefix not in line:
+        if "agent_meow.cli" not in line or home_prefix not in line:
             continue
         if not re.search(r"\bserver\b", line):
             continue
@@ -340,7 +340,7 @@ class _Procs:
     ) -> subprocess.Popen[bytes]:
         """Spawn a CLI subprocess with output captured to ``log``.
 
-        :param args: CLI args after the ``python -m omnigent.cli`` prefix.
+        :param args: CLI args after the ``python -m agent_meow.cli`` prefix.
         :param env: Subprocess environment.
         :param cwd: Working directory (an isolated home).
         :param log: File to capture combined stdout/stderr.
@@ -350,7 +350,7 @@ class _Procs:
         fh = open(log, "wb")  # noqa: SIM115
         self._logs.append(fh)
         proc = subprocess.Popen(
-            [sys.executable, "-m", "omnigent.cli", *args],
+            [sys.executable, "-m", "agent_meow.cli", *args],
             env=env,
             cwd=str(cwd),
             stdout=fh,

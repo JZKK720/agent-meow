@@ -290,7 +290,7 @@ def _require_omnigent_cli() -> str:
     :returns: Absolute path to an executable.
     """
     venv_omnigent = Path(sys.executable).parent / "omnigent"
-    if venv_omnigent.exists():
+    if venv_agent_meow.exists():
         return str(venv_omnigent)
     path = shutil.which("omnigent") or shutil.which("ap")
     if path is None:

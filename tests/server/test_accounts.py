@@ -2,16 +2,16 @@
 
 Covers the four layers of the stack:
 
-1. ``omnigent.server.passwords`` — argon2 wrapper (hash / verify
+1. ``agent_meow.server.passwords`` — argon2 wrapper (hash / verify
    round-trip, constant-time-equalized failures).
-2. ``omnigent.server.accounts_config.AccountsConfig`` — env-var
+2. ``agent_meow.server.accounts_config.AccountsConfig`` — env-var
    parsing, fail-loud validation, secure-cookie derivation.
-3. ``omnigent.server.auth.UnifiedAuthProvider`` with
+3. ``agent_meow.server.auth.UnifiedAuthProvider`` with
    ``source='accounts'`` — cookie validation, reserved-name
    rejection, ``create_auth_provider`` factory gating.
-4. ``omnigent.server.accounts_bootstrap.bootstrap_admin`` matrix
+4. ``agent_meow.server.accounts_bootstrap.bootstrap_admin`` matrix
    (auto-gen / pre-seed / idempotent / loopback handoff).
-5. ``omnigent.server.routes.accounts_auth`` — login / logout /
+5. ``agent_meow.server.routes.accounts_auth`` — login / logout /
    me / invite / register / magic / members admin endpoints via
    FastAPI TestClient, including cross-user (Alice/Bob)
    permission isolation and reserved-name guards.
@@ -30,25 +30,25 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from omnigent.server.accounts_bootstrap import (
+from agent_meow.server.accounts_bootstrap import (
     bootstrap_admin,
     resolve_admin_username,
 )
-from omnigent.server.accounts_config import AccountsConfig
-from omnigent.server.accounts_store import SqlAlchemyAccountStore
-from omnigent.server.auth import (
+from agent_meow.server.accounts_config import AccountsConfig
+from agent_meow.server.accounts_store import SqlAlchemyAccountStore
+from agent_meow.server.auth import (
     AuthProvider,
     UnifiedAuthProvider,
     create_auth_provider,
     resolve_auth_source,
 )
-from omnigent.server.passwords import (
+from agent_meow.server.passwords import (
     InvalidPasswordError,
     hash_password,
     needs_rehash,
     verify_password,
 )
-from omnigent.stores.permission_store.sqlalchemy_store import (
+from agent_meow.stores.permission_store.sqlalchemy_store import (
     SqlAlchemyPermissionStore,
 )
 
@@ -133,7 +133,7 @@ def test_needs_rehash_false_on_fresh_hash() -> None:
 def _set_required_accounts_env(
     monkeypatch: pytest.MonkeyPatch,
     *,
-    base_url: str = "https://omnigent.example.com",
+    base_url: str = "https://agent_meow.example.com",
 ) -> None:
     """Populate every required env var so from_env() doesn't fail loud."""
     monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
@@ -146,12 +146,12 @@ def test_accounts_config_round_trips_required_env(
     """from_env() parses every required var into the dataclass."""
     secret_hex = secrets.token_hex(32)
     monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secret_hex)
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "https://omnigent.example.com")
+    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "https://agent_meow.example.com")
 
     cfg = AccountsConfig.from_env()
 
     assert cfg.cookie_secret == bytes.fromhex(secret_hex)
-    assert cfg.base_url == "https://omnigent.example.com"
+    assert cfg.base_url == "https://agent_meow.example.com"
     assert cfg.secure_cookies is True
     assert cfg.session_cookie_name == "__Host-ap_session"
 
@@ -215,7 +215,7 @@ def test_accounts_config_rejects_non_http_scheme(
 ) -> None:
     """BASE_URL must start with http(s):// — fail loud otherwise."""
     monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "ftp://omnigent.example.com")
+    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "ftp://agent_meow.example.com")
 
     with pytest.raises(RuntimeError, match="http://"):
         AccountsConfig.from_env()
@@ -277,7 +277,7 @@ class _FakeReq:
 
 def test_accounts_source_reads_valid_cookie() -> None:
     """The accounts source extracts a user_id from a valid session JWT."""
-    from omnigent.server.oidc import mint_session_cookie
+    from agent_meow.server.oidc import mint_session_cookie
 
     cfg = _make_accounts_config()
     provider = UnifiedAuthProvider(source="accounts", accounts_config=cfg)
@@ -297,7 +297,7 @@ def test_accounts_source_rejects_reserved_user_in_cookie() -> None:
     malicious admin somehow gets a session JWT with sub=local
     minted, the auth provider refuses to honor it.
     """
-    from omnigent.server.oidc import mint_session_cookie
+    from agent_meow.server.oidc import mint_session_cookie
 
     cfg = _make_accounts_config()
     provider = UnifiedAuthProvider(source="accounts", accounts_config=cfg)
@@ -317,7 +317,7 @@ def test_accounts_source_rejects_cookie_signed_with_wrong_secret() -> None:
     server and presenting it to another with a different secret
     must not authenticate.
     """
-    from omnigent.server.oidc import mint_session_cookie
+    from agent_meow.server.oidc import mint_session_cookie
 
     cfg = _make_accounts_config()
     provider = UnifiedAuthProvider(source="accounts", accounts_config=cfg)
@@ -338,7 +338,7 @@ def test_accounts_source_accepts_bearer_token_for_cli() -> None:
     the token up from ~/.omnigent/auth_tokens.json — the same
     code path the OIDC mode supports.
     """
-    from omnigent.server.oidc import mint_session_cookie
+    from agent_meow.server.oidc import mint_session_cookie
 
     cfg = _make_accounts_config()
     provider = UnifiedAuthProvider(source="accounts", accounts_config=cfg)
@@ -679,7 +679,7 @@ def fresh_store(tmp_path: Path) -> SqlAlchemyAccountStore:
     in play at this layer of the suite.
     """
     db_url = f"sqlite:///{tmp_path}/test.db"
-    from omnigent.db.utils import get_or_create_engine
+    from agent_meow.db.utils import get_or_create_engine
 
     get_or_create_engine(db_url)  # runs alembic upgrade
     return SqlAlchemyAccountStore(db_url)
@@ -810,7 +810,7 @@ def test_bootstrap_remote_no_password_needs_setup_no_token(
     """
     result = bootstrap_admin(
         fresh_store,
-        base_url="https://omnigent.example.com",
+        base_url="https://agent_meow.example.com",
         cookie_secret=secrets.token_bytes(32),
     )
 
@@ -861,7 +861,7 @@ def test_bootstrap_init_password_loopback_writes_cli_token_no_autoopen(
     assert result.needs_setup is False
     assert result.open_url is None
     assert result.tui_token_written is True
-    from omnigent import cli_auth
+    from agent_meow import cli_auth
 
     assert cli_auth.load_token(base_url) is not None
 
@@ -878,7 +878,7 @@ def test_bootstrap_refreshes_cli_token_on_returning_loopback_boot(
     that motivated this). Here the second boot uses a *different* base
     URL (new port) and must still produce a usable token for it.
     """
-    from omnigent import cli_auth
+    from agent_meow import cli_auth
 
     first = bootstrap_admin(
         fresh_store,
@@ -1023,24 +1023,24 @@ def _build_accounts_app(
     monkeypatch.setenv("OMNIGENT_ACCOUNTS_AUTO_OPEN", "0")
 
     db_url = f"sqlite:///{tmp_path}/test.db"
-    from omnigent.db.utils import get_or_create_engine
-    from omnigent.runtime import init as init_runtime
-    from omnigent.runtime import telemetry
-    from omnigent.runtime.agent_cache import AgentCache
-    from omnigent.runtime.caps import RuntimeCaps
-    from omnigent.server.app import create_app
-    from omnigent.stores.agent_store.sqlalchemy_store import (
+    from agent_meow.db.utils import get_or_create_engine
+    from agent_meow.runtime import init as init_runtime
+    from agent_meow.runtime import telemetry
+    from agent_meow.runtime.agent_cache import AgentCache
+    from agent_meow.runtime.caps import RuntimeCaps
+    from agent_meow.server.app import create_app
+    from agent_meow.stores.agent_store.sqlalchemy_store import (
         SqlAlchemyAgentStore,
     )
-    from omnigent.stores.artifact_store.local import LocalArtifactStore
-    from omnigent.stores.comment_store.sqlalchemy_store import (
+    from agent_meow.stores.artifact_store.local import LocalArtifactStore
+    from agent_meow.stores.comment_store.sqlalchemy_store import (
         SqlAlchemyCommentStore,
     )
-    from omnigent.stores.conversation_store.sqlalchemy_store import (
+    from agent_meow.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
-    from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-    from omnigent.stores.host_store import HostStore
+    from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+    from agent_meow.stores.host_store import HostStore
 
     get_or_create_engine(db_url)
     telemetry.init()
@@ -1123,20 +1123,20 @@ def header_mode_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator
     monkeypatch.delenv("OMNIGENT_ACCOUNTS_BASE_URL", raising=False)
 
     db_url = f"sqlite:///{tmp_path}/header.db"
-    from omnigent.db.utils import get_or_create_engine
-    from omnigent.runtime import init as init_runtime
-    from omnigent.runtime import telemetry
-    from omnigent.runtime.agent_cache import AgentCache
-    from omnigent.runtime.caps import RuntimeCaps
-    from omnigent.server.app import create_app
-    from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-    from omnigent.stores.artifact_store.local import LocalArtifactStore
-    from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-    from omnigent.stores.conversation_store.sqlalchemy_store import (
+    from agent_meow.db.utils import get_or_create_engine
+    from agent_meow.runtime import init as init_runtime
+    from agent_meow.runtime import telemetry
+    from agent_meow.runtime.agent_cache import AgentCache
+    from agent_meow.runtime.caps import RuntimeCaps
+    from agent_meow.server.app import create_app
+    from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+    from agent_meow.stores.artifact_store.local import LocalArtifactStore
+    from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+    from agent_meow.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
-    from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-    from omnigent.stores.host_store import HostStore
+    from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+    from agent_meow.stores.host_store import HostStore
 
     get_or_create_engine(db_url)
     telemetry.init()
@@ -1477,8 +1477,8 @@ def test_admin_list_excludes_legacy_local_and_public_sentinels(
     ``accounts_app`` fixture wired up, then confirm the admin
     list filter drops them.
     """
-    from omnigent.db.db_models import SqlUser
-    from omnigent.db.utils import get_or_create_engine, make_managed_session_maker
+    from agent_meow.db.db_models import SqlUser
+    from agent_meow.db.utils import get_or_create_engine, make_managed_session_maker
 
     db_url = f"sqlite:///{tmp_path}/test.db"
     engine = get_or_create_engine(db_url)
@@ -1763,8 +1763,8 @@ def test_cli_accounts_login_happy_path_stores_token(
     import httpx as _httpx
     from click.testing import CliRunner
 
-    from omnigent import cli_auth
-    from omnigent.cli import cli
+    from agent_meow import cli_auth
+    from agent_meow.cli import cli
 
     # Redirect $HOME so cli_auth.store_token writes into tmp.
     monkeypatch.setenv("HOME", str(tmp_path))
@@ -1836,7 +1836,7 @@ def test_cli_accounts_login_wrong_password_surfaces_clean_error(
     import httpx as _httpx
     from click.testing import CliRunner
 
-    from omnigent.cli import cli
+    from agent_meow.cli import cli
 
     monkeypatch.setenv("HOME", str(tmp_path))
 
@@ -1886,7 +1886,7 @@ def test_cli_accounts_login_network_failure_surfaces_clean_error(
     import httpx as _httpx
     from click.testing import CliRunner
 
-    from omnigent.cli import cli
+    from agent_meow.cli import cli
 
     monkeypatch.setenv("HOME", str(tmp_path))
 
@@ -1967,7 +1967,7 @@ def test_setup_writes_loopback_cli_token(
     the in-flight ``omnigent run`` is signed in immediately instead of
     401-ing until the next server boot.
     """
-    from omnigent import cli_auth
+    from agent_meow import cli_auth
 
     client = accounts_app_needs_setup
     base_url = "http://localhost:8000"

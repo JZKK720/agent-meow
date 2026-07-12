@@ -17,7 +17,7 @@ Three properties are covered, all against STABLE-on-main behavior:
    distinct sentinel token in its prompt. Each session's transcript must contain
    ONLY its own sentinel — proving the per-session SDK ``Agent``/``Conversation``
    reuse (keyed by ``session_key`` in
-   :class:`~omnigent.inner.antigravity_executor.AntigravityExecutor`) does not
+   :class:`~?agent_meow.inner.antigravity_executor.AntigravityExecutor`) does not
    leak one conversation's content into another's.
 2. **No orphaned ``localharness``** — snapshot the live ``localharness`` PIDs
    before a turn and again after it ends cleanly; the turn must not leave a NEW
@@ -154,7 +154,7 @@ def _antigravity_prereqs_missing(omnigent_python: Path) -> str | None:
             "except Exception:\n"
             "    sdk = False\n"
             "try:\n"
-            "    from omnigent.onboarding.antigravity_auth import "
+            "    from agent_meow.onboarding.antigravity_auth import "
             "antigravity_api_key_configured as c\n"
             "    cfg = c()\n"
             "except Exception:\n"

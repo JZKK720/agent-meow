@@ -17,20 +17,20 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.runtime.harnesses import _HARNESS_MODULES
-from omnigent.spec._omnigent_compat import OMNIGENT_HARNESSES
+from agent_meow.runtime.harnesses import _HARNESS_MODULES
+from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
 from tests.e2e._harness_probes import (
     HARNESS_IDS,
     HARNESS_PROBES,
     HarnessProbe,
     skip_if_harness_cli_missing,
 )
-from tests.e2e.omnigent._pexpect_harness import (
+from tests.e2e.agent_meow._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
 )
-from tests.e2e.omnigent.conftest import configure_mock_llm
+from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 _PROMPT_TEMPLATE = (
     "Reply with exactly the identifier between <answer> tags, but omit the tags: "

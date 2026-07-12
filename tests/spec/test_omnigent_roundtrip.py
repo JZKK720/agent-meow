@@ -9,7 +9,7 @@ forward and reverse directions fails these tests the moment it
 appears.
 
 **Phase 1 dependency.** These tests import
-:func:`omnigent.spec.omnigent.agent_spec_to_agent_def`,
+:func:`~?agent_meow.spec.agent_meow.agent_spec_to_agent_def`,
 which is owned by the phase 1 worktree. Until phase 1 is merged
 into the branch this test runs against, the import fails at
 collection time — pytest reports a collection error naming the
@@ -28,11 +28,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-from omnigent.spec.omnigent import (
+from agent_meow.spec.omnigent import (
     agent_def_to_agent_spec,
     # NOTE: imported from the same module as the reverse
     # direction — both functions ship in
-    # ``omnigent/spec/omnigent.py`` per the design. Phase 1
+    # ``omnigent/spec/agent_meow.py`` per the design. Phase 1
     # adds this symbol; phase 2 consumes it here.
     agent_spec_to_agent_def,
 )
@@ -115,7 +115,7 @@ def _roundtrip(yaml_path: Path) -> None:
 
     :param yaml_path: Path to an omnigent YAML fixture.
     """
-    from omnigent.inner.loader import load_agent_def
+    from agent_meow.inner.loader import load_agent_def
 
     original = load_agent_def(yaml_path)
     spec = agent_def_to_agent_spec(original)
@@ -165,8 +165,8 @@ def test_roundtrip_hello_world_is_incomplete_for_omnigent(
     be a deliberate decision with a reviewer; the test guards
     against silent drift.
     """
-    from omnigent.errors import OmnigentError
-    from omnigent.inner.loader import load_agent_def
+    from agent_meow.errors import OmnigentError
+    from agent_meow.inner.loader import load_agent_def
 
     original = load_agent_def(hello_world_yaml)
     spec = agent_def_to_agent_spec(original)

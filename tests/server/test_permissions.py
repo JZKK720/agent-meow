@@ -1,7 +1,7 @@
 """Unit tests for the session permission resolution function.
 
-Tests :func:`omnigent.server.permissions.check_session_access` and
-:func:`omnigent.server.permissions.check_is_manager` against all
+Tests :func:`~?agent_meow.server.permissions.check_session_access` and
+:func:`~?agent_meow.server.permissions.check_is_manager` against all
 resolution branches:
 
 1. Admin user -> allow
@@ -24,9 +24,9 @@ from __future__ import annotations
 
 import pytest
 
-from omnigent.entities.conversation import Conversation
-from omnigent.entities.permission import ResolvedAccess, SessionPermission
-from omnigent.server.auth import (
+from agent_meow.entities.conversation import Conversation
+from agent_meow.entities.permission import ResolvedAccess, SessionPermission
+from agent_meow.server.auth import (
     LEVEL_EDIT,
     LEVEL_MANAGE,
     LEVEL_OWNER,
@@ -34,7 +34,7 @@ from omnigent.server.auth import (
     RESERVED_USER_PUBLIC,
     env_var_is_truthy,
 )
-from omnigent.server.permissions import (
+from agent_meow.server.permissions import (
     check_is_manager,
     check_session_access,
     resolved_allows,
@@ -792,7 +792,7 @@ def test_header_mode_rejects_missing_header(
     """
     from unittest.mock import MagicMock
 
-    from omnigent.server.auth import UnifiedAuthProvider
+    from agent_meow.server.auth import UnifiedAuthProvider
 
     # Clear the single-user marker so an ambient value from the dev
     # shell can't flip the provider into the fallback path.
@@ -824,7 +824,7 @@ def test_header_mode_accepts_valid_header() -> None:
     """
     from unittest.mock import MagicMock
 
-    from omnigent.server.auth import UnifiedAuthProvider
+    from agent_meow.server.auth import UnifiedAuthProvider
 
     provider = UnifiedAuthProvider(source="header")
     mock_request = MagicMock()
@@ -853,7 +853,7 @@ def test_header_mode_rejects_reserved_names(reserved_name: str) -> None:
     """
     from unittest.mock import MagicMock
 
-    from omnigent.server.auth import UnifiedAuthProvider
+    from agent_meow.server.auth import UnifiedAuthProvider
 
     provider = UnifiedAuthProvider(source="header")
     mock_request = MagicMock()

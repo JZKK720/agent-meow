@@ -40,7 +40,7 @@ from tests.e2e._harness_probes import (
     skip_if_harness_cli_missing,
 )
 from tests.e2e.conftest import configure_mock_llm, reset_mock_llm
-from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.agent_meow._snapshot import compare_snapshot
 
 _PROMPT = "What is 3 + 4? Use the calculate tool."
 

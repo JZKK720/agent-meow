@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omnigent"
-# Keep in sync with omnigent/version.py's VERSION constant.
+# Keep in sync with agent_meow/version.py's VERSION constant.
 # The pip package name stays "omnigent" for SDK dependency compatibility
 # (omnigent-client / omnigent-ui-sdk pin omnigent==X). The user-facing
 # brand is "agent-meow" — see README.md and web/index.html.
@@ -46,7 +46,7 @@ dependencies = [
     "httpx>=0.27,<1",
     "ftfy>=6.0",
     # Portable zombie-aware PID liveness checks for the host daemon
-    # lifecycle (omnigent/host/local_server.py).
+    # lifecycle (agent_meow/host/local_server.py).
     "psutil>=5.9,<8",
     # CEL (Common Expression Language) for inline policy evaluation.
     # Non-Turing-complete, side-effect-free, guaranteed to terminate.
@@ -55,18 +55,18 @@ dependencies = [
     # when the library is absent.
     'cel-expr-python>=0.1; platform_machine != "aarch64" and (sys_platform != "darwin" or platform_machine != "x86_64")',
     # OS keychain for storing model-provider API keys (OSS model
-    # selection). Used by omnigent/onboarding/secrets.py; falls back to
+    # selection). Used by agent_meow/onboarding/secrets.py; falls back to
     # a 0600 file when no keyring backend is available (e.g. headless).
     "keyring>=24,<26",
     # Round-trip (comment/format-preserving) TOML editing of the user's
     # ~/.codex/config.toml when removing a Databricks provider
-    # (omnigent/onboarding/ucode_cleanup.py). stdlib tomllib is read-only.
+    # (agent_meow/onboarding/ucode_cleanup.py). stdlib tomllib is read-only.
     "tomlkit>=0.12,<1",
     # omnigent deps (runtime, spec, server, persistent terminal, etc.).
     "alembic>=1.0,<2",
     "anyio>=4.0,<5",
     "cachetools>=5.0,<7",
-    # _HostGroup (omnigent/cli.py) rewrites a leading positional server URL
+    # _HostGroup (agent_meow/cli.py) rewrites a leading positional server URL
     # into `--server` before Click parses it, so it no longer depends on
     # Click's internal `protected_args` (made read-only in click 8.2, slated
     # for removal in click 9). Upper bound `<10` only guards against an
@@ -95,7 +95,7 @@ dependencies = [
     "PyJWT[crypto]>=2.8,<3",
     "argon2-cffi>=23.1,<24",
     # PEP 440 version comparison for the update check / `omni upgrade`
-    # (omnigent/update_check.py, omnigent/cli.py): compares the installed
+    # (agent_meow/update_check.py, agent_meow/cli.py): compares the installed
     # version against the latest PyPI release. Previously only a
     # transitive dep; pinned here now that we import it directly.
     "packaging>=23,<26",
@@ -244,16 +244,16 @@ dev = [
 
 [project.scripts]
 # Unified entry point. `omnigent` is the click-based CLI that absorbs
-# the legacy argparse commands from `omnigent/inner/cli.py` plus the
+# the legacy argparse commands from `agent_meow/inner/cli.py` plus the
 # omnigent `ap` subcommands. See designs/UNIFICATION.md § CLI
 # absorption. `omni` is installed as a short alias — both resolve to
 # the same entry point. `meow` and `agent-meow` are the Cubecloud
 # brand aliases for ColorFire and Meow series products — all four
 # resolve to the same entry point.
-omnigent = "omnigent.cli:main"
-omni = "omnigent.cli:main"
-meow = "omnigent.cli:main"
-agent-meow = "omnigent.cli:main"
+omnigent = "agent_meow.cli:main"
+omni = "agent_meow.cli:main"
+meow = "agent_meow.cli:main"
+agent-meow = "agent_meow.cli:main"
 
 # uv path-deps for the sibling SDK packages (renamed in Stage 3).
 [tool.uv.sources]
@@ -265,18 +265,20 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-# Discovers the `omnigent` package (including `omnigent.inner.*` and
-# all omnigent subpackages absorbed during unification).
-include = ["omnigent*"]
+# Discovers the `agent_meow` package (including `agent_meow.inner.*` and
+# all subpackages absorbed during unification). Also includes the thin
+# `omnigent` compat shim that redirects legacy `import omnigent` to
+# `import agent_meow`.
+include = ["agent_meow*", "omnigent"]
 
 [tool.setuptools.package-data]
-"omnigent.db" = ["alembic.ini"]
-"omnigent.db.migrations" = ["script.py.mako"]
-"omnigent.resources.examples" = ["*.yaml", "*.sh", "debby/**/*", "polly/**/*"]
-"omnigent.resources.pi_native" = ["*.js"]
+"agent_meow.db" = ["alembic.ini"]
+"agent_meow.db.migrations" = ["script.py.mako"]
+"agent_meow.resources.examples" = ["*.yaml", "*.sh", "debby/**/*", "polly/**/*"]
+"agent_meow.resources.pi_native" = ["*.js"]
 # include UI assets in build, plus the static API-only landing page served
 # at "/" when no web UI bundle is present
-"omnigent.server" = ["static/web-ui/**/*", "static/api_only_landing.html"]
+"agent_meow.server" = ["static/web-ui/**/*", "static/api_only_landing.html"]
 
 [tool.pytest.ini_options]
 # auto mode: async tests without @pytest.mark.asyncio() are auto-
@@ -337,7 +339,7 @@ playwright_visual_snapshot_failures_path = "tests/e2e_ui/visual/snapshot_failure
 
 [tool.coverage.run]
 # Measure the shipped package only; tests live under tests/.
-source = ["omnigent"]
+source = ["agent_meow"]
 # Each CI shard sets COVERAGE_FILE=artifacts/.coverage.<group> and writes
 # one data file (pytest-cov already combines the xdist workers within a
 # shard). `relative_files` stores paths relative to the repo root so the
@@ -349,7 +351,7 @@ relative_files = true
 show_missing = true
 # Report-only for now: no `fail_under`, so coverage never fails a build.
 # The code-coverage workflow reports against a plain `git checkout` that
-# has no generated files (e.g. omnigent/_build_info.py, written during
+# has no generated files (e.g. agent_meow/_build_info.py, written during
 # `uv sync` in the CI shards). Without this, `coverage report`/`xml` exit
 # 1 on "No source for code" and fail the step under `set -e`; ignore those
 # unreadable-source files instead.
@@ -363,11 +365,11 @@ line-length = 99
 # migration that belongs in its own cleanup PR.
 target-version = "py310"
 # Vendored upstream code — not ours to restyle.
-#  - ``omnigent/inner/databricks_mcps/google``: Google MCP server source.
+#  - ``agent_meow/inner/databricks_mcps/google``: Google MCP server source.
 #  - ``assistant-ui/``: assistant-ui.com React/Python suite imported as a
 #    vendored snapshot; tracked upstream, no in-tree edits.
 extend-exclude = [
-    "omnigent/inner/databricks_mcps/google",
+    "agent_meow/inner/databricks_mcps/google",
     "assistant-ui",
 ]
 
@@ -447,19 +449,19 @@ known-first-party = ["omnigent"]
 # files have a backlog of unused-arg, blind-except, and bugbear issues
 # that were invisible before. Graduate each subpath out of this list
 # as it's cleaned up.
-"omnigent/llms/**/*.py" = [
+"agent_meow/llms/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
-"omnigent/onboarding/**/*.py" = [
+"agent_meow/onboarding/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
-"omnigent/runtime/**/*.py" = [
+"agent_meow/runtime/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
-"omnigent/terminals/**/*.py" = [
+"agent_meow/terminals/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
-"omnigent/tools/**/*.py" = [
+"agent_meow/tools/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
 # The native Antigravity (agy) transcript forwarder / supervisor is a
@@ -468,7 +470,7 @@ known-first-party = ["omnigent"]
 # top-level catch is a deliberate, documented boundary catch — BLE001 is
 # waived for these top-level antigravity_native modules (see the inline
 # comments at each catch site).
-"omnigent/antigravity_native*.py" = ["BLE001"]
+"agent_meow/antigravity_native*.py" = ["BLE001"]
 "sdks/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
@@ -485,9 +487,9 @@ disallow_any_explicit = true
 # setup.py — build-time scaffolding that imports the (untyped) setuptools
 # build_py and subclasses it; not application code, so excluded from mypy
 # rather than pulling in types-setuptools just for one shim file.
-exclude = ["^omnigent/inner/databricks_mcps/google/", "^setup\\.py$"]
+exclude = ["^agent_meow/inner/databricks_mcps/google/", "^setup\\.py$"]
 # Incremental rollout: load imported modules for type info but don't
-# report their errors. Remove once every omnigent/ module is clean.
+# report their errors. Remove once every agent_meow/ module is clean.
 follow_imports = "silent"
 
 [[tool.mypy.overrides]]

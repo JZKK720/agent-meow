@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from omnigent.repl._event_tape import (
+from agent_meow.repl._event_tape import (
     EventTape,
     PipelineCounters,
     Stage,

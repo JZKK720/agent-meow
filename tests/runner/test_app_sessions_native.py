@@ -26,31 +26,31 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from omnigent import (
+from agent_meow import (
     claude_native_bridge,
     codex_native_bridge,
     cursor_native_bridge,
     kiro_native_bridge,
     qwen_native_bridge,
 )
-from omnigent.antigravity_native_bridge import (
+from agent_meow.antigravity_native_bridge import (
     ANTIGRAVITY_NATIVE_BRIDGE_ID_LABEL_KEY,
 )
-from omnigent.antigravity_native_bridge import (
+from agent_meow.antigravity_native_bridge import (
     is_placeholder_conversation_id as bridge_mod_is_placeholder,
 )
-from omnigent.claude_native_bridge import (
+from agent_meow.claude_native_bridge import (
     BRIDGE_ID_LABEL_KEY,
     bridge_dir_for_bridge_id,
     bridge_dir_for_conversation_id,
     prepare_bridge_dir,
     read_permission_hook_config,
 )
-from omnigent.entities.session_resources import SessionResourceView, terminal_resource_id
-from omnigent.inner.terminal import TerminalInstance
-from omnigent.runner import create_runner_app
-from omnigent.runner import tool_dispatch as _tool_dispatch
-from omnigent.runner.app import (
+from agent_meow.entities.session_resources import SessionResourceView, terminal_resource_id
+from agent_meow.inner.terminal import TerminalInstance
+from agent_meow.runner import create_runner_app
+from agent_meow.runner import tool_dispatch as _tool_dispatch
+from agent_meow.runner.app import (
     _RUNNER_DISPATCHED_FIELD,
     _WAKE_POST_MAX_ATTEMPTS,
     ResolvedSpec,
@@ -73,8 +73,8 @@ from omnigent.runner.app import (
     _terminal_lookup_miss_log_state,
     _wake_post_is_retryable,
 )
-from omnigent.runner.mcp_manager import McpSchemasResult
-from omnigent.runner.resource_registry import (
+from agent_meow.runner.mcp_manager import McpSchemasResult
+from agent_meow.runner.resource_registry import (
     ANTIGRAVITY_NATIVE_TERMINAL_ROLE,
     CLAUDE_NATIVE_TERMINAL_ROLE,
     CODEX_NATIVE_TERMINAL_ROLE,
@@ -83,8 +83,8 @@ from omnigent.runner.resource_registry import (
     PI_NATIVE_TERMINAL_ROLE,
     SessionResourceRegistry,
 )
-from omnigent.spec.types import AgentSpec, ExecutorSpec, LocalToolInfo, MCPServerConfig
-from omnigent.terminals import TerminalRegistry
+from agent_meow.spec.types import AgentSpec, ExecutorSpec, LocalToolInfo, MCPServerConfig
+from agent_meow.terminals import TerminalRegistry
 from tests.runner.helpers import NullServerClient
 
 # ── Fakes for the runner's collaborators ──────────────────────────────
@@ -461,7 +461,7 @@ async def test_session_labels_for_runner_spawn_timeout_is_quiet(
     """
     transport = _ReadTimeoutTransport()
     async with httpx.AsyncClient(transport=transport, base_url="http://ap") as client:
-        with caplog.at_level(logging.DEBUG, logger="omnigent.runner.app"):
+        with caplog.at_level(logging.DEBUG, logger="agent_meow.runner.app"):
             labels = await _session_labels_for_runner_spawn(
                 server_client=client,
                 session_id="conv_slow",
@@ -512,7 +512,7 @@ async def test_session_labels_for_runner_spawn_empty_200_body_recovers(
 
     transport = httpx.MockTransport(_handler)
     async with httpx.AsyncClient(transport=transport, base_url="http://ap") as client:
-        with caplog.at_level(logging.WARNING, logger="omnigent.runner.app"):
+        with caplog.at_level(logging.WARNING, logger="agent_meow.runner.app"):
             labels = await _session_labels_for_runner_spawn(
                 server_client=client,
                 session_id="conv_empty",
@@ -1758,7 +1758,7 @@ async def test_codex_top_level_session_needs_runner_terminal_for_all_session_sha
     host-id gate returns ``False`` here, ``omnigent codex`` falls back to
     a CLI-owned app-server.
     """
-    from omnigent.runner.app import _codex_session_needs_runner_terminal
+    from agent_meow.runner.app import _codex_session_needs_runner_terminal
 
     class _Client:
         async def get(self, url: str, *, timeout: float) -> httpx.Response:
@@ -1787,8 +1787,8 @@ async def test_auto_create_codex_terminal_uses_persisted_resume_launch_config(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    import omnigent.codex_native_app_server as codex_app_mod
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.codex_native_app_server as codex_app_mod
+    import agent_meow.runner.app as runner_app_mod
 
     session_id = "conv_codex_resume"
     thread_id = "019e96aa-0be2-7343-8d3b-6f914d60936b"
@@ -1796,7 +1796,7 @@ async def test_auto_create_codex_terminal_uses_persisted_resume_launch_config(
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
     bridge_dir = codex_native_bridge.bridge_dir_for_bridge_id(session_id)
     codex_native_bridge.write_bridge_state(
         bridge_dir,
@@ -2073,11 +2073,11 @@ async def test_auto_create_codex_terminal_fork_clones_rollout_and_resumes(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    import omnigent.codex_native_app_server as codex_app_mod
-    import omnigent.runner.app as runner_app_mod
-    from omnigent import codex_native
-    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
-    from omnigent.stores.conversation_store import (
+    import agent_meow.codex_native_app_server as codex_app_mod
+    import agent_meow.runner.app as runner_app_mod
+    from agent_meow import codex_native
+    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from agent_meow.stores.conversation_store import (
         FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY,
         FORK_SOURCE_LABEL_KEY,
     )
@@ -2092,7 +2092,7 @@ async def test_auto_create_codex_terminal_fork_clones_rollout_and_resumes(
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(workspace))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
     bridge_dir = bridge_dir_for_bridge_id(session_id)
     codex_native_bridge.write_bridge_state(
         bridge_dir,
@@ -2340,11 +2340,11 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    import omnigent.codex_native_app_server as codex_app_mod
-    import omnigent.runner.app as runner_app_mod
-    from omnigent import codex_native
-    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
-    from omnigent.stores.conversation_store import (
+    import agent_meow.codex_native_app_server as codex_app_mod
+    import agent_meow.runner.app as runner_app_mod
+    from agent_meow import codex_native
+    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from agent_meow.stores.conversation_store import (
         FORK_CARRY_HISTORY_LABEL_KEY,
         FORK_SOURCE_LABEL_KEY,
     )
@@ -2359,7 +2359,7 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(workspace))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
 
     patched_external_ids: list[str] = []
 
@@ -2596,9 +2596,9 @@ async def test_auto_create_codex_terminal_uses_worktree_workspace_not_bundle_dir
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    import omnigent.codex_native_app_server as codex_app_mod
-    import omnigent.runner.app as runner_app_mod
-    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    import agent_meow.codex_native_app_server as codex_app_mod
+    import agent_meow.runner.app as runner_app_mod
+    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     session_id = "conv_codex_worktree"
     # Three distinct dirs so the assertion can only pass for the worktree:
@@ -2616,7 +2616,7 @@ async def test_auto_create_codex_terminal_uses_worktree_workspace_not_bundle_dir
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(runner_env))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
     bridge_dir = codex_native_bridge.bridge_dir_for_bridge_id(session_id)
     codex_native_bridge.write_bridge_state(
         bridge_dir,
@@ -2847,15 +2847,15 @@ async def test_auto_create_codex_terminal_starts_relay_at_session_creation(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    import omnigent.codex_native_app_server as codex_app_mod
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.codex_native_app_server as codex_app_mod
+    import agent_meow.runner.app as runner_app_mod
 
     session_id = "conv_codex_relay_start"
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
 
     class _SnapshotClient:
         """Fresh-session snapshot (no external thread → discovery path)."""
@@ -3041,7 +3041,7 @@ async def test_claude_native_first_turn_not_blocked_by_cold_bridge_notify(
     # The runner imports post_tools_changed from this module at call time, so
     # patching the module attribute is picked up by _ensure_comment_relay_started.
     monkeypatch.setattr(
-        "omnigent.claude_native_bridge.post_tools_changed",
+        "agent_meow.claude_native_bridge.post_tools_changed",
         _blocking_post_tools_changed,
     )
 
@@ -3166,18 +3166,18 @@ async def _run_antigravity_auto_create(
     :returns: ``(bridge_state_after, start_cascade_calls, reader_calls,
         external_session_id_patch_calls)``.
     """
-    import omnigent.antigravity_native_bridge as bridge_mod
-    import omnigent.antigravity_native_launch as launch_mod
-    import omnigent.antigravity_native_reader as reader_mod
-    import omnigent.antigravity_native_rpc as rpc_mod
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.antigravity_native_bridge as bridge_mod
+    import agent_meow.antigravity_native_launch as launch_mod
+    import agent_meow.antigravity_native_reader as reader_mod
+    import agent_meow.antigravity_native_rpc as rpc_mod
+    import agent_meow.runner.app as runner_app_mod
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     (tmp_path / "workspace").mkdir(parents=True, exist_ok=True)
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
 
     # No-op the launch builder + onboarding seed so nothing tries to find agy.
     monkeypatch.setattr(
@@ -3502,9 +3502,9 @@ async def test_cold_start_agy_conversation_returns_early_on_real_id_in_bridge_st
     early-return BEFORE probing for a port or calling ``StartCascade`` — so even a
     future caller that forgets the resume gate cannot cold-start over a real id.
     """
-    import omnigent.antigravity_native_bridge as bridge_mod
-    import omnigent.antigravity_native_rpc as rpc_mod
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.antigravity_native_bridge as bridge_mod
+    import agent_meow.antigravity_native_rpc as rpc_mod
+    import agent_meow.runner.app as runner_app_mod
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     session_id = "conv_agy_guard"
@@ -3601,14 +3601,14 @@ async def test_auto_create_antigravity_wires_reader_task_and_interaction_bridge(
       with ``{elicitation_id, params}``, then — on the human verdict — delivers
       the answer to agy via ``handle_user_interaction`` (the bridge default).
     """
-    import omnigent.antigravity_native_bridge as bridge_mod
-    import omnigent.antigravity_native_interactions as interactions_mod
-    import omnigent.antigravity_native_launch as launch_mod
-    import omnigent.antigravity_native_reader as reader_mod
-    import omnigent.antigravity_native_rpc as rpc_mod
-    import omnigent.runner.app as runner_app_mod
-    from omnigent.antigravity_native_interactions import agy_elicitation_id
-    from omnigent.antigravity_native_steps import pending_interaction
+    import agent_meow.antigravity_native_bridge as bridge_mod
+    import agent_meow.antigravity_native_interactions as interactions_mod
+    import agent_meow.antigravity_native_launch as launch_mod
+    import agent_meow.antigravity_native_reader as reader_mod
+    import agent_meow.antigravity_native_rpc as rpc_mod
+    import agent_meow.runner.app as runner_app_mod
+    from agent_meow.antigravity_native_interactions import agy_elicitation_id
+    from agent_meow.antigravity_native_steps import pending_interaction
 
     session_id = "conv_agy_wiring"
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
@@ -3616,7 +3616,7 @@ async def test_auto_create_antigravity_wires_reader_task_and_interaction_bridge(
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     (tmp_path / "workspace").mkdir(parents=True, exist_ok=True)
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
     monkeypatch.setattr(
         launch_mod, "build_agy_launch", lambda **_kwargs: (("agy",), {"AGY_ENV": "1"})
     )
@@ -3785,11 +3785,11 @@ async def test_auto_create_antigravity_wires_omnigent_mcp_relay(
       env does not override ``HOME``, so agy keeps platform auth such as macOS
       Keychain but loads the bridge-scoped config.
     """
-    import omnigent.antigravity_native_bridge as bridge_mod
-    import omnigent.antigravity_native_launch as launch_mod
-    import omnigent.antigravity_native_reader as reader_mod
-    import omnigent.antigravity_native_rpc as rpc_mod
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.antigravity_native_bridge as bridge_mod
+    import agent_meow.antigravity_native_launch as launch_mod
+    import agent_meow.antigravity_native_reader as reader_mod
+    import agent_meow.antigravity_native_rpc as rpc_mod
+    import agent_meow.runner.app as runner_app_mod
 
     session_id = "conv_agy_mcp"
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
@@ -3797,7 +3797,7 @@ async def test_auto_create_antigravity_wires_omnigent_mcp_relay(
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     (tmp_path / "workspace").mkdir(parents=True, exist_ok=True)
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
     monkeypatch.setattr(bridge_mod, "ensure_agy_onboarding_complete", lambda: None)
     monkeypatch.setattr(runner_app_mod, "_terminal_tmux_pane", lambda *_a, **_k: (None, None))
     monkeypatch.setattr(rpc_mod, "_candidate_agy_rpc_ports", list)
@@ -3883,7 +3883,7 @@ async def test_auto_create_antigravity_wires_omnigent_mcp_relay(
     assert mcp_config.is_file()
     payload = json.loads(mcp_config.read_text(encoding="utf-8"))
     server = payload["mcpServers"]["omnigent"]
-    assert server["args"][:4] == ["-I", "-m", "omnigent.claude_native_bridge", "serve-mcp"]
+    assert server["args"][:4] == ["-I", "-m", "agent_meow.claude_native_bridge", "serve-mcp"]
     assert str(bridge_dir) in server["args"]
     assert "sys_session_create" in server["enabledTools"]
     # The bridge token the shared relay needs was written into the bridge dir.
@@ -3922,11 +3922,11 @@ async def test_auto_create_antigravity_prepends_gemini_dir_to_generated_flags(
     argv is preserved verbatim. This guards that invariant against a future change
     to the argv-composition line in ``_auto_create_antigravity_terminal``.
     """
-    import omnigent.antigravity_native_bridge as bridge_mod
-    import omnigent.antigravity_native_launch as launch_mod
-    import omnigent.antigravity_native_reader as reader_mod
-    import omnigent.antigravity_native_rpc as rpc_mod
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.antigravity_native_bridge as bridge_mod
+    import agent_meow.antigravity_native_launch as launch_mod
+    import agent_meow.antigravity_native_reader as reader_mod
+    import agent_meow.antigravity_native_rpc as rpc_mod
+    import agent_meow.runner.app as runner_app_mod
 
     session_id = "conv_agy_argv"
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
@@ -3934,7 +3934,7 @@ async def test_auto_create_antigravity_prepends_gemini_dir_to_generated_flags(
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     (tmp_path / "workspace").mkdir(parents=True, exist_ok=True)
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
     monkeypatch.setattr(bridge_mod, "ensure_agy_onboarding_complete", lambda: None)
     monkeypatch.setattr(runner_app_mod, "_terminal_tmux_pane", lambda *_a, **_k: (None, None))
     monkeypatch.setattr(rpc_mod, "_candidate_agy_rpc_ports", list)
@@ -4045,7 +4045,7 @@ async def test_codex_subagent_always_needs_runner_terminal(
     :param parent_host_id: The parent session's ``host_id`` value to simulate;
         ``"host_parent"`` (web-UI parent) or ``None`` (CLI-driven parent).
     """
-    from omnigent.runner.app import _codex_session_needs_runner_terminal
+    from agent_meow.runner.app import _codex_session_needs_runner_terminal
 
     class _Client:
         async def get(self, url: str, *, timeout: float) -> httpx.Response:
@@ -4086,7 +4086,7 @@ async def test_codex_session_needs_runner_terminal_false_without_client() -> Non
     host-spawned or sub-agent session, so it returns ``False`` — skipping
     auto-create rather than risking a competing setup.
     """
-    from omnigent.runner.app import _codex_session_needs_runner_terminal
+    from agent_meow.runner.app import _codex_session_needs_runner_terminal
 
     assert await _codex_session_needs_runner_terminal(None, "conv_x") is False
 
@@ -4101,8 +4101,8 @@ async def test_codex_discover_thread_and_forward_cleans_up_on_discovery_failure(
     Otherwise each failed host-spawned codex session orphans an app-server
     subprocess (and a dangling listener) for the runner's lifetime.
     """
-    from omnigent import codex_native_forwarder
-    from omnigent.runner.app import (
+    from agent_meow import codex_native_forwarder
+    from agent_meow.runner.app import (
         _AUTO_CODEX_APP_SERVERS,
         _codex_discover_thread_and_forward,
     )
@@ -4166,9 +4166,9 @@ async def test_codex_discover_thread_and_forward_records_accurate_startup_error(
     reads as "startup timed out", while a RuntimeError (TUI exited / event
     stream ended) must NOT be mislabeled as a timeout.
     """
-    from omnigent import codex_native_forwarder
-    from omnigent.codex_native_bridge import read_bridge_startup_error
-    from omnigent.runner.app import (
+    from agent_meow import codex_native_forwarder
+    from agent_meow.codex_native_bridge import read_bridge_startup_error
+    from agent_meow.runner.app import (
         _AUTO_CODEX_APP_SERVERS,
         _codex_discover_thread_and_forward,
     )
@@ -4242,7 +4242,7 @@ async def test_create_session_preserves_existing_event_queue() -> None:
     "working". Init must PRESERVE an existing queue — assert the
     pre-attached queue object survives init unchanged.
     """
-    from omnigent.runner.app import _session_event_queues_ref
+    from agent_meow.runner.app import _session_event_queues_ref
 
     app, _pm, _hc = _build_lifecycle_app()
     # Simulate the relay's GET /stream having already attached (lazily
@@ -4448,7 +4448,7 @@ async def test_session_stream_receives_events() -> None:
 @pytest.mark.asyncio
 async def test_session_stream_emits_heartbeat_on_idle() -> None:
     """The session stream emits an immediate and idle ``session.heartbeat``."""
-    import omnigent.runner.app as runner_app_module
+    import agent_meow.runner.app as runner_app_module
 
     original = runner_app_module._SESSION_STREAM_HEARTBEAT_S
     runner_app_module._SESSION_STREAM_HEARTBEAT_S = 0.05
@@ -5731,7 +5731,7 @@ async def test_session_creation_does_not_replay_trailing_user_for_codex_native(
     """
     import asyncio as _aio
 
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.runner.app as runner_app_mod
 
     session_id = "conv_codex_failed_recover"
     runner_app_mod._session_histories_ref.pop(session_id, None)
@@ -5789,7 +5789,7 @@ async def test_catch_up_scan_skips_codex_native_history_entries(
     """
     import asyncio as _aio
 
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.runner.app as runner_app_mod
 
     session_id = "conv_codex_catchup_skip"
     saved_histories = dict(runner_app_mod._session_histories_ref)
@@ -6590,7 +6590,7 @@ async def test_interrupt_forwards_to_harness_before_cancelling() -> None:
     """
     import asyncio as _aio
 
-    from omnigent.runner.app import _session_histories_ref
+    from agent_meow.runner.app import _session_histories_ref
 
     gate = _aio.Event()  # stream blocks forever
     fwd_gate = _aio.Event()  # interrupt forward blocks until released
@@ -6647,7 +6647,7 @@ async def test_interrupt_inserts_cancellation_items_in_history() -> None:
     """
     import asyncio as _aio
 
-    from omnigent.runner.app import _session_histories_ref
+    from agent_meow.runner.app import _session_histories_ref
 
     gate = _aio.Event()
     app, _pm, _hc = _build_interrupt_app(gate)
@@ -6765,7 +6765,7 @@ async def test_interrupt_cancel_floor_finalizes_stuck_turn() -> None:
     """
     import asyncio as _aio
 
-    from omnigent.runner.app import _session_histories_ref
+    from agent_meow.runner.app import _session_histories_ref
 
     gate = _aio.Event()  # never set — only the floor's task-cancel can end the turn
     app, _pm, _hc = _build_interrupt_app(gate)
@@ -6815,7 +6815,7 @@ async def test_stop_session_cancels_inprocess_turn() -> None:
     """
     import asyncio as _aio
 
-    from omnigent.runner.app import _session_histories_ref
+    from agent_meow.runner.app import _session_histories_ref
 
     gate = _aio.Event()  # never set
     app, _pm, _hc = _build_interrupt_app(gate)
@@ -6870,7 +6870,7 @@ async def test_interrupt_during_setup_phase_recovers_stuck_turn() -> None:
     """
     import asyncio as _aio
 
-    from omnigent.runner.app import _session_histories_ref
+    from agent_meow.runner.app import _session_histories_ref
 
     resolver_gate = _aio.Event()  # released only in teardown → spec resolution blocks
     resolver_entered = _aio.Event()
@@ -6963,7 +6963,7 @@ async def test_interrupt_marker_instructs_model_to_disregard_abandoned_request()
     """
     import asyncio as _aio
 
-    from omnigent.runner.app import _session_histories_ref
+    from agent_meow.runner.app import _session_histories_ref
 
     gate = _aio.Event()
     app, _pm, _hc = _build_interrupt_app(gate)
@@ -7034,8 +7034,8 @@ async def test_external_session_status_idle_delivers_forwarded_native_output_to_
     ``data.output`` value must be used for the parent inbox instead of
     falling back to the runner-local history.
     """
-    from omnigent.runner import app as runner_app
-    from omnigent.runner.tool_dispatch import execute_tool
+    from agent_meow.runner import app as runner_app
+    from agent_meow.runner.tool_dispatch import execute_tool
 
     parent_id = "conv_parent_native_complete"
     child_id = "conv_child_native_complete"
@@ -7113,7 +7113,7 @@ async def test_external_session_status_running_fans_out_child_busy_to_parent() -
     a ``session.child_session.updated`` delta with ``busy=True``; otherwise
     Nessie's Agents rail has no durable "Working" signal for native children.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_native_status_fanout"
     child_id = "conv_child_native_status_fanout"
@@ -7189,7 +7189,7 @@ async def test_external_status_sequence_coalesces_duplicates_but_emits_task_stat
     ``idle`` → ``failed`` sequence must still update ``current_task_status``
     from ``"completed"`` to ``"failed"`` even though both edges are non-busy.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_native_status_sequence"
     child_id = "conv_child_native_status_sequence"
@@ -7288,7 +7288,7 @@ async def test_external_status_idle_fans_out_forwarded_output_preview_to_parent(
     value forwarded by AP; otherwise the Agents rail can replace the real
     native reply with stale runner-local text while clearing the spinner.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_native_preview_fanout"
     child_id = "conv_child_native_preview_fanout"
@@ -7362,7 +7362,7 @@ async def test_external_status_idle_without_output_omits_stale_history_preview()
     persistence. The inbox receives an explicit empty result so the parent can
     still observe completion without fabricated output.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_native_no_preview"
     child_id = "conv_child_native_no_preview"
@@ -7487,7 +7487,7 @@ async def test_native_subagent_completion_wakes_idle_parent() -> None:
     the inbox still fills but no parent ``/events`` POST is made — exactly the
     "nessie doesn't know its sub-agent finished" bug this fixes.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_wake"
     child_id = "conv_child_wake"
@@ -7592,7 +7592,7 @@ async def test_tracked_subagent_status_without_parent_inbox_returns_503() -> Non
     204 would tell AP/the forwarder the completion was delivered even though
     the parent can never drain it.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_missing_inbox"
     child_id = "conv_child_missing_inbox"
@@ -7640,7 +7640,7 @@ def test_subagent_terminal_delivery_retry_uses_latest_undelivered_report() -> No
     parent should receive that latest report rather than stale cancellation
     text from the first failed delivery attempt.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_retry_missing_inbox"
     child_id = "conv_child_retry_missing_inbox"
@@ -7692,7 +7692,7 @@ def test_subagent_terminal_delivery_handles_missing_output() -> None:
     message. That must not become an unstructured ``RuntimeError`` after the
     parent inbox is available.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_missing_output"
     child_id = "conv_child_missing_output"
@@ -7774,7 +7774,7 @@ async def test_repeated_idle_status_wakes_parent_only_once() -> None:
     re-deliver or re-wake — this is what keeps a parallel fan-out (or a
     forwarder that re-sends idle) from triggering a wake storm.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_wake_once"
     child_id = "conv_child_wake_once"
@@ -7834,7 +7834,7 @@ async def test_delete_session_clears_pending_subagent_wake() -> None:
     away too; otherwise a later session reusing the same id can receive a child
     result in its inbox but never get the wake notice that tells it to drain.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_delete_clears_wake"
     first_child_id = "conv_child_before_delete"
@@ -7921,7 +7921,7 @@ async def test_subagent_completion_during_parent_wake_turn_posts_followup_wake()
     turn is still active should therefore enqueue a follow-up wake rather than
     leaving the result stranded until a human sends another message.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_wake_turn_race"
     first_child_id = "conv_child_initial_wake"
@@ -8032,7 +8032,7 @@ async def test_parent_idle_with_stuck_wake_flag_posts_recovery_wake() -> None:
     *coalesced* against the re-armed flag (inbox grows, no 4th wake). Child C is
     kept only to pin that coalesce contract — the signal is the step-3 wake.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_rewake_after_consume"
     child_a = "conv_child_round1_a"
@@ -8247,7 +8247,7 @@ async def test_parent_idle_with_stuck_wake_flag_and_drained_inbox_clears_flag() 
     fresh wake [3]. Under the bug, step 4 leaves the flag set, so step 5's C
     is debounced (count stays [2]) and C's result strands.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_rewake_drained_inbox"
     child_a = "conv_child_drained_a"
@@ -8455,8 +8455,8 @@ async def test_replayed_idle_status_after_inbox_drain_is_acknowledged() -> None:
     sees an already-delivered ack instead of a false ``missing_work_entry``
     503 for a still-known child session.
     """
-    from omnigent.runner import app as runner_app
-    from omnigent.runner.tool_dispatch import execute_tool
+    from agent_meow.runner import app as runner_app
+    from agent_meow.runner.tool_dispatch import execute_tool
 
     parent_id = "conv_parent_drain_replay"
     child_id = "conv_child_drain_replay"
@@ -8543,7 +8543,7 @@ async def test_concurrent_subagent_completions_coalesce_into_one_wake() -> None:
     and tripping the executor's per-turn tool-context guard ("no active turn
     context") — the regression this guards against.
     """
-    from omnigent.runner import app as runner_app
+    from agent_meow.runner import app as runner_app
 
     parent_id = "conv_parent_fanout"
     child_ids = ["conv_child_fan_a", "conv_child_fan_b", "conv_child_fan_c"]
@@ -8629,8 +8629,8 @@ async def test_events_interrupt_on_native_session_injects_escape_without_marker(
     user bubble is back; if a synthesized idle reappears in 3, the
     watcher desync bug is back.
     """
-    from omnigent.runner.app import _session_event_queues_ref, _session_histories_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref, _session_histories_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     captured_inject: list[Any] = []
 
@@ -8805,7 +8805,7 @@ async def test_message_turn_lifecycle_status_suppressed_for_terminal_backed_harn
         on the session stream, e.g. ``["running", "idle"]``.
     :returns: None.
     """
-    from omnigent.runner.app import _session_event_queues_ref
+    from agent_meow.runner.app import _session_event_queues_ref
 
     session_id = f"conv_ts_{harness.replace('-', '_')}"
     spec = AgentSpec(
@@ -8911,8 +8911,8 @@ async def test_events_interrupt_on_native_session_503_skips_cleanup_when_inject_
     refactor the responsibility lives on the runner, so the
     invariant is pinned here.
     """
-    from omnigent.runner.app import _session_event_queues_ref, _session_histories_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref, _session_histories_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(bridge_dir: Any, *, timeout_s: float) -> None:
         """Simulate the bridge-not-ready path."""
@@ -9034,7 +9034,7 @@ class _RecordingCodexAppServerClient:
     Test double for Codex app-server JSON-RPC controls.
 
     :param transport: Transport passed to
-        :func:`omnigent.codex_native_app_server.client_for_transport`, e.g.
+        :func:`~?agent_meow.codex_native_app_server.client_for_transport`, e.g.
         ``"ws://127.0.0.1:1234"``.
     :param client_name: App-server client name, e.g.
         ``"omnigent-codex-native-runner"``.
@@ -9123,8 +9123,8 @@ async def test_events_codex_native_settings_change_uses_thread_settings_update(
     204 as a no-op. The update is a next-turn setting: it is valid even when
     no active turn id is recorded.
     """
-    from omnigent import codex_native_app_server
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow import codex_native_app_server
+    from agent_meow.spec.types import ExecutorSpec
 
     conv_id = "conv_codex_native_settings"
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
@@ -9229,7 +9229,7 @@ async def test_codex_native_model_options_returns_503_until_bridge_state_exists(
     is still creating its app-server bridge; that would permanently hide the
     Web UI model picker for the session.
     """
-    from omnigent import codex_native_app_server
+    from agent_meow import codex_native_app_server
 
     conv_id = "conv_codex_native_model_options_not_ready"
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
@@ -9307,8 +9307,8 @@ async def test_codex_native_model_options_query_model_list(
     this endpoint should ask Codex for models and return those model objects
     unchanged for the AP snapshot.
     """
-    from omnigent import codex_native_app_server
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow import codex_native_app_server
+    from agent_meow.spec.types import ExecutorSpec
 
     conv_id = "conv_codex_native_model_options"
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
@@ -9531,9 +9531,9 @@ async def test_events_interrupt_on_codex_native_uses_turn_interrupt_without_mark
     3. The session is NOT added to ``_interrupted_sessions``; no marker in
        ``_session_histories``.
     """
-    from omnigent import codex_native_app_server
-    from omnigent.runner.app import _session_histories_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow import codex_native_app_server
+    from agent_meow.runner.app import _session_histories_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     conv_id = "conv_codex_native_int"
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
@@ -9679,9 +9679,9 @@ async def test_events_stop_session_on_codex_native_uses_turn_interrupt_without_m
     3. The session is NOT added to ``_interrupted_sessions``; no marker leaks
        into ``_session_histories``.
     """
-    from omnigent import codex_native_app_server
-    from omnigent.runner.app import _session_histories_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow import codex_native_app_server
+    from agent_meow.runner.app import _session_histories_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     conv_id = "conv_codex_native_stop"
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
@@ -9836,9 +9836,9 @@ async def test_events_interrupt_and_stop_on_pi_native_enqueue_bridge_interrupt(
     2. An ``interrupt_*`` payload is written to the session's bridge inbox.
     3. NO ``[System: interrupted]`` marker is persisted (the floor never ran).
     """
-    import omnigent.pi_native_bridge as pi_native_bridge
-    from omnigent.runner.app import _session_histories_ref
-    from omnigent.spec.types import ExecutorSpec
+    import agent_meow.pi_native_bridge as pi_native_bridge
+    from agent_meow.runner.app import _session_histories_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     conv_id = f"conv_pi_native_{event_type}"
     monkeypatch.setattr(pi_native_bridge, "_BRIDGE_ROOT", tmp_path / "pi-bridge")
@@ -9966,8 +9966,8 @@ async def test_events_stop_session_on_native_kills_tmux_and_publishes_idle(
        being torn down, not interrupted mid-turn. A stray marker would
        be the interrupt handler leaking into the stop path.
     """
-    from omnigent.runner.app import _session_event_queues_ref, _session_histories_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref, _session_histories_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     captured_kill: list[Any] = []
 
@@ -10081,8 +10081,8 @@ async def test_stop_session_on_native_subagent_reclaims_work_entry(
     Pre-fix the kill happened but the entry was never reclaimed (the parent could
     hang thinking the worker was still running).
     """
-    from omnigent.runner import app as runner_app
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner import app as runner_app
+    from agent_meow.spec.types import ExecutorSpec
 
     parent_id = "conv_parent_stop_reclaim"
     worker_id = "conv_worker_stop_reclaim"
@@ -10155,8 +10155,8 @@ async def test_stop_session_on_native_subagent_without_parent_inbox_returns_204(
     204 so agent-meow can finish host-runner teardown and write the deliberate-stop
     label even if parent delivery cannot be confirmed.
     """
-    from omnigent.runner import app as runner_app
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner import app as runner_app
+    from agent_meow.spec.types import ExecutorSpec
 
     parent_id = "conv_parent_stop_missing_inbox"
     worker_id = "conv_worker_stop_missing_inbox"
@@ -10230,8 +10230,8 @@ async def test_events_stop_session_on_native_returns_503_when_kill_fails(
     surface a 503 rather than lie to the web UI with a 204 + idle
     that says "stopped" while the session may still be alive.
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_kill(bridge_dir: Any, *, timeout_s: float) -> None:
         """Simulate the bridge-not-ready path."""
@@ -10310,7 +10310,7 @@ async def test_events_stop_session_on_non_native_session_is_204_noop(
     harness-agnostic and forwards stop_session for any session, so the
     runner must accept it and 204 — never reach ``kill_session``.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_kill(bridge_dir: Any, *, timeout_s: float) -> None:
         """Fail the test if a non-native session reaches the killer."""
@@ -10376,8 +10376,8 @@ async def test_events_stop_session_closes_terminal_and_publishes_deleted(
     stop handler must therefore close each of the session's terminals and
     publish ``session.resource.deleted`` so connected clients drop them.
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
     from tests.runner.helpers import make_test_terminal_instance
 
     def _fake_kill(bridge_dir: Any, *, timeout_s: float) -> None:
@@ -10474,8 +10474,8 @@ async def test_required_terminal_exit_publishes_deleted_and_failed(tmp_path: Pat
 
     :param tmp_path: Temporary directory for fake terminal paths.
     """
-    from omnigent.runner import app as runner_app
-    from omnigent.runner.app import _session_event_queues_ref
+    from agent_meow.runner import app as runner_app
+    from agent_meow.runner.app import _session_event_queues_ref
     from tests.runner.helpers import make_test_terminal_instance
 
     parent_id = f"conv_parent_required_exit_{uuid.uuid4().hex[:12]}"
@@ -10617,8 +10617,8 @@ async def test_required_terminal_exit_while_idle_does_not_fail_session(tmp_path:
 
     :param tmp_path: Temporary directory for fake terminal paths.
     """
-    from omnigent.runner import app as runner_app
-    from omnigent.runner.app import _session_event_queues_ref
+    from agent_meow.runner import app as runner_app
+    from agent_meow.runner.app import _session_event_queues_ref
     from tests.runner.helpers import make_test_terminal_instance
 
     parent_id = f"conv_parent_idle_exit_{uuid.uuid4().hex[:12]}"
@@ -10744,9 +10744,9 @@ async def test_required_terminal_clean_quit_publishes_idle_not_failed(
 
     :param terminal_name: The native terminal that the user quit cleanly.
     """
-    from omnigent.runner import app as runner_app
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.runner.resource_registry import (
+    from agent_meow.runner import app as runner_app
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.runner.resource_registry import (
         TerminalExitEvent,
         TerminalLifecycle,
     )
@@ -10820,7 +10820,7 @@ async def test_external_idle_status_makes_required_terminal_exit_clean(tmp_path:
 
     :param tmp_path: Temporary directory for fake terminal paths.
     """
-    from omnigent.runner.app import _session_event_queues_ref
+    from agent_meow.runner.app import _session_event_queues_ref
     from tests.runner.helpers import make_test_terminal_instance
 
     conv_id = f"conv_kiro_external_idle_exit_{uuid.uuid4().hex[:12]}"
@@ -10916,8 +10916,8 @@ async def test_events_effort_change_on_native_session_types_slash_command(
     would fall through to the generic harness-forward and 404, leaving
     the dropdown click silently ineffective.
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     captured: list[Any] = []
 
@@ -11038,7 +11038,7 @@ async def test_events_effort_change_on_native_session_skips_inject_for_unsupport
     Pins that the validation lives in the runner (where the
     harness-specific knowledge belongs), not in the agent-meow server.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(
         bridge_dir: Any,
@@ -11110,7 +11110,7 @@ async def test_events_effort_change_on_native_session_returns_503_when_bridge_no
     still returns 200 with the persisted value — the next spawn
     will apply the new effort via ``--effort``.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(
         bridge_dir: Any,
@@ -11182,7 +11182,7 @@ async def test_events_effort_change_on_non_native_session_is_204_noop(
     event and 204 — never reach the slash-command injector, never
     forward to the harness scaffold.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(
         bridge_dir: Any,
@@ -11261,8 +11261,8 @@ async def test_events_compact_on_native_session_types_slash_command(
     the agent-meow server fall through to ``_run_compact_locked``, which 400s
     on the LLM-less claude-native pseudo-agent — the original bug.
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     captured: list[Any] = []
 
@@ -11366,7 +11366,7 @@ async def test_events_compact_on_native_session_returns_503_when_bridge_not_read
     server treats a non-200/204 runner response as an error rather
     than silently running its own (wrong) compaction.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(
         bridge_dir: Any,
@@ -11436,7 +11436,7 @@ async def test_events_compact_on_codex_native_injects_slash_command(
     load-bearing: the agent-meow server reads it to skip its own
     AP-side compaction.
     """
-    from omnigent.runner.app import _session_event_queues_ref
+    from agent_meow.runner.app import _session_event_queues_ref
     from tests.runner.helpers import make_test_terminal_instance
 
     captured: list[tuple[str, list[str]]] = []
@@ -11672,8 +11672,8 @@ async def test_events_compact_on_cursor_native_pastes_summarize_and_raises_spinn
        the cursor forwarder when it observes the summary blob (covered by
        ``tests/test_cursor_native_forwarder.py``).
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     monkeypatch.setattr(cursor_native_bridge, "_BRIDGE_ROOT", tmp_path / "cursor-bridge")
 
@@ -11792,8 +11792,8 @@ async def test_events_compact_on_cursor_native_503_dismisses_spinner_on_inject_f
     both the tmux ``RuntimeError`` and the tempfile ``OSError`` surfaces; the
     latter is unique to cursor's bracketed-paste path.
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     monkeypatch.setattr(cursor_native_bridge, "_BRIDGE_ROOT", tmp_path / "cursor-bridge")
 
@@ -11886,9 +11886,9 @@ async def test_events_compact_on_pi_native_enqueues_compact_payload(
     2. A ``compact_*`` payload is written to the session's bridge inbox.
     3. /compact is a control signal and publishes no ``session.status`` events.
     """
-    import omnigent.pi_native_bridge as pi_native_bridge
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    import agent_meow.pi_native_bridge as pi_native_bridge
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     conv_id = "conv_pi_native_compact"
     monkeypatch.setattr(pi_native_bridge, "_BRIDGE_ROOT", tmp_path / "pi-bridge")
@@ -11973,8 +11973,8 @@ async def test_events_compact_on_pi_native_returns_503_when_inbox_unwritable(
     ``pi_native_compact_failed`` code rather than silently swallowing the
     request; the agent-meow server then treats it as not-handled.
     """
-    import omnigent.pi_native_bridge as pi_native_bridge
-    from omnigent.spec.types import ExecutorSpec
+    import agent_meow.pi_native_bridge as pi_native_bridge
+    from agent_meow.spec.types import ExecutorSpec
 
     conv_id = "conv_pi_native_compact_fail"
     monkeypatch.setattr(pi_native_bridge, "_BRIDGE_ROOT", tmp_path / "pi-bridge")
@@ -12042,8 +12042,8 @@ async def test_events_compact_on_qwen_native_submits_compress_and_raises_spinner
     ``in_progress``; the ``completed`` edge is the compaction mirror's job once
     the ``chat_compression`` record lands (covered in test_qwen_native_forwarder).
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     captured: list[tuple[Any, str]] = []
 
@@ -12115,8 +12115,8 @@ async def test_events_compact_on_qwen_native_503_dismisses_spinner_on_submit_fai
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A submit failure surfaces as 503 AND dismisses the spinner (in_progress->failed)."""
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_submit(bridge_dir: Any, *, content: str) -> None:
         del bridge_dir, content
@@ -12176,7 +12176,7 @@ async def test_events_compact_on_qwen_native_503_dismisses_spinner_on_submit_fai
 class _FakeOpenCodeCompactClient:
     """OpenCode client stub recording ``summarize`` calls for compact tests.
 
-    Stands in for :class:`omnigent.opencode_native_client.OpenCodeClient` so
+    Stands in for :class:`~?agent_meow.opencode_native_client.OpenCodeClient` so
     the opencode-native compact handler's model-resolution + ``/summarize``
     call is observable without a live ``opencode serve``.
     """
@@ -12266,11 +12266,11 @@ async def _drive_opencode_native_compact(
     :param summarize_error: When set, ``summarize`` raises it (503 path).
     :returns: ``(response, fake_client)`` for the compact POST.
     """
-    from omnigent import opencode_native_bridge
-    from omnigent.opencode_native_bridge import OpenCodeNativeBridgeState
-    from omnigent.opencode_native_client import OpenCodeSession
-    from omnigent.runner.app import _AUTO_OPENCODE_SERVERS, _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow import opencode_native_bridge
+    from agent_meow.opencode_native_bridge import OpenCodeNativeBridgeState
+    from agent_meow.opencode_native_client import OpenCodeSession
+    from agent_meow.runner.app import _AUTO_OPENCODE_SERVERS, _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
     from tests.runner.helpers import make_test_terminal_instance
 
     opencode_native_spec = AgentSpec(
@@ -12342,8 +12342,8 @@ def test_resolve_opencode_compact_model_prefers_latest_assistant_message() -> No
     must iterate in reverse and ignore user-role messages, picking the live
     model even when a session ``model`` and a ``model_override`` also resolve.
     """
-    from omnigent.opencode_native_client import OpenCodeSession
-    from omnigent.runner.app import _resolve_opencode_compact_model
+    from agent_meow.opencode_native_client import OpenCodeSession
+    from agent_meow.runner.app import _resolve_opencode_compact_model
 
     session = OpenCodeSession.from_payload(
         {"id": "ses_x", "model": {"providerID": "stale", "id": "stale-model"}}
@@ -12377,8 +12377,8 @@ def test_resolve_opencode_compact_model_falls_back_to_session_model() -> None:
     ``modelID``). An assistant message missing ``modelID`` must be skipped so
     the session field is used.
     """
-    from omnigent.opencode_native_client import OpenCodeSession
-    from omnigent.runner.app import _resolve_opencode_compact_model
+    from agent_meow.opencode_native_client import OpenCodeSession
+    from agent_meow.runner.app import _resolve_opencode_compact_model
 
     session = OpenCodeSession.from_payload(
         {"id": "ses_x", "model": {"providerID": "anthropic", "id": "claude-opus-4"}}
@@ -12398,8 +12398,8 @@ def test_resolve_opencode_compact_model_falls_back_to_model_override() -> None:
     A model id may itself contain ``/`` (e.g. an OpenRouter slug), so only the
     FIRST separator delimits provider from model.
     """
-    from omnigent.opencode_native_client import OpenCodeSession
-    from omnigent.runner.app import _resolve_opencode_compact_model
+    from agent_meow.opencode_native_client import OpenCodeSession
+    from agent_meow.runner.app import _resolve_opencode_compact_model
 
     session = OpenCodeSession.from_payload({"id": "ses_x"})
 
@@ -12417,8 +12417,8 @@ def test_resolve_opencode_compact_model_returns_none_when_unresolvable() -> None
     Covers the live agent-meow flow: the session is created without a model and
     has no assistant turn yet, and no override is set.
     """
-    from omnigent.opencode_native_client import OpenCodeSession
-    from omnigent.runner.app import _resolve_opencode_compact_model
+    from agent_meow.opencode_native_client import OpenCodeSession
+    from agent_meow.runner.app import _resolve_opencode_compact_model
 
     session = OpenCodeSession.from_payload({"id": "ses_x"})
 
@@ -12563,7 +12563,7 @@ async def test_events_compact_on_opencode_native_503_when_summarize_raises(
     The agent-meow server must see the failure (rather than a silent fallback)
     so it does not run a duplicate compaction.
     """
-    from omnigent.opencode_native_client import OpenCodeClientError
+    from agent_meow.opencode_native_client import OpenCodeClientError
 
     resp, client = await _drive_opencode_native_compact(
         monkeypatch,
@@ -12606,7 +12606,7 @@ async def test_events_compact_on_non_native_session_is_204_noop(
     and 204 — never reach the slash-command injector. The 204 tells the
     agent-meow server to run its own compaction.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(
         bridge_dir: Any,
@@ -12668,7 +12668,7 @@ async def test_events_compact_on_non_native_session_is_204_noop(
     "event_payload,inject_attr",
     # ``/fork`` creates a new conversation that reuses the
     # same Claude process (same bridge_dir), so the new session has
-    # bridge_id != conv_id, stored on the ``omnigent.claude_native
+    # bridge_id != conv_id, stored on the ``agent_meow.claude_native
     # .bridge_id`` label. The runner-side native dispatch MUST
     # resolve bridge_id via ``_claude_native_bridge_id_for_session``
     # so the slash command lands in the right pane. Using
@@ -12698,7 +12698,7 @@ async def test_events_native_dispatch_resolves_bridge_id_via_label_lookup(
     handlers used ``bridge_dir_for_conversation_id(conv_id)``
     directly, which is broken for ``/fork`` sessions (bridge_id !=
     conv_id, stored on label
-    ``omnigent.claude_native.bridge_id``).
+    ``agent_meow.claude_native.bridge_id``).
 
     Strategy: monkeypatch ``_claude_native_bridge_id_for_session``
     to return a sentinel bridge_id distinct from conv_id. Then
@@ -12708,9 +12708,9 @@ async def test_events_native_dispatch_resolves_bridge_id_via_label_lookup(
     directly. If the handler regresses to the conv_id-only path,
     the assertion fails.
     """
-    from omnigent.claude_native_bridge import bridge_dir_for_bridge_id
-    from omnigent.runner import app as runner_app_module
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.claude_native_bridge import bridge_dir_for_bridge_id
+    from agent_meow.runner import app as runner_app_module
+    from agent_meow.spec.types import ExecutorSpec
 
     captured_bridge_dir: list[Any] = []
 
@@ -12800,8 +12800,8 @@ async def test_events_model_change_on_native_session_types_slash_command(
     runner dispatch routes model_change to the native handler and
     assembles the right slash command.
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     captured: list[Any] = []
 
@@ -12890,8 +12890,8 @@ async def test_events_model_change_on_kiro_session_types_slash_command(
     Pins that the runner dispatch routes model_change to the kiro handler.
     Mirrors ``test_events_model_change_on_native_session_types_slash_command``.
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     captured: list[Any] = []
 
@@ -12963,7 +12963,7 @@ async def test_events_model_change_on_native_session_skips_inject_for_empty_or_n
     Pins that the empty-value validation lives in the runner native
     handler, not in the agent-meow server.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(
         bridge_dir: Any,
@@ -13031,7 +13031,7 @@ async def test_events_model_change_on_native_session_returns_503_when_bridge_not
     swallows this 503 and still returns 200 with the persisted
     value — the next spawn applies the new model via ``--model``.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(
         bridge_dir: Any,
@@ -13099,7 +13099,7 @@ async def test_events_model_change_on_non_native_session_is_204_noop(
     must accept the event with a 204 — never reach the slash-command
     injector.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(
         bridge_dir: Any,
@@ -13166,7 +13166,7 @@ async def test_events_model_change_on_cursor_native_session_types_slash_command(
     (not the claude slash injector and not a 204 no-op) and pass the
     model id straight through.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     captured: list[tuple[Any, str, float]] = []
 
@@ -13229,7 +13229,7 @@ async def test_events_model_change_on_cursor_native_session_skips_inject_for_emp
     clear only takes effect on the next spawn — mirrors the claude-native
     skip test.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(bridge_dir: Any, *, model: str, timeout_s: float) -> None:
         """Fail the test if the runner reaches inject for an empty value."""
@@ -13285,7 +13285,7 @@ async def test_events_model_change_on_cursor_native_session_returns_503_when_not
     (pane not attached yet) returns 503 with the cursor-specific error
     code; agent-meow server swallows it and the next spawn applies ``--model``.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(bridge_dir: Any, *, model: str, timeout_s: float) -> None:
         """Simulate the bridge-not-ready path."""
@@ -13346,7 +13346,7 @@ async def test_events_effort_change_on_cursor_native_session_is_disabled_noop(
     effort value (cursor-native is excluded from the effort_change gate, and the
     effort injector no longer exists).
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     native_spec = AgentSpec(
         spec_version=1,
@@ -13416,7 +13416,7 @@ async def test_auto_create_claude_terminal_registers_permission_hook(
         forwarder_kwargs.update(kwargs)
 
     monkeypatch.setattr(
-        "omnigent.claude_native_forwarder.supervise_forwarder",
+        "agent_meow.claude_native_forwarder.supervise_forwarder",
         _no_op_forwarder,
     )
 
@@ -13481,7 +13481,7 @@ async def test_auto_create_claude_terminal_registers_permission_hook(
     # session keeps forwarding after the ~1h OAuth token expires.
     # ``_auto_create_claude_terminal`` schedules the forwarder as a task;
     # yield once so the stub records its kwargs before asserting.
-    from omnigent.runner._entry import _RunnerDatabricksAuth
+    from agent_meow.runner._entry import _RunnerDatabricksAuth
 
     await asyncio.sleep(0)
     assert isinstance(forwarder_kwargs.get("auth"), _RunnerDatabricksAuth)
@@ -13507,9 +13507,9 @@ async def test_auto_create_pi_terminal_launches_required_terminal(
     :param tmp_path: Pytest-provided temporary directory.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    import omnigent.pi_native as pi_native
-    import omnigent.pi_native_bridge as pi_native_bridge
-    import omnigent.pi_native_credentials as pi_native_credentials
+    import agent_meow.pi_native as pi_native
+    import agent_meow.pi_native_bridge as pi_native_bridge
+    import agent_meow.pi_native_credentials as pi_native_credentials
 
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://127.0.0.1:8000")
     monkeypatch.setattr(pi_native_bridge, "_BRIDGE_ROOT", tmp_path / "pi-bridge")
@@ -13532,7 +13532,7 @@ async def test_auto_create_pi_terminal_launches_required_terminal(
             external_session_id=None,
         )
 
-    monkeypatch.setattr("omnigent.runner.app._pi_native_launch_config", _fake_launch_config)
+    monkeypatch.setattr("agent_meow.runner.app._pi_native_launch_config", _fake_launch_config)
 
     captured: dict[str, Any] = {}
 
@@ -13588,7 +13588,7 @@ async def test_auto_create_kiro_terminal_launches_required_terminal_with_isolate
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Kiro-native auto-create launches the TUI and session forwarder."""
-    import omnigent.kiro_native as kiro_native
+    import agent_meow.kiro_native as kiro_native
 
     monkeypatch.setenv("PATH", "/usr/bin")
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
@@ -13615,11 +13615,11 @@ async def test_auto_create_kiro_terminal_launches_required_terminal_with_isolate
         relay_calls.append({"session_id": session_id, **kwargs})
 
     monkeypatch.setattr(
-        "omnigent.kiro_native_session_forwarder.supervise_kiro_session_forwarder",
+        "agent_meow.kiro_native_session_forwarder.supervise_kiro_session_forwarder",
         _fake_supervise_kiro_session_forwarder,
     )
     monkeypatch.setattr(
-        "omnigent.kiro_native_permissions.supervise_kiro_permission_mirror",
+        "agent_meow.kiro_native_permissions.supervise_kiro_permission_mirror",
         _fake_supervise_kiro_permission_mirror,
     )
 
@@ -13630,7 +13630,7 @@ async def test_auto_create_kiro_terminal_launches_required_terminal_with_isolate
             external_session_id="kiro-session-123",
         )
 
-    monkeypatch.setattr("omnigent.runner.app._kiro_native_launch_config", _fake_launch_config)
+    monkeypatch.setattr("agent_meow.runner.app._kiro_native_launch_config", _fake_launch_config)
 
     captured: dict[str, Any] = {}
 
@@ -13739,7 +13739,7 @@ async def test_auto_create_kiro_terminal_skips_mcp_wiring_without_relay(
     to route calls back to. With ``ensure_comment_relay`` absent the gate must
     short-circuit: no workspace ``mcp.json`` is written.
     """
-    import omnigent.kiro_native as kiro_native
+    import agent_meow.kiro_native as kiro_native
 
     monkeypatch.setenv("PATH", "/usr/bin")
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
@@ -13755,11 +13755,11 @@ async def test_auto_create_kiro_terminal_skips_mcp_wiring_without_relay(
         return None
 
     monkeypatch.setattr(
-        "omnigent.kiro_native_session_forwarder.supervise_kiro_session_forwarder",
+        "agent_meow.kiro_native_session_forwarder.supervise_kiro_session_forwarder",
         _noop_supervise,
     )
     monkeypatch.setattr(
-        "omnigent.kiro_native_permissions.supervise_kiro_permission_mirror",
+        "agent_meow.kiro_native_permissions.supervise_kiro_permission_mirror",
         _noop_supervise,
     )
     mcp_writes: list[Any] = []
@@ -13776,7 +13776,7 @@ async def test_auto_create_kiro_terminal_skips_mcp_wiring_without_relay(
             external_session_id=None,
         )
 
-    monkeypatch.setattr("omnigent.runner.app._kiro_native_launch_config", _fake_launch_config)
+    monkeypatch.setattr("agent_meow.runner.app._kiro_native_launch_config", _fake_launch_config)
 
     class _FakeResourceRegistry:
         terminal_registry = None
@@ -13828,10 +13828,10 @@ async def test_auto_create_pi_terminal_inherits_agent_sandbox(
     :param tmp_path: Pytest-provided temporary directory.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    import omnigent.pi_native as pi_native
-    import omnigent.pi_native_bridge as pi_native_bridge
-    import omnigent.pi_native_credentials as pi_native_credentials
-    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    import agent_meow.pi_native as pi_native
+    import agent_meow.pi_native_bridge as pi_native_bridge
+    import agent_meow.pi_native_credentials as pi_native_credentials
+    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://127.0.0.1:8000")
     monkeypatch.setattr(pi_native_bridge, "_BRIDGE_ROOT", tmp_path / "pi-bridge")
@@ -13850,7 +13850,7 @@ async def test_auto_create_pi_terminal_inherits_agent_sandbox(
             external_session_id=None,
         )
 
-    monkeypatch.setattr("omnigent.runner.app._pi_native_launch_config", _fake_launch_config)
+    monkeypatch.setattr("agent_meow.runner.app._pi_native_launch_config", _fake_launch_config)
 
     captured: dict[str, Any] = {}
 
@@ -13940,7 +13940,7 @@ async def test_auto_create_claude_terminal_passes_session_effort(
         del kwargs
 
     monkeypatch.setattr(
-        "omnigent.claude_native_forwarder.supervise_forwarder",
+        "agent_meow.claude_native_forwarder.supervise_forwarder",
         _no_op_forwarder,
     )
 
@@ -14008,7 +14008,7 @@ def test_agent_os_env_from_spec_unwraps_resolved_and_handles_none() -> None:
     return ``None`` when there is no spec — so the launch falls back to the
     platform default only when there is genuinely no agent policy to honour.
     """
-    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     os_env = OSEnvSpec(type="caller_process", cwd=".", sandbox=OSEnvSandboxSpec(type="none"))
     bare = AgentSpec(
@@ -14058,7 +14058,7 @@ async def test_auto_create_claude_terminal_inherits_agent_sandbox(
     :param tmp_path: Pytest-provided temporary directory.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     monkeypatch.setattr(claude_native_bridge, "_TRUSTED_PARENT", tmp_path)
     monkeypatch.setattr(claude_native_bridge, "_BRIDGE_ROOT", tmp_path / "root")
@@ -14068,7 +14068,7 @@ async def test_auto_create_claude_terminal_inherits_agent_sandbox(
         del kwargs
 
     monkeypatch.setattr(
-        "omnigent.claude_native_forwarder.supervise_forwarder",
+        "agent_meow.claude_native_forwarder.supervise_forwarder",
         _no_op_forwarder,
     )
 
@@ -14166,7 +14166,7 @@ async def test_auto_create_claude_terminal_injects_ucode_gateway_config(
     :param tmp_path: Pytest-provided temporary directory.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from omnigent.claude_native import ClaudeNativeUcodeConfig
+    from agent_meow.claude_native import ClaudeNativeUcodeConfig
 
     monkeypatch.setattr(claude_native_bridge, "_TRUSTED_PARENT", tmp_path)
     monkeypatch.setattr(claude_native_bridge, "_BRIDGE_ROOT", tmp_path / "root")
@@ -14186,7 +14186,7 @@ async def test_auto_create_claude_terminal_injects_ucode_gateway_config(
         del kwargs
 
     monkeypatch.setattr(
-        "omnigent.claude_native_forwarder.supervise_forwarder",
+        "agent_meow.claude_native_forwarder.supervise_forwarder",
         _no_op_forwarder,
     )
 
@@ -14197,9 +14197,9 @@ async def test_auto_create_claude_terminal_injects_ucode_gateway_config(
         model="databricks-claude-opus-4-7",
     )
     # The runner imports ``_ucode_config_for_profile`` from
-    # ``omnigent.claude_native`` per call, so patch it at the source.
+    # ``agent_meow.claude_native`` per call, so patch it at the source.
     monkeypatch.setattr(
-        "omnigent.claude_native._ucode_config_for_profile",
+        "agent_meow.claude_native._ucode_config_for_profile",
         lambda profile: ucode,
     )
 
@@ -14281,19 +14281,19 @@ async def _run_auto_create_cursor_terminal(
     ``httpx.MockTransport``, and a fake registry records the ``spec`` passed to
     ``launch_required_terminal`` so the test can assert on ``spec.args``.
     """
-    from omnigent.runner import _entry as _runner_entry
+    from agent_meow.runner import _entry as _runner_entry
 
     workspace = tmp_path / "ws"
     workspace.mkdir()
     monkeypatch.setattr(cursor_native_bridge, "_BRIDGE_ROOT", tmp_path / "cursor-bridge")
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://127.0.0.1:8000")
-    monkeypatch.setattr("omnigent.cursor_native.resolve_cursor_executable", lambda: "cursor-agent")
+    monkeypatch.setattr("agent_meow.cursor_native.resolve_cursor_executable", lambda: "cursor-agent")
 
     async def _no_op_forwarder(**kwargs: Any) -> None:
         del kwargs
 
     monkeypatch.setattr(
-        "omnigent.cursor_native_forwarder.supervise_cursor_forwarder",
+        "agent_meow.cursor_native_forwarder.supervise_cursor_forwarder",
         _no_op_forwarder,
     )
     # The forwarder is stubbed, so the auth it would carry is never used — keep
@@ -14483,7 +14483,7 @@ async def test_auto_create_claude_terminal_forwarder_skips_replayed_transcript_o
         forwarder_kwargs.update(kwargs)
 
     monkeypatch.setattr(
-        "omnigent.claude_native_forwarder.supervise_forwarder",
+        "agent_meow.claude_native_forwarder.supervise_forwarder",
         _capture_forwarder,
     )
 
@@ -14507,7 +14507,7 @@ async def test_auto_create_claude_terminal_forwarder_skips_replayed_transcript_o
         return tmp_path / f"{external_session_id}.jsonl"
 
     monkeypatch.setattr(
-        "omnigent.claude_native._ensure_local_claude_resume_transcript",
+        "agent_meow.claude_native._ensure_local_claude_resume_transcript",
         _fake_synth,
     )
 
@@ -14665,7 +14665,7 @@ async def test_auto_create_claude_terminal_emits_resource_created_event(
         del kwargs
 
     monkeypatch.setattr(
-        "omnigent.claude_native_forwarder.supervise_forwarder",
+        "agent_meow.claude_native_forwarder.supervise_forwarder",
         _no_op_forwarder,
     )
 
@@ -14839,7 +14839,7 @@ def test_terminal_lookup_miss_log_explains_stopped_registered_terminal(
 
     _terminal_lookup_miss_log_state.clear()
     try:
-        with caplog.at_level(logging.INFO, logger="omnigent.runner.app"):
+        with caplog.at_level(logging.INFO, logger="agent_meow.runner.app"):
             _log_terminal_lookup_miss(
                 resource_registry,
                 "conv_lookup",
@@ -14890,7 +14890,7 @@ async def test_auto_create_claude_terminal_resets_stale_bridge_id_label(
         del kwargs
 
     monkeypatch.setattr(
-        "omnigent.claude_native_forwarder.supervise_forwarder",
+        "agent_meow.claude_native_forwarder.supervise_forwarder",
         _no_op_forwarder,
     )
 
@@ -15000,7 +15000,7 @@ async def test_auto_create_claude_terminal_honours_cleared_bridge_label(
         del kwargs
 
     monkeypatch.setattr(
-        "omnigent.claude_native_forwarder.supervise_forwarder",
+        "agent_meow.claude_native_forwarder.supervise_forwarder",
         _no_op_forwarder,
     )
 
@@ -15287,7 +15287,7 @@ async def test_create_session_auto_create_guard_skips_rotation_targets(
         del resource_registry, publish_event
         created.append(session_id)
 
-    monkeypatch.setattr("omnigent.runner.app._auto_create_claude_terminal", _recording_auto_create)
+    monkeypatch.setattr("agent_meow.runner.app._auto_create_claude_terminal", _recording_auto_create)
 
     native_spec = AgentSpec(
         spec_version=1,
@@ -15489,7 +15489,7 @@ async def test_create_session_antigravity_auto_create_guard_skips_rotation_targe
     ``clear_rotation_target_skips`` case red (auto-create fires for a rotation
     target again).
     """
-    import omnigent.antigravity_native_bridge as bridge_mod
+    import agent_meow.antigravity_native_bridge as bridge_mod
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
 
@@ -15542,7 +15542,7 @@ async def test_create_session_antigravity_auto_create_guard_skips_rotation_targe
         created.append(session_id)
 
     monkeypatch.setattr(
-        "omnigent.runner.app._auto_create_antigravity_terminal", _recording_auto_create
+        "agent_meow.runner.app._auto_create_antigravity_terminal", _recording_auto_create
     )
 
     native_spec = AgentSpec(
@@ -15722,7 +15722,7 @@ async def test_create_session_terminal_ensure_routes_claude_native(
             name="launched",
         )
 
-    monkeypatch.setattr("omnigent.runner.app._auto_create_claude_terminal", _stub_auto_create)
+    monkeypatch.setattr("agent_meow.runner.app._auto_create_claude_terminal", _stub_auto_create)
     monkeypatch.setattr(SessionResourceRegistry, "get_terminal_resource", _stub_get_terminal)
     monkeypatch.setattr(
         SessionResourceRegistry,
@@ -15794,9 +15794,9 @@ async def test_create_session_terminal_ensure_failure_returns_json_without_live_
         """Fail if the ensure endpoint tries to publish the live banner."""
         raise AssertionError("ensure endpoint must not publish response.error")
 
-    monkeypatch.setattr("omnigent.runner.app._auto_create_claude_terminal", _failing_auto_create)
+    monkeypatch.setattr("agent_meow.runner.app._auto_create_claude_terminal", _failing_auto_create)
     monkeypatch.setattr(
-        "omnigent.runner.app._publish_native_terminal_start_error",
+        "agent_meow.runner.app._publish_native_terminal_start_error",
         _unexpected_live_publish,
     )
 
@@ -16051,7 +16051,7 @@ async def test_create_session_terminal_ensure_routes_codex_native(
             name="launched",
         )
 
-    monkeypatch.setattr("omnigent.runner.app._auto_create_codex_terminal", _stub_auto_create)
+    monkeypatch.setattr("agent_meow.runner.app._auto_create_codex_terminal", _stub_auto_create)
     monkeypatch.setattr(SessionResourceRegistry, "get_terminal_resource", _stub_get_terminal)
     monkeypatch.setattr(
         SessionResourceRegistry,
@@ -16149,7 +16149,7 @@ class _RecordedPatch:
     A PATCH captured from the REPL terminal auto-create helper.
 
     :param url: Request path, e.g. ``"/v1/sessions/conv_repl"``.
-    :param json: JSON body, e.g. ``{"labels": {"omnigent.ui": "terminal"}}``.
+    :param json: JSON body, e.g. ``{"labels": {"agent_meow.ui": "terminal"}}``.
     """
 
     url: str
@@ -16168,7 +16168,7 @@ async def test_auto_create_repl_terminal_launches_attach_and_stamps_label(
     this terminal: the spec must run ``omnigent attach <session_id>
     --server <runner's server URL>`` (a co-drive client of the live
     session), defer the process to first attach, pin the cwd to the
-    runner workspace, stamp the ``omnigent.ui: terminal`` label that
+    runner workspace, stamp the ``agent_meow.ui: terminal`` label that
     gates the web Chat/Terminal pill, and publish the resource on the
     live stream. Each wrong value maps to a distinct user-facing break:
     wrong command/args → dead pane or wrong session; missing label →
@@ -16178,7 +16178,7 @@ async def test_auto_create_repl_terminal_launches_attach_and_stamps_label(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from omnigent._wrapper_labels import UI_MODE_LABEL_KEY, UI_MODE_TERMINAL_VALUE
+    from agent_meow._wrapper_labels import UI_MODE_LABEL_KEY, UI_MODE_TERMINAL_VALUE
 
     session_id = "conv_repl"
     workspace = tmp_path / "workspace"
@@ -16321,7 +16321,7 @@ async def test_auto_create_repl_terminal_inherits_agent_sandbox(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     session_id = "conv_repl_sandbox_none"
     workspace = tmp_path / "workspace"
@@ -16437,7 +16437,7 @@ async def test_create_session_repl_terminal_dispatch(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.runner.app as runner_app_mod
 
     # Keep the codex-native branch's bridge writes inside tmp_path.
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
@@ -16604,7 +16604,7 @@ def _no_wake_backoff(monkeypatch: pytest.MonkeyPatch) -> list[float]:
     async def _record(seconds: float) -> None:
         recorded.append(seconds)
 
-    monkeypatch.setattr("omnigent.runner.app._wake_retry_sleep", _record)
+    monkeypatch.setattr("agent_meow.runner.app._wake_retry_sleep", _record)
     return recorded
 
 
@@ -16815,8 +16815,8 @@ def _patch_judge_returns_pricey(monkeypatch: pytest.MonkeyPatch) -> None:
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from omnigent.cost_plan import AdvisorVerdict
-    from omnigent.runner import cost_advisor as cost_advisor_mod
+    from agent_meow.cost_plan import AdvisorVerdict
+    from agent_meow.runner import cost_advisor as cost_advisor_mod
 
     class _PriceyJudge:
         """Judge stub returning a fixed expensive-tier verdict."""
@@ -16942,7 +16942,7 @@ async def test_optimize_turn_applies_model_and_injects_note(
 
     :param monkeypatch: Replaces the production judge with the stub.
     """
-    from omnigent.cost_plan import parse_verdict
+    from agent_meow.cost_plan import parse_verdict
 
     _patch_judge_returns_pricey(monkeypatch)
     spec = _advisor_orchestrator_spec()
@@ -17027,7 +17027,7 @@ async def test_advise_turn_records_but_does_not_apply(
 
     :param monkeypatch: Replaces the production judge with the stub.
     """
-    from omnigent.cost_plan import parse_verdict
+    from agent_meow.cost_plan import parse_verdict
 
     _patch_judge_returns_pricey(monkeypatch)
     spec = _advisor_orchestrator_spec(mode="advise")
@@ -17101,7 +17101,7 @@ async def test_user_pin_suppresses_sticky_model_on_background_turn(
     """
     import asyncio as _aio
 
-    from omnigent.cost_plan import parse_verdict
+    from agent_meow.cost_plan import parse_verdict
 
     _patch_judge_returns_pricey(monkeypatch)
     spec = _advisor_orchestrator_spec()
@@ -17233,7 +17233,7 @@ async def test_cancel_auto_forwarder_task_cancels_and_awaits_registered_task() -
     still post items (it runs right before the bridge's forward-cursor
     state is wiped).
     """
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.runner.app as runner_app_mod
 
     session_id = "conv_fwd_cancel_awaits"
     run = _ForwarderRun()
@@ -17290,7 +17290,7 @@ async def test_register_auto_forwarder_task_replaces_incumbent_and_survives_stal
        Without the identity check, B would lose its strong reference and
        the registry would report no forwarder for a session that has one.
     """
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.runner.app as runner_app_mod
 
     session_id = "conv_fwd_stale_evict"
     run_a = _ForwarderRun()
@@ -17345,7 +17345,7 @@ async def test_auto_forwarder_registry_isolates_sessions_and_evicts_completed() 
     finishes on its own removes its entry (the dict must not leak entries
     the way the old set relied on ``discard`` for).
     """
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.runner.app as runner_app_mod
 
     run_a = _ForwarderRun()
     run_b = _ForwarderRun()
@@ -17406,7 +17406,7 @@ async def test_auto_create_claude_terminal_recreate_cancels_prior_forwarder(
     :param tmp_path: Pytest-provided temporary directory.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.runner.app as runner_app_mod
 
     monkeypatch.setattr(claude_native_bridge, "_TRUSTED_PARENT", tmp_path)
     monkeypatch.setattr(claude_native_bridge, "_BRIDGE_ROOT", tmp_path / "root")
@@ -17427,7 +17427,7 @@ async def test_auto_create_claude_terminal_recreate_cancels_prior_forwarder(
             raise
 
     monkeypatch.setattr(
-        "omnigent.claude_native_forwarder.supervise_forwarder",
+        "agent_meow.claude_native_forwarder.supervise_forwarder",
         _parking_forwarder,
     )
 
@@ -17520,8 +17520,8 @@ async def test_auto_create_codex_terminal_recreate_cancels_prior_forwarder(
     :param tmp_path: Temporary directory for isolated bridge state.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    import omnigent.codex_native_app_server as codex_app_mod
-    import omnigent.runner.app as runner_app_mod
+    import agent_meow.codex_native_app_server as codex_app_mod
+    import agent_meow.runner.app as runner_app_mod
 
     session_id = "conv_codex_fwd_recreate"
     thread_id = "019e96aa-0be2-7343-8d3b-6f914d60936b"
@@ -17529,7 +17529,7 @@ async def test_auto_create_codex_terminal_recreate_cancels_prior_forwarder(
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
 
     class _SnapshotServerClient:
         """Server client returning a persisted resume thread + one item."""
@@ -17736,7 +17736,7 @@ async def test_events_interrupt_on_kiro_native_routes_to_escape(
     did nothing. This pins that the dispatch routes kiro-native to
     ``kiro_native_bridge.inject_interrupt`` with the snappy 1.0s timeout.
     """
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.spec.types import ExecutorSpec
 
     captured: list[Any] = []
     monkeypatch.setattr(
@@ -17794,8 +17794,8 @@ async def test_events_stop_session_on_kiro_native_kills_tmux_and_publishes_idle(
     ``kiro_native_bridge.kill_session`` and enqueue exactly one
     ``session.status: idle`` (kiro-cli has no Stop hook on a hard kill).
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     captured: list[Any] = []
     monkeypatch.setattr(
@@ -17864,8 +17864,8 @@ async def test_events_interrupt_on_kiro_native_503_skips_idle_when_inject_fails(
     would clear the web-UI spinner while the kiro turn keeps generating. Guards
     against a reorder that moves the idle publish ahead of the ``try``.
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_inject(bridge_dir: Any, *, timeout_s: float) -> None:
         """Simulate the bridge-not-ready path."""
@@ -17934,8 +17934,8 @@ async def test_events_stop_session_on_kiro_native_503_when_kill_fails(
     a failed kill must surface 503 rather than lie to the web UI with 204 + idle
     while the ``kiro-cli`` process may still be alive.
     """
-    from omnigent.runner.app import _session_event_queues_ref
-    from omnigent.spec.types import ExecutorSpec
+    from agent_meow.runner.app import _session_event_queues_ref
+    from agent_meow.spec.types import ExecutorSpec
 
     def _fake_kill(bridge_dir: Any, *, timeout_s: float) -> None:
         """Simulate the bridge-not-ready path."""

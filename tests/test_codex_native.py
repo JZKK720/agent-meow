@@ -16,16 +16,16 @@ import httpx
 import pytest
 import yaml
 
-from omnigent import codex_native, codex_native_app_server, codex_native_forwarder
-from omnigent._runner_startup import RunnerStartupProgress
-from omnigent.codex_native_bridge import (
+from agent_meow import codex_native, codex_native_app_server, codex_native_forwarder
+from agent_meow._runner_startup import RunnerStartupProgress
+from agent_meow.codex_native_bridge import (
     CodexNativeBridgeState,
     clear_bridge_state,
     read_bridge_state,
     write_bridge_state,
 )
-from omnigent.codex_native_elicitation import codex_elicitation_id
-from omnigent.spec import load
+from agent_meow.codex_native_elicitation import codex_elicitation_id
+from agent_meow.spec import load
 
 
 def _write_codex_auth(path: Path, payload: object) -> None:
@@ -406,7 +406,7 @@ def test_preload_codex_thread_for_resume_resumes_and_closes(
         return fake_client
 
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         fake_client_factory,
     )
 
@@ -968,7 +968,7 @@ def test_build_codex_remote_args_bypass_emits_flag_and_strips_conflicts(
     sandbox`` and strips the conflicting ``--sandbox`` / ``--ask-for-approval``
     pairs.
 
-    See :func:`omnigent.codex_native_app_server._strip_approval_sandbox_flags`.
+    See :func:`~?agent_meow.codex_native_app_server._strip_approval_sandbox_flags`.
     Asserting the exact argv guards three things: the bypass flag is present
     exactly once, the conflicting flag pairs are removed (with their values),
     and the bypass flag lands before any ``resume`` subcommand (codex rejects
@@ -1237,7 +1237,7 @@ def test_supervise_forwarder_resumes_when_it_opens_client(
     # Patch at the source: the forwarder builds its fallback client via
     # client_for_transport, which constructs the app_server module's class.
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient", fake_client_factory
+        "agent_meow.codex_native_app_server.CodexAppServerClient", fake_client_factory
     )
 
     async def run() -> None:
@@ -1684,7 +1684,7 @@ def test_forwarder_rotates_session_on_new_codex_thread_and_posts_to_new_session(
                     "runner_id": "runner_123",
                     "labels": {
                         "omnigent.wrapper": "codex-native-ui",
-                        "omnigent.codex_native.bridge_id": "bridge_shared",
+                        "agent_meow.codex_native.bridge_id": "bridge_shared",
                     },
                 },
             )
@@ -1805,7 +1805,7 @@ def test_forwarder_rotates_session_on_new_codex_thread_and_posts_to_new_session(
             "agent_id": "ag_codex",
             "labels": {
                 "omnigent.wrapper": "codex-native-ui",
-                "omnigent.codex_native.bridge_id": "bridge_shared",
+                "agent_meow.codex_native.bridge_id": "bridge_shared",
             },
         },
     ) in requests
@@ -6375,11 +6375,11 @@ def test_local_run_prints_resume_hint_after_attach(
         """
         del kwargs
 
-    monkeypatch.setattr("omnigent.chat._find_free_port", lambda: 23456)
-    monkeypatch.setattr("omnigent.chat._start_local_server", fake_start_server)
-    monkeypatch.setattr("omnigent.chat._stop_local_server", lambda server: None)
-    monkeypatch.setattr("omnigent.chat._wait_for_server", lambda *a, **k: None)
-    monkeypatch.setattr("omnigent.chat._bundle_agent", lambda path: b"bundle")
+    monkeypatch.setattr("agent_meow.chat._find_free_port", lambda: 23456)
+    monkeypatch.setattr("agent_meow.chat._start_local_server", fake_start_server)
+    monkeypatch.setattr("agent_meow.chat._stop_local_server", lambda server: None)
+    monkeypatch.setattr("agent_meow.chat._wait_for_server", lambda *a, **k: None)
+    monkeypatch.setattr("agent_meow.chat._bundle_agent", lambda path: b"bundle")
     monkeypatch.setattr(codex_native, "_prepare_codex_terminal", fake_prepare)
     monkeypatch.setattr(codex_native, "_attach_with_forwarder", fake_attach_with_forwarder)
     monkeypatch.setattr(
@@ -6479,10 +6479,10 @@ def test_local_resume_does_not_print_redundant_resume_hint(
         """
         del kwargs
 
-    monkeypatch.setattr("omnigent.chat._find_free_port", lambda: 23457)
-    monkeypatch.setattr("omnigent.chat._start_local_server", fake_start_server)
-    monkeypatch.setattr("omnigent.chat._stop_local_server", lambda server: None)
-    monkeypatch.setattr("omnigent.chat._wait_for_server", lambda *a, **k: None)
+    monkeypatch.setattr("agent_meow.chat._find_free_port", lambda: 23457)
+    monkeypatch.setattr("agent_meow.chat._start_local_server", fake_start_server)
+    monkeypatch.setattr("agent_meow.chat._stop_local_server", lambda server: None)
+    monkeypatch.setattr("agent_meow.chat._wait_for_server", lambda *a, **k: None)
     monkeypatch.setattr(codex_native, "_prepare_codex_terminal", fake_prepare)
     monkeypatch.setattr(codex_native, "_attach_with_forwarder", fake_attach_with_forwarder)
 
@@ -6581,7 +6581,7 @@ def test_record_launch_for_fresh_session_persists_current_cwd(
     :param tmp_path: Temporary workspace and state root.
     :returns: None.
     """
-    from omnigent.codex_native_state import read_launch_state
+    from agent_meow.codex_native_state import read_launch_state
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -6606,7 +6606,7 @@ def test_align_working_directory_with_session_matching_cwd_is_noop(
     :param tmp_path: Temporary workspace and state root.
     :returns: None.
     """
-    from omnigent.codex_native_state import write_launch_state
+    from agent_meow.codex_native_state import write_launch_state
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(tmp_path / "state"))
@@ -6638,7 +6638,7 @@ def test_align_working_directory_with_session_switches_to_recorded_cwd(
     :param tmp_path: Temporary workspace and state root.
     :returns: None.
     """
-    from omnigent.codex_native_state import write_launch_state
+    from agent_meow.codex_native_state import write_launch_state
 
     recorded = tmp_path / "recorded"
     current = tmp_path / "current"
@@ -6669,7 +6669,7 @@ def test_align_working_directory_with_session_missing_recorded_cwd_raises(
     :param tmp_path: Temporary workspace and state root.
     :returns: None.
     """
-    from omnigent.codex_native_state import write_launch_state
+    from agent_meow.codex_native_state import write_launch_state
 
     current = tmp_path / "current"
     missing = tmp_path / "missing"
@@ -6716,9 +6716,9 @@ def test_run_with_remote_server_aligns_cwd_before_daemon_prepare(
     :param tmp_path: Temporary paths for prepared Codex details.
     :returns: None.
     """
-    import omnigent.chat as chat_mod
-    import omnigent.cli as cli_mod
-    import omnigent.host.identity as identity_mod
+    import agent_meow.chat as chat_mod
+    import agent_meow.cli as cli_mod
+    import agent_meow.host.identity as identity_mod
 
     order: list[str] = []
 
@@ -6831,7 +6831,7 @@ def test_run_with_local_server_records_fresh_session_before_attach(
     :param tmp_path: Temporary paths for fake server and Codex details.
     :returns: None.
     """
-    import omnigent.chat as chat_mod
+    import agent_meow.chat as chat_mod
 
     order: list[str] = []
 
@@ -6911,7 +6911,7 @@ async def test_prepare_codex_terminal_via_daemon_creates_runner_and_ensures_term
     This exercises the real ``_prepare_codex_terminal_via_daemon`` orchestration
     against an ``httpx.MockTransport`` agent-meow server. Removing terminal launch arg
     persistence, daemon runner launch, the runner re-bind (which clears
-    ``omnigent.stopped`` on resume), the ``ensure_native_terminal``
+    ``agent_meow.stopped`` on resume), the ``ensure_native_terminal``
     request, or terminal metadata decoding turns this test red.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -7011,7 +7011,7 @@ async def test_prepare_codex_terminal_via_daemon_creates_runner_and_ensures_term
         "/v1/hosts/host_local/runners",
         {"session_id": "conv_new", "workspace": "/repo"},
     ) in calls
-    # Runner re-bind clears omnigent.stopped on resume.
+    # Runner re-bind clears agent_meow.stopped on resume.
     assert ("PATCH", "/v1/sessions/conv_new", {"runner_id": "runner_new"}) in calls
     assert (
         "POST",
@@ -7049,8 +7049,8 @@ async def test_prepare_codex_terminal_via_daemon_live_resume_skips_config_patch(
     original_async_client = httpx.AsyncClient
     calls: list[tuple[str, str, object]] = []
     thread_id = "019e96aa-0be2-7343-8d3b-6f914d60936b"
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
-    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
     live_rollout = _write_source_rollout(
         codex_home=codex_home_for_bridge_dir(bridge_dir_for_bridge_id("conv_live")),
@@ -7157,8 +7157,8 @@ async def test_prepare_codex_terminal_hot_resume_does_not_rewrite_rollout(
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     monkeypatch.chdir(workspace)
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
-    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
     live_rollout = _write_source_rollout(
         codex_home=codex_home_for_bridge_dir(bridge_dir_for_bridge_id(bridge_id)),
@@ -7183,7 +7183,7 @@ async def test_prepare_codex_terminal_hot_resume_does_not_rewrite_rollout(
                 json={
                     "labels": {
                         "omnigent.wrapper": "codex-native-ui",
-                        "omnigent.codex_native.bridge_id": bridge_id,
+                        "agent_meow.codex_native.bridge_id": bridge_id,
                     },
                     "external_session_id": thread_id,
                 },
@@ -7533,7 +7533,7 @@ def test_attach_with_forwarder_uses_direct_tmux_when_socket_is_local(
         """
         raise AssertionError("WebSocket attach path should not be used")
 
-    monkeypatch.setattr("omnigent.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
+    monkeypatch.setattr("agent_meow.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
     monkeypatch.setattr(codex_native, "_attach_direct_tmux", fake_attach_direct_tmux)
     monkeypatch.setattr(codex_native, "_attach_with_reconnect", fail_attach_with_reconnect)
 
@@ -7784,7 +7784,7 @@ def test_attach_terminal_resource_runner_owned_missing_socket_fails_loud(
         """
         raise AssertionError("Runner-owned Codex attach must not use WebSocket")
 
-    monkeypatch.setattr("omnigent.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
+    monkeypatch.setattr("agent_meow.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
     monkeypatch.setattr(codex_native, "_attach_with_reconnect", fail_attach_with_reconnect)
 
     with pytest.raises(click.ClickException) as exc_info:
@@ -7863,7 +7863,7 @@ def test_attach_with_forwarder_falls_back_when_tmux_socket_is_not_local(
         assert active_session_id_reader() == "conv_rotated"
         websocket_attaches.append(attach_url)
 
-    monkeypatch.setattr("omnigent.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
+    monkeypatch.setattr("agent_meow.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
     monkeypatch.setattr(codex_native, "_attach_direct_tmux", fail_attach_direct_tmux)
     monkeypatch.setattr(codex_native, "_attach_with_reconnect", fake_attach_with_reconnect)
 
@@ -8953,9 +8953,9 @@ def test_clone_codex_rollout_rewrites_id_and_structural_cwd_into_clone_home(
     workspace, the rollout lands in the CLONE's CODEX_HOME under the
     target id, and record order is preserved.
     """
-    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
     source_thread = "019e96aa-0be2-7343-8d3b-6f914d60936b"
     target_thread = "019eaa11-1111-7222-8333-444455556666"
     source_cwd = "/repo/worktree-source"
@@ -9007,9 +9007,9 @@ def test_clone_codex_rollout_leaves_historical_cwd_untouched(
     workspace; rewriting them would fabricate history. Only the two
     structural fields move.
     """
-    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
     source_thread = "019e96aa-0be2-7343-8d3b-6f914d60936b"
     target_thread = "019eaa11-1111-7222-8333-444455556666"
     source_cwd = "/repo/worktree-source"
@@ -9054,9 +9054,9 @@ def test_clone_codex_rollout_leaves_source_untouched(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The source rollout is read-only — cloning never mutates it."""
-    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
     source_thread = "019e96aa-0be2-7343-8d3b-6f914d60936b"
     source_cwd = "/repo/worktree-source"
 
@@ -9090,9 +9090,9 @@ def test_clone_codex_rollout_returns_none_when_source_missing(
     the source rollout must not strand the clone pointing at a missing
     thread.
     """
-    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
     clone_home = codex_home_for_bridge_dir(bridge_dir_for_bridge_id("conv_clone"))
 
     result = codex_native._clone_codex_rollout(
@@ -9115,9 +9115,9 @@ def test_clone_codex_rollout_returns_none_for_unsafe_target_id(
     Guards against path traversal via the minted id being interpolated
     into the rollout filename.
     """
-    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
     source_thread = "019e96aa-0be2-7343-8d3b-6f914d60936b"
     source_home = codex_home_for_bridge_dir(bridge_dir_for_bridge_id("conv_source"))
     _write_source_rollout(codex_home=source_home, thread_id=source_thread, source_cwd="/repo/src")

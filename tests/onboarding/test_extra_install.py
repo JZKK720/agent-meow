@@ -8,11 +8,11 @@ from types import SimpleNamespace
 import pytest
 import tomllib
 
-from omnigent.onboarding import extra_install
-from omnigent.onboarding.antigravity_auth import ANTIGRAVITY_EXTRA
-from omnigent.onboarding.copilot_auth import COPILOT_EXTRA
-from omnigent.onboarding.cursor_auth import CURSOR_EXTRA
-from omnigent.onboarding.extra_install import (
+from agent_meow.onboarding import extra_install
+from agent_meow.onboarding.antigravity_auth import ANTIGRAVITY_EXTRA
+from agent_meow.onboarding.copilot_auth import COPILOT_EXTRA
+from agent_meow.onboarding.cursor_auth import CURSOR_EXTRA
+from agent_meow.onboarding.extra_install import (
     _installed_vcs_url,
     _is_uv_tool_install,
     extra_install_command,
@@ -50,7 +50,7 @@ def test_installed_vcs_url_git_source(monkeypatch: pytest.MonkeyPatch) -> None:
     """Surfaces the ``vcs_url`` recorded for a git-source install."""
     url = "git+https://github.com/JZKK720/agent-meow.git"
     monkeypatch.setattr(
-        "omnigent.update_check._read_installed_wheel_info",
+        "agent_meow.update_check._read_installed_wheel_info",
         lambda: SimpleNamespace(vcs_url=url),
     )
     assert _installed_vcs_url() == url
@@ -63,7 +63,7 @@ def test_installed_vcs_url_git_source(monkeypatch: pytest.MonkeyPatch) -> None:
 )
 def test_installed_vcs_url_none(monkeypatch: pytest.MonkeyPatch, info: object) -> None:
     """Returns ``None`` for registry installs and when the dist is absent."""
-    monkeypatch.setattr("omnigent.update_check._read_installed_wheel_info", lambda: info)
+    monkeypatch.setattr("agent_meow.update_check._read_installed_wheel_info", lambda: info)
     assert _installed_vcs_url() is None
 
 

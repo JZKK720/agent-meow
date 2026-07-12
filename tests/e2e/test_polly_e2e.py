@@ -1,7 +1,7 @@
 """Small mock-LLM e2e smoke for the polly coding orchestrator (examples/polly).
 
 Mock mode: boots a throwaway LOCAL server from this working tree (which carries
-the in-tree ``omnigent.inner.nessie.policies`` module that polly's guardrails
+the in-tree ``agent_meow.inner.nessie.policies`` module that polly's guardrails
 resolve server-side), rewrites the polly bundle's executor to use
 ``openai-agents`` harness wired to the mock LLM server, and runs a one-shot
 ``omnigent run`` subprocess against it. This exercises the parts a structural
@@ -10,7 +10,7 @@ and a turn streaming back through the run path — without requiring real OAuth
 credentials or proprietary model access.
 
 Why a local server (not bare ``omnigent run``): polly's guardrail policies
-(``omnigent.inner.nessie.policies`` — the package keeps its historical
+(``agent_meow.inner.nessie.policies`` — the package keeps its historical
 name) are resolved SERVER-SIDE when the workflow executes. Bare ``omnigent
 run`` routes to the developer's configured default server (the shared
 ``omnigent`` prod app), which may not carry the in-tree policy module, so
@@ -279,7 +279,7 @@ def local_polly_server(tmp_path: Path) -> Iterator[str]:
     """
     Start a throwaway local ``omnigent server`` from this working tree.
 
-    The server carries the in-tree ``omnigent.inner.nessie.policies`` module
+    The server carries the in-tree ``agent_meow.inner.nessie.policies`` module
     that polly's guardrails resolve server-side, so the workflow doesn't 500
     the way it does against the shared prod app. Own sqlite DB + artifact dir
     under ``tmp_path`` keep it isolated from the developer's real state.

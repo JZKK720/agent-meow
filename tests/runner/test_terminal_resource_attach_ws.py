@@ -18,15 +18,15 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from omnigent.entities.session_resources import SessionResourceView
-from omnigent.inner.terminal import TerminalInstance
-from omnigent.runner import create_runner_app
-from omnigent.runner.resource_registry import (
+from agent_meow.entities.session_resources import SessionResourceView
+from agent_meow.inner.terminal import TerminalInstance
+from agent_meow.runner import create_runner_app
+from agent_meow.runner.resource_registry import (
     OMNIGENT_REPL_TERMINAL_ROLE,
     QWEN_NATIVE_TERMINAL_ROLE,
     SessionResourceRegistry,
 )
-from omnigent.terminals import TerminalRegistry
+from agent_meow.terminals import TerminalRegistry
 from tests.runner.helpers import NullServerClient, make_test_terminal_instance
 
 
@@ -208,8 +208,8 @@ def test_runner_resource_attach_selects_control_bridge_on_transport_query(
         calls.append("pty")
         await websocket.close()
 
-    monkeypatch.setattr("omnigent.runner.app.bridge_tmux_control_to_websocket", fake_control)
-    monkeypatch.setattr("omnigent.runner.app.bridge_tmux_pty_to_websocket", fake_pty)
+    monkeypatch.setattr("agent_meow.runner.app.bridge_tmux_control_to_websocket", fake_control)
+    monkeypatch.setattr("agent_meow.runner.app.bridge_tmux_pty_to_websocket", fake_pty)
     # Point config resolution at an empty scratch dir so the no-query case is
     # deterministic regardless of the developer's real ~/.omnigent/config.yaml.
     # With no terminal.transport configured, control mode is the product default.
@@ -413,7 +413,7 @@ def test_runner_resource_attach_recreates_dead_repl_terminal(
             name="tui",
         )
 
-    monkeypatch.setattr("omnigent.runner.app._auto_create_repl_terminal", fake_auto_create)
+    monkeypatch.setattr("agent_meow.runner.app._auto_create_repl_terminal", fake_auto_create)
 
     attach_argvs: list[list[str]] = []
 
@@ -555,7 +555,7 @@ def test_runner_resource_attach_recreates_dead_qwen_terminal(
             name="qwen",
         )
 
-    monkeypatch.setattr("omnigent.runner.app._auto_create_qwen_terminal", fake_auto_create)
+    monkeypatch.setattr("agent_meow.runner.app._auto_create_qwen_terminal", fake_auto_create)
 
     attach_argvs: list[list[str]] = []
 
@@ -648,7 +648,7 @@ def test_runner_resource_attach_dead_non_repl_terminal_keeps_4404(
             "recreate path must be gated on OMNIGENT_REPL_TERMINAL_ROLE."
         )
 
-    monkeypatch.setattr("omnigent.runner.app._auto_create_repl_terminal", must_not_recreate)
+    monkeypatch.setattr("agent_meow.runner.app._auto_create_repl_terminal", must_not_recreate)
 
     with TestClient(app).websocket_connect(
         "/v1/sessions/conv_abc/resources/terminals/terminal_bash_s1/attach"

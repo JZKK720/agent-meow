@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`omnigent.inner.os_env` helper-env construction."""
+"""Unit tests for :mod:`~?agent_meow.inner.os_env` helper-env construction."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import base64
 import tracemalloc
 from pathlib import Path
 
-from omnigent.inner.os_env import _read_impl, build_helper_env
-from omnigent.inner.sandbox import SandboxPolicy
-from omnigent.runner.identity import (
+from agent_meow.inner.os_env import _read_impl, build_helper_env
+from agent_meow.inner.sandbox import SandboxPolicy
+from agent_meow.runner.identity import (
     OMNIGENT_SESSION_ENV_VALUE,
     OMNIGENT_SESSION_ENV_VAR,
     RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR,

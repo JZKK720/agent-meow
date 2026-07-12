@@ -19,7 +19,7 @@ from pathlib import Path
 import httpx
 import yaml as _yaml
 
-from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 from tests.e2e.conftest import (
     configure_mock_llm,
     find_free_port,
@@ -145,7 +145,7 @@ def test_chat_local_starts_server_and_agent_responds(
     - Agent bundle not registered → agent lookup in GET /v1/agents fails.
     - Agent config invalid → session turn fails.
     """
-    from omnigent.chat import (
+    from agent_meow.chat import (
         _start_local_server,
         _stop_local_server,
         _wait_for_server,
@@ -218,7 +218,7 @@ def test_chat_local_accepts_omnigent_yaml_file(
     The YAML path exercises the new ``materialize_bundle`` code
     path in :func:`_preregister_agent`: a file source wraps into
     a bundle directory, gets tarred, and the stored tarball
-    round-trips through :func:`omnigent.spec.load` to a
+    round-trips through :func:`~?agent_meow.spec.load` to a
     validated :class:`AgentSpec`.
 
     **What breaks if this fails:**
@@ -232,7 +232,7 @@ def test_chat_local_accepts_omnigent_yaml_file(
     :param mock_llm_server_url: Mock LLM server base URL.
     :param tmp_path: Per-test temp dir for the YAML fixture.
     """
-    from omnigent.chat import (
+    from agent_meow.chat import (
         _start_local_server,
         _stop_local_server,
         _wait_for_server,
@@ -330,7 +330,7 @@ def test_chat_remote_pick_agent(
     - _pick_agent can't parse server agent listing response.
     - Agent name extraction broken.
     """
-    from omnigent.chat import (
+    from agent_meow.chat import (
         _pick_agent,
         _start_local_server,
         _stop_local_server,

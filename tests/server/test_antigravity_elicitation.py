@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import pytest
 
-from omnigent.server.routes._antigravity_elicitation import (
+from agent_meow.server.routes._antigravity_elicitation import (
     to_elicitation_params,
     to_interaction_payload,
     to_tui_selection_keys,
 )
-from omnigent.server.schemas import ElicitationResult
+from agent_meow.server.schemas import ElicitationResult
 
 # ── Shared fixtures ──────────────────────────────────────────────────
 

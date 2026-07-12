@@ -1,5 +1,5 @@
 """
-Tests for :mod:`omnigent.repl._resume_picker` — the
+Tests for :mod:`~?agent_meow.repl._resume_picker` — the
 stderr/stdin interactive picker that ports legacy ``--resume`` to
 AP mode.
 
@@ -30,8 +30,8 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.entities import ConversationItem, MessageData
-from omnigent.repl._resume_picker import (
+from agent_meow.entities import ConversationItem, MessageData
+from agent_meow.repl._resume_picker import (
     _extract_text_from_content_blocks,
     _last_message_preview_from_dicts,
     _last_message_preview_from_entities,
@@ -39,8 +39,8 @@ from omnigent.repl._resume_picker import (
     pick_conversation,
     pick_conversation_from_store,
 )
-from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -849,7 +849,7 @@ def test_runtime_badge_claude_native() -> None:
     server-side label — a typo here would silently route every
     session to ``[chat]`` in the cross-agent picker.
     """
-    from omnigent.repl._resume_picker import _runtime_badge
+    from agent_meow.repl._resume_picker import _runtime_badge
 
     row = _BadgeRow(labels={"omnigent.wrapper": "claude-code-native-ui"})
     assert _runtime_badge(row) == "[claude]"
@@ -861,7 +861,7 @@ def test_runtime_badge_codex_native() -> None:
     ``[codex]`` so the cross-agent picker identifies the terminal UI
     owner before dispatch.
     """
-    from omnigent.repl._resume_picker import _runtime_badge
+    from agent_meow.repl._resume_picker import _runtime_badge
 
     row = _BadgeRow(labels={"omnigent.wrapper": "codex-native-ui"})
     assert _runtime_badge(row) == "[codex]"
@@ -886,7 +886,7 @@ def test_runtime_badge_non_claude_native(labels: dict[str, str] | None) -> None:
     doesn't know about), and the no-labels-attribute case (legacy
     test rows). All three must NOT raise.
     """
-    from omnigent.repl._resume_picker import _runtime_badge
+    from agent_meow.repl._resume_picker import _runtime_badge
 
     row = _BadgeRow(labels=labels)
     assert _runtime_badge(row) == "[chat]"
@@ -953,7 +953,7 @@ async def test_cross_agent_picker_lists_without_agent_id_filter() -> None:
     """
     import io
 
-    from omnigent.repl._resume_picker import pick_conversation_cross_agent_from_sdk
+    from agent_meow.repl._resume_picker import pick_conversation_cross_agent_from_sdk
 
     client = _FakeAPClient(rows=[])  # empty list → picker prints "no prior"
     out = io.StringIO()
@@ -979,7 +979,7 @@ async def test_cross_agent_picker_selection_returns_id_with_runtime_badge_render
     """
     import io
 
-    from omnigent.repl._resume_picker import pick_conversation_cross_agent_from_sdk
+    from agent_meow.repl._resume_picker import pick_conversation_cross_agent_from_sdk
 
     rows = [
         _BadgeRow(
@@ -1013,7 +1013,7 @@ async def test_wrapper_label_picker_filters_and_lists_without_agent_filter(
     empty) and filter to only rows carrying the wrapper label."""
     import io
 
-    from omnigent.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
+    from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     rows = [
@@ -1069,7 +1069,7 @@ def test_render_workspace_cell_no_state_returns_none(
     metadata segment for legacy sessions / sessions created on
     another machine / non-wrapper sessions.
     """
-    from omnigent.repl._resume_picker import _render_workspace_cell
+    from agent_meow.repl._resume_picker import _render_workspace_cell
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     row = _BadgeRow(id="conv_no_state", labels={"omnigent.wrapper": "x"})
@@ -1089,8 +1089,8 @@ def test_render_workspace_cell_matching_cwd_no_flag(
     *where* the session was started; only the action-required
     hint is suppressed.
     """
-    from omnigent.claude_native_state import write_launch_state
-    from omnigent.repl._resume_picker import _render_workspace_cell
+    from agent_meow.claude_native_state import write_launch_state
+    from agent_meow.repl._resume_picker import _render_workspace_cell
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.chdir(tmp_path)
@@ -1119,8 +1119,8 @@ def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
     this row is picked — without it the user has no way to
     anticipate the prompt.
     """
-    from omnigent.claude_native_state import write_launch_state
-    from omnigent.repl._resume_picker import _render_workspace_cell
+    from agent_meow.claude_native_state import write_launch_state
+    from agent_meow.repl._resume_picker import _render_workspace_cell
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     recorded = tmp_path / "recorded"
@@ -1157,8 +1157,8 @@ def test_workspace_metadata_appears_in_wrapper_picker_list(
     ``show_workspace=True`` somewhere between the wrapper picker
     entry point and item rendering is caught.
     """
-    from omnigent.claude_native_state import write_launch_state
-    from omnigent.repl._resume_picker import pick_conversation
+    from agent_meow.claude_native_state import write_launch_state
+    from agent_meow.repl._resume_picker import pick_conversation
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     workspace = tmp_path / "ws-marker"
@@ -1205,8 +1205,8 @@ def test_render_workspace_cell_codex_native_uses_codex_state(
     :param tmp_path: Temporary state root and workspace.
     :returns: None.
     """
-    from omnigent.codex_native_state import write_launch_state
-    from omnigent.repl._resume_picker import _render_workspace_cell
+    from agent_meow.codex_native_state import write_launch_state
+    from agent_meow.repl._resume_picker import _render_workspace_cell
 
     monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(tmp_path / "codex-state"))
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "claude-state"))
@@ -1238,7 +1238,7 @@ def test_workspace_metadata_omits_unrecorded_workspace_segment(
     showing workspace metadata for rows where the wrapper actually
     recorded a cwd.
     """
-    from omnigent.repl._resume_picker import pick_conversation
+    from agent_meow.repl._resume_picker import pick_conversation
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     row = _BadgeRow(

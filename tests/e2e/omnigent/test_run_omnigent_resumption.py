@@ -13,8 +13,8 @@ LLM in run #2, proving that the persistent omnigent store at
 **What breaks if this fails:**
 
 - The persistent store path regresses in
-  ``omnigent.chat._omnigent_persistent_dir`` or
-  ``omnigent.inner.cli._build_omnigent_stores`` — e.g. someone
+  ``agent_meow.chat._omnigent_persistent_dir`` or
+  ``agent_meow.inner.cli._build_omnigent_stores`` — e.g. someone
   flips back to ``mkdtemp`` and ``--continue`` silently
   starts a fresh conversation.
 - Idempotent agent registration regresses
@@ -46,7 +46,7 @@ import subprocess
 import uuid
 from pathlib import Path
 
-from tests.e2e.omnigent.conftest import configure_mock_llm
+from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 # ``openai-agents`` is picked because it honors
 # ``OPENAI_BASE_URL`` / ``OPENAI_API_KEY`` directly — no
@@ -390,11 +390,11 @@ def test_run_omnigent_continue_works_across_oneshot_and_interactive_paths(
     """
     A nonce planted in one-shot ``-p`` mode (the in-process
     ASGI path through
-    ``omnigent.inner.cli._post_prompt_and_print``) MUST be
+    ``agent_meow.inner.cli._post_prompt_and_print``) MUST be
     visible to a subsequent interactive REPL ``--continue``
     (the subprocess-server path through
-    ``omnigent.chat._chat_local`` ->
-    ``omnigent.cli server``).
+    ``agent_meow.chat._chat_local`` ->
+    ``agent_meow.cli server``).
 
     Why this needs its own test: the two paths have separate
     agent-registration helpers

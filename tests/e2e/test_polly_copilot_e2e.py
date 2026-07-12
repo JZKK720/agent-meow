@@ -9,7 +9,7 @@ written by ``omnigent setup``, or an ambient ``COPILOT_GITHUB_TOKEN`` /
 the harness probes skip when a CLI binary is absent from ``PATH``.
 
 It boots a throwaway local server from this working tree (which carries polly's
-in-tree ``omnigent.inner.nessie.policies`` guardrails, resolved server-side) and
+in-tree ``agent_meow.inner.nessie.policies`` guardrails, resolved server-side) and
 runs the real ``examples/polly`` bundle with its orchestrator brain overridden
 to ``--harness copilot``. The committed assertion is a brain-only smoke (boots +
 coherent reply). The full dispatch→collect→synthesize orchestration loop on a
@@ -49,7 +49,7 @@ _COPILOT_RUN_TIMEOUT_SEC = 280
 def _copilot_token_available() -> bool:
     """Return whether a Copilot-capable GitHub token is resolvable on this host."""
     try:
-        from omnigent.onboarding.copilot_auth import (
+        from agent_meow.onboarding.copilot_auth import (
             COPILOT_TOKEN_ENV_VARS,
             copilot_github_token_configured,
         )

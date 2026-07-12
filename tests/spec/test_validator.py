@@ -1,11 +1,11 @@
-"""Tests for omnigent.spec.validator."""
+"""Tests for agent_meow.spec.validator."""
 
 from __future__ import annotations
 
 import pytest
 
-from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-from omnigent.spec.types import (
+from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+from agent_meow.spec.types import (
     AgentSpec,
     CompactionConfig,
     ExecutorSpec,
@@ -17,7 +17,7 @@ from omnigent.spec.types import (
     SkillSpec,
     ToolsConfig,
 )
-from omnigent.spec.validator import validate
+from agent_meow.spec.validator import validate
 
 
 def _minimal_spec(**overrides: object) -> AgentSpec:
@@ -478,7 +478,7 @@ def test_mcp_stdio_valid() -> None:
 
     What breaks if this fails: a stdio MCPServerConfig constructed
     programmatically (e.g. by the translator in
-    spec/omnigent.py's _translate_mcp_tool_from_def) would fail
+    spec/agent_meow.py's _translate_mcp_tool_from_def) would fail
     validation at spec-load time even though it's correct.
     """
     spec = _minimal_spec(

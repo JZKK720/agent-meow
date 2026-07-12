@@ -3,7 +3,7 @@
 The root ``pyproject.toml``'s ``[project].version`` is the single source of
 truth for the release version (stamped in lockstep with the SDK packages by
 ``scripts/update_versions.py``). The runtime, however, reads
-``omnigent.version.VERSION`` — a plain constant it can import without touching
+``agent_meow.version.VERSION`` — a plain constant it can import without touching
 package metadata. This script keeps that constant equal to the canonical
 pyproject version so the two never drift.
 

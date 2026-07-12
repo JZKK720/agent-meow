@@ -1,9 +1,9 @@
-"""Tests for omnigent.onboarding.detected — ambient → provider bridge.
+"""Tests for agent_meow.onboarding.detected — ambient → provider bridge.
 
 Covers synthesizing config-shape provider entries from ambient detections,
 the read-time merge (explicit wins; detected auto-default per family), and
 the adopt set ``configure harnesses`` persists. Detections are constructed as
-real :class:`~omnigent.onboarding.ambient.DetectedProvider` objects (not
+real :class:`~?agent_meow.onboarding.ambient.DetectedProvider` objects (not
 mocks) so a regression in field handling surfaces here.
 """
 
@@ -11,13 +11,13 @@ from __future__ import annotations
 
 import pytest
 
-from omnigent.onboarding.ambient import DetectedProvider
-from omnigent.onboarding.detected import (
+from agent_meow.onboarding.ambient import DetectedProvider
+from agent_meow.onboarding.detected import (
     effective_config_with_detected,
     providers_to_adopt,
     synthesize_detected_entries,
 )
-from omnigent.onboarding.provider_config import (
+from agent_meow.onboarding.provider_config import (
     ANTHROPIC_FAMILY,
     GEMINI_FAMILY,
     OPENAI_FAMILY,
@@ -450,7 +450,7 @@ def test_malformed_dismissed_detections_treated_as_empty() -> None:
     accidentally dismiss everything; the next dismissal write self-heals
     the key into a proper list.
     """
-    from omnigent.onboarding.detected import dismissed_detection_names
+    from agent_meow.onboarding.detected import dismissed_detection_names
 
     assert dismissed_detection_names({"dismissed_detections": "oops"}) == frozenset()
     # Non-string members are ignored; string members still count.

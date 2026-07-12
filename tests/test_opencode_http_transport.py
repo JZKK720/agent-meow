@@ -1,4 +1,4 @@
-"""Unit tests for :class:`omnigent.opencode_http_transport.OpenCodeHttpTransport`.
+"""Unit tests for :class:`~?agent_meow.opencode_http_transport.OpenCodeHttpTransport`.
 
 Covers the payload builder + every transport method over an injected fake
 ``OpenCodeClient`` (the documented ``client_factory`` test seam), so the
@@ -12,12 +12,12 @@ from typing import Any
 
 import pytest
 
-from omnigent.native_server_transport import (
+from agent_meow.native_server_transport import (
     NativeLaunchConfig,
     NativePermissionDecision,
     NativePrompt,
 )
-from omnigent.opencode_http_transport import OpenCodeHttpTransport, build_prompt_payload
+from agent_meow.opencode_http_transport import OpenCodeHttpTransport, build_prompt_payload
 
 # ── build_prompt_payload + part/model helpers ──────────────────────────────
 

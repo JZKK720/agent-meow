@@ -1,4 +1,4 @@
-"""Tests for :class:`omnigent.inner.cursor_executor.CursorExecutor`.
+"""Tests for :class:`~?agent_meow.inner.cursor_executor.CursorExecutor`.
 
 The cursor harness drives the Cursor Python SDK (``cursor-sdk``). The SDK is
 replaced with an injected fake module (so no real bridge subprocess, API key, or
@@ -20,14 +20,14 @@ from typing import Any
 
 import pytest
 
-from omnigent.inner.cursor_executor import (
+from agent_meow.inner.cursor_executor import (
     CursorExecutor,
     _build_cursor_prompt,
     _normalize_cursor_usage,
     _resolve_model,
     _sdk_message_to_events,
 )
-from omnigent.inner.executor import (
+from agent_meow.inner.executor import (
     ExecutorError,
     Message,
     ReasoningChunk,
@@ -217,7 +217,7 @@ def test_resolve_model_warns_when_dropping_a_pinned_model(
     otherwise a user who pinned a non-Cursor model has no idea it was ignored."""
     import logging
 
-    with caplog.at_level(logging.WARNING, logger="omnigent.inner.cursor_executor"):
+    with caplog.at_level(logging.WARNING, logger="agent_meow.inner.cursor_executor"):
         assert _resolve_model("databricks-claude-opus-4-8") == "auto"
     assert any(
         r.levelno == logging.WARNING and "not a Cursor model" in r.getMessage()
@@ -225,7 +225,7 @@ def test_resolve_model_warns_when_dropping_a_pinned_model(
     )
     # No warning when there was no explicit model to honor.
     caplog.clear()
-    with caplog.at_level(logging.WARNING, logger="omnigent.inner.cursor_executor"):
+    with caplog.at_level(logging.WARNING, logger="agent_meow.inner.cursor_executor"):
         assert _resolve_model(None) == "auto"
     assert not caplog.records
 
@@ -699,7 +699,7 @@ async def test_custom_tool_execute_flags_nested_list_error_with_iserror() -> Non
 async def test_custom_tool_execute_times_out_to_iserror(monkeypatch: pytest.MonkeyPatch) -> None:
     """A tool that never completes must not block the daemon thread forever — the
     bounded wait surfaces a timeout tool error instead of hanging."""
-    monkeypatch.setattr("omnigent.inner.cursor_executor._TOOL_CALL_TIMEOUT_S", 0.05)
+    monkeypatch.setattr("agent_meow.inner.cursor_executor._TOOL_CALL_TIMEOUT_S", 0.05)
 
     async def slow(name: str, args: dict[str, Any]) -> Any:
         await asyncio.sleep(30)
@@ -1073,7 +1073,7 @@ async def test_run_turn_captures_usage_from_turn_ended_update(
 
     notified: list[dict[str, Any]] = []
     monkeypatch.setattr(
-        "omnigent.inner.cursor_executor._notify_usage_from_dict",
+        "agent_meow.inner.cursor_executor._notify_usage_from_dict",
         lambda *, model, usage: notified.append({"model": model, "usage": usage}),
     )
 
@@ -1111,7 +1111,7 @@ async def test_run_turn_usage_none_when_no_turn_ended_update(
 
     notified: list[dict[str, Any]] = []
     monkeypatch.setattr(
-        "omnigent.inner.cursor_executor._notify_usage_from_dict",
+        "agent_meow.inner.cursor_executor._notify_usage_from_dict",
         lambda *, model, usage: notified.append({"model": model, "usage": usage}),
     )
 
@@ -1644,14 +1644,14 @@ def test_cursor_policy_hook_allow(monkeypatch: pytest.MonkeyPatch) -> None:
 
     stdin_data = json.dumps({"tool_name": "Bash", "tool_input": {"command": "ls"}})
 
-    from omnigent.inner import cursor_policy_hook
+    from agent_meow.inner import cursor_policy_hook
 
     stdout = io.StringIO()
     with (
         patch.object(sys, "stdin", io.StringIO(stdin_data)),
         patch.object(sys, "stdout", stdout),
         patch(
-            "omnigent.native_policy_hook.post_evaluate_with_retry",
+            "agent_meow.native_policy_hook.post_evaluate_with_retry",
             return_value=_fake_evaluate_response("POLICY_ACTION_ALLOW"),
         ),
     ):
@@ -1671,14 +1671,14 @@ def test_cursor_policy_hook_deny(monkeypatch: pytest.MonkeyPatch) -> None:
 
     stdin_data = json.dumps({"tool_name": "Bash", "tool_input": {"command": "rm -rf /"}})
 
-    from omnigent.inner import cursor_policy_hook
+    from agent_meow.inner import cursor_policy_hook
 
     stdout = io.StringIO()
     with (
         patch.object(sys, "stdin", io.StringIO(stdin_data)),
         patch.object(sys, "stdout", stdout),
         patch(
-            "omnigent.native_policy_hook.post_evaluate_with_retry",
+            "agent_meow.native_policy_hook.post_evaluate_with_retry",
             return_value=_fake_evaluate_response("POLICY_ACTION_DENY", "dangerous command"),
         ),
     ):
@@ -1700,14 +1700,14 @@ def test_cursor_policy_hook_network_error_fails_open(monkeypatch: pytest.MonkeyP
 
     stdin_data = json.dumps({"tool_name": "Bash", "tool_input": {"command": "ls"}})
 
-    from omnigent.inner import cursor_policy_hook
+    from agent_meow.inner import cursor_policy_hook
 
     stdout = io.StringIO()
     with (
         patch.object(sys, "stdin", io.StringIO(stdin_data)),
         patch.object(sys, "stdout", stdout),
         patch(
-            "omnigent.native_policy_hook.post_evaluate_with_retry",
+            "agent_meow.native_policy_hook.post_evaluate_with_retry",
             return_value=None,
         ),
     ):
@@ -1725,7 +1725,7 @@ def test_cursor_policy_hook_no_env_fails_open(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.delenv("_OMNIGENT_SERVER_URL", raising=False)
     monkeypatch.delenv("_OMNIGENT_SESSION_ID", raising=False)
 
-    from omnigent.inner import cursor_policy_hook
+    from agent_meow.inner import cursor_policy_hook
 
     stdout = io.StringIO()
     with (
@@ -1748,14 +1748,14 @@ def test_cursor_policy_hook_ask_fails_closed(monkeypatch: pytest.MonkeyPatch) ->
 
     stdin_data = json.dumps({"tool_name": "Write", "tool_input": {}})
 
-    from omnigent.inner import cursor_policy_hook
+    from agent_meow.inner import cursor_policy_hook
 
     stdout = io.StringIO()
     with (
         patch.object(sys, "stdin", io.StringIO(stdin_data)),
         patch.object(sys, "stdout", stdout),
         patch(
-            "omnigent.native_policy_hook.post_evaluate_with_retry",
+            "agent_meow.native_policy_hook.post_evaluate_with_retry",
             return_value=_fake_evaluate_response("POLICY_ACTION_ASK", "needs approval"),
         ),
     ):
@@ -1776,14 +1776,14 @@ def test_cursor_policy_hook_uses_long_read_timeout(monkeypatch: pytest.MonkeyPat
 
     stdin_data = json.dumps({"tool_name": "Bash", "tool_input": {}})
 
-    from omnigent.inner import cursor_policy_hook
+    from agent_meow.inner import cursor_policy_hook
 
     mock_fn = MagicMock(return_value=_fake_evaluate_response("POLICY_ACTION_ALLOW"))
     stdout = io.StringIO()
     with (
         patch.object(sys, "stdin", io.StringIO(stdin_data)),
         patch.object(sys, "stdout", stdout),
-        patch("omnigent.native_policy_hook.post_evaluate_with_retry", mock_fn),
+        patch("agent_meow.native_policy_hook.post_evaluate_with_retry", mock_fn),
     ):
         cursor_policy_hook.main()
 

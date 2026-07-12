@@ -1,4 +1,4 @@
-"""Unit tests for omnigent.runtime.compaction."""
+"""Unit tests for agent_meow.runtime.compaction."""
 
 from __future__ import annotations
 
@@ -6,17 +6,17 @@ from typing import Any
 
 import pytest
 
-from omnigent.entities import (
+from agent_meow.entities import (
     CompactionData,
     ConversationItem,
     FunctionCallData,
     FunctionCallOutputData,
     MessageData,
 )
-from omnigent.llms.context_window import resolve_effective_context_window
-from omnigent.llms.errors import RetryableLLMError
-from omnigent.llms.types import MessageOutput, OutputText, Response
-from omnigent.runtime.compaction import (
+from agent_meow.llms.context_window import resolve_effective_context_window
+from agent_meow.llms.errors import RetryableLLMError
+from agent_meow.llms.types import MessageOutput, OutputText, Response
+from agent_meow.runtime.compaction import (
     _BINARY_CONTENT_CLEARED,
     _TOOL_RESULT_CLEARED,
     _is_summary_auth_error,
@@ -27,7 +27,7 @@ from omnigent.runtime.compaction import (
     count_tokens,
     summarize_history,
 )
-from omnigent.spec.types import CompactionConfig
+from agent_meow.spec.types import CompactionConfig
 
 # ---------------------------------------------------------------------------
 # LLM client stubs
@@ -264,7 +264,7 @@ def _fco_dict(call_id: str = "call_abc", output: str = "tool result") -> dict[st
 @pytest.mark.asyncio
 async def test_no_compaction_under_threshold(monkeypatch: pytest.MonkeyPatch) -> None:
     """Layer 1 always runs but returns early if token count is within budget."""
-    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", lambda msgs, model: 50)
+    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", lambda msgs, model: 50)
     messages = [_user_msg_dict("hi"), _assistant_msg_dict("hello")]
     history = [_user_msg("msg_001", "hi"), _assistant_msg("msg_002", "hello")]
 
@@ -300,7 +300,7 @@ async def test_layer1_clears_tool_results_outside_window(monkeypatch: pytest.Mon
     - Items 0..8 outside window (eligible for clearing).
     - Items 9..11 inside window (protected: fc3, fco3, a3).
     """
-    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", lambda msgs, model: 50)
+    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", lambda msgs, model: 50)
 
     history = [
         _user_msg("msg_u1", "iter1"),
@@ -369,7 +369,7 @@ async def test_layer1_never_touches_user_message_text(monkeypatch: pytest.Monkey
     Layer 1 (tool result clearing) must never modify user message text content,
     even for messages outside the recent window.
     """
-    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", lambda msgs, model: 50)
+    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", lambda msgs, model: 50)
 
     history = [
         _user_msg("msg_u1", "Important user text outside window"),
@@ -416,7 +416,7 @@ async def test_layer1_clears_binary_content_and_preserves_file_id(
     Layer 1 clears image/file block data outside the recent window,
     preserves file_id, and leaves text blocks in the same message untouched.
     """
-    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", lambda msgs, model: 50)
+    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", lambda msgs, model: 50)
 
     # User message with image block (outside window) + text block
     image_msg = {
@@ -465,7 +465,7 @@ async def test_layer1_binary_content_inside_window_untouched(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Binary content inside the recent window must not be cleared by Layer 1."""
-    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", lambda msgs, model: 50)
+    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", lambda msgs, model: 50)
 
     image_msg_outside = {
         "role": "user",
@@ -530,7 +530,7 @@ async def test_recent_window_boundary_parametrized(
     Items inside the recent window must never be modified;
     items outside must have their tool result bodies cleared.
     """
-    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", lambda msgs, model: 50)
+    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", lambda msgs, model: 50)
 
     history = []
     messages = []
@@ -602,7 +602,7 @@ async def test_layer2_triggers_when_layer1_insufficient(monkeypatch: pytest.Monk
             return 10001  # above budget=10000 → Layer 2 needed
         return 50  # all subsequent calls: below budget
 
-    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", mock_count_tokens)
+    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", mock_count_tokens)
 
     async def _stub_summarize(
         msgs: list[dict[str, Any]],
@@ -617,7 +617,7 @@ async def test_layer2_triggers_when_layer1_insufficient(monkeypatch: pytest.Monk
         }
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.summarize_history",
+        "agent_meow.runtime.compaction.summarize_history",
         _stub_summarize,
     )
 
@@ -699,14 +699,14 @@ async def test_layer2_failure_falls_back_to_layer3(monkeypatch: pytest.MonkeyPat
         call_idx[0] += 1
         return 10001 if call_idx[0] <= 2 else 50
 
-    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", mock_count_tokens)
+    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", mock_count_tokens)
 
     async def _raise_retryable(*args: Any, **kwargs: Any) -> dict[str, Any]:
         """Raise RetryableLLMError to simulate an unavailable LLM."""
         raise RetryableLLMError("LLM unavailable", code="503")
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.summarize_history",
+        "agent_meow.runtime.compaction.summarize_history",
         _raise_retryable,
     )
 
@@ -916,7 +916,7 @@ async def test_layer3_truncation_preserves_tool_call_pairs(
         return len(msgs) * 5000
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.count_tokens",
+        "agent_meow.runtime.compaction.count_tokens",
         mock_count_tokens,
     )
 
@@ -931,7 +931,7 @@ async def test_layer3_truncation_preserves_tool_call_pairs(
         raise RuntimeError("Simulated Layer 2 failure")
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.summarize_history",
+        "agent_meow.runtime.compaction.summarize_history",
         _raise_layer2,
     )
 
@@ -1027,7 +1027,7 @@ async def test_layer2_receives_cleared_content(
         return 50
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.count_tokens",
+        "agent_meow.runtime.compaction.count_tokens",
         mock_count_tokens,
     )
 
@@ -1053,7 +1053,7 @@ async def test_layer2_receives_cleared_content(
         return {"text": "Summary", "token_count": 10}
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.summarize_history",
+        "agent_meow.runtime.compaction.summarize_history",
         _capturing_summarize,
     )
 
@@ -1149,7 +1149,7 @@ async def test_layer3_fires_when_summary_plus_recent_exceeds_budget(
         return len(msgs) * 3000
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.count_tokens",
+        "agent_meow.runtime.compaction.count_tokens",
         mock_count_tokens,
     )
 
@@ -1166,7 +1166,7 @@ async def test_layer3_fires_when_summary_plus_recent_exceeds_budget(
         }
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.summarize_history",
+        "agent_meow.runtime.compaction.summarize_history",
         _stub_summarize,
     )
 
@@ -1296,7 +1296,7 @@ def test_truncate_oldest_preserves_tool_call_pairs(
         return 10000 if call_count[0] == 1 else 50
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.count_tokens",
+        "agent_meow.runtime.compaction.count_tokens",
         mock_count_tokens,
     )
 
@@ -1352,7 +1352,7 @@ async def test_compaction_strips_annotations_before_summarization(
         return 50
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.count_tokens",
+        "agent_meow.runtime.compaction.count_tokens",
         mock_count_tokens,
     )
 
@@ -1377,7 +1377,7 @@ async def test_compaction_strips_annotations_before_summarization(
         return {"text": "Summary", "token_count": 10}
 
     monkeypatch.setattr(
-        "omnigent.runtime.compaction.summarize_history",
+        "agent_meow.runtime.compaction.summarize_history",
         _capturing_summarize,
     )
 
@@ -1462,7 +1462,7 @@ async def test_declared_window_keeps_large_fill_under_budget(
     fill does NOT trigger Layer 2. If the window were the 128K catalog default
     (budget=102400), the same fill would compact — which is the bug.
     """
-    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", lambda msgs, model: 197_000)
+    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", lambda msgs, model: 197_000)
     messages = [_user_msg_dict("hi"), _assistant_msg_dict("hello")]
     history = [_user_msg("msg_001", "hi"), _assistant_msg("msg_002", "hello")]
 
@@ -1491,7 +1491,7 @@ async def test_default_window_compacts_same_fill(monkeypatch: pytest.MonkeyPatch
     Contrast with the test above: this is the pre-fix behavior (budget=102400),
     confirming the window value is what flips compaction on/off.
     """
-    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", lambda msgs, model: 197_000)
+    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", lambda msgs, model: 197_000)
     messages = [_user_msg_dict("hi"), _assistant_msg_dict("hello")]
     history = [_user_msg("msg_001", "hi"), _assistant_msg("msg_002", "hello")]
 

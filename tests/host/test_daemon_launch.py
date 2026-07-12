@@ -1,6 +1,6 @@
 """Tests for the CLI-side daemon-launch polling helpers.
 
-Covers ``omnigent.host.daemon_launch``: the online-wait loops must poll
+Covers ``agent_meow.host.daemon_launch``: the online-wait loops must poll
 through *transient* transport errors (connection refused while the local
 server is still binding, a dropped keepalive) instead of crashing on the
 first one, and must surface the last transport error when the deadline
@@ -15,8 +15,8 @@ import click
 import httpx
 import pytest
 
-from omnigent.host import daemon_launch
-from omnigent.host.daemon_launch import (
+from agent_meow.host import daemon_launch
+from agent_meow.host.daemon_launch import (
     runner_is_online,
     wait_for_host_online,
     wait_for_runner_online,

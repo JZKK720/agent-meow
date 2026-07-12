@@ -9,7 +9,7 @@ assistant text length).
 - agent-meow' ``ClaudeSDKExecutor`` regresses (auth, MCP tool
   bridging, Claude Code binary discovery, or the message-stream
   translation in ``claude_sdk_executor.run_turn``).
-- ``omnigent.cli._run_agent`` for the ``-p`` one-shot path
+- ``agent_meow.cli._run_agent`` for the ``-p`` one-shot path
   stops printing the assistant text to stdout on turn complete.
 - The Claude Agent SDK dependency or the ``claude`` CLI binary
   goes missing from the agent-meow venv.
@@ -37,8 +37,8 @@ from typing import Any
 
 import pytest
 
-from tests.e2e.omnigent._snapshot import compare_snapshot
-from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.agent_meow._snapshot import compare_snapshot
+from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
 
 _HARNESS = "claude-sdk"
 _PROMPT = "say hi in 5 words"

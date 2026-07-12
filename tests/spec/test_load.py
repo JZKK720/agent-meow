@@ -1,4 +1,4 @@
-"""Tests for omnigent.spec.load()."""
+"""Tests for agent_meow.spec.load()."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from omnigent.errors import OmnigentError
-from omnigent.spec import load, materialize_bundle
-from omnigent.spec._omnigent_compat import load_omnigent_yaml
+from agent_meow.errors import OmnigentError
+from agent_meow.spec import load, materialize_bundle
+from agent_meow.spec._omnigent_compat import load_omnigent_yaml
 
 
 @pytest.fixture()
@@ -587,7 +587,7 @@ def test_load_pruning_logs_warning_for_dropped_sub_agent(
         },
     )
 
-    with caplog.at_level("WARNING", logger="omnigent.spec"):
+    with caplog.at_level("WARNING", logger="agent_meow.spec"):
         load(tmp_path, prune_invalid_sub_agents=True)
 
     assert any("newcomer" in rec.message and rec.levelname == "WARNING" for rec in caplog.records)

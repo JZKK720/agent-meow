@@ -1,4 +1,4 @@
-"""Tests for omnigent.tools.local (LocalPythonTool subprocess execution)."""
+"""Tests for agent_meow.tools.local (LocalPythonTool subprocess execution)."""
 
 from __future__ import annotations
 
@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
-from omnigent.spec.types import LocalToolInfo, SandboxConfig
-from omnigent.tools.base import ToolContext
-from omnigent.tools.local import (
+from agent_meow.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
+from agent_meow.spec.types import LocalToolInfo, SandboxConfig
+from agent_meow.tools.base import ToolContext
+from agent_meow.tools.local import (
     LocalPythonTool,
     LocalToolLoadError,
     load_local_python_tools,

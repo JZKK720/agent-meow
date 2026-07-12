@@ -22,7 +22,7 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from omnigent.llms.types import (
+from agent_meow.llms.types import (
     FunctionCallOutput,
     MessageOutput,
     OutputText,
@@ -31,20 +31,20 @@ from omnigent.llms.types import (
     ResponseStreamEvent,
     ResponseTextDeltaEvent,
 )
-from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
-from omnigent.runtime import init as init_runtime
-from omnigent.runtime import pending_elicitations
-from omnigent.runtime.agent_cache import AgentCache
-from omnigent.server import _elicitation_registry, presence
-from omnigent.server.app import create_app
-from omnigent.server.routes import sessions as sessions_routes
-from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from omnigent.stores.artifact_store.local import LocalArtifactStore
-from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runtime import init as init_runtime
+from agent_meow.runtime import pending_elicitations
+from agent_meow.runtime.agent_cache import AgentCache
+from agent_meow.server import _elicitation_registry, presence
+from agent_meow.server.app import create_app
+from agent_meow.server.routes import sessions as sessions_routes
+from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from agent_meow.stores.artifact_store.local import LocalArtifactStore
+from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
 
 # ── Controllable mock LLM ─────────────────────────────
 
@@ -473,7 +473,7 @@ def pytest_runtest_teardown(item: pytest.Item) -> None:
     for name in leaked:
         setattr(sessions_routes, name, _GUARDED_SESSIONS_GLOBALS[name])
     raise RuntimeError(
-        f"omnigent.server.routes.sessions.{', '.join(leaked)} left monkeypatched "
+        f"agent_meow.server.routes.sessions.{', '.join(leaked)} left monkeypatched "
         f"after {item.nodeid}: a fixture finalizer (monkeypatch undo) did not run. "
         "The original has been restored for subsequent tests. If no test in this "
         "file patches it, suspect rerun/fixture-teardown plugin breakage "
@@ -518,7 +518,7 @@ def runtime_init(
     )
     # Patch the LLM client so the mock is used everywhere.
     monkeypatch.setattr(
-        "omnigent.runtime.workflow._get_llm_client",
+        "agent_meow.runtime.workflow._get_llm_client",
         lambda: mock_llm,
     )
     yield
@@ -613,8 +613,8 @@ async def client(
     """
     # Initialize the HarnessProcessManager for tests that hit the
     # fallback executor path (when _runner_client is not set).
-    from omnigent.runtime import set_harness_process_manager
-    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
+    from agent_meow.runtime import set_harness_process_manager
+    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()

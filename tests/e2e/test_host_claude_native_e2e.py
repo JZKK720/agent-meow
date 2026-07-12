@@ -12,7 +12,7 @@ pending terminal input when its TUI initializes. So a first message
 typed into that gap is silently dropped — the UI shows "Working…"
 forever and nothing is persisted. ``inject_user_message`` now waits for
 Claude's input prompt to render before typing (see
-``omnigent.claude_native_bridge._wait_for_claude_prompt_ready``).
+``agent_meow.claude_native_bridge._wait_for_claude_prompt_ready``).
 
 Making the race deterministic
 -----------------------------
@@ -202,7 +202,7 @@ def _spawn_host_daemon(
     with open(daemon_log, "w") as log_fh:
         return subprocess.Popen(
             # Compat-aware: pinned OLD host venv in runner compat mode (Config 2).
-            [runner_executable(), "-m", "omnigent.host._daemon_entry", "--server", live_server],
+            [runner_executable(), "-m", "agent_meow.host._daemon_entry", "--server", live_server],
             env=apply_runner_env(env),
             cwd=compat_runner_cwd(),
             stdout=subprocess.DEVNULL,
@@ -413,7 +413,7 @@ def _plant_poisoned_omnigent_package(workspace: Path) -> None:
 
     Claude Code runs its hook subprocesses (and the relay MCP server)
     with the cwd set to the session's workspace. Absent ``python -I``,
-    Python prepends that cwd to ``sys.path[0]``, so ``import omnigent``
+    Python prepends that cwd to ``sys.path[0]``, so ``import agent_meow``
     in the hook resolves to whatever ``omnigent/`` lives in the
     workspace -- not the installed package. This plants a copy whose
     ``__init__`` raises on import, faithfully modeling the real failure

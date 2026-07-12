@@ -10,8 +10,8 @@ from pathlib import Path
 import httpx
 import pytest
 
-from omnigent import codex_native_hook, native_policy_hook
-from omnigent.codex_native_bridge import (
+from agent_meow import codex_native_hook, native_policy_hook
+from agent_meow.codex_native_bridge import (
     CodexNativeBridgeState,
     codex_home_for_bridge_dir,
     prepare_bridge_dir,
@@ -145,7 +145,7 @@ def bridge_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     :param monkeypatch: pytest monkeypatch fixture.
     :returns: Prepared bridge directory.
     """
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
     bdir = prepare_bridge_dir("bridge_test")
     write_bridge_state(
         bdir,
@@ -354,7 +354,7 @@ def test_missing_bridge_state_is_fail_open(
     block tools — the hook returns 0 with no verdict. ``_RaisesIfCalled``
     asserts the network was never reached.
     """
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
     empty_dir = prepare_bridge_dir("bridge_no_state")
     monkeypatch.setattr(native_policy_hook.httpx, "Client", _RaisesIfCalled)
 

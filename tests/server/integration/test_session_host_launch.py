@@ -27,7 +27,7 @@ import pytest
 from asgiref.testing import ApplicationCommunicator
 from fastapi import FastAPI
 
-from omnigent.host.frames import (
+from agent_meow.host.frames import (
     HostHelloFrame,
     HostLaunchRunnerFrame,
     HostLaunchRunnerResultFrame,
@@ -38,17 +38,17 @@ from omnigent.host.frames import (
     decode_host_frame,
     encode_host_frame,
 )
-from omnigent.runner.transports.ws_tunnel.frames import HelloFrame
-from omnigent.runtime.agent_cache import AgentCache
-from omnigent.server.app import create_app
-from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from omnigent.stores.artifact_store.local import LocalArtifactStore
-from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.runner.transports.ws_tunnel.frames import HelloFrame
+from agent_meow.runtime.agent_cache import AgentCache
+from agent_meow.server.app import create_app
+from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from agent_meow.stores.artifact_store.local import LocalArtifactStore
+from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from omnigent.stores.host_store import HostStore
+from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from agent_meow.stores.host_store import HostStore
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
@@ -523,8 +523,8 @@ async def test_message_relaunch_harness_not_configured_persists_error_turn(
     ``runner_unavailable`` and no error item is written — both assertions
     below fail.
     """
-    from omnigent.runtime import set_runner_client
-    from omnigent.server.routes import sessions as sessions_module
+    from agent_meow.runtime import set_runner_client
+    from agent_meow.server.routes import sessions as sessions_module
 
     # Grace=0 so the message takes the relaunch branch immediately instead
     # of waiting for the (never-connecting) create-bound runner.
@@ -677,7 +677,7 @@ async def _stop_host_session(
     :param session_id: Session to stop, e.g. ``"conv_abc123"``.
     :returns: The ``runner_id`` the host was told to stop.
     """
-    from omnigent.runtime import set_runner_client
+    from agent_meow.runtime import set_runner_client
 
     def _runner_handler(request: httpx.Request) -> httpx.Response:
         """204 every runner POST (pane-kill forward) and snapshot GET."""
@@ -749,7 +749,7 @@ async def test_stopped_host_session_writes_no_label_and_host_stays_online(
     :func:`test_stopped_host_session_message_relaunches_runner`).
 
     Asserts the post-Stop liveness reports the host still online and that
-    NO ``omnigent.stopped`` label is persisted. Mutation check: re-add a
+    NO ``agent_meow.stopped`` label is persisted. Mutation check: re-add a
     sticky stop-label write and the no-label assertion fails.
     """
     comm = await _connect_host(app)
@@ -768,10 +768,10 @@ async def test_stopped_host_session_writes_no_label_and_host_stays_online(
     )
 
     # Stop is non-sticky: no persistent marker is written. A re-introduced
-    # sticky label would resurface the retired omnigent.stopped behavior.
+    # sticky label would resurface the retired agent_meow.stopped behavior.
     snap = await client.get(f"/v1/sessions/{session_id}")
-    assert "omnigent.stopped" not in snap.json()["labels"], (
-        f"Stop must NOT persist any omnigent.stopped label; got {snap.json()['labels']!r}"
+    assert "agent_meow.stopped" not in snap.json()["labels"], (
+        f"Stop must NOT persist any agent_meow.stopped label; got {snap.json()['labels']!r}"
     )
 
 
@@ -795,8 +795,8 @@ async def test_stopped_host_session_message_relaunches_runner(
     to the relaunch branch and no launch frame is sent — the first
     assertion fails.
     """
-    from omnigent.runtime import set_runner_client
-    from omnigent.server.routes import sessions as sessions_module
+    from agent_meow.runtime import set_runner_client
+    from agent_meow.server.routes import sessions as sessions_module
 
     monkeypatch.setattr(sessions_module, "_HOST_BOUND_RUNNER_CONNECT_GRACE_S", 0.0)
 
@@ -879,8 +879,8 @@ async def test_host_session_message_relaunches_offline_runner(
     returns ``None`` and the first assertion fails. Make ``replace_runner_id``
     a no-op and the runner_id-rotation assertion fails.
     """
-    from omnigent.runtime import set_runner_client
-    from omnigent.server.routes import sessions as sessions_module
+    from agent_meow.runtime import set_runner_client
+    from agent_meow.server.routes import sessions as sessions_module
 
     monkeypatch.setattr(sessions_module, "_HOST_BOUND_RUNNER_CONNECT_GRACE_S", 0.0)
 
@@ -965,7 +965,7 @@ async def test_host_session_message_waits_for_bound_runner_before_relaunch(
     and this test observes a second host launch frame plus a changed
     conversation ``runner_id``.
     """
-    from omnigent.server.routes import sessions as sessions_module
+    from agent_meow.server.routes import sessions as sessions_module
 
     comm = await _connect_host(app)
     session = await _inline_launch_session(client, comm)
@@ -1104,7 +1104,7 @@ async def test_relaunch_posts_session_init_before_forwarding_message(
     leading ``/v1/sessions`` POST (first assertion fails). Move it after
     the forward and the index-ordering assertion fails.
     """
-    from omnigent.server.routes import sessions as sessions_module
+    from agent_meow.server.routes import sessions as sessions_module
 
     monkeypatch.setattr(sessions_module, "_HOST_BOUND_RUNNER_CONNECT_GRACE_S", 0.0)
 

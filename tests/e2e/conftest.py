@@ -41,7 +41,7 @@ import httpx
 import pytest
 import yaml
 
-from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 from tests._helpers.compat import (
     apply_runner_env,
     apply_server_env,
@@ -132,7 +132,7 @@ def _enforce_min_runner_version(request: pytest.FixtureRequest) -> None:
     """Skip tests marked ``@pytest.mark.min_runner_version(X)`` on older runners/hosts.
 
     The runner/host backwards-compat run (Config 2) pins the
-    ``omnigent.runner._entry`` / ``omnigent.host._daemon_entry`` subprocesses to
+    ``agent_meow.runner._entry`` / ``agent_meow.host._daemon_entry`` subprocesses to
     an older build and sets ``OMNIGENT_COMPAT_RUNNER_VERSION``. The runner/host
     expose no ``/api/version`` endpoint, so — unlike the server skip — the
     version comes purely from that env backstop
@@ -556,7 +556,7 @@ def live_runner_id() -> str:
     """
     import secrets as _secrets
 
-    from omnigent.runner.identity import token_bound_runner_id
+    from agent_meow.runner.identity import token_bound_runner_id
 
     if "runner_id" not in _live_runner_state:
         token = _secrets.token_urlsafe(32)
@@ -678,7 +678,7 @@ def live_server(
         # sys.executable (it tracks the test process / client version).
         server_executable(),
         "-m",
-        "omnigent.cli",
+        "agent_meow.cli",
         "server",
         "--port",
         str(port),
@@ -755,7 +755,7 @@ def live_server(
         }
     )
     runner_proc = subprocess.Popen(
-        [runner_executable(), "-m", "omnigent.runner._entry"],
+        [runner_executable(), "-m", "agent_meow.runner._entry"],
         env=runner_env,
         cwd=compat_runner_cwd(),
         stdout=runner_log_handle,
@@ -1807,7 +1807,7 @@ def resume_test_server(
         [
             server_executable(),
             "-m",
-            "omnigent.cli",
+            "agent_meow.cli",
             "server",
             "--port",
             str(port),

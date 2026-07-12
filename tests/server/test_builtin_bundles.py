@@ -19,9 +19,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from omnigent.errors import OmnigentError
-from omnigent.server import app
-from omnigent.spec import load, materialize_bundle
+from agent_meow.errors import OmnigentError
+from agent_meow.server import app
+from agent_meow.spec import load, materialize_bundle
 
 # (builder attribute, the spec entry that proves the bundle was assembled,
 # whether the source is a shipped example that a stripped deployment may omit)
@@ -100,7 +100,7 @@ def test_bundle_builder_is_reproducible(
 # REAL shipped definitions (not synthetic minimal specs — see
 # tests/spec/test_load.py for those) so a regression in either the prune logic
 # OR the polly/debby structure (e.g. a parent that becomes un-prunable) is
-# caught here. See omnigent.spec.load(..., prune_invalid_sub_agents=True).
+# caught here. See agent_meow.spec.load(..., prune_invalid_sub_agents=True).
 
 # (name, bundle source dir, sub-agents the shipped definition declares today)
 _SHIPPED_SUB_AGENT_EXAMPLES = [

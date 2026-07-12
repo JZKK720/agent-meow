@@ -8,9 +8,9 @@ dispatches by ``type``, (c) loose-by-default ``extra="ignore"``
 forward compatibility, and (d) MCP-style ``extra="allow"`` on the
 elicitation params block.
 
-The event models live in :mod:`omnigent.server.schemas`;
+The event models live in :mod:`~?agent_meow.server.schemas`;
 this module only references the request/response schemas in
-:mod:`omnigent.server.schemas` for the embedded ``ResponseObject``.
+:mod:`~?agent_meow.server.schemas` for the embedded ``ResponseObject``.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from typing import Any
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from omnigent.server.schemas import (
+from agent_meow.server.schemas import (
     CancelledEvent,
     CompletedEvent,
     CreatedEvent,
@@ -587,7 +587,7 @@ def test_session_create_git_requires_host_id() -> None:
     failing late. If this validator is dropped, the request would
     validate and the error would surface deeper in the create flow.
     """
-    from omnigent.server.schemas import SessionCreateRequest, SessionGitOptions
+    from agent_meow.server.schemas import SessionCreateRequest, SessionGitOptions
 
     with pytest.raises(ValidationError, match="git worktree creation requires host_id"):
         SessionCreateRequest(
@@ -598,7 +598,7 @@ def test_session_create_git_requires_host_id() -> None:
 
 def test_session_create_git_with_host_id_ok() -> None:
     """``git`` with ``host_id`` validates cleanly."""
-    from omnigent.server.schemas import SessionCreateRequest, SessionGitOptions
+    from agent_meow.server.schemas import SessionCreateRequest, SessionGitOptions
 
     req = SessionCreateRequest(
         agent_id="ag_x",
@@ -615,7 +615,7 @@ def test_session_create_host_type_defaults_external() -> None:
     ``host_type`` defaults to ``"external"`` — the pre-existing
     contract for every client that doesn't send the field (backcompat).
     """
-    from omnigent.server.schemas import SessionCreateRequest
+    from agent_meow.server.schemas import SessionCreateRequest
 
     req = SessionCreateRequest(agent_id="ag_x")
     assert req.host_type == "external"
@@ -627,7 +627,7 @@ def test_session_create_managed_rejects_host_id() -> None:
     contradiction (the server provisions the host) — must 422 at
     validation instead of silently ignoring the caller's host.
     """
-    from omnigent.server.schemas import SessionCreateRequest
+    from agent_meow.server.schemas import SessionCreateRequest
 
     with pytest.raises(ValidationError, match="host_id must not be set"):
         SessionCreateRequest(agent_id="ag_x", host_type="managed", host_id="host_abc")
@@ -640,7 +640,7 @@ def test_session_create_managed_rejects_path_workspace() -> None:
     at. Managed workspaces are repository URLs; must 422 at
     validation with the URL form named.
     """
-    from omnigent.server.schemas import SessionCreateRequest
+    from agent_meow.server.schemas import SessionCreateRequest
 
     with pytest.raises(ValidationError, match="takes a git repository URL"):
         SessionCreateRequest(agent_id="ag_x", host_type="managed", workspace="/tmp/w")
@@ -660,7 +660,7 @@ def test_session_create_managed_accepts_repo_url_workspace(workspace: str) -> No
     forms — the value passes through verbatim for the launch path to
     parse and clone.
     """
-    from omnigent.server.schemas import SessionCreateRequest
+    from agent_meow.server.schemas import SessionCreateRequest
 
     req = SessionCreateRequest(agent_id="ag_x", host_type="managed", workspace=workspace)
     assert req.workspace == workspace
@@ -686,7 +686,7 @@ def test_session_create_managed_rejects_malformed_repo_workspace(
     error embedded) instead of failing mid-provision inside a
     half-launched sandbox.
     """
-    from omnigent.server.schemas import SessionCreateRequest
+    from agent_meow.server.schemas import SessionCreateRequest
 
     with pytest.raises(ValidationError, match="") as exc:
         SessionCreateRequest(agent_id="ag_x", host_type="managed", workspace=workspace)
@@ -700,7 +700,7 @@ def test_session_create_external_rejects_repo_url_workspace() -> None:
     the URL as a path would fail later in workspace validation with a
     confusing "no such directory".
     """
-    from omnigent.server.schemas import SessionCreateRequest
+    from agent_meow.server.schemas import SessionCreateRequest
 
     with pytest.raises(ValidationError, match="requires host_type 'managed'"):
         SessionCreateRequest(
@@ -725,7 +725,7 @@ def test_session_response_status_accepts_canonical_set(status: str) -> None:
     forwards the raw status would 500 on serialization. Widening keeps the
     model a superset of what the runtime can produce.
     """
-    from omnigent.server.schemas import SessionResponse
+    from agent_meow.server.schemas import SessionResponse
 
     resp = SessionResponse(id="conv_x", agent_id="ag_x", status=status, created_at=0)
     assert resp.status == status
@@ -735,7 +735,7 @@ def test_session_response_status_accepts_canonical_set(status: str) -> None:
 @pytest.mark.parametrize("status", ["idle", "running", "waiting", "failed"])
 def test_session_list_item_status_accepts_canonical_set(status: str) -> None:
     """``SessionListItem.status`` accepts the same canonical set as the snapshot."""
-    from omnigent.server.schemas import SessionListItem
+    from agent_meow.server.schemas import SessionListItem
 
     item = SessionListItem(id="conv_x", agent_id="ag_x", status=status, created_at=0, updated_at=0)
     assert item.status == status
@@ -743,7 +743,7 @@ def test_session_list_item_status_accepts_canonical_set(status: str) -> None:
 
 def test_session_response_status_rejects_unknown_value() -> None:
     """A status outside the canonical set still fails loud (fail-closed wire shape)."""
-    from omnigent.server.schemas import SessionResponse
+    from agent_meow.server.schemas import SessionResponse
 
     with pytest.raises(ValidationError):
         SessionResponse(id="conv_x", agent_id="ag_x", status="launching", created_at=0)

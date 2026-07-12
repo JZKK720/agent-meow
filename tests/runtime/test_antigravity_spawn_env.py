@@ -20,13 +20,13 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
-from omnigent.errors import ErrorCode, OmnigentError
-from omnigent.runtime import workflow as wf
-from omnigent.runtime.workflow import (
+from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.runtime import workflow as wf
+from agent_meow.runtime.workflow import (
     _build_antigravity_spawn_env,
     configure_agent_harness_with_provider,
 )
-from omnigent.spec.types import (
+from agent_meow.spec.types import (
     AgentSpec,
     ApiKeyAuth,
     DatabricksAuth,

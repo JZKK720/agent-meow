@@ -17,9 +17,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from omnigent.onboarding import copilot_auth, extra_install
-from omnigent.onboarding import secrets as secret_store
-from omnigent.onboarding.copilot_auth import (
+from agent_meow.onboarding import copilot_auth, extra_install
+from agent_meow.onboarding import secrets as secret_store
+from agent_meow.onboarding.copilot_auth import (
     COPILOT_SECRET_NAME,
     copilot_github_token_configured,
     copilot_github_token_ref,

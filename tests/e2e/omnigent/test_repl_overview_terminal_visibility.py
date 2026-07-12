@@ -33,15 +33,15 @@ from typing import Any
 import pexpect
 import pytest
 
-from tests.e2e.omnigent._pexpect_harness import (
+from tests.e2e.agent_meow._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     submit_prompt,
     wait_for_ready,
 )
-from tests.e2e.omnigent._snapshot import compare_snapshot
-from tests.e2e.omnigent.conftest import configure_mock_llm
+from tests.e2e.agent_meow._snapshot import compare_snapshot
+from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 _MODEL = "mock-overview-terminal"
 _HARNESS = "openai-agents"

@@ -11,7 +11,7 @@ import pytest
 from alembic import command
 from sqlalchemy import create_engine
 
-from omnigent.db.utils import (
+from agent_meow.db.utils import (
     _LAKEBASE_POOL_RECYCLE_SECONDS,
     _SERVER_POOL_RECYCLE_SECONDS,
     _build_alembic_config,
@@ -29,7 +29,7 @@ from omnigent.db.utils import (
     set_lakebase_token_provider,
     strip_nul_bytes,
 )
-from omnigent.entities.conversation import (
+from agent_meow.entities.conversation import (
     ErrorData,
     NewConversationItem,
     ResourceEventData,
@@ -61,12 +61,12 @@ def test_non_sqlite_engine_has_pool_settings(
         return mock_engine
 
     monkeypatch.setattr(
-        "omnigent.db.utils.create_engine",
+        "agent_meow.db.utils.create_engine",
         _capturing_create_engine,
     )
     # Skip migrations -- we only care about engine creation kwargs.
     monkeypatch.setattr(
-        "omnigent.db.utils._run_migrations",
+        "agent_meow.db.utils._run_migrations",
         lambda engine, db_uri: None,
     )
 
@@ -104,7 +104,7 @@ def test_sqlite_engine_skips_server_pool_settings_and_enables_wal(
     took effect on a fresh DBAPI connection.
     """
     monkeypatch.setattr(
-        "omnigent.db.utils._run_migrations",
+        "agent_meow.db.utils._run_migrations",
         lambda engine, db_uri: None,
     )
 
@@ -141,7 +141,7 @@ def test_sqlite_engine_skips_server_pool_settings_and_enables_wal(
 def _clear_lakebase_override() -> Any:
     """Ensure the process-wide token provider override never leaks across
     tests (it is module-global state). Clears before and after each test."""
-    from omnigent.db.utils import set_lakebase_token_provider as _set
+    from agent_meow.db.utils import set_lakebase_token_provider as _set
 
     _set(None)
     yield
@@ -157,7 +157,7 @@ def test_static_postgres_uri_path_unchanged(monkeypatch: pytest.MonkeyPatch) -> 
     attached. A regression here would mean the opt-in path leaked into the
     default static-password Postgres deploy.
     """
-    from omnigent.db import utils
+    from agent_meow.db import utils
 
     # No override installed (autouse fixture) and no env var → no token path.
     monkeypatch.delenv("OMNIGENT_LAKEBASE_INSTANCE", raising=False)
@@ -269,7 +269,7 @@ def test_create_engine_wires_token_refresh_and_short_recycle(
     listener (verified by spying on the install helper to confirm it receives
     the resolved provider).
     """
-    from omnigent.db import utils
+    from agent_meow.db import utils
 
     def _override() -> str:
         return "live-token"
@@ -431,7 +431,7 @@ def test_initialize_or_verify_schema_reports_manual_retry_when_auto_migration_fa
     def _fail_migration(*_args: object, **_kwargs: object) -> None:
         raise RuntimeError("boom")
 
-    monkeypatch.setattr("omnigent.db.utils._run_migrations", _fail_migration)
+    monkeypatch.setattr("agent_meow.db.utils._run_migrations", _fail_migration)
 
     engine = create_engine(uri)
     try:
@@ -493,8 +493,8 @@ def test_item_type_id_and_data_registries_cover_the_same_types() -> None:
     loud unit-test failure instead of a per-item production traceback — exactly
     how ``resource_event`` slipped through (added to the data map, forgotten in
     the id map)."""
-    from omnigent.db.utils import _ITEM_TYPE_PREFIX
-    from omnigent.entities.conversation import ITEM_TYPE_TO_DATA_CLS
+    from agent_meow.db.utils import _ITEM_TYPE_PREFIX
+    from agent_meow.entities.conversation import ITEM_TYPE_TO_DATA_CLS
 
     assert set(_ITEM_TYPE_PREFIX) == set(ITEM_TYPE_TO_DATA_CLS), (
         "item-type registries diverged — "

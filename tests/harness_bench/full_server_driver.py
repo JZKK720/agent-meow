@@ -41,7 +41,7 @@ from typing import Any
 
 import httpx
 
-from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN, token_bound_runner_id
+from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN, token_bound_runner_id
 from tests._helpers.compat import (
     apply_runner_env,
     apply_server_env,
@@ -124,7 +124,7 @@ def spawn_omnigent_server(
     args = [
         server_executable(),
         "-m",
-        "omnigent.cli",
+        "agent_meow.cli",
         "server",
         "--port",
         str(port),
@@ -280,7 +280,7 @@ class FullServerDriver:
             }
         )
         return subprocess.Popen(
-            [runner_executable(), "-m", "omnigent.runner._entry"],
+            [runner_executable(), "-m", "agent_meow.runner._entry"],
             env=runner_env,
             cwd=compat_runner_cwd(),
             stdout=log.open("wb"),
@@ -342,7 +342,7 @@ class FullServerDriver:
                     "deny_tool": {
                         "type": "function",
                         "function": {
-                            "path": "omnigent.policies.function.make_fixed_action_callable",
+                            "path": "agent_meow.policies.function.make_fixed_action_callable",
                             "arguments": {
                                 "action": "deny",
                                 "reason": _DENY_REASON,

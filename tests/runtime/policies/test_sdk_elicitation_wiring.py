@@ -473,17 +473,17 @@ async def test_hook_accepts_sync_callable() -> None:
 
 def _load_repl_module() -> Any:
     """
-    Reload ``omnigent.repl._repl`` so these tests see the
+    Reload ``agent_meow.repl._repl`` so these tests see the
     edited source. Multiple tests in this file touch the
     module; a stale import cache would silently test the old
     API.
 
-    :returns: The freshly-reloaded ``omnigent.repl._repl``
+    :returns: The freshly-reloaded ``agent_meow.repl._repl``
         module.
     """
     import importlib
 
-    import omnigent.repl._repl as repl_mod
+    import agent_meow.repl._repl as repl_mod
 
     importlib.reload(repl_mod)
     return repl_mod

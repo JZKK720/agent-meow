@@ -1,13 +1,13 @@
 """
 Tests for the LLM-facing async-handle shape — ``_AsyncToolHandle`` and
-``_async_handle_message`` in :mod:`omnigent.runtime.workflow`.
+``_async_handle_message`` in :mod:`~?agent_meow.runtime.workflow`.
 """
 
 from __future__ import annotations
 
 import json
 
-from omnigent.runtime.workflow import (
+from agent_meow.runtime.workflow import (
     _async_handle_message,
     _AsyncToolHandle,
 )

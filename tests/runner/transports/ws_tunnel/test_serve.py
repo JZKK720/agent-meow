@@ -12,12 +12,12 @@ from typing_extensions import Unpack
 from websockets.exceptions import InvalidStatus, InvalidURI, WebSocketException
 from websockets.http11 import Response
 
-from omnigent.runner.identity import (
+from agent_meow.runner.identity import (
     OMNIGENT_INTERNAL_WS_ORIGIN,
     RUNNER_TUNNEL_TOKEN_HEADER,
 )
-from omnigent.runner.transports.ws_tunnel import serve as serve_module
-from omnigent.runner.transports.ws_tunnel.frames import (
+from agent_meow.runner.transports.ws_tunnel import serve as serve_module
+from agent_meow.runner.transports.ws_tunnel.frames import (
     PingFrame,
     RequestCancelFrame,
     RequestFrame,
@@ -26,7 +26,7 @@ from omnigent.runner.transports.ws_tunnel.frames import (
     WSOpenFrame,
     encode_frame,
 )
-from omnigent.runner.transports.ws_tunnel.serve import (
+from agent_meow.runner.transports.ws_tunnel.serve import (
     _handle_tunnel_frame,
     _serve_tunnel_once,
     _websocket_auth_redirect_url,
@@ -548,7 +548,7 @@ async def test_serve_tunnel_once_sends_bearer_header(
     monkeypatch.setattr(websockets, "connect", _fake_connect)
     # No recorded ?o= selector, so no workspace-routing header rides the
     # handshake (keeps the asserted header set exact).
-    monkeypatch.setattr("omnigent.cli_auth.load_databricks_org_id", lambda _server_url: None)
+    monkeypatch.setattr("agent_meow.cli_auth.load_databricks_org_id", lambda _server_url: None)
 
     await _serve_tunnel_once(
         _noop_app,
@@ -617,7 +617,7 @@ async def test_serve_tunnel_once_sends_org_header(
 
     monkeypatch.setattr(websockets, "connect", _fake_connect)
     monkeypatch.setattr(
-        "omnigent.cli_auth.load_databricks_org_id", lambda _server_url: "2850744067564480"
+        "agent_meow.cli_auth.load_databricks_org_id", lambda _server_url: "2850744067564480"
     )
 
     await _serve_tunnel_once(

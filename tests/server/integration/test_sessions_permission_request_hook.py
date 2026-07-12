@@ -35,13 +35,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
-from omnigent.codex_native_elicitation import codex_elicitation_id
-from omnigent.runtime import session_stream
-from omnigent.server._elicitation_registry import (
+from agent_meow.codex_native_elicitation import codex_elicitation_id
+from agent_meow.runtime import session_stream
+from agent_meow.server._elicitation_registry import (
     _harness_pre_resolved_elicitations,
     _PreResolvedHarnessElicitation,
 )
-from omnigent.server.routes import sessions as sessions_route
+from agent_meow.server.routes import sessions as sessions_route
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
@@ -236,7 +236,7 @@ async def test_cursor_permission_request_hook_allow_round_trip(
     """
     cursor-native TUI prompt → web ApprovalCard → accept → verdict.
 
-    The runner-side mirror (``omnigent.cursor_native_permissions``) POSTs a
+    The runner-side mirror (``agent_meow.cursor_native_permissions``) POSTs a
     detected cursor TUI approval prompt to
     ``/hooks/cursor-permission-request``; the route publishes a
     ``response.elicitation_request`` (phase ``pre_tool_use``, policy
@@ -293,7 +293,7 @@ async def test_qwen_permission_request_hook_allow_round_trip(
     """
     qwen-native TUI ``can_use_tool`` → web ApprovalCard → accept → verdict.
 
-    The runner-side mirror (``omnigent.qwen_native_permissions``) reads a
+    The runner-side mirror (``agent_meow.qwen_native_permissions``) reads a
     ``can_use_tool`` control request off qwen's ``--json-file`` and POSTs it to
     the generic ``/hooks/native-permission-request`` (shared with hermes-/goose-
     native) with ``agent="qwen"`` + ``policy_name="qwen_native_permission"``; the
@@ -952,7 +952,7 @@ async def test_permission_request_hook_forwards_cwd_and_permission_mode(
     the permission check). With no id, the terminal-resolved fast path
     correlates a mirrored tool result to a parked prompt by exact
     ``(tool_name, tool_input)`` (see
-    :func:`omnigent.server.routes.sessions._signal_terminal_resolved_harness_elicitation`),
+    :func:`~?agent_meow.server.routes.sessions._signal_terminal_resolved_harness_elicitation`),
     and the web UI clears a card strictly by ``elicitation_id`` on the
     server's ``response.elicitation_resolved`` event — never by a
     "first pending" heuristic.
@@ -1511,7 +1511,7 @@ async def test_permission_request_hook_timeout_clears_pending_index(
     cleared" — i.e. the visible artifact is the index value
     flowing through ``GET /v1/sessions``.
     """
-    from omnigent.runtime import pending_elicitations, session_stream
+    from agent_meow.runtime import pending_elicitations, session_stream
 
     monkeypatch.setattr(
         sessions_route,
@@ -1677,7 +1677,7 @@ async def test_permission_request_hook_clears_index_on_client_disconnect(
     than wiring a real TCP teardown through the in-process ASGI
     transport — deterministic, no transport-layer timing dependence.
     """
-    from omnigent.runtime import pending_elicitations, session_stream
+    from agent_meow.runtime import pending_elicitations, session_stream
 
     async def _disconnect_immediately(_request: Any) -> None:
         # One short yield so the future-watcher in the asyncio.wait
@@ -1769,7 +1769,7 @@ async def test_permission_hook_repark_within_grace_keeps_card_pending(
     blocked: the old code cleared the card the moment the long-poll was
     severed, while the prompt lived on in an unattended tmux pane.
     """
-    from omnigent.runtime import pending_elicitations, session_stream
+    from agent_meow.runtime import pending_elicitations, session_stream
 
     disconnect_calls = 0
 
@@ -1889,7 +1889,7 @@ async def test_permission_hook_verdict_during_gap_honored_on_repark(
     Without it the retry would re-publish and fail-ask later — the
     user's click silently dropped, the sub-agent still blocked.
     """
-    from omnigent.runtime import pending_elicitations
+    from agent_meow.runtime import pending_elicitations
 
     async def _disconnect_immediately(_request: Any) -> None:
         """
@@ -2103,7 +2103,7 @@ async def test_codex_pending_elicitation_survives_session_snapshot_refresh(
     :param client: Test HTTP client.
     :returns: None.
     """
-    from omnigent.runtime import pending_elicitations
+    from agent_meow.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-codex-pending-refresh")
@@ -2688,7 +2688,7 @@ async def test_codex_elicitation_hook_timeout_clears_pending_index(
     Claude hook: return an empty body and decrement the pending
     elicitation index once the re-park grace elapses with no retry.
     """
-    from omnigent.runtime import pending_elicitations, session_stream
+    from agent_meow.runtime import pending_elicitations, session_stream
 
     monkeypatch.setattr(
         sessions_route,
@@ -2783,7 +2783,7 @@ async def test_permission_hook_finally_emits_elicitation_resolved_on_timeout(
     chat-store consumer is the visible artifact for the
     multi-tab path.
     """
-    from omnigent.runtime import pending_elicitations, session_stream
+    from agent_meow.runtime import pending_elicitations, session_stream
 
     monkeypatch.setattr(
         sessions_route,
@@ -2852,7 +2852,7 @@ async def test_approval_dispatch_publishes_elicitation_resolved(
     elicitation through the real ``PermissionRequest`` hook, then
     delivering an ``approval`` verdict from the test side.
     """
-    from omnigent.runtime import pending_elicitations, session_stream
+    from agent_meow.runtime import pending_elicitations, session_stream
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-approval-dispatch-emits-resolved")
@@ -3023,7 +3023,7 @@ async def test_non_gated_tool_output_does_not_resolve_pending_elicitation(
     index still counts it. Fails if forwarded tool observations start
     resolving pending permissions again.
     """
-    from omnigent.runtime import pending_elicitations
+    from agent_meow.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-1594-non-gated")
@@ -3139,7 +3139,7 @@ async def test_gated_tool_output_resolves_pending_elicitation(
     its TUI answer). Positive counterpart to
     ``test_non_gated_tool_output_does_not_resolve_pending_elicitation``.
     """
-    from omnigent.runtime import pending_elicitations
+    from agent_meow.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-terminal-resolved")
@@ -3233,7 +3233,7 @@ async def test_tool_output_resolves_only_the_matching_same_name_prompt(
     matching the fast path would fall back to resolving an arbitrary
     same-named prompt — the kind of mis-resolution this guards against.
     """
-    from omnigent.runtime import pending_elicitations
+    from agent_meow.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-terminal-resolved-match")
@@ -3336,7 +3336,7 @@ async def test_pre_permission_tool_call_does_not_deny_permission_hook(
     order: hook publishes approval, the transcript forwards ``Edit``,
     then the web UI accepts. The final hook response must still allow.
     """
-    from omnigent.runtime import pending_elicitations
+    from agent_meow.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-permission-edit-pre-call")
@@ -3525,7 +3525,7 @@ async def test_codex_hook_repark_after_disconnect_keeps_card_pending(
     the card stays pending, and the verdict resolves the retried poll
     in Codex's JSON-RPC result shape.
     """
-    from omnigent.runtime import pending_elicitations
+    from agent_meow.runtime import pending_elicitations
 
     disconnect_calls = 0
 
@@ -3621,7 +3621,7 @@ async def test_codex_hook_gap_verdict_returned_on_repost(
     Without it the retry would re-publish the prompt and fail-ask
     later — the click dropped, the codex sub-agent still blocked.
     """
-    from omnigent.runtime import pending_elicitations
+    from agent_meow.runtime import pending_elicitations
 
     async def _disconnect_immediately(_request: Any) -> None:
         """
@@ -3799,7 +3799,7 @@ async def test_antigravity_elicitation_hook_timeout_returns_empty_200(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from omnigent.runtime import pending_elicitations, session_stream
+    from agent_meow.runtime import pending_elicitations, session_stream
 
     monkeypatch.setattr(
         sessions_route,

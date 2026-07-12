@@ -22,9 +22,9 @@ from typing import Any
 
 import pytest
 
-from omnigent.runner import app as runner_app
-from omnigent.runner import create_runner_app
-from omnigent.spec.types import AgentSpec, ExecutorSpec
+from agent_meow.runner import app as runner_app
+from agent_meow.runner import create_runner_app
+from agent_meow.spec.types import AgentSpec, ExecutorSpec
 
 # Reuse the proven runner-turn stubs from the sessions-native suite.
 from tests.runner.helpers import NullServerClient
@@ -43,7 +43,7 @@ def _clean_subagent_registry() -> Iterator[None]:
     """Snapshot and restore the process-wide sub-agent / inbox maps.
 
     The sub-agent work registry and inbox queues live in module-level dicts on
-    ``omnigent.runner.app`` that otherwise leak across tests. Clear them before
+    ``agent_meow.runner.app`` that otherwise leak across tests. Clear them before
     the test and restore the originals after.
     """
     saved = (

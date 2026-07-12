@@ -41,7 +41,7 @@ from omnigent_client._sessions_chat import (
 from omnigent_client._tool_handler import StreamHooks
 from omnigent_client._types import File
 
-from omnigent.server.schemas import (
+from agent_meow.server.schemas import (
     CompletedEvent,
     CreatedEvent,
     ElicitationRequestEvent,
@@ -710,7 +710,7 @@ async def test_send_raises_on_failed_status_with_error_message() -> None:
     """
     from omnigent_client._errors import OmnigentError
 
-    from omnigent.server.schemas import ErrorDetail
+    from agent_meow.server.schemas import ErrorDetail
 
     session = _make_session()
     failed = SessionStatusEvent(

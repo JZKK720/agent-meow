@@ -47,12 +47,12 @@ import shutil
 import uuid
 from pathlib import Path
 
-from tests.e2e.omnigent._pexpect_harness import (
+from tests.e2e.agent_meow._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     submit_prompt,
 )
-from tests.e2e.omnigent.conftest import configure_mock_llm
+from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 # A deliberately distinctive URL the agent will echo — picked
 # so the OSC 8 byte sequence containing it can be unambiguously

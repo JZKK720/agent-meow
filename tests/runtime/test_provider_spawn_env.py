@@ -25,7 +25,7 @@ from pathlib import Path
 import pytest
 import yaml as _yaml
 
-from omnigent.runtime.workflow import (
+from agent_meow.runtime.workflow import (
     _build_claude_sdk_spawn_env,
     _build_codex_spawn_env,
     _build_goose_spawn_env,
@@ -35,7 +35,7 @@ from omnigent.runtime.workflow import (
     _build_qwen_spawn_env,
     _resolve_provider_for_build,
 )
-from omnigent.spec.types import (
+from agent_meow.spec.types import (
     AgentSpec,
     ApiKeyAuth,
     DatabricksAuth,
@@ -600,7 +600,7 @@ def test_claude_sdk_falls_back_to_catalog_default_model(config_home: Path) -> No
     a real model. The base_url assertion proves the provider branch fired
     (not a vacuous pass).
     """
-    from omnigent.onboarding.providers import default_chat_model
+    from agent_meow.onboarding.providers import default_chat_model
 
     config: dict[str, object] = {
         "providers": {
@@ -643,7 +643,7 @@ def test_codex_falls_back_to_catalog_default_model(config_home: Path) -> None:
     ``HARNESS_CODEX_MODEL`` equal to the catalog's default openai model
     (a ``gpt-*`` flagship, not an audio/realtime specialty variant).
     """
-    from omnigent.onboarding.providers import default_chat_model
+    from agent_meow.onboarding.providers import default_chat_model
 
     config: dict[str, object] = {
         "providers": {
@@ -673,7 +673,7 @@ def test_openai_agents_falls_back_to_catalog_default_model(config_home: Path) ->
 
     Proves the analogous fallback in :func:`_apply_provider_to_openai_agents`.
     """
-    from omnigent.onboarding.providers import default_chat_model
+    from agent_meow.onboarding.providers import default_chat_model
 
     config: dict[str, object] = {
         "providers": {
@@ -758,7 +758,7 @@ def test_qwen_falls_back_to_catalog_default_model(config_home: Path) -> None:
 
     Proves the analogous fallback in :func:`_build_qwen_spawn_env`.
     """
-    from omnigent.onboarding.providers import default_chat_model
+    from agent_meow.onboarding.providers import default_chat_model
 
     config: dict[str, object] = {
         "providers": {
@@ -789,7 +789,7 @@ def test_pi_falls_back_to_catalog_default_model(config_home: Path) -> None:
     pi prefers the anthropic family for auth, so the model fallback must
     come from the anthropic catalog default.
     """
-    from omnigent.onboarding.providers import default_chat_model
+    from agent_meow.onboarding.providers import default_chat_model
 
     config: dict[str, object] = {
         "providers": {
@@ -819,7 +819,7 @@ def test_provider_default_beats_catalog_default(config_home: Path) -> None:
     catalog. Failure means the precedence (provider default > catalog
     default) regressed.
     """
-    from omnigent.onboarding.providers import default_chat_model
+    from agent_meow.onboarding.providers import default_chat_model
 
     _write_config(config_home, _anthropic_default_config())  # declares "claude-default-model"
     spec = _make_spec(harness="claude-sdk")
@@ -887,7 +887,7 @@ def test_databricks_kind_default_routes_through_profile(
     # Stub ucode enrichment: it would otherwise read ~/.databrickscfg + ucode
     # state for the profile. We assert the profile wiring this branch owns,
     # independent of whether ucode state exists on the test machine.
-    import omnigent.runtime.workflow as workflow_mod
+    import agent_meow.runtime.workflow as workflow_mod
 
     def _noop_ucode(env: dict[str, str], profile: str | None, *, harness_type: str) -> None:
         # Record the profile passed through so the test can confirm delegation.
@@ -1072,7 +1072,7 @@ def test_openai_agents_cli_config_default_fails_loud(config_home: Path) -> None:
     the codex CLI reads. Failure (no exception) means openai-agents would
     launch with no credential at all and die opaquely at the first request.
     """
-    from omnigent.errors import OmnigentError
+    from agent_meow.errors import OmnigentError
 
     _write_config(config_home, _cli_config_default_config())
     spec = _make_spec(harness="openai-agents")
@@ -1267,7 +1267,7 @@ def test_kimi_declared_auth_raises(
     launching against whatever ambient ``~/.kimi/config.toml`` resolves to
     would be a confused-deputy / mis-attribution risk, so the builder raises
     instead. Regression guard for the originally-dead ``OmnigentError``."""
-    from omnigent.errors import OmnigentError
+    from agent_meow.errors import OmnigentError
 
     _write_config(config_home, {"providers": {}})
     spec = _make_spec(harness="kimi", auth=auth)
@@ -1283,7 +1283,7 @@ def test_kimi_os_env_serialized(config_home: Path) -> None:
     sandbox launcher never engages and kimi runs unconfined."""
     import json as _json
 
-    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     _write_config(config_home, {"providers": {}})
     os_env = OSEnvSpec(

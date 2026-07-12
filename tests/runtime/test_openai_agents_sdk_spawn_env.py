@@ -20,8 +20,8 @@ from pathlib import Path
 import pytest
 import yaml as _yaml
 
-from omnigent.runtime.workflow import _build_openai_agents_sdk_spawn_env, _load_global_auth
-from omnigent.spec.types import (
+from agent_meow.runtime.workflow import _build_openai_agents_sdk_spawn_env, _load_global_auth
+from agent_meow.spec.types import (
     AgentSpec,
     ApiKeyAuth,
     DatabricksAuth,
@@ -196,7 +196,7 @@ def test_profile_injects_ucode_state(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -213,11 +213,11 @@ def test_profile_injects_ucode_state(
         },
     )
     monkeypatch.setattr(
-        "omnigent.runtime.workflow.get_workspace_url_for_profile",
+        "agent_meow.runtime.workflow.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "omnigent.runtime.workflow.read_ucode_state",
+        "agent_meow.runtime.workflow.read_ucode_state",
         lambda workspace_url: state,
     )
 
@@ -447,7 +447,7 @@ def test_load_global_auth_unresolved_env_var_raises(
     the literal ``$MISSING_KEY`` string to the API, producing a confusing
     401 "invalid API key" error rather than a clear configuration error.
     """
-    from omnigent.errors import OmnigentError
+    from agent_meow.errors import OmnigentError
 
     monkeypatch.delenv("MISSING_KEY", raising=False)
     with tempfile.TemporaryDirectory() as td:

@@ -18,8 +18,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-import omnigent.claude_native_forwarder as forwarder
-from omnigent.claude_native_bridge import (
+import agent_meow.claude_native_forwarder as forwarder
+from agent_meow.claude_native_bridge import (
     BRIDGE_ID_LABEL_KEY,
     ClaudeMessageDelta,
     ClaudeTranscriptItem,
@@ -28,11 +28,11 @@ from omnigent.claude_native_bridge import (
     record_hook_event,
     write_active_session_id,
 )
-from omnigent.claude_native_forwarder import (
+from agent_meow.claude_native_forwarder import (
     _persist_native_compaction_item,
     forward_claude_transcript_to_session,
 )
-from omnigent.reasoning_effort import CLAUDE_EFFORTS, EFFORT_CLEAR_VALUES
+from agent_meow.reasoning_effort import CLAUDE_EFFORTS, EFFORT_CLEAR_VALUES
 
 
 @pytest.fixture(autouse=True)
@@ -44,8 +44,8 @@ def _allow_tmp_path_as_bridge_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     :param tmp_path: Per-test temp directory.
     :returns: None.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path)
 
 
 class _RecordingHTTPServer(ThreadingHTTPServer):
@@ -266,7 +266,7 @@ async def test_clear_hook_rotates_active_session_without_reprocessing(
     hook cursor past the clear record so the next poll does not fork
     again from the same hook line.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
     bridge_dir = prepare_bridge_dir(
         "conv_old",
         bridge_id="bridge_shared",
@@ -299,7 +299,7 @@ async def test_clear_hook_rotates_active_session_without_reprocessing(
                     "agent_id": "ag_claude",
                     "runner_id": "runner_one",
                     "labels": {
-                        "omnigent.ui": "terminal",
+                        "agent_meow.ui": "terminal",
                         BRIDGE_ID_LABEL_KEY: "bridge_shared",
                     },
                 },
@@ -308,7 +308,7 @@ async def test_clear_hook_rotates_active_session_without_reprocessing(
             assert body == {
                 "agent_id": "ag_claude",
                 "labels": {
-                    "omnigent.ui": "terminal",
+                    "agent_meow.ui": "terminal",
                     BRIDGE_ID_LABEL_KEY: "bridge_shared",
                 },
             }
@@ -369,7 +369,7 @@ async def test_clear_hook_rotates_active_session_without_reprocessing(
             {
                 "agent_id": "ag_claude",
                 "labels": {
-                    "omnigent.ui": "terminal",
+                    "agent_meow.ui": "terminal",
                     BRIDGE_ID_LABEL_KEY: "bridge_shared",
                 },
             },
@@ -402,7 +402,7 @@ async def test_clear_hook_rotation_survives_old_runner_clear_failure(
     is cleanup only; the executor active-session guard prevents stale
     old-session writes from reaching tmux.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
     bridge_dir = prepare_bridge_dir(
         "conv_old",
         bridge_id="bridge_shared",
@@ -501,7 +501,7 @@ async def test_clear_hook_transfer_failure_does_not_loop(
     rotation must still consume the clear hook so the forwarder's next poll does
     not re-rotate and create another replacement session every tick.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
     bridge_dir = prepare_bridge_dir(
         "conv_old",
         bridge_id="bridge_shared",
@@ -695,7 +695,7 @@ async def test_clear_hook_consumes_hook_rotated_session_without_duplicate_fork(
     It annotates the hook record so the background forwarder only
     advances its durable cursor and resets transcript state.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
     bridge_dir = prepare_bridge_dir(
         "conv_old",
         bridge_id="bridge_shared",
@@ -764,7 +764,7 @@ async def test_fork_hook_creates_omnigent_fork_and_consumes_hook(
     active bridge session, clear the old runner binding, and advance
     the hook cursor so the same hook line is not processed again.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
     bridge_dir = prepare_bridge_dir(
         "conv_old",
         bridge_id="bridge_shared",
@@ -784,7 +784,7 @@ async def test_fork_hook_creates_omnigent_fork_and_consumes_hook(
         + "\n",
         encoding="utf-8",
     )
-    monkeypatch.setattr("omnigent.claude_native_bridge.time.time", lambda: 1779922393.245)
+    monkeypatch.setattr("agent_meow.claude_native_bridge.time.time", lambda: 1779922393.245)
     record_hook_event(
         bridge_dir,
         {
@@ -815,7 +815,7 @@ async def test_fork_hook_creates_omnigent_fork_and_consumes_hook(
                     "agent_id": "ag_claude",
                     "runner_id": "runner_one",
                     "labels": {
-                        "omnigent.ui": "terminal",
+                        "agent_meow.ui": "terminal",
                         BRIDGE_ID_LABEL_KEY: "bridge_shared",
                     },
                 },
@@ -898,7 +898,7 @@ async def test_fork_hook_consumes_hook_rotated_session_without_duplicate_fork(
     cursor and seeds transcript state past Claude's copied fork
     history.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
     bridge_dir = prepare_bridge_dir(
         "conv_old",
         bridge_id="bridge_shared",
@@ -987,7 +987,7 @@ async def test_resume_seen_claude_fork_does_not_create_second_omnigent_fork(
     alone as a fresh `/fork` command after the hook recorded that the
     incoming Claude session had already been seen.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
     bridge_dir = prepare_bridge_dir(
         "conv_old",
         bridge_id="bridge_shared",
@@ -2111,7 +2111,7 @@ async def test_forwarder_start_at_end_uses_byte_offset_for_new_lines(
         raise AssertionError("start_at_end should seed and poll with byte offsets")
 
     monkeypatch.setattr(
-        "omnigent.claude_native_forwarder.read_transcript_items_since_with_position",
+        "agent_meow.claude_native_forwarder.read_transcript_items_since_with_position",
         _fail_line_cursor_reader,
     )
 
@@ -2263,7 +2263,7 @@ async def test_forwarder_waits_for_missing_fresh_transcript_without_warning(
             "transcript_path": str(transcript_path),
         },
     )
-    caplog.set_level(logging.WARNING, logger="omnigent.claude_native_forwarder")
+    caplog.set_level(logging.WARNING, logger="agent_meow.claude_native_forwarder")
 
     server, thread, base_url = _start_recording_server()
     task = asyncio.create_task(
@@ -2825,7 +2825,7 @@ async def test_forwarder_survives_unhandled_loop_exceptions(
         "_forward_available_items",
         _fail_once_forward_available_items,
     )
-    caplog.set_level(logging.ERROR, logger="omnigent.claude_native_forwarder")
+    caplog.set_level(logging.ERROR, logger="agent_meow.claude_native_forwarder")
 
     server, thread, base_url = _start_recording_server()
     task = asyncio.create_task(
@@ -3648,7 +3648,7 @@ def test_validated_transcript_state_resets_legacy_byte_cursor_without_fingerprin
         + "\n",
         encoding="utf-8",
     )
-    caplog.set_level(logging.WARNING, logger="omnigent.claude_native_forwarder")
+    caplog.set_level(logging.WARNING, logger="agent_meow.claude_native_forwarder")
 
     validated = forwarder._validated_transcript_state(
         forwarder.TranscriptForwardState(
@@ -3704,7 +3704,7 @@ def test_validated_transcript_state_adopts_fingerprint_at_offset_zero_without_re
         + "\n",
         encoding="utf-8",
     )
-    caplog.set_level(logging.WARNING, logger="omnigent.claude_native_forwarder")
+    caplog.set_level(logging.WARNING, logger="agent_meow.claude_native_forwarder")
 
     pre_existing_seen = ("already-sent-id-1", "already-sent-id-2")
     state = forwarder.TranscriptForwardState(
@@ -3789,7 +3789,7 @@ def test_validated_transcript_state_preserves_seen_source_ids_on_stale_reset(
     )
     transcript_path.write_text(replacement_content, encoding="utf-8")
 
-    caplog.set_level(logging.WARNING, logger="omnigent.claude_native_forwarder")
+    caplog.set_level(logging.WARNING, logger="agent_meow.claude_native_forwarder")
 
     pre_existing_seen = ("item-a", "item-b", "item-c")
     state = forwarder.TranscriptForwardState(
@@ -6254,7 +6254,7 @@ async def test_persist_native_compaction_item_posts_compaction_event(tmp_path: P
 
     with (
         patch(
-            "omnigent.claude_native_forwarder.read_claude_session_id",
+            "agent_meow.claude_native_forwarder.read_claude_session_id",
             return_value="claude-uuid-1",
         ),
         patch(
@@ -6310,7 +6310,7 @@ async def test_persist_native_compaction_item_empty_items_uses_fallback(tmp_path
 
     with (
         patch(
-            "omnigent.claude_native_forwarder.read_claude_session_id",
+            "agent_meow.claude_native_forwarder.read_claude_session_id",
             return_value=None,
         ),
     ):
@@ -6364,7 +6364,7 @@ async def test_compaction_completed_triggers_persist(tmp_path: Path) -> None:
 
     persist_mock = AsyncMock(side_effect=_persist_side_effect)
     with patch(
-        "omnigent.claude_native_forwarder._persist_native_compaction_item",
+        "agent_meow.claude_native_forwarder._persist_native_compaction_item",
         persist_mock,
     ):
         task = asyncio.create_task(
@@ -6428,7 +6428,7 @@ async def test_compaction_in_progress_does_not_persist(tmp_path: Path) -> None:
     server, thread, base_url = _start_recording_server()
     persist_mock = AsyncMock()
     with patch(
-        "omnigent.claude_native_forwarder._persist_native_compaction_item",
+        "agent_meow.claude_native_forwarder._persist_native_compaction_item",
         persist_mock,
     ):
         task = asyncio.create_task(
