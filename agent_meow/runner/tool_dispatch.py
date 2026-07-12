@@ -99,7 +99,7 @@ _RUNNER_EXECUTION_TIMEOUT_S = 7200.0
 _SUBAGENT_POLICY_STATUSES = frozenset({"completed", "failed"})
 _SUBAGENT_INBOX_TERMINAL_STATUSES = frozenset({"completed", "failed", "cancelled"})
 _SUBAGENT_POLICY_FAILURE_OUTPUT = "[Result suppressed by policy: policy evaluation failed]"
-_SESSION_WRAPPER_LABEL_KEY = "omnigent.wrapper"
+_SESSION_WRAPPER_LABEL_KEY = "agent_meow.wrapper"
 # Read budget for runner→server message-send POSTs that are gated at the
 # recipient's REQUEST phase, which can PARK behind a human-approval ASK gate
 # (e.g. session_cost_budget) for the deciding policy's ``ask_timeout``. Held at
@@ -508,8 +508,8 @@ def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
 # sys_agent_list: locally-authored agent config YAMLs live under this
 # subdirectory of the agent's os_env cwd, so the list tool can find them
 # and the agent can read/edit them via sys_os_* (configs are authored with
-# sys_os_write, e.g. following the ``build-omnigent`` skill).
-_AGENT_CONFIG_SUBDIR = ".omnigent/agent-configs"
+# sys_os_write, e.g. following the ``build-agent-meow`` skill).
+_AGENT_CONFIG_SUBDIR = ".agent_meow/agent-configs"
 
 # Broad page size for the sys_agent_list fan-out reads. Orchestrators want
 # the full launchable surface in one call, not a 20-row default page.
@@ -830,7 +830,7 @@ def _session_wrapper_label(session_payload: dict[str, Any]) -> str | None:
     Extract the native terminal wrapper label from a session payload.
 
     :param session_payload: Session or child-session payload, e.g.
-        ``{"labels": {"omnigent.wrapper": "codex-native-ui"}}``.
+        ``{"labels": {"agent_meow.wrapper": "codex-native-ui"}}``.
     :returns: Wrapper label value, or ``None`` when absent.
     """
     labels = session_payload.get("labels")
@@ -1408,7 +1408,7 @@ async def _execute_subagent_tool(
         # and the requested harness must canonicalize into OMNIGENT_HARNESSES.
         # NOTE: the server create route (``_validated_harness_override`` in
         # server/routes/sessions.py) independently re-validates a session-create
-        # override against the GLOBAL ``OMNIGENT_HARNESSES`` (plus the omnigent
+        # override against the GLOBAL ``OMNIGENT_HARNESSES`` (plus the agent-meow
         # executor-type rule), but it does NOT re-check the per-spec
         # ``allowed_harnesses`` allowlist. So this orchestrator-dispatch check is
         # the sole enforcement of that per-spec allowlist; a direct
@@ -2015,7 +2015,7 @@ def _bundle_local_agent_source(source: Path) -> bytes:
 
     :param source: Local agent config YAML, agent directory, or
         bundle file, e.g.
-        ``Path("/work/.omnigent/agent-configs/helper.yaml")``.
+        ``Path("/work/.agent_meow/agent-configs/helper.yaml")``.
     :returns: Gzipped tarball bytes for the multipart ``bundle`` part.
     :raises FileNotFoundError: If ``source`` does not exist.
     """
@@ -2111,7 +2111,7 @@ async def _upload_config_bundle(
 
     :param config_path: Caller-supplied path to the agent config YAML,
         agent directory, or ``.tar.gz`` bundle, relative to the os_env
-        cwd, e.g. ``".omnigent/agent-configs/helper.yaml"``.
+        cwd, e.g. ``".agent_meow/agent-configs/helper.yaml"``.
     :param args: Parsed tool arguments; optional ``title``.
     :param server_client: HTTP client pointed at the agent-meow server.
     :param conversation_id: The caller's session id — the forced parent.
@@ -2178,7 +2178,7 @@ async def _session_create_from_config_path(
 
     :param config_path: Caller-supplied path to the agent config YAML,
         agent directory, or ``.tar.gz`` bundle, relative to the os_env
-        cwd, e.g. ``".omnigent/agent-configs/helper.yaml"``.
+        cwd, e.g. ``".agent_meow/agent-configs/helper.yaml"``.
     :param args: Parsed tool arguments; optional ``title`` /
         ``message``.
     :param server_client: HTTP client pointed at the agent-meow server.
@@ -2386,7 +2386,7 @@ def _has_subagent(
     Check whether a sub-agent name exists in the parent spec.
 
     Searches both ``sub_agents`` (AP-style spec) and ``tools``
-    dict (omnigent inner loader) for a matching name.
+    dict (agent-meow inner loader) for a matching name.
 
     :param sub_agent_name: Name of the sub-agent, e.g.
         ``"researcher"``.
@@ -3045,7 +3045,7 @@ def _omnigent_error_message(resp: httpx.Response) -> str | None:
 
     The server renders :class:`~?agent_meow.errors.OmnigentError` as
     ``{"error": {"code": ..., "message": ...}}`` (see the exception
-    handler in ``omnigent/server/app.py``). Return that ``message`` so a
+    handler in ``agent_meow/server/app.py``). Return that ``message`` so a
     tool can surface the server's own explanation rather than a bare
     status code; return ``None`` when the body is not that envelope (a
     non-JSON body, or a differently-shaped payload) so the caller can
@@ -3893,7 +3893,7 @@ def _scan_local_agent_configs(configs_dir: Path) -> list[dict[str, str | None]]:
     when the directory doesn't exist yet (no configs authored).
 
     :param configs_dir: The agent-config directory to scan, e.g.
-        ``<cwd>/.omnigent/agent-configs``.
+        ``<cwd>/.agent_meow/agent-configs``.
     :returns: ``[{"name", "path", "description"}, ...]``, sorted by path.
     """
     import yaml
@@ -6441,14 +6441,14 @@ def _inject_orchestrator_skills(
     agent_spec: Any | None,
 ) -> list[Any]:
     """
-    Auto-inject built-in platform skills for every omnigent agent.
+    Auto-inject built-in platform skills for every agent-meow agent.
 
-    The ``build-omnigent`` skill teaches the LLM how to author valid
+    The ``build-agent-meow`` skill teaches the LLM how to author valid
     agent configs. Every agent on the platform should have access to it
     — whether it declares ``tools.agents`` or not — so that any
-    ``omnigent claude`` user can author and launch new agents. The
+    ``agent-meow claude`` user can author and launch new agents. The
     skill is injected from the canonical source at
-    ``omnigent/onboarding/agent/skills/build-omnigent/`` when not
+    ``agent_meow/onboarding/agent/skills/build-agent_meow/`` when not
     already present in the bundled set.
 
     :param skills: The agent's current skill list (bundled +
@@ -6459,7 +6459,7 @@ def _inject_orchestrator_skills(
     """
     del agent_spec  # no longer gated; inject unconditionally
     existing_names = {getattr(s, "name", None) for s in skills}
-    if "build-omnigent" in existing_names:
+    if "build-agent-meow" in existing_names:
         return skills
     from agent_meow.spec.parser import _discover_skills
 
@@ -6469,7 +6469,7 @@ def _inject_orchestrator_skills(
     if not onboarding_skills_dir.is_dir():
         return skills
     for spec in _discover_skills(onboarding_skills_dir, skipped=[]):
-        if spec.name == "build-omnigent":
+        if spec.name == "build-agent-meow":
             skills.append(spec)
             break
     return skills
@@ -6501,7 +6501,7 @@ def _execute_skill_tool(
 
     bundled_skills = list(getattr(agent_spec, "skills", None) or [])
     skills_filter = getattr(agent_spec, "skills_filter", "all")
-    # Auto-inject the build-omnigent skill for agents that opt into the
+    # Auto-inject the build-agent-meow skill for agents that opt into the
     # orchestration surface (tools.agents). This teaches the LLM how to
     # author valid agent configs via sys_os_write without requiring the
     # agent's own bundle to ship a skills/ directory.

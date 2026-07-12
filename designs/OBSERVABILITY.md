@@ -15,7 +15,7 @@ which makes stability and reliability work hard. Static analysis alone has prove
 unreliable; we want to incorporate signal from **real usage** by tracing every RPC,
 message, and cross-process call.
 
-Today there is a partial telemetry layer (`omnigent/runtime/telemetry.py`) built on
+Today there is a partial telemetry layer (`agent_meow/runtime/telemetry.py`) built on
 MLflow Tracing + OpenTelemetry, but:
 
 - Trace context is **never propagated over the wire**. Instead each layer on the
@@ -253,7 +253,7 @@ Server, Policy Server, Server database.** Choke points below are from the codeba
 
 ## 7. SDK / provider setup
 
-Build on the existing `omnigent/runtime/telemetry.py` `init()`; it already establishes a
+Build on the existing `agent_meow/runtime/telemetry.py` `init()`; it already establishes a
 **unified global `TracerProvider`** shared between MLflow and raw OTel
 (`MLFLOW_USE_DEFAULT_TRACER_PROVIDER=false`) and flips OTLP export on when
 `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Changes:
@@ -327,7 +327,7 @@ When an operator needs to see the literal contents flowing between services, set
 dormant flag) into the boundaries agent-meow controls:
 
 - **Host-tunnel frames** — inbound on the consumer span (`consume_frame_span`) and
-  outbound at `encode_host_frame`; recorded as `omnigent.message.payload`.
+  outbound at `encode_host_frame`; recorded as `agent_meow.message.payload`.
 - **Session-updates WS frames** — outbound at `_send`, inbound at the `watch` consumer
   span.
 - **Policy evaluation** — the content under evaluation, as `policy.content` on the

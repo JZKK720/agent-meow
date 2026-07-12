@@ -72,7 +72,7 @@ def _build_minimal_agent_bundle() -> bytes:
             "spec_version": 1,
             "name": _AGENT_NAME,
             "executor": {
-                "type": "omnigent",
+                "type": "agent-meow",
                 "config": {"harness": "openai-agents"},
             },
             "llm": {

@@ -1461,7 +1461,7 @@ class TestCodexExecutor(unittest.TestCase):
     def test_app_server_run_turn_reasoning_deltas_yield_reasoning_chunks(self):
         """item/reasoning/textDelta and item/reasoning/summaryTextDelta events
         yield ReasoningChunk events so the idle watchdog resets during long
-        think phases (regression guard for omnigent-ai/omnigent#738)."""
+        think phases (regression guard for JZKK720/agent-meow#738)."""
 
         async def _t():
             session = _CodexAppServerSession(
@@ -2243,7 +2243,7 @@ def test_app_server_start_uses_real_home_for_private_inherited_codex_home(
     """
     home = tmp_path / "home"
     monkeypatch.setenv("HOME", str(home))
-    inherited = home / ".omnigent" / "codex-native" / "abc123" / "codex-home"
+    inherited = home / ".agent-meow" / "codex-native" / "abc123" / "codex-home"
     inherited.mkdir(parents=True)
     monkeypatch.setenv("CODEX_HOME", str(inherited))
     real_codex_home = home / ".codex"
@@ -2331,7 +2331,7 @@ def test_app_server_start_preserves_custom_home_from_inherited_private_symlink(
     default_home.mkdir(parents=True)
     (default_home / "auth.json").write_text('{"auth_mode": "default"}')
     (default_home / "config.toml").write_text('model_provider = "default"')
-    inherited = home / ".omnigent" / "codex-native" / "abc123" / "codex-home"
+    inherited = home / ".agent-meow" / "codex-native" / "abc123" / "codex-home"
     inherited.mkdir(parents=True)
     (inherited / "auth.json").symlink_to(custom_home / "auth.json")
     (inherited / "config.toml").symlink_to(custom_home / "config.toml")
@@ -2447,7 +2447,7 @@ def test_clean_codex_env_includes_databricks_bearer(monkeypatch) -> None:
 
 
 def test_clean_codex_env_includes_omnigent_session_marker(monkeypatch) -> None:
-    """The ``OMNIGENT`` session marker survives the codex env scrub.
+    """The ``agent-meow`` session marker survives the codex env scrub.
 
     The marker (set once on the runner) must reach the codex CLI so the
     shell commands codex runs can detect they are inside an agent-meow

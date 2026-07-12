@@ -82,7 +82,7 @@ test-only changes, dependency bumps with no user impact) — it will simply be
 left out of the changelog. A Breaking change must always keep this section.
 
 Example:  `meow run --watch` reruns an agent when files change
-(agent-meow CLI currently installs as `omnigent` / `omni`; see docs/REBRAND_AUDIT.md)
+(agent-meow CLI currently installs as `agent-meow` / `omni`; see docs/REBRAND_AUDIT.md)
 -->
 
 <Add a line to describe the change, else delete this section>

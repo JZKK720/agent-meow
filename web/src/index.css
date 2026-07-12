@@ -150,17 +150,17 @@
     var(--agentmeow-safe-bottom) + var(--agentmeow-native-bottom-bar) *
       var(--agentmeow-bottom-bar-visible)
   );
-  /* Compat: --omnigent-* aliases for the renamed --agentmeow-* tokens.
+  /* Compat: --agent-meow-* aliases for the renamed --agentmeow-* tokens.
      Remove after all consumers are confirmed updated. */
-  --omnigent-header-height: var(--agentmeow-header-height);
-  --omnigent-safe-top: var(--agentmeow-safe-top);
-  --omnigent-safe-bottom: var(--agentmeow-safe-bottom);
-  --omnigent-native-top-bar: var(--agentmeow-native-top-bar);
-  --omnigent-native-bottom-bar: var(--agentmeow-native-bottom-bar);
-  --omnigent-top-bar-visible: var(--agentmeow-top-bar-visible);
-  --omnigent-bottom-bar-visible: var(--agentmeow-bottom-bar-visible);
-  --omnigent-inset-top: var(--agentmeow-inset-top);
-  --omnigent-inset-bottom: var(--agentmeow-inset-bottom);
+  --agent-meow-header-height: var(--agentmeow-header-height);
+  --agent-meow-safe-top: var(--agentmeow-safe-top);
+  --agent-meow-safe-bottom: var(--agentmeow-safe-bottom);
+  --agent-meow-native-top-bar: var(--agentmeow-native-top-bar);
+  --agent-meow-native-bottom-bar: var(--agentmeow-native-bottom-bar);
+  --agent-meow-top-bar-visible: var(--agentmeow-top-bar-visible);
+  --agent-meow-bottom-bar-visible: var(--agentmeow-bottom-bar-visible);
+  --agent-meow-inset-top: var(--agentmeow-inset-top);
+  --agent-meow-inset-bottom: var(--agentmeow-inset-bottom);
 
   /* Brand palette (light). Hex values are the brand spec, kept verbatim
      * for fidelity. --background is white: the lavender brand canvas is

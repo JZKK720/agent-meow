@@ -2,7 +2,7 @@
 REPL approval-flow e2e test -- sessions API variant (mock LLM).
 
 Sessions-API parallel of ``test_repl_approval_e2e.py``. Spawns
-``omnigent run <yaml>`` under pexpect and drives approval CUJs
+``agent-meow run <yaml>`` under pexpect and drives approval CUJs
 through the ``/v1/sessions`` path.
 
 All tests use the mock LLM server. ``OPENAI_BASE_URL`` in the
@@ -45,7 +45,7 @@ def _build_repl_env(mock_llm_server_url: str, tmp_home: Path) -> dict[str, str]:
     """Build the pexpect environment dict for REPL spawning.
 
     Points ``OPENAI_BASE_URL`` at the mock LLM server so the spawned
-    ``omnigent run`` subprocess uses mock responses.
+    ``agent-meow run`` subprocess uses mock responses.
     """
     from tests.e2e.agent_meow._pexpect_harness import ensure_repl_test_theme_env
 
@@ -58,7 +58,7 @@ def _build_repl_env(mock_llm_server_url: str, tmp_home: Path) -> dict[str, str]:
         os.pathsep.join([*sdk_paths, existing_pp]) if existing_pp else os.pathsep.join(sdk_paths)
     )
 
-    config_home = tmp_home / ".omnigent"
+    config_home = tmp_home / ".agent-meow"
     config_home.mkdir(parents=True, exist_ok=True)
     (config_home / "config.yaml").write_text(
         "auto_open_conversation: false\ntui:\n  theme: dark\n",
@@ -91,12 +91,12 @@ def _spawn_sessions_repl(
     *,
     timeout: int = 120,
 ) -> Any:
-    """Spawn ``omnigent run`` under a PTY (sessions API is default)."""
+    """Spawn ``agent-meow run`` under a PTY (sessions API is default)."""
     return pexpect.spawn(
         sys.executable,
         [
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--no-session",
@@ -117,10 +117,10 @@ def _spawn_repl_with_args(
     extra_args: list[str] | None = None,
     timeout: int = 120,
 ) -> Any:
-    """Spawn ``omnigent run`` with caller-supplied CLI args."""
+    """Spawn ``agent-meow run`` with caller-supplied CLI args."""
     args = [
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(yaml_path),
         "--no-session",

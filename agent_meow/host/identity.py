@@ -1,7 +1,7 @@
-"""Host identity management for ``omnigent host``.
+"""Host identity management for ``agent-meow host``.
 
-Reads or creates the ``host`` section in ``~/.omnigent/config.yaml``.
-The host identity is auto-generated on first ``omnigent host``
+Reads or creates the ``host`` section in ``~/.agent_meow/config.yaml``.
+The host identity is auto-generated on first ``agent-meow host``
 if the section does not exist.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import yaml
 
-CONFIG_PATH = Path.home() / ".omnigent" / "config.yaml"
+CONFIG_PATH = Path.home() / ".agent-meow" / "config.yaml"
 
 # Env vars a server-managed sandbox host is launched with. The server
 # provisions the sandbox, generates the identity + launch token, and
@@ -69,7 +69,7 @@ def load_or_create_host_identity(
     launcher bug and fails loud.
 
     :param path: Path to the config YAML file, e.g.
-        ``Path("~/.omnigent/config.yaml")``. Defaults to
+        ``Path("~/.agent_meow/config.yaml")``. Defaults to
         :data:`CONFIG_PATH`.
     :returns: The loaded or newly created :class:`HostIdentity`.
     :raises ValueError: If exactly one of the identity env vars is set.

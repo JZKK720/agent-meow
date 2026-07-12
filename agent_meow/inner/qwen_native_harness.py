@@ -7,7 +7,7 @@ resolves ``"qwen-native"`` to this module via
 
 Wraps a :class:`~?agent_meow.inner.qwen_native_executor.QwenNativeExecutor`, which
 appends web-UI messages to the running ``qwen`` TUI's ``--input-file`` (launched
-by ``omnigent qwen`` in the session terminal). The bridge dir is read from
+by ``agent-meow qwen`` in the session terminal). The bridge dir is read from
 :data:`~?agent_meow.qwen_native_bridge.BRIDGE_DIR_ENV_VAR` in the spawn env.
 
 Tool policies: in this first cut, qwen runs its tools inside its own TUI and

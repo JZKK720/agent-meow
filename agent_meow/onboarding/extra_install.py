@@ -1,17 +1,17 @@
 """Shared helper for installing optional pip extras (cursor, antigravity, copilot).
 
-Each SDK harness ships as an optional extra (``omnigent[cursor]``, etc.).  The
-install command depends on *how* omnigent itself was installed:
+Each SDK harness ships as an optional extra (``agent-meow[cursor]``, etc.).  The
+install command depends on *how* agent-meow itself was installed:
 
 * **``uv tool``** — the package lives in an isolated tool environment that
   ``uv pip install`` cannot reach.  A registry install reinstalls with the
-  extra via ``uv tool install --with "omnigent[extra]" omnigent --force``; a
+  extra via ``uv tool install --with "agent-meow[extra]" agent-meow --force``; a
   git-source install (``uv tool install git+…``) instead reinstalls from that
-  same source (``uv tool install --force "omnigent[extra] @ git+…"``) so the
+  same source (``uv tool install --force "agent-meow[extra] @ git+…"``) so the
   tool is not silently re-pulled from PyPI.
-* **``uv`` (non-tool)** — ``uv pip install "omnigent[extra]"`` targets the
+* **``uv`` (non-tool)** — ``uv pip install "agent-meow[extra]"`` targets the
   active virtualenv.
-* **``pip`` / fallback** — ``<sys.executable> -m pip install "omnigent[extra]"``
+* **``pip`` / fallback** — ``<sys.executable> -m pip install "agent-meow[extra]"``
   pins to the running interpreter.
 """
 
@@ -40,13 +40,13 @@ def _is_uv_tool_install() -> bool:
 
 
 def _installed_vcs_url() -> str | None:
-    """Return the VCS URL omnigent was installed from, or ``None``.
+    """Return the VCS URL agent-meow was installed from, or ``None``.
 
     Reads the distribution's ``direct_url.json`` (PEP 610) via
     :func:`~?agent_meow.update_check._read_installed_wheel_info`, which normalizes
     the URL to the ``git+…`` form pip/uv accept back as an install target (and
     repairs an SSH user the installer redacted to ``****``). Returns ``None``
-    for plain registry installs, so callers fall back to a bare ``omnigent``
+    for plain registry installs, so callers fall back to a bare ``agent-meow``
     target.
     """
     from agent_meow.update_check import _read_installed_wheel_info
@@ -61,24 +61,24 @@ def extra_install_command(extra: str) -> list[str]:
     Detects the install method and picks the right tool:
 
     1. ``uv tool`` install, git source → ``uv tool install --force
-       "omnigent[extra] @ git+…"`` (keeps the tool on its original source)
+       "agent-meow[extra] @ git+…"`` (keeps the tool on its original source)
     2. ``uv tool`` install, registry → ``uv tool install --with ...
-       omnigent --force``
-    3. ``uv`` on PATH (non-tool) → ``uv pip install "omnigent[extra]"``
-    4. fallback → ``<sys.executable> -m pip install "omnigent[extra]"``
+       agent-meow --force``
+    3. ``uv`` on PATH (non-tool) → ``uv pip install "agent-meow[extra]"``
+    4. fallback → ``<sys.executable> -m pip install "agent-meow[extra]"``
 
     :param extra: The pip extra name, e.g. ``"cursor"``.
     :returns: The install argv.
     """
-    target = f"omnigent[{extra}]"
+    target = f"agent-meow[{extra}]"
 
     if _is_uv_tool_install():
         vcs_url = _installed_vcs_url()
         if vcs_url is not None:
             # Git-source tool install: reinstall from the same source with the
-            # extra attached, else a bare ``omnigent`` re-pulls it from PyPI.
+            # extra attached, else a bare ``agent-meow`` re-pulls it from PyPI.
             return ["uv", "tool", "install", "--force", f"{target} @ {vcs_url}"]
-        return ["uv", "tool", "install", "--with", target, "omnigent", "--force"]
+        return ["uv", "tool", "install", "--with", target, "agent-meow", "--force"]
 
     if shutil.which("uv") is not None:
         return ["uv", "pip", "install", target]

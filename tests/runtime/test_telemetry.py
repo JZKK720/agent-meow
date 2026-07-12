@@ -661,7 +661,7 @@ def test_init_defaults_service_name_when_unset(
 ) -> None:
     """
     With no argument and no operator-set ``OTEL_SERVICE_NAME``, the
-    service name defaults to ``omnigent`` so spans are never anonymous.
+    service name defaults to ``agent-meow`` so spans are never anonymous.
     """
     monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
     monkeypatch.delenv("OTEL_SERVICE_NAME", raising=False)
@@ -673,7 +673,7 @@ def test_init_defaults_service_name_when_unset(
 
     telemetry.init()
 
-    assert os.environ["OTEL_SERVICE_NAME"] == "omnigent"
+    assert os.environ["OTEL_SERVICE_NAME"] == "agent-meow"
 
 
 def test_init_honors_operator_service_name_without_argument(

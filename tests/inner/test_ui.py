@@ -42,11 +42,11 @@ def test_status_lines_go_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:
     """Normal status (step/success/info) prints to stdout."""
 
     ui.step("Installing agent-meow")
-    ui.success("Verified omnigent")
-    ui.info("Using ~/.omnigent")
+    ui.success("Verified agent-meow")
+    ui.info("Using ~/.agent-meow")
     captured = capsys.readouterr()
     assert "Installing agent-meow" in captured.out
-    assert "✓ Verified omnigent" in captured.out
+    assert "✓ Verified agent-meow" in captured.out
     assert captured.err == ""
 
 

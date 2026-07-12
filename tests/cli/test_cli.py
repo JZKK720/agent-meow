@@ -82,7 +82,7 @@ def _restore_logging_state() -> Iterator[None]:
 
     :returns: A pytest finalizer implemented by yielding.
     """
-    names = ("omnigent", "omnigent_ui_sdk", "httpx", "httpcore", "asyncio", "urllib3")
+    names = ("agent-meow", "omnigent_ui_sdk", "httpx", "httpcore", "asyncio", "urllib3")
     snapshots = {}
     for name in names:
         logger = logging.getLogger(name)
@@ -104,24 +104,24 @@ def _restore_logging_state() -> Iterator[None]:
 
 def test_python_module_entrypoint_uses_unified_click_cli() -> None:
     """
-    ``python -m omnigent`` must dispatch through the same click CLI
-    as the installed ``omnigent`` console script.
+    ``python -m agent-meow`` must dispatch through the same click CLI
+    as the installed ``agent-meow`` console script.
 
-    This catches ``omnigent/__main__.py`` pointing at the legacy
+    This catches ``agent_meow/__main__.py`` pointing at the legacy
     argparse CLI, which bypasses the agent-meow REPL path. In that broken
-    state ``python -m omnigent run ...`` opens the old ``>``
+    state ``python -m agent-meow run ...`` opens the old ``>``
     prompt and loses AP-only input features such as slash-command
     autocomplete and bracketed-paste abstraction.
     """
     result = subprocess.run(
-        [sys.executable, "-m", "omnigent", "--help"],
+        [sys.executable, "-m", "agent-meow", "--help"],
         check=True,
         capture_output=True,
         text=True,
         timeout=20,
     )
 
-    assert "Usage: python -m omnigent [OPTIONS] COMMAND [ARGS]..." in result.stdout
+    assert "Usage: python -m agent-meow [OPTIONS] COMMAND [ARGS]..." in result.stdout
     assert "Commands:" in result.stdout
     assert "run" in result.stdout and "Attach the REPL to a LIVE session" in result.stdout
     assert "agent-meow quick chat" not in result.stdout
@@ -158,7 +158,7 @@ def _fake_run_claude_native_capture(
     """
     Build a ``run_claude_native`` stub that records its kwargs.
 
-    Shared by the ``omnigent claude`` CLI parsing tests below so a
+    Shared by the ``agent-meow claude`` CLI parsing tests below so a
     signature change to ``run_claude_native`` (new kwarg, renamed
     kwarg) updates one place instead of every test.
 
@@ -186,7 +186,7 @@ def _fake_run_codex_native_capture(
     """
     Build a ``run_codex_native`` stub that records its kwargs.
 
-    Shared by ``omnigent codex`` parsing tests so wrapper signature
+    Shared by ``agent-meow codex`` parsing tests so wrapper signature
     changes only update one helper.
 
     :param captured: Dict the stub writes recorded kwargs into.
@@ -220,7 +220,7 @@ def test_claude_command_resume_binds_session_and_passes_unknown_args(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent claude --resume <conv_id>`` binds the agent-meow
+    ``agent-meow claude --resume <conv_id>`` binds the agent-meow
     session; unknown args after ``--`` reach ``run_claude_native``
     as raw passthrough.
 
@@ -273,7 +273,7 @@ def test_claude_command_short_r_binds_omnigent_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent claude -r <conv_id>`` is the agent-meow resume shortcut.
+    ``agent-meow claude -r <conv_id>`` is the agent-meow resume shortcut.
 
     With the unified ``--resume`` UX, ``-r`` is the agent-meow alias
     (not Claude's own short flag). Users who need Claude's own
@@ -302,7 +302,7 @@ def test_claude_command_bare_resume_requests_picker(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent claude --resume`` (no value) requests the picker.
+    ``agent-meow claude --resume`` (no value) requests the picker.
 
     Bare ``--resume`` sets the picker sentinel, which the CLI
     translates into ``resume_picker=True`` for ``run_claude_native``.
@@ -382,7 +382,7 @@ def test_claude_command_profile_startup_threads_profiler(
     ``--profile-startup`` starts timing before backend setup.
 
     This covers the slow-start diagnostic path users need for
-    ``omnigent claude``: the profiler must be created in the Click
+    ``agent-meow claude``: the profiler must be created in the Click
     command, emit early marks, and be passed to ``run_claude_native``
     so native launch marks share the same timer.
 
@@ -441,7 +441,7 @@ def test_codex_command_resume_binds_session_and_passes_unknown_args(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent codex --resume <conv_id>`` binds the agent-meow
+    ``agent-meow codex --resume <conv_id>`` binds the agent-meow
     session and preserves Codex CLI passthrough args after ``--``.
     """
     captured: dict[str, object] = {}
@@ -482,7 +482,7 @@ def test_codex_command_bare_resume_requests_picker(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent codex --resume`` requests the codex-native picker.
+    ``agent-meow codex --resume`` requests the codex-native picker.
     """
     captured: dict[str, object] = {}
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
@@ -503,7 +503,7 @@ def test_codex_command_session_legacy_alias_routes_to_session_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent codex --session <id>`` routes into ``session_id``.
+    ``agent-meow codex --session <id>`` routes into ``session_id``.
     """
     captured: dict[str, object] = {}
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
@@ -541,7 +541,7 @@ def test_codex_command_session_and_resume_mutually_exclusive(
 
 
 def test_kiro_command_is_registered_in_click_help() -> None:
-    """``omnigent kiro`` is a true top-level Click command."""
+    """``agent-meow kiro`` is a true top-level Click command."""
     result = CliRunner().invoke(cli, ["--help"])
 
     assert result.exit_code == 0, result.output
@@ -552,7 +552,7 @@ def test_kiro_command_is_registered_in_click_help() -> None:
 def test_kiro_command_parses_native_options_and_prompt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``omnigent kiro`` routes mapped options to the native Kiro runner."""
+    """``agent-meow kiro`` routes mapped options to the native Kiro runner."""
     captured: dict[str, object] = {}
     monkeypatch.setattr("agent_meow.cli._load_effective_config", lambda: {"server": "https://cfg"})
     monkeypatch.setattr("agent_meow.cli._ensure_backend", lambda server: server)
@@ -597,7 +597,7 @@ def test_kiro_command_parses_native_options_and_prompt(
 
 
 def test_kiro_command_bare_resume_requests_picker(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``omnigent kiro --resume`` requests the Kiro-native picker."""
+    """``agent-meow kiro --resume`` requests the Kiro-native picker."""
     captured: dict[str, object] = {}
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     monkeypatch.setattr("agent_meow.cli._ensure_backend", lambda *_: "http://localhost:0")
@@ -643,7 +643,7 @@ def test_kiro_command_rejects_kiro_resume_passthrough_flags(
     assert "Kiro resume flags are reserved" in result.output
 
 
-# ── bundled-agent shorthands (omnigent polly / omnigent debby) ──────────
+# ── bundled-agent shorthands (agent-meow polly / agent-meow debby) ──────────
 
 
 def _invoke_bundled_agent_command(
@@ -669,10 +669,10 @@ def _invoke_bundled_agent_command(
 def test_polly_command_runs_bundled_polly_and_forwards_run_flags(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``omnigent polly`` dispatches ``run`` on the packaged polly agent.
+    """``agent-meow polly`` dispatches ``run`` on the packaged polly agent.
 
     The shorthand must target the same bundled polly directory the bare
-    ``omnigent`` first-run plan uses, and pass-through ``run`` flags
+    ``agent-meow`` first-run plan uses, and pass-through ``run`` flags
     (``-p``, ``--model``) must survive the forwarding unchanged.
     """
     result, dispatch = _invoke_bundled_agent_command(
@@ -686,12 +686,12 @@ def test_polly_command_runs_bundled_polly_and_forwards_run_flags(
     assert kwargs["prompt"] == "review the last commit"
     assert kwargs["model"] == "m1"
     # The resume replay prefix must be the canonical (re-runnable) run form,
-    # not "omnigent polly <path>" which would parse the path as a 2nd target.
-    assert kwargs["resume_parts"][:3] == ["omnigent", "run", _bundled_example_path("polly")]
+    # not "agent-meow polly <path>" which would parse the path as a 2nd target.
+    assert kwargs["resume_parts"][:3] == ["agent-meow", "run", _bundled_example_path("polly")]
 
 
 def test_debby_command_runs_bundled_debby(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``omnigent debby`` dispatches ``run`` on the packaged debby agent."""
+    """``agent-meow debby`` dispatches ``run`` on the packaged debby agent."""
     result, dispatch = _invoke_bundled_agent_command(monkeypatch, ["debby"])
 
     assert result.exit_code == 0, result.output
@@ -717,7 +717,7 @@ def test_bundled_agent_command_rejects_extra_positional_target(
 def test_first_run_plan_and_polly_command_agree_on_bundled_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Bare ``omnigent`` (Claude creds) and ``omnigent polly`` launch the SAME agent.
+    """Bare ``agent-meow`` (Claude creds) and ``agent-meow polly`` launch the SAME agent.
 
     Pins the "same thing as bare ``omni``" contract: the first-run plan's
     default agent and the polly shorthand resolve to one bundled directory.
@@ -735,7 +735,7 @@ def _write_isolated_provider_config(
     config_home: Path,
     providers: dict[str, object],
 ) -> Path:
-    """Write an isolated ``~/.omnigent/config.yaml`` with *providers*.
+    """Write an isolated ``~/.agent_meow/config.yaml`` with *providers*.
 
     :param config_home: Directory to use as ``$OMNIGENT_CONFIG_HOME``.
     :param providers: The raw ``providers:`` mapping to write.
@@ -1137,7 +1137,7 @@ def test_server_command_reads_tunnel_token_and_does_not_spawn_runner(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """``omnigent server`` is a pure state server — no embedded runner.
+    """``agent-meow server`` is a pure state server — no embedded runner.
 
     The server reads ``OMNIGENT_RUNNER_TUNNEL_TOKEN`` from the
     environment and passes it as ``runner_tunnel_tokens`` to
@@ -1184,7 +1184,7 @@ def test_server_command_reads_tunnel_token_and_does_not_spawn_runner(
     monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_TOKEN", "test-tunnel-token-abc")
 
     # On a loopback bind the `server` command reuses an already-running
-    # local server (and registers itself in ~/.omnigent/local_server.pid).
+    # local server (and registers itself in ~/.agent_meow/local_server.pid).
     # Pin the unified-server helpers so the test exercises the spawn path
     # deterministically: no pre-existing server to reuse, the requested port
     # is taken as-is, and we don't touch the developer's real pidfile.
@@ -1236,8 +1236,8 @@ def test_server_with_explicit_db_does_not_reuse_canonical_server(
     """A `server` with explicit --database-uri binds its own port, never reuses.
 
     Regression: the unified machine-global lifecycle (reuse a running
-    canonical server via ~/.omnigent/local_server.pid) must apply ONLY
-    to a *bare* loopback ``omnigent server``. The daemon and the e2e
+    canonical server via ~/.agent_meow/local_server.pid) must apply ONLY
+    to a *bare* loopback ``agent-meow server``. The daemon and the e2e
     harness spawn DEDICATED servers with explicit --database-uri /
     --artifact-location / --port; if the reuse-check fired for them, a
     healthy canonical server on a *different* DB would make the dedicated
@@ -1278,7 +1278,7 @@ def test_server_with_explicit_db_does_not_reuse_canonical_server(
     monkeypatch.setattr(app_module, "create_app", _spy_create_app)
     monkeypatch.setattr(uvicorn, "run", _fake_uvicorn_run)
 
-    # A healthy canonical server EXISTS. A bare `omnigent server` would
+    # A healthy canonical server EXISTS. A bare `agent-meow server` would
     # reuse it; an explicit-DB server must ignore it. register/clear must
     # never fire for the dedicated server (it doesn't own the pidfile).
     from agent_meow.host import local_server as _local_server_mod
@@ -1324,10 +1324,10 @@ def test_server_with_explicit_port_does_not_check_canonical_server(
     An explicit ``--port`` starts a dedicated local server.
 
     A healthy canonical local server on another port must not make
-    ``omnigent server --port <new>`` reuse and exit. Explicit port
+    ``agent-meow server --port <new>`` reuse and exit. Explicit port
     selection is the user asking for another listener, while the
     canonical local-server reuse path is only for bare
-    ``omnigent server``.
+    ``agent-meow server``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Per-test data directory for default server state.
@@ -1389,7 +1389,7 @@ def test_server_with_explicit_port_does_not_check_canonical_server(
     assert result.exit_code == 0, result.output
     assert "already running" not in result.output
     assert captured["uvicorn_kwargs"]["port"] == 44770
-    assert "Starting omnigent server on 127.0.0.1:44770" in result.output
+    assert "Starting agent-meow server on 127.0.0.1:44770" in result.output
 
 
 def test_server_command_explicit_occupied_port_fails() -> None:
@@ -1397,7 +1397,7 @@ def test_server_command_explicit_occupied_port_fails() -> None:
     An explicit ``--port`` must fail instead of choosing a replacement.
 
     The test owns a real listening socket on a kernel-assigned port,
-    then asks ``omnigent server`` for that exact port. The command
+    then asks ``agent-meow server`` for that exact port. The command
     must fail during preflight, before uvicorn or fallback-port logic
     can start the server elsewhere.
 
@@ -1425,7 +1425,7 @@ def test_server_command_explicit_occupied_port_fails() -> None:
     assert f"Cannot start server on 127.0.0.1:{port}" in result.output
     assert "port is unavailable" in result.output
     assert "using" not in result.output
-    assert "Starting omnigent server" not in result.output
+    assert "Starting agent-meow server" not in result.output
 
 
 def test_server_command_explicit_port_uses_bind_probe_not_connect_probe(
@@ -1491,7 +1491,7 @@ def test_server_command_explicit_port_uses_bind_probe_not_connect_probe(
 
     assert result.exit_code == 0, result.output
     assert captured["uvicorn_kwargs"]["port"] == port
-    assert f"Starting omnigent server on 127.0.0.1:{port}" in result.output
+    assert f"Starting agent-meow server on 127.0.0.1:{port}" in result.output
     assert "port is unavailable" not in result.output
 
 
@@ -1600,7 +1600,7 @@ def test_expand_config_expands_executor_connection(
 
     The server no longer expands uploaded
     bundles, so the client must resolve ``executor.connection`` (not
-    just ``llm.connection``) or local ``omnigent run`` specs using the
+    just ``llm.connection``) or local ``agent-meow run`` specs using the
     consolidated executor block would ship unresolved ``${VAR}``.
     """
     monkeypatch.setenv("EXEC_API_KEY", "sk-exec-999")
@@ -1609,7 +1609,7 @@ def test_expand_config_expands_executor_connection(
     raw: dict[str, Any] = {
         "spec_version": 1,
         "executor": {
-            "type": "omnigent",
+            "type": "agent-meow",
             "model": "gpt-5.4-mini",
             "connection": {"api_key": "${EXEC_API_KEY}"},
             "config": {"harness": "openai-agents"},
@@ -1639,7 +1639,7 @@ def test_expand_config_expands_executor_auth_api_key(
     raw: dict[str, Any] = {
         "spec_version": 1,
         "executor": {
-            "type": "omnigent",
+            "type": "agent-meow",
             "auth": {
                 "type": "api_key",
                 "api_key": "${AUTH_KEY}",
@@ -1672,7 +1672,7 @@ def test_expand_config_leaves_databricks_auth_untouched(
     raw: dict[str, Any] = {
         "spec_version": 1,
         "executor": {
-            "type": "omnigent",
+            "type": "agent-meow",
             "auth": {"type": "databricks", "profile": "my-profile"},
         },
     }
@@ -2012,9 +2012,9 @@ def test_bundle_no_env_vars_preserves_files(
 
 def test_bundle_materializes_standalone_omnigent_yaml(tmp_path: Path) -> None:
     """
-    ``_bundle`` wraps a standalone omnigent YAML file in a tarball.
+    ``_bundle`` wraps a standalone agent-meow YAML file in a tarball.
 
-    ``omnigent run <yaml> --server`` uploads the returned bytes
+    ``agent-meow run <yaml> --server`` uploads the returned bytes
     directly to ``POST /api/agents``. If the YAML bytes are passed
     through unchanged, the remote server rejects them as an invalid
     tarball before the runner tunnel can start.
@@ -2194,8 +2194,8 @@ def test_preregister_agent_accepts_directory(tmp_path: Path) -> None:
     canonical agent-image bundle. The stored bytes round-trip
     through ``spec.load`` to the same name the YAML declared.
 
-    What breaks if this fails: ``omnigent server --agent my-agent/``
-    regresses — the standard case every omnigent user exercises.
+    What breaks if this fails: ``agent-meow server --agent my-agent/``
+    regresses — the standard case every agent-meow user exercises.
     """
     agent_dir = tmp_path / "native-agent"
     agent_dir.mkdir()
@@ -2235,12 +2235,12 @@ def test_preregister_agent_accepts_directory(tmp_path: Path) -> None:
 
 def test_preregister_agent_accepts_omnigent_yaml_file(tmp_path: Path) -> None:
     """
-    A standalone omnigent YAML file registers identically — the
+    A standalone agent-meow YAML file registers identically — the
     spec's ``name`` field becomes the agent name, and the tarball
     stored in the artifact store round-trips through
     ``_find_omnigent_yaml_in_dir`` to the same spec.
 
-    What breaks if this fails: ``omnigent server --agent coding_supervisor.yaml``
+    What breaks if this fails: ``agent-meow server --agent coding_supervisor.yaml``
     either crashes on the bundle step or stores a broken tarball
     the server later fails to rehydrate.
     """
@@ -2264,7 +2264,7 @@ def test_preregister_agent_accepts_omnigent_yaml_file(tmp_path: Path) -> None:
 
     agent_id = _preregister_agent(yaml_path, agent_store, artifact_store, agent_cache)
 
-    # The YAML's ``name`` field flows through the omnigent
+    # The YAML's ``name`` field flows through the agent-meow
     # adapter into the AgentSpec and lands on the stored row.
     # Any regression in that translation would surface here.
     assert len(agent_store.created) == 1
@@ -2377,7 +2377,7 @@ def test_run_without_agent_drops_into_configure_when_unconfigured(
     pins the ``run``-command wiring at the CLI layer.
 
     Fully isolated so it neither depends on the developer's ambient creds nor
-    mutates the real ``~/.omnigent`` config, and never launches a daemon.
+    mutates the real ``~/.agent-meow`` config, and never launches a daemon.
     """
     # Empty config + no detectable provider before/after configure, so the
     # first-run plan resolves to "nothing configured".
@@ -2420,7 +2420,7 @@ def test_run_without_agent_claude_alias_dispatches_generated_yaml_headlessly(
     runs against the daemon-backed server via ``run_chat`` rather than the
     legacy in-process ``run_prompt``.
     """
-    # Isolate from any real ~/.omnigent/config.yaml on the developer's machine
+    # Isolate from any real ~/.agent_meow/config.yaml on the developer's machine
     # (config defaults and ambient creds must not leak into the generated YAML
     # or the dispatch kwargs asserted below).
     monkeypatch.setattr("agent_meow.cli._load_global_config", dict)
@@ -2579,7 +2579,7 @@ def test_run_with_agent_accepts_openai_agents_sdk_alias(
     run_chat.assert_called_once()
 
 
-@pytest.mark.parametrize("flag", ["--omnigent", "--no-sessions-api"])
+@pytest.mark.parametrize("flag", ["--agent-meow", "--no-sessions-api"])
 def test_removed_runner_flow_flags_are_rejected(flag: str) -> None:
     """Removed runner-flow escape hatches are no longer accepted by click."""
     result = CliRunner().invoke(cli, ["run", "tests/resources/examples/hello_world.yaml", flag])
@@ -2745,7 +2745,7 @@ def test_attach_forwards_live_conversation_to_run_attach(
 ) -> None:
     """``attach <id> --server`` joins the live conversation via ``run_attach``
     (the co-drive client that dispatches to the host's existing runner)."""
-    # Isolate from the developer's real ~/.omnigent config (a configured
+    # Isolate from the developer's real ~/.agent-meow config (a configured
     # server/auto-open default would otherwise leak into the asserted
     # run_attach kwargs).
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
@@ -2929,7 +2929,7 @@ def test_run_server_resume_by_id_forwards_to_run_attach(
     runner-bind with "Sessions API dispatch requires a registered runner id"
     the moment it tried to bind a runner it never started.
     """
-    # Isolate from the developer's real ~/.omnigent config so a configured
+    # Isolate from the developer's real ~/.agent-meow config so a configured
     # server default can't leak into the asserted run_attach kwargs.
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     # The live-session probe (precise not-found error) is exercised by the
@@ -2971,7 +2971,7 @@ def test_run_server_resume_native_redirects_before_attach_preflight(
     """Terminal-native ``run --server --resume`` redirects before attach checks.
 
     The pre-attach liveness check is for agent-meow REPL co-drive. Native-wrapper
-    sessions need to hand off to ``omnigent claude`` / ``omnigent codex``
+    sessions need to hand off to ``agent-meow claude`` / ``agent-meow codex``
     even when their old runner is gone, otherwise a cold native resume fails
     before the wrapper can relaunch its terminal.
     """
@@ -3226,7 +3226,7 @@ def test_is_run_shorthand(argv: list[str], expected: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# `omnigent config` command
+# `agent-meow config` command
 # ---------------------------------------------------------------------------
 
 
@@ -3235,11 +3235,11 @@ def test_config_list_empty(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config list`` prints a no-defaults message when neither
+    ``agent-meow config list`` prints a no-defaults message when neither
     global nor project-level config files exist.
 
     :param monkeypatch: Pytest monkeypatch fixture.
-    :param tmp_path: Temporary directory standing in for ~/.omnigent and cwd.
+    :param tmp_path: Temporary directory standing in for ~/.agent-meow and cwd.
     """
     monkeypatch.setattr("agent_meow.cli._GLOBAL_CONFIG_PATH", tmp_path / "config.yaml")
     monkeypatch.setattr("agent_meow.cli._load_local_config", dict)
@@ -3285,7 +3285,7 @@ def test_config_set_global_writes_file(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config set --global key=value`` persists the value so that
+    ``agent-meow config set --global key=value`` persists the value so that
     ``_load_global_config`` returns it.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3388,7 +3388,7 @@ def test_config_list_shows_saved_values(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config list`` prints all defaults that were previously
+    ``agent-meow config list`` prints all defaults that were previously
     written with ``config set --global``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3416,17 +3416,17 @@ def test_config_list_dedups_when_cwd_is_config_home(
     ``config list`` shows a shared config file once when cwd is its home.
 
     When the command runs from the user's home directory, the project-level
-    path (``cwd/.omnigent/config.yaml``) resolves to the SAME file as the
-    user-level path (``~/.omnigent/config.yaml``).  The defaults section
+    path (``cwd/.agent_meow/config.yaml``) resolves to the SAME file as the
+    user-level path (``~/.agent_meow/config.yaml``).  The defaults section
     must dedup on the resolved absolute path and print that one file once,
     not twice under two different spellings.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for the home dir.
     """
-    # Global config lives at ``<home>/.omnigent/config.yaml``; chdir to
+    # Global config lives at ``<home>/.agent_meow/config.yaml``; chdir to
     # that same home dir so the local loader reads the identical file.
-    config_dir = tmp_path / ".omnigent"
+    config_dir = tmp_path / ".agent-meow"
     config_dir.mkdir()
     monkeypatch.setattr("agent_meow.cli._GLOBAL_CONFIG_PATH", config_dir / "config.yaml")
     monkeypatch.chdir(tmp_path)  # cwd == home → local path resolves to global
@@ -3438,7 +3438,7 @@ def test_config_list_dedups_when_cwd_is_config_home(
     assert result.exit_code == 0, result.output
     # Exactly one value line and one source-comment line. Before the
     # absolute-path dedup fix this appeared twice — once under the hardcoded
-    # ``# ~/.omnigent/config.yaml`` literal and once under the resolved
+    # ``# ~/.agent_meow/config.yaml`` literal and once under the resolved
     # local path — because the two sources were compared by raw spelling,
     # not resolved path. A count of 2 means the dedup regressed.
     assert result.output.count("default_agent=examples/hello_world.yaml") == 1
@@ -3451,7 +3451,7 @@ def test_config_unset_removes_key(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config unset --global server`` removes the key from
+    ``agent-meow config unset --global server`` removes the key from
     the config file without touching other keys.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3477,7 +3477,7 @@ def test_config_unknown_key_raises_error(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config set --global unknown=value`` rejects keys that are
+    ``agent-meow config set --global unknown=value`` rejects keys that are
     not in ``_GLOBAL_CONFIG_KEYS``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3498,7 +3498,7 @@ def test_config_set_profile_rejected_as_unknown_key(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config set profile=...`` fails with the unknown-key error.
+    ``agent-meow config set profile=...`` fails with the unknown-key error.
 
     Pins the removal of the ``profile`` config key alongside the
     ``--profile`` CLI flag: a user migrating from an older release must
@@ -3526,8 +3526,8 @@ def test_config_set_local_writes_project_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent config set key=value`` without ``--global`` writes to
-    ``.omnigent/config.yaml`` in the current directory.
+    ``agent-meow config set key=value`` without ``--global`` writes to
+    ``.agent_meow/config.yaml`` in the current directory.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory used as a stand-in project root.
@@ -3538,7 +3538,7 @@ def test_config_set_local_writes_project_config(
     result = CliRunner().invoke(cli, ["config", "set", "model=my-model"])
 
     assert result.exit_code == 0, result.output
-    local_path = tmp_path / ".omnigent" / "config.yaml"
+    local_path = tmp_path / ".agent-meow" / "config.yaml"
     assert local_path.exists(), "local config file should have been created"
     cfg = yaml.safe_load(local_path.read_text())
     assert cfg["model"] == "my-model"
@@ -3547,7 +3547,7 @@ def test_config_set_local_writes_project_config(
 
 
 # ---------------------------------------------------------------------------
-# `omnigent run` picks up global config defaults
+# `agent-meow run` picks up global config defaults
 # ---------------------------------------------------------------------------
 
 
@@ -3556,7 +3556,7 @@ def test_run_applies_global_config_agent_default(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent run`` (no AGENT arg) uses the ``default_agent`` key from
+    ``agent-meow run`` (no AGENT arg) uses the ``default_agent`` key from
     global config as the target when no explicit target is given.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3591,7 +3591,7 @@ def test_run_cli_arg_overrides_global_config(
     tmp_path: Path,
 ) -> None:
     """
-    An explicit CLI arg on ``omnigent run`` takes precedence over the
+    An explicit CLI arg on ``agent-meow run`` takes precedence over the
     corresponding key in global config.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3628,7 +3628,7 @@ def test_run_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent run`` forwards the persisted browser-open setting.
+    ``agent-meow run`` forwards the persisted browser-open setting.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.agent_meow.
@@ -3661,10 +3661,10 @@ def _capture_run_dispatch(
     tmp_path: Path,
 ) -> dict[str, object]:
     """
-    Wire ``omnigent run`` to capture dispatch kwargs without launching.
+    Wire ``agent-meow run`` to capture dispatch kwargs without launching.
 
     Points the global config at an empty *tmp_path* file (so the test is
-    isolated from the developer's real ``~/.omnigent/config.yaml``) and
+    isolated from the developer's real ``~/.agent_meow/config.yaml``) and
     stubs the dispatch / resume helpers. Callers that want a non-empty
     config call ``_save_global_config`` any time before invoking the CLI
     (the ``_GLOBAL_CONFIG_PATH`` monkeypatch this helper installs persists
@@ -3699,7 +3699,7 @@ def test_run_interactive_defaults_browser_open_on(
     tmp_path: Path,
 ) -> None:
     """
-    Interactive ``omnigent run`` opens the browser by default.
+    Interactive ``agent-meow run`` opens the browser by default.
 
     With no ``auto_open_conversation`` configured, a bare interactive
     ``run`` (no ``-p``) defaults the browser-open ON so users discover
@@ -3721,7 +3721,7 @@ def test_run_headless_prompt_defaults_browser_open_off(
     tmp_path: Path,
 ) -> None:
     """
-    Headless ``omnigent run -p`` stays quiet by default.
+    Headless ``agent-meow run -p`` stays quiet by default.
 
     A one-shot ``-p`` invocation with no configured preference must NOT
     open the browser — the user is scripting, not exploring the UI.
@@ -3799,7 +3799,7 @@ def test_attach_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent attach`` reads browser-open from config and forwards it to run_attach.
+    ``agent-meow attach`` reads browser-open from config and forwards it to run_attach.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.agent_meow.
@@ -3823,7 +3823,7 @@ def test_claude_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent claude`` forwards the persisted browser-open setting.
+    ``agent-meow claude`` forwards the persisted browser-open setting.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.agent_meow.
@@ -3849,7 +3849,7 @@ def test_codex_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent codex`` forwards the persisted browser-open setting.
+    ``agent-meow codex`` forwards the persisted browser-open setting.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.agent_meow.
@@ -3875,7 +3875,7 @@ def test_run_bare_omnigent_with_harness_only_config(
     tmp_path: Path,
 ) -> None:
     """
-    Bare ``omnigent`` with only ``harness`` in global config dispatches
+    Bare ``agent-meow`` with only ``harness`` in global config dispatches
     to ``run`` (not ``--help``), so the harness default is applied.
 
     Regression target: the bare-invocation check previously only looked
@@ -3912,7 +3912,7 @@ def test_run_bare_omnigent_with_harness_only_config(
 def test_bare_omnigent_harness_flag_dispatches_to_run(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``omnigent --harness ...`` is shorthand for ``omnigent run --harness ...``."""
+    """``agent-meow --harness ...`` is shorthand for ``agent-meow run --harness ...``."""
     from agent_meow.cli import main
 
     dispatched: dict[str, object] = {}
@@ -3927,7 +3927,7 @@ def test_bare_omnigent_harness_flag_dispatches_to_run(
         "agent_meow.cli._split_resume_value",
         lambda _: SimpleNamespace(picker=False, conversation_id=None),
     )
-    monkeypatch.setattr(sys, "argv", ["omnigent", "--harness", "claude"])
+    monkeypatch.setattr(sys, "argv", ["agent-meow", "--harness", "claude"])
 
     main()
 
@@ -3939,7 +3939,7 @@ def test_bare_omnigent_non_tty_shows_help(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Bare ``omnigent`` in a non-interactive shell (no TTY) shows help.
+    """Bare ``agent-meow`` in a non-interactive shell (no TTY) shows help.
 
     On a pipe / CI there is no terminal to drive a REPL, so the bare command
     falls back to ``--help`` rather than launching ``run`` (which would hang
@@ -3947,7 +3947,7 @@ def test_bare_omnigent_non_tty_shows_help(
     """
     from agent_meow.cli import main
 
-    monkeypatch.setattr(sys, "argv", ["omnigent"])
+    monkeypatch.setattr(sys, "argv", ["agent-meow"])
     monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
 
     with pytest.raises(SystemExit) as exc_info:
@@ -3962,14 +3962,14 @@ def test_bare_omnigent_non_tty_shows_help(
 def test_bare_omnigent_tty_dispatches_to_run(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Bare ``omnigent`` on an interactive terminal behaves like ``omnigent run``.
+    """Bare ``agent-meow`` on an interactive terminal behaves like ``agent-meow run``.
 
     ``run`` then resolves the configured default / first-run plan. We assert
     only that the bare invocation is rewritten to ``run`` before dispatch.
     """
     from agent_meow import cli as cli_module
 
-    monkeypatch.setattr(sys, "argv", ["omnigent"])
+    monkeypatch.setattr(sys, "argv", ["agent-meow"])
     monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
 
     dispatched: dict[str, list[str]] = {}
@@ -3991,7 +3991,7 @@ def test_bare_omnigent_rejects_positional_server_url(
     """Top-level server URLs must use ``run --server`` explicitly."""
     from agent_meow.cli import main
 
-    monkeypatch.setattr(sys, "argv", ["omnigent", "http://localhost:8000"])
+    monkeypatch.setattr(sys, "argv", ["agent-meow", "http://localhost:8000"])
 
     with pytest.raises(SystemExit) as exc_info:
         main()
@@ -3999,7 +3999,7 @@ def test_bare_omnigent_rejects_positional_server_url(
     assert exc_info.value.code == 2
     terminal = capsys.readouterr()
     assert "server URLs must be passed with --server" in terminal.err
-    assert "omnigent run --server http://localhost:8000" in terminal.err
+    assert "agent-meow run --server http://localhost:8000" in terminal.err
 
 
 def test_unknown_command_reports_no_such_command(
@@ -4009,13 +4009,13 @@ def test_unknown_command_reports_no_such_command(
     """
     An unknown subcommand falls through to click's standard error.
 
-    A typo'd command (``omnigent blah``) must produce click's
+    A typo'd command (``agent-meow blah``) must produce click's
     "No such command" usage error, not the removed-ad-hoc-chat notice
     that previously swallowed every non-subcommand invocation.
     """
     from agent_meow.cli import main
 
-    monkeypatch.setattr(sys, "argv", ["omnigent", "blah"])
+    monkeypatch.setattr(sys, "argv", ["agent-meow", "blah"])
 
     with pytest.raises(SystemExit) as exc_info:
         main()
@@ -4028,7 +4028,7 @@ def test_unknown_command_reports_no_such_command(
 
 
 def test_setup_command_replaces_wizard(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``omnigent setup`` is the visible standard setup flow command."""
+    """``agent-meow setup`` is the visible standard setup flow command."""
     configure_flow = Mock()
     configure_databricks = Mock()
     run_onboarding = Mock(return_value=True)
@@ -4287,7 +4287,7 @@ def test_click_subcommands_allowlist_covers_registered_commands() -> None:
     first token not in the set is rejected as removed top-level ad-hoc chat
     (see ``_is_removed_ad_hoc_invocation``). So a command registered on the
     group but absent from the allowlist is unreachable from the real
-    entrypoint — exactly the bug where ``omnigent configure`` errored with
+    entrypoint — exactly the bug where ``agent-meow configure`` errored with
     "ad-hoc chat was removed" despite being registered. A failure here means
     a newly added top-level command must be added to ``_CLICK_SUBCOMMANDS``.
     """
@@ -4303,7 +4303,7 @@ def test_click_subcommands_allowlist_covers_registered_commands() -> None:
     )
 
 
-# ── first-run smart defaults (omnigent run) ──────────
+# ── first-run smart defaults (agent-meow run) ──────────
 
 
 def _fake_provider_for(*configured: str):
@@ -4582,7 +4582,7 @@ def test_ensure_sqlite_parent_dir_noop_for_memory_and_non_sqlite(tmp_path: Path)
     """
     # Neither call should raise, and neither should create a stray dir.
     _ensure_sqlite_parent_dir("sqlite:///:memory:")
-    _ensure_sqlite_parent_dir("postgresql://user:pw@db.example.com:5432/omnigent")
+    _ensure_sqlite_parent_dir("postgresql://user:pw@db.example.com:5432/agent-meow")
 
     assert list(tmp_path.iterdir()) == []
 
@@ -4798,7 +4798,7 @@ def test_run_agent_with_native_terminal_harness_is_rejected() -> None:
         )
 
 
-# ── omnigent setup: Qwen Code drill-in (_manage_qwen_harness) ────────────
+# ── agent-meow setup: Qwen Code drill-in (_manage_qwen_harness) ────────────
 
 
 def test_qwen_auth_configured_detects_env_var(
@@ -4886,7 +4886,7 @@ def test_manage_qwen_harness_back_does_not_launch(
     launch.assert_not_called()
 
 
-# ── omnigent setup: Goose drill-in (_manage_goose_harness) ───────────────
+# ── agent-meow setup: Goose drill-in (_manage_goose_harness) ───────────────
 
 
 def test_manage_goose_harness_missing_cli_shows_hint_returns(
@@ -4961,7 +4961,7 @@ def test_manage_goose_harness_configure_launches(
     launch.assert_called_once()
 
 
-# ── omnigent setup: Kimi Code drill-in (_manage_kimi_harness) ────────────
+# ── agent-meow setup: Kimi Code drill-in (_manage_kimi_harness) ────────────
 
 
 def test_manage_kimi_harness_not_installed_shows_hint_returns(

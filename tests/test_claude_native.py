@@ -83,7 +83,7 @@ def test_claude_terminal_request_pins_launch_cwd(tmp_path, monkeypatch) -> None:
     assert args[:4] == ["--resume", "claude-session", "-p", "hi"]
     mcp_index = args.index("--mcp-config")
     mcp_config = json.loads(args[mcp_index + 1])
-    assert mcp_config["mcpServers"]["omnigent"]["args"] == [
+    assert mcp_config["mcpServers"]["agent-meow"]["args"] == [
         "-I",
         "-m",
         "agent_meow.claude_native_bridge",
@@ -163,7 +163,7 @@ def test_claude_terminal_request_injects_claude_config() -> None:
     """
     Ucode config reaches the terminal env, settings, and model argv.
 
-    This test pins the native ``omnigent claude`` launch boundary:
+    This test pins the native ``agent-meow claude`` launch boundary:
     a regression that reads ucode but forgets to pass the resulting
     Databricks gateway values to the terminal resource would leave
     Claude Code on its default provider path.
@@ -521,14 +521,14 @@ def test_materialized_session_spec_is_valid_terminal_metadata(tmp_path: Path) ->
     # observed (see ``agent_meow.claude_native_status``).
     assert raw["executor"] == {"harness": "claude-native", "context_window": 200_000}
     # os_env block is required for the runner's filesystem APIs not
-    # to 404 (see _require_os_env in omnigent/runner/app.py).
+    # to 404 (see _require_os_env in agent_meow/runner/app.py).
     assert raw["os_env"] == {
         "type": "caller_process",
         "cwd": ".",
         "sandbox": {"type": "none"},
     }
     spec = load_omnigent_yaml(path)
-    assert spec.executor.type == "omnigent"
+    assert spec.executor.type == "agent-meow"
     assert spec.executor.config["harness"] == "claude-native"
     assert spec.os_env is not None
     # The native wrapper opts into the spawn-write surface so the
@@ -796,7 +796,7 @@ def test_local_run_persists_launch_state_on_fresh_session(
     )
     captured = capsys.readouterr()
     web_ui = "Web UI: http://127.0.0.1:12345/c/conv_local_fresh"
-    resume_hint = "Resume with: omnigent claude --resume conv_local_fresh"
+    resume_hint = "Resume with: agent-meow claude --resume conv_local_fresh"
     assert web_ui in captured.err
     assert resume_hint in captured.err
     assert captured.err.index(web_ui) < captured.err.index(resume_hint)
@@ -809,7 +809,7 @@ def test_local_resume_does_not_print_redundant_resume_hint(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    ``omnigent claude --resume`` does not echo another resume prompt.
+    ``agent-meow claude --resume`` does not echo another resume prompt.
 
     The final hint is useful when a fresh launch creates a new
     conversation id. On an explicit resume, the user already supplied
@@ -896,7 +896,7 @@ def test_remote_daemon_run_attaches_without_cli_forwarder(
     tmp_path: Path,
 ) -> None:
     """
-    Daemon-routed ``omnigent claude`` leaves forwarding to the runner.
+    Daemon-routed ``agent-meow claude`` leaves forwarding to the runner.
 
     The daemon path launches a runner, the runner auto-creates the
     Claude terminal, and that auto-create starts the transcript
@@ -1185,7 +1185,7 @@ async def test_attach_profiles_direct_tmux_handoff(
     stream = io.StringIO()
     clock_values = iter([0.0, 0.1, 0.3])
     profiler = StartupProfiler(
-        name="omnigent claude",
+        name="agent-meow claude",
         enabled=True,
         clock=lambda: next(clock_values),
         stream=stream,
@@ -1542,7 +1542,7 @@ async def test_prepare_reattaches_existing_claude_terminal(
     """
     Existing running ``claude/main`` terminals are reused before bind.
 
-    If this regresses, a second ``omnigent claude --session`` can
+    If this regresses, a second ``agent-meow claude --session`` can
     rebind the session to a new local runner and launch a duplicate
     terminal instead of attaching to the live one.
     """
@@ -1996,7 +1996,7 @@ async def test_create_claude_session_omits_title_for_generic_seed_path() -> None
     ``_seed_missing_title_from_user_message`` on the first forwarded
     user message. The sidebar fills the create-to-first-message gap
     by rendering a default label off the
-    ``omnigent.wrapper = claude-code-native-ui`` label
+    ``agent_meow.wrapper = claude-code-native-ui`` label
     (see ``web/src/shell/sidebarNav.ts::conversationDisplayLabel``).
     The labels must still reach the server unchanged because that
     sidebar fallback keys off the wrapper label.
@@ -2058,7 +2058,7 @@ async def test_create_claude_session_omits_title_for_generic_seed_path() -> None
 # ---------------------------------------------------------------------------
 # Reconnect tests
 #
-# These tests cover the reconnect loop that lets ``omnigent claude``
+# These tests cover the reconnect loop that lets ``agent-meow claude``
 # survive a remote-server bounce. The bug they guard against:
 # previously, a single transient WebSocket close took down the entire
 # TUI session — the user had to relaunch and lost their live Claude
@@ -2178,7 +2178,7 @@ async def test_attach_with_reconnect_passes_terminal_gone_probe_to_attach(
     """
     Reconnect wiring enables the client-side terminal-gone watcher.
 
-    The production ``omnigent claude`` path passes
+    The production ``agent-meow claude`` path passes
     :func:`attach_local_terminal` through ``_attach_with_reconnect``.
     This test pins the handoff: when client-side close-on-gone is
     enabled, the attach callable receives a probe that checks the
@@ -3033,7 +3033,7 @@ async def test_attach_reconnects_through_real_websocket_bounce(
     server closes its WebSocket mid-session.
 
     This is the regression test for the reconnect loop. The bug:
-    ``omnigent claude`` exited after the first WebSocket close, so
+    ``agent-meow claude`` exited after the first WebSocket close, so
     a server redeploy ended the user's Claude session. The fix wraps
     the attach in a reconnect loop guarded by a recovery callback;
     this test drives that loop against a real websockets server that
@@ -3640,7 +3640,7 @@ def _conversation_response_body(
     ``external_session_id`` — so the fixture stays small.
 
     :param labels: ``labels`` field for the response payload, e.g.
-        ``{"omnigent.wrapper": "claude-code-native-ui"}``.
+        ``{"agent_meow.wrapper": "claude-code-native-ui"}``.
     :param external_session_id: ``external_session_id`` field or
         ``None``.
     :returns: JSON-encodable response dict.
@@ -3750,7 +3750,7 @@ async def test_resolve_cold_resume_args_injects_external_session_id(
     monkeypatch.setattr(claude_native, "_CLAUDE_PROJECTS_DIR", tmp_path / "projects")
     client = await _httpx_client_with_canned_response(
         _conversation_response_body(
-            labels={"omnigent.wrapper": "claude-code-native-ui"},
+            labels={"agent_meow.wrapper": "claude-code-native-ui"},
             external_session_id="claude-uuid-abc",
         ),
         200,
@@ -3783,7 +3783,7 @@ async def test_resolve_cold_resume_args_declines_resume_when_no_history(
     monkeypatch.setattr(claude_native, "_CLAUDE_PROJECTS_DIR", tmp_path / "projects")
     client = await _httpx_client_with_canned_response(
         _conversation_response_body(
-            labels={"omnigent.wrapper": "claude-code-native-ui"},
+            labels={"agent_meow.wrapper": "claude-code-native-ui"},
             external_session_id="claude-uuid-abc",
         ),
         200,
@@ -3867,7 +3867,7 @@ async def test_resolve_cold_resume_args_bootstraps_missing_local_claude_transcri
             return httpx.Response(
                 200,
                 json=_conversation_response_body(
-                    labels={"omnigent.wrapper": "claude-code-native-ui"},
+                    labels={"agent_meow.wrapper": "claude-code-native-ui"},
                     external_session_id="claude-uuid-abc",
                 ),
             )
@@ -3990,7 +3990,7 @@ async def test_resolve_cold_resume_args_replaces_existing_local_claude_transcrip
             return httpx.Response(
                 200,
                 json=_conversation_response_body(
-                    labels={"omnigent.wrapper": "claude-code-native-ui"},
+                    labels={"agent_meow.wrapper": "claude-code-native-ui"},
                     external_session_id="claude-uuid-abc",
                 ),
             )
@@ -4029,7 +4029,7 @@ async def test_resolve_cold_resume_args_warns_when_external_session_id_missing(
     """
     client = await _httpx_client_with_canned_response(
         _conversation_response_body(
-            labels={"omnigent.wrapper": "claude-code-native-ui"},
+            labels={"agent_meow.wrapper": "claude-code-native-ui"},
             external_session_id=None,
         ),
         200,
@@ -4046,7 +4046,7 @@ async def test_resolve_cold_resume_args_warns_when_external_session_id_missing(
 async def test_resolve_cold_resume_args_rejects_non_claude_native_conv() -> None:
     """
     A conv whose wrapper label is NOT claude-native is an
-    ``omnigent claude --resume <run-conv-id>`` programmer error.
+    ``agent-meow claude --resume <run-conv-id>`` programmer error.
     Fail loud with a redirect hint rather than silently launching
     claude over a chat session whose state the wrapper doesn't
     own.
@@ -4066,7 +4066,7 @@ async def test_resolve_cold_resume_args_rejects_non_claude_native_conv() -> None
     # Redirect hint includes the right command and conv id so the
     # user can copy-paste to recover. If this assertion fails, the
     # error becomes a dead-end.
-    assert "omnigent run --resume conv_abc" in excinfo.value.message
+    assert "agent-meow run --resume conv_abc" in excinfo.value.message
 
 
 @pytest.mark.asyncio
@@ -4114,7 +4114,7 @@ async def test_resolve_cold_resume_args_warning_lands_in_logger(
 
     client = await _httpx_client_with_canned_response(
         _conversation_response_body(
-            labels={"omnigent.wrapper": "claude-code-native-ui"},
+            labels={"agent_meow.wrapper": "claude-code-native-ui"},
             external_session_id=None,
         ),
         200,
@@ -4544,7 +4544,7 @@ def test_is_claude_native_conversation_returns_true_on_matching_label(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    200 + ``omnigent.wrapper=claude-code-native-ui`` → True.
+    200 + ``agent_meow.wrapper=claude-code-native-ui`` → True.
 
     This is the load-bearing decision for the chat-redirect path
     (``_chat_with_server`` calls this to decide whether to redirect
@@ -4559,7 +4559,7 @@ def test_is_claude_native_conversation_returns_true_on_matching_label(
         return httpx.Response(
             200,
             json={
-                "labels": {"omnigent.wrapper": "claude-code-native-ui"},
+                "labels": {"agent_meow.wrapper": "claude-code-native-ui"},
             },
         )
 
@@ -4579,7 +4579,7 @@ def test_is_claude_native_conversation_returns_true_on_matching_label(
     "labels",
     [
         {},
-        {"omnigent.wrapper": "some-other-wrapper"},
+        {"agent_meow.wrapper": "some-other-wrapper"},
         {"unrelated": "x"},
     ],
 )
@@ -4709,7 +4709,7 @@ def test_is_claude_native_conversation_returns_false_on_transport_error(
 # real state module, then drives the helper. The autouse
 # ``_isolate_claude_native_state`` fixture in ``tests/conftest.py``
 # redirects the state root to a per-test tmp dir so writes never
-# touch the developer's real ``~/.omnigent/``.
+# touch the developer's real ``~/.agent_meow/``.
 
 
 @dataclass(frozen=True)
@@ -4901,7 +4901,7 @@ def test_align_working_directory_switch_action_chdirs(
     Mismatched cwd, recorded path exists, user chooses switch → chdir.
 
     This is the happy-path fix for the bug the user reported:
-    ``omnigent claude --resume`` invoked from a different
+    ``agent-meow claude --resume`` invoked from a different
     directory than the session was started in must offer to
     switch, and on switch must actually mutate the process cwd so
     subsequent ``Path.cwd()`` reads in the launch flow see the
@@ -5739,7 +5739,7 @@ def _no_auth_claude_spec() -> Any:
         spec_version=1,
         name="t",
         instructions="t",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-sdk"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-sdk"}),
     )
 
 
@@ -5958,8 +5958,8 @@ def test_resolve_native_claude_config_global_databricks_auth_uses_ucode(
 
     Preserves the Databricks behavior after the ``--profile`` flag removal:
     a databricks user (no OSS provider configured) who set up a global
-    ``auth:`` block via ``omnigent setup`` still routes a bare
-    ``omnigent claude`` launch through ucode, keyed on the auth block's
+    ``auth:`` block via ``agent-meow setup`` still routes a bare
+    ``agent-meow claude`` launch through ucode, keyed on the auth block's
     own profile. We assert the resolver delegates to
     `_ucode_config_for_profile` with that profile.
     """
@@ -6010,7 +6010,7 @@ def test_resolve_native_claude_config_ambient_key(
 ) -> None:
     """Spec-less with only an ambient ANTHROPIC_API_KEY → provider config.
 
-    First run without configure: a native `omnigent claude` launch still
+    First run without configure: a native `agent-meow claude` launch still
     routes through the detected env key. Failure means a fresh machine's
     native Claude would ignore the ambient credential.
     """

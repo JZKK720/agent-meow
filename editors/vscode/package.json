@@ -1,11 +1,11 @@
 {
-  "name": "omnigent-vscode",
+  "name": "agent-meow-vscode",
   "displayName": "agent-meow",
   "description": "Open your running local agent-meow server inside VS Code, in an editor-beside iframe.",
   "version": "0.1.0",
   "publisher": "databricks",
   "license": "Apache-2.0",
-  "icon": "media/omnigent-icon.png",
+  "icon": "media/agent-meow-icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/JZKK720/agent-meow.git",
@@ -20,7 +20,7 @@
     "configuration": {
       "title": "agent-meow",
       "properties": {
-        "omnigent.serverUrl": {
+        "agent_meow.serverUrl": {
           "type": "string",
           "default": "",
           "markdownDescription": "Manual agent-meow server URL override for a **localhost** server (e.g. `http://127.0.0.1:6767`). Leave empty to auto-discover a locally running agent-meow server. Non-localhost URLs are not supported in this build."
@@ -30,44 +30,44 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "omnigent-container",
+          "id": "agent-meow-container",
           "title": "agent-meow",
-          "icon": "media/omnigent-icon.svg"
+          "icon": "media/agent-meow-icon.svg"
         }
       ]
     },
     "views": {
-      "omnigent-container": [
+      "agent-meow-container": [
         {
           "type": "tree",
-          "id": "omnigent.home",
+          "id": "agent_meow.home",
           "name": "agent-meow"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "omnigent.home",
-        "contents": "Open the running agent-meow server UI in an editor tab.\n[Open agent-meow](command:omnigent.open)\nStart a local server with `meow server`, or set `omnigent.serverUrl` to a localhost URL."
+        "view": "agent_meow.home",
+        "contents": "Open the running agent-meow server UI in an editor tab.\n[Open agent-meow](command:agent_meow.open)\nStart a local server with `meow server`, or set `agent_meow.serverUrl` to a localhost URL."
       }
     ],
     "commands": [
       {
-        "command": "omnigent.open",
+        "command": "agent_meow.open",
         "title": "agent-meow: Open",
-        "icon": "media/omnigent-icon.svg"
+        "icon": "media/agent-meow-icon.svg"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "omnigent.open",
+          "command": "agent_meow.open",
           "group": "navigation@99"
         }
       ],
       "commandPalette": [
         {
-          "command": "omnigent.open"
+          "command": "agent_meow.open"
         }
       ]
     }

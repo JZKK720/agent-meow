@@ -151,7 +151,7 @@ async def test_create_rejects_unknown_harness_override(
 async def test_create_rejects_harness_override_for_non_omnigent_agent(
     client: httpx.AsyncClient,
 ) -> None:
-    """Non-omnigent executor types reject the override instead of no-opping.
+    """Non-agent-meow executor types reject the override instead of no-opping.
 
     Mirrors the CLI's ``--harness`` rule: those executors have no
     ``config.harness``, so accepting the value would silently launch the
@@ -160,7 +160,7 @@ async def test_create_rejects_harness_override_for_non_omnigent_agent(
     agent = await create_test_agent(
         client,
         name="sdk-typed-agent",
-        # A non-omnigent executor type (claude_sdk rejects the helper's
+        # A non-agent-meow executor type (claude_sdk rejects the helper's
         # executor.connection, so agents_sdk is the representative here);
         # the helper still injects config.harness, which this executor
         # type simply ignores.

@@ -382,7 +382,7 @@
         <div id="cli-install" hidden>
           <p>
             <a
-              href="https://cubecloud.io/quickstart/install#install-omnigent"
+              href="https://cubecloud.io/quickstart/install#install-agent-meow"
               target="_blank"
               rel="noreferrer"
               >Install the agent-meow CLI ↗</a
@@ -513,10 +513,10 @@
         if (e.key === "Enter") connect();
       });
 
-      // --- Start locally + omnigent CLI detection ---------------------------
-      // "Start locally" runs `omnigent server` via the main process, then
+      // --- Start locally + agent-meow CLI detection ---------------------------
+      // "Start locally" runs `agent-meow server` via the main process, then
       // connects this window to it through the normal flow. It
-      // needs the local omnigent CLI, so we detect the CLI on load and, when
+      // needs the local agent-meow CLI, so we detect the CLI on load and, when
       // it's missing, show install instructions plus a way to point at the
       // binary. Remote Connect never depends on the CLI.
       const startLocalBtn = document.getElementById("start-local");

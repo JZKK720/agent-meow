@@ -380,16 +380,16 @@ def pi_host_skills(ctx: SkillSourceContext) -> list[SkillSpec]:
     Pi has its **own** host-skill mechanism: it loads bundle skills via
     ``--skill`` (already carried by ``spec.skills``, which the runner
     unions in separately) and runs its own auto-discovery at runtime,
-    sourcing from Pi's internal extension layout. omnigent can't enumerate
+    sourcing from Pi's internal extension layout. agent-meow can't enumerate
     that layout to name/resolve those skills for the menu, so listing any
     would risk surfacing a command Pi can't invoke. Hence the explicit
     no-op (under-report when unsure).
 
     This is why Pi gets a dedicated provider rather than the generic
     ``~/.claude/skills`` fallback: the fallback's skills are resolvable by
-    omnigent on harnesses that have *no* host-skill mechanism of their own
+    agent-meow on harnesses that have *no* host-skill mechanism of their own
     (the unregistered SDK/CLI harnesses — antigravity, qwen — which route a
-    typed skill through omnigent's own resolve+inject), but Pi's competing,
+    typed skill through agent-meow's own resolve+inject), but Pi's competing,
     unenumerable mechanism makes that fallback unsafe. The distinction is
     "does the harness own an unenumerable host-skill mechanism", not the
     vendor.
@@ -404,9 +404,9 @@ def pi_host_skills(ctx: SkillSourceContext) -> list[SkillSpec]:
 # Keyed by harness family (see _harness_family). A harness with no entry
 # (antigravity, qwen, openai-agents, …) falls through to _generic_host_skills
 # in resolve_harness_skills — the unchanged pre-existing ~/.claude/skills walk,
-# whose skills omnigent resolves+injects regardless of vendor. Pi is the one
+# whose skills agent-meow resolves+injects regardless of vendor. Pi is the one
 # harness that needs an explicit no-op (see pi_host_skills) because it owns a
-# host-skill mechanism omnigent can't enumerate.
+# host-skill mechanism agent-meow can't enumerate.
 _SKILL_SOURCES: dict[str | None, SkillSource] = {
     "claude": claude_host_skills,
     "codex": codex_host_skills,

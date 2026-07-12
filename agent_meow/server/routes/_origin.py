@@ -20,7 +20,7 @@ WebSocket share exactly one trust boundary:
   may still announce themselves explicitly with the sentinel ``Origin``
   below, but are not required to.
 - the first-party sentinel (:data:`OMNIGENT_INTERNAL_WS_ORIGIN`,
-  ``"omnigent://internal"``) and any origin in
+  ``"agent-meow://internal"``) and any origin in
   ``OMNIGENT_WS_ALLOWED_ORIGINS`` pass;
 - in single-user **local mode** (no cookie / proxy auth) a present
   ``Origin`` must be a loopback host — this is where the guard actually
@@ -56,7 +56,7 @@ def require_trusted_origin(request: Request) -> None:
     ``Origin``. A present ``Origin`` that is none of those is rejected.
 
     First-party non-browser clients (the Python SDK, the runner, the REPL)
-    may announce themselves with ``Origin: omnigent://internal``
+    may announce themselves with ``Origin: agent-meow://internal``
     (:data:`OMNIGENT_INTERNAL_WS_ORIGIN`), but are not required to.
 
     Only the request headers are inspected; the body is never read.

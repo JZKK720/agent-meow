@@ -257,12 +257,12 @@ const CODEX_NATIVE_APPROVAL_MODES: {
 // Conversation-label key for the DANGEROUS codex full-bypass opt-in. When
 // set to "1" the runner launches Codex with
 // `--dangerously-bypass-approvals-and-sandbox` (no approval prompts, no
-// command sandbox) — see omnigent.stores.conversation_store
+// command sandbox) — see agent_meow.stores.conversation_store
 // CODEX_NATIVE_BYPASS_SANDBOX_LABEL_KEY. Stored as a label (cheap thread
 // metadata) so it survives reload. Mutually exclusive in spirit with the
 // approval-mode presets above: when bypass is on the runner strips any
 // `--sandbox` / `--ask-for-approval` flags those presets would emit.
-const CODEX_NATIVE_BYPASS_SANDBOX_LABEL_KEY = "omnigent.codex_native.bypass_sandbox";
+const CODEX_NATIVE_BYPASS_SANDBOX_LABEL_KEY = "agent_meow.codex_native.bypass_sandbox";
 // The exact phrase a user must TYPE (not just click) to arm full bypass.
 // A typed confirmation makes the dangerous mode impossible to enable by an
 // accidental click; the toggle stays off until this is entered verbatim.
@@ -486,7 +486,7 @@ export async function describeCreateError(res: Response): Promise<string> {
  *
  * Warning-only signal for the agent picker: `true` only when the host
  * explicitly reported the harness as not ready (CLI missing or no
- * default credential — see `omnigent setup`). A missing readiness map
+ * default credential — see `agent-meow setup`). A missing readiness map
  * (older host build) or an unknown harness yields `false`, so unknown
  * never warns; the host re-checks authoritatively at launch time.
  *
@@ -540,9 +540,9 @@ export function harnessWarningMessageText(
     return `${agentName} needs Codex authentication on ${hostName} — run codex login on that machine.`;
   }
   if (reason === "binary-missing") {
-    return `${agentName} is missing the Codex binary on ${hostName} — run omnigent setup on that machine.`;
+    return `${agentName} is missing the Codex binary on ${hostName} — run agent-meow setup on that machine.`;
   }
-  return `${agentName} isn't configured on ${hostName} — run omnigent setup on that machine.`;
+  return `${agentName} isn't configured on ${hostName} — run agent-meow setup on that machine.`;
 }
 
 function harnessWarningMessage(
@@ -561,14 +561,14 @@ function harnessWarningMessage(
   if (reason === "binary-missing") {
     return (
       <>
-        {agentName} is missing the Codex binary on {hostName} — run <code>omnigent setup</code> on
+        {agentName} is missing the Codex binary on {hostName} — run <code>agent-meow setup</code> on
         that machine.
       </>
     );
   }
   return (
     <>
-      {agentName} isn&apos;t configured on {hostName} — run <code>omnigent setup</code> on that
+      {agentName} isn&apos;t configured on {hostName} — run <code>agent-meow setup</code> on that
       machine.
     </>
   );
@@ -2461,9 +2461,9 @@ export function NewChatLandingScreen() {
                     ? { branch_name: trimmedBranch, base_branch: baseBranch.trim() || undefined }
                     : undefined,
                 }),
-            // Native terminal agents open terminal-first: `omnigent.ui:
+            // Native terminal agents open terminal-first: `agent_meow.ui:
             // terminal` tells the UI to render the terminal wrapper, and
-            // `omnigent.wrapper` selects which CLI bridge the runner launches.
+            // `agent_meow.wrapper` selects which CLI bridge the runner launches.
             // The values are the registered wrapper ids the runner keys off —
             // they must match the wrapper registry, not the agent display name.
             // The DANGEROUS codex full-bypass opt-in rides along as an extra

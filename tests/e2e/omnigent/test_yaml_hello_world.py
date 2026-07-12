@@ -119,7 +119,7 @@ def test_yaml_agent_with_tools(
     model: str,
 ) -> None:
     """
-    Running ``omnigent run agent_with_tools.yaml --harness
+    Running ``agent-meow run agent_with_tools.yaml --harness
     <harness> -p <calc-prompt>`` completes cleanly and the
     ``calculate`` tool appears in stdout.
 
@@ -132,7 +132,7 @@ def test_yaml_agent_with_tools(
     text response so the test is deterministic and requires no
     real credentials.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         the harness's SDK installed.
     :param omnigent_repo_root: Cwd for the subprocess — the
         YAML's ``callable:`` entries
@@ -180,7 +180,7 @@ def test_yaml_agent_with_tools(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--model",
@@ -244,13 +244,13 @@ def _strip_tool_chatter(stdout: str) -> str:
     """
     Remove known tool-lifecycle marker lines from stdout.
 
-    The omnigent CLI prints ``◦ <tool>`` (queued) and
+    The agent-meow CLI prints ``◦ <tool>`` (queued) and
     ``• <tool> (NNms)`` (done) lines around tool calls regardless
     of which harness fired them. For the assistant-length
     assertion we want to measure only the natural-language reply,
     not those markers.
 
-    :param stdout: Raw stdout from ``omnigent run``.
+    :param stdout: Raw stdout from ``agent-meow run``.
     :returns: The stdout with tool lifecycle lines removed,
         trimmed of leading/trailing whitespace.
     """

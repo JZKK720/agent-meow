@@ -1,6 +1,6 @@
 """E2E: /model command in the agent-meow REPL under pexpect.
 
-Migrated to mock LLM: drives ``/model`` against a mock ``omnigent run``
+Migrated to mock LLM: drives ``/model`` against a mock ``agent-meow run``
 REPL and asserts the slash-command surface — show / set / show-after-set
 / reset — matches the design's contract end-to-end. No real Databricks
 credentials required.
@@ -53,7 +53,7 @@ def test_repl_model_command_show_set_reset(
        (session override persisted).
     4. ``/model default`` confirms ``model reset to agent default``.
 
-    :param omnigent_python: Interpreter with omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow installed.
     :param omnigent_repo_root: Working directory for the subprocess.
     :param mock_credentials_env: Mock-LLM env vars.
     :param mock_llm_server_url: Mock server URL.
@@ -83,7 +83,7 @@ def test_repl_model_command_show_set_reset(
         # No-arg /model renders the active-credential readout:
         #   "Active:  <model | (no model pinned …)>  ·  <provider>  ·  <source>"
         # (this replaced the legacy "model: (agent default)" line; see
-        # _build_model_readout_lines in omnigent/repl/_repl.py). With no
+        # _build_model_readout_lines in agent_meow/repl/_repl.py). With no
         # in-session override yet, the model slot reads "no model pinned" —
         # ``--model`` sets the routing model, not the /model session override
         # the readout tracks (``session.model_override``).

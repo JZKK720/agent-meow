@@ -46,7 +46,7 @@ def test_claude_code_agent_one_shot(
     the Claude SDK harness routes its ``POST /v1/messages`` calls to
     the mock server instead of api.anthropic.com.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         claude-agent-sdk installed.
     :param omnigent_repo_root: Repo root for subprocess cwd.
     :param mock_credentials_env: Env dict pointing at the mock LLM

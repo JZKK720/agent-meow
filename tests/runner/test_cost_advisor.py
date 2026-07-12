@@ -67,7 +67,7 @@ def _orchestrator_spec(*, cost_optimize: Any = None) -> AgentSpec:  # type: igno
     return AgentSpec(
         spec_version=1,
         name="orchestrator",
-        executor=ExecutorSpec(type="omnigent", config=config),
+        executor=ExecutorSpec(type="agent-meow", config=config),
     )
 
 

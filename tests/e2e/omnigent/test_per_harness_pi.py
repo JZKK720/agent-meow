@@ -1,6 +1,6 @@
 """Phase 0 characterization test — pi harness, one-shot prompt.
 
-Runs ``omnigent run hello_world.yaml --harness pi --model
+Runs ``agent-meow run hello_world.yaml --harness pi --model
 <mock-model> -p "..."`` as a real subprocess against the mock LLM
 server and snapshots structural observations (exit code, stderr
 cleanliness, assistant text length).
@@ -83,7 +83,7 @@ def test_per_harness_pi_one_shot(
     mock_llm_server_url: str,
 ) -> None:
     """
-    ``omnigent run hello_world.yaml --harness pi -p <prompt>``
+    ``agent-meow run hello_world.yaml --harness pi -p <prompt>``
     exits 0 and emits a non-trivial assistant reply.
 
     Uses the mock LLM server so the test runs without real API
@@ -91,7 +91,7 @@ def test_per_harness_pi_one_shot(
     model calls through ``OPENAI_BASE_URL`` (provided by
     ``mock_credentials_env``).
 
-    :param omnigent_python: Interpreter with omnigent
+    :param omnigent_python: Interpreter with agent-meow
         installed and importable.
     :param omnigent_repo_root: Cwd for the subprocess so the
         YAML spec and example tool modules resolve on sys.path.
@@ -114,7 +114,7 @@ def test_per_harness_pi_one_shot(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--model",

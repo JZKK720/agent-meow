@@ -4,7 +4,7 @@ Modal sandbox launcher.
 Implements :class:`~?agent_meow.onboarding.sandboxes.base.SandboxLauncher`
 for `Modal <https://modal.com>`_ sandboxes. This module ships in the OSS
 build; the Modal SDK itself is an optional dependency (``pip install
-'omnigent[modal]'``) imported lazily, so the provider can be listed and
+'agent-meow[modal]'``) imported lazily, so the provider can be listed and
 the module probed without it.
 
 Platform constraints that shape this launcher:
@@ -62,7 +62,7 @@ maximum (24 hours). There is no way to extend a sandbox past it."""
 HOST_IMAGE_ENV_VAR: str = "OMNIGENT_MODAL_HOST_IMAGE"
 """Environment variable overriding :data:`DEFAULT_HOST_IMAGE`, e.g. for
 an org-internal copy of the host image
-(``ghcr.io/<your-org>/omnigent-host:latest``)."""
+(``ghcr.io/<your-org>/agent-meow-host:latest``)."""
 
 REGISTRY_SECRET_ENV_VAR: str = "OMNIGENT_MODAL_REGISTRY_SECRET"
 """Environment variable naming a Modal secret
@@ -99,7 +99,7 @@ def _ensure_sdk() -> None:
     Verify the Modal SDK is importable, with an install hint when not.
 
     Called at the top of every launcher entry point because the SDK is
-    an optional dependency — the base ``omnigent`` install does not
+    an optional dependency — the base ``agent-meow`` install does not
     pull it in.
 
     :raises click.ClickException: When the ``modal`` package is not
@@ -110,7 +110,7 @@ def _ensure_sdk() -> None:
     except ImportError as exc:
         raise click.ClickException(
             "The Modal SDK is required for the 'modal' sandbox provider. "
-            "Install it with `pip install 'omnigent[modal]'`, then "
+            "Install it with `pip install 'agent-meow[modal]'`, then "
             "authenticate with `modal token new`."
         ) from exc
 
@@ -151,7 +151,7 @@ def _lookup_sandbox(sandbox_id: str) -> modal.Sandbox:
         raise click.ClickException(
             f"Modal sandbox '{sandbox_id}' not found — it may have passed its "
             "24-hour lifetime. Create a fresh one with "
-            "`omnigent sandbox create --provider modal`."
+            "`agent-meow sandbox create --provider modal`."
         ) from exc
 
 
@@ -159,7 +159,7 @@ def _build_sandbox_image(image_ref: str | None = None) -> modal.Image:
     """
     Resolve the sandbox image definition.
 
-    Pulls the prebaked agent-meow host image — the full omnigent
+    Pulls the prebaked agent-meow host image — the full agent-meow
     install plus the tools a host needs at runtime: ``git``
     (workspaces), ``tmux`` (terminal sessions spawned by native
     harnesses), ``curl`` + CA certificates. Booting from a prebaked
@@ -179,7 +179,7 @@ def _build_sandbox_image(image_ref: str | None = None) -> modal.Image:
     — applied to explicit refs and env/default refs alike.
 
     :param image_ref: Explicit registry image reference, e.g.
-        ``"docker.io/me/omnigent-host:latest"``, or ``None`` to
+        ``"docker.io/me/agent-meow-host:latest"``, or ``None`` to
         resolve from the environment / official default.
     :returns: The (lazy) image definition; Modal pulls it on first use.
     """
@@ -278,7 +278,7 @@ class ModalSandboxLauncher(SandboxLauncher):
         Initialize the launcher.
 
         :param image: Optional registry image reference to provision
-            sandboxes from, e.g. ``"docker.io/me/omnigent-host:latest"``
+            sandboxes from, e.g. ``"docker.io/me/agent-meow-host:latest"``
             — the server's managed-host ``sandbox.modal.image`` config.
             ``None`` resolves :data:`HOST_IMAGE_ENV_VAR` and falls back
             to the official :data:`DEFAULT_HOST_IMAGE` (see
@@ -353,7 +353,7 @@ class ModalSandboxLauncher(SandboxLauncher):
         with a ``sleep infinity`` entrypoint so it stays up for the full
         window regardless of exec activity.
 
-        :param name: Human-readable label, e.g. ``"omnigent-host"``.
+        :param name: Human-readable label, e.g. ``"agent-meow-host"``.
             Modal sandbox *names* must be unique per App, so the label
             rides a tag instead; the returned id is the canonical
             reference.
@@ -401,7 +401,7 @@ class ModalSandboxLauncher(SandboxLauncher):
             raise click.ClickException(
                 f"Modal sandbox '{sandbox_id}' has terminated (sandboxes live "
                 "at most 24 hours). Create a fresh one with "
-                "`omnigent sandbox create --provider modal`."
+                "`agent-meow sandbox create --provider modal`."
             )
 
     def keep_alive(self, sandbox_id: str) -> None:
@@ -415,7 +415,7 @@ class ModalSandboxLauncher(SandboxLauncher):
             present to satisfy the launcher contract).
         """
         click.echo(
-            f"  → Modal caps sandbox lifetime at 24 hours; re-run `omnigent "
+            f"  → Modal caps sandbox lifetime at 24 hours; re-run `agent-meow "
             f"sandbox create --provider modal` for a fresh host after "
             f"'{sandbox_id}' expires."
         )
@@ -515,7 +515,7 @@ class ModalSandboxLauncher(SandboxLauncher):
 
         :param sandbox_id: Target sandbox.
         :param command: Shell command to execute remotely, e.g.
-            ``"omnigent host --server https://…"``.
+            ``"agent-meow host --server https://…"``.
         :returns: The remote command's exit code.
         :raises KeyboardInterrupt: Re-raised after killing the remote
             process when the user detaches with Ctrl-C.

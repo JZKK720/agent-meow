@@ -1,6 +1,6 @@
 """Phase 0 characterization test — openai-agents-sdk harness, one-shot prompt.
 
-Runs ``omnigent run hello_world.yaml --harness openai-agents
+Runs ``agent-meow run hello_world.yaml --harness openai-agents
 --model <mock-model> -p "..."`` as a real subprocess against the
 mock LLM server and snapshots structural observations (exit code,
 stderr cleanliness, assistant text length).
@@ -11,7 +11,7 @@ stderr cleanliness, assistant text length).
   ``agent_meow.open_responses_sdk``, the MCP tool bridging, or
   the event stream translation to ``ExecutorEvent`` types).
 - The ``openai-agents`` Python package (``agents`` module) is
-  missing from the omnigent venv or its public API changes
+  missing from the agent-meow venv or its public API changes
   incompatibly.
 - ``agent_meow.cli._run_agent`` for the ``-p`` one-shot path
   stops printing the assistant text on turn complete.
@@ -63,14 +63,14 @@ def openai_agents_available(omnigent_python: Path) -> bool:
 
     ``OpenAIAgentsSDKExecutor`` imports the ``agents`` package
     lazily on first use. The package must be installed in the
-    *omnigent* venv (the subprocess interpreter) — the current
+    *agent-meow* venv (the subprocess interpreter) — the current
     pytest interpreter is irrelevant because the test shells out.
 
     :param omnigent_python: Interpreter the subprocess will
         use. Probe THIS one for the ``agents`` import, not the
         current pytest interpreter.
     :returns: True when the ``agents`` package imports cleanly
-        in the omnigent venv.
+        in the agent-meow venv.
     """
     probe = subprocess.run(
         [
@@ -91,7 +91,7 @@ def test_per_harness_openai_agents_sdk_one_shot(
     openai_agents_available: bool,
 ) -> None:
     """
-    ``omnigent run hello_world.yaml --harness openai-agents -p
+    ``agent-meow run hello_world.yaml --harness openai-agents -p
     <prompt>`` exits 0 and emits a non-trivial assistant reply.
 
     Uses the mock LLM server so the test runs without real API
@@ -100,7 +100,7 @@ def test_per_harness_openai_agents_sdk_one_shot(
     (populated by ``mock_credentials_env``) — no
     ``~/.databrickscfg`` touch is required for this harness.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         ``openai-agents`` installed.
     :param omnigent_repo_root: Cwd for the subprocess.
     :param mock_credentials_env: Env vars pointing at the mock
@@ -108,7 +108,7 @@ def test_per_harness_openai_agents_sdk_one_shot(
     :param mock_llm_server_url: Base URL of the mock server for
         configuring canned responses.
     :param openai_agents_available: True when the ``agents``
-        package is importable in the omnigent venv. On False
+        package is importable in the agent-meow venv. On False
         the test skips — consistent with the codex and
         claude-sdk harness tests that skip when their binary
         is absent.
@@ -134,7 +134,7 @@ def test_per_harness_openai_agents_sdk_one_shot(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--model",

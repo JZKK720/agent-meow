@@ -214,7 +214,7 @@ jobs:
         env:
           GATEWAY_BASE_URL: ${{ secrets.GATEWAY_BASE_URL }}
         run: |
-          mkdir -p "$HOME/.omnigent"
+          mkdir -p "$HOME/.agent-meow"
           # Use python to write the config safely — avoids interpolating
           # secrets/URLs into a heredoc where special chars could break YAML.
           # Uses json (stdlib) instead of yaml to avoid needing PyYAML on
@@ -242,7 +242,7 @@ jobs:
                   }
               }
           }
-          pathlib.Path.home().joinpath('.omnigent', 'config.yaml').write_text(
+          pathlib.Path.home().joinpath('.agent-meow', 'config.yaml').write_text(
               json.dumps(cfg, indent=2)
           )
           "
@@ -500,7 +500,7 @@ jobs:
           # (not expression interpolation) to avoid expression injection.
           {
             echo "<!-- polly-review-bot -->"
-            echo "## <img src=\"https://raw.githubusercontent.com/JZKK720/agent-meow/main/docs/images/omnigent-logo.svg\" alt=\"\" height=\"20\" valign=\"middle\" /> Polly AI Review"
+            echo "## <img src=\"https://raw.githubusercontent.com/JZKK720/agent-meow/main/docs/images/agent-meow-logo.svg\" alt=\"\" height=\"20\" valign=\"middle\" /> Polly AI Review"
             echo ""
             echo "$REVIEW_TEXT"
             echo ""

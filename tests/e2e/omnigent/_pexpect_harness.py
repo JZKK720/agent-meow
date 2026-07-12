@@ -106,7 +106,7 @@ def ensure_repl_test_theme_env(env: Mapping[str, str]) -> dict[str, str]:
     Return an env dict whose HOME contains a persisted TUI theme.
 
     The startup REPL shows an interactive theme picker when
-    ``$HOME/.omnigent/config.yaml`` has no ``tui.theme`` entry.
+    ``$HOME/.agent_meow/config.yaml`` has no ``tui.theme`` entry.
     That is correct for users but breaks pexpect tests that expect
     the normal REPL prompt to be the first interactive surface.
 
@@ -119,7 +119,7 @@ def ensure_repl_test_theme_env(env: Mapping[str, str]) -> dict[str, str]:
     :param env: Base subprocess environment, e.g. the
         ``omnigent_credentials_env`` fixture.
     :returns: A copy of *env* with ``HOME`` pointing at a directory
-        that has ``.omnigent/config.yaml`` seeded.
+        that has ``.agent_meow/config.yaml`` seeded.
     """
     prepared = dict(env)
     real_home = Path.home()
@@ -135,7 +135,7 @@ def ensure_repl_test_theme_env(env: Mapping[str, str]) -> dict[str, str]:
         home = requested_home
         home.mkdir(parents=True, exist_ok=True)
 
-    config_path = home / ".omnigent" / "config.yaml"
+    config_path = home / ".agent-meow" / "config.yaml"
     if not config_path.exists():
         config_path.parent.mkdir(parents=True, exist_ok=True)
         config_path.write_text(_TEST_THEME_CONFIG, encoding="utf-8")
@@ -175,14 +175,14 @@ def spawn_omnigent_run(
     no_session: bool = True,
 ) -> pexpect.spawn:
     """
-    Spawn ``omnigent run`` under a PTY for REPL tests.
+    Spawn ``agent-meow run`` under a PTY for REPL tests.
 
-    :param omnigent_python: Python interpreter with omnigent
+    :param omnigent_python: Python interpreter with agent-meow
         installed, e.g.
-        ``Path("/Users/.../omnigent/.venv/bin/python")``.
+        ``Path("/Users/.../agent_meow/.venv/bin/python")``.
     :param yaml_path: Absolute path to the agent YAML, e.g.
         ``examples/hello_world.yaml``. Pass ``None`` to exercise
-        ``omnigent run --harness ...`` without an explicit
+        ``agent-meow run --harness ...`` without an explicit
         agent argument.
     :param model: Model override passed via ``--model``, e.g.
         ``"databricks-gpt-5-mini"``.
@@ -215,9 +215,9 @@ def spawn_omnigent_run(
     """
     if yaml_path is None:
         # Exercise the public console-script entry point instead of
-        # ``python -m omnigent``. The package ``__main__`` module
+        # ``python -m agent-meow``. The package ``__main__`` module
         # intentionally routes through the legacy argparse quick-chat
-        # CLI, while the installed ``omnigent`` script invokes the
+        # CLI, while the installed ``agent-meow`` script invokes the
         # unified Click CLI where the no-AGENT ``run --harness``
         # launcher lives. ``PYTHONPATH`` from the fixture points this
         # console script at the worktree under test.
@@ -232,11 +232,11 @@ def spawn_omnigent_run(
         # public shape users run locally. The branch under test does
         # not expose the legacy ``--no-log`` / ``--no-session`` flags
         # on that shape, so do not append them here.
-        command = str(omnigent_python.parent / "omnigent")
+        command = str(omnigent_python.parent / "agent-meow")
     else:
         args = [
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--model",
@@ -253,7 +253,7 @@ def spawn_omnigent_run(
         args.extend(["--system-prompt", system_prompt])
     if initial_prompt is not None:
         args.extend(["-p", initial_prompt])
-    # NOTE: the omnigent CLI no longer accepts ``--profile``; Databricks
+    # NOTE: the agent-meow CLI no longer accepts ``--profile``; Databricks
     # routing for spawned CLIs comes from the ``auth:`` block written into
     # the isolated ``OMNIGENT_CONFIG_HOME`` by ``omnigent_credentials_env``.
     spawn_env = ensure_repl_test_theme_env(env)

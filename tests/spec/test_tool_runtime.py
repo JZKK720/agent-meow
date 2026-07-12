@@ -1,8 +1,8 @@
 """Tests for the ``runtime: server | client`` tool-spec field.
 
-Covers the end-to-end contract — YAML parser (via the omnigent
+Covers the end-to-end contract — YAML parser (via the agent-meow
 inner-stack loader, which is the entry point every YAML spec
-flows through today), the spec translator, and the omnigent
+flows through today), the spec translator, and the agent-meow
 validator. The runtime path that emits ``action_required`` for
 client-runtime tools lives in a separate stack and is intentionally
 not exercised here.
@@ -67,7 +67,7 @@ def _minimal_spec(**overrides: object) -> AgentSpec:
 
 
 # ---------------------------------------------------------------
-# Parser (omnigent inner-stack loader) coverage.
+# Parser (agent-meow inner-stack loader) coverage.
 # ---------------------------------------------------------------
 
 

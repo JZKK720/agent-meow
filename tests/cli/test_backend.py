@@ -210,7 +210,7 @@ def test_build_host_daemon_env_local_preserves_server_credentials(
     """Local daemon env carries credentials needed by its agent-meow server.
 
     The daemon's local server is the process that performs LLM calls, so
-    stripping ``OPENAI_*`` here makes default persistent ``omnigent run``
+    stripping ``OPENAI_*`` here makes default persistent ``agent-meow run``
     invocations hang or fail after booting a credential-less server.
     """
     monkeypatch.setenv("PATH", "/usr/bin")
@@ -866,7 +866,7 @@ def test_foreground_connect_local_no_prompt_when_server_absent(
 def test_foreground_connect_reused_server_omits_prompt(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Reusing a server we didn't spawn (e.g. ``omnigent server``) skips the prompt.
+    """Reusing a server we didn't spawn (e.g. ``agent-meow server``) skips the prompt.
 
     Local mode connecting to a server that was already running must NOT offer
     to stop it on Ctrl-C — the user started it independently, so killing it
@@ -1239,11 +1239,11 @@ def test_ensure_backend_defaults_scheme_https(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
     monkeypatch.setattr(cli, "_ensure_databricks_server_auth", lambda server: None)
 
-    result = _ensure_backend("dbc-x.cloud.databricks.com/omnigent")
+    result = _ensure_backend("dbc-x.cloud.databricks.com/agent-meow")
 
     # Scheme defaulted to https before the workspace expansion ran.
-    assert seen == ["https://dbc-x.cloud.databricks.com/omnigent"]
-    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/omnigent")
+    assert seen == ["https://dbc-x.cloud.databricks.com/agent-meow"]
+    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent-meow")
 
 
 def test_discover_local_server_url_returns_when_healthy(
@@ -1280,7 +1280,7 @@ def _fake_run_claude_native_capture(captured: dict[str, object]) -> Any:
 def test_claude_command_routes_server_through_ensure_backend(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``omnigent claude --server ""`` resolves via ``_ensure_backend``.
+    """``agent-meow claude --server ""`` resolves via ``_ensure_backend``.
 
     The empty/local value must be turned into the concrete daemon-backed URL
     and passed to ``run_claude_native`` — never forwarded raw.
@@ -1451,7 +1451,7 @@ def test_ensure_backend_databricks_preflight_hints_headless(
     with pytest.raises(click.ClickException) as exc:
         _ensure_backend("https://myapp-1234.aws.databricksapps.com")
 
-    assert "omnigent login https://myapp-1234.aws.databricksapps.com" in str(exc.value)
+    assert "agent-meow login https://myapp-1234.aws.databricksapps.com" in str(exc.value)
     # No browser flow attempted off-TTY.
     assert login_calls == []
 
@@ -1496,7 +1496,7 @@ def test_databricks_preflight_non_interactive_overrides_tty(
     with pytest.raises(click.ClickException) as exc:
         cli._ensure_databricks_server_auth(_HOST_DATABRICKS_SERVER, non_interactive=True)
 
-    assert f"omnigent login {_HOST_DATABRICKS_SERVER}" in str(exc.value)
+    assert f"agent-meow login {_HOST_DATABRICKS_SERVER}" in str(exc.value)
     # The browser login never ran despite the TTY.
     assert login_calls == []
 
@@ -1579,7 +1579,7 @@ def test_host_non_interactive_flag_forwarded_to_preflight(
 def test_host_non_interactive_flag_positional_shorthand(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """``omnigent host <url> --non-interactive`` parses the flag with the shorthand."""
+    """``agent-meow host <url> --non-interactive`` parses the flag with the shorthand."""
     preflight = _capture_preflight(monkeypatch)
     _patch_foreground_host(monkeypatch, tmp_path)
 
@@ -1611,7 +1611,7 @@ def test_host_remote_preflight_hints_headless(
     result = CliRunner().invoke(cli_group, ["host", "--server", _HOST_DATABRICKS_SERVER])
 
     assert result.exit_code != 0
-    assert f"omnigent login {_HOST_DATABRICKS_SERVER}" in result.output
+    assert f"agent-meow login {_HOST_DATABRICKS_SERVER}" in result.output
     # Pre-flight bailed: no browser login and no connect.
     assert login_calls == []
     assert connected == []
@@ -1634,7 +1634,7 @@ def test_host_remote_preflight_skips_when_authenticated(
 # ── Workspace-URL expansion for attach / resume / host ──────────────
 #
 # ``run`` / ``claude`` / ``codex`` expand a bare Databricks workspace URL to
-# its ``/api/2.0/omnigent`` mount via ``_ensure_backend`` (covered above);
+# its ``/api/2.0/agent-meow`` mount via ``_ensure_backend`` (covered above);
 # ``attach``, ``resume``, and the ``host`` subcommands resolve ``--server``
 # on their own paths and must route through the same expansion. The
 # expansion itself probes the network and is tested in
@@ -1649,7 +1649,7 @@ def _expand_marker(server: str) -> str:
     :returns: ``server`` with the API mount appended, so a test can tell
         an expanded result apart from a passed-through one.
     """
-    return f"{server.rstrip('/')}/api/2.0/omnigent"
+    return f"{server.rstrip('/')}/api/2.0/agent-meow"
 
 
 def _recording_expander(seen: list[str]) -> Callable[[str], str]:
@@ -1673,14 +1673,14 @@ def test_resolve_attach_server_expands_explicit_workspace_url(
     """An explicit ``--server`` workspace URL is expanded to its API mount.
 
     Regression: ``attach`` returned the bare URL, so ``/v1/sessions/{id}``
-    hit the workspace web app and 404'd instead of the omnigent API.
+    hit the workspace web app and 404'd instead of the agent-meow API.
     """
     seen: list[str] = []
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
 
     result = _resolve_attach_server("https://ws.example.net/", configured_server=None)
 
-    assert result == "https://ws.example.net/api/2.0/omnigent"
+    assert result == "https://ws.example.net/api/2.0/agent-meow"
     assert seen == ["https://ws.example.net"]
 
 
@@ -1692,7 +1692,7 @@ def test_resolve_attach_server_expands_configured_workspace_url(
 
     result = _resolve_attach_server(None, configured_server="https://ws.example.net")
 
-    assert result == "https://ws.example.net/api/2.0/omnigent"
+    assert result == "https://ws.example.net/api/2.0/agent-meow"
 
 
 def test_resolve_attach_server_local_fallback_not_expanded(
@@ -1714,14 +1714,14 @@ def test_resolve_attach_server_local_fallback_not_expanded(
 
 
 def test_resolve_attach_server_defaults_scheme_https(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``attach --server <ws>/omnigent`` (no scheme) is defaulted to https."""
+    """``attach --server <ws>/agent-meow`` (no scheme) is defaulted to https."""
     seen: list[str] = []
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
 
-    result = _resolve_attach_server("dbc-x.cloud.databricks.com/omnigent", configured_server=None)
+    result = _resolve_attach_server("dbc-x.cloud.databricks.com/agent-meow", configured_server=None)
 
-    assert seen == ["https://dbc-x.cloud.databricks.com/omnigent"]
-    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/omnigent")
+    assert seen == ["https://dbc-x.cloud.databricks.com/agent-meow"]
+    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent-meow")
 
 
 def test_resolve_host_server_expands_explicit_workspace_url(
@@ -1729,7 +1729,7 @@ def test_resolve_host_server_expands_explicit_workspace_url(
 ) -> None:
     """``host`` subcommands expand a bare ``--server`` workspace URL.
 
-    The daemon is registered under the expanded ``/api/2.0/omnigent`` URL,
+    The daemon is registered under the expanded ``/api/2.0/agent-meow`` URL,
     so the registry lookup must expand too or it never matches a daemon
     that ``run`` / ``host`` started.
     """
@@ -1738,7 +1738,7 @@ def test_resolve_host_server_expands_explicit_workspace_url(
 
     result = _resolve_host_server("https://ws.example.net/")
 
-    assert result == "https://ws.example.net/api/2.0/omnigent"
+    assert result == "https://ws.example.net/api/2.0/agent-meow"
     assert seen == ["https://ws.example.net"]
 
 
@@ -1751,7 +1751,7 @@ def test_resolve_host_server_reads_config_and_expands(
     )
     monkeypatch.setattr(cli, "_workspace_api_server_url", _expand_marker)
 
-    assert _resolve_host_server(None) == "https://ws.example.net/api/2.0/omnigent"
+    assert _resolve_host_server(None) == "https://ws.example.net/api/2.0/agent-meow"
 
 
 def test_resolve_host_server_none_stays_local(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1767,28 +1767,28 @@ def test_resolve_host_server_none_stays_local(monkeypatch: pytest.MonkeyPatch) -
 def test_resolve_host_server_defaults_scheme_and_accepts_omnigent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``host`` subcommands accept a schemeless ``/omnigent`` workspace URL.
+    """``host`` subcommands accept a schemeless ``/agent-meow`` workspace URL.
 
     The internal user guide's web URL omits the scheme and ends in
-    ``/omnigent``; host must default it to https before expansion, just
-    like ``omnigent login``.
+    ``/agent-meow``; host must default it to https before expansion, just
+    like ``agent-meow login``.
     """
     seen: list[str] = []
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
 
-    result = _resolve_host_server("dbc-x.cloud.databricks.com/omnigent")
+    result = _resolve_host_server("dbc-x.cloud.databricks.com/agent-meow")
 
     # Scheme defaulted to https before the expansion saw the URL.
-    assert seen == ["https://dbc-x.cloud.databricks.com/omnigent"]
-    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/omnigent")
+    assert seen == ["https://dbc-x.cloud.databricks.com/agent-meow"]
+    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent-meow")
 
 
 def test_host_command_defaults_scheme_and_accepts_omnigent_web_url(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """``omnigent host --server <ws>/omnigent`` (no scheme) normalizes before connect.
+    """``agent-meow host --server <ws>/agent-meow`` (no scheme) normalizes before connect.
 
-    Pasting the guide's web URL (schemeless, ``/omnigent`` suffix) must
+    Pasting the guide's web URL (schemeless, ``/agent-meow`` suffix) must
     default to https and expand to the API mount, not connect to the raw
     input.
     """
@@ -1805,18 +1805,18 @@ def test_host_command_defaults_scheme_and_accepts_omnigent_web_url(
     )
 
     result = CliRunner().invoke(
-        cli_group, ["host", "--server", "dbc-x.cloud.databricks.com/omnigent"]
+        cli_group, ["host", "--server", "dbc-x.cloud.databricks.com/agent-meow"]
     )
 
     assert result.exit_code == 0, result.output
     # Scheme defaulted to https before the workspace expansion ran.
-    assert seen == ["https://dbc-x.cloud.databricks.com/omnigent"]
+    assert seen == ["https://dbc-x.cloud.databricks.com/agent-meow"]
     # The foreground connect targeted the expanded API-mount URL.
-    assert observed == [_expand_marker("https://dbc-x.cloud.databricks.com/omnigent")]
+    assert observed == [_expand_marker("https://dbc-x.cloud.databricks.com/agent-meow")]
 
 
 def test_resume_command_expands_server_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``omnigent resume <id> --server <workspace>`` expands before dispatch.
+    """``agent-meow resume <id> --server <workspace>`` expands before dispatch.
 
     Regression: ``resume`` forwarded the bare URL, so its remote picker
     and wrapper-label lookups 404'd against the workspace web app.
@@ -1835,7 +1835,7 @@ def test_resume_command_expands_server_url(monkeypatch: pytest.MonkeyPatch) -> N
     assert result.exit_code == 0, result.output
     assert captured == {
         "target": "conv_abc123",
-        "server": "https://ws.example.net/api/2.0/omnigent",
+        "server": "https://ws.example.net/api/2.0/agent-meow",
     }
 
 
@@ -1859,7 +1859,7 @@ def test_resume_command_without_server_skips_expansion(
 
 
 def test_resume_command_defaults_scheme_https(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``omnigent resume --server <ws>/omnigent`` (no scheme) is defaulted to https."""
+    """``agent-meow resume --server <ws>/agent-meow`` (no scheme) is defaulted to https."""
     seen: list[str] = []
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
     captured: dict[str, object] = {}
@@ -1870,9 +1870,9 @@ def test_resume_command_defaults_scheme_https(monkeypatch: pytest.MonkeyPatch) -
 
     result = CliRunner().invoke(
         cli_group,
-        ["resume", "conv_abc123", "--server", "dbc-x.cloud.databricks.com/omnigent"],
+        ["resume", "conv_abc123", "--server", "dbc-x.cloud.databricks.com/agent-meow"],
     )
 
     assert result.exit_code == 0, result.output
-    assert seen == ["https://dbc-x.cloud.databricks.com/omnigent"]
-    assert captured["server"] == _expand_marker("https://dbc-x.cloud.databricks.com/omnigent")
+    assert seen == ["https://dbc-x.cloud.databricks.com/agent-meow"]
+    assert captured["server"] == _expand_marker("https://dbc-x.cloud.databricks.com/agent-meow")

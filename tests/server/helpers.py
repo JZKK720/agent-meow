@@ -109,7 +109,7 @@ class HostStartInvocation:
     """
     The managed-host start command a fake launcher observed.
 
-    Parsed from the ``omnigent host`` start command the managed-launch
+    Parsed from the ``agent-meow host`` start command the managed-launch
     orchestration runs inside the sandbox, so tests can assert on (and
     act with) the exact identity + credential the server injected.
 
@@ -242,7 +242,7 @@ class FakeSandboxLauncher(SandboxLauncher):
             raise click.ClickException(f"simulated failure of: {command}")
         if 'printf %s "$HOME"' in command:
             return RemoteCommandResult(returncode=0, stdout=self._home, stderr="")
-        if "omnigent host" in command:
+        if "agent-meow host" in command:
             if self.fail_on_host_start:
                 raise click.ClickException("simulated in-sandbox host start failure")
             invocation = _parse_host_start(command)
@@ -641,7 +641,7 @@ def build_agent_bundle(
         to force an ``incomplete`` terminal state after a known
         number of LLM turns. ``None`` uses the spec default.
     :param executor: Optional executor block to write verbatim,
-        e.g. ``{"type": "omnigent", "config": {"harness":
+        e.g. ``{"type": "agent-meow", "config": {"harness":
         "codex"}}``. ``None`` uses the default in-process LLM
         executor.
     :param skills: Optional bundled skills. Each dict must include
@@ -767,7 +767,7 @@ async def create_test_agent(
     :param description: Optional agent description.
     :param max_iterations: Optional executor iteration cap.
     :param executor: Optional executor block to write verbatim,
-        e.g. ``{"type": "omnigent", "config": {"harness":
+        e.g. ``{"type": "agent-meow", "config": {"harness":
         "codex"}}``.
     :param skills: Optional bundled skills. Each dict must include
         ``"name"``, ``"description"``, and ``"content"``.
@@ -840,7 +840,7 @@ async def create_test_session(
         ``{"env": "test"}``.
     :param max_iterations: Optional executor iteration cap.
     :param executor: Optional executor block to write verbatim,
-        e.g. ``{"type": "omnigent", "config": {"harness":
+        e.g. ``{"type": "agent-meow", "config": {"harness":
         "codex"}}``.
     :param skills: Optional bundled skills. Each dict must include
         ``"name"``, ``"description"``, and ``"content"``.

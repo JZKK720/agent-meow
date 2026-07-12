@@ -33,7 +33,7 @@ description: >-
 # workspace — resolving that provider's default Claude model (the bundled
 # catalog default is claude-opus-4-8).
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: claude-sdk
 

@@ -18,7 +18,7 @@ _MINIMAL_CONFIG = yaml.dump(
     {
         "spec_version": 1,
         "name": "test-agent",
-        "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+        "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
     }
 )
 
@@ -215,7 +215,7 @@ _MCP_HEADER_FILES = {
         {
             "spec_version": 1,
             "name": "mcp-agent",
-            "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+            "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
         }
     ),
     "tools/mcp/leaky.yaml": yaml.dump(
@@ -342,7 +342,7 @@ def test_replace_swaps_spec(
             "spec_version": 1,
             "name": "test-agent",
             "description": "updated agent",
-            "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+            "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
         }
     )
     new_bytes = _make_bundle_bytes({"config.yaml": new_config})

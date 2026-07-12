@@ -148,7 +148,7 @@ class FunctionPolicy(Policy):
         """
         Forward the per-turn reset to the underlying callable.
 
-        Stateful policy callables (notably the legacy omnigent
+        Stateful policy callables (notably the legacy agent-meow
         ``max_tool_calls_per_turn`` factory) attach a
         ``reset_turn`` attribute to their returned evaluator so
         the engine can clear per-turn counters at turn
@@ -490,7 +490,7 @@ def _coerce_to_policy_result(raw: Any, *, spec_name: str) -> PolicyResult:
     - :class:`PolicyResult` — returned as-is.
     - A foreign PolicyResult-shaped object (any object with at
       least ``.action``, e.g. ``agent_meow.policies.PolicyResult``
-      returned by callables ported from the omnigent examples).
+      returned by callables ported from the agent-meow examples).
     - Anything else → :class:`TypeError` with a clear
       message. The engine catches it and fails closed (or
       substitutes ALLOW under the carve-out).

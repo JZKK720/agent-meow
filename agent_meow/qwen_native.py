@@ -1,8 +1,8 @@
 """Native qwen TUI wrapper for the agent-meow CLI.
 
-``omnigent qwen`` launches Qwen Code's interactive TUI (``qwen``) inside an
+``agent-meow qwen`` launches Qwen Code's interactive TUI (``qwen``) inside an
 agent-meow-runner-owned tmux terminal and attaches the local TTY — the qwen analog
-of ``omnigent goose`` / ``omnigent cursor``. The runner spawns the process (see
+of ``agent-meow goose`` / ``agent-meow cursor``. The runner spawns the process (see
 :func:`~?agent_meow.runner.app._auto_create_qwen_terminal`), pointing qwen at the
 bridge dir's ``--input-file`` / ``--json-file`` so web-UI turns and the
 transcript mirror flow through files; this module owns the CLI-side
@@ -186,7 +186,7 @@ def run_qwen_native(
 
 def _materialize_qwen_agent_spec(tmpdir: Path) -> Path:
     """
-    Write the terminal-first agent spec used by ``omnigent qwen``.
+    Write the terminal-first agent spec used by ``agent-meow qwen``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :returns: Path to the generated YAML spec.
@@ -290,7 +290,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the omnigent server at {base_url}. "
+            f"Could not reach the agent-meow server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc

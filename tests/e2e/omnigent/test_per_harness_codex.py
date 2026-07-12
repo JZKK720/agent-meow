@@ -1,6 +1,6 @@
 """Phase 0 characterization test — codex harness, one-shot prompt.
 
-Runs ``omnigent run hello_world.yaml --harness codex --model
+Runs ``agent-meow run hello_world.yaml --harness codex --model
 <mock-model> -p "..."`` as a real subprocess against the mock LLM
 server and snapshots structural observations (exit code, stderr
 cleanliness, assistant text length).
@@ -78,7 +78,7 @@ def test_per_harness_codex_one_shot(
     codex_available: bool,
 ) -> None:
     """
-    ``omnigent run hello_world.yaml --harness codex -p <prompt>``
+    ``agent-meow run hello_world.yaml --harness codex -p <prompt>``
     exits 0 and emits a non-trivial assistant reply.
 
     Uses the mock LLM server (via ``OPENAI_BASE_URL`` in
@@ -86,7 +86,7 @@ def test_per_harness_codex_one_shot(
     credentials or a Databricks workspace. The codex executor
     honors ``OPENAI_BASE_URL`` for its app-server model routing.
 
-    :param omnigent_python: Interpreter with omnigent
+    :param omnigent_python: Interpreter with agent-meow
         installed and importable.
     :param omnigent_repo_root: Cwd for the subprocess so the
         YAML spec and example tool modules resolve on sys.path.
@@ -119,7 +119,7 @@ def test_per_harness_codex_one_shot(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--model",

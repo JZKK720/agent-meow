@@ -8,7 +8,7 @@ description: >-
 # Read-only explorer on the Claude Agent SDK. No model is pinned, so it runs on
 # whatever Claude provider you configured (`meow setup`).
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: claude-sdk
 

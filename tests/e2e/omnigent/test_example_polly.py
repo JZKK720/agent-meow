@@ -26,7 +26,7 @@ import pytest
 from agent_meow.spec import load
 from agent_meow.spec.types import AgentSpec
 
-# tests/e2e/omnigent/test_example_polly.py -> repo root is 3 parents up.
+# tests/e2e/agent_meow/test_example_polly.py -> repo root is 3 parents up.
 _POLLY_BUNDLE = Path(__file__).resolve().parents[3] / "examples" / "polly"
 
 
@@ -40,7 +40,7 @@ def test_orchestrator_executor(polly_spec: AgentSpec) -> None:
     """
     The orchestrator runs on claude-sdk with a 1M window and **no pinned
     model or profile**, so it inherits whatever Claude provider the user
-    configured via ``omnigent setup --no-internal-beta`` (Anthropic key,
+    configured via ``agent-meow setup --no-internal-beta`` (Anthropic key,
     subscription, gateway, or Databricks) and resolves that provider's
     default Claude model.
 
@@ -380,7 +380,7 @@ def test_function_policies_have_nonempty_arguments(polly_spec: AgentSpec) -> Non
     Regression guard for a bug found in live testing: the resolver only calls
     the factory when arguments are truthy —
     ``target(**func_ref.arguments) if func_ref.arguments else target``
-    (omnigent/policies/function.py). With empty ``arguments: {}`` the factory
+    (agent_meow/policies/function.py). With empty ``arguments: {}`` the factory
     object itself is used as the evaluator, so the first gated tool call fails
     closed. Our policies are factories, so each must pass at least one argument.
     """

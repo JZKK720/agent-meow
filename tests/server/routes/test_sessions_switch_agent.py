@@ -356,7 +356,7 @@ async def test_switch_same_family_native_carries_history(
             "ag_builtin_origin": _BUILTIN_ORIGIN,
         }
     )
-    labels = {"agent_meow.ui": "terminal", "omnigent.wrapper": "claude-code-native-ui"}
+    labels = {"agent_meow.ui": "terminal", "agent_meow.wrapper": "claude-code-native-ui"}
     _patch_family_helpers(monkeypatch, same_family=True, native=True, labels=labels)
     client = TestClient(_build_app(conv_store, agent_store))
 
@@ -422,7 +422,7 @@ async def test_switch_cross_family_resets_model_but_carries_history(
         (
             _BUILTIN_CURSOR,
             "cursor-native",
-            {"agent_meow.ui": "terminal", "omnigent.wrapper": "cursor-native-ui"},
+            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "cursor-native-ui"},
             False,
         ),
         # pi-native rebuilds its JSONL session file from the copied items →
@@ -430,7 +430,7 @@ async def test_switch_cross_family_resets_model_but_carries_history(
         (
             _BUILTIN_PI,
             "pi-native",
-            {"agent_meow.ui": "terminal", "omnigent.wrapper": "pi-native-ui"},
+            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "pi-native-ui"},
             True,
         ),
         # qwen-native rebuilds qwen's on-disk chat recording from the copied
@@ -438,7 +438,7 @@ async def test_switch_cross_family_resets_model_but_carries_history(
         (
             _BUILTIN_QWEN,
             "qwen-native",
-            {"agent_meow.ui": "terminal", "omnigent.wrapper": "qwen-native-ui"},
+            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "qwen-native-ui"},
             True,
         ),
     ],

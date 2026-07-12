@@ -2,13 +2,13 @@
 
 This is the one place that owns the consoles, the brand palette, and the
 status / structure helpers that every command should print through, so
-that ``omnigent``'s output reads as one coherent product. See
+that ``agent-meow``'s output reads as one coherent product. See
 ``designs/CLI_CONTRACT.md`` for the full contract.
 
 Core rule — **stdout carries data, stderr carries decoration**:
 
 * Machine-readable output (IDs, paths, config dumps, the ``version``
-  string) goes to stdout via :data:`console`, so ``omnigent … | cat``
+  string) goes to stdout via :data:`console`, so ``agent-meow … | cat``
   stays clean.
 * Warnings, errors, and the brand banner go to stderr (via
   :data:`err_console` / the banner helpers) and are TTY-gated, so they
@@ -222,7 +222,7 @@ def print_landing(
 
 def print_brandmark(subtitle: str | None = None) -> None:
     """
-    Print the compact one-line brandmark (``✦ omnigent``), TTY-gated.
+    Print the compact one-line brandmark (``✦ agent-meow``), TTY-gated.
 
     For non-interactive commands that want a branded header without the
     full banner. Drawn on stderr; no-op when the banner is suppressed.

@@ -22,7 +22,7 @@ def _conversation_with_wrapper(wrapper: str) -> Conversation:
         updated_at=0,
         root_conversation_id="conv_test",
         agent_id="ag_native_test",
-        labels={"omnigent.wrapper": wrapper},
+        labels={"agent_meow.wrapper": wrapper},
     )
 
 
@@ -197,7 +197,7 @@ def test_custom_native_harness_session_without_wrapper_label_is_native(
 
     A user agent that declares ``executor.harness: codex-native`` but is not a
     built-in ``*-native-ui`` wrapper (e.g. a ``polly`` orchestrator) carries NO
-    ``omnigent.wrapper`` label — it renders chat-first on purpose. Its runner
+    ``agent_meow.wrapper`` label — it renders chat-first on purpose. Its runner
     still runs a native transcript forwarder, so the persist decision must
     treat it as native via the RESOLVED harness; otherwise the inbound user
     message is persisted AP-side AND mirrored by the forwarder (double input).

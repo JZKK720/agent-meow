@@ -1,5 +1,5 @@
 {
-  "name": "omnigent-cloudflare",
+  "name": "agent-meow-cloudflare",
   "version": "0.1.0",
   "private": true,
   "type": "module",

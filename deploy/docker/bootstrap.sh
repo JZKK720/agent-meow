@@ -92,7 +92,7 @@ fi
 
 echo
 echo "✓ deploy/docker/.env is ready. Next:"
-echo "    docker compose up -d && docker compose logs omnigent"
+echo "    docker compose up -d && docker compose logs agent-meow"
 echo
 echo "  Accounts mode is the default — the first-boot admin password"
 echo "  lands in the logs and in /data/admin-credentials on the"

@@ -7,7 +7,7 @@ resolves ``"kimi-native"`` to this module via
 
 Wraps a :class:`~?agent_meow.inner.kimi_native_executor.KimiNativeExecutor`,
 which injects web-UI messages into the running ``kimi`` TUI (launched by
-``omnigent kimi`` in the session terminal) via tmux. The bridge dir is read
+``agent-meow kimi`` in the session terminal) via tmux. The bridge dir is read
 from :data:`~?agent_meow.kimi_native_bridge.BRIDGE_DIR_ENV_VAR` in the spawn env.
 
 Tool policies: kimi-native enforces agent-meow's tool deny-policy via a

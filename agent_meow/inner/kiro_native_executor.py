@@ -21,7 +21,7 @@ from agent_meow.kiro_native_bridge import KIRO_NATIVE_BRIDGE_DIR_ENV_VAR, inject
 
 
 class KiroNativeExecutor(Executor):
-    """Harness-side executor for ``omnigent kiro`` web-UI turns."""
+    """Harness-side executor for ``agent-meow kiro`` web-UI turns."""
 
     def __init__(self, bridge_dir: Path | None = None) -> None:
         self._bridge_dir = bridge_dir or _bridge_dir_from_env()

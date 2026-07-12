@@ -138,7 +138,7 @@ def bridge_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     Create an isolated codex-native bridge directory with state.
 
     Redirects the bridge root under ``tmp_path`` so the test never
-    touches the real ``~/.omnigent`` tree, then writes a valid bridge
+    touches the real ``~/.agent-meow`` tree, then writes a valid bridge
     state whose ``session_id`` the hook reads to build the agent-meow URL.
 
     :param tmp_path: pytest temp directory.

@@ -511,7 +511,7 @@ def create_accounts_auth_router(
         if promote_if_listed(admin_list, account_store, username):
             user = account_store.get_user(username) or user
         # Loopback CLI handoff: the operator who spawned this local server via
-        # `omnigent run` needs a CLI token too, not just the browser cookie.
+        # `agent-meow run` needs a CLI token too, not just the browser cookie.
         # bootstrap_admin only mints the token when an admin already exists at
         # boot; on a fresh first run the admin is claimed HERE, so mint it now
         # (loopback only) — otherwise the in-flight `run` 401s until the next

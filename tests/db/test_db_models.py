@@ -1,4 +1,4 @@
-"""Tests for SQLAlchemy ORM models (omnigent/db/db_models.py).
+"""Tests for SQLAlchemy ORM models (agent_meow/db/db_models.py).
 
 Verifies that each ORM model can be instantiated, persisted, read back,
 and that relationships, defaults, nullable columns, and constraints

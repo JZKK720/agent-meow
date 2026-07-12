@@ -64,7 +64,7 @@ _POLL_INTERVAL_S = 0.2
 #: bridge dir. Mirrors cursor-/claude-native (``cursor_native_bridge.py``).
 _BRIDGE_CONFIG_FILE = "bridge.json"
 #: Name qwen lists the agent-meow MCP server under (shows in ``/mcp``).
-_MCP_SERVER_NAME = "omnigent"
+_MCP_SERVER_NAME = "agent-meow"
 #: Per-session MCP config passed to qwen via ``--mcp-config <path>``. Lives in
 #: the bridge dir (NOT the workspace), so we never drop a file in the user's repo
 #: and concurrent same-workspace sessions can't collide. CLI-provided MCP servers
@@ -344,9 +344,9 @@ def write_qwen_session_recording(
     chats_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     try:
-        hostname = socket.gethostname() or "omnigent"
+        hostname = socket.gethostname() or "agent-meow"
     except OSError:
-        hostname = "omnigent"
+        hostname = "agent-meow"
 
     # Sidecars first so the gate file (``.jsonl``) lands last: a sidecar failure
     # then leaves no ``.jsonl`` and the resume gate cleanly picks a fresh launch.
@@ -498,7 +498,7 @@ def build_mcp_server_entry(
     *,
     python_executable: str | None = None,
 ) -> dict[str, Any]:
-    """Build qwen's ``mcpServers.omnigent`` entry for the agent-meow relay.
+    """Build qwen's ``mcpServers.agent-meow`` entry for the agent-meow relay.
 
     ``trust: true`` auto-approves the qwen-side MCP tool gate so the TUI doesn't
     add a second in-terminal prompt: agent-meow already gates these calls through
@@ -537,7 +537,7 @@ def write_mcp_config(
 ) -> Path:
     """Write the per-session agent-meow MCP config for qwen's ``--mcp-config`` flag.
 
-    Writes ``{"mcpServers": {"omnigent": ...}}`` to a file *inside the bridge dir*
+    Writes ``{"mcpServers": {"agent-meow": ...}}`` to a file *inside the bridge dir*
     (never the workspace) and the relay token (:func:`write_mcp_bridge_config`).
     The runner passes the returned path to qwen via ``--mcp-config <path>``. Unlike
     a project ``.mcp.json`` / ``.qwen/settings.json``, a CLI-provided MCP server:

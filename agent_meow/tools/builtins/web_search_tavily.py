@@ -46,7 +46,7 @@ _VALID_SEARCH_DEPTHS = frozenset({"basic", "advanced"})
 
 # Identifies this integration to Tavily via the ``X-Client-Source`` header so
 # traffic from the agent-meow provider is attributable.
-_CLIENT_SOURCE = "omnigent"
+_CLIENT_SOURCE = "agent-meow"
 
 
 def _tavily_url() -> str:

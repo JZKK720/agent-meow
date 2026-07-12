@@ -9,7 +9,7 @@ via [Databricks Asset Bundles](https://docs.databricks.com/aws/en/dev-tools/bund
   storage snapshots.
 
 > **Most Databricks users want the managed offering instead.**
-> [agent-meow on Databricks](https://docs.databricks.com/aws/en/omnigent/)
+> [agent-meow on Databricks](https://docs.databricks.com/aws/en/agent_meow/)
 > (Beta) runs the server for you, wired to workspace identity,
 > Foundation Models, AI Gateway, and MLflow Tracing out of the box.
 > Enable the **agent-meow** preview in your workspace settings and follow
@@ -61,9 +61,9 @@ from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.postgres import Project
 
 wc = WorkspaceClient(profile="<your-profile>")
-wc.postgres.create_project(project=Project(), project_id="omnigent")
+wc.postgres.create_project(project=Project(), project_id="agent-meow")
 
-branch = "projects/omnigent/branches/production"
+branch = "projects/agent_meow/branches/production"
 endpoint = f"{branch}/endpoints/primary"
 
 import time
@@ -82,8 +82,8 @@ print("database resource path:", database.name)
 ### 2. UC Volumes
 
 ```sql
-CREATE SCHEMA IF NOT EXISTS main.omnigent;
-CREATE VOLUME IF NOT EXISTS main.omnigent.artifacts;
+CREATE SCHEMA IF NOT EXISTS main.agent-meow;
+CREATE VOLUME IF NOT EXISTS main.agent_meow.artifacts;
 ```
 
 The `artifacts` volume is referenced declaratively in `databricks.yml`
@@ -105,8 +105,8 @@ privileges Alembic needs, then re-run the deploy:
 
 ```bash
 python deploy/databricks/grant_sp_perms.py \
-    --app-name omnigent \
-    --lakebase-endpoint projects/omnigent/branches/production/endpoints/primary \
+    --app-name agent-meow \
+    --lakebase-endpoint projects/agent_meow/branches/production/endpoints/primary \
     --database databricks_postgres \
     --profile <your-profile>
 ```
@@ -127,17 +127,17 @@ and `/health` returns 200. Subsequent redeploys are a single
 
 ```bash
 uv run python deploy/databricks/deploy.py \
-    --app-name omnigent \
+    --app-name agent-meow \
     --profile <your-profile> \
-    --lakebase-branch projects/omnigent/branches/production \
-    --lakebase-database projects/omnigent/branches/production/databases/databricks-postgres \
-    --volume-name main.omnigent.artifacts
+    --lakebase-branch projects/agent_meow/branches/production \
+    --lakebase-database projects/agent_meow/branches/production/databases/databricks-postgres \
+    --volume-name main.agent_meow.artifacts
 ```
 
 The script builds wheels, classifies them by size, copies wheels into
 `src/`, regenerates `src/pyproject.toml` and `src/uv.lock`, runs
 `databricks bundle deploy --target prod`, runs
-`databricks bundle run omnigent --target prod`, and polls `/health`
+`databricks bundle run agent-meow --target prod`, and polls `/health`
 with backoff until 200.
 
 All agent-meow wheels must fit under the Databricks Apps source
@@ -234,7 +234,7 @@ loads, so the blast radius of a deploy is exactly that state file.
 
 - **Remote state is per app.** `targets.<t>.workspace.root_path` ends
   in `${var.app_name}`, so `--app-name X` reads and writes state only
-  under `.bundle/omnigent/X`. A deploy of X cannot mutate app Y.
+  under `.bundle/agent_meow/X`. A deploy of X cannot mutate app Y.
 - **The app resource's `name` is `${var.app_name}`.** If the loaded
   state tracks app X but you pass `app_name=Y`, terraform sees a name
   change and plans a **destroy of X + create of Y**. Never bind the
@@ -265,8 +265,8 @@ uv run python deploy/databricks/deploy.py --skip-web-ui ...
 | Symptom | Cause | Fix |
 |---|---|---|
 | Deploy refuses: "working tree has uncommitted changes" / "HEAD is not at origin/main" | Clean-tree assertion | Commit/stash, `git checkout main && git pull`, or pass `--allow-dirty` |
-| `bundle deploy` fails: "Resource already managed by Terraform" | App already bound to another bundle directory | Run from that directory, or unbind: `databricks bundle deployment unbind omnigent` |
-| `bundle deploy` fails: "An app with the same name already exists" | App exists but isn't bound to this bundle (or a stale per-target local cache from a *different* app made `deploy.py` skip the bind) | `rm -rf deploy/databricks/.databricks/bundle/<target>`, then bind: `databricks bundle deployment bind omnigent <app-name> --target <target> --auto-approve --var ...` |
+| `bundle deploy` fails: "Resource already managed by Terraform" | App already bound to another bundle directory | Run from that directory, or unbind: `databricks bundle deployment unbind agent-meow` |
+| `bundle deploy` fails: "An app with the same name already exists" | App exists but isn't bound to this bundle (or a stale per-target local cache from a *different* app made `deploy.py` skip the bind) | `rm -rf deploy/databricks/.databricks/bundle/<target>`, then bind: `databricks bundle deployment bind agent-meow <app-name> --target <target> --auto-approve --var ...` |
 | App fails "Error installing packages"; `/logz` shows "Ignoring existing lockfile due to … exclude newer …" then a PyPI fetch timeout | The Apps runtime pins a global uv `exclude-newer` cutoff; a lock generated without the matching option is re-resolved in-container, where PyPI is unreachable | Read the cutoff from `/logz` ("change of exclude newer timestamp from X to Y") and redeploy with `UV_EXCLUDE_NEWER=<cutoff>` in the environment |
 | `permission denied for table agents` | Lakebase tables owned by wrong user | Connect as the owner and `DROP TABLE … CASCADE`; redeploy |
 | `schema "dbos" already exists` | Same for the DBOS schema | `DROP SCHEMA dbos CASCADE` and redeploy |

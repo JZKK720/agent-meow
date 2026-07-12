@@ -1,14 +1,14 @@
-"""Persistent client-side state for ``omnigent opencode`` sessions.
+"""Persistent client-side state for ``agent-meow opencode`` sessions.
 
 The native OpenCode wrapper records the cwd used to create a session so a
-later ``omnigent opencode --resume <conv_id>`` can launch OpenCode from
+later ``agent-meow opencode --resume <conv_id>`` can launch OpenCode from
 the same workspace. This state is intentionally client-side: local
 filesystem paths belong to the user's machine and should not be stored on
 the shared agent-meow server. Mirrors :mod:`~?agent_meow.codex_native_state`.
 
 Layout (per conversation):
 
-    ~/.omnigent/opencode-native/<sha256(conv_id)[:32]>/launch.json
+    ~/.agent_meow/opencode-native/<sha256(conv_id)[:32]>/launch.json
 """
 
 from __future__ import annotations
@@ -43,14 +43,14 @@ def _opencode_native_state_root() -> Path:
     Return the root directory for persistent opencode-native state.
 
     Honors :data:`_STATE_ROOT_ENV_VAR` for tests and advanced local setups.
-    Production defaults to ``~/.omnigent/opencode-native``.
+    Production defaults to ``~/.agent_meow/opencode-native``.
 
     :returns: Absolute path to the state root.
     """
     override = os.environ.get(_STATE_ROOT_ENV_VAR)
     if override:
         return Path(override)
-    return Path.home() / ".omnigent" / "opencode-native"
+    return Path.home() / ".agent-meow" / "opencode-native"
 
 
 def _state_dir_for_conversation_id(conversation_id: str) -> Path:

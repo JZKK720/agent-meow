@@ -123,7 +123,7 @@ async def cleanup_registry(registry: TerminalRegistry) -> AsyncIterator[None]:
 async def _invoke(tool: Tool, payload: dict[str, object], ctx: ToolContext) -> dict:
     """Drive ``tool.invoke`` via ``asyncio.to_thread`` and decode JSON.
 
-    Mirrors production dispatch: ``omnigent/runtime/workflow.py`` calls
+    Mirrors production dispatch: ``agent_meow/runtime/workflow.py`` calls
     ``tool_mgr.call_tool`` inside ``asyncio.to_thread`` so the sync
     ``invoke`` runs on a worker thread (with no event loop), letting
     the tool spin its own ``asyncio.run()`` for async work. Calling

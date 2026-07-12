@@ -45,7 +45,7 @@ struct WebShellView: View {
       .overlay(alignment: .bottom) {
         // Always present, shown/hidden by opacity rather than insert/remove, so
         // a transient visibility flip never slides the bar in and out. The web
-        // layer reserves a fixed footprint for it (`.omnigent-native-bottom-
+        // layer reserves a fixed footprint for it (`.agent-meow-native-bottom-
         // spacer` in index.css), so there's no size round-trip to coordinate.
         ChatTerminalBar(
           mode: $model.viewMode,

@@ -18,16 +18,16 @@ from pathlib import Path
 import httpx
 import pytest
 
-# Root of the agent-meow checkout that ships the ``omnigent``
+# Root of the agent-meow checkout that ships the ``agent-meow``
 # package, the example YAMLs, and (in the main checkout) the
-# ``.venv`` with omnigent + pexpect + openai-agents installed.
+# ``.venv`` with agent-meow + pexpect + openai-agents installed.
 #
 # Derived from the conftest's own location so git worktrees work
 # naturally: this file lives at
-# ``<root>/tests/e2e/omnigent/conftest.py`` (post-unification), so
+# ``<root>/tests/e2e/agent_meow/conftest.py`` (post-unification), so
 # the checkout root is three levels up. Hardcoding an absolute path
 # broke worktrees because a subprocess spawned there would still
-# exec the main-checkout ``omnigent`` (via the editable install),
+# exec the main-checkout ``agent-meow`` (via the editable install),
 # missing any per-worktree edits.
 _OMNIGENT_REPO = Path(__file__).resolve().parents[3]
 
@@ -69,19 +69,19 @@ _OMNIGENT_VENV_PYTHON = _resolve_venv_python()
 @pytest.fixture(scope="session")
 def omnigent_python() -> Path:
     """
-    Path to the Python interpreter that has the ``omnigent``
+    Path to the Python interpreter that has the ``agent-meow``
     package + its harness dependencies installed.
 
     The agent-meow repo ships its own ``.venv`` with
-    ``omnigent``, ``pexpect``, ``openai-agents``,
+    ``agent-meow``, ``pexpect``, ``openai-agents``,
     ``claude-agent-sdk``, etc. pre-installed. Agent-plane's e2e
     tests use that interpreter directly rather than adding
-    omnigent as an omnigent dep (omnigent is not
+    agent-meow as an agent-meow dep (agent-meow is not
     distributed as a package yet).
 
     :returns: Absolute path to the agent-meow ``.venv`` Python
         interpreter, e.g.
-        ``"/path/to/omnigent/.venv/bin/python"``.
+        ``"/path/to/agent_meow/.venv/bin/python"``.
     :raises RuntimeError: If the interpreter is not present at
         the expected path — indicates the agent-meow checkout is
         missing or its .venv hasn't been created.
@@ -106,7 +106,7 @@ def omnigent_repo_root() -> Path:
     (i.e. as its cwd).
 
     :returns: Absolute path to the agent-meow repo root, e.g.
-        ``"/path/to/omnigent"``.
+        ``"/path/to/agent-meow"``.
     """
     return _OMNIGENT_REPO
 
@@ -153,7 +153,7 @@ def mock_credentials_env(
     )
     env["OMNIGENT_CONFIG_HOME"] = str(config_home)
     repo = str(_OMNIGENT_REPO)
-    omnigent_path = str(_OMNIGENT_REPO / "omnigent")
+    omnigent_path = str(_OMNIGENT_REPO / "agent-meow")
     existing_pp = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = os.pathsep.join(p for p in (repo, omnigent_path, existing_pp) if p)
     return env

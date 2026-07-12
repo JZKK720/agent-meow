@@ -1,7 +1,7 @@
 """Tests for utility endpoints on the FastAPI app (health + version).
 
 These endpoints are defined inline in ``create_app()`` in
-``omnigent/server/app.py`` rather than in a route sub-module, so
+``agent_meow/server/app.py`` rather than in a route sub-module, so
 they live here following the source ↔ test directory mirroring rule.
 """
 
@@ -606,7 +606,7 @@ def test_ensure_default_qwen_agent_seeds_card(seed_stores: _SeedStores) -> None:
     Seeding registers qwen-native-ui as a built-in the picker can render.
 
     The new-session picker reads built-ins from ``GET /v1/agents``; without this
-    seeder Qwen Code only appears after the ``omnigent qwen`` CLI first registers
+    seeder Qwen Code only appears after the ``agent-meow qwen`` CLI first registers
     it, so it was absent from the Web UI dropdown.
     """
     server_app._ensure_default_qwen_agent(

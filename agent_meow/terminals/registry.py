@@ -76,7 +76,7 @@ def conversation_link_for_id(
     if base_url is None or not base_url.strip():
         return f"/c/{quote(conversation_id, safe='')}"
     # Delegate to the shared builder so workspace-hosted servers get the
-    # API→UI mount swap (``/api/2.0/omnigent`` → ``/omnigent``) and the
+    # API→UI mount swap (``/api/2.0/agent-meow`` → ``/agent-meow``) and the
     # ``?o=<org>`` selector — keeping the terminal status-bar link in
     # lockstep with the CLI's ``Web UI:`` link instead of pointing at the
     # JSON API mount.

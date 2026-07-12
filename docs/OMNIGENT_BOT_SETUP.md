@@ -8,29 +8,29 @@ conflate them:
 | Identity | Used for | Why this identity |
 | --- | --- | --- |
 | `agent-meow <noreply@cubecloud.io>` | Co-author trailer on commits authored by **polly's coding sub-agents** | These commits are produced by `git commit` in a worker's local worktree — they are **not** GitHub Actions runs, so a plain org co-author is the honest attribution. No GitHub App user is involved. |
-| `omnigent-ci[bot]` (GitHub App) | **CI automation**: lockfile-regen commits/PRs **and** automated PR-review comments | These actions genuinely run inside GitHub Actions, where the App's private key lives and a short-lived installation token is minted per run. The App is an org-owned, least-privilege identity. |
+| `agent-meow-ci[bot]` (GitHub App) | **CI automation**: lockfile-regen commits/PRs **and** automated PR-review comments | These actions genuinely run inside GitHub Actions, where the App's private key lives and a short-lived installation token is minted per run. The App is an org-owned, least-privilege identity. |
 
 > **Why two identities and not one?** An earlier draft of this work tried to use
-> `omnigent-ci[bot]` everywhere, including the sub-agent commit trailer. That was
+> `agent-meow-ci[bot]` everywhere, including the sub-agent commit trailer. That was
 > corrected: polly's workers don't run in Actions and never touch the App key, so
 > attributing their commits to the Actions-minted bot user was misleading. Local
 > work → plain org co-author; Actions-minted work → the App bot.
 
 ---
 
-## The GitHub App: `omnigent-ci[bot]`
+## The GitHub App: `agent-meow-ci[bot]`
 
-> **Naming note.** The App was registered as **`omnigent-ci`** (the bare
-> `omnigent` name was unavailable), so GitHub renders the actor as
-> **`omnigent-ci[bot]`**.
+> **Naming note.** The App was registered as **`agent-meow-ci`** (the bare
+> `agent-meow` name was unavailable), so GitHub renders the actor as
+> **`agent-meow-ci[bot]`**.
 
 | Field | Value |
 | --- | --- |
-| App name | `omnigent-ci` |
-| Bot actor | `omnigent-ci[bot]` |
+| App name | `agent-meow-ci` |
+| Bot actor | `agent-meow-ci[bot]` |
 | App ID | `4082516` |
 | Bot numeric user ID | `294685417` |
-| CI git author email | `294685417+omnigent-ci[bot]@users.noreply.github.com` |
+| CI git author email | `294685417+agent-meow-ci[bot]@users.noreply.github.com` |
 
 The numeric user ID (`294685417`) is what links GitHub's no-reply commit email
 back to the bot's profile; it is distinct from the App ID (`4082516`), which is
@@ -50,9 +50,9 @@ reverse-engineered.
 
 ### 1. Create the App
 
-Created at `https://github.com/organizations/omnigent-ai/settings/apps/new`:
+Created at `https://github.com/organizations/JZKK720/settings/apps/new`:
 
-- **GitHub App name:** `omnigent-ci` → actor `omnigent-ci[bot]`.
+- **GitHub App name:** `agent-meow-ci` → actor `agent-meow-ci[bot]`.
 - **Homepage URL:** any valid URL.
 - **Webhook:** **Active** unchecked — token-minting only, no webhook.
 - **Repository permissions** (least privilege):
@@ -60,8 +60,8 @@ Created at `https://github.com/organizations/omnigent-ai/settings/apps/new`:
   - **Pull requests:** Read and write — open/update PRs **and post reviews**.
   - **Metadata:** Read-only (mandatory).
   - Everything else **No access**.
-- **Where can this App be installed?** Only on `omnigent-ai`.
-- Installed into `omnigent-ai`, scoped to the `omnigent` repo.
+- **Where can this App be installed?** Only on `JZKK720`.
+- Installed into `JZKK720`, scoped to the `agent-meow` repo.
 
 **App ID `4082516`.** A private key (`.pem`) was generated and stored as a
 secret (step 3).
@@ -74,7 +74,7 @@ secret (step 3).
 GitHub's no-reply commit email embeds a numeric user ID assigned after install:
 
 ```bash
-gh api users/omnigent-ci%5Bbot%5D --jq '.id'
+gh api users/agent-meow-ci%5Bbot%5D --jq '.id'
 # -> 294685417
 ```
 
@@ -92,7 +92,7 @@ In **`JZKK720/agent-meow` → Settings → Secrets and variables → Actions**:
 > to `GITHUB_TOKEN` (attributing the action to `github-actions[bot]`) — so the
 > exact names matter.
 
-> **`omnigent-ci[bot]` replaced the old OSS regen bot.** The previous
+> **`agent-meow-ci[bot]` replaced the old OSS regen bot.** The previous
 > `OSS_REGEN_APP_ID` / `OSS_REGEN_APP_KEY` config and its App have been
 > **retired**; nothing in the repo references `OSS_REGEN_*` anymore.
 
@@ -121,11 +121,11 @@ This requirement lives in the worker IMPLEMENT instructions:
 > signing key. It is **not** cryptographic signing (GPG/sigstore), which is a
 > separate, heavier concern.
 
-> The packaged copies under `omnigent/resources/examples/polly/...` are a
+> The packaged copies under `agent_meow/resources/examples/polly/...` are a
 > **symlink** to the `examples/polly/...` source, so there is a single source of
 > truth — no dual copies to keep in sync.
 
-### CI commits/PRs as `omnigent-ci[bot]`
+### CI commits/PRs as `agent-meow-ci[bot]`
 
 The lockfile-regen workflows (`.github/workflows/oss-regenerate-and-smoke.yml`
 and `oss-regen-on-comment.yml`) mint the App token and set the git identity so
@@ -142,19 +142,19 @@ regen commits/PRs are authored by the bot:
 ```
 
 ```bash
-git config user.name  "omnigent-ci[bot]"
-git config user.email "294685417+omnigent-ci[bot]@users.noreply.github.com"
+git config user.name  "agent-meow-ci[bot]"
+git config user.email "294685417+agent-meow-ci[bot]@users.noreply.github.com"
 ```
 
 The push uses `steps.app-token.outputs.token || secrets.GITHUB_TOKEN`, so a
 missing App config falls back to `github-actions[bot]` rather than failing.
 
-### Automated PR review posted as `omnigent-ci[bot]`
+### Automated PR review posted as `agent-meow-ci[bot]`
 
 `.github/workflows/polly-review.yml` runs a full cross-vendor Polly review of a
 PR diff (on PR open/reopen/ready, a `/review` comment from a write-access user,
 or `workflow_dispatch`) and posts the findings as a PR comment. It mints the App
-token and posts the review **as `omnigent-ci[bot]`**:
+token and posts the review **as `agent-meow-ci[bot]`**:
 
 ```yaml
 - name: Mint App token
@@ -185,8 +185,8 @@ token and posts the review **as `omnigent-ci[bot]`**:
 | Surface | Identity on the artifact | Where it's wired |
 | --- | --- | --- |
 | polly sub-agent commits | `agent-meow <noreply@cubecloud.io>` (co-author trailer) | `examples/polly/agents/*/config.yaml` |
-| Lockfile-regen commits/PRs | `omnigent-ci[bot]` | `oss-regenerate-and-smoke.yml`, `oss-regen-on-comment.yml` |
-| Automated PR review comments | `omnigent-ci[bot]` (fallback `github-actions[bot]`) | `polly-review.yml` |
+| Lockfile-regen commits/PRs | `agent-meow-ci[bot]` | `oss-regenerate-and-smoke.yml`, `oss-regen-on-comment.yml` |
+| Automated PR review comments | `agent-meow-ci[bot]` (fallback `github-actions[bot]`) | `polly-review.yml` |
 
 **Config:** variable `OMNIGENT_BOT_APP_ID` = `4082516`, secret
 `OMNIGENT_BOT_APP_KEY` = App private key. The old `OSS_REGEN_APP_*` config and

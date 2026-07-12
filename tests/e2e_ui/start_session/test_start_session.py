@@ -529,7 +529,7 @@ async def _drive_permission_mode(base_url: str, session_id: str) -> None:
             # so the landing composer reads it on mount.
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -612,7 +612,7 @@ async def _drive_model_effort(base_url: str, session_id: str) -> None:
 
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -735,7 +735,7 @@ async def _drive_agent_picker_pagination_dedupe(base_url: str, session_id: str) 
             await page.route(re.compile(r"/v1/sessions\?.*kind=any"), handle_agent_scan)
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -796,7 +796,7 @@ async def _drive_approval_mode(base_url: str, session_id: str) -> None:
 
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -878,7 +878,7 @@ async def _drive_bypass_sandbox(base_url: str, session_id: str) -> None:
 
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -990,7 +990,7 @@ async def _drive_select_harness(base_url: str, session_id: str) -> None:
             # auto-fills and Send can enable without touching the file browser.
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -1042,7 +1042,7 @@ def test_start_session_pi_native_picker_and_wrapper_labels(
        raw name capitalized as "Pi-native-ui".)
     2. **Session-creation wrapper labels** — selecting Pi and sending must POST
        ``/v1/sessions`` with the terminal-first wrapper labels
-       (``agent_meow.ui: terminal`` + ``omnigent.wrapper: pi-native-ui``) that
+       (``agent_meow.ui: terminal`` + ``agent_meow.wrapper: pi-native-ui``) that
        make the runner launch the Pi TUI and the web UI render the
        Chat/Terminal view.
     """
@@ -1085,7 +1085,7 @@ async def _drive_pi_native_start(base_url: str, session_id: str) -> None:
             # auto-fills and Send can enable without touching the file browser.
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -1115,7 +1115,7 @@ async def _drive_pi_native_start(base_url: str, session_id: str) -> None:
             # runner-owned Pi TUI and the web UI's Chat/Terminal view.
             assert body.get("labels") == {
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "pi-native-ui",
+                "agent_meow.wrapper": "pi-native-ui",
             }, body
         finally:
             await browser.close()
@@ -1133,7 +1133,7 @@ def test_start_session_antigravity_native_picker_and_wrapper_labels(
        ``"antigravity-native-ui"`` the server sends.
     2. **Session-creation wrapper labels** — selecting Antigravity and sending must
        POST ``/v1/sessions`` with the terminal-first wrapper labels
-       (``agent_meow.ui: terminal`` + ``omnigent.wrapper: antigravity-native-ui``)
+       (``agent_meow.ui: terminal`` + ``agent_meow.wrapper: antigravity-native-ui``)
        that make the runner launch the agy TUI and the web UI render the
        Chat/Terminal view.
     """
@@ -1168,7 +1168,7 @@ async def _drive_antigravity_native_start(base_url: str, session_id: str) -> Non
 
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -1197,7 +1197,7 @@ async def _drive_antigravity_native_start(base_url: str, session_id: str) -> Non
             # the web UI's Chat/Terminal view.
             assert body.get("labels") == {
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "antigravity-native-ui",
+                "agent_meow.wrapper": "antigravity-native-ui",
             }, body
         finally:
             await browser.close()
@@ -1216,7 +1216,7 @@ def test_start_session_opencode_native_picker_and_wrapper_labels(
        agent name ``"opencode-native-ui"`` the server sends.
     2. **Session-creation wrapper labels** — selecting OpenCode and sending
        must POST ``/v1/sessions`` with the terminal-first wrapper labels
-       (``agent_meow.ui: terminal`` + ``omnigent.wrapper: opencode-native-ui``)
+       (``agent_meow.ui: terminal`` + ``agent_meow.wrapper: opencode-native-ui``)
        that make the runner launch the OpenCode TUI and the web UI render the
        Chat/Terminal view.
     """
@@ -1260,7 +1260,7 @@ async def _drive_opencode_native_start(base_url: str, session_id: str) -> None:
             # auto-fills and Send can enable without touching the file browser.
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -1289,7 +1289,7 @@ async def _drive_opencode_native_start(base_url: str, session_id: str) -> None:
             # runner-owned OpenCode TUI and the web UI's Chat/Terminal view.
             assert body.get("labels") == {
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "opencode-native-ui",
+                "agent_meow.wrapper": "opencode-native-ui",
             }, body
         finally:
             await browser.close()
@@ -1308,7 +1308,7 @@ def test_start_session_kimi_native_picker_and_wrapper_labels(
        name ``"kimi-native-ui"`` the server sends.
     2. **Session-creation wrapper labels** — selecting Kimi and sending must POST
        ``/v1/sessions`` with the terminal-first wrapper labels
-       (``agent_meow.ui: terminal`` + ``omnigent.wrapper: kimi-native-ui``) that
+       (``agent_meow.ui: terminal`` + ``agent_meow.wrapper: kimi-native-ui``) that
        make the runner launch the Kimi TUI and the web UI render the
        Chat/Terminal view.
     """
@@ -1347,7 +1347,7 @@ async def _drive_kimi_native_start(base_url: str, session_id: str) -> None:
 
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -1376,7 +1376,7 @@ async def _drive_kimi_native_start(base_url: str, session_id: str) -> None:
             # runner-owned Kimi TUI and the web UI's Chat/Terminal view.
             assert body.get("labels") == {
                 "agent_meow.ui": "terminal",
-                "omnigent.wrapper": "kimi-native-ui",
+                "agent_meow.wrapper": "kimi-native-ui",
             }, body
         finally:
             await browser.close()
@@ -1424,7 +1424,7 @@ async def _drive_kimi_picker_dedup(base_url: str, session_id: str) -> None:
 
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )
@@ -1696,7 +1696,7 @@ async def _drive_add_worktree(base_url: str, session_id: str) -> None:
             )
             await page.add_init_script(
                 f"""window.localStorage.setItem(
-                    "omnigent:recent-workspaces",
+                    "agent-meow:recent-workspaces",
                     JSON.stringify({{ {_HOST_ID}: ["/work/repo"] }})
                 );"""
             )

@@ -4,10 +4,10 @@ omnigent-format example YAMLs under ``examples/*.yaml``.
 
 Complements :mod:`test_enforcement_integration`, which loads
 pre-translated omnigent-native fixtures. The fixtures there
-are hand-maintained ports; any bug in the omnigent → omnigent
+are hand-maintained ports; any bug in the agent-meow → agent-meow
 adapter layer (e.g. ``condition: {}`` parse rejection,
 ``match_tools`` → ``on:`` expansion) slips past those tests. This module goes through
-:func:`~?agent_meow.spec.load` — the same path ``omnigent run``
+:func:`~?agent_meow.spec.load` — the same path ``agent-meow run``
 uses — so the adapter is exercised on every run.
 
 Scenarios mirror the user-documented trigger matrix:
@@ -132,7 +132,7 @@ async def test_agent_with_policies_allows_short_sleep(
     (threshold is 5s) and any other gates.
 
     Claim: the full parse + engine pipeline loaded from the
-    omnigent YAML ends at ALLOW for an in-bounds duration.
+    agent-meow YAML ends at ALLOW for an in-bounds duration.
     """
     engine = _load_engine_from_yaml(_AGENT_WITH_POLICIES, conversation_store)
     result = await _enforce_policy(
@@ -163,7 +163,7 @@ async def test_agent_with_policies_denies_long_sleep(
     payload — and ``_coerce_to_policy_result`` accepts the
     returned dict shape structurally.
 
-    Claim: the omnigent YAML + its legacy-style example
+    Claim: the agent-meow YAML + its legacy-style example
     callable actually works through agent-meow' engine. If
     this ever regresses (e.g. the callable adapter path is
     tightened), the regression is visible in this test.
@@ -200,7 +200,7 @@ async def test_secure_research_clean_shell_allows(
     and ALLOWs.
 
     Claim: the engine seeds ``initial`` values from the
-    omnigent ``labels:`` block and the enforcement chain
+    agent-meow ``labels:`` block and the enforcement chain
     sees the clean state on the first call.
     """
     engine = _load_engine_from_yaml(_SECURE_RESEARCH, conversation_store)
@@ -333,7 +333,7 @@ async def test_risk_score_web_searches_accrue_and_gate_send(
 
 # Scenario 10 (secure_research_agent_os_env.yaml) is NOT tested
 # here: the YAML declares a tool named ``web_search`` (line 49)
-# which collides with an omnigent reserved builtin name. The
+# which collides with an agent-meow reserved builtin name. The
 # validator rejects at spec load with "tool name 'web_search'
 # collides with a reserved builtin tool name". Fix requires
 # renaming the tool in the YAML or relaxing the reserved-name

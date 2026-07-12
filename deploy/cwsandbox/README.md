@@ -27,7 +27,7 @@ Two traits shape the rest of this guide:
   the agent can reach its model endpoint.
 
 ```bash
-pip install 'omnigent[cwsandbox]'
+pip install 'agent-meow[cwsandbox]'
 ```
 
 ## Prerequisites

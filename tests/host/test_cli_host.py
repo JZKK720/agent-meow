@@ -47,7 +47,7 @@ def test_host_command_registered() -> None:
     Verify that ``host`` is a registered subcommand.
 
     If the command is missing, the CLI wiring in cli.py is broken
-    and users can't run ``omnigent host``.
+    and users can't run ``agent-meow host``.
     """
     runner = CliRunner()
     result = runner.invoke(cli, ["host", "--help"])
@@ -65,7 +65,7 @@ def test_host_no_server_starts_local_backend(
     """
     Verify that ``host`` with no --server starts a local agent-meow server.
 
-    Under the daemon model, ``omnigent host`` (no URL, no config) is
+    Under the daemon model, ``agent-meow host`` (no URL, no config) is
     valid: it starts (or reuses) a persistent local agent-meow server and connects
     the foreground daemon to it — it no longer errors. We mock the local
     server spawn and the (blocking) daemon loop so the command returns.
@@ -103,7 +103,7 @@ def test_host_reads_server_from_global_config(
     when --server is not passed on the CLI.
 
     If it doesn't, users must always pass --server even when
-    ``~/.omnigent/config.yaml`` has a ``server:`` key.
+    ``~/.agent_meow/config.yaml`` has a ``server:`` key.
     """
     (tmp_path / "config.yaml").write_text("server: https://from-config.example.com\n")
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
@@ -164,7 +164,7 @@ def test_host_accepts_option_after_positional_server(
     Verify ``host <url> --non-interactive`` parses the trailing option.
 
     The positional-URL shorthand must not swallow options that follow the
-    URL: ``omnigent host https://… --non-interactive`` is the scripted/CI
+    URL: ``agent-meow host https://… --non-interactive`` is the scripted/CI
     form (#1428). A regression here — the URL rewrite misclassifying the
     trailing option as an extra positional — makes the command exit
     non-zero with "Unexpected extra argument(s)".

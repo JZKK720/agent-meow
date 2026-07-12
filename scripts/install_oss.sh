@@ -2,7 +2,7 @@
 
 # agent-meow installer.
 #
-# Installs the published `omnigent` wheel from PyPI with uv, wires up PATH,
+# Installs the published `agent-meow` wheel from PyPI with uv, wires up PATH,
 # and points you at first-run. The wheel bundles the prebuilt web UI, so the
 # default install needs no Node/npm and runs no build.
 #
@@ -23,7 +23,7 @@
 set -eu
 
 # Published PyPI package, the default install. --version pins a release.
-PACKAGE_NAME="omnigent"
+PACKAGE_NAME="agent-meow"
 VERSION=
 # Comma-separated optional-dependency extras to install with the package
 # (e.g. "databricks"), accumulated from one or more --extra flags. Empty =>
@@ -55,7 +55,7 @@ init_style() {
     BOLD="${ESC}[1m"
     DIM="${ESC}[2m"
     # Brand accent — Otto's magenta-pink (#F43BA6), matching the Python CLI
-    # palette in omnigent/inner/ui.py so the installer and the tool agree.
+    # palette in agent_meow/inner/ui.py so the installer and the tool agree.
     MAGENTA="${ESC}[38;2;244;59;166m"
     GREEN="${ESC}[32m"
     YELLOW="${ESC}[33m"
@@ -63,8 +63,8 @@ init_style() {
   fi
 }
 
-# The Otto + "omnigent" wordmark lockup, printed once at the top of an
-# interactive install. Mirrors omnigent.inner.wordmark.lockup_lines(); the
+# The Otto + "agent-meow" wordmark lockup, printed once at the top of an
+# interactive install. Mirrors agent_meow.inner.wordmark.lockup_lines(); the
 # whole lockup is painted in the brand magenta (flat — no gradient in sh).
 # Skipped off a TTY (use_terminal_ui) so piped/CI installs stay clean.
 print_banner() {
@@ -125,8 +125,8 @@ run_with_spinner() {
     return
   fi
 
-  log_file="${TMPDIR:-/tmp}/omnigent-oss-installer.$$.log"
-  status_file="${TMPDIR:-/tmp}/omnigent-oss-installer.$$.status"
+  log_file="${TMPDIR:-/tmp}/agent-meow-oss-installer.$$.log"
+  status_file="${TMPDIR:-/tmp}/agent-meow-oss-installer.$$.status"
   rm -f "$log_file" "$status_file"
 
   (
@@ -384,7 +384,7 @@ check_npm() {
   fi
 }
 
-# `omnigent claude` / `omnigent codex` launch through a local tmux terminal
+# `agent-meow claude` / `agent-meow codex` launch through a local tmux terminal
 # and won't start without it, so surface it up front and offer to install it.
 # Emit the package-manager command that installs $1 on this Linux box, or
 # nothing when no known package manager is present. Shared by the tmux and
@@ -413,31 +413,31 @@ check_tmux() {
   case "$(uname -s)" in
     Darwin)
       if command -v brew >/dev/null 2>&1; then
-        if prompt_yes_no "tmux is missing (needed for \`omnigent claude\` / \`omnigent codex\`). Install it with brew?"; then
-          run_with_spinner "brew install tmux" brew install tmux || warn "brew install tmux failed — install tmux manually before \`omnigent claude\`."
+        if prompt_yes_no "tmux is missing (needed for \`agent-meow claude\` / \`agent-meow codex\`). Install it with brew?"; then
+          run_with_spinner "brew install tmux" brew install tmux || warn "brew install tmux failed — install tmux manually before \`agent-meow claude\`."
           return
         fi
       fi
-      warn "tmux not found — \`omnigent claude\` / \`omnigent codex\` need it. Install with: brew install tmux"
+      warn "tmux not found — \`agent-meow claude\` / \`agent-meow codex\` need it. Install with: brew install tmux"
       ;;
     Linux)
       install_cmd="$(linux_pkg_install_cmd tmux)"
-      if [ -n "$install_cmd" ] && prompt_yes_no "tmux is missing (needed for \`omnigent claude\` / \`omnigent codex\`). Install it now ($install_cmd)?"; then
+      if [ -n "$install_cmd" ] && prompt_yes_no "tmux is missing (needed for \`agent-meow claude\` / \`agent-meow codex\`). Install it now ($install_cmd)?"; then
         # Run directly (not via run_with_spinner) so sudo can prompt for a password.
         sh -c "$install_cmd" || warn "tmux install failed — run manually: $install_cmd"
         command -v tmux >/dev/null 2>&1 && step "tmux installed"
         return
       fi
       if [ -n "$install_cmd" ]; then
-        warn "tmux not found — \`omnigent claude\` / \`omnigent codex\` need it. Install with: $install_cmd"
+        warn "tmux not found — \`agent-meow claude\` / \`agent-meow codex\` need it. Install with: $install_cmd"
       else
-        warn "tmux not found — \`omnigent claude\` / \`omnigent codex\` need it. Install it with your package manager."
+        warn "tmux not found — \`agent-meow claude\` / \`agent-meow codex\` need it. Install it with your package manager."
       fi
       ;;
   esac
 }
 
-# The native `omnigent claude` / `omnigent codex` / `pi` harnesses wrap each
+# The native `agent-meow claude` / `agent-meow codex` / `pi` harnesses wrap each
 # agent terminal in a bubblewrap (`bwrap`) OS-sandbox; on Linux that isolation
 # is mandatory and fail-loud, so a missing `bwrap` binary makes those terminals
 # fail to start. macOS sandboxes with the built-in seatbelt backend and needs
@@ -451,19 +451,19 @@ check_bubblewrap() {
   fi
 
   install_cmd="$(linux_pkg_install_cmd bubblewrap)"
-  if [ -n "$install_cmd" ] && prompt_yes_no "bubblewrap is missing (needed to sandbox native \`omnigent claude\` / \`omnigent codex\` terminals). Install it now ($install_cmd)?"; then
+  if [ -n "$install_cmd" ] && prompt_yes_no "bubblewrap is missing (needed to sandbox native \`agent-meow claude\` / \`agent-meow codex\` terminals). Install it now ($install_cmd)?"; then
     run_with_spinner "install bubblewrap" sh -c "$install_cmd" || warn "bubblewrap install failed — run manually: $install_cmd"
     return
   fi
   if [ -n "$install_cmd" ]; then
-    warn "bubblewrap (bwrap) not found — native \`omnigent claude\` / \`omnigent codex\` terminals need it on Linux. Install with: $install_cmd"
+    warn "bubblewrap (bwrap) not found — native \`agent-meow claude\` / \`agent-meow codex\` terminals need it on Linux. Install with: $install_cmd"
   else
-    warn "bubblewrap (bwrap) not found — native \`omnigent claude\` / \`omnigent codex\` terminals need it on Linux. Install it with your package manager."
+    warn "bubblewrap (bwrap) not found — native \`agent-meow claude\` / \`agent-meow codex\` terminals need it on Linux. Install it with your package manager."
   fi
 }
 
 install_omnigent() {
-  # Default: the published PyPI wheel (`omnigent`, optionally `omnigent==X`).
+  # Default: the published PyPI wheel (`agent-meow`, optionally `agent-meow==X`).
   # The wheel ships the prebuilt web UI, so there is no npm/Node step and no
   # source build — the fast, reliable path. `--repo` switches INSTALL_URL to a
   # git ref, which builds from source (and needs npm, checked above).
@@ -476,7 +476,7 @@ install_omnigent() {
   fi
   if building_from_source; then
     # A PEP 508 direct reference attaches extras to a git source install:
-    # "omnigent[databricks] @ git+https://...". Without extras, keep the bare
+    # "agent-meow[databricks] @ git+https://...". Without extras, keep the bare
     # URL (the long-standing form uv accepts directly).
     if [ -n "$extras_suffix" ]; then
       target="${PACKAGE_NAME}${extras_suffix} @ ${INSTALL_URL}"
@@ -576,29 +576,29 @@ maybe_add_bin_to_path() {
 
 verify_omnigent() {
   bin_dir="$1"
-  cli_path="$bin_dir/omnigent"
+  cli_path="$bin_dir/agent-meow"
 
   if [ ! -x "$cli_path" ]; then
-    cli_path="$(command -v omnigent 2>/dev/null || true)"
+    cli_path="$(command -v agent-meow 2>/dev/null || true)"
   fi
 
   if [ -z "$cli_path" ]; then
-    fail "agent-meow installed, but the omnigent command was not found."
+    fail "agent-meow installed, but the agent-meow command was not found."
   fi
 
   "$cli_path" --help >/dev/null
   step "Verified $cli_path"
 
-  # `omni` is a shorthand alias installed alongside `omnigent`; check it so a
+  # `omni` is a shorthand alias installed alongside `agent-meow`; check it so a
   # packaging regression that drops it surfaces here rather than later.
   for alias_cmd in omni; do
     if [ ! -x "$bin_dir/$alias_cmd" ] && ! command -v "$alias_cmd" >/dev/null 2>&1; then
-      warn "the $alias_cmd alias was not installed (expected a console-script entry point alongside omnigent)."
+      warn "the $alias_cmd alias was not installed (expected a console-script entry point alongside agent-meow)."
     fi
   done
 }
 
-# No setup step here by design: the first `omnigent` run configures a model
+# No setup step here by design: the first `agent-meow` run configures a model
 # credential and offers to install the harness CLI you pick.
 print_next_steps() {
   bin_dir="$1"
@@ -618,7 +618,7 @@ print_next_steps() {
   printf '  %somnigent setup\n\n' "$command_prefix"
   printf '%sUsing a Databricks workspace as your model provider? Install the\n' "$DIM"
   printf 'Databricks CLI (https://docs.databricks.com/aws/en/dev-tools/cli/install)\n'
-  printf 'and add it via: omnigent setup -> Databricks.%s\n' "$RESET"
+  printf 'and add it via: agent-meow setup -> Databricks.%s\n' "$RESET"
 }
 
 main() {

@@ -40,7 +40,7 @@ def _ansi_truecolor_fg(hex_rgb: str) -> str:
 def _display_width(text: str) -> int:
     """Terminal display width of *text*.
 
-    :func:`rich.cells.cell_len` (rich >= 14, which omnigent requires) counts
+    :func:`rich.cells.cell_len` (rich >= 14, which agent-meow requires) counts
     an emoji forced to its wide presentation by a trailing VARIATION
     SELECTOR-16 (U+FE0F) — e.g. the cli-config ``⚙️`` glyph — as the two
     cells modern terminals render, so it already aligns the banner box.
@@ -106,7 +106,7 @@ def startup_banner_strings(
     :param info_lines: Explicit dim info rows shown beneath the title,
         e.g. ``[BannerLine("multi-agent orchestrator", dim=True),
         BannerLine("claude-sonnet-4-6 · Subscription", dim=True),
-        BannerLine("~/omnigent", dim=True)]``. ``None`` falls
+        BannerLine("~/agent-meow", dim=True)]``. ``None`` falls
         back to the *hint_line* behavior.
     :param mascot_lines: Mascot art to show to the left of the
         text. ``None`` picks a random mascot.

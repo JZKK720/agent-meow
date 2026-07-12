@@ -312,8 +312,8 @@ def test_nimble_sends_x_client_source_header(tool_ctx: ToolContext) -> None:
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
     headers = mock_post.call_args.kwargs["headers"]
-    assert headers["X-Client-Source"] == "omnigent", (
-        f"Expected X-Client-Source 'omnigent', got {headers.get('X-Client-Source')!r}"
+    assert headers["X-Client-Source"] == "agent-meow", (
+        f"Expected X-Client-Source 'agent-meow', got {headers.get('X-Client-Source')!r}"
     )
 
 
@@ -483,8 +483,8 @@ def test_tavily_sends_x_client_source_header(tool_ctx: ToolContext) -> None:
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
     headers = mock_post.call_args.kwargs["headers"]
-    assert headers["X-Client-Source"] == "omnigent", (
-        f"Expected X-Client-Source 'omnigent', got {headers.get('X-Client-Source')!r}"
+    assert headers["X-Client-Source"] == "agent-meow", (
+        f"Expected X-Client-Source 'agent-meow', got {headers.get('X-Client-Source')!r}"
     )
 
 

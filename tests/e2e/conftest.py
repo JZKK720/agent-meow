@@ -576,7 +576,7 @@ def live_server(
     mock_llm_server_url: str | None,
 ) -> Iterator[str]:
     """
-    Start a real ``omnigent server`` subprocess and yield its base URL.
+    Start a real ``agent-meow server`` subprocess and yield its base URL.
 
     The server runs on a random high port. The fixture waits
     for the health endpoint before yielding, and kills the
@@ -649,7 +649,7 @@ def live_server(
     # The CLI exposes ``--database-uri`` but not an env var, so the
     # DB path must be on the command line. Absolute path prevents
     # the server from writing into the CWD (which was previously
-    # happening silently — each e2e run polluted ``omnigent.db``
+    # happening silently — each e2e run polluted ``agent_meow.db``
     # in whatever dir pytest was invoked from).
     # Route server output to a file so DBOS/agent logs don't fill
     # a PIPE buffer (which would block the server after ~64KB —
@@ -730,7 +730,7 @@ def live_server(
             **env,
             "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token,
         },
-        # Compat mode: neutral CWD so the worktree omnigent/ doesn't shadow
+        # Compat mode: neutral CWD so the worktree agent_meow/ doesn't shadow
         # the pinned old install via sys.path[0]. None (inherit) otherwise.
         cwd=compat_server_cwd(),
         stdout=log_handle,
@@ -867,7 +867,7 @@ def upload_agent(
         :data:`_DATABRICKS_MODEL_MAP` before tarballing. Covers
         ``llm.model`` in ``config.yaml`` bundles and
         ``executor.model`` (including nested ``tools.<name>.executor.model``)
-        in single-file omnigent YAMLs.
+        in single-file agent-meow YAMLs.
     :param databricks_profile: When set, stamp this profile onto
         every ``executor`` block that lacks one during the rewrite.
         Native (no-harness) agents otherwise reach the gateway with
@@ -919,7 +919,7 @@ def register_inline_agent(
     extra_config: dict[str, Any] | None = None,
 ) -> str:
     """
-    Register a single-file omnigent agent built in-memory.
+    Register a single-file agent-meow agent built in-memory.
 
     Tarballs a minimal ``<name>.yaml`` (no directory on disk) and
     uploads it via multipart ``POST /v1/sessions``. Idempotent: a
@@ -1757,11 +1757,11 @@ def resume_test_server(
     tmp_path: Path,
 ) -> Iterator[str]:
     """
-    Spawn a real ``omnigent server`` that accepts the CLI's own runner.
+    Spawn a real ``agent-meow server`` that accepts the CLI's own runner.
 
     Used by the native-CLI resume e2e tests
     (``test_claude_native_cli_resume_e2e`` / ``test_codex_native_cli_resume_e2e``),
-    which drive the real ``omnigent claude/codex --server`` CLI. It differs
+    which drive the real ``agent-meow claude/codex --server`` CLI. It differs
     from :func:`live_server` in two ways, both required for that:
 
     * **No tunnel-token allow-list.** ``OMNIGENT_RUNNER_TUNNEL_TOKEN``

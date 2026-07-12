@@ -252,7 +252,7 @@ class ExecutorError(ExecutorEvent):
         e.g. a codex app-server ``turn/failed`` or ``method == "error"``
         carrying a tool exit code. ``False`` (default) for harness-level
         failures (auth, SDK crash, protocol violation) that would recur.
-        Consumed by the omnigent workflow to pick between
+        Consumed by the agent-meow workflow to pick between
         :class:`RetryableLLMError` and :class:`PermanentLLMError`.
     """
 

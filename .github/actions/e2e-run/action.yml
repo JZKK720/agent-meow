@@ -1,7 +1,7 @@
 name: "Run e2e suite"
 description: >
   Run the tests/e2e suite exactly as the e2e.yml gate does (mock LLM,
-  sharded). When `server_version` is set, the omnigent SERVER subprocess is
+  sharded). When `server_version` is set, the agent-meow SERVER subprocess is
   pinned to that released tag (built into an isolated venv) while the client,
   runner, and tests stay on the checked-out ref — the server-version
   backwards-compat configuration. Shared verbatim by e2e.yml (normal gate) and
@@ -126,7 +126,7 @@ runs:
         uv venv --python 3.12 "$venv"
         uv pip install --python "$venv/bin/python" \
           -e "$src" -e "$src/sdks/python-client" -e "$src/sdks/ui"
-        "$venv/bin/omnigent" --version
+        "$venv/bin/agent-meow" --version
         echo "OMNIGENT_COMPAT_SERVER_PYTHON=$venv/bin/python" >> "$GITHUB_ENV"
         echo "OMNIGENT_COMPAT_SERVER_VERSION=${tag#v}" >> "$GITHUB_ENV"
 
@@ -151,7 +151,7 @@ runs:
         uv venv --python 3.12 "$venv"
         uv pip install --python "$venv/bin/python" \
           -e "$src" -e "$src/sdks/python-client" -e "$src/sdks/ui"
-        "$venv/bin/omnigent" --version
+        "$venv/bin/agent-meow" --version
         echo "OMNIGENT_COMPAT_RUNNER_PYTHON=$venv/bin/python" >> "$GITHUB_ENV"
         echo "OMNIGENT_COMPAT_RUNNER_VERSION=${tag#v}" >> "$GITHUB_ENV"
 
@@ -162,9 +162,9 @@ runs:
         SHARD_ID: ${{ inputs.shard_id }}
         NUM_SHARDS: ${{ inputs.num_shards }}
         NIGHTLY_FULL: ${{ inputs.nightly_full }}
-        E2E_TMP_BASE: /tmp/omnigent-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}
-        PYTEST_PROGRESS_LOG_DIR: /tmp/omnigent-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/progress
-        OMNIGENT_TOKEN_USAGE_JSON: /tmp/omnigent-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/tokens.json
+        E2E_TMP_BASE: /tmp/agent-meow-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}
+        PYTEST_PROGRESS_LOG_DIR: /tmp/agent-meow-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/progress
+        OMNIGENT_TOKEN_USAGE_JSON: /tmp/agent-meow-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/tokens.json
       run: |
         # Validate parallelism (untrusted input -- bind to env, never
         # interpolate a GitHub expression into the shell).
@@ -207,11 +207,11 @@ runs:
       with:
         name: e2e-server-logs-${{ github.run_id }}-shard${{ inputs.shard_id }}${{ inputs.artifact_suffix }}
         path: |
-          /tmp/omnigent-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/**/server.log
-          /tmp/omnigent-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/**/runner.log
-          /tmp/omnigent-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/**/.omnigent/logs/**/*.log
-          /tmp/omnigent-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/junit.xml
-          /tmp/omnigent-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/progress/progress-*.log
+          /tmp/agent-meow-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/**/server.log
+          /tmp/agent-meow-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/**/runner.log
+          /tmp/agent-meow-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/**/.agent_meow/logs/**/*.log
+          /tmp/agent-meow-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/junit.xml
+          /tmp/agent-meow-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/progress/progress-*.log
         retention-days: 7
         if-no-files-found: warn
         include-hidden-files: true
@@ -221,6 +221,6 @@ runs:
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
       with:
         name: e2e-tokens-${{ github.run_id }}-shard${{ inputs.shard_id }}${{ inputs.artifact_suffix }}
-        path: /tmp/omnigent-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/tokens*.json
+        path: /tmp/agent-meow-e2e-${{ github.run_id }}-shard${{ inputs.shard_id }}/tokens*.json
         retention-days: 14
         if-no-files-found: warn

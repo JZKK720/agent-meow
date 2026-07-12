@@ -1,7 +1,7 @@
 """Server-side YAML config for the non-CLI entrypoints.
 
-The ``omnigent server`` CLI already takes ``-c/--config`` and reads a
-YAML file (see ``omnigent/cli.py``). The hosted entrypoints —
+The ``agent-meow server`` CLI already takes ``-c/--config`` and reads a
+YAML file (see ``agent_meow/cli.py``). The hosted entrypoints —
 ``deploy/docker/entrypoint.py`` and ``deploy/databricks/src/app.py`` —
 don't go through that CLI; they build the app directly from env vars.
 This module gives those entrypoints the *same* config-file experience a
@@ -22,7 +22,7 @@ Resolution order for the config path:
 1. ``OMNIGENT_CONFIG`` env var, if set (explicit path).
 2. ``<data_dir>/config.yaml`` if it exists — ``<data_dir>`` is the same
    directory the admin list / credentials use (``/data`` in the Docker
-   stack, ``~/.omnigent`` on a laptop; see
+   stack, ``~/.agent-meow`` on a laptop; see
    :func:`~?agent_meow.server.admin_list.resolve_data_dir`).
 3. Otherwise ``None`` — no file, pure env config (back-compat: existing
    env-only deploys keep working unchanged).

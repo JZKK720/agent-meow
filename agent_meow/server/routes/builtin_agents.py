@@ -2,7 +2,7 @@
 
 Built-in agents are the long-lived, shared agents the server provides
 out of the box — the seeded ``claude-native-ui`` agent plus anything
-registered at startup with ``omnigent server --agent``. They are the
+registered at startup with ``agent-meow server --agent``. They are the
 ``session_id IS NULL`` rows in ``agent_store``; ``agent_store.list()``
 already filters to exactly these. Session-scoped agents (created via
 multipart ``POST /v1/sessions``) belong to one conversation and are read
@@ -111,7 +111,7 @@ def _to_agent_object(agent: Agent, agent_cache: AgentCache) -> AgentObject:
         # Seeded built-ins use a deterministic, name-derived id; an
         # operator/user-registered template (e.g. ``--agent``) uses a
         # random id. The picker protects the former from being shadowed
-        # by a same-named ``omnigent run`` upload, but lets a newer
+        # by a same-named ``agent-meow run`` upload, but lets a newer
         # upload supersede the latter.
         builtin=agent.session_id is None and agent.id == builtin_agent_id(agent.name),
     )

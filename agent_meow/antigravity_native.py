@@ -1,7 +1,7 @@
 """Native Antigravity (agy) TUI wrapper for the agent-meow CLI.
 
-``omnigent antigravity`` treats the Antigravity ``agy`` CLI as a
-terminal-first program, mirroring ``omnigent codex`` / ``omnigent claude``.
+``agent-meow antigravity`` treats the Antigravity ``agy`` CLI as a
+terminal-first program, mirroring ``agent-meow codex`` / ``agent-meow claude``.
 It creates or binds an agent-meow session, launches ``agy`` in a runner-owned
 tmux terminal resource, then attaches the local TTY (directly to the
 runner's tmux when same-machine, else over the WebSocket PTY bridge).
@@ -279,7 +279,7 @@ def run_antigravity_native(
 
 def _materialize_antigravity_agent_spec(tmpdir: Path) -> Path:
     """
-    Write the terminal-first agent spec used by ``omnigent antigravity``.
+    Write the terminal-first agent spec used by ``agent-meow antigravity``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :returns: Path to the generated YAML spec.
@@ -300,7 +300,7 @@ def _materialize_antigravity_agent_spec(tmpdir: Path) -> Path:
         # ``sys_session_*`` write surface from this ``spawn: true`` gate.
         "spawn": True,
         # Without an ``os_env`` block the runner's filesystem APIs 404 (see
-        # ``_require_os_env`` in ``omnigent/runner/app.py``). agy already
+        # ``_require_os_env`` in ``agent_meow/runner/app.py``). agy already
         # operates on the user's workspace with full filesystem access, so
         # caller-process / no-sandbox matches reality and enables the web
         # UI's files panel.
@@ -540,7 +540,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the omnigent server at {base_url}. "
+            f"Could not reach the agent-meow server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc
@@ -1203,7 +1203,7 @@ async def _cold_start_agy_conversation(
 
     The cold-started id is also PATCHed onto the agent-meow session as
     ``external_session_id`` (best-effort, mirroring the runner cold-start and
-    codex/pi) so a later ``omnigent antigravity --resume`` reads it back and passes
+    codex/pi) so a later ``agent-meow antigravity --resume`` reads it back and passes
     ``--conversation <id>`` to continue agy's actual conversation — the read-path
     replacement for the retired forwarder's ``_patch_external_session_id``.
 
@@ -1330,7 +1330,7 @@ async def _attach_direct_tmux(socket_path: Path, tmux_target: str) -> _AttachOut
 
     Lower latency than the WebSocket PTY relay because there is no server
     round-trip. ``TMUX`` is dropped from the child environment so a user
-    who runs ``omnigent antigravity`` from inside their own tmux can still
+    who runs ``agent-meow antigravity`` from inside their own tmux can still
     attach to agent-meow's private tmux server. After the attach child
     exits, a ``has-session`` probe distinguishes a user *detach* (session
     still alive) from agy *exiting* (session gone).
@@ -1474,7 +1474,7 @@ async def _launch_antigravity_terminal(
         "spec": spec,
         # Native-bootstrap allowlist marker only: it lets the server's
         # create-terminal gate admit this undeclared terminal name (see
-        # ``omnigent/server/routes/sessions.py`` ``is_native_bootstrap``).
+        # ``agent_meow/server/routes/sessions.py`` ``is_native_bootstrap``).
         #
         # Deliberately NOT ``bridge_inject_dir``: on the runner, that marker
         # triggers Claude-native machinery — it starts the Claude comment relay,
@@ -1710,7 +1710,7 @@ def _launch_is_headless() -> bool:
     """
     Return whether this agy launch is headless (no interactive client attaches).
 
-    ``omnigent antigravity`` attaches the local TTY to the agy tmux terminal so
+    ``agent-meow antigravity`` attaches the local TTY to the agy tmux terminal so
     the user drives agy interactively. agy's default ``request-review``
     permission prompt is fine for that attended case, but it would **hang an
     unattended/headless turn forever** waiting for a terminal answer (sandbox /

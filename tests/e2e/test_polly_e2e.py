@@ -4,18 +4,18 @@ Mock mode: boots a throwaway LOCAL server from this working tree (which carries
 the in-tree ``agent_meow.inner.nessie.policies`` module that polly's guardrails
 resolve server-side), rewrites the polly bundle's executor to use
 ``openai-agents`` harness wired to the mock LLM server, and runs a one-shot
-``omnigent run`` subprocess against it. This exercises the parts a structural
+``agent-meow run`` subprocess against it. This exercises the parts a structural
 spec-load test can't — bundle load, server-side guardrail policy resolution,
 and a turn streaming back through the run path — without requiring real OAuth
 credentials or proprietary model access.
 
-Why a local server (not bare ``omnigent run``): polly's guardrail policies
+Why a local server (not bare ``agent-meow run``): polly's guardrail policies
 (``agent_meow.inner.nessie.policies`` — the package keeps its historical
-name) are resolved SERVER-SIDE when the workflow executes. Bare ``omnigent
+name) are resolved SERVER-SIDE when the workflow executes. Bare ``agent-meow
 run`` routes to the developer's configured default server (the shared
-``omnigent`` prod app), which may not carry the in-tree policy module, so
+``agent-meow`` prod app), which may not carry the in-tree policy module, so
 the turn 500s at event-execution. We therefore stand up a throwaway local
-``omnigent server`` from this working tree - which DOES carry the polly
+``agent-meow server`` from this working tree - which DOES carry the polly
 code - and point ``run --server`` at it.
 
 Mock helpers and fixture names are exported from this module so the sibling
@@ -105,7 +105,7 @@ def _mock_env(mock_llm_server_url: str) -> dict[str, str]:
     binaries) and injects ``OPENAI_BASE_URL`` and ``OPENAI_API_KEY`` so the
     ``openai-agents`` harness routes to the mock LLM server. An isolated
     ``OMNIGENT_CONFIG_HOME`` prevents the spawned process from touching
-    the developer's real omnigent state.
+    the developer's real agent-meow state.
 
     :param mock_llm_server_url: The mock LLM server base URL, e.g.
         ``"http://127.0.0.1:12345"``.  The function appends ``/v1`` so the
@@ -277,7 +277,7 @@ def _mock_polly_spec_dir(
 @pytest.fixture
 def local_polly_server(tmp_path: Path) -> Iterator[str]:
     """
-    Start a throwaway local ``omnigent server`` from this working tree.
+    Start a throwaway local ``agent-meow server`` from this working tree.
 
     The server carries the in-tree ``agent_meow.inner.nessie.policies`` module
     that polly's guardrails resolve server-side, so the workflow doesn't 500
@@ -302,7 +302,7 @@ def local_polly_server(tmp_path: Path) -> Iterator[str]:
         [
             sys.executable,
             "-m",
-            "omnigent",
+            "agent-meow",
             "server",
             "--host",
             "127.0.0.1",
@@ -336,7 +336,7 @@ def test_polly_orchestrator_boots_and_responds(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent run <mock-polly> --server <local> -p <prompt>``
+    ``agent-meow run <mock-polly> --server <local> -p <prompt>``
     exits 0 and emits a non-trivial reply via the mock LLM server.
 
     Proves the bundle loads end-to-end against a server that carries polly's
@@ -372,7 +372,7 @@ def test_polly_orchestrator_boots_and_responds(
         [
             sys.executable,
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(polly_dir),
             "--server",

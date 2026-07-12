@@ -49,7 +49,7 @@ class SqlAlchemyCommentStore(CommentStore):
         """Initialize the SQLAlchemy comments store.
 
         :param storage_location: SQLAlchemy database URI,
-            e.g. ``"sqlite:///omnigent.db"``.
+            e.g. ``"sqlite:///agent_meow.db"``.
         """
         super().__init__(storage_location)
         self._engine = get_or_create_engine(storage_location)

@@ -53,7 +53,7 @@ def _agent_bundle(cwd: str) -> bytes:
     Mirrors the executor block of the conftest test agent so the strict
     validator accepts it; the model is never invoked (output is seeded via
     ``external_assistant_message``). The ``*.yaml`` arcname routes the bundle
-    through the omnigent compat adapter, matching the conftest helpers.
+    through the agent-meow compat adapter, matching the conftest helpers.
 
     :param cwd: Absolute workspace directory the runner should use as root.
     :returns: ``.tar.gz`` bytes for multipart upload.

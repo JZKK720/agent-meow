@@ -7,10 +7,10 @@ functions and surfaced through the ``omnigent_client``
 SDK's ``build_tool_handler``. The legacy ``TOOLS`` list and
 ``execute_tool`` dispatcher are derived from the same
 functions so consumers that hand-construct schemas
-(``examples/frontends/terminal.py``, ``omnigent chat``'s raw-schema
+(``examples/frontends/terminal.py``, ``agent-meow chat``'s raw-schema
 path) keep working without modification.
 
-Used by ``omnigent chat --tools coding`` and the terminal TUI.
+Used by ``agent-meow chat --tools coding`` and the terminal TUI.
 """
 
 from __future__ import annotations
@@ -311,7 +311,7 @@ def get_current_time() -> str:
 # ── Legacy adapter surface ───────────────────────────────
 #
 # ``examples/frontends/terminal.py`` and the legacy
-# ``omnigent chat`` ``_load_tool_handler`` path reach into modules
+# ``agent-meow chat`` ``_load_tool_handler`` path reach into modules
 # in this package for ``TOOLS`` (a list of OpenAI-format
 # schema dicts) and ``execute_tool(name, args) -> str``
 # (sync dispatcher). Both are derived from the
@@ -342,7 +342,7 @@ TOOLS: list[dict[str, object]] = build_tool_handler(_TOOL_FNS).schemas
 def execute_tool(name: str, arguments: dict[str, Any]) -> str:
     """Execute a coding tool by name (legacy sync dispatcher).
 
-    Used by ``examples/frontends/terminal.py`` and ``omnigent chat``'s
+    Used by ``examples/frontends/terminal.py`` and ``agent-meow chat``'s
     raw-schema path. New consumers should construct a
     :class:`~omnigent_client.tools.ToolHandler` via
     :func:`~omnigent_client.tools.build_tool_handler` against

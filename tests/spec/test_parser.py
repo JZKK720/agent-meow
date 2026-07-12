@@ -253,7 +253,7 @@ def test_parse_expand_env_false_keeps_var_references(
     """
     ``expand_env=False`` keeps ``${VAR}`` references as literal strings.
 
-    Used during scaffolding/validation (e.g. ``omnigent create``) where
+    Used during scaffolding/validation (e.g. ``agent-meow create``) where
     env vars may not yet be set in the current process.
     """
     monkeypatch.delenv("MY_API_KEY", raising=False)
@@ -548,7 +548,7 @@ def test_parse_skill_non_utf8_raises_omnigent_error(agent_dir: Path) -> None:
 # Reproduces the exact ``argument-hint:`` line from the upstream
 # Claude Code skill at
 # https://github.com/databricks-field-eng/vibe/blob/main/plugins/fe-databricks-tools/skills/databricks-data-generation/SKILL.md
-# which broke ``omnigent --harness codex`` REPL launch before the
+# which broke ``agent-meow --harness codex`` REPL launch before the
 # host-skill scanner was made tolerant. YAML reads ``[industry]``
 # as a flow sequence and then chokes on the trailing ``[--rows N]``.
 _UPSTREAM_BAD_ARGUMENT_HINT = (
@@ -586,7 +586,7 @@ def test_discover_host_skills_skips_invalid_yaml_frontmatter(
     frontmatter doesn't strictly parse as YAML. This test uses the
     literal upstream ``argument-hint:`` line from the
     ``databricks-data-generation`` Claude Code skill — the exact
-    string that aborted ``omnigent --harness codex`` REPL launch
+    string that aborted ``agent-meow --harness codex`` REPL launch
     in production.
 
     One bad skill must not break REPL launch: it must be logged
@@ -1969,7 +1969,7 @@ def test_parse_llm_profile_survives_consolidation(tmp_path: Path) -> None:
     That rebuild used to omit ``profile``, silently dropping the credentials
     profile. Downstream, the policy/guardrail builder resolves a Databricks
     workspace connection from ``spec.llm.profile``
-    (``omnigent/runtime/policies/builder.py``), so losing it makes those
+    (``agent_meow/runtime/policies/builder.py``), so losing it makes those
     paths fall back to env/default auth instead of the declared profile.
 
     Regression guard: pre-fix ``spec.llm.profile`` is ``None`` here.
@@ -2119,9 +2119,9 @@ def test_parse_executor_config(tmp_path: Path) -> None:
     # Failure means max_iterations is ignored by the parser.
     assert spec.executor.max_iterations == 500
 
-    # Default type should be "omnigent" when not specified.
+    # Default type should be "agent-meow" when not specified.
     # Failure means the parser doesn't apply the default type.
-    assert spec.executor.type == "omnigent"
+    assert spec.executor.type == "agent-meow"
 
 
 def test_parse_executor_defaults(tmp_path: Path) -> None:
@@ -2138,15 +2138,15 @@ def test_parse_executor_defaults(tmp_path: Path) -> None:
     # Failure means the parser uses a different default.
     assert spec.executor.max_iterations == 1000
 
-    # Default type is "omnigent" per ExecutorSpec.
+    # Default type is "agent-meow" per ExecutorSpec.
     # Failure means the parser uses a different default.
-    assert spec.executor.type == "omnigent"
+    assert spec.executor.type == "agent-meow"
 
 
 def test_parse_executor_config_field(tmp_path: Path) -> None:
     """Executor block with a ``config`` sub-block parses string values.
 
-    The ``config`` field is executor-type-specific. For the omnigent
+    The ``config`` field is executor-type-specific. For the agent-meow
     executor it carries ``harness`` / ``profile``. The parser coerces
     values to strings so non-string YAML scalars (numbers, bools)
     round-trip as their string form.
@@ -2154,7 +2154,7 @@ def test_parse_executor_config_field(tmp_path: Path) -> None:
     config = {
         "spec_version": 1,
         "executor": {
-            "type": "omnigent",
+            "type": "agent-meow",
             "config": {
                 "harness": "claude-sdk",
                 "profile": "test-profile",
@@ -2165,8 +2165,8 @@ def test_parse_executor_config_field(tmp_path: Path) -> None:
     spec = parse(tmp_path)
 
     # Failure means the parser silently drops the config block,
-    # breaking omnigent harness selection at executor construction.
-    assert spec.executor.type == "omnigent"
+    # breaking agent-meow harness selection at executor construction.
+    assert spec.executor.type == "agent-meow"
     assert spec.executor.config == {
         "harness": "claude-sdk",
         "profile": "test-profile",
@@ -2177,7 +2177,7 @@ def test_parse_executor_config_missing_defaults_to_empty(
     tmp_path: Path,
 ) -> None:
     """Absent ``executor.config`` block yields an empty dict, not None."""
-    config = {"spec_version": 1, "executor": {"type": "omnigent"}}
+    config = {"spec_version": 1, "executor": {"type": "agent-meow"}}
     (tmp_path / "config.yaml").write_text(yaml.dump(config))
     spec = parse(tmp_path)
 
@@ -2790,7 +2790,7 @@ def test_executor_profile_field_lifted_from_yaml(tmp_path: Path) -> None:
     Top-level ``executor.profile`` lifts into the concrete
     ``ExecutorSpec.profile`` field.
 
-    For ``executor.type == "omnigent"`` the parser additionally
+    For ``executor.type == "agent-meow"`` the parser additionally
     mirrors the value into ``executor.config["profile"]`` so the
     legacy reader (which still consults ``config["profile"]``)
     keeps working until the omnigent-compat sunset lands.
@@ -2801,7 +2801,7 @@ def test_executor_profile_field_lifted_from_yaml(tmp_path: Path) -> None:
         "spec_version": 1,
         "name": "agent",
         "executor": {
-            "type": "omnigent",
+            "type": "agent-meow",
             "profile": "dev",
             "config": {"harness": "claude-sdk"},
         },
@@ -2812,7 +2812,7 @@ def test_executor_profile_field_lifted_from_yaml(tmp_path: Path) -> None:
     # Concrete field populated for every executor type.
     assert spec.executor.profile == "dev"
     # Back-compat mirror into config["profile"] for agent_meow.
-    # Without this the legacy omnigent executor (which still
+    # Without this the legacy agent-meow executor (which still
     # reads config["profile"]) would silently fall back to env
     # vars / DEFAULT section.
     assert spec.executor.config.get("profile") == "dev"
@@ -2833,12 +2833,12 @@ def test_executor_profile_field_lifted_for_non_omnigent(tmp_path: Path) -> None:
 
 
 def test_omnigent_and_default_executor_minimal_configs_still_parse(tmp_path: Path) -> None:
-    """Both legacy ``omnigent`` and default minimal YAMLs continue to parse cleanly."""
+    """Both legacy ``agent-meow`` and default minimal YAMLs continue to parse cleanly."""
     omni_config = {
         "spec_version": 1,
         "name": "omni-agent",
         "executor": {
-            "type": "omnigent",
+            "type": "agent-meow",
             "config": {"harness": "claude-sdk"},
         },
         "llm": {"model": "databricks-claude-sonnet-4-6"},
@@ -2847,7 +2847,7 @@ def test_omnigent_and_default_executor_minimal_configs_still_parse(tmp_path: Pat
     omni_dir.mkdir()
     (omni_dir / "config.yaml").write_text(yaml.dump(omni_config))
     omni_spec = parse(omni_dir)
-    assert omni_spec.executor.type == "omnigent"
+    assert omni_spec.executor.type == "agent-meow"
     assert omni_spec.executor.config.get("harness") == "claude-sdk"
 
     llm_config = {
@@ -2862,7 +2862,7 @@ def test_omnigent_and_default_executor_minimal_configs_still_parse(tmp_path: Pat
     llm_dir.mkdir()
     (llm_dir / "config.yaml").write_text(yaml.dump(llm_config))
     llm_spec = parse(llm_dir)
-    assert llm_spec.executor.type == "omnigent"
+    assert llm_spec.executor.type == "agent-meow"
     assert llm_spec.executor.profile is None
 
 

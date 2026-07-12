@@ -30,7 +30,7 @@ description: >-
 # OpenAI-compatible gateway, or a Databricks workspace — resolving that
 # provider's default Claude model for agent-meow.
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: claude-sdk
 

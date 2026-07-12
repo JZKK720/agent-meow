@@ -694,7 +694,7 @@ def test_materialized_codex_agent_spec_loads_as_valid_omnigent_yaml(
 @pytest.mark.parametrize(
     ("codex_args", "thread_id", "remote_url", "expected"),
     [
-        # Fresh thread over a Unix socket (local ``omnigent codex``
+        # Fresh thread over a Unix socket (local ``agent-meow codex``
         # cold start): no ``resume``/thread id, transport passed verbatim.
         (
             (),
@@ -1683,7 +1683,7 @@ def test_forwarder_rotates_session_on_new_codex_thread_and_posts_to_new_session(
                     "agent_id": "ag_codex",
                     "runner_id": "runner_123",
                     "labels": {
-                        "omnigent.wrapper": "codex-native-ui",
+                        "agent_meow.wrapper": "codex-native-ui",
                         "agent_meow.codex_native.bridge_id": "bridge_shared",
                     },
                 },
@@ -1804,7 +1804,7 @@ def test_forwarder_rotates_session_on_new_codex_thread_and_posts_to_new_session(
         {
             "agent_id": "ag_codex",
             "labels": {
-                "omnigent.wrapper": "codex-native-ui",
+                "agent_meow.wrapper": "codex-native-ui",
                 "agent_meow.codex_native.bridge_id": "bridge_shared",
             },
         },
@@ -6314,7 +6314,7 @@ def test_local_run_prints_resume_hint_after_attach(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    Local ``omnigent codex`` prints a copyable resume hint on exit.
+    Local ``agent-meow codex`` prints a copyable resume hint on exit.
 
     This exercises the run-level call site, not just the formatter:
     a regression that prepares and attaches successfully but forgets
@@ -6407,7 +6407,7 @@ def test_local_run_prints_resume_hint_after_attach(
 
     captured = capsys.readouterr()
     web_ui = "Web UI: http://127.0.0.1:23456/c/conv_codex_fresh"
-    resume_hint = "Resume with: omnigent codex --resume conv_codex_fresh"
+    resume_hint = "Resume with: agent-meow codex --resume conv_codex_fresh"
     assert web_ui in captured.err
     assert resume_hint in captured.err
     assert captured.err.index(web_ui) < captured.err.index(resume_hint)
@@ -6420,7 +6420,7 @@ def test_local_resume_does_not_print_redundant_resume_hint(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    ``omnigent codex --resume`` does not echo another resume prompt.
+    ``agent-meow codex --resume`` does not echo another resume prompt.
 
     This prevents the hint from becoming always-on noise after a user
     has already chosen the conversation id to resume.
@@ -7073,7 +7073,7 @@ async def test_prepare_codex_terminal_via_daemon_live_resume_skips_config_patch(
             return httpx.Response(
                 200,
                 json={
-                    "labels": {"omnigent.wrapper": "codex-native-ui"},
+                    "labels": {"agent_meow.wrapper": "codex-native-ui"},
                     "external_session_id": thread_id,
                 },
             )
@@ -7182,7 +7182,7 @@ async def test_prepare_codex_terminal_hot_resume_does_not_rewrite_rollout(
                 200,
                 json={
                     "labels": {
-                        "omnigent.wrapper": "codex-native-ui",
+                        "agent_meow.wrapper": "codex-native-ui",
                         "agent_meow.codex_native.bridge_id": bridge_id,
                     },
                     "external_session_id": thread_id,

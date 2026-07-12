@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: omnigent-config
+  name: agent-meow-config
   labels:
-    app: omnigent
+    app: agent-meow
 data:
   HOST: "0.0.0.0"
   PORT: "8000"

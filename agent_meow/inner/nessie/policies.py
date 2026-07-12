@@ -4,7 +4,7 @@ Each public function is a :class:`FunctionPolicy` *factory*: it takes the
 YAML ``factory_params`` as keyword arguments and returns an evaluator
 callable ``fn(event[, config]) -> {"result": ..., "reason": ...}``.
 The evaluators run runner-side at tool dispatch
-(``omnigent/runner/policy.py``) and add no server routes. See
+(``agent_meow/runner/policy.py``) and add no server routes. See
 ``designs/NESSIE.md`` "Layer 1 — enforcement".
 """
 
@@ -418,7 +418,7 @@ def spawn_bounds(
     bounded waves rather than an unbounded fleet. The orchestrator dispatches
     every worker through a sub-agent send (``sys_session_send``), so that is the
     default counted tool. The counter resets each turn via the ``reset_turn``
-    hook the runner calls (``omnigent/runner/policy.py``). This is the v1
+    hook the runner calls (``agent_meow/runner/policy.py``). This is the v1
     concurrency bound; true cross-turn live-concurrency accounting is a v1.x
     refinement.
 

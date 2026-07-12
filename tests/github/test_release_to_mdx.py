@@ -45,7 +45,7 @@ def test_linkify_leaves_headings_alone() -> None:
 
 def test_release_body_to_mdx_structure() -> None:
     body = "### Major new features\n\n* Seven harnesses (#1132, #330)\n"
-    page = mod.release_body_to_mdx("v0.3.0", "2026-06-27", body, "omnigent-ai/omnigent")
+    page = mod.release_body_to_mdx("v0.3.0", "2026-06-27", body, "JZKK720/agent-meow")
     assert page.startswith("{/* Auto-generated")
     assert "# v0.3.0" in page
     assert "_Released 2026-06-27_" in page

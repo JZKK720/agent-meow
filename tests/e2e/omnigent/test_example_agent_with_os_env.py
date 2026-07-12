@@ -30,12 +30,12 @@ def test_agent_with_os_env_one_shot(
     mock_llm_server_url: str,
 ) -> None:
     """
-    ``omnigent run agent_with_os_env -p <prompt>`` completes
+    ``agent-meow run agent_with_os_env -p <prompt>`` completes
     cleanly and streams a reply.
 
     Uses the mock LLM server for deterministic responses.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         openai-agents installed.
     :param omnigent_repo_root: Repo root for subprocess cwd.
     :param mock_credentials_env: Mock-LLM env vars.

@@ -106,7 +106,7 @@ def looks_like_test_db(db_uri: str) -> bool:
 
     Accepts in-memory SQLite, file SQLite under a system temp dir, or a
     file-backed SQLite path with ``test`` or ``tests`` as a delimited
-    path/name token. Everything else (a real ``~/.omnigent/chat.db``, a Postgres
+    path/name token. Everything else (a real ``~/.agent_meow/chat.db``, a Postgres
     ``DATABASE_URL``) is treated as a non-test DB.
 
     :param db_uri: A SQLAlchemy-style URI, e.g. ``sqlite:///…`` .

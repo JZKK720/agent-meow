@@ -166,7 +166,7 @@ class EgressProxy:
         through ``OSEnvSandboxSpec.egress_allow_private_destinations``
         so the opt-in is auditable in the spec.
     :param auth_token: When set, every inbound proxy connection MUST
-        carry ``Proxy-Authorization: Basic base64("omnigent:<token>")``
+        carry ``Proxy-Authorization: Basic base64("agent-meow:<token>")``
         or it is rejected with ``407 Proxy Authentication Required``.
         Defends against same-UID cross-helper abuse on platforms
         without per-process network isolation (macOS ``darwin_seatbelt``
@@ -245,7 +245,7 @@ class EgressProxy:
         # value lifted from the request without re-encoding.
         if auth_token is not None:
             self._expected_auth_value = b"Basic " + base64.b64encode(
-                f"omnigent:{auth_token}".encode()
+                f"agent-meow:{auth_token}".encode()
             )
         else:
             self._expected_auth_value = None
@@ -1263,7 +1263,7 @@ class EgressProxy:
         """Send HTTP 407 Proxy Authentication Required.
 
         The ``Proxy-Authenticate`` header advertises Basic with the
-        realm ``omnigent`` so any HTTP client following RFC 7235
+        realm ``agent-meow`` so any HTTP client following RFC 7235
         will resend with credentials lifted from the proxy URL's
         userinfo component. Body is intentionally generic — leaking
         "you forgot the token" vs "you sent the wrong one" gives a
@@ -1272,7 +1272,7 @@ class EgressProxy:
         body = b"407 Proxy Authentication Required\r\n"
         resp = (
             b"HTTP/1.1 407 Proxy Authentication Required\r\n"
-            b'Proxy-Authenticate: Basic realm="omnigent"\r\n'
+            b'Proxy-Authenticate: Basic realm="agent-meow"\r\n'
             b"Content-Type: text/plain\r\n"
             b"Content-Length: " + str(len(body)).encode() + b"\r\n"
             b"Connection: close\r\n"
@@ -1292,7 +1292,7 @@ class EgressProxy:
           proxy was constructed without auth — relied on by tests and
           by deployments that don't run the in-helper config FD path).
         - When set, the request MUST carry ``Proxy-Authorization:
-          Basic <base64(omnigent:<token>)>``. Compared with
+          Basic <base64(agent-meow:<token>)>``. Compared with
           :func:`hmac.compare_digest` so the time-to-mismatch doesn't
           leak the prefix.
         """

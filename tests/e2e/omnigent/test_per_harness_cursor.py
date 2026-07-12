@@ -1,6 +1,6 @@
 """Per-harness live characterization test — cursor harness, one-shot prompt.
 
-Runs ``omnigent run hello_world.yaml --harness cursor -p "..."`` as a real
+Runs ``agent-meow run hello_world.yaml --harness cursor -p "..."`` as a real
 subprocess and asserts structural invariants (exit 0, a non-trivial assistant
 reply). This is the end-to-end gate for the cursor harness: the full path
 from CLI parse → spec materialize → spawn the ``cursor`` harness subprocess
@@ -65,9 +65,9 @@ def test_per_harness_cursor_one_shot(
     omnigent_python: Path,
     omnigent_repo_root: Path,
 ) -> None:
-    """``omnigent run hello_world.yaml --harness cursor -p <prompt>`` works.
+    """``agent-meow run hello_world.yaml --harness cursor -p <prompt>`` works.
 
-    :param omnigent_python: Interpreter with omnigent installed and importable.
+    :param omnigent_python: Interpreter with agent-meow installed and importable.
     :param omnigent_repo_root: Cwd for the subprocess so the YAML spec and
         example tool modules resolve on sys.path.
     """
@@ -92,7 +92,7 @@ def test_per_harness_cursor_one_shot(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--harness",

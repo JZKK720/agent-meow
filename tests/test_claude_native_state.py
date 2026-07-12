@@ -2,7 +2,7 @@
 
 The state module persists per-conversation launch metadata (today
 just the cwd a session was created in) under
-``~/.omnigent/claude-native/<hash>/launch.json`` so the resume
+``~/.agent_meow/claude-native/<hash>/launch.json`` so the resume
 path can detect cwd mismatches that would otherwise make
 ``claude --resume`` exit immediately on launch.
 
@@ -10,7 +10,7 @@ The test session's :func:`_isolate_claude_native_state` autouse
 fixture (defined in ``tests/conftest.py``) redirects the state
 root to a per-session ``tmp_path`` via
 :data:`OMNIGENT_CLAUDE_NATIVE_STATE_DIR`, so these tests never
-touch the developer's real ``~/.omnigent``.
+touch the developer's real ``~/.agent-meow``.
 """
 
 from __future__ import annotations
@@ -100,12 +100,12 @@ def test_write_different_value_keeps_existing(caplog: pytest.LogCaptureFixture) 
     """
     import logging
 
-    # Force the `omnigent` package logger to propagate so caplog's
+    # Force the `agent-meow` package logger to propagate so caplog's
     # root-attached handler captures warnings. Defensive: pollution
     # from a sibling test that runs ``setup_cli_logging`` (which sets
     # ``agent_meow.propagate = False``) can leak into this xdist
     # worker if its cleanup fixture didn't run.
-    logging.getLogger("omnigent").propagate = True
+    logging.getLogger("agent-meow").propagate = True
     write_launch_state("conv_overwrite", "/home/me/repo")
     with caplog.at_level(logging.WARNING):
         write_launch_state("conv_overwrite", "/elsewhere")
@@ -212,9 +212,9 @@ def test_read_malformed_json_returns_none(
     import logging
 
     # See test_write_different_value_keeps_existing — defensive
-    # restore of ``omnigent`` logger propagation in case a sibling
+    # restore of ``agent-meow`` logger propagation in case a sibling
     # test leaked ``propagate = False`` into this xdist worker.
-    logging.getLogger("omnigent").propagate = True
+    logging.getLogger("agent-meow").propagate = True
 
     # Point the state root at a fresh tmp dir so we don't read a
     # malformed file from another test.
@@ -291,7 +291,7 @@ def test_state_root_env_var_redirects_state(
     ``_isolate_claude_native_state`` fixture in ``tests/conftest.py``).
     If the override stopped working, every test that drives the
     wrapper would silently write to the developer's real
-    ``~/.omnigent/``.
+    ``~/.agent_meow/``.
     """
     redirect = tmp_path / "alt-state"
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(redirect))

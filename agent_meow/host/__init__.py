@@ -1,1 +1,1 @@
-"""Host connection management for ``omnigent host``."""
+"""Host connection management for ``agent-meow host``."""

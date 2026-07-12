@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
-const STORAGE_PREFIX = "omnigent:prompt-history";
+const STORAGE_PREFIX = "agent-meow:prompt-history";
 const MAX_ENTRIES = 100;
 
 /**
@@ -21,7 +21,7 @@ const MAX_ENTRIES = 100;
  * @param scope The conversation id the history belongs to, e.g.
  *   ``"conv_abc123"``. When `null`/`undefined` (no bound conversation), returns
  *   the bare legacy key so unscoped surfaces share one stack.
- * @returns The localStorage key, e.g. ``"omnigent:prompt-history:conv_abc123"``.
+ * @returns The localStorage key, e.g. ``"agent-meow:prompt-history:conv_abc123"``.
  */
 function scopedKey(scope: string | null | undefined): string {
   return scope ? `${STORAGE_PREFIX}:${scope}` : STORAGE_PREFIX;

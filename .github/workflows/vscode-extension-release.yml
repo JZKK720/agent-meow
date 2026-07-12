@@ -97,7 +97,7 @@ jobs:
 
       - name: Compute SHA256 checksum
         run: |
-          vsix=$(ls omnigent-vscode-*.vsix)
+          vsix=$(ls agent-meow-vscode-*.vsix)
           sha256sum "$vsix" > "$vsix.sha256"
           echo "Built $vsix" | tee -a "$GITHUB_STEP_SUMMARY"
           cat "$vsix.sha256" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -153,11 +153,11 @@ jobs:
           # commit when the draft is published).
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             # Rerun: refresh assets and the notes on the existing draft.
-            gh release upload "$TAG" omnigent-vscode-*.vsix omnigent-vscode-*.vsix.sha256 \
+            gh release upload "$TAG" agent-meow-vscode-*.vsix agent-meow-vscode-*.vsix.sha256 \
               --repo "$GITHUB_REPOSITORY" --clobber
             gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file /tmp/release_notes.md
           else
-            gh release create "$TAG" omnigent-vscode-*.vsix omnigent-vscode-*.vsix.sha256 \
+            gh release create "$TAG" agent-meow-vscode-*.vsix agent-meow-vscode-*.vsix.sha256 \
               --repo "$GITHUB_REPOSITORY" \
               --draft \
               --target "${{ steps.meta.outputs.sha }}" \

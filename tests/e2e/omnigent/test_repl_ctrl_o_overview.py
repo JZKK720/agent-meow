@@ -12,7 +12,7 @@ opening and painting.
 
 The overview binding is ``Ctrl+O`` (it moved off ``Ctrl+G``, which
 Warp and some terminals intercept for their own search before the
-app sees it — see ``omnigent/repl/_repl.py`` "Why Ctrl+O and not
+app sees it — see ``agent_meow/repl/_repl.py`` "Why Ctrl+O and not
 Ctrl+G"). This file was renamed from ``test_repl_ctrl_g_overview``
 to match.
 
@@ -70,7 +70,7 @@ def test_repl_ctrl_o_overview_toggle(
 
     Uses the mock LLM server for deterministic responses.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         openai-agents installed.
     :param omnigent_repo_root: Working directory for the
         subprocess.

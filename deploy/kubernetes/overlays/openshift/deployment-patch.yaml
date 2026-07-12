@@ -1,14 +1,14 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: omnigent
+  name: agent-meow
 spec:
   template:
     spec:
       securityContext:
         runAsNonRoot: true
       containers:
-        - name: omnigent
+        - name: agent-meow
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

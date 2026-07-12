@@ -21,7 +21,7 @@ def agent_dir(tmp_path: Path) -> Path:
     config = {
         "spec_version": 1,
         "name": "test-agent",
-        "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+        "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
     }
     (tmp_path / "config.yaml").write_text(yaml.dump(config))
     return tmp_path
@@ -50,7 +50,7 @@ def test_load_from_tarball(tmp_path: Path) -> None:
         {
             "spec_version": 1,
             "name": "tarball-agent",
-            "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+            "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
         }
     )
     tar_path = _make_tarball(tmp_path, {"config.yaml": config})
@@ -68,7 +68,7 @@ def test_load_tarball_without_dest_raises(tmp_path: Path) -> None:
         {
             "spec_version": 1,
             "name": "x",
-            "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+            "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
         }
     )
     tar_path = _make_tarball(tmp_path, {"config.yaml": config})
@@ -110,8 +110,8 @@ def test_load_yaml_missing_prompt_raises_actionable_error(tmp_path: Path) -> Non
 def test_load_yaml_with_spec_version_raises_actionable_error(tmp_path: Path) -> None:
     """
     A ``.yaml`` file with ``spec_version`` set looks like an
-    omnigent spec but is sitting alone (no ``config.yaml``
-    bundle dir). The omnigent check rejects it. The error
+    agent-meow spec but is sitting alone (no ``config.yaml``
+    bundle dir). The agent-meow check rejects it. The error
     should explain the bundle-vs-single-file distinction, not
     the misleading tarball message.
     """
@@ -160,7 +160,7 @@ def test_load_from_bytes(tmp_path: Path) -> None:
         {
             "spec_version": 1,
             "name": "bytes-agent",
-            "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+            "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
         }
     )
     tar_path = _make_tarball(tmp_path, {"config.yaml": config})
@@ -183,12 +183,12 @@ def test_load_bytes_without_dest_raises() -> None:
 def test_materialize_bundle_copies_directory_recursively(tmp_path: Path) -> None:
     """
     A directory source is copied recursively into *dest*. This is
-    the path taken by native omnigent agent-image directories
+    the path taken by native agent-meow agent-image directories
     (``config.yaml`` + bundled assets). Every file at any depth
     must survive the copy so ``spec.load(bundle_dir)`` sees the
     full spec tree.
 
-    What breaks if this fails: ``omnigent server --agent my-agent/``
+    What breaks if this fails: ``agent-meow server --agent my-agent/``
     ends up tarballing a partial bundle — the server-side
     extraction would either fail or produce an incomplete spec
     the LLM runs with.
@@ -281,7 +281,7 @@ def test_materialize_bundle_then_load_roundtrip_directory(tmp_path: Path) -> Non
             {
                 "spec_version": 1,
                 "name": "roundtrip-agent",
-                "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+                "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
             }
         )
     )
@@ -295,14 +295,14 @@ def test_materialize_bundle_then_load_roundtrip_directory(tmp_path: Path) -> Non
 def test_materialize_bundle_then_load_roundtrip_yaml(tmp_path: Path) -> None:
     """
     Same end-to-end sanity for the YAML-file branch: materializing
-    a standalone omnigent YAML must produce a directory
+    a standalone agent-meow YAML must produce a directory
     :func:`load` can dispatch through ``_find_omnigent_yaml_in_dir``.
     Gate against regressions that would make the wrap-a-file path
     yield a directory ``load`` rejects.
     """
     source = tmp_path / "hello.yaml"
     # Include an executor block with a harness — the adapter's
-    # validator requires one for executor.type='omnigent'. The
+    # validator requires one for executor.type='agent-meow'. The
     # roundtrip shape we want to prove is "path goes through, spec
     # loads" — not harness-selection logic, which has its own
     # tests in test_omnigent_adapter.py.
@@ -324,12 +324,12 @@ def test_materialize_bundle_then_load_roundtrip_yaml(tmp_path: Path) -> None:
 
     # agent-meow-sourced spec — translator sets executor.type.
     assert spec.name == "hello-from-yaml"
-    assert spec.executor.type == "omnigent"
+    assert spec.executor.type == "agent-meow"
 
 
 def test_load_omnigent_yaml_preserves_use_responses_bool(tmp_path: Path) -> None:
     """
-    ``use_responses: false`` in an omnigent YAML must land as Python ``False``
+    ``use_responses: false`` in an agent-meow YAML must land as Python ``False``
     on ``spec.executor.config["use_responses"]``, not the string ``"false"``.
 
     What breaks if this fails: ``_build_openai_agents_sdk_spawn_env`` encodes the
@@ -471,7 +471,7 @@ def _write_parent_with_sub_agents(
     parent = {
         "spec_version": 1,
         "name": "parent",
-        "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+        "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
         "tools": {"agents": parent_agents},
     }
     (root / "config.yaml").write_text(yaml.dump(parent))
@@ -498,14 +498,14 @@ def test_load_drops_invalid_sub_agent_when_pruning(tmp_path: Path) -> None:
                 "spec_version": 1,
                 "name": "newcomer",
                 "executor": {
-                    "type": "omnigent",
+                    "type": "agent-meow",
                     "config": {"harness": _UNKNOWN_HARNESS},
                 },
             },
             "helper": {
                 "spec_version": 1,
                 "name": "helper",
-                "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+                "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
             },
         },
     )
@@ -529,7 +529,7 @@ def test_load_without_pruning_still_fails_on_invalid_sub_agent(tmp_path: Path) -
                 "spec_version": 1,
                 "name": "newcomer",
                 "executor": {
-                    "type": "omnigent",
+                    "type": "agent-meow",
                     "config": {"harness": _UNKNOWN_HARNESS},
                 },
             },
@@ -558,7 +558,7 @@ def test_load_pruning_keeps_valid_sub_agents_intact(tmp_path: Path) -> None:
             "helper": {
                 "spec_version": 1,
                 "name": "helper",
-                "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+                "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
             },
         },
     )
@@ -580,7 +580,7 @@ def test_load_pruning_logs_warning_for_dropped_sub_agent(
                 "spec_version": 1,
                 "name": "newcomer",
                 "executor": {
-                    "type": "omnigent",
+                    "type": "agent-meow",
                     "config": {"harness": _UNKNOWN_HARNESS},
                 },
             },
@@ -606,7 +606,7 @@ def test_load_pruning_drops_grandchild_but_keeps_valid_child(tmp_path: Path) -> 
             {
                 "spec_version": 1,
                 "name": "parent",
-                "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+                "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
                 "tools": {"agents": ["child"]},
             }
         )
@@ -619,7 +619,7 @@ def test_load_pruning_drops_grandchild_but_keeps_valid_child(tmp_path: Path) -> 
             {
                 "spec_version": 1,
                 "name": "child",
-                "executor": {"type": "omnigent", "config": {"harness": "claude-sdk"}},
+                "executor": {"type": "agent-meow", "config": {"harness": "claude-sdk"}},
                 "tools": {"agents": ["grandchild"]},
             }
         )
@@ -632,7 +632,7 @@ def test_load_pruning_drops_grandchild_but_keeps_valid_child(tmp_path: Path) -> 
             {
                 "spec_version": 1,
                 "name": "grandchild",
-                "executor": {"type": "omnigent", "config": {"harness": _UNKNOWN_HARNESS}},
+                "executor": {"type": "agent-meow", "config": {"harness": _UNKNOWN_HARNESS}},
             }
         )
     )

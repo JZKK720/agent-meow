@@ -4,7 +4,7 @@ E2B sandbox launcher.
 Implements :class:`~?agent_meow.onboarding.sandboxes.base.SandboxLauncher`
 for `E2B <https://e2b.dev>`_ sandboxes on top of the official ``e2b``
 Python SDK. Same posture as the Modal, Daytona, and CoreWeave launchers:
-the SDK is an optional dependency (``pip install 'omnigent[e2b]'``)
+the SDK is an optional dependency (``pip install 'agent-meow[e2b]'``)
 imported lazily, so the provider can be listed and the module probed
 without it.
 
@@ -25,7 +25,7 @@ Notes that shape this launcher:
   ``template`` field names that template — it is NOT a
   ``ghcr.io/...`` reference. The wheel-overlay path
   (:meth:`wheel_install_command`) still applies because the template is
-  built FROM the same host image (omnigent ``0.1.0`` baked).
+  built FROM the same host image (agent-meow ``0.1.0`` baked).
 - **Hard lifetime cap, no idle-stop disable.** E2B sandboxes carry a
   single timeout (default 300 s, account-max 24 h on Pro / 1 h on Hobby)
   with no "never expire" option. :meth:`provision` requests the 24 h max;
@@ -86,7 +86,7 @@ environment at provision time, so secrets never live in config files.
 The server's managed-host config (``sandbox.e2b.env``) takes precedence
 when set."""
 
-DEFAULT_E2B_TEMPLATE: str = "omnigent-host"
+DEFAULT_E2B_TEMPLATE: str = "agent-meow-host"
 """Default E2B template name. Matches the ``--name`` the
 ``deploy/e2b/README.md`` walkthrough builds the host template with, so a
 deployment that followed the guide works without extra config. Override
@@ -208,7 +208,7 @@ def _ensure_sdk() -> None:
     Verify the E2B SDK is importable, with an install hint when not.
 
     Called at the top of every launcher entry point because the SDK is
-    an optional dependency — the base ``omnigent`` install does not
+    an optional dependency — the base ``agent-meow`` install does not
     pull it in.
 
     :raises click.ClickException: When the ``e2b`` package is not
@@ -219,7 +219,7 @@ def _ensure_sdk() -> None:
     except ImportError as exc:
         raise click.ClickException(
             "The E2B SDK is required for the 'e2b' sandbox provider. "
-            "Install it with `pip install 'omnigent[e2b]'`, then set "
+            "Install it with `pip install 'agent-meow[e2b]'`, then set "
             "E2B_API_KEY (create a key at https://e2b.dev/dashboard)."
         ) from exc
 
@@ -411,7 +411,7 @@ class E2BSandboxLauncher(SandboxLauncher):
                     f"E2B sandbox '{sandbox_id}' not found — it may have passed its "
                     "lifetime cap. Managed sessions provision a replacement on the "
                     "next message; for a CLI host create a fresh one with "
-                    "`omnigent sandbox create --provider e2b`."
+                    "`agent-meow sandbox create --provider e2b`."
                 ) from exc
             self._sandboxes[sandbox_id] = handle
         return handle
@@ -577,7 +577,7 @@ class E2BSandboxLauncher(SandboxLauncher):
             raise click.ClickException(
                 f"E2B sandbox '{sandbox_id}' is not running (it may have passed its "
                 "lifetime cap). Create a fresh one with "
-                "`omnigent sandbox create --provider e2b`."
+                "`agent-meow sandbox create --provider e2b`."
             )
 
     def keep_alive(self, sandbox_id: str) -> None:
@@ -700,7 +700,7 @@ class E2BSandboxLauncher(SandboxLauncher):
         handle = self._resolve(sandbox_id)
         try:
             # timeout=0 disables the SDK's default 60s per-command cap — this
-            # backs exec_foreground, which holds `omnigent host` open for the
+            # backs exec_foreground, which holds `agent-meow host` open for the
             # whole session; the cap would otherwise tear it down after 60s.
             process = handle.commands.run(
                 f"bash -lc {shlex.quote(command)}",
@@ -726,7 +726,7 @@ class E2BSandboxLauncher(SandboxLauncher):
 
         :param sandbox_id: Target sandbox.
         :param command: Shell command to execute remotely, e.g.
-            ``"omnigent host --server https://…"``.
+            ``"agent-meow host --server https://…"``.
         :returns: The remote command's exit code.
         :raises KeyboardInterrupt: Re-raised after killing the remote
             process when the user detaches with Ctrl-C.
@@ -749,7 +749,7 @@ class E2BSandboxLauncher(SandboxLauncher):
         template — see
         :func:`~?agent_meow.onboarding.sandboxes.base.host_image_wheel_install_command`
         for the flag rationale. Applies because the E2B template is built
-        FROM the prebaked host image (omnigent ``0.1.0`` baked).
+        FROM the prebaked host image (agent-meow ``0.1.0`` baked).
 
         :param remote_tgz_path: Sandbox path of the shipped tarball,
             e.g. ``"/tmp/oa-wheels.tgz"``.

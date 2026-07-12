@@ -157,7 +157,7 @@ def test_provision_requests_host_image_and_egress(sdk: _State) -> None:
     assert sdk.run_command == ("sleep", "infinity")
     assert sdk.run_kwargs["container_image"] == DEFAULT_HOST_IMAGE
     assert sdk.run_kwargs["network"].egress_mode == "internet"
-    assert sdk.run_kwargs["tags"] == ["omnigent", "managed-x"]
+    assert sdk.run_kwargs["tags"] == ["agent-meow", "managed-x"]
 
 
 def test_provision_image_resolution_order(sdk: _State, monkeypatch: pytest.MonkeyPatch) -> None:

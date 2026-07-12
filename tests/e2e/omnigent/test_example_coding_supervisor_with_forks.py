@@ -55,7 +55,7 @@ def test_coding_supervisor_with_forks_one_shot(
     must be present to launch.  ``openai-agents`` is pure-Python and
     never skips.
 
-    :param omnigent_python: Interpreter with omnigent + the harness's
+    :param omnigent_python: Interpreter with agent-meow + the harness's
         SDK installed.
     :param omnigent_repo_root: Repo root for subprocess cwd.
     :param mock_credentials_env: Env with ``OPENAI_BASE_URL`` /

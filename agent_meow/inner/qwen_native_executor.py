@@ -1,6 +1,6 @@
 """Executor that bridges agent-meow web-chat turns into the native qwen TUI.
 
-It does not launch ``qwen`` — the ``omnigent qwen`` wrapper already launched the
+It does not launch ``qwen`` — the ``agent-meow qwen`` wrapper already launched the
 interactive ``qwen`` TUI in the session terminal (with ``--input-file`` /
 ``--json-file``). Each web-UI turn appends a ``{"type":"submit",...}`` line to
 that input file, which qwen's ``RemoteInputWatcher`` routes through the same
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 class QwenNativeExecutor(Executor):
-    """Harness-side executor for ``omnigent qwen`` web-UI turns.
+    """Harness-side executor for ``agent-meow qwen`` web-UI turns.
 
     Appends each web-UI message as a ``submit`` command to the running qwen TUI's
     input file. Does not stream output (the embedded terminal shows it, and the

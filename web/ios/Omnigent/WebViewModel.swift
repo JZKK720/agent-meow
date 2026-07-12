@@ -66,7 +66,7 @@ final class WebViewModel: ObservableObject {
 
   /// Push the footprint (in CSS px, excluding the OS safe area which the web
   /// layer adds via `env()`) of the native floating bars to the web app. The
-  /// web side folds these into its `--omnigent-inset-*` variables so page
+  /// web side folds these into its `--agent-meow-inset-*` variables so page
   /// content reserves the right amount of space — making native bar dimensions
   /// the single source of truth instead of magic numbers duplicated in CSS.
   func emitInsets(topBar: CGFloat, bottomBar: CGFloat) {

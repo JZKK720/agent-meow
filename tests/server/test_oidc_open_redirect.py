@@ -6,7 +6,7 @@ issues a server-side 302 to it. Without validation that is an open
 redirect — ``/auth/login?return_to=https://evil.example`` would land the
 user on an attacker page under the app's own domain.
 
-These tests pin both halves of the fix in ``omnigent/server/routes/auth.py``:
+These tests pin both halves of the fix in ``agent_meow/server/routes/auth.py``:
 
 1. **Ingest** (``/auth/login``): a malicious ``return_to`` is reduced to
    ``"/"`` *before* it is signed into the state cookie, so the cookie

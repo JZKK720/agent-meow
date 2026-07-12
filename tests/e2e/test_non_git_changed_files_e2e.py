@@ -95,7 +95,7 @@ def non_git_workspace() -> Iterator[Path]:
     """A temporary directory guaranteed to be outside any git repository.
 
     Created under the OS temp root so it is never inside the repo
-    checkout.  The ``omnigent server`` subprocess is started with this
+    checkout.  The ``agent-meow server`` subprocess is started with this
     directory as its CWD so the runner adopts it as its workspace root
     via ``Path.cwd()`` — no env-var override of the server is needed.
 
@@ -138,7 +138,7 @@ def non_git_server(
     non_git_workspace: Path,
     non_git_runner_id: str,
 ) -> Iterator[str]:
-    """Spawn a real ``omnigent server`` whose CWD is a non-git workspace.
+    """Spawn a real ``agent-meow server`` whose CWD is a non-git workspace.
 
     The server is started with ``cwd=non_git_workspace``.  Inside
     ``server()``, ``Path.cwd()`` resolves to ``non_git_workspace`` and

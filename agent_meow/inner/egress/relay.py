@@ -23,7 +23,7 @@ Security:
   every helper start instead of pre-binding a well-known port.
 
 Historical note: a prior revision enforced a
-``Proxy-Authorization: Basic <base64(omnigent:token)>`` header on
+``Proxy-Authorization: Basic <base64(agent-meow:token)>`` header on
 every inbound connection, with the token shared between parent and
 helper via :class:`~?agent_meow.inner.sandbox.SandboxPolicy.
 egress_auth_token`. That mechanism was removed because the token
@@ -32,7 +32,7 @@ was carried on the helper's ``Popen`` argv (visible via
 it the WEAKEST secret in the system — strictly weaker than the
 random-ephemeral-port + fail-loud-bind guarantees the relay still
 provides. The auth path also added per-connection latency for no
-net protection gain. See ``omnigent/inner/os_env.py:
+net protection gain. See ``agent_meow/inner/os_env.py:
 _start_egress_proxy_locked`` for the matching parent-side change.
 
 Lifecycle::

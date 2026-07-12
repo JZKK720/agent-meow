@@ -33,7 +33,7 @@ def test_write_mcp_config_writes_into_bridge_dir_not_workspace(bridge_dir: Path)
     assert path.parent == bridge_dir
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    server = data["mcpServers"]["omnigent"]
+    server = data["mcpServers"]["agent-meow"]
     # Points at the shared stdio relay implemented in claude_native_bridge.
     assert server["args"][:4] == ["-I", "-m", "agent_meow.claude_native_bridge", "serve-mcp"]
     assert str(bridge_dir) in server["args"]
@@ -50,7 +50,7 @@ def test_write_mcp_config_is_valid_for_qwen_mcp_config_flag(bridge_dir: Path) ->
     path = qwen_native_bridge.write_mcp_config(bridge_dir)
     data = json.loads(path.read_text(encoding="utf-8"))
     assert set(data) == {"mcpServers"}
-    assert set(data["mcpServers"]) == {"omnigent"}
+    assert set(data["mcpServers"]) == {"agent-meow"}
 
 
 def test_write_mcp_config_path_is_per_session(
@@ -65,8 +65,8 @@ def test_write_mcp_config_path_is_per_session(
     path_b = qwen_native_bridge.write_mcp_config(bridge_b)
 
     assert path_a != path_b
-    args_a = json.loads(path_a.read_text())["mcpServers"]["omnigent"]["args"]
-    args_b = json.loads(path_b.read_text())["mcpServers"]["omnigent"]["args"]
+    args_a = json.loads(path_a.read_text())["mcpServers"]["agent-meow"]["args"]
+    args_b = json.loads(path_b.read_text())["mcpServers"]["agent-meow"]["args"]
     assert str(bridge_a) in args_a
     assert str(bridge_b) in args_b
     # No cross-contamination: A's config never points at B's bridge dir.

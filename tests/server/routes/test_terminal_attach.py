@@ -672,13 +672,13 @@ async def test_attach_terminal_local_fallback_spawns_tmux(
         raise OSError("stop child path")
 
     exit_exc = RuntimeError("child exited")
-    monkeypatch.setattr("omnigent.terminals.ws_bridge.pty.fork", fake_fork)
+    monkeypatch.setattr("agent_meow.terminals.ws_bridge.pty.fork", fake_fork)
     # Production resolves the absolute tmux path and builds the child env
     # in the parent; the child calls os.execve (no PATH search, explicit
     # env) — patch execve, not execv/execvp.
-    monkeypatch.setattr("omnigent.terminals.ws_bridge.os.execve", fake_execve)
+    monkeypatch.setattr("agent_meow.terminals.ws_bridge.os.execve", fake_execve)
     monkeypatch.setattr(
-        "omnigent.terminals.ws_bridge.os._exit",
+        "agent_meow.terminals.ws_bridge.os._exit",
         lambda code: (_ for _ in ()).throw(exit_exc),
     )
 

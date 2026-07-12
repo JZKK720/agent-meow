@@ -92,11 +92,11 @@ def validate_agent_bundle(
         reject any ``type: function`` policy whose handler is not a
         registered policy handler, before the inner loader
         can resolve and call it. Callers pass ``False`` only for a
-        trusted single-user/local server, where ``omnigent run`` uploads
+        trusted single-user/local server, where ``agent-meow run`` uploads
         the operator's own bundle through this same path and custom
         handlers must keep working (the operator already has code
         execution, so the restriction would add no security). See the
-        call sites in ``omnigent/server/routes/sessions.py``, which gate
+        call sites in ``agent_meow/server/routes/sessions.py``, which gate
         this on :func:`~?agent_meow.server.auth.local_single_user_enabled`.
     :returns: The validated :class:`AgentSpec`.
     :raises OmnigentError: If the bundle is invalid, the spec is

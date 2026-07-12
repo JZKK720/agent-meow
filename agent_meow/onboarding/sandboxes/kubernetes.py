@@ -5,11 +5,11 @@ Implements the managed-launch subset of
 :class:`~?agent_meow.onboarding.sandboxes.base.SandboxLauncher` for an
 agent-runner Pod spawned on demand in a Kubernetes cluster. This module ships
 in the OSS build; the official ``kubernetes`` Python client is an optional
-dependency (``pip install 'omnigent[kubernetes]'``) imported lazily, so the
+dependency (``pip install 'agent-meow[kubernetes]'``) imported lazily, so the
 provider can be listed and the module probed without it.
 
 The model is **entrypoint-as-host**: the Pod's container command IS
-``omnigent host``. :meth:`~KubernetesSandboxLauncher.provision` only RESERVES
+``agent-meow host``. :meth:`~KubernetesSandboxLauncher.provision` only RESERVES
 the Pod name (no Pod yet); :meth:`~KubernetesSandboxLauncher.start_host` then
 creates the Pod — an init container prepares the workspace (``mkdir`` + optional
 ``git clone``) and the main container runs the host under a tiny PID-1 reaper,
@@ -31,12 +31,12 @@ Platform notes that shape this launcher:
   and ``fsGroup`` makes it group-writable.
 - **PID-1 reaper.** The in-sandbox host re-parents orphaned runner processes to
   PID 1, so the container command is a tiny supervisor that spawns
-  ``omnigent host``, reaps any children, and forwards SIGTERM for prompt,
+  ``agent-meow host``, reaps any children, and forwards SIGTERM for prompt,
   graceful termination.
 - **Least privilege.** ``automountServiceAccountToken: false`` keeps the runner
   SA's (absent) rights out of the sandbox, the Pod runs as a non-root user,
   drops all capabilities, and disables privilege escalation. The root
-  filesystem stays writable (the host writes ``/tmp`` and ``~/.omnigent``).
+  filesystem stays writable (the host writes ``/tmp`` and ``~/.agent-meow``).
 - **No CLI bootstrap / port forward.** Like Modal/Daytona/Islo, the launcher
   exists for server-managed hosts only.
 """
@@ -128,7 +128,7 @@ _SANDBOX_MEMORY_LIMIT: str = "4Gi"
 # Labels stamped on every managed runner Pod + its token Secret, so an operator
 # (or a future reconciler) can select omnigent-managed objects for GC.
 _MANAGED_BY_LABEL: str = "app.kubernetes.io/managed-by"
-_MANAGED_BY_VALUE: str = "omnigent"
+_MANAGED_BY_VALUE: str = "agent-meow"
 _ROLE_LABEL: str = "agent_meow.ai/role"
 _ROLE_VALUE: str = "sandbox-host"
 
@@ -145,7 +145,7 @@ _RUN_AS_GID: int = 1000660000
 # Writable HOME for the uid-1000 Pod (the image's /root is unwritable to it).
 # A constant the launcher controls, so the workspace path is known without
 # asking the sandbox. Mounted as an emptyDir shared by both containers.
-_HOME_DIR: str = "/home/omnigent"
+_HOME_DIR: str = "/home/agent_meow"
 
 # Container names. The init container prepares the workspace; the main container
 # runs the host. Single-sourced so the manifest and the log/diagnostic lookups
@@ -197,7 +197,7 @@ _RESERVED_ENV_NAMES: frozenset[str] = frozenset(
 )
 
 # PID-1 reaper, run as the host container's entrypoint. It spawns its argv
-# (``omnigent host …``) as a child, forwards SIGTERM/SIGINT for prompt graceful
+# (``agent-meow host …``) as a child, forwards SIGTERM/SIGINT for prompt graceful
 # shutdown, and loops os.wait() to reap every child — including runner processes
 # the in-sandbox host re-parents to PID 1 — until the host child exits. Stdlib
 # only, so it runs under the image's bare python3.
@@ -247,7 +247,7 @@ def _ensure_sdk() -> None:
     Verify the Kubernetes client is importable, with an install hint when not.
 
     Called at the top of every launcher entry point because the client is an
-    optional dependency — the base ``omnigent`` install does not pull it in.
+    optional dependency — the base ``agent-meow`` install does not pull it in.
 
     :raises click.ClickException: When the ``kubernetes`` package is absent.
     """
@@ -256,7 +256,7 @@ def _ensure_sdk() -> None:
     except ImportError as exc:
         raise click.ClickException(
             "The Kubernetes client is required for the 'kubernetes' sandbox "
-            "provider. Install it with `pip install 'omnigent[kubernetes]'`."
+            "provider. Install it with `pip install 'agent-meow[kubernetes]'`."
         ) from exc
 
 
@@ -371,7 +371,7 @@ def _render_workspace_prep_command(
     start wait with the git error as the container log tail — rather than
     silently leaving the host without its workspace.
 
-    :param workspace: The workspace root to create, e.g. ``"/home/omnigent/workspace"``.
+    :param workspace: The workspace root to create, e.g. ``"/home/agent_meow/workspace"``.
     :param clone_dir: Directory the clone lands in, or ``None`` for no clone.
     :param repo_url: Repository clone URL, or ``None`` for an empty workspace.
     :param repo_branch: Branch to clone (``--branch … --single-branch``), or
@@ -395,12 +395,12 @@ def _render_workspace_prep_command(
 
 def _render_host_command(server_url: str) -> list[str]:
     """
-    Render the main container command that runs ``omnigent host`` under the
+    Render the main container command that runs ``agent-meow host`` under the
     PID-1 reaper.
 
     ``exec`` replaces the login shell with the reaper (so it becomes PID 1, with
     the venv on PATH from the image's profile), and the reaper spawns its argv —
-    ``omnigent host --server <url>`` — as its child. Identity + token reach the
+    ``agent-meow host --server <url>`` — as its child. Identity + token reach the
     host through the Pod environment (literal env + the token ``secretKeyRef``),
     not this command.
 
@@ -409,7 +409,7 @@ def _render_host_command(server_url: str) -> list[str]:
     """
     script = (
         f"exec python3 -c {shlex.quote(_REAPER_SRC)} "
-        f"omnigent host --server {shlex.quote(server_url)}"
+        f"agent-meow host --server {shlex.quote(server_url)}"
     )
     return ["bash", "-lc", script]
 
@@ -474,7 +474,7 @@ def build_pod_manifest(
 
     - An **init container** (:data:`_INIT_CONTAINER_NAME`) creates the workspace
       and clones the repository; the **main container**
-      (:data:`_CONTAINER_NAME`) runs ``omnigent host`` under the PID-1 reaper.
+      (:data:`_CONTAINER_NAME`) runs ``agent-meow host`` under the PID-1 reaper.
       Both share the writable-HOME ``emptyDir``.
     - ``restartPolicy: Never`` — a crashed host should not silently restart with
       a stale launch token; the managed machinery provisions a replacement.
@@ -486,7 +486,7 @@ def build_pod_manifest(
     - Pod + container ``securityContext`` satisfy Pod Security "restricted"
       (runAsNonRoot as the image's ``sandbox`` user :data:`_RUN_AS_UID`, drop ALL
       caps, ``seccompProfile: RuntimeDefault``, no privilege escalation). The
-      root filesystem stays writable (the host writes ``/tmp`` + ``~/.omnigent``).
+      root filesystem stays writable (the host writes ``/tmp`` + ``~/.agent-meow``).
     - ``kubernetes.io/arch: amd64`` is always enforced (the host image is
       amd64-only) and CANNOT be overridden by *node_selector*.
 
@@ -740,7 +740,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
     Server-managed only and entrypoint-as-host: :meth:`provision` reserves a Pod
     name, :meth:`start_host` creates a per-Pod token Secret and a Pod whose init
     container prepares the workspace and whose main container runs
-    ``omnigent host``, and :meth:`terminate` deletes both. All transport rides the
+    ``agent-meow host``, and :meth:`terminate` deletes both. All transport rides the
     official ``kubernetes`` client's ``CoreV1Api`` built into an isolated
     :class:`~kubernetes.client.Configuration` (no global client-state mutation),
     preferring in-cluster ServiceAccount config and falling back to a kubeconfig.
@@ -996,7 +996,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
         """
         Reserve a Pod name for a managed launch — no Pod is created here.
 
-        Entrypoint-as-host: the Pod (which boots running ``omnigent host``) is
+        Entrypoint-as-host: the Pod (which boots running ``agent-meow host``) is
         materialized by :meth:`start_host`, not here. ``provision`` only mints
         the DNS-label-safe Pod name, so the server can register the launch token
         against it BEFORE the Pod exists — closing the host dial-back race by
@@ -1027,7 +1027,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
         :meth:`~?agent_meow.onboarding.sandboxes.base.SandboxLauncher.start_host`
         (there is no exec bootstrap): the Pod's init container creates
         ``<HOME>/workspace`` and clones the repository (when requested), and its
-        main container runs ``omnigent host``, which dials back over the
+        main container runs ``agent-meow host``, which dials back over the
         launch-token tunnel. Because the launcher controls ``HOME``
         (:data:`_HOME_DIR`), the workspace path is known without asking the
         sandbox. The pod-start wait fast-fails (with the container log tail) on a
@@ -1441,7 +1441,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
         click.echo(
             f"  → warning: could not delete Kubernetes {kind} '{name}' after "
             f"{_POD_DELETE_MAX_ATTEMPTS} attempts ({reason}); it may still exist "
-            "and carries the omnigent managed-by/role labels for GC.",
+            "and carries the agent-meow managed-by/role labels for GC.",
             err=True,
         )
 

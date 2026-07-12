@@ -6,13 +6,13 @@ owns the ``opencode serve`` process and SSE forwarder; this spec just binds
 the ``opencode-native`` harness and declares the spawn/terminal surface so
 the web UI renders the session terminal-first.
 
-This module also hosts the interactive local ``omnigent opencode`` CLI wrapper
-(:func:`run_opencode_native`, the analog of ``omnigent codex`` / ``omnigent pi``):
+This module also hosts the interactive local ``agent-meow opencode`` CLI wrapper
+(:func:`run_opencode_native`, the analog of ``agent-meow codex`` / ``agent-meow pi``):
 it ensures a local daemon + runner, creates-or-resumes the ``opencode-native-ui``
 session (whose runner auto-creates the ``opencode serve`` + ``opencode attach``
 terminal), and attaches this TTY directly to that runner-owned tmux pane — the
 same web-UI takeover path, driven from the CLI. The provider/gateway comes from
-the runner's ambient env / ``omnigent setup`` config (a profile-bound spec routes
+the runner's ambient env / ``agent-meow setup`` config (a profile-bound spec routes
 through the Databricks gateway; otherwise OpenAI-/Anthropic-compatible env vars).
 """
 
@@ -169,9 +169,9 @@ def run_opencode_native(  # pragma: no cover
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch the OpenCode TUI in an agent-meow terminal (the ``omnigent opencode`` path).
+    Launch the OpenCode TUI in an agent-meow terminal (the ``agent-meow opencode`` path).
 
-    Mirrors ``omnigent codex`` / ``omnigent pi``: ensure a local daemon + runner,
+    Mirrors ``agent-meow codex`` / ``agent-meow pi``: ensure a local daemon + runner,
     create-or-resume the ``opencode-native-ui`` session (the runner auto-creates
     the ``opencode serve`` + ``opencode attach`` terminal), then attach this TTY
     to that runner-owned tmux pane.
@@ -266,7 +266,7 @@ def _run_with_remote_server(  # pragma: no cover
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the omnigent server at {base_url}. "
+            f"Could not reach the agent-meow server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc

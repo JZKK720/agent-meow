@@ -1,4 +1,4 @@
-"""Tests for the session presence registry (``omnigent/server/presence.py``).
+"""Tests for the session presence registry (``agent_meow/server/presence.py``).
 
 Broadcasts are observed through a real ``session_stream.subscribe``
 collector — the same pub/sub path the SSE route consumes — so every

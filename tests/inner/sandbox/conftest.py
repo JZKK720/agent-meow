@@ -49,14 +49,14 @@ _SANDBOX_EXEC_AVAILABLE = shutil.which("sandbox-exec") is not None
 def _repo_root_for_pythonpath() -> str:
     """
     Return the absolute repo-root path so a sandbox-spawned helper can
-    reach the ``omnigent`` package via ``PYTHONPATH``.
+    reach the ``agent-meow`` package via ``PYTHONPATH``.
 
     Helper subprocesses run with ``cwd`` set to a throwaway tempdir
     in these tests, so they can't ``import agent_meow`` unless the
     repo root is on ``sys.path`` and visible inside the sandbox.
 
     :returns: Absolute path to the repository root containing the
-        ``omnigent/`` package.
+        ``agent_meow/`` package.
     """
     # tests/inner/sandbox/conftest.py → tests/inner/sandbox/ →
     # tests/inner/ → tests/ → repo root.

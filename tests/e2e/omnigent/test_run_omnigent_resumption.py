@@ -1,4 +1,4 @@
-"""End-to-end tests for ``omnigent run`` conversation resumption.
+"""End-to-end tests for ``agent-meow run`` conversation resumption.
 
 Covers ``--continue`` (latest conversation) and ``--resume <id>``
 (specific conversation) across two independent subprocess
@@ -7,8 +7,8 @@ rejects them combined with ``-p/--prompt``), so the resume steps
 pipe the user prompt and ``/quit`` through stdin.
 
 Verifies that a unique nonce sent in run #1 is recovered by the
-LLM in run #2, proving that the persistent omnigent store at
-``$HOME/.omnigent/chat.db`` carries history between invocations.
+LLM in run #2, proving that the persistent agent-meow store at
+``$HOME/.agent_meow/chat.db`` carries history between invocations.
 
 **What breaks if this fails:**
 
@@ -55,7 +55,7 @@ from tests.e2e.agent_meow.conftest import configure_mock_llm
 _MODEL = "mock-model"
 _HARNESS = "openai-agents"
 
-# Subprocess timeout per ``omnigent run`` invocation.
+# Subprocess timeout per ``agent-meow run`` invocation.
 # 180s matches the existing run_omnigent tests' headroom for DBOS
 # sqlite migrations + cold imports + one openai-agents turn.
 _RUN_TIMEOUT_SEC = 180
@@ -88,7 +88,7 @@ def _argv_run_omnigent(
     extra_flags: list[str],
 ) -> list[str]:
     """
-    Build the ``omnigent run`` argv for a one-shot ``-p`` invocation.
+    Build the ``agent-meow run`` argv for a one-shot ``-p`` invocation.
 
     Use for plant steps (no resumption flags). Resume steps need
     :func:`_argv_run_omnigent_interactive` instead, since the CLI rejects
@@ -106,7 +106,7 @@ def _argv_run_omnigent(
     return [
         str(omnigent_python),
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(yaml_path),
         "--model",
@@ -127,7 +127,7 @@ def _argv_run_omnigent_interactive(
     extra_flags: list[str],
 ) -> list[str]:
     """
-    Build the ``omnigent run`` argv for the interactive REPL.
+    Build the ``agent-meow run`` argv for the interactive REPL.
 
     The CLI rejects ``--continue`` / ``--resume`` combined with
     ``-p/--prompt``, so resume tests pipe the prompt through stdin
@@ -143,7 +143,7 @@ def _argv_run_omnigent_interactive(
     return [
         str(omnigent_python),
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(yaml_path),
         "--model",
@@ -159,8 +159,8 @@ def _daemon_log_tails(home: Path, *, tail_chars: int = 3000) -> str:
     """
     Collect the tails of every daemon-side log under the fake ``$HOME``.
 
-    Each ``omnigent run`` subprocess spawns its own local server, host
-    daemon, and runner whose logs land under ``$HOME/.omnigent/logs/``
+    Each ``agent-meow run`` subprocess spawns its own local server, host
+    daemon, and runner whose logs land under ``$HOME/.agent_meow/logs/``
     (``server/``, ``runner/``, ``host-runner/``). When the CLI exits
     nonzero those logs are the only record of WHY — e.g. the local
     server dying mid-startup surfaces in the CLI only as a bare
@@ -172,7 +172,7 @@ def _daemon_log_tails(home: Path, *, tail_chars: int = 3000) -> str:
     :returns: A formatted multi-log report for embedding in an
         assertion message, or a placeholder when no logs exist.
     """
-    logs_dir = home / ".omnigent" / "logs"
+    logs_dir = home / ".agent-meow" / "logs"
     log_files = sorted(logs_dir.rglob("*.log")) if logs_dir.is_dir() else []
     if not log_files:
         return f"(no daemon logs under {logs_dir})"
@@ -195,7 +195,7 @@ def _isolated_env(
     daemon records all land inside the test's temp dir.
 
     Without this isolation the test would write to the
-    developer's real ``~/.omnigent/chat.db`` and could
+    developer's real ``~/.agent_meow/chat.db`` and could
     pick up unrelated prior conversations (or overwrite
     them).
 
@@ -207,8 +207,8 @@ def _isolated_env(
     """
     env = dict(base_env)
     env["HOME"] = str(home)
-    env["OMNIGENT_CONFIG_HOME"] = str(home / ".omnigent")
-    env["OMNIGENT_DATA_DIR"] = str(home / ".omnigent")
+    env["OMNIGENT_CONFIG_HOME"] = str(home / ".agent-meow")
+    env["OMNIGENT_DATA_DIR"] = str(home / ".agent-meow")
     return env
 
 
@@ -279,10 +279,10 @@ def test_run_omnigent_continue_carries_history_across_invocations(
     # The persistent store should now exist under the fake
     # HOME. If it doesn't, ``--continue`` in run #2 would
     # find nothing and fail loud.
-    persistent_db = fake_home / ".omnigent" / "chat.db"
+    persistent_db = fake_home / ".agent-meow" / "chat.db"
     assert persistent_db.is_file(), (
         f"Persistent store was not created at {persistent_db}. "
-        f"Run #1 didn't write to ``~/.omnigent/chat.db`` — "
+        f"Run #1 didn't write to ``~/.agent_meow/chat.db`` — "
         f"either ``--no-session`` slipped in, or "
         f"``_omnigent_persistent_dir`` regressed."
     )
@@ -335,7 +335,7 @@ def test_run_omnigent_continue_with_no_prior_conversation_exits_nonzero(
     ``--continue`` against a fresh ``$HOME`` (no prior
     conversations) exits non-zero with a clean error
     message. Matches the native shape at
-    ``omnigent/inner/cli.py:3082-3084`` ("No saved sessions
+    ``agent_meow/inner/cli.py:3082-3084`` ("No saved sessions
     to continue.").
 
     What breaks if this fails:
@@ -455,7 +455,7 @@ def test_run_omnigent_continue_works_across_oneshot_and_interactive_paths(
     interactive_argv = [
         str(omnigent_python),
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(omnigent_repo_root / "tests" / "resources" / "examples" / "hello_world.yaml"),
         "--model",
@@ -541,7 +541,7 @@ def test_run_omnigent_session_id_pins_the_specific_conversation(
     env = _isolated_env(mock_credentials_env, fake_home)
     nonce_a = _make_nonce()
     nonce_b = _make_nonce()
-    persistent_db = fake_home / ".omnigent" / "chat.db"
+    persistent_db = fake_home / ".agent-meow" / "chat.db"
     # 4 LLM calls: plant A, plant B, recall A (--resume convA), recall B (--resume convB).
     configure_mock_llm(
         mock_llm_server_url,
@@ -758,7 +758,7 @@ def test_run_omnigent_no_session_does_not_pollute_persistent_store(
 ) -> None:
     """
     ``--no-session`` opts back into the per-run tmpdir —
-    the persistent ``$HOME/.omnigent/chat.db`` must NOT
+    the persistent ``$HOME/.agent_meow/chat.db`` must NOT
     be touched by the run.
 
     What breaks if this fails: ``--no-session`` users who
@@ -790,7 +790,7 @@ def test_run_omnigent_no_session_does_not_pollute_persistent_store(
     # ``_omnigent_persistent_dir`` regardless of
     # ``--no-session`` — that's a one-time mkdir, not a
     # write), but the chat.db file MUST NOT.
-    persistent_db = fake_home / ".omnigent" / "chat.db"
+    persistent_db = fake_home / ".agent-meow" / "chat.db"
     assert not persistent_db.exists(), (
         f"--no-session unexpectedly wrote to {persistent_db}. "
         f"Either the ephemeral branch in _build_omnigent_stores "

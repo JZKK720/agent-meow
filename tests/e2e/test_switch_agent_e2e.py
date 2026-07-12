@@ -255,7 +255,7 @@ def _upload_single_file_agent_with_os_env(
     model: str,
     os_env: dict[str, object],
 ) -> str:
-    """Upload a single-file omnigent agent that declares an ``os_env``.
+    """Upload a single-file agent-meow agent that declares an ``os_env``.
 
     Tarballs a minimal ``<name>.yaml`` carrying the given ``os_env`` block and
     uploads it via multipart ``POST /v1/sessions`` (same path the inline-agent

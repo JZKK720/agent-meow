@@ -5,7 +5,7 @@ Verifies that PolicyEngine instances bound to different
 conversations keep their label state separate — no
 cross-conversation leakage via the store.
 
-Load-bearing: omnigent runs multiple concurrent
+Load-bearing: agent-meow runs multiple concurrent
 conversations against the same database. A bug that
 leaked label state across conversations would break every
 per-user IFC guarantee.

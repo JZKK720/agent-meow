@@ -1,6 +1,6 @@
 """Server-side WebSocket endpoint for host tunnels.
 
-Hosts (machines running ``omnigent host``) connect here via
+Hosts (machines running ``agent-meow host``) connect here via
 outbound WebSocket. The server sends control frames
 (launch/stop runner) over the tunnel; the host process spawns
 or terminates runner subprocesses accordingly.

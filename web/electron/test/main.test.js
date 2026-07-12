@@ -49,7 +49,7 @@ describe("workspace chrome injection wiring (src/main.js)", () => {
         "A URL/path gate was reintroduced around the chrome-hide wiring. It must stay",
         "UNCONDITIONAL: the original bug gated on pathname.startsWith(WORKSPACE_UI_PATH),",
         "which skipped injection on auth redirects and path variants and left the workspace",
-        "switcher visible. The CSS targets .omnigent-app (workspace-embedded build only), so",
+        "switcher visible. The CSS targets .agent-meow-app (workspace-embedded build only), so",
         "injecting on every load is a safe no-op elsewhere. See src/workspace-chrome.js.",
       ].join(" "),
     );

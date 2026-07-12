@@ -1,4 +1,4 @@
-"""Tests for the native Antigravity (``omnigent antigravity``) launcher.
+"""Tests for the native Antigravity (``agent-meow antigravity``) launcher.
 
 No live agy or server is started — the terminal-launch POST is driven through
 an ``httpx.MockTransport`` so the request body shape is asserted without a real
@@ -415,7 +415,7 @@ async def test_local_fresh_launch_reattaches_to_runner_autocreated_terminal(
     The LOCAL (non-daemon) prepare path also reattaches to the runner-owned terminal.
 
     Regression for the double-launch/double-forward gap on the default
-    ``omnigent antigravity`` path: the local server spawns a CLI runner, and
+    ``agent-meow antigravity`` path: the local server spawns a CLI runner, and
     binding it triggers the runner's ``_auto_create_antigravity_terminal`` exactly
     as the daemon path does. ``_prepare_antigravity_terminal`` must reattach to that
     runner-owned terminal after the bind — NOT call ``_launch_and_record`` (whose

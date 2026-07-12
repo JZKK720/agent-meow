@@ -89,7 +89,7 @@ def test_materialize_kiro_agent_spec_uses_native_identity(tmp_path: Path) -> Non
 
 
 def test_materialized_kiro_agent_spec_passes_current_validator(tmp_path: Path) -> None:
-    """``omnigent kiro`` must not be rejected as an unknown harness at upload."""
+    """``agent-meow kiro`` must not be rejected as an unknown harness at upload."""
     from agent_meow.spec._omnigent_compat import load_omnigent_yaml
 
     path = _materialize_kiro_agent_spec(tmp_path, model=None)

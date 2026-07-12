@@ -1,6 +1,6 @@
 """TUI→web forwarder for the goose-native harness.
 
-The ``omnigent goose`` wrapper launches the real ``goose session`` TUI in a
+The ``agent-meow goose`` wrapper launches the real ``goose session`` TUI in a
 runner-owned tmux pane, and :mod:`~?agent_meow.goose_native_bridge` injects web-UI
 messages into it. That covers the web→TUI direction, but the *embedded terminal*
 is then the only surface that reflects the agent's work — the agent-meow

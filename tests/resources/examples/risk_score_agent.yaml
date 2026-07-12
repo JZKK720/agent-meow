@@ -18,7 +18,7 @@
 #
 # Usage:
 #   export DATABRICKS_CONFIG_PROFILE=<your-profile>
-#   python -m omnigent tests/resources/examples/risk_score_agent.yaml \
+#   python -m agent-meow tests/resources/examples/risk_score_agent.yaml \
 #       --prompt "Search the web for our competitors, then email a summary."
 #   # Five web searches raise the score to the threshold; the gmail_message_send
 #   # is then escalated to ASK.

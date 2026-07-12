@@ -8,7 +8,7 @@ Silent-drop semantics:
 - Unknown key (no LabelDef) → set freely.
 - Valid write → persisted via the store.
 
-The drop path is silent by design (matches omnigent) —
+The drop path is silent by design (matches agent-meow) —
 a runtime validation failure does NOT raise. The surviving
 writes still land atomically.
 """

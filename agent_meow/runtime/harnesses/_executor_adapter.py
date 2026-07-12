@@ -900,7 +900,7 @@ class ExecutorAdapter(HarnessApp):
             # (``mcp__omnigent__sys_terminal_launch``) but the
             # agent-meow wire shape and persisted conversation items
             # carry the bare form — kept consistent with
-            # ``omnigent/runtime/workflow.py``'s
+            # ``agent_meow/runtime/workflow.py``'s
             # ``_observed_tool_call_sse_dicts`` /
             # ``_build_observed_tool_items`` pair so SSE name and
             # store-item name don't drift.

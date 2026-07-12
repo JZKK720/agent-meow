@@ -29,7 +29,7 @@ export interface OmnigentHostConfig {
    * Maps an web API path (always starting with `/v1`, `/health`, or
    * `/api/...`) to a `Response`. The host implementation is responsible for
    * prefixing the real API base and attaching auth (e.g. the monolith's
-   * `workspaceFetch` against `/ajax-api/2.0/omnigent`). When omitted, the
+   * `workspaceFetch` against `/ajax-api/2.0/agent-meow`). When omitted, the
    * native `fetch` is used with the path unchanged.
    */
   fetcher?: (path: string, init?: RequestInit) => Promise<Response>;
@@ -57,9 +57,9 @@ export interface OmnigentHostConfig {
   transformShareLink?: (relativePath: string) => string;
   /**
    * Path suffix appended to the origin in CLI `--server` instructions shown
-   * in the UI (e.g. `"/api/2.0/omnigent"`). When the host proxies the
+   * in the UI (e.g. `"/api/2.0/agent-meow"`). When the host proxies the
    * agent-meow API behind a path prefix, CLI users need the full URL
-   * (`https://host/api/2.0/omnigent`) — this suffix supplies the
+   * (`https://host/api/2.0/agent-meow`) — this suffix supplies the
    * non-origin part.
    */
   cliServerUrlSuffix?: string;
@@ -118,7 +118,7 @@ export function getOmnigentTransformShareLink(): OmnigentHostConfig["transformSh
 /**
  * The DOM node the embed is mounted into. Used as the portal container for
  * Radix overlays so portaled content (dialogs, popovers, tooltips, menus)
- * lands inside the scoped `.omnigent-app` subtree and inherits its styles.
+ * lands inside the scoped `.agent-meow-app` subtree and inherits its styles.
  * Returns null in standalone mode, where Radix falls back to `document.body`.
  */
 export function setEmbedRoot(el: HTMLElement | null): void {

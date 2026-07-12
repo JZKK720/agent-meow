@@ -164,7 +164,7 @@ def test_configured_harness_map_covers_all_spellings(
         # Kimi Code CLI + alias.
         "kimi",
         "kimi-code",
-        # Native Kimi (``omnigent kimi``) — gates on the kimi CLI.
+        # Native Kimi (``agent-meow kimi``) — gates on the kimi CLI.
         "kimi-native",
         "native-kimi",
         # Native Antigravity (agy) CLI-wrapping harness, both spellings.

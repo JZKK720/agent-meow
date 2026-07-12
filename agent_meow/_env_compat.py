@@ -9,9 +9,9 @@ process startup -- but only when the new name is unset, so an explicitly-set
 ``OMNIGENT_`` value always wins.
 
 The mirror is installed once, as early as possible, from
-``omnigent/__init__.py`` so it runs before any submodule reads the
+``agent_meow/__init__.py`` so it runs before any submodule reads the
 environment. Out-of-package entry points that read env *before* importing the
-``omnigent`` package (the Docker / Databricks deploy entrypoints) call
+``agent-meow`` package (the Docker / Databricks deploy entrypoints) call
 :func:`mirror_legacy_env` directly.
 """
 

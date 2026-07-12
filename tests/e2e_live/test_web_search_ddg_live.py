@@ -22,7 +22,7 @@ Run it on demand::
 
 A FAIL here means DDG drifted: re-capture the golden fixture with
 ``tests/tools/fixtures/refresh_ddg_fixture.py`` and fix the parser in
-``omnigent/tools/builtins/web_search_duckduckgo.py``. Transient throttling
+``agent_meow/tools/builtins/web_search_duckduckgo.py``. Transient throttling
 (429 / 5xx / timeout) SKIPS — it is noise, not drift.
 """
 

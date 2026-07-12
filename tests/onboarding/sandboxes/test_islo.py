@@ -177,7 +177,7 @@ def test_provision_builds_islo_create_payload(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(islo_mod, "_new_sandbox_name", lambda label: "omnigent-fixed")
     fake = _FakeIsloAPI()
     launcher = IsloSandboxLauncher(
-        image="docker.io/me/omnigent-host:latest",
+        image="docker.io/me/agent-meow-host:latest",
         env=["OPENAI_API_KEY", "GIT_TOKEN"],
         gateway_profile="default",
         snapshot_name="warm-host",
@@ -194,7 +194,7 @@ def test_provision_builds_islo_create_payload(monkeypatch: pytest.MonkeyPatch) -
     assert fake.create_payloads == [
         {
             "name": "omnigent-fixed",
-            "image": "docker.io/me/omnigent-host:latest",
+            "image": "docker.io/me/agent-meow-host:latest",
             "vcpus": 4,
             "memory_mb": 8192,
             "init": {"type": "minimal"},

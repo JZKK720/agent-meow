@@ -2129,7 +2129,7 @@ async def _create_clear_replacement_session(
             # The new session keeps the original bridge id (set above) and owns
             # the live terminal/pane in D(original); the old session must NOT
             # share that dir, or resuming it (host wake-on-message /
-            # ``omnigent claude --resume``) would put a second forwarder on the
+            # ``agent-meow claude --resume``) would put a second forwarder on the
             # live transcript (duplicate items) and trip the executor's
             # "no longer active after /clear" guard. ``_auto_create_claude_terminal``
             # recognises this exact marker and cold-resumes the old session in

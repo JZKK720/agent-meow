@@ -375,7 +375,7 @@ def test_agents_sdk_accepts_connection() -> None:
 
 def test_omnigent_executor_accepts_valid_harness() -> None:
     """
-    ``omnigent`` executor with ``config.harness`` set to one of
+    ``agent-meow`` executor with ``config.harness`` set to one of
     the four supported harnesses validates cleanly.
 
     Failure here means every valid spec is rejected — a complete
@@ -384,7 +384,7 @@ def test_omnigent_executor_accepts_valid_harness() -> None:
     spec = _minimal_spec(
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "claude-sdk", "profile": "test-profile"},
         ),
     )
@@ -394,7 +394,7 @@ def test_omnigent_executor_accepts_valid_harness() -> None:
 
 def test_omnigent_executor_accepts_antigravity_native_harness() -> None:
     """
-    ``omnigent`` executor with ``config.harness == "antigravity-native"``
+    ``agent-meow`` executor with ``config.harness == "antigravity-native"``
     validates cleanly.
 
     Failure here means the antigravity-native harness is missing from
@@ -404,7 +404,7 @@ def test_omnigent_executor_accepts_antigravity_native_harness() -> None:
     spec = _minimal_spec(
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "antigravity-native"},
         ),
     )
@@ -414,15 +414,15 @@ def test_omnigent_executor_accepts_antigravity_native_harness() -> None:
 
 def test_omnigent_executor_rejects_missing_harness() -> None:
     """
-    ``omnigent`` executor without ``config.harness`` is rejected.
+    ``agent-meow`` executor without ``config.harness`` is rejected.
 
-    Without the harness selector the omnigent factory cannot
+    Without the harness selector the agent-meow factory cannot
     pick a backend and would silently fall back to a MockExecutor.
     The validator fails loud instead.
     """
     spec = _minimal_spec(
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
-        executor=ExecutorSpec(type="omnigent", config={}),
+        executor=ExecutorSpec(type="agent-meow", config={}),
     )
     result = validate(spec)
     assert not result.valid
@@ -433,13 +433,13 @@ def test_omnigent_executor_rejects_missing_harness() -> None:
 
 def test_omnigent_executor_rejects_unknown_harness() -> None:
     """
-    ``omnigent`` executor with a harness not in the allowed set
+    ``agent-meow`` executor with a harness not in the allowed set
     is rejected with a message naming the allowed harnesses.
     """
     spec = _minimal_spec(
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "totally-bogus"},
         ),
     )
@@ -452,14 +452,14 @@ def test_omnigent_executor_rejects_unknown_harness() -> None:
 
 def test_omnigent_executor_rejects_compaction() -> None:
     """
-    ``omnigent`` executor forbids ``compaction`` — the inner
+    ``agent-meow`` executor forbids ``compaction`` — the inner
     harness manages context internally, so any compaction
     directive from the spec would be silently ignored.
     """
     spec = _minimal_spec(
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "claude-sdk"},
         ),
         compaction=CompactionConfig(),
@@ -573,7 +573,7 @@ def test_mcp_http_with_stdio_field_invalid() -> None:
 # os_env sandbox combo checks.
 # ---------------------------------------------------------------------------
 # These mirror the loader / parser checks so an AgentSpec built
-# programmatically — by tests, the omnigent compat shim, or any
+# programmatically — by tests, the agent-meow compat shim, or any
 # caller skipping the YAML pipeline — still gets the same validation
 # guard before the spec reaches the runtime.
 

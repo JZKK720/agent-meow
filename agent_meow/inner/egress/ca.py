@@ -102,7 +102,7 @@ def _generate_ca(cert_path: Path, key_path: Path) -> None:
     subject = issuer = x509.Name(
         [
             x509.NameAttribute(NameOID.COMMON_NAME, "agent-meow Egress MITM CA"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "omnigent"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "agent-meow"),
         ]
     )
 

@@ -33,7 +33,7 @@ def test_wrap_with_srt_passthrough_when_disabled() -> None:
     ``SandboxConfig(enabled=False)`` for ``LocalPythonTool``
     would still run inside srt's sandbox, violating their
     explicit opt-out. (Stdio MCPs no longer go through this
-    helper post-step-7 — see ``omnigent/tools/mcp.py`` for
+    helper post-step-7 — see ``agent_meow/tools/mcp.py`` for
     the rationale.)
     """
     cmd = ["python", "/tmp/foo.py", "--flag"]

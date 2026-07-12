@@ -64,7 +64,7 @@ class Policy(ABC):
             other identity fields policy callables may want
             to inspect. Structured as a plain dict to keep
             the FunctionPolicy callable contract compatible
-            with omnigent' signature (see POLICIES.md §9.1).
+            with agent-meow' signature (see POLICIES.md §9.1).
         :returns: The policy's single-policy
             :class:`PolicyResult` (``deciding_policy`` left
             ``None`` — engine fills it on composed results).
@@ -84,7 +84,7 @@ class Policy(ABC):
 
         The runtime calls this once per "turn" — defined as one
         user prompt → terminal assistant response cycle, which
-        in omnigent corresponds to one ``_run_agent_loop``
+        in agent-meow corresponds to one ``_run_agent_loop``
         invocation. Sub-iteration steps (tool calls within a
         turn) do NOT trigger a reset.
 

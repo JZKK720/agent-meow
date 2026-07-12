@@ -17,9 +17,9 @@ agent-meow Voice surface
 ├── High-quality ASR (long-form with diarization)
 │   └── VibeVoice-ASR-7B via vLLM — transcribe_audio_high_quality tool
 ├── Builtin tools
-│   └── omnigent/tools/builtins/{transcribe.py, tts.py}
+│   └── agent_meow/tools/builtins/{transcribe.py, tts.py}
 ├── Runner dispatch
-│   └── omnigent/runner/tool_dispatch.py (_execute_voice_tool)
+│   └── agent_meow/runner/tool_dispatch.py (_execute_voice_tool)
 └── Example agents
     ├── examples/voice-agent/config.yaml (TTS + STT)
     └── examples/transcribe-agent/config.yaml (STT only)

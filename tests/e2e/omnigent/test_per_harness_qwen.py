@@ -1,6 +1,6 @@
 """Phase 0 characterization test — qwen harness, one-shot prompt.
 
-Runs ``omnigent run hello_world.yaml --harness qwen --model
+Runs ``agent-meow run hello_world.yaml --harness qwen --model
 <model> -p "..."`` as a real subprocess and snapshots structural
 observations (exit code, stderr cleanliness, assistant text
 length). Captured against current agent-meow; re-run unchanged
@@ -62,10 +62,10 @@ def test_per_harness_qwen_one_shot(
     omnigent_credentials_env: dict[str, str],
 ) -> None:
     """
-    ``omnigent run hello_world.yaml --harness qwen -p <prompt>``
+    ``agent-meow run hello_world.yaml --harness qwen -p <prompt>``
     exits 0 and emits a non-trivial assistant reply.
 
-    :param omnigent_python: Interpreter with omnigent
+    :param omnigent_python: Interpreter with agent-meow
         installed and importable.
     :param omnigent_repo_root: Cwd for the subprocess so the
         YAML spec and example tool modules resolve on sys.path.
@@ -80,7 +80,7 @@ def test_per_harness_qwen_one_shot(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--model",

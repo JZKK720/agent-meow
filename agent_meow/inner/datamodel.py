@@ -350,7 +350,7 @@ class ExecutorSpec:
         ``~/.databrickscfg`` profile), e.g. ``"<your-profile>"``.
         ``None`` when no profile override is needed.
     :param auth: Parsed auth block from the YAML (e.g. api_key +
-        base_url). Carried through so the omnigent spec translator
+        base_url). Carried through so the agent-meow spec translator
         can forward it into the child :class:`ExecutorSpec` without
         re-reading raw YAML.
     """
@@ -632,7 +632,7 @@ class OSEnvSandboxSpec:
     # known cloud-internal IPs that present as public but are
     # routed only inside the tenant — currently Azure WireServer
     # ``168.63.129.16`` (see ``_CLOUD_TRAP_NETWORKS`` in
-    # ``omnigent/inner/egress/proxy.py``). Defends against
+    # ``agent_meow/inner/egress/proxy.py``). Defends against
     # DNS-rebinding attacks where the agent uses a wildcard rule
     # like ``GET *.example.com/**`` and a subdomain it controls
     # resolves to ``127.0.0.1`` (reaching the parent's localhost
@@ -733,7 +733,7 @@ class TerminalEnvSpec:
         native scrollback + selection — the default) or ``"pty"`` (the legacy
         forked-``tmux attach`` PTY stream). ``None`` defers to the global
         default, which is control mode unless ``terminal.transport`` in
-        ``~/.omnigent/config.yaml`` opts out to ``pty``. A per-attach
+        ``~/.agent_meow/config.yaml`` opts out to ``pty``. A per-attach
         ``?transport=`` query overrides both.
     """
 

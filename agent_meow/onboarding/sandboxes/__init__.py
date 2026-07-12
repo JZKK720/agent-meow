@@ -1,7 +1,7 @@
 """
 Sandbox launchers: run agent-meow hosts in remote sandboxes.
 
-Public API for the ``omnigent sandbox`` CLI and anything else that
+Public API for the ``agent-meow sandbox`` CLI and anything else that
 bootstraps a sandbox-backed host. Providers are registered by name in
 :data:`_LAUNCHERS`; launcher modules may be absent from a given
 distribution (e.g. the Databricks Lakebox launcher), in which case the
@@ -60,15 +60,15 @@ _LAUNCHERS: dict[str, str] = {
     "daytona": "agent_meow.onboarding.sandboxes.daytona:DaytonaSandboxLauncher",
     "boxlite": "agent_meow.onboarding.sandboxes.boxlite:BoxliteSandboxLauncher",
     # CoreWeave Sandbox via the official cwsandbox SDK (the
-    # `omnigent[cwsandbox]` extra), imported lazily like modal/daytona.
+    # `agent-meow[cwsandbox]` extra), imported lazily like modal/daytona.
     "cwsandbox": "agent_meow.onboarding.sandboxes.cwsandbox:CWSandboxLauncher",
     "islo": "agent_meow.onboarding.sandboxes.islo:IsloSandboxLauncher",
     # E2B (https://e2b.dev) via the official `e2b` SDK (the
-    # `omnigent[e2b]` extra), imported lazily like modal/daytona.
+    # `agent-meow[e2b]` extra), imported lazily like modal/daytona.
     "e2b": "agent_meow.onboarding.sandboxes.e2b:E2BSandboxLauncher",
     "openshell": "agent_meow.onboarding.sandboxes.openshell:OpenShellSandboxLauncher",
     # On-demand Kubernetes runner Pod via the official kubernetes client (the
-    # `omnigent[kubernetes]` extra), imported lazily like modal/daytona.
+    # `agent-meow[kubernetes]` extra), imported lazily like modal/daytona.
     "kubernetes": "agent_meow.onboarding.sandboxes.kubernetes:KubernetesSandboxLauncher",
 }
 
@@ -80,7 +80,7 @@ def available_providers() -> tuple[str, ...]:
 
     Uses ``find_spec`` (no import side effects), so it is cheap enough
     to call at CLI startup to decide whether to register the
-    ``omnigent sandbox`` command group.
+    ``agent-meow sandbox`` command group.
 
     :returns: Provider names in registration order, e.g.
         ``("lakebox", "modal")`` internally or ``("modal",)`` in the

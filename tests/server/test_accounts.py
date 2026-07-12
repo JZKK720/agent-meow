@@ -335,7 +335,7 @@ def test_accounts_source_accepts_bearer_token_for_cli() -> None:
     """CLI bearer tokens (no cookie) also authenticate against accounts.
 
     The runner / CLI use Authorization: Bearer <jwt> after picking
-    the token up from ~/.omnigent/auth_tokens.json — the same
+    the token up from ~/.agent_meow/auth_tokens.json — the same
     code path the OIDC mode supports.
     """
     from agent_meow.server.oidc import mint_session_cookie
@@ -543,7 +543,7 @@ def test_factory_defaults_to_header_when_env_unset(
     """Unset OMNIGENT_AUTH_PROVIDER (+ no enable switch) → header mode.
 
     The shipped default is single-user, no-login: a bare
-    ``omnigent server`` on a laptop should pop open with no
+    ``agent-meow server`` on a laptop should pop open with no
     multi-user wiring. Multi-user (accounts) is opt-in via
     ``OMNIGENT_AUTH_ENABLED=1`` (see
     :func:`test_factory_accounts_enabled_truthy_enables_accounts`).
@@ -690,7 +690,7 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Redirect $HOME so cli_auth.store_token writes to a temp file.
 
     Without this, the test could write into the developer's real
-    ``~/.omnigent/auth_tokens.json`` — fine, but noisy. The
+    ``~/.agent_meow/auth_tokens.json`` — fine, but noisy. The
     fixture also pins OMNIGENT_ADMIN_CREDENTIALS_PATH so the
     bootstrap's 0600 file lands inside the tmp dir too.
     """
@@ -817,7 +817,7 @@ def test_bootstrap_remote_no_password_needs_setup_no_token(
     assert result.needs_setup is True
     assert result.open_url is None
     assert result.tui_token_written is False
-    assert not (isolated_home / ".omnigent" / "auth_tokens.json").exists()
+    assert not (isolated_home / ".agent-meow" / "auth_tokens.json").exists()
 
 
 def test_bootstrap_loopback_no_password_needs_setup_opens_form(
@@ -845,7 +845,7 @@ def test_bootstrap_init_password_loopback_writes_cli_token_no_autoopen(
     """Supplied password on loopback → admin created, CLI token written, no auto-open.
 
     The flag path creates the admin and mints the loopback CLI token
-    (so ``omnigent run`` is signed in), but does NOT auto-open the
+    (so ``agent-meow run`` is signed in), but does NOT auto-open the
     browser — the operator chose the password and will log in when
     they want.
     """
@@ -873,7 +873,7 @@ def test_bootstrap_refreshes_cli_token_on_returning_loopback_boot(
 
     The daemon spawns the loopback server on a fresh port each time and
     the first-boot token is port-keyed + one-time, so a returning boot
-    must re-mint a token for the current URL — otherwise ``omnigent
+    must re-mint a token for the current URL — otherwise ``agent-meow
     run`` 401s against its own server once an admin exists (the Bug B
     that motivated this). Here the second boot uses a *different* base
     URL (new port) and must still produce a usable token for it.
@@ -900,7 +900,7 @@ def test_bootstrap_refreshes_cli_token_on_returning_loopback_boot(
     assert second.tui_token_written is True
     assert cli_auth.load_token(new_url) is not None, (
         "returning boot must mint a CLI token for the new spawn URL so "
-        "`omnigent run` authenticates"
+        "`agent-meow run` authenticates"
     )
 
 
@@ -926,7 +926,7 @@ def test_resolve_admin_username_falls_back_to_os_user(
 ) -> None:
     """With no env override, the OS user (via getpass) is the admin name.
 
-    This is the laptop-UX win — running ``omnigent server`` as
+    This is the laptop-UX win — running ``agent-meow server`` as
     ``dhruv.gupta`` creates a ``dhruv.gupta`` admin, so the CLI
     and the web UI share one identity from the start (no
     separate "local" / "admin" split).
@@ -1743,17 +1743,17 @@ def test_purge_expired_tokens_drops_only_expired(
     assert redeemed is not None and redeemed.id == "live"
 
 
-# ── CLI: omnigent login accounts flow ───────────────────────────
+# ── CLI: agent-meow login accounts flow ───────────────────────────
 
 
 def test_cli_accounts_login_happy_path_stores_token(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`omnigent login` in accounts mode prompts → POSTs → stores token.
+    """`agent-meow login` in accounts mode prompts → POSTs → stores token.
 
     Mocks the network surface (the /v1/me probe + the /auth/login
     POST) and the token storage (cli_auth.store_token writes to
-    the user's ~/.omnigent/), so the test verifies the CLI
+    the user's ~/.agent_meow/), so the test verifies the CLI
     plumbing without spinning up a server.
 
     Closes the AI-review gap flagged in the first review pass —
@@ -1819,7 +1819,7 @@ def test_cli_accounts_login_happy_path_stores_token(
 
     assert result.exit_code == 0, result.output
     assert "Logged in as alice" in result.output
-    # The store_token side effect lands in ~/.omnigent/auth_tokens.json.
+    # The store_token side effect lands in ~/.agent_meow/auth_tokens.json.
     assert cli_auth.load_token("http://localhost:8000") == "fake.jwt.token"
 
 
@@ -1960,11 +1960,11 @@ def test_setup_writes_loopback_cli_token(
 ) -> None:
     """First-run web admin-claim mints the loopback CLI token.
 
-    The local CUJ: ``omnigent run`` (re)spawns the local server in
+    The local CUJ: ``agent-meow run`` (re)spawns the local server in
     accounts mode with no admin, so the operator claims it via the
     browser form. ``/auth/setup`` must also mint the loopback CLI token
     (the fixture's base URL is ``http://localhost:8000`` — loopback) so
-    the in-flight ``omnigent run`` is signed in immediately instead of
+    the in-flight ``agent-meow run`` is signed in immediately instead of
     401-ing until the next server boot.
     """
     from agent_meow import cli_auth

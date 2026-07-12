@@ -1,9 +1,9 @@
-"""Read/write the kind-typed model-provider config in ``~/.omnigent/config.yaml``.
+"""Read/write the kind-typed model-provider config in ``~/.agent_meow/config.yaml``.
 
 For open-source users who route coding agents through a non-Databricks
 endpoint (a vendor API key, a subscription CLI login, a gateway like
 OpenRouter, a local Ollama, or a Databricks profile), the ``providers:``
-block in ``~/.omnigent/config.yaml`` is the source of truth for the
+block in ``~/.agent_meow/config.yaml`` is the source of truth for the
 active model selection. Defaults are **per family**: a provider marked
 **``default: true``** is the default for the family/families it serves,
 so a Claude (``anthropic``) default and a Codex (``openai``) default
@@ -90,7 +90,7 @@ _PI_FALLBACK_FAMILIES = (ANTHROPIC_FAMILY, OPENAI_FAMILY)
 # too (a Databricks AI Gateway is pi-consumable — Pi speaks its Anthropic
 # surface), with the actual gateway capability validated at resolution time.
 # A ``subscription`` (CLI login, unusable outside its own CLI) and ``bedrock``
-# (native-``omnigent claude`` only) can never drive pi. Resolution: an
+# (native-``agent-meow claude`` only) can never drive pi. Resolution: an
 # explicit pi default wins; otherwise pi falls back to the anthropic then
 # openai family default, skipping the non-pi kinds (see
 # :func:`default_provider_for_harness`).
@@ -242,7 +242,7 @@ class FamilyConfig:
         :attr:`api_key_ref` and :attr:`auth_command`.
     :param api_key_ref: A reference to a secret stored outside the config
         file: ``"env:<VAR>"`` (read from the environment) or
-        ``"keychain:<name>"`` (read from the omnigent secret store — see
+        ``"keychain:<name>"`` (read from the agent-meow secret store — see
         :func:`resolve_secret` and :mod:`~?agent_meow.onboarding.secrets`),
         e.g. ``"keychain:anthropic"``. Mutually exclusive with
         :attr:`api_key` and :attr:`auth_command`.
@@ -430,9 +430,9 @@ def resolve_secret(ref: str) -> str:
     - ``"env:<VAR>"`` — read ``<VAR>`` from the environment.
     - a bare inline ``$VAR`` / ``${VAR}`` reference — expanded via
       :func:`os.path.expandvars` with an unresolved-variable check.
-    - ``"keychain:<name>"`` — read ``<name>`` from the omnigent secret
+    - ``"keychain:<name>"`` — read ``<name>`` from the agent-meow secret
       store (OS keychain, else a ``0600`` JSON file). The store is
-      populated by ``omnigent setup --no-internal-beta`` — see
+      populated by ``agent-meow setup --no-internal-beta`` — see
       :mod:`~?agent_meow.onboarding.secrets`.
 
     :param ref: The secret reference, e.g. ``"env:OPENROUTER_API_KEY"``,
@@ -452,7 +452,7 @@ def resolve_secret(ref: str) -> str:
         if value is None:
             raise OmnigentError(
                 f"no stored secret named {name!r}; run "
-                "`omnigent setup --no-internal-beta` to set it.",
+                "`agent-meow setup --no-internal-beta` to set it.",
                 code=ErrorCode.INVALID_INPUT,
             )
         return value
@@ -479,18 +479,18 @@ def resolve_secret(ref: str) -> str:
 
 
 def _config_path() -> str:
-    """Return the path to the global omnigent config file.
+    """Return the path to the global agent-meow config file.
 
     Respects ``$OMNIGENT_CONFIG_HOME`` for test isolation (matching the
     rest of the onboarding layer).
 
     :returns: Path to ``config.yaml``, e.g.
-        ``"/home/u/.omnigent/config.yaml"``.
+        ``"/home/u/.agent_meow/config.yaml"``.
     """
     config_home = os.environ.get("OMNIGENT_CONFIG_HOME")
     if config_home:
         return os.path.join(config_home, "config.yaml")
-    return os.path.join(os.path.expanduser("~"), ".omnigent", "config.yaml")
+    return os.path.join(os.path.expanduser("~"), ".agent-meow", "config.yaml")
 
 
 def _load_config() -> dict[str, object]:
@@ -780,7 +780,7 @@ def _parse_provider(name: str, raw: dict[str, object]) -> ProviderEntry:
     # The (possibly family-scoped) default flag — resolved per-kind below
     # once the served families are known. The repo's YAML loader strips
     # implicit scalar resolvers (the Norway-problem guard in
-    # omnigent/inner/loader.py), so a YAML ``default: true`` arrives as
+    # agent_meow/inner/loader.py), so a YAML ``default: true`` arrives as
     # the string ``"true"``; the programmatic config-writing path uses a
     # real bool / family-name / list — :func:`_parse_default_families`
     # accepts all forms. The per-family "at most one default per family"
@@ -915,7 +915,7 @@ def _parse_provider(name: str, raw: dict[str, object]) -> ProviderEntry:
 
 
 def load_config() -> dict[str, object]:
-    """Load the global ``~/.omnigent/config.yaml`` mapping.
+    """Load the global ``~/.agent_meow/config.yaml`` mapping.
 
     Public entry point for callers (e.g. the runtime spawn-env builders)
     that need to pass the parsed config into :func:`load_providers` /
@@ -934,7 +934,7 @@ def load_config() -> dict[str, object]:
 def load_providers(config: dict[str, object]) -> dict[str, ProviderEntry]:
     """Parse the ``providers:`` block of *config* into named entries.
 
-    :param config: The parsed ``~/.omnigent/config.yaml`` mapping, e.g.
+    :param config: The parsed ``~/.agent_meow/config.yaml`` mapping, e.g.
         ``{"providers": {"anthropic": {"kind": "key", ...}}, "auth": {...}}``.
     :returns: Providers keyed by name, e.g.
         ``{"anthropic": ProviderEntry(...)}``. Empty when no ``providers:``
@@ -1022,7 +1022,7 @@ def provider_families(entry: ProviderEntry) -> frozenset[str]:
         profile.
     """
     if entry.kind == BEDROCK_KIND:
-        # Bedrock mode is native-``omnigent claude`` only — the in-process /
+        # Bedrock mode is native-``agent-meow claude`` only — the in-process /
         # gateway harnesses (incl. pi) reject it (see
         # configure_agent_harness_with_provider). Surface only its real
         # family (anthropic), never the pi scope.
@@ -1140,7 +1140,7 @@ def default_provider_for_harness(config: dict[str, object], harness: str) -> Pro
     families: an explicit :data:`PI_SURFACE` default wins; otherwise it
     falls back to the ``anthropic`` then ``openai`` family default,
     skipping ``subscription`` and ``bedrock`` defaults (a CLI login is
-    unusable outside its own CLI, and ``bedrock`` is native-``omnigent
+    unusable outside its own CLI, and ``bedrock`` is native-``agent-meow
     claude`` only — routing pi to either fails). A ``cli-config`` default is
     skipped UNLESS it is a pi-consumable Databricks AI Gateway (see
     :func:`_cli_config_serves_pi`): such a gateway exposes an Anthropic
@@ -1173,7 +1173,7 @@ def default_provider_for_harness(config: dict[str, object], harness: str) -> Pro
             continue
         # Subscription logins live in the claude/codex CLI's own login, which
         # an unmapped harness doesn't wrap; a bedrock provider is
-        # native-``omnigent claude`` only (configure_agent_harness_with_provider
+        # native-``agent-meow claude`` only (configure_agent_harness_with_provider
         # raises for it). Neither can serve pi, so skip them and fall through —
         # otherwise a bedrock Claude default would turn a working pi run (own
         # login) into a hard error.
@@ -1446,7 +1446,7 @@ def provider_entry_settings(
     """Build a ``{"providers": {name: entry}}`` dict to merge into config.
 
     Packages a single provider entry ready to deep-merge into
-    ``~/.omnigent/config.yaml`` under ``providers:``. When *make_default*
+    ``~/.agent_meow/config.yaml`` under ``providers:``. When *make_default*
     is set, the entry carries ``default: true`` — but the caller must still
     clear the flag on any other provider (use :func:`set_default_provider`
     over the merged result), since a deep-merge does not touch siblings.

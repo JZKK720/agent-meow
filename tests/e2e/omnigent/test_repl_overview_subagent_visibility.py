@@ -124,7 +124,7 @@ def test_repl_overview_subagent_visibility(
     that is gated to the main session in ``_repl.py`` — so there is no
     executor-harness assertion.)
 
-    :param omnigent_python: Interpreter with omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow installed.
     :param omnigent_repo_root: Working directory for the subprocess.
     :param mock_credentials_env: Mock-LLM env vars.
     :param mock_llm_server_url: Mock server URL.

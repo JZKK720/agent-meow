@@ -154,7 +154,7 @@ async def _post_native_idle(
         return AgentSpec(
             spec_version=1,
             name="reviewer",
-            executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+            executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
         )
 
     app = create_runner_app(
@@ -312,7 +312,7 @@ async def test_replayed_idle_after_drain_does_not_redeliver(
         return AgentSpec(
             spec_version=1,
             name="reviewer",
-            executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+            executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
         )
 
     app = create_runner_app(

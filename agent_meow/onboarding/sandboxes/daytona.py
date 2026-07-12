@@ -5,12 +5,12 @@ Implements the managed-launch subset of
 :class:`~?agent_meow.onboarding.sandboxes.base.SandboxLauncher` for
 `Daytona <https://www.daytona.io>`_ sandboxes. This module ships in the
 OSS build; the Daytona SDK itself is an optional dependency
-(``pip install 'omnigent[daytona]'``) imported lazily, so the provider
+(``pip install 'agent-meow[daytona]'``) imported lazily, so the provider
 can be listed and the module probed without it.
 
 Supports both server-managed hosts (``host_type="managed"`` sessions —
 ``prepare`` / ``provision`` / ``run`` / ``terminate``) and the CLI
-bootstrap flow (``omnigent sandbox create`` / ``connect`` — file
+bootstrap flow (``agent-meow sandbox create`` / ``connect`` — file
 shipping via the SDK's filesystem API, foreground attach via a PTY
 session). The one unimplemented primitive is ``stream_exec``: its only
 consumer is the in-sandbox App OAuth login, which requires
@@ -68,7 +68,7 @@ HOST_IMAGE_ENV_VAR: str = "OMNIGENT_DAYTONA_HOST_IMAGE"
 """Environment variable overriding
 :data:`~?agent_meow.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE` for
 Daytona sandboxes, e.g. an org-internal copy of the host image
-(``ghcr.io/<your-org>/omnigent-host:latest``)."""
+(``ghcr.io/<your-org>/agent-meow-host:latest``)."""
 
 SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_DAYTONA_SANDBOX_ENV"
 """Environment variable naming (comma-separated) the SERVER-process
@@ -112,7 +112,7 @@ def _ensure_sdk() -> None:
     Verify the Daytona SDK is importable, with an install hint when not.
 
     Called at the top of every launcher entry point because the SDK is
-    an optional dependency — the base ``omnigent`` install does not
+    an optional dependency — the base ``agent-meow`` install does not
     pull it in.
 
     :raises click.ClickException: When the ``daytona`` package is not
@@ -123,7 +123,7 @@ def _ensure_sdk() -> None:
     except ImportError as exc:
         raise click.ClickException(
             "The Daytona SDK is required for the 'daytona' sandbox "
-            "provider. Install it with `pip install 'omnigent[daytona]'`, "
+            "provider. Install it with `pip install 'agent-meow[daytona]'`, "
             "then set DAYTONA_API_KEY (create a key at "
             "https://app.daytona.io)."
         ) from exc
@@ -142,7 +142,7 @@ def _drive_foreground_pty(pty: PtyHandle, sandbox_id: str, command: str) -> int:
         connected; the SDK waits for the connection during creation).
     :param sandbox_id: Sandbox the session runs in, for error messages.
     :param command: Shell command to execute remotely, e.g.
-        ``"omnigent host --server https://…"``.
+        ``"agent-meow host --server https://…"``.
     :returns: The remote command's exit code.
     :raises click.ClickException: When the session ends without
         reporting an exit code (e.g. a dropped websocket).
@@ -193,7 +193,7 @@ class DaytonaSandboxLauncher(SandboxLauncher):
         Initialize the launcher.
 
         :param image: Optional registry image reference to provision
-            sandboxes from, e.g. ``"docker.io/me/omnigent-host:latest"``
+            sandboxes from, e.g. ``"docker.io/me/agent-meow-host:latest"``
             — the server's managed-host ``sandbox.daytona.image``
             config. ``None`` resolves :data:`HOST_IMAGE_ENV_VAR` and
             falls back to the official
@@ -500,7 +500,7 @@ class DaytonaSandboxLauncher(SandboxLauncher):
 
         :param sandbox_id: Target sandbox.
         :param command: Shell command to execute remotely, e.g.
-            ``"omnigent host --server https://…"``.
+            ``"agent-meow host --server https://…"``.
         :returns: The remote command's exit code.
         :raises click.ClickException: When the PTY session cannot be
             created or ends without reporting an exit code.
@@ -558,7 +558,7 @@ class DaytonaSandboxLauncher(SandboxLauncher):
 
         # Hand-rolled bounded retry on purpose: the retry condition is
         # one provider-specific exception in one place, and tenacity is
-        # not an omnigent dependency — pulling it in for a 3-iteration
+        # not an agent-meow dependency — pulling it in for a 3-iteration
         # loop fails the cost/benefit test.
         for attempt in range(_TERMINATE_CONFLICT_RETRIES):
             try:

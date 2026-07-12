@@ -31,7 +31,7 @@ _logger = logging.getLogger(__name__)
 
 class ClaudeNativeExecutor(Executor):
     """
-    Harness-side executor for ``omnigent claude`` web UI turns.
+    Harness-side executor for ``agent-meow claude`` web UI turns.
 
     It does not launch Claude itself. The native wrapper has already
     launched Claude Code in the session terminal with the agent-meow
@@ -203,7 +203,7 @@ def _latest_user_text(messages: list[Message], bridge_dir: Path) -> str:
 
     :param messages: Conversation history in executor message shape.
     :param bridge_dir: Bridge directory path for writing attachment
-        files, e.g. ``Path("/tmp/omnigent/claude-native/<digest>")``.
+        files, e.g. ``Path("/tmp/agent_meow/claude-native/<digest>")``.
     :returns: Concatenated latest user message text, or ``""`` when
         no user text is present.
     """
@@ -227,7 +227,7 @@ def _content_to_text(content: Any, bridge_dir: Path) -> str:
         contain ``input_image`` blocks with an ``image_url`` data URI
         or ``input_file`` blocks with a ``file_data`` data URI.
     :param bridge_dir: Bridge directory path for writing attachment
-        files, e.g. ``Path("/tmp/omnigent/claude-native/<digest>")``.
+        files, e.g. ``Path("/tmp/agent_meow/claude-native/<digest>")``.
     :returns: Plain text content with file-path references prepended
         for any materialized attachments.
     """
@@ -250,7 +250,7 @@ def _content_to_text(content: Any, bridge_dir: Path) -> str:
                     # Marker format is load-bearing: the transcript mirrors
                     # this text back as the durable user message, and title
                     # seeding strips lines matching _ATTACHMENT_MARKER_RE in
-                    # omnigent/entities/conversation.py. Keep in sync.
+                    # agent_meow/entities/conversation.py. Keep in sync.
                     attachment_lines.append(f"[Attached: {path}]")
         parts = attachment_lines + text_parts
         return "\n\n".join(parts)

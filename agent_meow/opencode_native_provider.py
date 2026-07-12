@@ -205,8 +205,8 @@ def build_opencode_omnigent_mcp_server(
     :param bridge_dir: OpenCode-native bridge directory (must hold ``bridge.json``
         + ``tool_relay.json``).
     :param python_executable: Python to run ``serve-mcp`` with; ``None`` uses the
-        runner interpreter (has ``omnigent`` importable).
-    :returns: A one-entry ``mcp`` block ``{"omnigent": {type:"local", …}}``.
+        runner interpreter (has ``agent-meow`` importable).
+    :returns: A one-entry ``mcp`` block ``{"agent-meow": {type:"local", …}}``.
     """
     from agent_meow.claude_native_bridge import build_mcp_config
 

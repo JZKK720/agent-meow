@@ -2,7 +2,7 @@ name: "Run integration suite"
 description: >
   Run the tests/integration journey suite exactly as the integration.yml gate
   does (mock LLM, one wrapped harness per invocation). When `server_version`
-  is set, the omnigent SERVER subprocess is pinned to that released tag while
+  is set, the agent-meow SERVER subprocess is pinned to that released tag while
   the client, runner, and tests stay on the checked-out ref — the
   server-version backwards-compat configuration. Shared verbatim by
   integration.yml (normal gate) and server-compat.yml (backcompat jobs) so the
@@ -107,7 +107,7 @@ runs:
         uv venv --python 3.12 "$venv"
         uv pip install --python "$venv/bin/python" \
           -e "$src" -e "$src/sdks/python-client" -e "$src/sdks/ui"
-        "$venv/bin/omnigent" --version
+        "$venv/bin/agent-meow" --version
         echo "OMNIGENT_COMPAT_SERVER_PYTHON=$venv/bin/python" >> "$GITHUB_ENV"
         echo "OMNIGENT_COMPAT_SERVER_VERSION=${tag#v}" >> "$GITHUB_ENV"
 
@@ -130,7 +130,7 @@ runs:
         uv venv --python 3.12 "$venv"
         uv pip install --python "$venv/bin/python" \
           -e "$src" -e "$src/sdks/python-client" -e "$src/sdks/ui"
-        "$venv/bin/omnigent" --version
+        "$venv/bin/agent-meow" --version
         echo "OMNIGENT_COMPAT_RUNNER_PYTHON=$venv/bin/python" >> "$GITHUB_ENV"
         echo "OMNIGENT_COMPAT_RUNNER_VERSION=${tag#v}" >> "$GITHUB_ENV"
 
@@ -140,7 +140,7 @@ runs:
         HARNESS: ${{ inputs.harness }}
         MODEL: ${{ inputs.model }}
         WORKERS: ${{ inputs.workers }}
-        INTEGRATION_TMP_BASE: /tmp/omnigent-integration-${{ github.run_id }}-${{ inputs.harness }}
+        INTEGRATION_TMP_BASE: /tmp/agent-meow-integration-${{ github.run_id }}-${{ inputs.harness }}
         CLAUDE_CODE_STREAM_CLOSE_TIMEOUT: "60000"
         OMNIGENT_CLAUDE_SDK_NO_SANDBOX: ${{ inputs.harness == 'claude-sdk' && '1' || '' }}
         PYTEST_PROGRESS_LOG_DIR: ${{ github.workspace }}/artifacts/progress-${{ inputs.harness }}
@@ -172,8 +172,8 @@ runs:
       with:
         name: integration-server-logs-${{ inputs.harness }}-${{ github.run_id }}${{ inputs.artifact_suffix }}
         path: |
-          /tmp/omnigent-integration-${{ github.run_id }}-${{ inputs.harness }}/**/server.log
-          /tmp/omnigent-integration-${{ github.run_id }}-${{ inputs.harness }}/**/runner.log
+          /tmp/agent-meow-integration-${{ github.run_id }}-${{ inputs.harness }}/**/server.log
+          /tmp/agent-meow-integration-${{ github.run_id }}-${{ inputs.harness }}/**/runner.log
         retention-days: 7
         if-no-files-found: warn
 

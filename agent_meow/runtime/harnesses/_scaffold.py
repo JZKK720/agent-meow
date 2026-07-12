@@ -76,7 +76,7 @@ _logger = logging.getLogger(__name__)
 
 # Cadence for ``response.heartbeat`` SSE events while a turn is
 # streaming. Matches the existing agent-meow cadence at
-# ``omnigent/runtime/workflow.py:3732`` — 15 seconds is short
+# ``agent_meow/runtime/workflow.py:3732`` — 15 seconds is short
 # enough that ~3 missed intervals (45s) is a reasonable
 # dead-detection threshold for AP, long enough that the
 # per-process emit overhead is negligible.
@@ -477,7 +477,7 @@ class TurnContext:
         future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
         self._pending_tool_calls[call_id] = future
         # Build the function_call item shape that AP's resolver
-        # expects (per omnigent/entities/conversation.py:FunctionCallData
+        # expects (per agent_meow/entities/conversation.py:FunctionCallData
         # plus the API-shape common fields ``id``, ``type``,
         # ``status``).
         item: dict[str, Any] = {
@@ -1018,11 +1018,11 @@ class HarnessApp:
         The harness scaffold is per-conversation: a single
         subprocess serves exactly one ``conversation_id`` (set on
         ``app.state.conversation_id`` by the runner — see
-        ``omnigent/runtime/harnesses/_runner.py``). Any
+        ``agent_meow/runtime/harnesses/_runner.py``). Any
         session-keyed request whose path does not match is
         addressed at the wrong subprocess; failing with 404 is the
         same shape the agent-meow side uses for unknown conversations
-        (per ``omnigent/server/routes/sessions.py``).
+        (per ``agent_meow/server/routes/sessions.py``).
 
         Boot ordering: ``app.state.conversation_id`` is set in
         ``_runner._load_harness_app`` AFTER the FastAPI app is
@@ -1747,7 +1747,7 @@ async def _handle_omnigent_error(_request: Request, exc: OmnigentError) -> Respo
     correct HTTP status.
 
     Mirrors AP's exception handler at
-    ``omnigent/server/app.py``.
+    ``agent_meow/server/app.py``.
 
     :param _request: Unused (FastAPI signature requirement).
     :param exc: The application error to render.

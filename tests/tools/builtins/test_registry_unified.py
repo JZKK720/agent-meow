@@ -176,7 +176,7 @@ def test_async_builtins_override_dispatch_async_or_are_runner_dispatched() -> No
     would crash the in-process agent-meow loop. After the DBOS removal,
     a class of async-namespace tools (``sys_call_async``,
     ``sys_read_inbox``, ``sys_cancel_async``) are dispatched by
-    the runner via ``omnigent/runner/tool_dispatch.py`` —
+    the runner via ``agent_meow/runner/tool_dispatch.py`` —
     ``dispatch_async`` is never reached on those, so leaving them
     on the base implementation is correct. Pin the contract: an
     async tool is permitted iff it either overrides

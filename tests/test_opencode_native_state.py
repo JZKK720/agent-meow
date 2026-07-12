@@ -49,7 +49,7 @@ def test_conflicting_write_keeps_original(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     monkeypatch.setenv("OMNIGENT_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
-    logging.getLogger("omnigent").propagate = True
+    logging.getLogger("agent-meow").propagate = True
     write_launch_state("conv_abc", "/original")
     with caplog.at_level(logging.WARNING):
         write_launch_state("conv_abc", "/other")

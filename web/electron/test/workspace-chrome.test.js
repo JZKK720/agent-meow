@@ -40,7 +40,7 @@ describe("applyWorkspaceChromeHideCss", () => {
         "URL, but it did not fire for a non-/ml/omnigents path. A URL/path guard has likely",
         "been reintroduced. That is the original bug: gating injection by path left the",
         "Databricks workspace switcher visible on auth redirects and path variants. Injection",
-        "must stay unconditional — the CSS only targets .omnigent-app (workspace-embedded",
+        "must stay unconditional — the CSS only targets .agent-meow-app (workspace-embedded",
         "build), so it is a harmless no-op elsewhere.",
       ].join(" "),
     );

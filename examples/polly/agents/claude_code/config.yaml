@@ -3,7 +3,7 @@ name: claude_code
 description: Claude Code coding sub-agent — implements, cross-vendor reviews, or explores a scoped task in its own worktree.
 
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: claude-native
     # Headless workers can't answer ApprovalCards, and managed Claude

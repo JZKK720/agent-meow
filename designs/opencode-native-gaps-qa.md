@@ -48,8 +48,8 @@ builtins (`sys_session_*`, `sys_agent_*`, `load_skill`, `web_fetch`,
   a builtin — e.g. "list my other sessions" (`sys_session_list`) or "load the
   X skill" (`load_skill`).
 - Expected:
-  - opencode's `opencode.json` `mcp` block has an `omnigent` `{type:"local"}`
-    entry whose command is `… -m omnigent.claude_native_bridge serve-mcp
+  - opencode's `opencode.json` `mcp` block has an `agent-meow` `{type:"local"}`
+    entry whose command is `… -m agent_meow.claude_native_bridge serve-mcp
     --bridge-dir <bridge>`; the bridge dir holds `bridge.json` (token) +
     `tool_relay.json` (the relay tool list + URL).
   - The model can call the builtin and gets a real result (proxied through the
@@ -68,7 +68,7 @@ builtins (`sys_session_*`, `sys_agent_*`, `load_skill`, `web_fetch`,
 - Expected:
   - opencode's per-session `opencode.json` contains the agent servers in the
     `mcp` block (stdio→`local`, http→`remote` with the bearer header) **alongside**
-    the `omnigent` relay entry, **and** `permission:{"*":"ask"}`.
+    the `agent-meow` relay entry, **and** `permission:{"*":"ask"}`.
   - The MCP tools are visible/callable by the model.
   - Because `permission:ask` is set, the tool call routes through the agent-meow
     TOOL_CALL **policy engine** (see §7) rather than running silently.
@@ -186,7 +186,7 @@ to `/policies/evaluate` → the cost-budget gate reads the session cost (from th
 
 ### 7b. Policy plugin — REQUEST + TOOL_RESULT phases  [needs web: live turns]
 
-The `omnigent-policy.js` plugin (loaded via `opencode.json` `plugin:[…]`) bridges
+The `agent-meow-policy.js` plugin (loaded via `opencode.json` `plugin:[…]`) bridges
 opencode's lifecycle hooks to `/policies/evaluate` for the phases the reactive
 `permission.asked` path can't reach. Verify the plugin loaded: opencode's startup
 log should mention the plugin, and `opencode.json` should list it under `plugin`.

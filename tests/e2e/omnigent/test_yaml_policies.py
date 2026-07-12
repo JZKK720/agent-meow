@@ -82,7 +82,7 @@ def test_yaml_policies_blocks_canada_input(
     model: str,
 ) -> None:
     """
-    ``omnigent run agent_with_policies.yaml --harness <harness>
+    ``agent-meow run agent_with_policies.yaml --harness <harness>
     -p "Name the provinces of Canada."`` exits 0 and stdout
     contains the denial marker.
 
@@ -134,7 +134,7 @@ def test_yaml_policies_blocks_canada_input(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--harness",

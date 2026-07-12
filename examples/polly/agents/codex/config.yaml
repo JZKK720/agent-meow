@@ -3,7 +3,7 @@ name: codex
 description: Codex coding sub-agent — implements, cross-vendor reviews, or explores a scoped task in its own worktree.
 
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: codex-native
     # YOLO: headless workers can't answer approval prompts, so run Codex

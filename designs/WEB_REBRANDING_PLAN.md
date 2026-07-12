@@ -1,4 +1,4 @@
-# Comprehensive Front-End Rebranding Plan: Omnigent → agent-meow (ColorFire / Meow)
+# Comprehensive Front-End Rebranding Plan: agent-meow → agent-meow (ColorFire / Meow)
 
 **Date:** 2026-07-11  
 **Scope:** `web/` directory — all CSS, components, assets, Electron shell, PWA, i18n  
@@ -9,9 +9,9 @@
 
 ## Executive Summary
 
-The current `web/` frontend is the inherited Omnigent UI with a **lavender/pink brand accent** (`#df3c85`) and the **Otto starfish mascot**. The rebrand replaces these with the agent-meow identity system:
+The current `web/` frontend is the inherited agent-meow UI with a **lavender/pink brand accent** (`#df3c85`) and the **Otto starfish mascot**. The rebrand replaces these with the agent-meow identity system:
 
-| Dimension | Current (Omnigent) | Target (agent-meow) |
+| Dimension | Current (agent-meow) | Target (agent-meow) |
 |---|---|---|
 | Brand accent | `#df3c85` (pink) | `#E8651A` ColorFire ember / `#5B8DEF` Meow sky |
 | App-shell gradient | Near-white lavender/pink drift | Warm white `#FFFBF5` (ColorFire) / cool white `#F5F8FC` (Meow) |
@@ -21,9 +21,9 @@ The current `web/` frontend is the inherited Omnigent UI with a **lavender/pink 
 | Typography | Geist Mono + system sans | Inter + Noto Sans SC + JetBrains Mono |
 | Share button | Hardcoded pink gradient | Brand-primary gradient (ember/sky) |
 | Text selection | Pink `#f22286` | Brand-primary |
-| CSS var prefix | `--omnigent-*` | `--agentmeow-*` (with compat shim) |
+| CSS var prefix | `--agent-meow-*` | `--agentmeow-*` (with compat shim) |
 | PWA theme_color | `#0d1218` | `--brand-bg-dark` (warm/cool dark) |
-| Service worker | `omnigent-pwa-${version}` | `agentmeow-pwa-${version}` |
+| Service worker | `agent-meow-pwa-${version}` | `agentmeow-pwa-${version}` |
 
 The plan is organized into **8 phases**, each scoped to a single PR:
 
@@ -31,7 +31,7 @@ The plan is organized into **8 phases**, each scoped to a single PR:
 2. **Mascot replacement** (OttoIcon → MeowCatIcon, OttoEyes → cat eye-tracking)
 3. **Static assets** (favicon, PWA icons, platform-assets logos)
 4. **Share button + selection** (hardcoded pink → brand tokens)
-5. **CSS variable rename** (`--omnigent-*` → `--agentmeow-*`)
+5. **CSS variable rename** (`--agent-meow-*` → `--agentmeow-*`)
 6. **Service worker + PWA manifest** (cache name, theme_color)
 7. **Electron shell branding** (logos, window title, package metadata)
 8. **Font stack migration** (Geist Mono → Inter + Noto Sans SC + JetBrains Mono)
@@ -396,7 +396,7 @@ All `.imc-*` rules that reference `var(--brand-accent)` will **automatically** p
 
 ---
 
-## Phase 5: CSS Variable Rename (`--omnigent-*` → `--agentmeow-*`)
+## Phase 5: CSS Variable Rename (`--agent-meow-*` → `--agentmeow-*`)
 
 **Effort:** M (2–3 hours)  
 **Risk:** Medium — many references across CSS + TS; requires compat shim
@@ -407,48 +407,48 @@ All `.imc-*` rules that reference `var(--brand-accent)` will **automatically** p
 
 | Current | New |
 |---|---|
-| `--omnigent-header-height` | `--agentmeow-header-height` |
-| `--omnigent-safe-top` | `--agentmeow-safe-top` |
-| `--omnigent-safe-bottom` | `--agentmeow-safe-bottom` |
-| `--omnigent-native-top-bar` | `--agentmeow-native-top-bar` |
-| `--omnigent-native-bottom-bar` | `--agentmeow-native-bottom-bar` |
-| `--omnigent-top-bar-visible` | `--agentmeow-top-bar-visible` |
-| `--omnigent-bottom-bar-visible` | `--agentmeow-bottom-bar-visible` |
-| `--omnigent-inset-top` | `--agentmeow-inset-top` |
-| `--omnigent-inset-bottom` | `--agentmeow-inset-bottom` |
-| `--omnigent-viewport-height` | `--agentmeow-viewport-height` |
+| `--agent-meow-header-height` | `--agentmeow-header-height` |
+| `--agent-meow-safe-top` | `--agentmeow-safe-top` |
+| `--agent-meow-safe-bottom` | `--agentmeow-safe-bottom` |
+| `--agent-meow-native-top-bar` | `--agentmeow-native-top-bar` |
+| `--agent-meow-native-bottom-bar` | `--agentmeow-native-bottom-bar` |
+| `--agent-meow-top-bar-visible` | `--agentmeow-top-bar-visible` |
+| `--agent-meow-bottom-bar-visible` | `--agentmeow-bottom-bar-visible` |
+| `--agent-meow-inset-top` | `--agentmeow-inset-top` |
+| `--agent-meow-inset-bottom` | `--agentmeow-inset-bottom` |
+| `--agent-meow-viewport-height` | `--agentmeow-viewport-height` |
 
 **Note:** `--agentmeow-android-safe-area-*` already uses the new prefix — no change needed.
 
 ### 5.2 Compatibility shim
 
-Add a compatibility block at the end of `:root` so any code that still references `--omnigent-*` keeps working during the migration:
+Add a compatibility block at the end of `:root` so any code that still references `--agent-meow-*` keeps working during the migration:
 
 ```css
 :root {
-  /* Compat: --omnigent-* aliases for the new --agentmeow-* tokens.
+  /* Compat: --agent-meow-* aliases for the new --agentmeow-* tokens.
      Remove after all consumers are updated. */
-  --omnigent-header-height: var(--agentmeow-header-height);
-  --omnigent-safe-top: var(--agentmeow-safe-top);
+  --agent-meow-header-height: var(--agentmeow-header-height);
+  --agent-meow-safe-top: var(--agentmeow-safe-top);
   /* ... etc for each renamed var ... */
 }
 ```
 
 ### 5.3 Update TypeScript consumers
 
-**Files that read `--omnigent-*` via `getComputedStyle`:**
+**Files that read `--agent-meow-*` via `getComputedStyle`:**
 
 | File | Variable | Notes |
 |---|---|---|
-| `web/src/lib/nativeInsets.ts` | `--omnigent-native-top-bar`, `--omnigent-native-bottom-bar` | Updates native bridge |
-| `web/src/hooks/useIOSViewportLock.ts` | `--omnigent-viewport-height` | Updates viewport lock |
-| `web/src/components/PageScroll.tsx` | `--omnigent-header-height`, `--omnigent-inset-*` | Updates scroll insets |
+| `web/src/lib/nativeInsets.ts` | `--agent-meow-native-top-bar`, `--agent-meow-native-bottom-bar` | Updates native bridge |
+| `web/src/hooks/useIOSViewportLock.ts` | `--agent-meow-viewport-height` | Updates viewport lock |
+| `web/src/components/PageScroll.tsx` | `--agent-meow-header-height`, `--agent-meow-inset-*` | Updates scroll insets |
 
 ### 5.4 Update CSS class consumers
 
-**Classes that reference `--omnigent-*` in CSS:**
+**Classes that reference `--agent-meow-*` in CSS:**
 
-Search `web/src/index.css` for all `var(--omnigent-*)` references and update to `var(--agentmeow-*)`.
+Search `web/src/index.css` for all `var(--agent-meow-*)` references and update to `var(--agentmeow-*)`.
 
 ### 5.5 Tests
 
@@ -468,7 +468,7 @@ Search `web/src/index.css` for all `var(--omnigent-*)` references and update to 
 **File:** `web/sw-src/sw.js`
 
 ```diff
-- const CACHE_NAME = `omnigent-pwa-${BUILD_VERSION}`;
+- const CACHE_NAME = `agent-meow-pwa-${BUILD_VERSION}`;
 + const CACHE_NAME = `agentmeow-pwa-${BUILD_VERSION}`;
 ```
 
@@ -516,7 +516,7 @@ Already has `productName: "agent-meow"` and `appId: "io.cubecloud.agentmeow.desk
 
 **File:** `web/electron/src/main.js`
 
-Search for any hardcoded "Omnigent" strings in window titles, about panels, or notification text. The file already uses "agent-meow" in comments — verify there are no user-facing "Omnigent" strings.
+Search for any hardcoded "agent-meow" strings in window titles, about panels, or notification text. The file already uses "agent-meow" in comments — verify there are no user-facing "agent-meow" strings.
 
 ### 7.3 Preload bridge naming
 
@@ -530,7 +530,7 @@ The preload exposes `window.omnigentDesktop` and `window.omnigentSetup`. These a
 | `window.omnigentSetup` | `window.agentmeowSetup` |
 | `window.omnigentFind` | `window.agentmeowFind` |
 | `window.omnigentUrl` | `window.agentmeowUrl` |
-| IPC channels `omnigent:*` | `agentmeow:*` |
+| IPC channels `agent-meow:*` | `agentmeow:*` |
 
 **Web-side consumers:**
 
@@ -541,7 +541,7 @@ The preload exposes `window.omnigentDesktop` and `window.omnigentSetup`. These a
 | `web/src/lib/nativeInsets.ts` | reads from native bridge |
 | `web/electron/src/url.js` | `window.omnigentUrl` |
 
-**Recommendation:** Keep the bridge names as-is for now (they are internal, not user-facing) and rename in a separate coordination PR. The `omnigent` CLI binary name is also still the pip package name — renaming it is a Phase 2 (v0.7) task per `colorfire-branding-index.md` §2.
+**Recommendation:** Keep the bridge names as-is for now (they are internal, not user-facing) and rename in a separate coordination PR. The `agent-meow` CLI binary name is also still the pip package name — renaming it is a Phase 2 (v0.7) task per `colorfire-branding-index.md` §2.
 
 ### 7.4 Logo references in setup page
 
@@ -705,13 +705,13 @@ Phase 8 (Fonts) ──────── independent
 
 These are **not** changed in the web rebranding:
 
-1. **`omnigent` CLI binary name** — the pip package is still `omnigent` for SDK compatibility; rename is Phase 2 (v0.7) per `colorfire-branding-index.md` §2
+1. **`agent-meow` CLI binary name** — the pip package is still `agent-meow` for SDK compatibility; rename is Phase 2 (v0.7) per `colorfire-branding-index.md` §2
 2. **`omnigent_*` env vars** — deferred to v0.7 with compat shim
-3. **`omnigent.*` label keys** in conversation labels (`omnigent.wrapper`, `omnigent.ui`, etc.) — these are API protocol keys, not user-facing brand strings
-4. **`omnigent-client` / `omnigent-ui-sdk`** package names — SDK dependency pins
+3. **`agent_meow.*` label keys** in conversation labels (`agent_meow.wrapper`, `agent_meow.ui`, etc.) — these are API protocol keys, not user-facing brand strings
+4. **`agent-meow-client` / `agent-meow-ui-sdk`** package names — SDK dependency pins
 5. **Embed component name** `OmnigentApp` / `OmnigentHostConfig` in `web/src/embed.tsx` — public API surface for embed consumers, rename is a breaking change
-6. **localStorage keys** like `omnigent:lastLoginUsername`, `omnigent:last-agent-id`, `omnigent.sessionDrafts` — renaming would lose saved user state; add aliases if needed
-7. **Backend `omnigent/` module** — this plan is web-only
+6. **localStorage keys** like `agent-meow:lastLoginUsername`, `agent-meow:last-agent-id`, `agent_meow.sessionDrafts` — renaming would lose saved user state; add aliases if needed
+7. **Backend `agent_meow/` module** — this plan is web-only
 8. **i18n locale strings** — already say "agent-meow" in both `en.json` and `zh-CN.json`; no changes needed
 
 ---

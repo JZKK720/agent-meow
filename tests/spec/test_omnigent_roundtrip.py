@@ -28,11 +28,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.spec.omnigent import (
+from agent_meow.spec.agent-meow import (
     agent_def_to_agent_spec,
     # NOTE: imported from the same module as the reverse
     # direction — both functions ship in
-    # ``omnigent/spec/agent_meow.py`` per the design. Phase 1
+    # ``agent_meow/spec/agent_meow.py`` per the design. Phase 1
     # adds this symbol; phase 2 consumes it here.
     agent_spec_to_agent_def,
 )
@@ -41,7 +41,7 @@ from agent_meow.spec.omnigent import (
 @pytest.fixture()
 def hello_world_yaml(tmp_path: Path) -> Path:
     """
-    Minimal omnigent YAML — name + prompt only. Round-trip
+    Minimal agent-meow YAML — name + prompt only. Round-trip
     checks that the adapter does not silently add or lose
     fields on the trivial case.
     """
@@ -101,19 +101,19 @@ def function_tool_yaml(tmp_path: Path) -> Path:
 
 def _roundtrip(yaml_path: Path) -> None:
     """
-    Load the YAML via omnigent' loader, translate to an
+    Load the YAML via agent-meow' loader, translate to an
     :class:`AgentSpec`, translate back, and assert equality on the
     fields the bidirectional translator is contracted to preserve.
 
     **Lossy by design.** :class:`AgentSpec` does not model every
-    omnigent :class:`FunctionTool` field — ``description``,
+    agent-meow :class:`FunctionTool` field — ``description``,
     ``input_schema``, ``output_schema``, ``scopes``, and
     ``catalog_path`` are dropped on the way to AgentSpec and not
     recovered on the way back. We compare on the structural fields
     we DO promise to round-trip: ``name``, ``prompt``, ``executor``,
     and the per-tool ``(name, callable identity)`` pair.
 
-    :param yaml_path: Path to an omnigent YAML fixture.
+    :param yaml_path: Path to an agent-meow YAML fixture.
     """
     from agent_meow.inner.loader import load_agent_def
 
@@ -128,7 +128,7 @@ def _roundtrip(yaml_path: Path) -> None:
     # :func:`_infer_harness_from_model` enriches ``harness`` from
     # an empty string to a concrete value when the YAML declares
     # only a model. That's intended behavior (mirrors pure
-    # omnigent' CLI auto-pick) — the round-trip contract is
+    # agent-meow' CLI auto-pick) — the round-trip contract is
     # "every field the caller explicitly set must survive", not
     # "no field can gain a value".
     assert recovered.executor.model == original.executor.model
@@ -155,8 +155,8 @@ def test_roundtrip_hello_world_is_incomplete_for_omnigent(
     A bare ``name`` + ``prompt`` YAML (no executor block) does
     NOT round-trip — the synthesized AgentSpec has no harness or
     model, which agent-meow' strict spec rejects on the way
-    back. This is intentional: the omnigent validator requires
-    a harness when ``executor.type == "omnigent"``, and that
+    back. This is intentional: the agent-meow validator requires
+    a harness when ``executor.type == "agent-meow"``, and that
     requirement is the reason the round-trip surfaces as a
     fail-loud error rather than producing nonsense.
 

@@ -4,7 +4,7 @@ Registers alongside the sub-agent dispatch surface so an orchestrator
 can deterministically learn which models each worker (and it itself)
 can run before passing an ``args.model`` to ``sys_session_send``. The
 enumeration logic lives in :mod:`~?agent_meow.model_catalog`; the runner
-dispatches this tool locally (see ``omnigent/runner/tool_dispatch.py``)
+dispatches this tool locally (see ``agent_meow/runner/tool_dispatch.py``)
 and the in-process path runs the same enumerator via :meth:`invoke`.
 """
 

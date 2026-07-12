@@ -17,7 +17,7 @@ translation for ``catalog_path:`` tool entries and the
 ``executor`` harness/model resolution. UC tool *parameters* are
 author-supplied in the YAML and are NOT resolved against a
 workspace at registration time (see
-``omnigent/runner/uc_function.py`` — metadata fetch at agent-build
+``agent_meow/runner/uc_function.py`` — metadata fetch at agent-build
 time is called out there as a future enhancement), so loading the
 def is a faithful, infra-free check of everything the spec layer
 owns.
@@ -57,7 +57,7 @@ def test_agent_with_uc_tools_structure(
     def, the same way other can't-run-on-a-laptop examples are
     guarded via :func:`validate_agent_def_structure`.
 
-    :param omnigent_python: Interpreter with omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow installed.
     :param omnigent_repo_root: Repo root for subprocess cwd so
         the example's dotted module paths resolve.
     """

@@ -2985,7 +2985,7 @@ def test_clean_pi_env_passes_pi_and_proxy_config(monkeypatch) -> None:
 
 
 def test_clean_pi_env_includes_omnigent_session_marker(monkeypatch) -> None:
-    """The ``OMNIGENT`` session marker survives the Pi env scrub.
+    """The ``agent-meow`` session marker survives the Pi env scrub.
 
     The marker (set once on the runner) must reach the Pi CLI so the
     shell commands Pi runs can detect they are inside an agent-meow
@@ -3488,7 +3488,7 @@ def test_run_turn_bridge_extension_carries_live_server_token(monkeypatch) -> Non
 # ``usage`` object carries ``input`` / ``output`` / ``cacheRead`` /
 # ``cacheWrite`` / ``totalTokens`` token counts (plus a ``cost`` breakdown),
 # and the message itself carries the resolved ``model``. The executor maps
-# those onto omnigent's usage schema so pi sub-agent cost is priced the same
+# those onto agent-meow's usage schema so pi sub-agent cost is priced the same
 # way as ``claude-sdk`` and ``codex`` turns. These tests assert the MAPPED
 # values, not just presence, so a wrong field mapping fails loud.
 # ---------------------------------------------------------------------------
@@ -3523,7 +3523,7 @@ def _pi_assistant_message_with_usage(
             "cacheWrite": cache_write,
             "totalTokens": total_tokens,
             # pi also forwards a per-field cost breakdown; the executor
-            # ignores it (omnigent prices from token counts), but include
+            # ignores it (agent-meow prices from token counts), but include
             # it so the fixture matches the real wire shape.
             "cost": {
                 "input": 0.0036,
@@ -3543,7 +3543,7 @@ def test_pi_usage_captured_from_message_end() -> None:
     """
     A ``message_end`` event whose assistant message carries a ``usage``
     object surfaces on ``TurnComplete.usage`` with each pi field mapped to
-    the omnigent schema key. Asserts the actual numbers so a swapped or
+    the agent-meow schema key. Asserts the actual numbers so a swapped or
     dropped mapping (e.g. cacheRead→cache_creation instead of cache_read)
     fails loud rather than passing on mere presence.
     """

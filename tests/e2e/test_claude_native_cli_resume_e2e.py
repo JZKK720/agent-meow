@@ -1,8 +1,8 @@
-"""End-to-end regression test: ``omnigent claude --resume`` restores history.
+"""End-to-end regression test: ``agent-meow claude --resume`` restores history.
 
 Reproduces the user-reported bug: running
 
-    omnigent claude --server <url> --resume <conv_id>
+    agent-meow claude --server <url> --resume <conv_id>
 
 attached a Claude Code session with **no history** — the prior conversation
 was silently lost because the runner auto-created a *fresh* Claude terminal
@@ -10,7 +10,7 @@ was silently lost because the runner auto-created a *fresh* Claude terminal
 cold-resume launch. The fix gates the runner's auto-create to host-spawned
 (web-UI) sessions only; CLI-driven sessions keep their own cold-resume launch.
 
-This is the robust, outcome-based check: it drives the REAL ``omnigent
+This is the robust, outcome-based check: it drives the REAL ``agent-meow
 claude`` CLI to create a conversation that knows a passphrase, resumes it, and
 then — through the server's message API, the same path the web UI uses —
 verifies Claude answers a follow-up with that passphrase. The passphrase
@@ -70,9 +70,9 @@ def test_claude_native_cli_resume_restores_history(
     request: pytest.FixtureRequest,
 ) -> None:
     """
-    Cross-context ``omnigent claude --resume`` restores conversation history.
+    Cross-context ``agent-meow claude --resume`` restores conversation history.
 
-    Drives the real ``omnigent claude --server …`` CLI (gateway routing
+    Drives the real ``agent-meow claude --server …`` CLI (gateway routing
     via the config-home auth block from the pytest ``--profile``) to teach
     Claude a passphrase, **deletes Claude's local transcript** for that session,
     then resumes — so the resume cannot reuse Claude's own on-disk transcript

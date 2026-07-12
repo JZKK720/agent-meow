@@ -2,7 +2,7 @@
 Integration tests for ``POST /v1/sessions/{id}/hooks/permission-request``.
 
 The endpoint receives Claude Code's ``PermissionRequest`` HTTP hook
-payload (when ``omnigent claude`` wraps the native TUI), parks
+payload (when ``agent-meow claude`` wraps the native TUI), parks
 the call on the same in-memory elicitation registry the claude-sdk
 path uses, emits an SSE event for the web UI's :file:`ApprovalCard`,
 and returns Claude's expected ``hookSpecificOutput`` decision JSON
@@ -417,7 +417,7 @@ async def test_top_level_elicitations_route_is_not_mounted(
     - HTTP (``client`` fixture, same app): the live response is
       ``404`` *or* ``405``. The status varies by environment because
       ``create_app`` mounts a catch-all SPA at ``/`` only when a local
-      web-ui build exists at ``omnigent/server/static/web-ui/index.html``
+      web-ui build exists at ``agent_meow/server/static/web-ui/index.html``
       (a gitignored dev artifact, absent on main/CI/fresh clones).
       With no build the unmatched POST is a plain ``404``; with the
       build present Starlette's ``StaticFiles`` matches the path but

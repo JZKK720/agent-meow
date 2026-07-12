@@ -529,7 +529,7 @@ struct OmnigentWebView: UIViewRepresentable {
 
     private func injectWorkspaceChromeCSS(_ webView: WKWebView) {
       let css = """
-        .omnigent-app {
+        .agent-meow-app {
           position: fixed !important;
           inset: 0 !important;
           z-index: 2147483647 !important;
@@ -537,7 +537,7 @@ struct OmnigentWebView: UIViewRepresentable {
         """
       let script = """
         (() => {
-          if (document.querySelector("style[data-omnigent-workspace-chrome]")) return;
+          if (document.querySelector("style[data-agent-meow-workspace-chrome]")) return;
           const style = document.createElement("style");
           style.dataset.omnigentWorkspaceChrome = "true";
           style.textContent = \(WebViewModel.javascriptString(css));

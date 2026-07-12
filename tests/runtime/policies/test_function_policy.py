@@ -1,7 +1,7 @@
 """
 Tests for :class:`FunctionPolicy` (Phase 4).
 
-Ports and extends these omnigent cases:
+Ports and extends these agent-meow cases:
 
 From ``test_policies.py``:
 - ``test_allow_by_default`` — empty FunctionPolicy → ALLOW
@@ -126,7 +126,7 @@ def _build_engine(
 
 @pytest.mark.asyncio
 async def test_sync_callable_allow() -> None:
-    """Ports omnigent ``test_sync_callable_allow``. A sync
+    """Ports agent-meow ``test_sync_callable_allow``. A sync
     lambda that returns PolicyResult(ALLOW) produces ALLOW."""
 
     def fn(event: dict) -> PolicyResult:
@@ -142,7 +142,7 @@ async def test_sync_callable_allow() -> None:
 
 @pytest.mark.asyncio
 async def test_sync_callable_block() -> None:
-    """Ports omnigent ``test_sync_callable_block``. A sync
+    """Ports agent-meow ``test_sync_callable_block``. A sync
     function that returns DENY blocks."""
 
     def fn(event: dict) -> PolicyResult:
@@ -161,7 +161,7 @@ async def test_sync_callable_block() -> None:
 
 @pytest.mark.asyncio
 async def test_async_callable() -> None:
-    """Ports omnigent ``test_async_callable``. An async
+    """Ports agent-meow ``test_async_callable``. An async
     def evaluator works identically to sync."""
 
     async def fn(event: dict) -> PolicyResult:
@@ -177,7 +177,7 @@ async def test_async_callable() -> None:
 
 @pytest.mark.asyncio
 async def test_callable_returns_dict_allow() -> None:
-    """Ports omnigent ``test_callable_returns_dict``. A
+    """Ports agent-meow ``test_callable_returns_dict``. A
     V0 dict return with string result parses into PolicyResult."""
     policy = FunctionPolicy(
         _spec(),
@@ -192,7 +192,7 @@ async def test_callable_returns_dict_allow() -> None:
 
 @pytest.mark.asyncio
 async def test_callable_returns_dict_deny_with_reason() -> None:
-    """Ports omnigent ``test_deny_action_from_dict``. A
+    """Ports agent-meow ``test_deny_action_from_dict``. A
     V0 dict return with explicit deny and reason."""
     policy = FunctionPolicy(
         _spec(),
@@ -247,7 +247,7 @@ async def test_callable_returns_foreign_policy_result_shape() -> None:
     ``isinstance`` fails.
 
     Uses a local stand-in dataclass so the test doesn't
-    depend on whether omnigent is installed in this
+    depend on whether agent-meow is installed in this
     environment. The failure signature would be:
     ``PolicyDecisionError: FunctionPolicy 'p' failed:
     FunctionPolicy 'p' returned unsupported type
@@ -301,7 +301,7 @@ async def test_callable_returns_foreign_policy_result_shape() -> None:
 
 @pytest.mark.asyncio
 async def test_two_arg_callable_receives_config() -> None:
-    """Ports omnigent
+    """Ports agent-meow
     ``test_three_arg_callable_receives_context`` (ours is 2-arg
     because we fold content+phase into the V0 event dict). Under
     the V0 contract the second arg is the spec's static ``config``
@@ -333,7 +333,7 @@ async def test_two_arg_callable_receives_config() -> None:
 async def test_two_arg_callable_reads_config_for_decision(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Ports omnigent ``test_three_arg_callable_reads_labels_for_decision``.
+    """Ports agent-meow ``test_three_arg_callable_reads_labels_for_decision``.
     Under V0, labels are NOT passed to the callable — decisions
     that once depended on the runtime label state should instead
     use the spec's static ``config`` thresholds. This test verifies
@@ -387,7 +387,7 @@ async def test_two_arg_callable_reads_config_for_decision(
 
 @pytest.mark.asyncio
 async def test_async_two_arg_callable() -> None:
-    """Ports omnigent ``test_three_arg_async_callable``.
+    """Ports agent-meow ``test_three_arg_async_callable``.
     Async two-arg callables receive the spec's static config as
     the second argument. Verifies async dispatch works correctly
     for the two-arg V0 signature."""
@@ -416,7 +416,7 @@ async def test_async_two_arg_callable() -> None:
 
 @pytest.mark.asyncio
 async def test_rate_limit_closure_counts() -> None:
-    """Ports omnigent ``test_tool_call_rate_limit``. A
+    """Ports agent-meow ``test_tool_call_rate_limit``. A
     closure counter ticks across evaluations in the same
     workflow. Without this, stateful FunctionPolicies are
     useless."""
@@ -625,7 +625,7 @@ def test_resolve_function_policy_none_arguments_auto_detects_factory(
 async def test_factory_closure_counter_isolated_per_build(
     tmp_path: Path,
 ) -> None:
-    """Ports omnigent ``test_rate_limit_counter_isolated``.
+    """Ports agent-meow ``test_rate_limit_counter_isolated``.
     Two separate FunctionPolicy builds from the same factory
     have independent closure state — if this regresses,
     rate limits for different agents (or different workflows
@@ -727,7 +727,7 @@ async def test_function_policy_without_whitelist_writes_freely(
 ) -> None:
     """When the spec does NOT declare `set_labels`, every
     key the callable writes lands (schemaless semantics,
-    matches omnigent parity)."""
+    matches agent-meow parity)."""
 
     def fn(event: dict) -> PolicyResult:
         return PolicyResult(
@@ -828,7 +828,7 @@ def test_function_policy_reset_turn_invokes_callable_attribute(
     """
     ``FunctionPolicy.reset_turn`` must look up ``reset_turn``
     on the wrapped callable and invoke it. This is how legacy
-    omnigent policies like ``max_tool_calls_per_turn`` clear
+    agent-meow policies like ``max_tool_calls_per_turn`` clear
     per-turn accumulators between turns — see
     :meth:`~?agent_meow.runtime.policies.engine.PolicyEngine.reset_turn`
     for the native implementation we mirror.

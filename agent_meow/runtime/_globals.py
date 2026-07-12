@@ -48,7 +48,7 @@ _terminal_registry: TerminalRegistry | None = None
 _resource_registry: SessionResourceRegistry | None = None
 
 # AP-wide harness process manager. Initialized by the FastAPI
-# lifespan in ``omnigent/server/app.py``; accessed via
+# lifespan in ``agent_meow/server/app.py``; accessed via
 # ``get_harness_process_manager()`` in ``agent_meow.runtime``.
 # See §Step 5b in designs/SERVER_HARNESS_CONTRACT.md /
 # Autonomous decisions.

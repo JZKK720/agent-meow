@@ -1,6 +1,6 @@
 """
 Tests for ``_build_openai_agents_sdk_spawn_env`` in
-``omnigent/runtime/workflow.py``.
+``agent_meow/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec.executor`` fields to
 ``HARNESS_OPENAI_AGENTS_*`` env vars that the openai-agents harness
@@ -35,7 +35,7 @@ def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     """
     Point OMNIGENT_CONFIG_HOME at an empty temp dir for every test in
     this file so tests that don't explicitly set up a global config are
-    not affected by the developer's real ``~/.omnigent/config.yaml``.
+    not affected by the developer's real ``~/.agent_meow/config.yaml``.
 
     Tests that need a specific global config write their own config.yaml
     into a separate temp dir and set OMNIGENT_CONFIG_HOME themselves —
@@ -76,7 +76,7 @@ def _make_spec(
         spec_version=1,
         name="test-openai-agents",
         instructions="You are a test agent.",
-        executor=ExecutorSpec(type="omnigent", config=config, model=model, auth=auth),
+        executor=ExecutorSpec(type="agent-meow", config=config, model=model, auth=auth),
         llm=LLMConfig(model=model) if model is not None else None,
     )
 
@@ -137,7 +137,7 @@ def test_databricks_model_ignores_env_profile(
 ) -> None:
     """
     Ambient ``DATABRICKS_CONFIG_PROFILE`` does NOT steer the auto-Databricks
-    routing — credentials are controlled by the spec or by ``omnigent
+    routing — credentials are controlled by the spec or by ``agent-meow
     setup`` provider config, never by shell environment. A databricks-*
     model with no spec profile routes via the SDK ``DEFAULT`` profile.
     """
@@ -311,7 +311,7 @@ def test_global_config_auth_used_when_spec_auth_absent(
 
     Failure means users must declare auth in every agent YAML and
     cannot rely on the once-configured global default from
-    ``omnigent setup``.
+    ``agent-meow setup``.
     """
     with tempfile.TemporaryDirectory() as td:
         cfg_path = Path(td) / "config.yaml"
@@ -382,7 +382,7 @@ def test_global_config_auth_not_applied_when_spec_has_legacy_profile(
         monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
         monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
 
-        # Spec declares profile via the legacy config dict (omnigent compat path).
+        # Spec declares profile via the legacy config dict (agent-meow compat path).
         spec = _make_spec(model="databricks-gpt-5-4-mini", profile="oss", auth=None)
         env = _build_openai_agents_sdk_spawn_env(spec)
 
@@ -410,7 +410,7 @@ def test_load_global_auth_api_key_with_base_url(
     and expands env-var references in it.
 
     Failure means a user who configures a custom endpoint in
-    ``~/.omnigent/config.yaml`` via an env-var reference has the
+    ``~/.agent_meow/config.yaml`` via an env-var reference has the
     literal ``$VAR`` string passed as the base URL.
     """
     monkeypatch.setenv("MY_GLOBAL_KEY", "sk-global-abc")

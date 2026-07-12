@@ -379,7 +379,7 @@ def run_claude_native(
     :raises click.ClickException: If setup, launch, or attach fails.
     """
     startup_profiler = startup_profiler or StartupProfiler.from_env(
-        name="omnigent claude",
+        name="agent-meow claude",
         env_var=_CLAUDE_STARTUP_PROFILE_ENV_VAR,
     )
     startup_profiler.mark("native launch entered")
@@ -393,7 +393,7 @@ def run_claude_native(
     startup_profiler.mark("claude args normalized")
     # Resolve the launch config across all offerings: a configured provider
     # (configure harnesses), the Databricks ucode profile, or Claude's own
-    # login — so `omnigent claude` honors the provider selection just like
+    # login — so `agent-meow claude` honors the provider selection just like
     # the in-process claude-sdk harness. ``use_claude_config`` forces the
     # CLI's own ~/.claude config (skips all of it).
     startup_profiler.mark("resolving claude config")
@@ -1347,7 +1347,7 @@ def _strip_resume_from_claude_args(args: tuple[str, ...]) -> tuple[str, ...]:
     Strip any stray ``--resume`` / ``-r`` (and value) from raw args.
 
     Defense in depth: a user routing ``--resume`` past Click (e.g.
-    ``omnigent claude -- --resume <id>``) must not have it reach
+    ``agent-meow claude -- --resume <id>``) must not have it reach
     upstream Claude, which would apply it to its own session-id
     namespace.
 
@@ -1368,7 +1368,7 @@ def _strip_resume_from_claude_args(args: tuple[str, ...]) -> tuple[str, ...]:
             continue
         if arg in ("--resume", "-r"):
             _logger.warning(
-                "Stripped stray %s from claude args; use `omnigent claude --resume`.", arg
+                "Stripped stray %s from claude args; use `agent-meow claude --resume`.", arg
             )
             consume_value = True
             continue
@@ -1414,7 +1414,7 @@ def _ucode_config_for_profile(profile: str | None) -> ClaudeNativeUcodeConfig | 
     if agent_state is None:
         raise click.ClickException(
             f"ucode state for profile {profile!r} does not include a Claude agent entry. "
-            "Run `omnigent setup --internal-beta` to refresh ucode configuration."
+            "Run `agent-meow setup --internal-beta` to refresh ucode configuration."
         )
 
     base_url = agent_state.env.get(_UCODE_CLAUDE_BASE_URL_ENV) or agent_state.base_url
@@ -1424,12 +1424,12 @@ def _ucode_config_for_profile(profile: str | None) -> ClaudeNativeUcodeConfig | 
         raise click.ClickException(
             f"ucode state for profile {profile!r} is missing Claude base URL "
             f"({_UCODE_CLAUDE_BASE_URL_ENV} / base_url). "
-            "Run `omnigent setup --internal-beta` to refresh ucode configuration."
+            "Run `agent-meow setup --internal-beta` to refresh ucode configuration."
         )
     if not agent_state.auth_command:
         raise click.ClickException(
             f"ucode state for profile {profile!r} is missing Claude auth_command. "
-            "Run `omnigent setup --internal-beta` to refresh ucode configuration."
+            "Run `agent-meow setup --internal-beta` to refresh ucode configuration."
         )
 
     refresh_interval_ms = (
@@ -1465,7 +1465,7 @@ def _provider_config_for_native_claude(entry: ProviderEntry) -> ClaudeNativeUcod
     resolved ``key`` / ``gateway`` / ``local`` provider serving the
     ``anthropic`` surface and injects the same knobs the native CLI needs —
     ``ANTHROPIC_BASE_URL`` plus a token ``apiKeyHelper`` and the default
-    model — so a Claude Code terminal launched by ``omnigent`` routes
+    model — so a Claude Code terminal launched by ``agent-meow`` routes
     through the configured provider exactly like the in-process claude-sdk
     harness does (:func:`~?agent_meow.runtime.workflow.configure_agent_harness_with_provider`).
 
@@ -1663,8 +1663,8 @@ def resolve_native_claude_config(
     """Resolve the native Claude Code launch config across all offerings.
 
     The single entry point both native-claude launch paths use (the CLI
-    ``omnigent claude`` and the runner's host-spawned auto-create), so the
-    native harness honors ``omnigent setup`` exactly like the in-process
+    ``agent-meow claude`` and the runner's host-spawned auto-create), so the
+    native harness honors ``agent-meow setup`` exactly like the in-process
     claude-sdk harness. Precedence mirrors
     :func:`~?agent_meow.runtime.workflow._resolve_provider_for_build`:
 
@@ -1672,15 +1672,15 @@ def resolve_native_claude_config(
        → explicit per-family default → global ``auth:`` → ``databricks-*``
        model → ambient detection), falling back to the spec's own
        ``executor.profile`` (ucode) when it routed to legacy databricks;
-    2. when spec-less (``omnigent claude``): an explicit per-family default
+    2. when spec-less (``agent-meow claude``): an explicit per-family default
        → global ``auth:`` (→ ucode) → ambient detection;
     3. otherwise ``None`` (Claude's own login).
 
     Credentials are controlled exclusively by the spec or by
-    ``omnigent setup`` provider config — there is no CLI/env profile
+    ``agent-meow setup`` provider config — there is no CLI/env profile
     override.
 
-    :param spec: The agent spec, or ``None`` for the bare ``omnigent
+    :param spec: The agent spec, or ``None`` for the bare ``agent-meow
         claude`` launch.
     :returns: The launch config, or ``None`` to use Claude's own login.
     """
@@ -1702,7 +1702,7 @@ def resolve_native_claude_config(
             return _native_claude_config_from_entry(entry)
         return _ucode_config_for_profile(spec.executor.profile)
 
-    # 2. Spec-less (omnigent claude): explicit default wins first.
+    # 2. Spec-less (agent-meow claude): explicit default wins first.
     explicit = load_config()
     entry = default_provider_for_harness(explicit, "claude-sdk")
     if entry is not None:
@@ -1722,7 +1722,7 @@ def resolve_native_claude_config(
         return _native_claude_config_from_entry(entry)
     _logger.info(
         "native-claude routing: Claude CLI login (no provider configured for the Claude "
-        "harness, no Databricks profile). Run `omnigent setup --no-internal-beta` to route "
+        "harness, no Databricks profile). Run `agent-meow setup --no-internal-beta` to route "
         "through a provider."
     )
     return None
@@ -1730,7 +1730,7 @@ def resolve_native_claude_config(
 
 def _materialize_claude_agent_spec(tmpdir: Path) -> Path:
     """
-    Write the terminal-first session agent spec used by ``omnigent claude``.
+    Write the terminal-first session agent spec used by ``agent-meow claude``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :returns: Path to a generated YAML spec.
@@ -1758,7 +1758,7 @@ def _materialize_claude_agent_spec(tmpdir: Path) -> Path:
         # Without an ``os_env`` block, the runner's filesystem APIs
         # (``/resources/environments/default/filesystem`` and siblings)
         # return 404 — see ``_require_os_env`` in
-        # ``omnigent/runner/app.py``. Claude Code already operates
+        # ``agent_meow/runner/app.py``. Claude Code already operates
         # on the user's workspace with full filesystem access, so the
         # caller process / no sandbox combination matches reality and
         # enables the web UI's files panel.
@@ -1823,7 +1823,7 @@ def _run_with_local_server(
         _wait_for_server,
     )
 
-    startup_profiler = startup_profiler or StartupProfiler(name="omnigent claude", enabled=False)
+    startup_profiler = startup_profiler or StartupProfiler(name="agent-meow claude", enabled=False)
     startup_profiler.mark("local server selecting port")
     port = _find_free_port()
     startup_profiler.mark("local server port selected", detail=f"port={port}")
@@ -1851,7 +1851,7 @@ def _run_with_local_server(
             # session's recorded launch cwd BEFORE the bundle / runner
             # / terminal-launch steps sample ``Path.cwd()``. Local
             # server is already up at this point but is cwd-
-            # independent (writes to ``~/.omnigent/``), so chdiring
+            # independent (writes to ``~/.agent_meow/``), so chdiring
             # now is safe.
             _align_working_directory_with_session(
                 resolved_session_id,
@@ -2007,7 +2007,7 @@ async def _attach_direct_tmux(
     Lower latency than the WebSocket PTY relay because there is no
     server round-trip — the local TTY drives the runner's private tmux
     server over its Unix socket. ``TMUX`` is dropped from the child
-    environment so a user who runs ``omnigent claude`` from inside
+    environment so a user who runs ``agent-meow claude`` from inside
     their own tmux can still attach to agent-meow' server. After the
     ``tmux attach`` child exits, a ``has-session`` probe distinguishes a
     user *detach* (session still alive → keep the agent-meow terminal resource
@@ -2024,7 +2024,7 @@ async def _attach_direct_tmux(
     """
     from agent_meow.terminals.ws_bridge import _check_pane_dead_definitive, _tmux_session_alive
 
-    startup_profiler = startup_profiler or StartupProfiler(name="omnigent claude", enabled=False)
+    startup_profiler = startup_profiler or StartupProfiler(name="agent-meow claude", enabled=False)
     env = dict(os.environ)
     env.pop("TMUX", None)
     startup_profiler.mark("starting tmux attach subprocess", detail=f"target={tmux_target}")
@@ -2131,7 +2131,7 @@ async def _attach_with_transcript_forwarder(
         when the user detached from tmux (runner kept alive), else
         :attr:`_AttachOutcome.EXITED`.
     """
-    startup_profiler = startup_profiler or StartupProfiler(name="omnigent claude", enabled=False)
+    startup_profiler = startup_profiler or StartupProfiler(name="agent-meow claude", enabled=False)
     # ``start_at_end`` covers both reattach (terminal still live,
     # transcript JSONL still growing) and cold resume (new terminal
     # but ``claude --resume <sid>`` reopens the prior transcript so
@@ -2539,7 +2539,7 @@ async def _close_claude_terminal(
 # ── daemon-routed launch (HOST_BY_DEFAULT) ─────────────────
 #
 # The remote-server flow spawns the runner via the connect daemon
-# (``omnigent host``) rather than this CLI: ensure the daemon, ask
+# (``agent-meow host``) rather than this CLI: ensure the daemon, ask
 # the server to launch a runner on this host, wait for it to come
 # online, then wait for the runner to auto-create the Claude terminal
 # (``_auto_create_claude_terminal`` in ``runner/app.py``, which also
@@ -2666,7 +2666,7 @@ async def _prepare_claude_terminal_via_daemon(
     """
     from agent_meow.claude_native_bridge import bridge_dir_for_conversation_id
 
-    startup_profiler = startup_profiler or StartupProfiler(name="omnigent claude", enabled=False)
+    startup_profiler = startup_profiler or StartupProfiler(name="agent-meow claude", enabled=False)
     persist_args = list(_strip_resume_from_claude_args(claude_args))
     timeout = httpx.Timeout(30.0, read=120.0)
     async with httpx.AsyncClient(base_url=base_url, headers=headers, timeout=timeout) as client:
@@ -2849,7 +2849,7 @@ def _run_with_remote_server(
     from agent_meow.cli import _ensure_host_daemon
     from agent_meow.host.identity import load_or_create_host_identity
 
-    startup_profiler = startup_profiler or StartupProfiler(name="omnigent claude", enabled=False)
+    startup_profiler = startup_profiler or StartupProfiler(name="agent-meow claude", enabled=False)
     startup_profiler.mark("remote headers resolving")
     headers = _remote_headers(server_url=base_url)
     startup_profiler.mark("remote headers resolved")
@@ -2963,7 +2963,7 @@ def _run_with_remote_server(
                 # TCP connection — the agent-meow server at this URL isn't reachable.
                 # Fail loud with the URL instead of a raw httpx traceback.
                 raise click.ClickException(
-                    f"Could not reach the omnigent server at {base_url}. "
+                    f"Could not reach the agent-meow server at {base_url}. "
                     "Confirm the server is running and reachable from here "
                     f"(e.g. `curl {base_url}/health`), and that --server is correct."
                 ) from exc
@@ -3071,7 +3071,7 @@ async def _prepare_claude_terminal(
     :returns: Prepared terminal details.
     :raises click.ClickException: If any server operation fails.
     """
-    startup_profiler = startup_profiler or StartupProfiler(name="omnigent claude", enabled=False)
+    startup_profiler = startup_profiler or StartupProfiler(name="agent-meow claude", enabled=False)
     timeout = httpx.Timeout(30.0, read=120.0)
     async with httpx.AsyncClient(base_url=base_url, headers=headers, timeout=timeout) as client:
         startup_profiler.mark("prepare http client ready")
@@ -3248,7 +3248,7 @@ async def _fetch_claude_session_labels(
     if resp.status_code == 404:
         raise click.ClickException(
             f"Conversation {session_id!r} not found on the server. "
-            "Run `omnigent claude` (no --resume) to start a new session.",
+            "Run `agent-meow claude` (no --resume) to start a new session.",
         )
     if resp.status_code >= 400:
         raise click.ClickException(
@@ -3292,7 +3292,7 @@ async def _resolve_cold_resume_args(
     if resp.status_code == 404:
         raise click.ClickException(
             f"Conversation {session_id!r} not found on the server. "
-            "Run `omnigent claude` (no --resume) to start a new session.",
+            "Run `agent-meow claude` (no --resume) to start a new session.",
         )
     if resp.status_code >= 400:
         raise click.ClickException(
@@ -3310,7 +3310,7 @@ async def _resolve_cold_resume_args(
     if wrapper != _WRAPPER_LABEL_VALUE:
         raise click.ClickException(
             f"Conversation {session_id!r} is not a claude-native session "
-            f"(wrapper={wrapper!r}). Use `omnigent run --resume "
+            f"(wrapper={wrapper!r}). Use `agent-meow run --resume "
             f"{session_id}` to resume it through the right runtime.",
         )
     external_session_id = payload.get("external_session_id")
@@ -3813,7 +3813,7 @@ async def _create_claude_session(
     populates it from the first forwarded user message — the same
     path every other session type takes. The sidebar renders a
     ``"Claude Code"`` default label off the
-    ``omnigent.wrapper = claude-code-native-ui`` label until the
+    ``agent_meow.wrapper = claude-code-native-ui`` label until the
     real title lands, so no server-side placeholder is needed.
 
     :param client: HTTP client pointed at the agent-meow server.
@@ -4071,7 +4071,7 @@ def _claude_terminal_request(
         # ``-c <that-missing-dir>`` and silently falls back to
         # ``$HOME``, so ``claude`` starts in the wrong directory.
         # The per-session isolation is meaningful for shared
-        # deployments; ``omnigent claude`` is a local-only
+        # deployments; ``agent-meow claude`` is a local-only
         # single-user wrapper, so taking the explicit-cwd path
         # short-circuits it safely.
         "cwd": str(Path.cwd().resolve()),
@@ -4481,7 +4481,7 @@ def _install_attach_signal_handlers(ws: Any, stdin_fd: int) -> _SignalRestore:
 
 def claude_terminal_resource_id() -> str:
     """
-    Return the deterministic terminal id used by ``omnigent claude``.
+    Return the deterministic terminal id used by ``agent-meow claude``.
 
     :returns: Terminal resource id, e.g. ``"terminal_claude_main"``.
     """

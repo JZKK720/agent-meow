@@ -90,7 +90,7 @@ const useDirectorySessionsMock = vi.mocked(useDirectorySessions);
 const useRunnerHealthMock = vi.mocked(useRunnerHealthRegistration);
 const setPendingInitialPromptMock = vi.mocked(setPendingInitialPrompt);
 
-const RECENT_KEY = "omnigent:recent-workspaces";
+const RECENT_KEY = "agent-meow:recent-workspaces";
 
 /**
  * Build a minimal Conversation for the directory-conflict helpers/warning.
@@ -431,7 +431,7 @@ describe("harnessUnconfiguredOnHost", () => {
     expect(reason).toBe("unconfigured");
     expect(harnessWarningBadgeText(reason)).toBe("needs setup");
     expect(harnessWarningMessageText("Claude Code", "laptop", reason)).toBe(
-      "Claude Code isn't configured on laptop — run omnigent setup on that machine.",
+      "Claude Code isn't configured on laptop — run agent-meow setup on that machine.",
     );
   });
 
@@ -446,7 +446,7 @@ describe("harnessUnconfiguredOnHost", () => {
     );
     expect(harnessWarningBadgeText("binary-missing")).toBe("binary missing");
     expect(harnessWarningMessageText("Codex", "laptop", "binary-missing")).toBe(
-      "Codex is missing the Codex binary on laptop — run omnigent setup on that machine.",
+      "Codex is missing the Codex binary on laptop — run agent-meow setup on that machine.",
     );
   });
 
@@ -967,9 +967,9 @@ describe("NewChatLandingScreen", () => {
     const body = JSON.parse((init as RequestInit).body as string) as Record<string, unknown>;
     const labels = body.labels as Record<string, string>;
     // The label is what the runner reads to launch with the bypass flag.
-    expect(labels["omnigent.codex_native.bypass_sandbox"]).toBe("1");
+    expect(labels["agent_meow.codex_native.bypass_sandbox"]).toBe("1");
     // The native wrapper labels still ride alongside it.
-    expect(labels["omnigent.wrapper"]).toBe("codex-native-ui");
+    expect(labels["agent_meow.wrapper"]).toBe("codex-native-ui");
   });
 
   it("shows a conflict banner in the file browser for an occupied directory", async () => {
@@ -1738,16 +1738,16 @@ describe("NewChatLandingScreen @-file-mention", () => {
   function file(path: string): HostFilesystemEntry {
     return { name: path.split("/").pop() ?? "", path, type: "file", bytes: 10, modified_at: 0 };
   }
-  // Path-aware listing: the workspace root holds an "omnigent" folder + a
-  // README; drilling into "omnigent" reveals a nested folder + a file. Keyed by
+  // Path-aware listing: the workspace root holds an "agent-meow" folder + a
+  // README; drilling into "agent-meow" reveals a nested folder + a file. Keyed by
   // the absolute path so drill-down and relative-path mapping are exercised for
   // real (a fixed stub couldn't distinguish the two levels).
   function mockFsByPath() {
     useHostFilesystemMock.mockImplementation(((_hostId: string | null, path: string | null) => {
       let entries: HostFilesystemEntry[] = [];
-      if (path === ROOT) entries = [dir(`${ROOT}/omnigent`), file(`${ROOT}/README.md`)];
-      else if (path === `${ROOT}/omnigent`)
-        entries = [dir(`${ROOT}/omnigent/inner`), file(`${ROOT}/omnigent/cli.py`)];
+      if (path === ROOT) entries = [dir(`${ROOT}/agent-meow`), file(`${ROOT}/README.md`)];
+      else if (path === `${ROOT}/agent-meow`)
+        entries = [dir(`${ROOT}/agent_meow/inner`), file(`${ROOT}/agent_meow/cli.py`)];
       return {
         data: { entries, truncated: false },
         isLoading: false,
@@ -1778,7 +1778,7 @@ describe("NewChatLandingScreen @-file-mention", () => {
     );
     fireEvent.change(input(), { target: { value: "@", selectionStart: 1 } });
     // Host absolute paths are shown as workspace-relative rows (folders first).
-    expect(screen.getByTitle("Open omnigent")).toBeInTheDocument();
+    expect(screen.getByTitle("Open agent-meow")).toBeInTheDocument();
     expect(screen.getByTitle("Attach README.md")).toBeInTheDocument();
   });
 
@@ -1796,7 +1796,7 @@ describe("NewChatLandingScreen @-file-mention", () => {
     ]);
     renderLanding();
     fireEvent.change(input(), { target: { value: "@", selectionStart: 1 } });
-    expect(screen.queryByTitle("Open omnigent")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Open agent-meow")).not.toBeInTheDocument();
   });
 
   it("drills into a folder and delivers the chosen file as a workspace-relative marker", async () => {
@@ -1812,10 +1812,10 @@ describe("NewChatLandingScreen @-file-mention", () => {
     fireEvent.change(input(), { target: { value: "@", selectionStart: 1 } });
     // Nested files are hidden until the folder is opened (drill-down).
     expect(screen.queryByTitle("Attach cli.py")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTitle("Open omnigent"));
+    fireEvent.click(screen.getByTitle("Open agent-meow"));
     fireEvent.click(screen.getByTitle("Attach cli.py"));
     // The chip shows the workspace-relative path, not the host-absolute one.
-    expect(screen.getByText("@omnigent/cli.py")).toBeInTheDocument();
+    expect(screen.getByText("@agent_meow/cli.py")).toBeInTheDocument();
 
     fireEvent.change(input(), { target: { value: "explain this", selectionStart: 12 } });
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
@@ -1825,7 +1825,7 @@ describe("NewChatLandingScreen @-file-mention", () => {
     // the "/Users/corey/repo/…" absolute path the host filesystem returned.
     await waitFor(() => expect(setPendingInitialPromptMock).toHaveBeenCalled());
     const [, payload] = setPendingInitialPromptMock.mock.calls[0]!;
-    expect((payload as { text: string }).text).toBe("[Attached: omnigent/cli.py]\n\nexplain this");
+    expect((payload as { text: string }).text).toBe("[Attached: agent_meow/cli.py]\n\nexplain this");
   });
 
   it("suppresses stale parent rows while a drilled directory is still loading", async () => {
@@ -1836,7 +1836,7 @@ describe("NewChatLandingScreen @-file-mention", () => {
     // they lived inside the drilled child, and a click/Enter would attach the
     // wrong entry. The menu must collapse to "Loading…" until the child's own
     // listing arrives.
-    const rootEntries = [dir(`${ROOT}/omnigent`), file(`${ROOT}/README.md`)];
+    const rootEntries = [dir(`${ROOT}/agent-meow`), file(`${ROOT}/README.md`)];
     useHostFilesystemMock.mockImplementation(((_hostId: string | null, path: string | null) => {
       // Root resolves normally; the drilled path is still serving the parent's
       // rows as placeholder data (the mid-fetch window we're regression-testing).
@@ -1856,14 +1856,14 @@ describe("NewChatLandingScreen @-file-mention", () => {
 
     fireEvent.change(input(), { target: { value: "@", selectionStart: 1 } });
     // Root listing renders its rows.
-    expect(screen.getByTitle("Open omnigent")).toBeInTheDocument();
-    fireEvent.click(screen.getByTitle("Open omnigent"));
+    expect(screen.getByTitle("Open agent-meow")).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle("Open agent-meow"));
 
     // Drilled-but-loading: the loading row shows and the parent's stale rows are
     // gone (without the isPlaceholderData guard they'd appear as the child's).
     expect(screen.getByText("Loading…")).toBeInTheDocument();
     expect(screen.queryByTitle("Attach README.md")).not.toBeInTheDocument();
-    expect(screen.queryByTitle("Open omnigent")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Open agent-meow")).not.toBeInTheDocument();
   });
 
   it("attaches a whole folder with a trailing-slash marker", async () => {
@@ -1878,15 +1878,15 @@ describe("NewChatLandingScreen @-file-mention", () => {
 
     fireEvent.change(input(), { target: { value: "@", selectionStart: 1 } });
     // The folder row's "+" button attaches the directory as a unit.
-    fireEvent.click(screen.getByLabelText("Attach whole folder omnigent"));
-    expect(screen.getByText("@omnigent/")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Attach whole folder agent-meow"));
+    expect(screen.getByText("@agent_meow/")).toBeInTheDocument();
 
     fireEvent.change(input(), { target: { value: "review it", selectionStart: 9 } });
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
 
     await waitFor(() => expect(setPendingInitialPromptMock).toHaveBeenCalled());
     const [, payload] = setPendingInitialPromptMock.mock.calls[0]!;
-    expect((payload as { text: string }).text).toBe("[Attached: omnigent/]\n\nreview it");
+    expect((payload as { text: string }).text).toBe("[Attached: agent_meow/]\n\nreview it");
   });
 
   it("removes a tagged chip when its ✕ is clicked", () => {

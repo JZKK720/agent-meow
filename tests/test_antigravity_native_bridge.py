@@ -1199,7 +1199,7 @@ def test_inject_user_message_via_tui_short_message_raises_when_not_submitted(
 def test_build_mcp_config_registers_omnigent_relay(tmp_path: Path) -> None:
     """build_mcp_config emits the shared serve-mcp relay command + enabledTools."""
     config = build_mcp_config(tmp_path, python_executable="python-test")
-    server = config["mcpServers"]["omnigent"]
+    server = config["mcpServers"]["agent-meow"]
     assert server["command"] == "python-test"
     assert server["args"] == [
         "-I",
@@ -1226,7 +1226,7 @@ def test_build_mcp_config_defaults_python_to_current_interpreter(tmp_path: Path)
     """Omitting python_executable uses sys.executable so the relay runs in our venv."""
     import sys
 
-    server = build_mcp_config(tmp_path)["mcpServers"]["omnigent"]
+    server = build_mcp_config(tmp_path)["mcpServers"]["agent-meow"]
     assert server["command"] == sys.executable
 
 
@@ -1240,7 +1240,7 @@ def test_write_mcp_config_targets_isolated_agy_gemini_dir(tmp_path: Path) -> Non
     # real ~/.gemini is untouched.
     assert path == agy_gemini_dir(bridge_dir) / "config" / "mcp_config.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
-    assert payload["mcpServers"]["omnigent"]["command"] == "python-test"
+    assert payload["mcpServers"]["agent-meow"]["command"] == "python-test"
     # The bridge token the shared relay requires is written into the bridge dir.
     assert json.loads((bridge_dir / "bridge.json").read_text(encoding="utf-8"))["token"]
 

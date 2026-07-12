@@ -50,7 +50,7 @@ def _patch_session_as_kiro_native(page: Page, session_id: str) -> list[dict]:
 
         payload["labels"] = {
             **payload.get("labels", {}),
-            "omnigent.wrapper": "kiro-native-ui",
+            "agent_meow.wrapper": "kiro-native-ui",
         }
         payload["harness"] = "kiro-native"
         payload["model_options"] = [

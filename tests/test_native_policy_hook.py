@@ -602,11 +602,11 @@ def test_policy_hook_wrapper_script_bakes_auth_and_routing(
     monkeypatch.setattr(cli_auth, "load_databricks_org_id", lambda _url: "org123")
 
     script = native_policy_hook.policy_hook_wrapper_script(
-        "https://acme.databricks.com/api/2.0/omnigent", "conv_x", "/path/hook.py"
+        "https://acme.databricks.com/api/2.0/agent-meow", "conv_x", "/path/hook.py"
     )
 
     assert script.startswith("#!/bin/sh\n")
-    assert "_OMNIGENT_SERVER_URL=https://acme.databricks.com/api/2.0/omnigent" in script
+    assert "_OMNIGENT_SERVER_URL=https://acme.databricks.com/api/2.0/agent-meow" in script
     assert "_OMNIGENT_SESSION_ID=conv_x" in script
     # The baked headers carry BOTH the bearer and the routing header.
     line = next(
@@ -655,7 +655,7 @@ def test_policy_hook_reauth_remints_and_preserves_routing_header(
         lambda _server_url: lambda: "fresh-token",
     )
     reauth = native_policy_hook.policy_hook_reauth(
-        "https://acme.databricks.com/api/2.0/omnigent",
+        "https://acme.databricks.com/api/2.0/agent-meow",
         {"Authorization": "Bearer stale", "X-Databricks-Org-Id": "o9"},
     )
     assert reauth() == {"Authorization": "Bearer fresh-token", "X-Databricks-Org-Id": "o9"}

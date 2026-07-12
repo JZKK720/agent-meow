@@ -1,6 +1,6 @@
 """The agent-meow brand wordmark and Otto lockup for CLI output.
 
-A bold "ANSI-Shadow" block-letter ``omnigent`` wordmark — the canonical
+A bold "ANSI-Shadow" block-letter ``agent-meow`` wordmark — the canonical
 figlet font with one duplicate body row dropped (5 rows), so every letter
 stays legible and it sits exactly as tall as the Otto-the-starfish mascot
 from :mod:`~?agent_meow.inner.mascots`, which it pairs with 1:1.
@@ -51,16 +51,18 @@ _INDENT = "  "
 # are concatenated.
 _GLYPH_ROWS = 5
 _GLYPHS: dict[str, tuple[str, ...]] = {
-    "o": (" ██████╗ ", "██╔═══██╗", "██║   ██║", "╚██████╔╝", " ╚═════╝ "),
-    "m": ("███╗   ███╗", "████╗ ████║", "██╔████╔██║", "██║ ╚═╝ ██║", "╚═╝     ╚═╝"),
-    "n": ("███╗   ██╗", "████╗  ██║", "██╔██╗ ██║", "██║ ╚████║", "╚═╝  ╚═══╝"),
-    "i": ("██╗", "██║", "██║", "██║", "╚═╝"),
+    "a": (" █████╗ ", "██╔═══██╗", "███████║", "██╔═══██║", "╚═╝   ╚═╝"),
     "g": (" ██████╗ ", "██╔════╝ ", "██║  ███╗", "╚██████╔╝", " ╚═════╝ "),
     "e": ("███████╗", "██╔════╝", "█████╗  ", "███████╗", "╚══════╝"),
+    "n": ("███╗   ██╗", "████╗  ██║", "██╔██╗ ██║", "██║ ╚████║", "╚═╝  ╚═══╝"),
     "t": ("████████╗", "╚══██╔══╝", "   ██║   ", "   ██║   ", "   ╚═╝   "),
+    "-": ("        ", "        ", "████████", "        ", "        "),
+    "m": ("███╗   ███╗", "████╗ ████║", "██╔████╔██║", "██║ ╚═╝ ██║", "╚═╝     ╚═╝"),
+    "o": (" ██████╗ ", "██╔═══██╗", "██║   ██║", "╚██████╔╝", " ╚═════╝ "),
+    "w": ("██╗    ██╗", "██║    ██║", "██║ █╗ ██║", "██║███╗██║", "╚═╝╚══╝╚═╝"),
 }
 
-_WORDMARK_TEXT = "omnigent"
+_WORDMARK_TEXT = "agent-meow"
 
 
 def _build_wordmark(word: str) -> tuple[str, ...]:
@@ -68,7 +70,7 @@ def _build_wordmark(word: str) -> tuple[str, ...]:
     Concatenate per-letter glyphs into the wordmark rows.
 
     :param word: The text to render; every character must have a glyph
-        in :data:`_GLYPHS`, e.g. ``"omnigent"``.
+        in :data:`_GLYPHS`, e.g. ``"agent-meow"``.
     :returns: The wordmark rows (top cap · identity · bottom · shadow).
     """
     rows = ["" for _ in range(_GLYPH_ROWS)]
@@ -79,7 +81,7 @@ def _build_wordmark(word: str) -> tuple[str, ...]:
     return tuple(rows)
 
 
-#: The rows of the ``omnigent`` wordmark, as plain (uncolored) text.
+#: The rows of the ``agent-meow`` wordmark, as plain (uncolored) text.
 WORDMARK_LINES: tuple[str, ...] = _build_wordmark(_WORDMARK_TEXT)
 
 # Which Otto row each wordmark row sits on. Otto and the wordmark are both
@@ -174,7 +176,7 @@ def render_lockup(
     :param tagline: Optional dim line printed under the lockup, e.g.
         ``"all your agents, one cli"``.
     :param epilogue: Optional aligned label/value rows printed beneath the
-        art, e.g. ``[("Version", "0.4.2"), ("Next", "omnigent setup")]``.
+        art, e.g. ``[("Version", "0.4.2"), ("Next", "agent-meow setup")]``.
     :returns: None.
     """
     total_width = max(len(line) for line in WORDMARK_LINES)
@@ -217,7 +219,7 @@ def _print_epilogue(console: Console, rows: list[tuple[str, str]]) -> None:
 
 def render_compact(console: Console, *, subtitle: str | None = None) -> None:
     """
-    Print the one-line brandmark: ``✦ omnigent  <subtitle>``.
+    Print the one-line brandmark: ``✦ agent-meow  <subtitle>``.
 
     Used as a lightweight branded header on non-interactive commands that
     don't warrant the full lockup (``version``, ``status``, ``upgrade``…).
@@ -228,7 +230,7 @@ def render_compact(console: Console, *, subtitle: str | None = None) -> None:
     """
     line = Text(_INDENT)
     line.append("✦ ", style=WORDMARK_COLOR)
-    line.append("omnigent", style=f"bold {WORDMARK_COLOR}")
+    line.append("agent-meow", style=f"bold {WORDMARK_COLOR}")
     if subtitle:
         line.append(f"  {subtitle}", style="dim")
     console.print(line)

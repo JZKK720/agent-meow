@@ -1,8 +1,8 @@
-"""End-to-end tests: ``omnigent cursor`` drives the native Cursor TUI.
+"""End-to-end tests: ``agent-meow cursor`` drives the native Cursor TUI.
 
 The cursor-native sibling of ``test_codex_native_cli_cwd_e2e`` /
 ``test_codex_native_cli_resume_e2e``. ``cursor-native`` is a *terminal-first*
-harness: ``omnigent cursor`` launches the official ``cursor-agent`` TUI in a
+harness: ``agent-meow cursor`` launches the official ``cursor-agent`` TUI in a
 runner-owned tmux pane, and each web-UI turn is injected into that pane
 (bracketed paste + Enter) by
 :class:`~?agent_meow.inner.cursor_native_executor.CursorNativeExecutor`. The TUI's
@@ -10,7 +10,7 @@ own conversation store is tailed by
 :mod:`~?agent_meow.cursor_native_forwarder`, which mirrors ``cursor-agent``'s
 replies back onto the agent-meow conversation as assistant items.
 
-These tests drive the full stack the way a user does — spawn ``omnigent
+These tests drive the full stack the way a user does — spawn ``agent-meow
 cursor``, then talk to the session **through the server** (``POST
 /v1/sessions/{id}/events``, the web-UI path) — and assert on the persisted
 assistant items:
@@ -171,7 +171,7 @@ def test_cursor_native_cli_smoke(
 ) -> None:
     """A cursor-native turn driven through the server returns the model's reply.
 
-    Spawns a backgrounded ``omnigent cursor`` session, waits for its terminal
+    Spawns a backgrounded ``agent-meow cursor`` session, waits for its terminal
     to register, injects (via ``/events`` — the web-UI path) a prompt asking
     ``cursor-agent`` to emit a unique marker word, and asserts the marker comes
     back as an assistant item. The marker is a fresh per-run nonce so a match
@@ -221,7 +221,7 @@ def test_cursor_native_cli_smoke(
                 )
             except AssertionError as exc:
                 raise AssertionError(
-                    f"`omnigent cursor` did not return marker {marker!r}. The "
+                    f"`agent-meow cursor` did not return marker {marker!r}. The "
                     "cursor-native path regressed somewhere between tmux injection, "
                     "the cursor-agent turn, and the forwarder mirroring the reply "
                     f"onto the conversation.\n\nCLI output tail:\n{handle.output()[-2000:]}"
@@ -235,9 +235,9 @@ def test_cursor_native_cli_runs_in_launch_cwd(
     tmp_path: Path,
     request: pytest.FixtureRequest,
 ) -> None:
-    """``omnigent cursor`` launches ``cursor-agent`` in the directory it was run from.
+    """``agent-meow cursor`` launches ``cursor-agent`` in the directory it was run from.
 
-    Spawns a backgrounded ``omnigent cursor`` whose process cwd is a temp
+    Spawns a backgrounded ``agent-meow cursor`` whose process cwd is a temp
     directory containing a marker file, then injects (via the server, the
     web-UI path) a request to read that file. The marker exists only in the
     launch cwd (never in the runner's spec-bundle dir), so it can come back
@@ -289,7 +289,7 @@ def test_cursor_native_cli_runs_in_launch_cwd(
                 )
             except AssertionError as exc:
                 raise AssertionError(
-                    f"`omnigent cursor` did not return marker {marker!r} from "
+                    f"`agent-meow cursor` did not return marker {marker!r} from "
                     f"{_CWD_MARKER_FILE} — it did not run cursor-agent in its launch "
                     "cwd (the wrapper-path cwd resolution regressed, likely the "
                     f"spec-bundle dir).\n\nCLI output tail:\n{handle.output()[-2000:]}"
@@ -306,7 +306,7 @@ def test_cursor_native_cli_resume_warns_when_terminal_was_killed(
     """Live reattach stays quiet, but cold resume tells the truth.
 
     This is the e2e guard for the UX bug in ``CURSOR_NATIVE_AUDIT_FIXES.md``
-    item #2. A second ``omnigent cursor --resume <conv>`` while the original
+    item #2. A second ``agent-meow cursor --resume <conv>`` while the original
     tmux pane is still alive should attach to the live terminal and must not
     print the cold-resume warning. After killing that tmux session, the same
     resume command necessarily starts a fresh ``cursor-agent`` TUI with no
@@ -396,11 +396,11 @@ def test_cursor_native_cli_exposes_omnigent_mcp_tools(
     tmp_path: Path,
     request: pytest.FixtureRequest,
 ) -> None:
-    """``omnigent cursor`` wires agent-meow tools into Cursor's native MCP client.
+    """``agent-meow cursor`` wires agent-meow tools into Cursor's native MCP client.
 
     Spawns a real cursor-native session, waits for the runner-owned Cursor TUI
     to start, then asks ``cursor-agent``'s own MCP subcommand to discover the
-    workspace-scoped ``omnigent`` server. This catches the regressions that made
+    workspace-scoped ``agent-meow`` server. This catches the regressions that made
     Cursor-native unable to call ``sys_*`` tools: missing ``bridge.json``, a
     disabled workspace MCP server, lost ``TMPDIR`` under ``python -I``, missing
     auto-approval config, and stdio framing incompatibility.
@@ -440,7 +440,7 @@ def test_cursor_native_cli_exposes_omnigent_mcp_tools(
         assert (bridge_dir / "tool_relay.json").is_file(), "agent-meow tool relay was not started"
 
         payload = json.loads(mcp_config_path.read_text(encoding="utf-8"))
-        server = payload["mcpServers"]["omnigent"]
+        server = payload["mcpServers"]["agent-meow"]
         assert server["env"]["TMPDIR"]
         assert "--bridge-dir" in server["args"]
         assert str(bridge_dir) in server["args"]
@@ -451,8 +451,8 @@ def test_cursor_native_cli_exposes_omnigent_mcp_tools(
         if cli_config_path.is_file():
             cli_config = json.loads(cli_config_path.read_text(encoding="utf-8"))
             allow = cli_config.get("permissions", {}).get("allow", [])
-            assert "Mcp(omnigent:sys_session_list)" in allow
-            assert "Mcp(omnigent:sys_os_read)" in allow
+            assert "Mcp(agent-meow:sys_session_list)" in allow
+            assert "Mcp(agent-meow:sys_os_read)" in allow
 
         listed = subprocess.run(
             ["cursor-agent", "mcp", "list"],
@@ -465,11 +465,11 @@ def test_cursor_native_cli_exposes_omnigent_mcp_tools(
             check=False,
         )
         assert listed.returncode == 0, listed.stdout
-        assert "omnigent" in listed.stdout
+        assert "agent-meow" in listed.stdout
         assert "ready" in listed.stdout.lower()
 
         tools = subprocess.run(
-            ["cursor-agent", "mcp", "list-tools", "omnigent"],
+            ["cursor-agent", "mcp", "list-tools", "agent-meow"],
             cwd=pwd_dir,
             env=env,
             text=True,
@@ -525,7 +525,7 @@ def test_cursor_native_cli_mcp_can_call_sys_tool(
         bridge_dir = bridge_dir_for_session_id(conversation_id)
         mcp_config_path = pwd_dir / ".cursor" / "mcp.json"
         payload = json.loads(mcp_config_path.read_text(encoding="utf-8"))
-        server = payload["mcpServers"]["omnigent"]
+        server = payload["mcpServers"]["agent-meow"]
         proc_env = {**os.environ, **env, **server.get("env", {})}
         proc = subprocess.Popen(
             [server.get("command") or sys.executable, *server["args"]],
@@ -604,7 +604,7 @@ def test_cursor_native_cli_tool_approval_surfaced_as_elicitation(
 ) -> None:
     """A cursor-native tool-approval prompt surfaces as a web elicitation card.
 
-    Unlike the other tests in this module, this launches ``omnigent cursor``
+    Unlike the other tests in this module, this launches ``agent-meow cursor``
     **without** the ``-f`` force/trust flag, so ``cursor-agent`` shows its own
     per-tool approval prompt (the Workspace Trust gate is still auto-dismissed
     by the inject path's ``_settle_pane``). It then injects (via the server,
@@ -712,7 +712,7 @@ def test_cursor_native_cli_same_cwd_launch_does_not_duplicate(
 ) -> None:
     """A second cursor-native launch in the same cwd does not duplicate the chat.
 
-    cursor keeps one chat per working directory, so two ``omnigent cursor``
+    cursor keeps one chat per working directory, so two ``agent-meow cursor``
     launches from the same dir discover the SAME chat store. The forwarder's
     per-chat claim must let only ONE session (the earlier-launched one) mirror
     it; the later session yields. A marker injected into the FIRST session must

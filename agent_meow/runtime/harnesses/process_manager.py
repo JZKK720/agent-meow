@@ -50,16 +50,16 @@ _logger = logging.getLogger(__name__)
 # uuid-named subdir so concurrent agent-meow processes (zero-downtime restarts,
 # multi-tenant single-machine deployments) don't step on each other.
 #
-# POSIX pins ``/tmp/omnigent`` deliberately: Unix socket paths have a tight
+# POSIX pins ``/tmp/agent-meow`` deliberately: Unix socket paths have a tight
 # length limit, so a short, predictable parent matters (gettempdir() can be a
 # long ``/var/folders/...`` path on macOS). Windows uses TCP loopback for the
 # harness IPC (no socket-path length concern) and has no ``/tmp`` — a literal
-# ``/tmp/omnigent`` there resolves to ``\tmp\omnigent`` on the current drive —
+# ``/tmp/agent-meow`` there resolves to ``\tmp\agent-meow`` on the current drive —
 # so use the real temp dir.
 if IS_WINDOWS:
-    _TMP_PARENT = Path(tempfile.gettempdir()) / "omnigent"
+    _TMP_PARENT = Path(tempfile.gettempdir()) / "agent-meow"
 else:
-    _TMP_PARENT = Path("/tmp/omnigent")
+    _TMP_PARENT = Path("/tmp/agent-meow")
 _TMP_PARENT_ENV_VAR = "OMNIGENT_HARNESS_TMP_PARENT"
 
 # S1 (security): env var carrying the per-spawn bearer token for the harness
@@ -194,7 +194,7 @@ def _default_tmp_parent() -> Path:
     for local worktrees whose absolute path is long.
 
     :returns: Configured parent path, or the default
-        ``/tmp/omnigent``.
+        ``/tmp/agent-meow``.
     """
     configured = os.environ.get(_TMP_PARENT_ENV_VAR)
     if configured:
@@ -207,7 +207,7 @@ def _socket_path(instance_dir: Path, conversation_id: str) -> Path:
     Per-conversation socket path under the per-AP-instance dir.
 
     :param instance_dir: This agent-meow instance's directory, e.g.
-        ``/tmp/omnigent/ap-abc123``.
+        ``/tmp/agent_meow/ap-abc123``.
     :param conversation_id: AP-allocated conversation id, e.g.
         ``"conv_xyz789"``.
     :returns: Absolute Unix socket path the runner binds and AP's
@@ -431,7 +431,7 @@ class _SubprocessEntry:
         to this subprocess over its Unix socket.
     :param socket_path: Absolute Unix socket path the runner
         bound, e.g.
-        ``Path("/tmp/omnigent/ap-abc/conv-xyz.sock")``.
+        ``Path("/tmp/agent_meow/ap-abc/conv-xyz.sock")``.
     :param harness: The harness name this subprocess serves
         (e.g. ``"claude-sdk"``). Recorded so the reaper can
         include it in log lines.
@@ -519,7 +519,7 @@ class HarnessProcessManager:
         specific value.
     :param reaper_interval_s: Seconds between idle-reaper passes.
         Defaults to 60.
-    :param tmp_parent: Override for the parent ``/tmp/omnigent``
+    :param tmp_parent: Override for the parent ``/tmp/agent-meow``
         directory; tests pass a temp path so concurrent test runs
         and the host's real ``/tmp`` don't interfere. Production
         callers normally leave this unset; set
@@ -574,7 +574,7 @@ class HarnessProcessManager:
         """
         This agent-meow instance's per-instance directory.
 
-        :returns: Path like ``/tmp/omnigent/ap-<uuid>``.
+        :returns: Path like ``/tmp/agent_meow/ap-<uuid>``.
         """
         return self._instance_dir
 

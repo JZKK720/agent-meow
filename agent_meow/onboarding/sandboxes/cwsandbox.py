@@ -5,7 +5,7 @@ Implements :class:`SandboxLauncher` for `CoreWeave Sandbox
 <https://docs.coreweave.com/products/sandboxes>`_ on top of the official
 ``cwsandbox`` Python SDK. Same posture as the Modal and Daytona
 launchers: the SDK is an optional dependency (``pip install
-'omnigent[cwsandbox]'``) imported lazily, so the provider can be listed
+'agent-meow[cwsandbox]'``) imported lazily, so the provider can be listed
 and the module probed without it.
 
 Supports both server-managed hosts (``host_type="managed"`` sessions)
@@ -84,7 +84,7 @@ def _ensure_sdk() -> None:
     except ImportError as exc:
         raise click.ClickException(
             "The cwsandbox SDK is required for the 'cwsandbox' sandbox provider. "
-            "Install it with `pip install 'omnigent[cwsandbox]'`, then set "
+            "Install it with `pip install 'agent-meow[cwsandbox]'`, then set "
             "CWSANDBOX_API_KEY (and optionally CWSANDBOX_BASE_URL)."
         ) from exc
 
@@ -209,7 +209,7 @@ class CWSandboxLauncher(SandboxLauncher):
                 # Egress defaults to none; a managed host must dial the server out.
                 network=NetworkOptions(egress_mode="internet"),
                 environment_variables=env_vars or None,
-                tags=["omnigent", name],
+                tags=["agent-meow", name],
             )
             sandbox.wait()
         except CWSandboxError as exc:

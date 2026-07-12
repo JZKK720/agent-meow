@@ -1,17 +1,17 @@
-"""Cursor API-key credential storage for ``omnigent setup`` and the runtime.
+"""Cursor API-key credential storage for ``agent-meow setup`` and the runtime.
 
 Cursor is deliberately outside the anthropic/openai provider-family + gateway
 machinery (see :func:`~?agent_meow.runtime.workflow._build_cursor_spawn_env`): the
 Cursor SDK (``cursor-sdk``) talks only to Cursor's own backend via a
 ``CURSOR_API_KEY`` — which it requires — never the Databricks AI gateway. It
 therefore has no ``providers:`` family entry, but a user should still be able to
-register a ``CURSOR_API_KEY`` once through ``omnigent setup`` rather than
+register a ``CURSOR_API_KEY`` once through ``agent-meow setup`` rather than
 exporting it in every shell.
 
 This module is that home. The key is stored exactly like the api-key
-providers' secrets — in the omnigent secret store (OS keychain, else a
+providers' secrets — in the agent-meow secret store (OS keychain, else a
 ``0600`` JSON file; see :mod:`~?agent_meow.onboarding.secrets`) — and referenced
-from a dedicated top-level ``cursor:`` block in ``~/.omnigent/config.yaml``::
+from a dedicated top-level ``cursor:`` block in ``~/.agent_meow/config.yaml``::
 
     cursor:
       api_key_ref: keychain:cursor   # or env:CURSOR_API_KEY
@@ -128,7 +128,7 @@ def cursor_api_key_ref(config: dict[str, object] | None = None) -> str | None:
     too; ``api_key_ref`` wins when both are present.
 
     :param config: A pre-loaded config mapping; ``None`` loads
-        ``~/.omnigent/config.yaml`` via :func:`load_config`.
+        ``~/.agent_meow/config.yaml`` via :func:`load_config`.
     :returns: The secret reference, e.g. ``"keychain:cursor"`` or
         ``"env:CURSOR_API_KEY"``, or ``None`` when no Cursor key is
         configured.

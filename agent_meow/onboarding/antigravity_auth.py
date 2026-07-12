@@ -1,9 +1,9 @@
-"""Antigravity Gemini API-key credential storage for ``omnigent setup``.
+"""Antigravity Gemini API-key credential storage for ``agent-meow setup``.
 
 Antigravity is Gemini-native (the SDK has no OpenAI-compatible ``base_url``), so
 it sits outside the anthropic/openai provider-family machinery. Its key lives in
-the omnigent secret store and is referenced from a dedicated top-level
-``antigravity:`` block in ``~/.omnigent/config.yaml`` (``keychain:`` / ``env:``),
+the agent-meow secret store and is referenced from a dedicated top-level
+``antigravity:`` block in ``~/.agent_meow/config.yaml`` (``keychain:`` / ``env:``),
 resolved with the shared :func:`resolve_secret`. A dedicated block — not the
 global ``auth:`` block, which the other SDK harnesses inherit — keeps a Gemini
 key from being mis-consumed by claude-sdk / codex / pi / openai-agents. Mirrors

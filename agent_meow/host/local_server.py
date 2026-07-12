@@ -7,7 +7,7 @@ server is detached, shared, and reused across invocations — tracked by a
 pidfile like the connect daemon — so the Web UI stays reachable after the
 command exits and a second invocation reuses the same server + state.
 
-These helpers live under ``omnigent/host/`` (not ``cli.py``) so the
+These helpers live under ``agent_meow/host/`` (not ``cli.py``) so the
 connect daemon can import and own the server's lifecycle: the daemon is
 the only process that starts the local server, and the CLI discovers its
 URL via the pidfile this module writes. The module deliberately avoids
@@ -43,13 +43,13 @@ def _local_data_dir() -> Path:
     """Return the local runtime data dir (db, artifacts, logs, pidfile).
 
     Honors ``OMNIGENT_DATA_DIR`` (the purpose-built data-isolation knob),
-    else ``~/.omnigent``. This lets a checkout/worktree isolate its local
-    runtime DB: two worktrees otherwise share ``~/.omnigent/chat.db``, and
+    else ``~/.agent-meow``. This lets a checkout/worktree isolate its local
+    runtime DB: two worktrees otherwise share ``~/.agent_meow/chat.db``, and
     if their Alembic heads have diverged the shared DB can't migrate and the
     daemon-backed local server fails to boot ("schema is out of date").
 
     Must stay in lock-step with :func:`~?agent_meow.chat._omnigent_persistent_dir`:
-    the local server's DB lives here and ``omnigent run`` resolves the
+    the local server's DB lives here and ``agent-meow run`` resolves the
     resume DB there, so the two MUST agree. ``OMNIGENT_CONFIG_HOME`` is
     deliberately NOT consulted — it isolates *config* (``config.yaml``) only;
     overloading it to move the DB breaks HOME-based data isolation (e.g. the
@@ -61,7 +61,7 @@ def _local_data_dir() -> Path:
     value = os.environ.get("OMNIGENT_DATA_DIR")
     if value:
         return Path(value).expanduser()
-    return Path.home() / ".omnigent"
+    return Path.home() / ".agent-meow"
 
 
 # Pidfile carrying the background local server's PID + port (two lines).
@@ -78,7 +78,7 @@ _LOCAL_SERVER_SIG_PATH = _local_data_dir() / "local_server.sig"
 # stdout/stderr log file (one line). Lets `server start` / `server status`
 # point at the exact ``logs/server/local-server-*.log`` even when reusing a
 # server this invocation didn't spawn. Absent for a foreground
-# ``omnigent server`` (its logs stream to the terminal, not a file).
+# ``agent-meow server`` (its logs stream to the terminal, not a file).
 _LOCAL_SERVER_LOG_REF_PATH = _local_data_dir() / "local_server.logpath"
 
 
@@ -117,7 +117,7 @@ def server_config_signature() -> str:
     from agent_meow.server.auth import resolve_auth_source
 
     try:
-        version = importlib.metadata.version("omnigent")
+        version = importlib.metadata.version("agent-meow")
     except importlib.metadata.PackageNotFoundError:
         # Running from a source tree with no registered distribution —
         # nothing to key version-drift on, so leave it out of the payload.
@@ -203,7 +203,7 @@ def _write_local_server_record(
     """Write the pidfile + config-signature sidecar for the canonical server.
 
     The single writer for all three files so the daemon-spawn and foreground
-    (``omnigent server``) registration paths stay symmetric: a server
+    (``agent-meow server``) registration paths stay symmetric: a server
     that advertises itself in the pidfile ALWAYS stamps a matching sig,
     so reuse-matching in :func:`ensure_local_omnigent_server` can't spuriously
     fail and respawn. Stamp the sig first; the pidfile is what reuse keys
@@ -213,7 +213,7 @@ def _write_local_server_record(
     :param port: Loopback port the server bound, e.g. ``6767``.
     :param sig: Config signature from :func:`server_config_signature`.
     :param log_path: Absolute path of the spawned server's captured log file,
-        e.g. ``Path("/Users/alice/.omnigent/logs/server/local-server-ab12cd.log")``.
+        e.g. ``Path("/Users/alice/.agent_meow/logs/server/local-server-ab12cd.log")``.
         ``None`` for a foreground server whose logs stream to the terminal —
         any stale log-ref sidecar is then removed so status never reports a
         log file that doesn't apply to the running server.
@@ -237,7 +237,7 @@ def _read_local_server_log_path() -> Path | None:
     """Read the running local server's captured-log path from its sidecar.
 
     :returns: The absolute log path the background server writes to, e.g.
-        ``Path("/Users/alice/.omnigent/logs/server/local-server-ab12cd.log")``, or
+        ``Path("/Users/alice/.agent_meow/logs/server/local-server-ab12cd.log")``, or
         ``None`` when the sidecar is absent (foreground server, legacy
         record, or no server) or unreadable.
     """
@@ -251,7 +251,7 @@ def _read_local_server_log_path() -> Path | None:
 def _atomic_write(path: Path, text: str) -> None:
     """Write ``text`` to ``path`` atomically via a same-dir temp + replace.
 
-    :param path: Destination file, e.g. ``~/.omnigent/local_server.pid``.
+    :param path: Destination file, e.g. ``~/.agent_meow/local_server.pid``.
     :param text: Full file contents to write.
     """
     fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.")
@@ -347,7 +347,7 @@ def stop_local_omnigent_server() -> None:
 
     This is pidfile-scoped by design. An orphan whose pidfile was lost is
     NOT visible here — :func:`stop_untracked_local_server` covers that, and
-    the off-switch (``omnigent stop`` / ``server stop``) calls both.
+    the off-switch (``agent-meow stop`` / ``server stop``) calls both.
 
     :returns: None.
     """
@@ -374,7 +374,7 @@ class LocalServerInfo:
     :param url: Base URL when running, e.g. ``"http://127.0.0.1:8123"``;
         ``None`` when not running.
     :param log_path: Absolute path of the background server's captured log
-        file, e.g. ``Path("/Users/alice/.omnigent/logs/server/local-server-ab12cd.log")``.
+        file, e.g. ``Path("/Users/alice/.agent_meow/logs/server/local-server-ab12cd.log")``.
         ``None`` for a foreground server (logs stream to its terminal) or a
         legacy record without the log-path sidecar.
     """
@@ -389,7 +389,7 @@ class LocalServerInfo:
 def local_server_status() -> LocalServerInfo:
     """Report the detached background local server's status.
 
-    Reads ``~/.omnigent/local_server.pid`` for the recorded pid/port and
+    Reads ``~/.agent_meow/local_server.pid`` for the recorded pid/port and
     probes ``/health`` to decide ``running``. A stale pidfile (PID dead or
     health failing) reports ``running=False`` while still surfacing the
     recorded pid/port for diagnostics.
@@ -415,17 +415,17 @@ class LocalServerStartup:
         ``"http://127.0.0.1:8123"``.
     :param spawned: ``True`` when this call started a NEW detached server
         process; ``False`` when it reused an already-running healthy server
-        (one started earlier by ``omnigent server`` or by a prior
+        (one started earlier by ``agent-meow server`` or by a prior
         ``connect`` / ``run`` daemon). Callers that own teardown — notably
         the connect Ctrl-C stop-server prompt — gate on this so they only
         offer to stop a server they actually brought up, never one the user
         started independently.
     :param log_path: Absolute path of the background server's captured log
-        file, e.g. ``Path("/Users/alice/.omnigent/logs/server/local-server-ab12cd.log")``
+        file, e.g. ``Path("/Users/alice/.agent_meow/logs/server/local-server-ab12cd.log")``
         — surfaced so callers (``server start``) can point the user at the
         exact log. For a spawned server this is the freshly created log; for
         a reused one it is read back from the log-path sidecar, and may be
-        ``None`` when the running server is a foreground ``omnigent server``
+        ``None`` when the running server is a foreground ``agent-meow server``
         (logs stream to its terminal) or a legacy record without the sidecar.
     """
 
@@ -438,8 +438,8 @@ def ensure_local_omnigent_server() -> LocalServerStartup:
     """Ensure a persistent background local agent-meow server is running.
 
     Reuses a healthy server recorded in the pidfile; otherwise spawns a
-    detached ``omnigent server`` on a free loopback port, backed by the
-    persistent ``~/.omnigent`` data store so conversations survive across
+    detached ``agent-meow server`` on a free loopback port, backed by the
+    persistent ``~/.agent-meow`` data store so conversations survive across
     invocations (designs/RUN_OMNIGENT_SESSION_RESUMPTION.md). The server runs
     accounts mode (the default) so the daemon and CLI
     both authenticate via built-in accounts and runner launches authorize.
@@ -471,7 +471,7 @@ def ensure_local_omnigent_server() -> LocalServerStartup:
         stop_local_omnigent_server()
 
     # Prefer the stable :6767 so the daemon-spawned server lands on the
-    # same URL as a manual `omnigent server` (and reuse via the pidfile
+    # same URL as a manual `agent-meow server` (and reuse via the pidfile
     # keeps them from ever both running); fall back to a free port if
     # taken.
     port = pick_local_port()
@@ -524,9 +524,9 @@ def ensure_local_omnigent_server() -> LocalServerStartup:
 class _SpawnedLocalServer:
     """A just-spawned detached server subprocess, before readiness.
 
-    :param proc: The ``omnigent server`` subprocess handle.
+    :param proc: The ``agent-meow server`` subprocess handle.
     :param log_path: File capturing the child's stdout/stderr, e.g.
-        ``Path("~/.omnigent/logs/server/local-server-ab12cd.log")``.
+        ``Path("~/.agent_meow/logs/server/local-server-ab12cd.log")``.
     :param base_url: Loopback URL the child was asked to bind, e.g.
         ``"http://127.0.0.1:6767"``.
     """
@@ -614,7 +614,7 @@ def _spawn_local_server(port: int) -> _SpawnedLocalServer:
     # cookie secret + base URL. Persisted via
     # load_or_generate_cookie_secret so daemon restarts don't
     # invalidate every existing browser session. From the user's
-    # POV, `omnigent run` (no --server) in accounts mode gets
+    # POV, `agent-meow run` (no --server) in accounts mode gets
     # "browser auto-opens signed in + TUI auto-signed in" once
     # the spawned server's bootstrap fires.
     child_env = {**os.environ}
@@ -695,10 +695,10 @@ def pick_local_port(preferred: int = _DEFAULT_LOCAL_PORT) -> int:
     """Return ``preferred`` if it's bindable on loopback, else a free port.
 
     The local server prefers a stable, predictable port (6767) so the
-    URL is the same across ``omnigent server`` and daemon spawns —
+    URL is the same across ``agent-meow server`` and daemon spawns —
     but falls back to a free port when 6767 is already taken (another
     app, a second OS user on a shared box). Reuse of an existing
-    omnigent server happens via the pidfile (:func:`register_local_server`
+    agent-meow server happens via the pidfile (:func:`register_local_server`
     / :func:`local_server_url_if_healthy`), NOT by assuming the port, so
     the fallback never breaks discovery.
 
@@ -773,7 +773,7 @@ def stop_untracked_local_server(port: int = _DEFAULT_LOCAL_PORT) -> int | None:
     The pidfile can be lost while the server process lives (a torn/cleared
     record, a respawn that landed on a different port, a crash). Such a
     server then escapes :func:`stop_local_omnigent_server`, which only knows the
-    pidfile PID — so ``omnigent stop`` / ``server stop`` would leave it
+    pidfile PID — so ``agent-meow stop`` / ``server stop`` would leave it
     running. This sweep covers that hole: if a live agent-meow server answers
     ``/health`` on the canonical loopback *port*, find its PID and terminate
     it. Call it AFTER :func:`stop_local_omnigent_server` so a normally-tracked
@@ -797,8 +797,8 @@ def stop_untracked_local_server(port: int = _DEFAULT_LOCAL_PORT) -> int | None:
 def register_local_server(port: int) -> None:
     """Record THIS process as the canonical local server in the pidfile.
 
-    Lets a foreground ``omnigent server`` advertise itself in the same
-    ``local_server.pid`` the daemon reads, so ``omnigent run`` /
+    Lets a foreground ``agent-meow server`` advertise itself in the same
+    ``local_server.pid`` the daemon reads, so ``agent-meow run`` /
     ``connect`` reuse it instead of spawning a competitor.
 
     Stamps the config-signature sidecar alongside the pidfile (same writer
@@ -815,7 +815,7 @@ def register_local_server(port: int) -> None:
 def clear_local_server_record() -> None:
     """Remove the pidfile + sig sidecar if they still point at THIS process.
 
-    Called on ``omnigent server`` shutdown so a clean exit doesn't
+    Called on ``agent-meow server`` shutdown so a clean exit doesn't
     leave a stale record. Guarded on the recorded pid matching ours so
     we never delete a daemon-spawned server's record. The pidfile, sig,
     and log-path sidecar are written together by

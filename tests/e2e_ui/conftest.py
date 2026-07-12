@@ -1,6 +1,6 @@
 """Fixtures for browser-driven e2e tests of the web SPA.
 
-The suite spawns a real ``omnigent server --agent`` subprocess against
+The suite spawns a real ``agent-meow server --agent`` subprocess against
 ``examples/hello_world.yaml`` and drives the rendered SPA with
 Playwright. The server is wired to a mock LLM server so the suite
 runs deterministically without real credentials. The suite is excluded
@@ -18,16 +18,16 @@ Local usage::
 
     # iterate against an already-running server (dev hosts/ports need opt-in)
     cd web && npm run dev &
-    omnigent server --agent examples/hello_world.yaml &
+    agent-meow server --agent examples/hello_world.yaml &
     OMNIGENT_E2E_ALLOW_DEV_BASE_URL=1 \
       uv run pytest tests/e2e_ui --ui-base-url http://127.0.0.1:5173
 
-``omnigent server`` is documented at ``omnigent/cli.py:server``:
+``agent-meow server`` is documented at ``agent_meow/cli.py:server``:
 it spins up uvicorn with the agent-meow app and spawns an out-of-process
 runner that reconnects over the WebSocket tunnel. The fixture passes
 ``--database-uri`` and ``--artifact-location`` pointing at the
 pytest tmp dir so the test never touches the user's default
-``sqlite:///omnigent.db`` / ``./artifacts``.
+``sqlite:///agent_meow.db`` / ``./artifacts``.
 """
 
 from __future__ import annotations
@@ -114,19 +114,19 @@ def switch_markdown_view_mode(page: Page, file_viewer: Locator, mode: str) -> No
 # type (which other tests depend on).
 _server_state: dict[str, int | str] = {}
 _WEB_DIR = _REPO_ROOT / "web"
-_BUILD_OUTPUT = _REPO_ROOT / "omnigent" / "server" / "static" / "web-ui"
+_BUILD_OUTPUT = _REPO_ROOT / "agent-meow" / "server" / "static" / "web-ui"
 
-# ``omnigent server --agent`` runs the spec through the strict
+# ``agent-meow server --agent`` runs the spec through the strict
 # validator at registration time (no shim defaults applied), so the
 # YAML must carry an explicit ``executor`` block — otherwise the
 # server rejects with ``executor.config.harness: required when
-# executor.type is 'omnigent'``. The model name (gpt-4o-mini) is a plain
+# executor.type is 'agent-meow'``. The model name (gpt-4o-mini) is a plain
 # (non-``databricks-``) name on purpose: the openai-agents harness then
 # resolves no provider auth and falls back to ``OPENAI_BASE_URL`` (the
 # in-process mock) rather than routing to the Databricks gateway, which
 # would need real credentials CI does not have. A ``databricks-``-prefixed
 # model forces Databricks DEFAULT-profile auth (see
-# omnigent/runtime/workflow.py) and fails with DatabricksAuthError in CI.
+# agent_meow/runtime/workflow.py) and fails with DatabricksAuthError in CI.
 _TEST_AGENT_YAML = """\
 name: hello_world
 prompt: You are a friendly assistant. Say hello and answer questions.
@@ -150,9 +150,9 @@ def _build_hello_world_bundle() -> bytes:
     """Build a gzipped tarball from ``_TEST_AGENT_YAML``.
 
     Uses a non-``config.yaml`` archive name so the bundle routes
-    through the omnigent compat adapter (which translates
+    through the agent-meow compat adapter (which translates
     ``executor.harness`` → ``executor.config.harness`` and sets
-    ``executor.type: omnigent``). Using ``config.yaml`` would
+    ``executor.type: agent-meow``). Using ``config.yaml`` would
     go through the strict ``spec_version: 1`` parser which doesn't
     accept the shorthand.
 
@@ -239,7 +239,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         action="store_true",
         default=False,
         help=(
-            "Reuse whatever's already in omnigent/server/static/web-ui/ "
+            "Reuse whatever's already in agent_meow/server/static/web-ui/ "
             "instead of rebuilding. Fails if no build is present."
         ),
     )
@@ -378,7 +378,7 @@ def _register_agent_yaml(
 
     ``arcname`` defaults to ``config.yaml`` for native agent-meow specs. Pass a
     ``*.yaml`` filename for omnigent-flavored single-file specs; the
-    compat loader only routes those through the omnigent translator when
+    compat loader only routes those through the agent-meow translator when
     the extracted bundle has no root ``config.yaml``.
 
     Returns the new agent id on 201, or None on 409 (already registered against
@@ -456,7 +456,7 @@ def mock_llm_server_url(
 
     The mock server is a lightweight FastAPI/uvicorn subprocess that
     serves an OpenAI-compatible ``/v1/`` endpoint. The ``live_server``
-    fixture points the spawned omnigent server at this URL so all agent
+    fixture points the spawned agent-meow server at this URL so all agent
     LLM calls hit the mock rather than a real provider.
 
     :param tmp_path_factory: Pytest temp path factory for logs.
@@ -658,7 +658,7 @@ def _assert_pwa_build(build_output: Path) -> None:
 @pytest.fixture(scope="session")
 def built_spa(request: pytest.FixtureRequest) -> None:
     """
-    Build the web SPA into ``omnigent/server/static/web-ui/``.
+    Build the web SPA into ``agent_meow/server/static/web-ui/``.
 
     Vite's ``emptyOutDir: true`` (see ``web/vite.config.ts``)
     nukes the output directory before writing, so concurrent
@@ -703,7 +703,7 @@ def _spawn_runner_against_external_server(
     """Spawn a runner subprocess that tunnels into an already-running server.
 
     Used when ``--ui-base-url`` is set: the user owns the
-    ``omnigent server`` process (and its pre-registered ``hello_world``
+    ``agent-meow server`` process (and its pre-registered ``hello_world``
     agent), but the runner-bound fixtures still need a runner id this
     process controls. Mirrors :func:`~?agent_meow.cli._start_cli_runner_process`
     minus the click plumbing, then polls
@@ -805,7 +805,7 @@ def live_server(
     request: pytest.FixtureRequest,
 ) -> Iterator[str]:
     """
-    Spawn ``omnigent server --agent examples/hello_world.yaml`` and
+    Spawn ``agent-meow server --agent examples/hello_world.yaml`` and
     yield its base URL.
 
     The server picks a random free port so back-to-back sessions
@@ -826,7 +826,7 @@ def live_server(
     :param tmp_path_factory: Pytest temp path factory for the log,
         the SQLite DB, and the artifact dir — all per-session, so
         the test never reads from or writes to the user's default
-        ``./omnigent.db`` / ``./artifacts``.
+        ``./agent_meow.db`` / ``./artifacts``.
     :param request: pytest request — reads ``--ui-base-url`` to
         bypass the spawn entirely.
     :returns: The server's base URL, e.g. ``"http://127.0.0.1:51234"``.
@@ -896,7 +896,7 @@ def live_server(
             # presence-leave assertion in test_collab_realtime clears in ~1s
             # instead of the prod 15s dwell (which only exists to absorb the
             # ingress' ~5-min stream recycle a test server never hits).
-            # Mirrors ``python -m omnigent`` (omnigent/__main__.py).
+            # Mirrors ``python -m agent-meow`` (agent_meow/__main__.py).
             "-c",
             "import agent_meow.server.presence as _p; _p._LEAVE_GRACE_S = 1.0; "
             + "from agent_meow.cli import main; main()",
@@ -993,7 +993,7 @@ def live_server(
         log_handle.close()
         log_text = log_path.read_text() if log_path.exists() else ""
         raise RuntimeError(
-            f"`omnigent server` did not become healthy within "
+            f"`agent-meow server` did not become healthy within "
             f"{_HEALTH_TIMEOUT_S:.0f}s on {base_url} "
             f"(last_error={last_error}).\n"
             f"Server log at {log_path}:\n{log_text[-3000:]}"
@@ -1438,7 +1438,7 @@ def terminal_session(
         gzip.GzipFile(fileobj=buf, mode="wb", mtime=0) as gz,
         tarfile.open(fileobj=gz, mode="w") as tar,
     ):
-        # Use the omnigent shorthand YAML with a non-config.yaml
+        # Use the agent-meow shorthand YAML with a non-config.yaml
         # name so the bundle routes through the compat adapter, which
         # parses `terminals:`. The spec_version:1 parser silently
         # drops the terminals key.
@@ -1508,7 +1508,7 @@ def _two_agent_chat_yaml(verification_code: str, question_code: str) -> str:
 
     A parent agent (Arthur) with an inline ``type: agent`` sub-agent
     (Deep Thought) — the omnigent-flavored shape parsed by
-    ``omnigent/inner/loader.py:_parse_tool``, same as the
+    ``agent_meow/inner/loader.py:_parse_tool``, same as the
     ``named-sub-agent-test`` e2e fixture. The parent is forbidden from
     answering the Ultimate Question itself, and both nonces appear ONLY
     in the sub-agent's prompt: if either code shows up in the parent's
@@ -1607,7 +1607,7 @@ def two_agent_chat_session(
     yaml_bytes = yaml_text.encode()
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
-        # Non-config.yaml arcname routes the bundle through the omnigent
+        # Non-config.yaml arcname routes the bundle through the agent-meow
         # compat adapter, whose loader parses the inline `type: agent`
         # tool. The spec_version:1 parser does not accept this shorthand.
         info = tarfile.TarInfo(name=f"{_TWO_AGENT_PARENT_NAME}.yaml")
@@ -1834,7 +1834,7 @@ def runner_id(live_server: str) -> str:
 @pytest.fixture
 def server_pid(live_server: str) -> int:
     """
-    PID of the ``omnigent server`` process spawned by
+    PID of the ``agent-meow server`` process spawned by
     :func:`live_server`.
 
     Depends on ``live_server`` to guarantee the process is running.
@@ -1859,7 +1859,7 @@ def server_pid(live_server: str) -> int:
 #
 # ``native_claude_session`` is the native-CLI counterpart: it spins up a real
 # ``claude-native`` ("Claude Code") wrapper session — the same terminal-first
-# spec ``omnigent claude`` ships — and yields ``(base_url, session_id)``. The
+# spec ``agent-meow claude`` ships — and yields ``(base_url, session_id)``. The
 # runner auto-launches Claude Code in the session terminal on bind, including
 # the gateway auth it derives from the runner's own credentials and the
 # first-run trust/onboarding pre-accept, so no CLI client is needed. In CI the
@@ -1869,7 +1869,7 @@ def server_pid(live_server: str) -> int:
 #
 # ``native_codex_session`` is the sibling native-CLI fixture for the
 # ``codex-native`` ("Codex") wrapper: it spins up a real Codex wrapper session —
-# the same terminal-first spec ``omnigent codex`` ships — and yields
+# the same terminal-first spec ``agent-meow codex`` ships — and yields
 # ``(base_url, session_id)``. The runner auto-launches Codex in the session
 # terminal on bind (gateway auth derived from the runner's own credentials +
 # first-run pre-accept handled runner-side), exactly like the claude fixture.
@@ -1977,12 +1977,12 @@ def _create_native_claude_session(
 ) -> str:
     """Register the ``claude-native`` wrapper agent and bind its session.
 
-    Reuses the exact terminal-first spec ``omnigent claude`` ships
+    Reuses the exact terminal-first spec ``agent-meow claude`` ships
     (:func:`~?agent_meow.claude_native._materialize_claude_agent_spec`) so the
     fixture never drifts from production, and stamps the same wrapper /
-    terminal-first labels (``omnigent.wrapper`` + ``agent_meow.ui = terminal``)
+    terminal-first labels (``agent_meow.wrapper`` + ``agent_meow.ui = terminal``)
     the CLI writes. The spec carries no ``spec_version``, so it is bundled
-    under a ``*.yaml`` arcname to route through the omnigent compat translator
+    under a ``*.yaml`` arcname to route through the agent-meow compat translator
     (which preserves ``executor.harness`` + ``terminals:``); a ``config.yaml``
     arcname would hit the strict parser and reject it.
 
@@ -1996,7 +1996,7 @@ def _create_native_claude_session(
     :param terminal_launch_args: Pass-through ``claude`` CLI args persisted on
         the session (``conversations.terminal_launch_args``); the runner threads
         them into the terminal launch before its own bridge/MCP/hook wiring (see
-        ``_build_claude_native_base_args`` in ``omnigent/runner/app.py``). Used
+        ``_build_claude_native_base_args`` in ``agent_meow/runner/app.py``). Used
         by the plan-mode fixture to pass ``["--permission-mode", "plan"]`` so
         Claude boots into plan mode and reaches for ``ExitPlanMode``. ``None``
         launches with the production defaults.
@@ -2020,7 +2020,7 @@ def _create_native_claude_session(
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         data = yaml_text.encode()
-        # Non-config.yaml arcname → omnigent compat translator (the spec has
+        # Non-config.yaml arcname → agent-meow compat translator (the spec has
         # no spec_version), matching the terminal_session fixture.
         info = tarfile.TarInfo("claude-native-ui.yaml")
         info.size = len(data)
@@ -2143,12 +2143,12 @@ def native_claude_plan_session(
 def _create_native_codex_session(base_url: str, runner_id: str) -> str:
     """Register the ``codex-native`` wrapper agent and bind its session.
 
-    Reuses the exact terminal-first spec ``omnigent codex`` ships
+    Reuses the exact terminal-first spec ``agent-meow codex`` ships
     (:func:`~?agent_meow.codex_native._materialize_codex_agent_spec`) so the
     fixture never drifts from production, and stamps the same wrapper /
-    terminal-first labels (``omnigent.wrapper`` + ``agent_meow.ui = terminal``)
+    terminal-first labels (``agent_meow.wrapper`` + ``agent_meow.ui = terminal``)
     the CLI writes. The spec carries no ``spec_version``, so it is bundled
-    under a ``*.yaml`` arcname to route through the omnigent compat translator
+    under a ``*.yaml`` arcname to route through the agent-meow compat translator
     (which preserves ``executor.harness`` + ``terminals:``); a ``config.yaml``
     arcname would hit the strict parser and reject it.
 
@@ -2180,7 +2180,7 @@ def _create_native_codex_session(base_url: str, runner_id: str) -> str:
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         data = yaml_text.encode()
-        # Non-config.yaml arcname → omnigent compat translator (the spec has
+        # Non-config.yaml arcname → agent-meow compat translator (the spec has
         # no spec_version), matching the terminal_session fixture.
         info = tarfile.TarInfo("codex-native-ui.yaml")
         info.size = len(data)
@@ -2251,7 +2251,7 @@ def native_codex_session(
 def _temp_omnigent_mock_config(
     mock_llm_server_url: str, harness: str
 ) -> Generator[None, None, None]:
-    """Temporarily write a mock provider config to ~/.omnigent/config.yaml.
+    """Temporarily write a mock provider config to ~/.agent_meow/config.yaml.
 
     The runner reads this at terminal-creation time, so it only needs to be
     in place between the PATCH that binds a session to the runner (which
@@ -2262,7 +2262,7 @@ def _temp_omnigent_mock_config(
         ``"http://127.0.0.1:51235"``. No /v1 suffix — each SDK appends it.
     :param harness: ``"claude"`` or ``"codex"``.
     """
-    config_dir = Path.home() / ".omnigent"
+    config_dir = Path.home() / ".agent-meow"
     config_path = config_dir / "config.yaml"
     config_dir.mkdir(parents=True, exist_ok=True)
     original = config_path.read_text() if config_path.exists() else None
@@ -2312,10 +2312,10 @@ def native_claude_mock_session(
     """A runner-bound claude-native session whose LLM backend depends on env.
 
     When ``LLM_API_KEY`` is set in the environment (local dev / CI with real
-    credentials), the existing ``~/.omnigent/config.yaml`` is left untouched so
+    credentials), the existing ``~/.agent_meow/config.yaml`` is left untouched so
     the runner boots Claude Code against the real gateway. When ``LLM_API_KEY``
     is absent, a mock anthropic provider config is written to
-    ``~/.omnigent/config.yaml`` and restored on teardown.
+    ``~/.agent_meow/config.yaml`` and restored on teardown.
 
     :param live_server: Spawned server fixture; its runner is reused.
     :param mock_llm_server_url: Session-scoped mock LLM server base URL.
@@ -2599,10 +2599,10 @@ def mocked_native_codex_goal_session(
 # ---------------------------------------------------------------------------
 # ``native_cursor_session`` is the sibling native-CLI fixture for the
 # ``cursor-native`` ("Cursor") wrapper: it spins up a real Cursor wrapper
-# session — the same terminal-first spec ``omnigent cursor`` ships — and yields
+# session — the same terminal-first spec ``agent-meow cursor`` ships — and yields
 # ``(base_url, session_id)``. The runner auto-launches ``cursor-agent`` in the
 # session terminal on bind (``_auto_create_cursor_terminal`` in
-# ``omnigent/runner/app.py``), exactly like the claude/codex fixtures.
+# ``agent_meow/runner/app.py``), exactly like the claude/codex fixtures.
 #
 # Two things differ from claude/codex, both stemming from cursor-agent owning
 # its own auth/approval:
@@ -2629,12 +2629,12 @@ def _create_native_cursor_session(
 ) -> str:
     """Register the ``cursor-native`` wrapper agent and bind its session.
 
-    Reuses the exact terminal-first spec ``omnigent cursor`` ships
+    Reuses the exact terminal-first spec ``agent-meow cursor`` ships
     (:func:`~?agent_meow.cursor_native._materialize_cursor_agent_spec`) so the
     fixture never drifts from production, and stamps the same wrapper /
-    terminal-first labels (``omnigent.wrapper`` + ``agent_meow.ui = terminal``)
+    terminal-first labels (``agent_meow.wrapper`` + ``agent_meow.ui = terminal``)
     the CLI writes. The spec carries no ``spec_version``, so it is bundled
-    under a ``*.yaml`` arcname to route through the omnigent compat translator
+    under a ``*.yaml`` arcname to route through the agent-meow compat translator
     (which preserves ``executor.harness`` + ``terminals:``); a ``config.yaml``
     arcname would hit the strict parser and reject it.
 
@@ -2668,7 +2668,7 @@ def _create_native_cursor_session(
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         data = yaml_text.encode()
-        # Non-config.yaml arcname → omnigent compat translator (the spec has
+        # Non-config.yaml arcname → agent-meow compat translator (the spec has
         # no spec_version), matching the terminal_session fixture.
         info = tarfile.TarInfo("cursor-native-ui.yaml")
         info.size = len(data)
@@ -2708,7 +2708,7 @@ def _create_native_goose_session(base_url: str, runner_id: str) -> str:
     """Register the ``goose-native`` wrapper agent and bind its session.
 
     Mirrors :func:`_create_native_cursor_session`: reuses the exact terminal-first
-    spec ``omnigent goose`` ships
+    spec ``agent-meow goose`` ships
     (:func:`~?agent_meow.goose_native._materialize_goose_agent_spec`) and stamps the
     same wrapper / terminal-first labels. Binding triggers the runner's
     goose-native auto-bootstrap
@@ -2798,7 +2798,7 @@ def _create_native_kiro_session(base_url: str, runner_id: str) -> str:
     """Register the ``kiro-native`` wrapper agent and bind its session.
 
     Mirrors :func:`_create_native_goose_session`: reuses the terminal-first spec
-    ``omnigent kiro`` ships
+    ``agent-meow kiro`` ships
     (:func:`~?agent_meow.kiro_native._materialize_kiro_agent_spec`) and stamps the
     same wrapper / terminal-first labels. Binding triggers the runner's
     kiro-native auto-bootstrap
@@ -2887,7 +2887,7 @@ def _create_native_hermes_session(base_url: str, runner_id: str) -> str:
     """Register the ``hermes-native`` wrapper agent and bind its session.
 
     Mirrors :func:`_create_native_goose_session`: reuses the exact terminal-first
-    spec ``omnigent hermes`` ships
+    spec ``agent-meow hermes`` ships
     (:func:`~?agent_meow.hermes_native._materialize_hermes_agent_spec`) and stamps the
     same wrapper / terminal-first labels. Binding triggers the runner's
     hermes-native auto-bootstrap

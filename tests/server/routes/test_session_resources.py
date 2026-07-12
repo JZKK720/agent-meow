@@ -54,7 +54,7 @@ class _ConversationStore:
                 agent_id="ag_test",
                 labels={
                     "agent_meow.ui": "terminal",
-                    "omnigent.wrapper": "claude-code-native-ui",
+                    "agent_meow.wrapper": "claude-code-native-ui",
                 },
             ),
             "conv_kiro": Conversation(
@@ -65,7 +65,7 @@ class _ConversationStore:
                 agent_id="ag_kiro",
                 labels={
                     "agent_meow.ui": "terminal",
-                    "omnigent.wrapper": "kiro-native-ui",
+                    "agent_meow.wrapper": "kiro-native-ui",
                 },
             ),
             # A spec-driven native sub-agent child (e.g. a nessie
@@ -83,7 +83,7 @@ class _ConversationStore:
                 agent_id="ag_test",
                 labels={
                     "agent_meow.ui": "terminal",
-                    "omnigent.wrapper": "claude-code-native-ui",
+                    "agent_meow.wrapper": "claude-code-native-ui",
                 },
             ),
         }
@@ -504,7 +504,7 @@ async def test_get_session_labels_uses_labels_only_path(
         "id": "conv_claude",
         "labels": {
             "agent_meow.ui": "terminal",
-            "omnigent.wrapper": "claude-code-native-ui",
+            "agent_meow.wrapper": "claude-code-native-ui",
         },
     }
     assert fake_runner.calls == []
@@ -1179,7 +1179,7 @@ async def test_create_terminal_native_bootstrap_exempt_from_gate(
 ) -> None:
     """``ensure_native_terminal`` requests bypass the declared-name gate.
 
-    The ``omnigent claude`` / ``codex`` wrappers launch the session's
+    The ``agent-meow claude`` / ``codex`` wrappers launch the session's
     own CLI terminal under undeclared names (``"claude"`` /
     ``"codex"``); gating them would break every native session boot.
     No spec resolves here (stub agent store), so a recorded proxy call
@@ -4237,7 +4237,7 @@ def _make_subagent_conv(child_id: str, *, wrapper: str, kind: str = "sub_agent")
     """Build a sub-agent conversation row for terminal-delivery relay tests.
 
     :param child_id: Child session id, e.g. ``"conv_cc_child"``.
-    :param wrapper: ``omnigent.wrapper`` label, e.g.
+    :param wrapper: ``agent_meow.wrapper`` label, e.g.
         ``"claude-code-native-ui"`` or ``"codex-native-ui"``.
     :param kind: Conversation kind, ``"sub_agent"`` or ``"default"``.
     :returns: A real :class:`Conversation` carrying the wrapper label.
@@ -4250,7 +4250,7 @@ def _make_subagent_conv(child_id: str, *, wrapper: str, kind: str = "sub_agent")
         parent_conversation_id="conv_parent",
         agent_id="ag_test",
         kind=kind,
-        labels={"agent_meow.ui": "terminal", "omnigent.wrapper": wrapper},
+        labels={"agent_meow.ui": "terminal", "agent_meow.wrapper": wrapper},
     )
 
 

@@ -67,10 +67,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         payload = json.loads(raw or "{}")
     except json.JSONDecodeError as exc:
-        print(f"omnigent message-display hook: malformed JSON: {exc}", file=sys.stderr)
+        print(f"agent-meow message-display hook: malformed JSON: {exc}", file=sys.stderr)
         return 0
     if not isinstance(payload, dict):
-        print("omnigent message-display hook: expected JSON object", file=sys.stderr)
+        print("agent-meow message-display hook: expected JSON object", file=sys.stderr)
         return 0
 
     record = _delta_record(payload)
@@ -92,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
         finally:
             os.close(fd)
     except OSError as exc:
-        print(f"omnigent message-display hook: write failed: {exc}", file=sys.stderr)
+        print(f"agent-meow message-display hook: write failed: {exc}", file=sys.stderr)
         return 0
     return 0
 

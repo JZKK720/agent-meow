@@ -1,6 +1,6 @@
 """TUI→web forwarder for the cursor-native harness.
 
-The ``omnigent cursor`` wrapper launches the real ``cursor-agent`` TUI in a
+The ``agent-meow cursor`` wrapper launches the real ``cursor-agent`` TUI in a
 runner-owned tmux pane, and :mod:`~?agent_meow.cursor_native_bridge` injects web-UI
 messages into it. That covers the web→TUI direction, but the *embedded terminal*
 is then the only surface that reflects the agent's work — the agent-meow
@@ -583,7 +583,7 @@ async def _post_model_change_if_new(
     claude-native (which seeds the first value without posting, because its pill
     already falls back to a Claude-ish ``llmModel``), cursor must post the first
     observation: a cursor-native session has no per-session llm model, so an
-    un-pinned session falls back to omnigent's default (e.g. "fable") in the Web
+    un-pinned session falls back to agent-meow's default (e.g. "fable") in the Web
     UI pill — meaningless for cursor. Surfacing the real model immediately fixes
     that and makes the picker highlight correct from the first poll. Safe to
     post the first value because cursor has no bind-time sticky-model handoff to

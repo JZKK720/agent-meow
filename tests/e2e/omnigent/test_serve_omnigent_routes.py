@@ -1,11 +1,11 @@
-"""Phase 3 integration-code test -- ``omnigent server --agent`` routing (mock LLM).
+"""Phase 3 integration-code test -- ``agent-meow server --agent`` routing (mock LLM).
 
 Migrated to mock LLM: the test only boots the server and probes
 HTTP routes -- no LLM calls are made, so mock credentials suffice.
 
 **What breaks if this fails:**
 - The agent-meow mode dispatch site at ``_serve_agent`` stops calling into
-  omnigent and falls back to the legacy ``create_app``.
+  agent-meow and falls back to the legacy ``create_app``.
 - The shim's ``_omnigent_register_yaml_bundle`` stops registering
   the synthesized bundle with agent-meow' ``AgentStore``.
 - The shim's YAML translation pipeline regresses.
@@ -45,12 +45,12 @@ def _omnigent_serve_omnigent(
     env: dict[str, str],
     cwd: Path,
 ) -> Generator[subprocess.Popen[str]]:
-    """Spawn ``omnigent server --agent <yaml> --port <port>``."""
+    """Spawn ``agent-meow server --agent <yaml> --port <port>``."""
     proc = subprocess.Popen(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "server",
             "--agent",
             str(yaml_path),
@@ -87,7 +87,7 @@ def _wait_for_health(
         if proc.poll() is not None:
             output = proc.stdout.read() if proc.stdout is not None else "<no output>"
             raise AssertionError(
-                f"omnigent server --agent exited early with code "
+                f"agent-meow server --agent exited early with code "
                 f"{proc.returncode} before /health became ready.\n\n"
                 f"Server output:\n{output}"
             )
@@ -101,7 +101,7 @@ def _wait_for_health(
             last_error = f"HTTP {resp.status_code}"
         time.sleep(_POLL_INTERVAL_S)
     pytest.fail(
-        f"omnigent server --agent did not respond on /health within "
+        f"agent-meow server --agent did not respond on /health within "
         f"{timeout}s (last_error={last_error!r})."
     )
 
@@ -148,7 +148,7 @@ def test_serve_omnigent_routes_to_omnigent(
     mock_credentials_env: dict[str, str],
 ) -> None:
     """
-    ``omnigent server --agent <yaml>`` boots an omnigent server
+    ``agent-meow server --agent <yaml>`` boots an agent-meow server
     with the YAML pre-registered. No LLM calls are made.
     """
     port = _find_free_port()
@@ -165,7 +165,7 @@ def test_serve_omnigent_routes_to_omnigent(
 
     diffs = compare_snapshot("test_serve_omnigent_routes", observed)
     assert diffs == [], (
-        "Snapshot mismatch for omnigent server --agent routing:\n"
+        "Snapshot mismatch for agent-meow server --agent routing:\n"
         + "\n".join(diffs)
         + f"\n\nObserved: {observed!r}"
     )

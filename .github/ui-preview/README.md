@@ -10,7 +10,7 @@ when a PR changes the frontend (`web/`).
    `OWNER`/`MEMBER`/`COLLABORATOR` authors).
 2. The [UI Preview workflow](../workflows/ui-preview.yml) builds the SPA + the
    agent-meow wheels and deploys them to an ephemeral Databricks App
-   (`omnigent-ui-preview-pr-<N>`).
+   (`agent-meow-ui-preview-pr-<N>`).
 3. A comment with the preview URL is posted on the PR and updated on each push.
 4. The app is deleted automatically when the PR is closed.
 

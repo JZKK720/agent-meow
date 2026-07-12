@@ -1,4 +1,4 @@
-"""FastAPI application — main entry point for the omnigent server."""
+"""FastAPI application — main entry point for the agent-meow server."""
 
 import asyncio
 import logging
@@ -716,7 +716,7 @@ def _ensure_default_cursor_agent(
 
     Called during server lifespan startup so the Web UI offers Cursor as a
     built-in native-terminal agent on every deployment (not only after the
-    ``omnigent cursor`` CLI first registers it). Content-aware via
+    ``agent-meow cursor`` CLI first registers it). Content-aware via
     :func:`_ensure_builtin_agent`.
 
     :param agent_store: Store for agent metadata.
@@ -831,7 +831,7 @@ def _ensure_default_qwen_agent(
 
     Called during server lifespan startup so the Web UI offers Qwen Code as a
     built-in native-terminal agent on every deployment (not only after the
-    ``omnigent qwen`` CLI first registers it). Content-aware via
+    ``agent-meow qwen`` CLI first registers it). Content-aware via
     :func:`_ensure_builtin_agent`.
 
     :param agent_store: Store for agent metadata.
@@ -874,7 +874,7 @@ def _ensure_default_kimi_native_agent(
 
     Called during server lifespan startup so the Web UI offers Kimi as a
     built-in native-terminal agent on every deployment (not only after the
-    ``omnigent kimi`` CLI first registers it). Content-aware via
+    ``agent-meow kimi`` CLI first registers it). Content-aware via
     :func:`_ensure_builtin_agent`.
 
     :param agent_store: Store for agent metadata.
@@ -1174,13 +1174,13 @@ def create_app(
 
         _to_thread.current_default_thread_limiter().total_tokens = 200
 
-        # Apply OMNIGENT_LOG_LEVEL to the omnigent namespace after
+        # Apply OMNIGENT_LOG_LEVEL to the agent-meow namespace after
         # uvicorn's dictConfig runs (dictConfig resets existing handlers,
         # making a pre-run basicConfig call ineffective).
         import os as _os
 
         _log_level_name = _os.environ.get("OMNIGENT_LOG_LEVEL", "INFO").upper()
-        logging.getLogger("omnigent").setLevel(getattr(logging, _log_level_name, logging.INFO))
+        logging.getLogger("agent-meow").setLevel(getattr(logging, _log_level_name, logging.INFO))
 
         harness_pm = HarnessProcessManager()
         await harness_pm.start()
@@ -1695,7 +1695,7 @@ def create_app(
     @app.get("/api/version")
     async def version() -> dict[str, str]:
         """
-        Return the installed omnigent package version.
+        Return the installed agent-meow package version.
 
         Used by the web UI to include version info in bug reports.
 
@@ -1708,7 +1708,7 @@ def create_app(
     async def info() -> dict[str, bool | str | None]:
         """Runtime capabilities probe for the SPA + CLI.
 
-        Returned at app boot by the frontend (and by ``omnigent
+        Returned at app boot by the frontend (and by ``agent-meow
         login`` when it needs to choose between flows). Drives
         conditional route registration and chrome on the SPA side
         — when ``accounts_enabled`` is false, the SPA never
@@ -1769,7 +1769,7 @@ def create_app(
         # actually offered; None when no provider is named (embedding
         # configs may leave it unset) so the UI keeps the generic label.
         sandbox_provider = sandbox_config.provider if managed_sandboxes_enabled else None
-        # server_version is the installed omnigent package version (same
+        # server_version is the installed agent-meow package version (same
         # source as /api/version), surfaced so the web UI can show it in the
         # session info popover alongside the per-session host version.
         # smart_routing_enabled: true when the server can route — either
@@ -2295,7 +2295,7 @@ def create_app(
             )
 
     # Mount the built web SPA at "/" if a build is present. The SPA is
-    # built into ``omnigent/server/static/web-ui/`` by ``web/``'s Vite
+    # built into ``agent_meow/server/static/web-ui/`` by ``web/``'s Vite
     # build (see ``web/vite.config.ts`` ``build.outDir``). The mount is
     # registered AFTER all API routers so router routes win on overlap.
     # Skipping the mount when no build is present keeps API-only

@@ -1,4 +1,4 @@
-"""Host tunnel frame schema for ``omnigent host``.
+"""Host tunnel frame schema for ``agent-meow host``.
 
 Host-specific frame kinds, all JSON (see :class:`HostFrameKind`),
 plus reuse of ``PingFrame``/``PongFrame`` from the runner tunnel

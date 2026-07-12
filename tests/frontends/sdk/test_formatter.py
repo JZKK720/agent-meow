@@ -390,7 +390,7 @@ def test_duplicate_tool_call_renders_call_line_once() -> None:
     on the first occurrence; the second should be suppressed.
 
     Reproduces the bug observed in the debug log at
-    ``~/.omnigent/debug/events-fresh-1778791015.jsonl``: every tool
+    ``~/.agent_meow/debug/events-fresh-1778791015.jsonl``: every tool
     call's ``⏵ tool_name(args)`` line appeared twice in the TUI.
     """
     fmt = RichBlockFormatter()

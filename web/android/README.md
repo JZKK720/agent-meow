@@ -38,7 +38,7 @@ routing back into the SPA, a best-effort app badge, edge-to-edge inset plumbing
 (measured insets injected as `--agentmeow-android-safe-area-*`, consumed by the
 web inset system), correct system-back / predictive-back handling, file
 downloads — including `blob:` / `data:` exports via a fetch→base64→MediaStore
-bridge, which closes omnigent-ai/omnigent#969 (the iOS shell drops these) —
+bridge, which closes JZKK720/agent-meow#969 (the iOS shell drops these) —
 file **uploads** (`<input type=file>` via `WebChromeClient.onShowFileChooser`),
 and **microphone** capture for voice input (`onPermissionRequest`, granted to
 the pinned origin only, with a runtime `RECORD_AUDIO` request).
@@ -72,5 +72,5 @@ Play case but review is unpredictable for this category.
 
 > Status: builds clean — `gradlew :app:assembleDebug :app:lintDebug` produces a
 > debug APK with 0 lint errors (JDK 17, Gradle 8.9 wrapper, `compileSdk 35`).
-> Implementation for omnigent-ai/omnigent#1604; not yet exercised on a device
+> Implementation for JZKK720/agent-meow#1604; not yet exercised on a device
 > (no runtime/instrumented testing here), so treat device behavior as unverified.

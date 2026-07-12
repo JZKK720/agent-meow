@@ -53,7 +53,7 @@ def _patch_session_as_codex_native(page: Page, session_id: str) -> list[dict]:
 
         payload["labels"] = {
             **payload.get("labels", {}),
-            "omnigent.wrapper": "codex-native-ui",
+            "agent_meow.wrapper": "codex-native-ui",
         }
         payload["harness"] = "codex"
         payload["llm_model"] = "gpt-5.5"

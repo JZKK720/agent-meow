@@ -1,6 +1,6 @@
 """Executor that bridges agent-meow web-chat turns into the native Kimi TUI.
 
-It does not launch ``kimi`` — the ``omnigent kimi`` wrapper already
+It does not launch ``kimi`` — the ``agent-meow kimi`` wrapper already
 launched the interactive TUI in the session terminal. Each web-UI turn injects
 the latest user message into that same tmux pane (bracketed paste + Enter), so
 the message appears in the running Kimi TUI (and, since the web UI embeds the
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 class KimiNativeExecutor(Executor):
-    """Harness-side executor for ``omnigent kimi`` web-UI turns.
+    """Harness-side executor for ``agent-meow kimi`` web-UI turns.
 
     Injects each web-UI message into the running Kimi TUI's tmux pane. Does not
     stream output (the embedded terminal shows it); accepts mid-turn steering.

@@ -19,8 +19,8 @@ from omnigent_ui_sdk.terminal import (
 def test_user_config_path_uses_shared_state_dir(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
 
-    assert state_dir() == tmp_path / ".omnigent"
-    assert user_config_path() == tmp_path / ".omnigent" / "config.yaml"
+    assert state_dir() == tmp_path / ".agent-meow"
+    assert user_config_path() == tmp_path / ".agent-meow" / "config.yaml"
 
 
 def test_user_config_path_accepts_explicit_state_dir(tmp_path) -> None:

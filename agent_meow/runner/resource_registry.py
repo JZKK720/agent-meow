@@ -63,7 +63,7 @@ QWEN_NATIVE_TERMINAL_ROLE = "qwen-native"
 KIMI_NATIVE_TERMINAL_ROLE = "kimi-native"
 HERMES_NATIVE_TERMINAL_ROLE = "hermes-native"
 # Role marker for the embedded agent-meow REPL terminal auto-created for
-# runner-hosted SDK sessions (``omnigent attach`` in a tmux pane — the
+# runner-hosted SDK sessions (``agent-meow attach`` in a tmux pane — the
 # SDK mirror of the native terminals above). The attach WebSocket uses
 # this marker to recreate the terminal when its tmux session has died
 # (the REPL exited or crashed) instead of rejecting the attach.

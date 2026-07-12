@@ -1,21 +1,21 @@
 """
-End-to-end: omnigent example YAMLs that declare unsupported
+End-to-end: agent-meow example YAMLs that declare unsupported
 concepts MUST fail loud at spec-load time under agent-meow mode.
 
-The adapter in :mod:`~?agent_meow.spec.omnigent` rejects several
-concepts it cannot faithfully translate into an omnigent
+The adapter in :mod:`~?agent_meow.spec.agent-meow` rejects several
+concepts it cannot faithfully translate into an agent-meow
 :class:`AgentSpec` (see
 :func:`_reject_unsupported_concepts_def`):
 
 - ``policies`` — label-based + function-type policies have no
-  omnigent parity yet.
-- MCP-type tools — omnigent' subprocess MCP transport has no
-  omnigent equivalent (omnigent uses HTTP/SSE MCP only).
+  agent-meow parity yet.
+- MCP-type tools — agent-meow' subprocess MCP transport has no
+  agent-meow equivalent (agent-meow uses HTTP/SSE MCP only).
 
 Silent translation of these would give the user an agent that
 LOOKS configured (no error at boot) but lacks the policies /
 tools the YAML promised — a foot-gun. The right behavior is
-``omnigent run <yaml>`` exits non-zero with an error
+``agent-meow run <yaml>`` exits non-zero with an error
 message naming the specific field.
 
 This test parametrizes over every example YAML that trips at
@@ -84,7 +84,7 @@ def test_run_omnigent_rejects_unsupported_yaml(
     expected_error: str,
 ) -> None:
     """
-    ``omnigent run <yaml> -p ...`` exits non-zero and
+    ``agent-meow run <yaml> -p ...`` exits non-zero and
     mentions *expected_error* when the YAML trips a spec-load
     rejection.
 
@@ -109,7 +109,7 @@ def test_run_omnigent_rejects_unsupported_yaml(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "-p",
@@ -129,7 +129,7 @@ def test_run_omnigent_rejects_unsupported_yaml(
     # translated incorrectly — exactly the foot-gun this test
     # exists to catch.
     assert result.returncode != 0, (
-        f"--omnigent on {yaml_rel} exited 0 but should have rejected the "
+        f"--agent-meow on {yaml_rel} exited 0 but should have rejected the "
         f"spec at load time. stderr={result.stderr[-1500:]!r}"
     )
     # stderr must name the specific field so the YAML author
@@ -138,7 +138,7 @@ def test_run_omnigent_rejects_unsupported_yaml(
     combined = result.stdout + result.stderr
     assert expected_error in combined, (
         f"Expected error substring {expected_error!r} missing from "
-        f"--omnigent rejection output. The adapter may have raised a less-"
+        f"--agent-meow rejection output. The adapter may have raised a less-"
         f"specific error than the OmnigentError in "
         f"_reject_unsupported_concepts_def. "
         f"stderr tail:\n{result.stderr[-1500:]}"

@@ -57,7 +57,7 @@ def test_repl_inline_tool_call_and_result_streaming(
     REPL's inline-streaming rendering path completes correctly under the
     mock LLM.
 
-    :param omnigent_python: Interpreter with omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow installed.
     :param omnigent_repo_root: Working directory for the subprocess.
     :param mock_credentials_env: Mock-LLM env vars.
     :param mock_llm_server_url: Mock server URL.

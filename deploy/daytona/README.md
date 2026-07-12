@@ -25,7 +25,7 @@ Daytona pulls and snapshots it.
 ## Prerequisites
 
 ```bash
-pip install 'omnigent[daytona]'   # installs the daytona SDK extra
+pip install 'agent-meow[daytona]'   # installs the daytona SDK extra
 ```
 
 > [!IMPORTANT]
@@ -220,13 +220,13 @@ plain HTTP) reaches the server through the firewall.
 npm i -g wrangler          # or use npx
 wrangler login             # one-time, free, no credit card
 cd deploy/daytona
-wrangler deploy --var UPSTREAM_URL:https://your-omnigent-server
-# → https://omnigent-daytona-relay.<your-subdomain>.workers.dev
+wrangler deploy --var UPSTREAM_URL:https://your-agent-meow-server
+# → https://agent-meow-daytona-relay.<your-subdomain>.workers.dev
 ```
 
 Point `sandbox.daytona.server_url` at the printed `*.workers.dev` URL.
 For a non-allowlisted model endpoint, deploy a second copy
-(`name = "omnigent-llm-relay"`, `UPSTREAM_URL` = your gateway) and
+(`name = "agent-meow-llm-relay"`, `UPSTREAM_URL` = your gateway) and
 inject its URL as `OPENAI_BASE_URL` via `sandbox.daytona.env`.
 
 **This path is verified end-to-end on a real Daytona Tier 1 org**

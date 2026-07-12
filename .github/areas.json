@@ -22,7 +22,7 @@
     "               LAST matching area in this array wins per file. So broad prefixes",
     "               MUST come before their more-specific children:",
     "                 - 'web/' before 'web/electron/' and 'web/ios/'",
-    "                 - 'omnigent/inner/' before every 'omnigent/inner/<harness>_'.",
+    "                 - 'agent_meow/inner/' before every 'agent_meow/inner/<harness>_'.",
     "  owners     - candidate reviewers/assignees. Must be maintainers in",
     "               .github/MAINTAINER. 2+ each. Edit these freely: the",
     "               reviewer-logic tests run against a frozen fixture",
@@ -93,7 +93,7 @@
       "label": "comp:harnesses",
       "definition": "Core agent runtime and the harness/executor layer shared by all harnesses (loader, executor base, tool bridge, sandboxes). Harness-specific code has its own areas below.",
       "paths": [
-        "omnigent/inner/"
+        "agent_meow/inner/"
       ],
       "owners": [
         "dhruv0811",
@@ -112,7 +112,7 @@
       "label": "comp:runner",
       "definition": "The agent runner: the execution engine that drives a turn.",
       "paths": [
-        "omnigent/runner/"
+        "agent_meow/runner/"
       ],
       "owners": [
         "dhruv0811",
@@ -129,7 +129,7 @@
       "label": "comp:runner",
       "definition": "The agent runtime and execution scaffolding surrounding the runner.",
       "paths": [
-        "omnigent/runtime/"
+        "agent_meow/runtime/"
       ],
       "owners": [
         "dhruv0811",
@@ -146,7 +146,7 @@
       "label": "comp:server",
       "definition": "The agent-meow server: HTTP API, session creation and lifecycle, request routing.",
       "paths": [
-        "omnigent/server/"
+        "agent_meow/server/"
       ],
       "owners": [
         "dhruv0811",
@@ -165,7 +165,7 @@
       "label": "comp:tui",
       "definition": "The setup / onboarding flow: first-run setup, provider auth, credential onboarding driven through the CLI.",
       "paths": [
-        "omnigent/onboarding/"
+        "agent_meow/onboarding/"
       ],
       "owners": [
         "SabhyaC26",
@@ -178,7 +178,7 @@
       "label": "comp:policies",
       "definition": "Safety policies, guardrails, and policy evaluation/elicitation.",
       "paths": [
-        "omnigent/policies/"
+        "agent_meow/policies/"
       ],
       "owners": [
         "TomeHirata",
@@ -190,7 +190,7 @@
       "label": "comp:repr",
       "definition": "Spec and schema layer: representation of agents/sessions and their serialized form.",
       "paths": [
-        "omnigent/spec/"
+        "agent_meow/spec/"
       ],
       "owners": [
         "TomeHirata",
@@ -206,7 +206,7 @@
       "label": "comp:harnesses",
       "definition": "LLM provider and model-catalog layer: gateways, provider adapters, model selection.",
       "paths": [
-        "omnigent/llms/"
+        "agent_meow/llms/"
       ],
       "owners": [
         "dhruv0811",
@@ -219,7 +219,7 @@
       "label": "comp:server",
       "definition": "The host / daemon: the long-running local process that hosts sessions and terminals.",
       "paths": [
-        "omnigent/host/"
+        "agent_meow/host/"
       ],
       "owners": [
         "fanzeyi",
@@ -235,7 +235,7 @@
       "label": "comp:runner",
       "definition": "The OS sandbox (bwrap/seatbelt isolation) and egress controls around agent execution.",
       "paths": [
-        "omnigent/sandbox/"
+        "agent_meow/sandbox/"
       ],
       "owners": [
         "SabhyaC26",
@@ -250,7 +250,7 @@
       "label": "comp:server",
       "definition": "Database and persistence layer for the server.",
       "paths": [
-        "omnigent/db/"
+        "agent_meow/db/"
       ],
       "owners": [
         "bbqiu",
@@ -268,7 +268,7 @@
       "label": "comp:repr",
       "definition": "Stores: persistence and serialization of sessions, history, and artifacts.",
       "paths": [
-        "omnigent/stores/"
+        "agent_meow/stores/"
       ],
       "owners": [
         "bbqiu",
@@ -289,7 +289,7 @@
       "label": "comp:tui",
       "definition": "Terminal management: PTY/terminal launch, read, and lifecycle.",
       "paths": [
-        "omnigent/terminals/"
+        "agent_meow/terminals/"
       ],
       "owners": [
         "fanzeyi",
@@ -307,7 +307,7 @@
       "label": "comp:harnesses",
       "definition": "Built-in tools and the tool-bridge exposed to harnesses.",
       "paths": [
-        "omnigent/tools/"
+        "agent_meow/tools/"
       ],
       "owners": [
         "dhruv0811",
@@ -326,7 +326,7 @@
       "label": "comp:repr",
       "definition": "Entity models: the core data model for agents, sessions, and related objects.",
       "paths": [
-        "omnigent/entities/"
+        "agent_meow/entities/"
       ],
       "owners": [
         "daniellok-db",
@@ -338,7 +338,7 @@
       "label": "comp:tui",
       "definition": "The interactive REPL and its terminal UI.",
       "paths": [
-        "omnigent/repl/"
+        "agent_meow/repl/"
       ],
       "owners": [
         "dhruv0811",
@@ -355,7 +355,7 @@
       "label": "comp:server",
       "definition": "Bundled resources and static assets used by the runtime.",
       "paths": [
-        "omnigent/resources/"
+        "agent_meow/resources/"
       ],
       "owners": [
         "fanzeyi",
@@ -403,8 +403,8 @@
       "label": "comp:harnesses",
       "definition": "The Claude harness family: the Claude SDK executor/harness (claude-sdk) and the native Claude Code terminal integration.",
       "paths": [
-        "omnigent/inner/claude_",
-        "omnigent/claude_native"
+        "agent_meow/inner/claude_",
+        "agent_meow/claude_native"
       ],
       "owners": [
         "dhruv0811",
@@ -423,10 +423,10 @@
       "label": "comp:harnesses",
       "definition": "The Codex / OpenAI harness family: the OpenAI Agents SDK executor/harness, the open-responses SDK, and the native Codex integration.",
       "paths": [
-        "omnigent/inner/codex_",
-        "omnigent/inner/openai_",
-        "omnigent/inner/open_responses_sdk.py",
-        "omnigent/codex_native"
+        "agent_meow/inner/codex_",
+        "agent_meow/inner/openai_",
+        "agent_meow/inner/open_responses_sdk.py",
+        "agent_meow/codex_native"
       ],
       "owners": [
         "dhruv0811",
@@ -445,8 +445,8 @@
       "label": "comp:harnesses",
       "definition": "The Cursor harness: SDK executor/harness and the native Cursor integration.",
       "paths": [
-        "omnigent/inner/cursor_",
-        "omnigent/cursor_native"
+        "agent_meow/inner/cursor_",
+        "agent_meow/cursor_native"
       ],
       "owners": [
         "SabhyaC26",
@@ -461,10 +461,10 @@
       "label": "comp:harnesses",
       "definition": "The Antigravity (Gemini) harness: SDK executor/harness, native integration, and Gemini/Antigravity auth.",
       "paths": [
-        "omnigent/inner/antigravity_",
-        "omnigent/antigravity_native",
-        "omnigent/onboarding/antigravity_auth.py",
-        "omnigent/onboarding/gemini_auth.py"
+        "agent_meow/inner/antigravity_",
+        "agent_meow/antigravity_native",
+        "agent_meow/onboarding/antigravity_auth.py",
+        "agent_meow/onboarding/gemini_auth.py"
       ],
       "owners": [
         "SabhyaC26",
@@ -476,9 +476,9 @@
       "label": "comp:harnesses",
       "definition": "The Goose harness: SDK executor/harness, native TUI/ACP integration, and Goose auth.",
       "paths": [
-        "omnigent/inner/goose_",
-        "omnigent/goose_native",
-        "omnigent/onboarding/goose_auth.py"
+        "agent_meow/inner/goose_",
+        "agent_meow/goose_native",
+        "agent_meow/onboarding/goose_auth.py"
       ],
       "owners": [
         "dhruv0811",
@@ -490,8 +490,8 @@
       "label": "comp:harnesses",
       "definition": "The Hermes harness: SDK executor/harness and the native Hermes integration.",
       "paths": [
-        "omnigent/inner/hermes_",
-        "omnigent/hermes_native"
+        "agent_meow/inner/hermes_",
+        "agent_meow/hermes_native"
       ],
       "owners": [
         "dhruv0811",
@@ -504,8 +504,8 @@
       "label": "comp:harnesses",
       "definition": "The Kimi harness: SDK executor/harness and the native Kimi integration.",
       "paths": [
-        "omnigent/inner/kimi_",
-        "omnigent/kimi_native"
+        "agent_meow/inner/kimi_",
+        "agent_meow/kimi_native"
       ],
       "owners": [
         "aravind-segu",
@@ -518,8 +518,8 @@
       "label": "comp:harnesses",
       "definition": "The Kiro harness: SDK executor/harness and the native Kiro integration.",
       "paths": [
-        "omnigent/inner/kiro_",
-        "omnigent/kiro_native"
+        "agent_meow/inner/kiro_",
+        "agent_meow/kiro_native"
       ],
       "owners": [
         "PattaraS",
@@ -533,9 +533,9 @@
       "label": "comp:harnesses",
       "definition": "The OpenCode harness: SDK executor/harness, native integration, HTTP transport, and OpenCode auth.",
       "paths": [
-        "omnigent/inner/opencode_",
-        "omnigent/opencode_",
-        "omnigent/onboarding/opencode_auth.py"
+        "agent_meow/inner/opencode_",
+        "agent_meow/opencode_",
+        "agent_meow/onboarding/opencode_auth.py"
       ],
       "owners": [
         "dhruv0811",
@@ -552,8 +552,8 @@
       "label": "comp:harnesses",
       "definition": "The Pi harness: SDK executor/harness and the native Pi integration.",
       "paths": [
-        "omnigent/inner/pi_",
-        "omnigent/pi_native"
+        "agent_meow/inner/pi_",
+        "agent_meow/pi_native"
       ],
       "owners": [
         "SabhyaC26",
@@ -566,8 +566,8 @@
       "label": "comp:harnesses",
       "definition": "The Qwen harness: SDK executor/harness and the native Qwen integration.",
       "paths": [
-        "omnigent/inner/qwen_",
-        "omnigent/qwen_native"
+        "agent_meow/inner/qwen_",
+        "agent_meow/qwen_native"
       ],
       "owners": [
         "serena-ruan",
@@ -580,8 +580,8 @@
       "label": "comp:harnesses",
       "definition": "The GitHub Copilot harness: SDK executor/harness and Copilot auth.",
       "paths": [
-        "omnigent/inner/copilot_",
-        "omnigent/onboarding/copilot_auth.py"
+        "agent_meow/inner/copilot_",
+        "agent_meow/onboarding/copilot_auth.py"
       ],
       "owners": [
         "SabhyaC26",

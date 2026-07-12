@@ -35,7 +35,7 @@ os.environ.setdefault("OMNIGENT_DISABLE_CATALOG_LOOKUP", "1")
 # shell. Accounts/OIDC-specific tests still opt in by monkeypatching the
 # vars inside their own fixtures (tests/server/test_accounts.py,
 # tests/server/test_oidc.py). Module-level setdefault rather than a fixture
-# so subprocess-spawning tests (e2e shells out to `omnigent run`) inherit
+# so subprocess-spawning tests (e2e shells out to `agent-meow run`) inherit
 # the pin via env.
 os.environ.setdefault("OMNIGENT_AUTH_PROVIDER", "header")
 
@@ -115,7 +115,7 @@ def _run_test_environment_guardrails(config: pytest.Config) -> None:
     from agent_meow.testing.guardrails import check_test_environment
 
     db_uri = os.environ.get("OMNIGENT_DATABASE_URI", "")
-    base_url = config.getoption("--omnigent-server-url", default=None)
+    base_url = config.getoption("--agent-meow-server-url", default=None)
     check_test_environment(db_uri=db_uri, base_url=base_url, warn_only=False)
 
 
@@ -255,7 +255,7 @@ def pytest_addoption(parser):
         ),
     )
     parser.addoption(
-        "--omnigent-server-url",
+        "--agent-meow-server-url",
         action="store",
         default=None,
         help=(
@@ -279,12 +279,12 @@ def _isolate_claude_native_state(
     """
     Redirect claude-native client-side persistent state to a tmp dir.
 
-    The ``omnigent claude`` wrapper writes per-conversation
+    The ``agent-meow claude`` wrapper writes per-conversation
     launch state (the cwd a session was created in) under
-    ``~/.omnigent/claude-native/<hash>/launch.json``. Any test
+    ``~/.agent_meow/claude-native/<hash>/launch.json``. Any test
     that drives the wrapper -- directly or indirectly via test
     fakes that invoke its helpers -- would otherwise write to the
-    developer's real ``~/.omnigent`` directory and pollute it
+    developer's real ``~/.agent-meow`` directory and pollute it
     across test runs.
 
     The state module honors :data:`OMNIGENT_CLAUDE_NATIVE_STATE_DIR`
@@ -316,8 +316,8 @@ def _isolate_codex_native_state(
     """
     Redirect codex-native client-side persistent state to a tmp dir.
 
-    The ``omnigent codex`` wrapper writes per-conversation launch
-    state under ``~/.omnigent/codex-native/<hash>/launch.json``.
+    The ``agent-meow codex`` wrapper writes per-conversation launch
+    state under ``~/.agent_meow/codex-native/<hash>/launch.json``.
     Tests that drive the wrapper should never write to or read from
     the developer's real persistent resume state.
 

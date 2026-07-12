@@ -97,11 +97,11 @@ def _entrypoint_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     auth disabled so it doesn't mint accounts secrets, and no ambient
     artifact-store URI (each test sets it as needed)."""
     # Point config at an empty file so the resolver doesn't read the developer's
-    # ambient ~/.omnigent/config.yaml (keeps the test hermetic; CI has none).
+    # ambient ~/.agent_meow/config.yaml (keeps the test hermetic; CI has none).
     config_file = tmp_path / "config.yaml"
     config_file.write_text("{}\n")
     monkeypatch.setenv("OMNIGENT_CONFIG", str(config_file))
-    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/omnigent")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/agent-meow")
     monkeypatch.setenv("ARTIFACT_DIR", str(tmp_path / "artifacts"))
     monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "0")
     monkeypatch.delenv("OMNIGENT_ARTIFACT_URI", raising=False)
@@ -146,7 +146,7 @@ def test_select_artifact_store(
 
     resolved = _ResolvedConfig(
         cfg={},
-        database_url="postgresql://u:p@localhost/omnigent",
+        database_url="postgresql://u:p@localhost/agent-meow",
         artifact_dir=tmp_path,
         artifact_store_uri=artifact_store_uri,
         host="0.0.0.0",

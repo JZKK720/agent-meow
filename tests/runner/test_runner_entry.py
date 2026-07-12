@@ -1133,7 +1133,7 @@ async def test_runner_shutdown_closes_terminal_registry(
     """The --server local runner shuts down terminal-owned resources.
 
     ``examples/databricks_coding_agent.yaml`` exposes terminal tools,
-    and in ``omnigent run --server`` mode those terminals are owned
+    and in ``agent-meow run --server`` mode those terminals are owned
     by the local tunnel runner. This test drives the runner app
     startup/shutdown hooks directly and verifies shutdown includes the
     TerminalRegistry, not just harness subprocesses and MCPs.
@@ -1191,7 +1191,7 @@ async def test_runner_shutdown_closes_terminal_registry(
         _FakeProcessManager,
     )
     monkeypatch.setattr(
-        "omnigent.terminals.TerminalRegistry",
+        "agent_meow.terminals.TerminalRegistry",
         _terminal_registry_factory,
     )
     monkeypatch.setattr(entry_mod.httpx, "AsyncClient", _async_client_factory)
@@ -1452,7 +1452,7 @@ def test_main_installs_timestamped_runner_log_format(
     Runner process logs include timestamps at the formatter boundary.
 
     Host-spawned runners redirect stderr to
-    ``~/.omnigent/logs/host-runner/runner-*.log``. The entrypoint's
+    ``~/.agent_meow/logs/host-runner/runner-*.log``. The entrypoint's
     logging formatter therefore has to include ``asctime`` globally; adding
     timestamps to individual messages would miss library and framework logs.
 

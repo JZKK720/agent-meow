@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { forkSession } from "@/lib/sessionsApi";
 
 // Conservative model-id charset, kept in sync with the server's
-// `omnigent.model_override._MODEL_ID_RE`: a leading alphanumeric (so the
+// `agent_meow.model_override._MODEL_ID_RE`: a leading alphanumeric (so the
 // value can never read as a CLI flag) then dots / underscores / colons /
 // slashes / brackets / dashes. Catches obvious typos client-side; the
 // server re-validates and family-checks regardless.

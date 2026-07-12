@@ -1,6 +1,6 @@
 """Central, dependency-light platform flags and OS-portability helpers.
 
-omnigent grew up on Linux/macOS and bakes a number of POSIX assumptions into
+agent-meow grew up on Linux/macOS and bakes a number of POSIX assumptions into
 process management, shells, and user identity. This module is the single place
 that answers "which OS are we on?" and provides the small portable primitives
 that the rest of the package uses instead of branching on :data:`os.name`
@@ -30,7 +30,7 @@ IS_LINUX = sys.platform.startswith("linux")
 #: True on macOS specifically (the seatbelt sandbox platform).
 IS_DARWIN = sys.platform == "darwin"
 
-#: Non-sensitive Windows environment variables that a spawned omnigent
+#: Non-sensitive Windows environment variables that a spawned agent-meow
 #: subprocess needs to function, for env-passthrough allowlists that otherwise
 #: assume POSIX names. Python uppercases env keys on Windows, so these match
 #: ``os.environ`` as stored; they are absent on POSIX, so including them in an
@@ -124,7 +124,7 @@ def resolve_repo_symlink(path: Path) -> Path:
     On Windows with ``core.symlinks=false`` (the default when Developer Mode is
     off and Git was not run elevated), Git materializes a repository symlink as a
     *regular file* whose entire content is the link target — e.g. the checked-out
-    ``omnigent/resources/examples/polly`` is a 23-byte file containing
+    ``agent_meow/resources/examples/polly`` is a 23-byte file containing
     ``../../../examples/polly`` rather than a link to that directory. Code that
     expects to open the linked directory then reads this stub instead (the
     symptom: ``expected YAML mapping at top level, got str``).

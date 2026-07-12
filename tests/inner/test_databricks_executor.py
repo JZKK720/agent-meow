@@ -1648,7 +1648,7 @@ if __name__ == "__main__":
     unittest.main()
 
 
-# ── host-keyed resolution (omnigent login pointer records) ─────────
+# ── host-keyed resolution (agent-meow login pointer records) ─────────
 
 
 class _StubSdkConfig:

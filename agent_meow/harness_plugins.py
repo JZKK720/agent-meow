@@ -473,7 +473,7 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         streaming=True,
     ),
     # open-responses is resolved via an alternate path, but its executor
-    # (omnigent/inner/open_responses_sdk.py) is concrete: interrupt_session()
+    # (agent_meow/inner/open_responses_sdk.py) is concrete: interrupt_session()
     # closes the active stream and returns True, supports_streaming() is True,
     # and it drives an OpenAI Responses model (gpt-5.3-codex) forwarding
     # reasoning_effort via cfg.extra — so effort is OPENAI.
@@ -492,7 +492,7 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
 
 
 _BUILTIN_CONTRIBUTION = HarnessContribution(
-    name="omnigent",
+    name="agent-meow",
     valid_harnesses=frozenset(
         {
             "antigravity",

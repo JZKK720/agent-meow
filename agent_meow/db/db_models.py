@@ -1,4 +1,4 @@
-"""SQLAlchemy table definitions for the omnigent database."""
+"""SQLAlchemy table definitions for the agent-meow database."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    """Shared declarative base for all omnigent tables."""
+    """Shared declarative base for all agent-meow tables."""
 
 
 class SqlAgent(Base):
@@ -276,7 +276,7 @@ class SqlConversation(Base):
         purely in-memory.
     :param external_session_id: Runtime-native session id this
         conversation wraps, e.g. Claude Code's session uuid for
-        ``omnigent claude`` sessions. ``None`` for regular
+        ``agent-meow claude`` sessions. ``None`` for regular
         AP-only conversations. Populated by the wrapper bridge
         from the underlying runtime and used by ``--resume`` to
         recover the external session's prior transcript. Generic
@@ -536,7 +536,7 @@ class SqlConversationLabel(Base):
     :param updated_at: Unix epoch seconds of the last write.
         Single timestamp for each row; on UPSERT the row's
         timestamp is refreshed even when the value is
-        unchanged (matches omnigent parity and keeps
+        unchanged (matches agent-meow parity and keeps
         debugging timelines accurate).
     """
 
@@ -680,11 +680,11 @@ class SqlHost(Base):
     SQLAlchemy model for the ``hosts`` table.
 
     Each row represents a machine that has connected to the server
-    via ``omnigent host``. The row is upserted on first connect
+    via ``agent-meow host``. The row is upserted on first connect
     and updated on subsequent reconnects (name, status, timestamps).
 
     :param host_id: Stable host identifier from the host's local
-        ``~/.omnigent/config.yaml``, e.g. ``"host_a1b2c3d4e5f6..."``.
+        ``~/.agent_meow/config.yaml``, e.g. ``"host_a1b2c3d4e5f6..."``.
     :param name: Human-readable name from ``config.yaml``, e.g.
         ``"corey-laptop"``. Displayed in the Web UI host picker.
     :param owner: User ID from the Databricks auth Bearer token
@@ -693,7 +693,7 @@ class SqlHost(Base):
     :param status: ``"online"`` when the host has an active WebSocket
         connection, ``"offline"`` when disconnected.
     :param created_at: Unix epoch seconds when the host was first
-        registered (first ``omnigent host``).
+        registered (first ``agent-meow host``).
     :param updated_at: Unix epoch seconds the row was last touched — a
         status change (connect/disconnect) or a tunnel heartbeat. Doubles
         as the host's last-seen for the liveness freshness gate, so a

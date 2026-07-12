@@ -392,7 +392,7 @@ policies:
 A policy function receives an event dict and returns a response dict (or `None` to abstain).
 
 ```python
-from omnigent.policies.schema import PolicyEvent, PolicyResponse
+from agent_meow.policies.schema import PolicyEvent, PolicyResponse
 
 def my_policy(event: PolicyEvent) -> PolicyResponse | None:
     if event["type"] != "tool_call":

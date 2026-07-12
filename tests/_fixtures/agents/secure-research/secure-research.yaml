@@ -1,6 +1,6 @@
 name: secure-research
 description: |
-  Ported from omnigent `examples/secure_research_agent.yaml`.
+  Ported from agent-meow `examples/secure_research_agent.yaml`.
   Full IFC scenario — labels + function policies + enforcement.
 
 executor:

@@ -39,7 +39,7 @@ def test_secure_research_agent_one_shot(
 
     Uses the mock LLM server for deterministic responses.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         openai-agents installed.
     :param omnigent_repo_root: Repo root for subprocess cwd.
     :param mock_credentials_env: Mock-LLM env vars.

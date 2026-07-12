@@ -83,7 +83,7 @@ def test_repl_ctrl_r_reverse_search(
 
     Uses the mock LLM server for deterministic responses.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         openai-agents installed.
     :param omnigent_repo_root: Working directory for the
         subprocess.

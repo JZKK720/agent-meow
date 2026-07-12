@@ -203,7 +203,7 @@ def test_startup_picker_non_tty_defaults_to_light(
     result = startup_theme_picker(out=out)
     assert result is LIGHT_THEME
     # Should have persisted the choice.
-    config = (tmp_path / ".omnigent" / "config.yaml").read_text(encoding="utf-8")
+    config = (tmp_path / ".agent-meow" / "config.yaml").read_text(encoding="utf-8")
     assert "theme: light" in config
 
 
@@ -224,5 +224,5 @@ def test_startup_picker_non_tty_respects_dark_detection(
     out = io.StringIO()
     result = startup_theme_picker(out=out)
     assert result is DARK_THEME
-    config = (tmp_path / ".omnigent" / "config.yaml").read_text(encoding="utf-8")
+    config = (tmp_path / ".agent-meow" / "config.yaml").read_text(encoding="utf-8")
     assert "theme: dark" in config

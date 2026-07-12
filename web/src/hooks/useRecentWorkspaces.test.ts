@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { useRecentWorkspaces } from "./useRecentWorkspaces";
 
-const RECENT_KEY = "omnigent:recent-workspaces";
+const RECENT_KEY = "agent-meow:recent-workspaces";
 
 describe("useRecentWorkspaces", () => {
   beforeEach(() => localStorage.clear());

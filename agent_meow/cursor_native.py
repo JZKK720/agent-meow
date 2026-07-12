@@ -1,8 +1,8 @@
 """Native Cursor TUI wrapper for the agent-meow CLI.
 
-``omnigent cursor`` launches the Cursor CLI's interactive TUI (``cursor-agent``
+``agent-meow cursor`` launches the Cursor CLI's interactive TUI (``cursor-agent``
 with no args) inside an agent-meow-runner-owned tmux terminal and attaches the
-local TTY — the cursor analog of ``omnigent codex`` / ``omnigent pi``. The runner
+local TTY — the cursor analog of ``agent-meow codex`` / ``agent-meow pi``. The runner
 spawns the process (see :func:`~?agent_meow.runner.app._auto_create_cursor_terminal`);
 this module owns the CLI-side orchestration: session create/resume, daemon
 runner bind, terminal-ready poll, and the direct tmux attach.
@@ -315,7 +315,7 @@ def run_cursor_native(
 
 def _materialize_cursor_agent_spec(tmpdir: Path) -> Path:
     """
-    Write the terminal-first agent spec used by ``omnigent cursor``.
+    Write the terminal-first agent spec used by ``agent-meow cursor``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :returns: Path to the generated YAML spec.
@@ -431,7 +431,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the omnigent server at {base_url}. "
+            f"Could not reach the agent-meow server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc

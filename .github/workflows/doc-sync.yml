@@ -1,12 +1,12 @@
-# Keep omnigent-site docs in sync with merged PRs: on push to main, resolve the
+# Keep agent-meow-site docs in sync with merged PRs: on push to main, resolve the
 # merged PR from the commit, classify its doc impact, label it, and — if it needs
-# docs — draft an omnigent-site PR tagging the merging maintainer. Plan → classify
+# docs — draft an agent-meow-site PR tagging the merging maintainer. Plan → classify
 # (doc-classifier) → label → draft (doc-drafter) → open site PR.
 #
 # Docs staging: main always carries the NEXT unreleased version (X.Y.Z.dev0), so
 # the docs drafted here describe the next release, not what's live. Targeting
-# omnigent-site `main` would deploy in-progress docs on merge — so instead the PR
-# targets a per-minor staging branch `X.Y-docs` (derived from omnigent/version.py,
+# agent-meow-site `main` would deploy in-progress docs on merge — so instead the PR
+# targets a per-minor staging branch `X.Y-docs` (derived from agent_meow/version.py,
 # created off site `main` on the first doc PR of the cycle). At release,
 # publish-changelog opens `X.Y-docs → main` to publish the whole batch at once.
 #
@@ -15,10 +15,10 @@
 # fork and internal PRs alike. It also only runs already-merged, trusted code (no
 # PR-event-with-secrets surface), and never pushes to main, so it can't self-trigger.
 #
-# The cross-repo PR uses the omnigent-ci App (already installed on omnigent-site;
+# The cross-repo PR uses the agent-meow-ci App (already installed on agent-meow-site;
 # sync-openapi-to-site.yml uses it too). If the App is unavailable the draft still
 # runs and prints its diff to the run summary but doesn't push (relies on
-# omnigent-site being public for the read-only checkout).
+# agent-meow-site being public for the read-only checkout).
 #
 # Security model + residual risk (unsandboxed drafter, secret-scan coverage) live
 # in .github/agents/doc-drafter/config.yaml.
@@ -46,7 +46,7 @@ concurrency:
 
 env:
   CODE_REPO: JZKK720/agent-meow
-  SITE_REPO_SLUG: ${{ github.repository_owner }}/omnigent-site
+  SITE_REPO_SLUG: ${{ github.repository_owner }}/agent-meow-site
   OMNIGENT_SKIP_WEB_UI: "true"
   UV_INDEX_URL: https://pypi.org/simple
   PIP_INDEX_URL: https://pypi.org/simple
@@ -194,7 +194,7 @@ jobs:
           fi
 
       # Always check out the TRUSTED default branch (never PR head).
-      - name: Check out omnigent (code)
+      - name: Check out agent-meow (code)
         if: steps.plan.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
@@ -211,10 +211,10 @@ jobs:
           set -euo pipefail
           minor="$(python3 - <<'PYEOF'
           import pathlib, re
-          text = pathlib.Path("omnigent/version.py").read_text()
+          text = pathlib.Path("agent_meow/version.py").read_text()
           m = re.search(r'VERSION\s*=\s*["\']([0-9]+)\.([0-9]+)', text)
           if not m:
-              raise SystemExit("could not parse X.Y from omnigent/version.py")
+              raise SystemExit("could not parse X.Y from agent_meow/version.py")
           print(f"{m.group(1)}.{m.group(2)}")
           PYEOF
           )"
@@ -259,7 +259,7 @@ jobs:
         env:
           GATEWAY_BASE_URL: ${{ secrets.GATEWAY_BASE_URL }}
         run: |
-          mkdir -p "$HOME/.omnigent"
+          mkdir -p "$HOME/.agent-meow"
           python3 -c "
           import pathlib, os, json
           gw = os.environ['GATEWAY_BASE_URL']
@@ -270,7 +270,7 @@ jobs:
                   'api_key_ref': 'env:LLM_API_KEY',
                   'models': {'default': 'databricks-claude-opus-4-8'},
               }}}}
-          pathlib.Path.home().joinpath('.omnigent', 'config.yaml').write_text(json.dumps(cfg, indent=2))
+          pathlib.Path.home().joinpath('.agent-meow', 'config.yaml').write_text(json.dumps(cfg, indent=2))
           "
 
       # --- Collect the PR diff + metadata once (used by classify and draft) ---
@@ -441,26 +441,26 @@ jobs:
           gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file /tmp/unclassified_comment.md
 
       # --- Draft path ---
-      # Read-only checkout (omnigent-site is public), no persisted creds so no token
+      # Read-only checkout (agent-meow-site is public), no persisted creds so no token
       # sits in .git/config for the unsandboxed drafter. Write-token minted later.
-      - name: Check out omnigent-site (docs)
+      - name: Check out agent-meow-site (docs)
         if: steps.decide.outputs.draft == 'true'
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           repository: JZKK720/agent-meow-site
-          path: omnigent-site
+          path: agent-meow-site
           token: ${{ github.token }}
           persist-credentials: false
 
       # Point the working tree at the docs staging branch BEFORE the drafter runs,
       # so it sees docs already accumulated this cycle and re-drafts merge cleanly.
-      # Reads need no auth (omnigent-site is public); no creds are persisted, so
+      # Reads need no auth (agent-meow-site is public); no creds are persisted, so
       # the unsandboxed drafter can't read a token from .git/config. If the branch
       # doesn't exist on the remote yet, create it locally off the default branch —
       # the first push (with the App token, later) publishes it.
       - name: Switch site checkout to docs branch
         if: steps.decide.outputs.draft == 'true'
-        working-directory: omnigent-site
+        working-directory: agent-meow-site
         env:
           DOCS_BRANCH: ${{ steps.docsbranch.outputs.branch }}
         run: |
@@ -492,13 +492,13 @@ jobs:
           diff = pathlib.Path("/tmp/pr_diff.txt").read_text(encoding="utf-8", errors="replace")
           (pathlib.Path(ws) / "_pr_diff.txt").write_text(diff, encoding="utf-8")
           # No PR title/description by design — author-controlled prose / injection surface.
-          prompt = f"""SITE_REPO={ws}/omnigent-site
+          prompt = f"""SITE_REPO={ws}/agent-meow-site
           PR_NUMBER={os.environ['PR_NUMBER']}
           DIFF_FILE=./_pr_diff.txt
 
           Read DIFF_FILE first — it holds the merged PR's full diff and is your only
           source of truth (there is no PR title or description, by design). Then
-          draft the omnigent-site docs update per your instructions and print the
+          draft the agent-meow-site docs update per your instructions and print the
           DOC_DRAFT_SUMMARY block.
           {trunc_note}"""
           pathlib.Path("/tmp/draft_prompt.txt").write_text(prompt)
@@ -507,7 +507,7 @@ jobs:
       - name: Run drafter
         id: draft
         if: steps.decide.outputs.draft == 'true'
-        # cwd = workspace root (holds _pr_diff.txt + the omnigent-site checkout).
+        # cwd = workspace root (holds _pr_diff.txt + the agent-meow-site checkout).
         # Only LLM_API_KEY is in env — same exposure as polly-review.
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
@@ -534,7 +534,7 @@ jobs:
       - name: Detect doc changes
         id: sitechanges
         if: steps.decide.outputs.draft == 'true'
-        working-directory: omnigent-site
+        working-directory: agent-meow-site
         run: |
           set -euo pipefail
           if [ -n "$(git status --porcelain)" ]; then
@@ -546,7 +546,7 @@ jobs:
 
       - name: Scan drafted changes for secrets
         if: steps.sitechanges.outputs.changed == 'true'
-        working-directory: omnigent-site
+        working-directory: agent-meow-site
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
         run: |
@@ -561,9 +561,9 @@ jobs:
             fi
           fi
 
-      # Mint the omnigent-site write-token ONLY now — after the drafter has run and
+      # Mint the agent-meow-site write-token ONLY now — after the drafter has run and
       # produced changes. It never coexists with the (PR-influenced) drafter.
-      - name: Mint omnigent-site App token
+      - name: Mint agent-meow-site App token
         id: site-token
         if: steps.sitechanges.outputs.changed == 'true' && vars.OMNIGENT_BOT_APP_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
@@ -571,7 +571,7 @@ jobs:
           app-id: ${{ vars.OMNIGENT_BOT_APP_ID }}
           private-key: ${{ secrets.OMNIGENT_BOT_APP_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: omnigent-site
+          repositories: agent-meow-site
 
       - name: Build site PR body and resolve reviewer
         id: sitepr
@@ -598,7 +598,7 @@ jobs:
           # to the author when there's no usable merger (e.g. a manual run on an
           # unmerged PR). Skip bots / the CI identity.
           def usable(login):
-              return bool(login) and not login.endswith("[bot]") and login != "omnigent-ci"
+              return bool(login) and not login.endswith("[bot]") and login != "agent-meow-ci"
           if usable(merger):
               reviewer, role = merger, "merged by"
           elif usable(author):
@@ -628,7 +628,7 @@ jobs:
 
       - name: Open or update site PR
         if: steps.sitechanges.outputs.changed == 'true' && steps.site-token.outputs.token != ''
-        working-directory: omnigent-site
+        working-directory: agent-meow-site
         env:
           GH_TOKEN: ${{ steps.site-token.outputs.token }}
           SITE_TOKEN: ${{ steps.site-token.outputs.token }}
@@ -638,13 +638,13 @@ jobs:
         run: |
           set -euo pipefail
           BRANCH="auto/docs/pr-${PR_NUMBER}"
-          git config user.name  "omnigent-ci[bot]"
-          git config user.email "294685417+omnigent-ci[bot]@users.noreply.github.com"
+          git config user.name  "agent-meow-ci[bot]"
+          git config user.email "294685417+agent-meow-ci[bot]@users.noreply.github.com"
           # Credentials are NOT persisted in .git/config (so the unsandboxed drafter
           # couldn't read them); the App token is minted only now (after the drafter)
           # and used solely for the push URL below. GitHub registers it as a masked
           # secret, so it's redacted from logs. Reads (ls-remote/fetch) need no auth —
-          # omnigent-site is public.
+          # agent-meow-site is public.
           PUSH_URL="https://x-access-token:${SITE_TOKEN}@github.com/${SITE_REPO_SLUG}.git"
 
           # Ensure the docs staging branch exists on the remote — it's the PR base.
@@ -662,7 +662,7 @@ jobs:
           # guard fails CLOSED — if the branch exists but we can't read its HEAD
           # author (fetch failed, FETCH_HEAD absent), we skip rather than risk
           # force-pushing over human commits.
-          BOT_EMAIL="294685417+omnigent-ci[bot]@users.noreply.github.com"
+          BOT_EMAIL="294685417+agent-meow-ci[bot]@users.noreply.github.com"
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
             if ! git fetch --depth=1 origin "$BRANCH" >/dev/null 2>&1; then
               echo "::warning::$BRANCH exists but could not be fetched — skipping (fail-closed, won't risk clobbering)."
@@ -716,10 +716,10 @@ jobs:
       - name: Note draft skipped (no site token)
         if: steps.sitechanges.outputs.changed == 'true' && steps.site-token.outputs.token == ''
         run: |
-          echo "::warning::Doc edits were drafted but the omnigent-site App token could not be minted"
-          echo "(OMNIGENT_BOT_APP_ID/KEY missing, or the omnigent-ci App lost access to omnigent-site). The PR was not opened."
+          echo "::warning::Doc edits were drafted but the agent-meow-site App token could not be minted"
+          echo "(OMNIGENT_BOT_APP_ID/KEY missing, or the agent-meow-ci App lost access to agent-meow-site). The PR was not opened."
           echo "### Doc-sync: drafted but not pushed" >> "$GITHUB_STEP_SUMMARY"
-          { echo '```diff'; (cd omnigent-site && git --no-pager diff); echo '```'; } >> "$GITHUB_STEP_SUMMARY" || true
+          { echo '```diff'; (cd agent-meow-site && git --no-pager diff); echo '```'; } >> "$GITHUB_STEP_SUMMARY" || true
 
       # ::add-mask:: redacts rendered logs, not artifact files — scrub the key from
       # the artifacts (incl. the otherwise-unscanned stderr logs) before upload.

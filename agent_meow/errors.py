@@ -1,4 +1,4 @@
-"""Centralized error handling for the omnigent server.
+"""Centralized error handling for the agent-meow server.
 
 All user-facing errors should be raised as OmnigentError with an
 appropriate error code. The FastAPI exception handler (registered in
@@ -44,7 +44,7 @@ class ErrorCode:
         the ``harness_not_configured`` error code). HTTP 412
         rather than 400 (the request is valid against a configured
         host) or 503 (retrying cannot succeed without user action —
-        running ``omnigent setup`` on the host machine).
+        running ``agent-meow setup`` on the host machine).
     """
 
     UNAUTHORIZED = "unauthorized"
@@ -78,7 +78,7 @@ _CODE_TO_HTTP_STATUS: dict[str, int] = {
     ErrorCode.RUNNER_UNAVAILABLE: 503,
     ErrorCode.RUNNER_CAPABILITY_MISMATCH: 503,
     # 412 Precondition Failed: the request is well-formed but the host
-    # can't satisfy it until the user runs `omnigent setup` there —
+    # can't satisfy it until the user runs `agent-meow setup` there —
     # neither a 400 (input is fine) nor a 503 (a retry won't help).
     ErrorCode.HARNESS_NOT_CONFIGURED: 412,
 }

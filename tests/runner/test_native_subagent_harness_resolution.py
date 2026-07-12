@@ -65,12 +65,12 @@ def _polly_spec_tree() -> AgentSpec:
     child = AgentSpec(
         spec_version=1,
         name=SUB_AGENT_NAME,
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
     )
     return AgentSpec(
         spec_version=1,
         name="polly",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-sdk"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-sdk"}),
         sub_agents=[child],
     )
 

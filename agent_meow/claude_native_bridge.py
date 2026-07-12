@@ -90,7 +90,7 @@ _TMUX_FILE = "tmux.json"
 _PERMISSION_HOOK_FILE = "permission_hook.json"
 _CONTEXT_FILE = "context.json"
 _USER_CLAUDE_SETTINGS_PATH = Path.home() / ".claude" / "settings.json"
-_MCP_SERVER_NAME = "omnigent"
+_MCP_SERVER_NAME = "agent-meow"
 _MCP_PROTOCOL_VERSION = "2024-11-05"
 # Tools-changed: harness POSTs to the bridge MCP server's localhost
 # control endpoint, which emits ``notifications/tools/list_changed``
@@ -176,7 +176,7 @@ def _absolute_syntactic_path(path: Path) -> Path:
     that inspection, so this helper only expands ``~`` and normalizes
     ``.`` / ``..`` components.
 
-    :param path: Path to normalize, e.g. ``Path("~/.omnigent/x")``.
+    :param path: Path to normalize, e.g. ``Path("~/.agent_meow/x")``.
     :returns: Absolute path with syntactic normalization applied.
     """
     return Path(os.path.abspath(os.fspath(path.expanduser())))
@@ -207,10 +207,10 @@ def _trusted_parent_for_bridge_dir(target: Path) -> Path:
     codex_root = _absolute_syntactic_path(bridge_root())
     if target.is_relative_to(codex_root):
         # In production, trust $HOME and validate/chmod the two bridge-owned
-        # directories below it: .omnigent and codex-native. In tests, the
+        # directories below it: .agent-meow and codex-native. In tests, the
         # monkeypatched root may not use that shape, so trust the direct parent.
         trusted_parent = codex_root.parent
-        if codex_root.name == "codex-native" and codex_root.parent.name == ".omnigent":
+        if codex_root.name == "codex-native" and codex_root.parent.name == ".agent-meow":
             trusted_parent = codex_root.parent.parent
         return _absolute_syntactic_path(trusted_parent)
 
@@ -222,17 +222,17 @@ def _trusted_parent_for_bridge_dir(target: Path) -> Path:
 
     from agent_meow.antigravity_native_bridge import bridge_root as antigravity_bridge_root
 
-    # antigravity-native keeps its bridge files below ``~/.omnigent/antigravity-native``,
-    # the same ``$HOME/.omnigent/<harness>-native`` shape codex uses, so apply the
+    # antigravity-native keeps its bridge files below ``~/.agent_meow/antigravity-native``,
+    # the same ``$HOME/.agent_meow/<harness>-native`` shape codex uses, so apply the
     # identical anchor logic: in production trust ``$HOME`` and validate/chmod the
-    # two bridge-owned dirs below it (``.omnigent`` and ``antigravity-native``); in
+    # two bridge-owned dirs below it (``.agent-meow`` and ``antigravity-native``); in
     # tests the monkeypatched root may differ, so trust the direct parent.
     antigravity_root = _absolute_syntactic_path(antigravity_bridge_root())
     if target.is_relative_to(antigravity_root):
         trusted_parent = antigravity_root.parent
         if (
             antigravity_root.name == "antigravity-native"
-            and antigravity_root.parent.name == ".omnigent"
+            and antigravity_root.parent.name == ".agent-meow"
         ):
             trusted_parent = antigravity_root.parent.parent
         return _absolute_syntactic_path(trusted_parent)
@@ -257,16 +257,16 @@ def _trusted_parent_for_bridge_dir(target: Path) -> Path:
 
     from agent_meow.opencode_native_bridge import bridge_root as opencode_bridge_root
 
-    # opencode-native keeps its bridge files below ``~/.omnigent/opencode-native``
-    # (the same ``$HOME/.omnigent/<harness>-native`` shape codex/antigravity use),
+    # opencode-native keeps its bridge files below ``~/.agent_meow/opencode-native``
+    # (the same ``$HOME/.agent_meow/<harness>-native`` shape codex/antigravity use),
     # so apply the identical anchor logic: in production trust ``$HOME`` and
-    # validate/chmod the two bridge-owned dirs below it (``.omnigent`` and
+    # validate/chmod the two bridge-owned dirs below it (``.agent-meow`` and
     # ``opencode-native``); in tests the monkeypatched root may differ, so trust
     # the direct parent.
     opencode_root = _absolute_syntactic_path(opencode_bridge_root())
     if target.is_relative_to(opencode_root):
         trusted_parent = opencode_root.parent
-        if opencode_root.name == "opencode-native" and opencode_root.parent.name == ".omnigent":
+        if opencode_root.name == "opencode-native" and opencode_root.parent.name == ".agent-meow":
             trusted_parent = opencode_root.parent.parent
         return _absolute_syntactic_path(trusted_parent)
 
@@ -602,7 +602,7 @@ class ClaudeNativeToolRelay:
     within one turn.
 
     :param bridge_dir: Bridge directory containing
-        ``tool_relay.json``, e.g. ``/tmp/omnigent/claude-native/x``.
+        ``tool_relay.json``, e.g. ``/tmp/agent_meow/claude-native/x``.
     :param httpd: Started localhost HTTP server for tool calls. Its bound
         address identifies this relay's advertisement on close.
     """
@@ -612,7 +612,7 @@ class ClaudeNativeToolRelay:
         Initialize the relay handle.
 
         :param bridge_dir: Bridge directory containing the relay
-            advertisement, e.g. ``Path("/tmp/omnigent/...")``.
+            advertisement, e.g. ``Path("/tmp/agent_meow/...")``.
         :param httpd: Started localhost HTTP server for tool calls.
         :returns: None.
         """
@@ -653,7 +653,7 @@ def _ensure_secure_dir(target: Path) -> None:
     ``Path.mkdir(mode=0o700, parents=True, exist_ok=True)`` only applies
     the mode to the leaf and silently trusts any pre-existing ancestor.
     On a shared host, an attacker could pre-create
-    ``/tmp/omnigent-<UID>`` (Claude-native), ``~/.omnigent``
+    ``/tmp/omnigent-<UID>`` (Claude-native), ``~/.agent-meow``
     (Codex-native), or a deeper ancestor as a symlink — or as a 0o777
     directory — and redirect the bridge tree (which stores bearer
     tokens in JSON files).
@@ -1067,8 +1067,8 @@ def build_hook_settings(
     python = python_executable or sys.executable
     # -I (isolated mode) prevents Python from adding the session's
     # working directory to sys.path, which would shadow the installed
-    # omnigent package with a local checkout in the cwd (e.g. a
-    # git worktree that has its own omnigent/ directory on a
+    # agent-meow package with a local checkout in the cwd (e.g. a
+    # git worktree that has its own agent_meow/ directory on a
     # different branch).
     command_parts = [
         python,
@@ -1325,7 +1325,7 @@ def augment_claude_args(
         session's agent ships a ``skills/`` directory. Triggers
         ``--plugin-dir <bundle>`` so Claude Code discovers bundled
         skills natively — the CLI mirror of the SDK executor's plugin
-        wiring. ``None`` (e.g. the ``omnigent claude`` CLI's minimal
+        wiring. ``None`` (e.g. the ``agent-meow claude`` CLI's minimal
         spec) adds no plugin args.
     :param agent_name: Agent display name for the bundle's plugin
         manifest, e.g. ``"researcher"``. ``None`` falls back to the
@@ -2372,7 +2372,7 @@ def write_tmux_target(
     same private socket the terminal was launched on.
 
     :param bridge_dir: Bridge directory path, e.g.
-        ``/tmp/omnigent/claude-native/<digest>``.
+        ``/tmp/agent_meow/claude-native/<digest>``.
     :param socket_path: Absolute path to the terminal's private tmux
         socket, e.g. ``Path("/tmp/.../tmux.sock")``.
     :param tmux_target: tmux pane target string, e.g. ``"claude:0.0"``.
@@ -2544,7 +2544,7 @@ def inject_interrupt(
     web stop button / Escape keybind.
 
     :param bridge_dir: Bridge directory path, e.g.
-        ``/tmp/omnigent/claude-native/<digest>``.
+        ``/tmp/agent_meow/claude-native/<digest>``.
     :param timeout_s: Seconds to wait for ``tmux.json`` to be
         advertised by the runner, e.g. ``30.0``.
     :returns: None.
@@ -2581,7 +2581,7 @@ def kill_session(
     are synthesized here.
 
     :param bridge_dir: Bridge directory path, e.g.
-        ``/tmp/omnigent/claude-native/<digest>``.
+        ``/tmp/agent_meow/claude-native/<digest>``.
     :param timeout_s: Seconds to wait for ``tmux.json`` to be
         advertised by the runner, e.g. ``30.0``. A short value is
         appropriate for the UI path — a missing ``tmux.json`` means
@@ -2605,7 +2605,7 @@ def inject_slash_command(
     Type a Claude Code slash command into the tmux pane and submit it.
 
     :param bridge_dir: Bridge directory path, e.g.
-        ``/tmp/omnigent/claude-native/<digest>``.
+        ``/tmp/agent_meow/claude-native/<digest>``.
     :param command: Single-line slash command including the leading
         ``/``, e.g. ``"/effort high"``.
     :param timeout_s: Seconds to wait for ``tmux.json``, e.g. ``30.0``.
@@ -2683,7 +2683,7 @@ def display_cost_approval_popup(
     ``ApprovalCard`` remains the answer surface.
 
     :param bridge_dir: Bridge directory path, e.g.
-        ``/tmp/omnigent/claude-native/<digest>``. Supplies the tmux target
+        ``/tmp/agent_meow/claude-native/<digest>``. Supplies the tmux target
         (``tmux.json``); the AP-routing config comes from *config_file*.
     :param session_id: agent-meow session id that owns the elicitation, e.g.
         ``"conv_abc123"``. Used in the resolve URL the popup POSTs to.

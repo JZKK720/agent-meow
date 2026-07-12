@@ -593,7 +593,7 @@ def _is_omnigent_private_codex_home(path: Path) -> bool:
     nested launches must not treat them as the real login directory.
 
     :param path: Candidate ``CODEX_HOME`` path, e.g.
-        ``"/home/user/.omnigent/codex-native/<hash>/codex-home"``.
+        ``"/home/user/.agent_meow/codex-native/<hash>/codex-home"``.
     :returns: ``True`` when *path* matches a native bridge home or the
         wrapped executor's temporary ``omnigent-codex-home-*`` naming.
     """
@@ -603,7 +603,7 @@ def _is_omnigent_private_codex_home(path: Path) -> bool:
         expanded.name == "codex-home"
         and len(parts) >= 4
         and parts[-3] == "codex-native"
-        and parts[-4] == ".omnigent"
+        and parts[-4] == ".agent-meow"
     ):
         return True
     return expanded.name.startswith("omnigent-codex-home-")
@@ -619,7 +619,7 @@ def _private_codex_home_config_source(path: Path) -> Path | None:
     custom parent source.
 
     :param path: Private ``CODEX_HOME`` path, e.g.
-        ``"/home/user/.omnigent/codex-native/<hash>/codex-home"``.
+        ``"/home/user/.agent_meow/codex-native/<hash>/codex-home"``.
     :returns: The shared parent directory of bridged config symlink targets,
         or ``None`` if the private home has no usable source symlink.
     """
@@ -1259,7 +1259,7 @@ class _CodexAppServerSession:
                 "initialize",
                 {
                     "clientInfo": {
-                        "name": "omnigent",
+                        "name": "agent-meow",
                         "version": "0.1",
                     },
                     "capabilities": {

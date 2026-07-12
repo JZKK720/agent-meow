@@ -333,7 +333,7 @@ def test_yaml_async_omitted_defaults_true(tmp_path: Any) -> None:
     ``async_enabled=True``.
 
     Matches the legacy inner stack's default at
-    ``omnigent/inner/datamodel.py::AgentDef.async_enabled``
+    ``agent_meow/inner/datamodel.py::AgentDef.async_enabled``
     so the same YAML produces the same tool surface under
     agent-meow mode and the legacy path. Pinning this so a future
     parser refactor can't silently revert the default.

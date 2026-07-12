@@ -10,7 +10,7 @@ as schema-only :class:`~?agent_meow.tools.base.Tool` subclasses.
   for long-form transcription with diarization + timestamps.
 
 The runner's tool dispatch intercepts these calls by name and executes
-them locally (see ``omnigent/runner/tool_dispatch.py``).
+them locally (see ``agent_meow/runner/tool_dispatch.py``).
 """
 
 from __future__ import annotations

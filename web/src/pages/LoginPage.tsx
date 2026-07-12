@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { getMe, login as loginRequest } from "@/lib/accountsApi";
 
 const DEFAULT_RETURN_TO = "/";
-const LAST_USERNAME_KEY = "omnigent.lastLoginUsername";
+const LAST_USERNAME_KEY = "agent_meow.lastLoginUsername";
 
 function readLastUsername(): string {
   try {
@@ -188,7 +188,7 @@ export function LoginPage() {
           On a fresh install the initial admin password was printed to the server's stderr and saved
           to{" "}
           <code className="rounded bg-muted px-1 py-0.5 font-mono">
-            ~/.omnigent/admin-credentials
+            ~/.agent_meow/admin-credentials
           </code>
           .
         </p>
