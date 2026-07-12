@@ -1,7 +1,7 @@
 """Custom setuptools build for omnigent.
 
-Generates ``omnigent/_build_info.py`` at wheel build time so the
-CLI's update-check (``omnigent/update_check.py``) can tell the user
+Generates ``agent_meow/_build_info.py`` at wheel build time so the
+CLI's update-check (``agent_meow/update_check.py``) can tell the user
 when their installed build is stale without having to consult
 ``git`` or hit a remote endpoint at startup.
 
@@ -44,7 +44,7 @@ class _GenerateBuildInfo(build_py):
     def _bundle_examples(self) -> None:
         """Copy bundled example agents into the wheel as real directories.
 
-        ``omnigent/resources/examples/{polly,debby}`` may exist as symlinks
+        ``agent_meow/resources/examples/{polly,debby}`` may exist as symlinks
         into the top-level ``examples/`` tree (or not at all) depending on
         the checkout, and setuptools' ``package-data`` never materializes
         symlinks into the built wheel — a directory symlink is not walked.
@@ -56,7 +56,7 @@ class _GenerateBuildInfo(build_py):
         Fix: after ``build_py`` has populated ``build_lib``, copy the real
         example trees from the top-level ``examples/`` dir (present in every
         checkout) into
-        ``build_lib/omnigent/resources/examples/<name>`` so every wheel is
+        ``build_lib/agent_meow/resources/examples/<name>`` so every wheel is
         self-contained. This honors the contract documented in cli.py's
         ``_bundled_polly_path``: a symlink in a checkout, a real directory in
         an installed wheel. Editable installs (``uv sync``) resolve the
@@ -79,10 +79,10 @@ class _GenerateBuildInfo(build_py):
             shutil.copytree(src, dst)
 
     def _build_web_ui(self) -> None:
-        """Build the web SPA into ``omnigent/server/static/web-ui/``.
+        """Build the web SPA into ``agent_meow/server/static/web-ui/``.
 
         The server mounts that directory at ``/`` when present
-        (``omnigent/server/app.py``); when absent it serves an
+        (``agent_meow/server/app.py``); when absent it serves an
         API-only JSON landing page and the web UI is unreachable.
         The bundle is npm-build output, not tracked in git, so a
         plain ``pip install .`` / ``uv tool install`` from a checkout
@@ -162,7 +162,7 @@ class _GenerateBuildInfo(build_py):
             ) from exc
 
     def _write_build_info(self) -> None:
-        """Write ``omnigent/_build_info.py`` into the source tree.
+        """Write ``agent_meow/_build_info.py`` into the source tree.
 
         Writing to the source tree (rather than directly into the
         build dir) means editable installs (``pip install -e .``,

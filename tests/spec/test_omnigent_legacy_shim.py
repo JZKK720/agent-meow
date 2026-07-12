@@ -1,5 +1,5 @@
 """
-Tests for :mod:`omnigent.spec._omnigent_legacy_shim` — the
+Tests for :mod:`~?agent_meow.spec._omnigent_legacy_shim` — the
 compatibility layer that lets legacy omnigent
 ``(content, phase)`` function-policy callables run under
 agent-meow' ``(ctx, context)`` convention.
@@ -18,8 +18,8 @@ from typing import Any
 
 import pytest
 
-from omnigent.policies.types import EvaluationContext
-from omnigent.spec._omnigent_legacy_shim import (
+from agent_meow.policies.types import EvaluationContext
+from agent_meow.spec._omnigent_legacy_shim import (
     _convert_args,
     _has_legacy_signature,
     _legacy_content,
@@ -27,7 +27,7 @@ from omnigent.spec._omnigent_legacy_shim import (
     _wrap_legacy,
     build,
 )
-from omnigent.spec.types import Phase
+from agent_meow.spec.types import Phase
 
 # ── signature detection ──────────────────────────────────────
 
@@ -156,7 +156,7 @@ def test_legacy_content_tool_result_json_text_parses_to_dict() -> None:
     TOOL_RESULT: when agent-meow' raw string IS a JSON-encoded
     object, the shim parses it into the corresponding Python
     dict. Mirrors omnigent-native's
-    :func:`omnigent.inner.mcp_tools._extract_call_result_payload`,
+    :func:`~?agent_meow.inner.mcp_tools._extract_call_result_payload`,
     which JSON-parses each text content block on the way back.
 
     Why this matters: the Databricks ``google_policy``'s
@@ -544,7 +544,7 @@ def test_shim_builds_usable_FunctionPolicy_through_spec_factory(
 ) -> None:
     """
     Proves the shim integrates with the existing
-    :func:`omnigent.policies.function.resolve_function_policy`
+    :func:`~?agent_meow.policies.function.resolve_function_policy`
     factory mechanism — i.e. the translator's ``function: {path:
     shim.build, arguments: {target: ...}}`` shape drives a real
     :class:`FunctionPolicy` that returns the legacy callable's
@@ -555,8 +555,8 @@ def test_shim_builds_usable_FunctionPolicy_through_spec_factory(
     engine's invocation; only integration tests would catch it
     otherwise.
     """
-    from omnigent.policies.function import resolve_function_policy
-    from omnigent.spec.types import (
+    from agent_meow.policies.function import resolve_function_policy
+    from agent_meow.spec.types import (
         FunctionPolicySpec,
         FunctionRef,
         Phase,
@@ -581,7 +581,7 @@ def test_shim_builds_usable_FunctionPolicy_through_spec_factory(
         name="sleep_gate",
         on=(PhaseSelector(phase=Phase.TOOL_CALL),),
         function=FunctionRef(
-            path="omnigent.spec._omnigent_legacy_shim.build",
+            path="agent_meow.spec._omnigent_legacy_shim.build",
             arguments={"target": "_legacy_shim_test_ephemeral.policy"},
         ),
     )
@@ -596,7 +596,7 @@ def test_shim_builds_usable_FunctionPolicy_through_spec_factory(
     )
     result = asyncio.run(policy.evaluate(ctx, {"labels": {}}))
     # PolicyResult carries the deny — full pipeline worked.
-    from omnigent.spec.types import PolicyAction
+    from agent_meow.spec.types import PolicyAction
 
     assert result.action == PolicyAction.DENY
     assert result.reason == "sleep too long"
@@ -677,8 +677,8 @@ def test_rate_limit_factory_reset_turn_propagates_through_shim_and_policy() -> N
     """
     import asyncio
 
-    from omnigent.policies.function import resolve_function_policy
-    from omnigent.spec.types import (
+    from agent_meow.policies.function import resolve_function_policy
+    from agent_meow.spec.types import (
         FunctionPolicySpec,
         FunctionRef,
         Phase,
@@ -690,7 +690,7 @@ def test_rate_limit_factory_reset_turn_propagates_through_shim_and_policy() -> N
         name="rate_limit",
         on=(PhaseSelector(phase=Phase.TOOL_CALL),),
         function=FunctionRef(
-            path="omnigent.spec._omnigent_legacy_shim.build",
+            path="agent_meow.spec._omnigent_legacy_shim.build",
             arguments={
                 "target": (
                     "tests.resources.examples._shared.rate_limit_policy.max_tool_calls_per_turn"

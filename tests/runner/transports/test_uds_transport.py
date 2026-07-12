@@ -18,7 +18,7 @@ import tempfile
 import httpx
 import pytest
 
-from omnigent.runner.transports.uds import (
+from agent_meow.runner.transports.uds import (
     RunnerSubprocess,
     create_uds_client,
 )
@@ -157,7 +157,7 @@ def test_subprocess_with_bad_app_factory_raises() -> None:
     misleading — the subprocess died, it didn't time out.
     """
     with pytest.raises(RuntimeError, match="exited prematurely"):
-        with RunnerSubprocess(app_factory_path="omnigent.does.not.exist:app"):
+        with RunnerSubprocess(app_factory_path="agent_meow.does.not.exist:app"):
             pass
 
 

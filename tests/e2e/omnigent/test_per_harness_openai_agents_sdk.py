@@ -8,12 +8,12 @@ stderr cleanliness, assistant text length).
 **What breaks if this fails:**
 - agent-meow' ``OpenAIAgentsSDKExecutor`` regresses (the Runner
   lifecycle, the Responses-API adapter in
-  ``omnigent.open_responses_sdk``, the MCP tool bridging, or
+  ``agent_meow.open_responses_sdk``, the MCP tool bridging, or
   the event stream translation to ``ExecutorEvent`` types).
 - The ``openai-agents`` Python package (``agents`` module) is
   missing from the omnigent venv or its public API changes
   incompatibly.
-- ``omnigent.cli._run_agent`` for the ``-p`` one-shot path
+- ``agent_meow.cli._run_agent`` for the ``-p`` one-shot path
   stops printing the assistant text on turn complete.
 
 Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
@@ -38,8 +38,8 @@ from typing import Any
 
 import pytest
 
-from tests.e2e.omnigent._snapshot import compare_snapshot
-from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.agent_meow._snapshot import compare_snapshot
+from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
 
 _HARNESS = "openai-agents"
 _PROMPT = "say hi in 5 words"

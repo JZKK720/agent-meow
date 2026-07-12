@@ -33,12 +33,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import omnigent.server.routes.auth as auth_module
-from omnigent.server.admin_list import AdminList
-from omnigent.server.auth import UnifiedAuthProvider
-from omnigent.server.oidc import OIDCConfig
-from omnigent.server.routes.auth import create_auth_router
-from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+import agent_meow.server.routes.auth as auth_module
+from agent_meow.server.admin_list import AdminList
+from agent_meow.server.auth import UnifiedAuthProvider
+from agent_meow.server.oidc import OIDCConfig
+from agent_meow.server.routes.auth import create_auth_router
+from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 _TEST_SECRET = bytes.fromhex("aa" * 32)
 # The plain (non-__Host-) state cookie name, used because the test

@@ -28,7 +28,7 @@ from typing import Any
 import httpx
 import pytest
 
-from omnigent.runtime.compaction import CompactionResult
+from agent_meow.runtime.compaction import CompactionResult
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
@@ -103,7 +103,7 @@ async def test_compact_skips_omnigent_compaction_when_runner_handles_it(
     When the runner reports it handled the control (200), the agent-meow server
     must NOT run ``compact_conversation_now`` at all.
     """
-    from omnigent.runtime import set_runner_client
+    from agent_meow.runtime import set_runner_client
 
     async def _must_not_run(**_: Any) -> CompactionResult:
         """Fail loudly if AP-side compaction is reached on the 200 path."""
@@ -114,7 +114,7 @@ async def test_compact_skips_omnigent_compaction_when_runner_handles_it(
         )
 
     monkeypatch.setattr(
-        "omnigent.runtime.workflow.compact_conversation_now",
+        "agent_meow.runtime.workflow.compact_conversation_now",
         _must_not_run,
     )
 
@@ -157,7 +157,7 @@ async def test_compact_runs_omnigent_compaction_when_runner_noops(
     agent-meow server it owns the operation, so it must still forward the
     control (harness-agnostic) AND then run the compaction.
     """
-    from omnigent.runtime import set_runner_client
+    from agent_meow.runtime import set_runner_client
 
     calls: list[dict[str, Any]] = []
 
@@ -167,7 +167,7 @@ async def test_compact_runs_omnigent_compaction_when_runner_noops(
         return CompactionResult(messages=[], summary_metadata=None, total_tokens=1234)
 
     monkeypatch.setattr(
-        "omnigent.runtime.workflow.compact_conversation_now",
+        "agent_meow.runtime.workflow.compact_conversation_now",
         _record,
     )
 
@@ -217,7 +217,7 @@ async def test_compact_errors_when_runner_injection_fails(
     wrong (summarising the mirror). The agent-meow server must surface the
     failure rather than silently running its own compaction.
     """
-    from omnigent.runtime import set_runner_client
+    from agent_meow.runtime import set_runner_client
 
     async def _must_not_run(**_: Any) -> CompactionResult:
         """Fail loudly if AP-side compaction is reached on the error path."""
@@ -228,7 +228,7 @@ async def test_compact_errors_when_runner_injection_fails(
         )
 
     monkeypatch.setattr(
-        "omnigent.runtime.workflow.compact_conversation_now",
+        "agent_meow.runtime.workflow.compact_conversation_now",
         _must_not_run,
     )
 
@@ -295,7 +295,7 @@ async def test_external_compaction_status_publishes_compaction_sse(
         published.append((session_id, event))
 
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions.session_stream.publish",
+        "agent_meow.server.routes.sessions.session_stream.publish",
         capture_publish,
     )
     agent = await create_test_agent(client)

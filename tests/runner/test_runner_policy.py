@@ -20,7 +20,7 @@ from typing import Any
 import httpx
 import pytest
 
-from omnigent.runner.app import _evaluate_policy_via_omnigent
+from agent_meow.runner.app import _evaluate_policy_via_omnigent
 
 
 class _RaisingServerClient:

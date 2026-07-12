@@ -31,7 +31,7 @@ from playwright.sync_api import Page, expect
 
 
 def _find_runner_pids() -> list[int]:
-    """Find PIDs of the runner entry point (``omnigent.runner._entry``).
+    """Find PIDs of the runner entry point (``agent_meow.runner._entry``).
 
     The runner is a sibling subprocess of the server (both spawned by the
     fixture), so we match on the command line rather than the parent PID.
@@ -39,7 +39,7 @@ def _find_runner_pids() -> list[int]:
     :returns: List of runner PIDs (may be empty).
     """
     result = subprocess.run(
-        ["pgrep", "-f", "omnigent.runner._entry"],
+        ["pgrep", "-f", "agent_meow.runner._entry"],
         capture_output=True,
         text=True,
     )

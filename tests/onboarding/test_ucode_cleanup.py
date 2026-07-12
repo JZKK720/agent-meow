@@ -1,4 +1,4 @@
-"""Tests for :mod:`omnigent.onboarding.ucode_cleanup`.
+"""Tests for :mod:`~?agent_meow.onboarding.ucode_cleanup`.
 
 The fixture configs mirror what ucode actually writes (see ucode's
 ``agents/codex.py`` legacy overlay and ``agents/claude.py`` MCP entry), so
@@ -16,8 +16,8 @@ from pathlib import Path
 import pytest
 import tomllib
 
-from omnigent.errors import OmnigentError
-from omnigent.onboarding.ucode_cleanup import (
+from agent_meow.errors import OmnigentError
+from agent_meow.onboarding.ucode_cleanup import (
     UcodeWiringRemoval,
     remove_ucode_sidecars,
     remove_ucode_web_search_mcp,
@@ -269,7 +269,7 @@ def test_remove_web_search_removes_ucode_owned_entry(
     )
     cli_calls: list[bool] = []
     monkeypatch.setattr(
-        "omnigent.onboarding.ucode_cleanup._remove_web_search_via_claude_cli",
+        "agent_meow.onboarding.ucode_cleanup._remove_web_search_via_claude_cli",
         lambda: cli_calls.append(True) or True,
     )
 
@@ -310,7 +310,7 @@ def test_remove_web_search_never_touches_non_ucode_config(
         )
 
     monkeypatch.setattr(
-        "omnigent.onboarding.ucode_cleanup._remove_web_search_via_claude_cli",
+        "agent_meow.onboarding.ucode_cleanup._remove_web_search_via_claude_cli",
         _must_not_run,
     )
 

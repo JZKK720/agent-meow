@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`omnigent.inner.terminal`."""
+"""Unit tests for :mod:`~?agent_meow.inner.terminal`."""
 
 from __future__ import annotations
 
@@ -13,16 +13,16 @@ from types import SimpleNamespace
 
 import pytest
 
-import omnigent.inner.terminal as terminal_mod
-from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from omnigent.inner.terminal import (
+import agent_meow.inner.terminal as terminal_mod
+from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
+from agent_meow.inner.terminal import (
     TERMINAL_TRANSPORT_CONTROL,
     TERMINAL_TRANSPORT_PTY,
     TerminalInstance,
     create_terminal_instance,
     resolve_terminal_transport,
 )
-from omnigent.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
+from agent_meow.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
 
 
 def _write_transport_config(config_home: Path, value: str | None) -> None:

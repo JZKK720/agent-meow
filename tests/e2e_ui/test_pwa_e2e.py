@@ -105,7 +105,7 @@ def pwa_server(
     port = _free_port()
     server_tmp = tmp_path_factory.mktemp("pwa_e2e_server")
     log_path = server_tmp / "server.log"
-    # PYTHONPATH forces the subprocess to import omnigent from the worktree, not
+    # PYTHONPATH forces the subprocess to import agent_meow from the worktree, not
     # whatever is pip-installed in .venv — otherwise a branch's code changes
     # would silently run against stale code (same trick as ``live_server``).
     env = {
@@ -120,7 +120,7 @@ def pwa_server(
             [
                 sys.executable,
                 "-c",
-                "from omnigent.cli import main; main()",
+                "from agent_meow.cli import main; main()",
                 "server",
                 "--host",
                 "127.0.0.1",

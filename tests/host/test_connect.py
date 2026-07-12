@@ -14,14 +14,14 @@ from websockets.datastructures import Headers
 from websockets.exceptions import ConnectionClosedError, InvalidStatus, InvalidURI
 from websockets.http11 import Response
 
-from omnigent.host.connect import (
+from agent_meow.host.connect import (
     HostConnectError,
     HostProcess,
     _build_runner_env,
     _RunnerHandle,
     run_host_process,
 )
-from omnigent.host.frames import (
+from agent_meow.host.frames import (
     HARNESS_NOT_CONFIGURED_ERROR_CODE,
     HostCreateDirFrame,
     HostCreateDirResultFrame,
@@ -37,8 +37,8 @@ from omnigent.host.frames import (
     HostStopRunnerResultFrame,
     decode_host_frame,
 )
-from omnigent.host.identity import HostIdentity
-from omnigent.runner.identity import (
+from agent_meow.host.identity import HostIdentity
+from agent_meow.runner.identity import (
     RUNNER_ID_ENV_VAR,
     RUNNER_PARENT_PID_ENV_VAR,
     RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR,
@@ -121,7 +121,7 @@ async def test_handle_launch_spawns_subprocess(
             stderr=subprocess.DEVNULL,
         )
 
-    with patch("omnigent.host.connect.subprocess.Popen", side_effect=_fake_popen):
+    with patch("agent_meow.host.connect.subprocess.Popen", side_effect=_fake_popen):
         result = await host._handle_launch(frame)
 
     assert isinstance(result, HostLaunchRunnerResultFrame)
@@ -199,7 +199,7 @@ async def test_handle_launch_refuses_unconfigured_harness(
     # Patch the symbol connect.py imported, with the real function's
     # signature; the workspace exists so ONLY the harness check can fail.
     monkeypatch.setattr(
-        "omnigent.host.connect.harness_is_configured",
+        "agent_meow.host.connect.harness_is_configured",
         lambda harness: False,
     )
 
@@ -241,7 +241,7 @@ async def test_handle_launch_native_cursor_message_points_at_cursor_installer(
     workspace = tmp_path / "project"
     workspace.mkdir()
     monkeypatch.setattr(
-        "omnigent.host.connect.harness_is_configured",
+        "agent_meow.host.connect.harness_is_configured",
         lambda harness: False,
     )
 
@@ -280,7 +280,7 @@ async def test_handle_launch_configured_harness_proceeds_to_spawn(
     workspace = tmp_path / "project"
     workspace.mkdir()
     monkeypatch.setattr(
-        "omnigent.host.connect.harness_is_configured",
+        "agent_meow.host.connect.harness_is_configured",
         lambda harness: True,
     )
 
@@ -305,7 +305,7 @@ async def test_handle_launch_configured_harness_proceeds_to_spawn(
         workspace=str(workspace),
         harness="claude-sdk",
     )
-    with patch("omnigent.host.connect.subprocess.Popen", side_effect=_fake_popen):
+    with patch("agent_meow.host.connect.subprocess.Popen", side_effect=_fake_popen):
         result = await host._handle_launch(frame)
 
     assert result.status == "launched", (
@@ -342,7 +342,7 @@ async def test_handle_launch_without_harness_skips_check(
         raise AssertionError("harness_is_configured must not be called when frame.harness is None")
 
     monkeypatch.setattr(
-        "omnigent.host.connect.harness_is_configured",
+        "agent_meow.host.connect.harness_is_configured",
         _must_not_be_called,
     )
 
@@ -366,7 +366,7 @@ async def test_handle_launch_without_harness_skips_check(
         binding_token="token_ghi",
         workspace=str(workspace),
     )
-    with patch("omnigent.host.connect.subprocess.Popen", side_effect=_fake_popen):
+    with patch("agent_meow.host.connect.subprocess.Popen", side_effect=_fake_popen):
         result = await host._handle_launch(frame)
 
     assert result.status == "launched"
@@ -414,7 +414,7 @@ async def test_handle_launch_prints_exact_runner_log_path(
             stderr=subprocess.DEVNULL,
         )
 
-    with patch("omnigent.host.connect.subprocess.Popen", side_effect=_fake_popen):
+    with patch("agent_meow.host.connect.subprocess.Popen", side_effect=_fake_popen):
         result = await host._handle_launch(frame)
 
     assert result.status == "launched", result.error
@@ -505,7 +505,7 @@ async def test_handle_launch_immediate_exit_reports_exit_code_and_log_tail(
         binding_token="tok_dead",
         workspace=str(workspace),
     )
-    with patch("omnigent.host.connect.subprocess.Popen", side_effect=_fake_popen):
+    with patch("agent_meow.host.connect.subprocess.Popen", side_effect=_fake_popen):
         result = await host._handle_launch(frame)
 
     assert result.status == "failed"
@@ -531,7 +531,7 @@ async def test_watch_runner_reports_unexpected_exit(
     directory on the host.
     """
     monkeypatch.setattr(Path, "home", classmethod(lambda _cls: tmp_path))
-    monkeypatch.setattr("omnigent.host.connect._RUNNER_WATCH_INTERVAL_S", 0.01)
+    monkeypatch.setattr("agent_meow.host.connect._RUNNER_WATCH_INTERVAL_S", 0.01)
     host = _make_host_process()
     tunnel = _FakeTunnel()
     host._ws = tunnel  # type: ignore[assignment] — duck-typed send
@@ -564,7 +564,7 @@ async def test_watch_runner_reports_unexpected_exit(
         binding_token="tok_watch",
         workspace=str(workspace),
     )
-    with patch("omnigent.host.connect.subprocess.Popen", side_effect=_fake_popen):
+    with patch("agent_meow.host.connect.subprocess.Popen", side_effect=_fake_popen):
         result = await host._handle_launch(frame)
     assert result.status == "launched", result.error
 
@@ -594,7 +594,7 @@ async def test_watch_runner_silent_on_intentional_stop(
     cleanly stopped session.
     """
     monkeypatch.setattr(Path, "home", classmethod(lambda _cls: tmp_path))
-    monkeypatch.setattr("omnigent.host.connect._RUNNER_WATCH_INTERVAL_S", 0.01)
+    monkeypatch.setattr("agent_meow.host.connect._RUNNER_WATCH_INTERVAL_S", 0.01)
     host = _make_host_process()
     tunnel = _FakeTunnel()
     host._ws = tunnel  # type: ignore[assignment] — duck-typed send
@@ -622,7 +622,7 @@ async def test_watch_runner_silent_on_intentional_stop(
         binding_token="tok_stop",
         workspace=str(workspace),
     )
-    with patch("omnigent.host.connect.subprocess.Popen", side_effect=_fake_popen):
+    with patch("agent_meow.host.connect.subprocess.Popen", side_effect=_fake_popen):
         result = await host._handle_launch(launch)
     assert result.status == "launched", result.error
 
@@ -679,7 +679,7 @@ async def test_hello_advertises_installed_version() -> None:
     stale build in the server's version popover. The hello must carry the
     shared resolved version this host is actually running.
     """
-    from omnigent.version import VERSION
+    from agent_meow.version import VERSION
 
     host = _make_host_process()
     tunnel = _FakeTunnel()
@@ -887,7 +887,7 @@ def test_reaper_does_not_steal_host_owned_subprocess_exit_code(tmp_path: Path) -
 
     Regression for the Polly-flagged race: the host also spawns *direct*
     children that are not tracked runners — the ``git`` commands in
-    :mod:`omnigent.host.git_worktree`, run via ``subprocess.run`` under
+    :mod:`~?agent_meow.host.git_worktree`, run via ``subprocess.run`` under
     ``asyncio.to_thread`` from the worktree handlers. If the 2s reaper sweep
     fires after such a git child has exited but before ``subprocess``'s own
     ``wait()`` collects it, a blind reaper would ``waitpid`` it — and CPython
@@ -953,7 +953,7 @@ def test_install_child_subreaper_is_safe_to_call() -> None:
     """
     import sys
 
-    from omnigent.host.connect import _install_child_subreaper
+    from agent_meow.host.connect import _install_child_subreaper
 
     result = _install_child_subreaper()
     assert isinstance(result, bool)
@@ -1002,7 +1002,7 @@ def test_host_spawned_runner_has_parent_pid_env(
             stderr=subprocess.DEVNULL,
         )
 
-    with patch("omnigent.host.connect.subprocess.Popen", side_effect=_capture_env):
+    with patch("agent_meow.host.connect.subprocess.Popen", side_effect=_capture_env):
         import asyncio
 
         result = asyncio.run(host._handle_launch(frame))
@@ -1291,7 +1291,7 @@ def test_build_runner_env_forwards_harness_credentials_and_endpoints() -> None:
     or gateway setups break in confusing ways). Absent vars are simply
     not set rather than defaulted.
     """
-    from omnigent.host.connect import HARNESS_CREDENTIAL_ENV_VARS
+    from agent_meow.host.connect import HARNESS_CREDENTIAL_ENV_VARS
 
     base = {
         "PATH": "/usr/bin",
@@ -1339,7 +1339,7 @@ def test_build_runner_env_forwards_harness_credentials_and_endpoints() -> None:
 
 def test_build_runner_env_forwards_omnigent_prefixed_harness_credentials() -> None:
     """Prefixed harness credential aliases forward without creating raw names."""
-    from omnigent.host.connect import HARNESS_CREDENTIAL_ENV_VARS
+    from agent_meow.host.connect import HARNESS_CREDENTIAL_ENV_VARS
 
     base = {
         "PATH": "/usr/bin",
@@ -1995,7 +1995,7 @@ def _patch_connect(monkeypatch: pytest.MonkeyPatch, spy: _ConnectSpy) -> None:
     """
     import websockets.asyncio.client as ws_client
 
-    import omnigent.runner._entry as entry_mod
+    import agent_meow.runner._entry as entry_mod
 
     monkeypatch.setattr(entry_mod, "_make_auth_token_factory", lambda *, server_url=None: None)
     monkeypatch.setattr(ws_client, "connect", spy)
@@ -2024,14 +2024,14 @@ def test_build_connect_headers_adds_org_header(monkeypatch: pytest.MonkeyPatch) 
     :param monkeypatch: The pytest monkeypatch fixture.
     :returns: None.
     """
-    import omnigent.runner._entry as entry_mod
+    import agent_meow.runner._entry as entry_mod
 
     # No managed token + no real Databricks creds: isolate the bearer
     # branch so only the routing header is under test.
     monkeypatch.delenv("OMNIGENT_HOST_TOKEN", raising=False)
     monkeypatch.setattr(entry_mod, "_make_auth_token_factory", lambda *, server_url=None: None)
     monkeypatch.setattr(
-        "omnigent.cli_auth.load_databricks_org_id", lambda _url: "2850744067564480"
+        "agent_meow.cli_auth.load_databricks_org_id", lambda _url: "2850744067564480"
     )
 
     headers = _host("https://acme.databricks.com/api/2.0/omnigent")._build_connect_headers()
@@ -2053,7 +2053,7 @@ async def test_run_retries_on_login_redirect(
     ``omnigent login`` remediation so the operator can act if the cause
     is persistent.
     """
-    monkeypatch.setattr("omnigent.host.connect._RECONNECT_BASE_S", 0.0)
+    monkeypatch.setattr("agent_meow.host.connect._RECONNECT_BASE_S", 0.0)
     spy = _ConnectSpy(
         [
             InvalidURI("https://w/oidc/authorize", "scheme isn't ws or wss"),
@@ -2063,7 +2063,7 @@ async def test_run_retries_on_login_redirect(
     _patch_connect(monkeypatch, spy)
     host = _host()
 
-    with caplog.at_level(logging.WARNING, logger="omnigent.host.connect"):
+    with caplog.at_level(logging.WARNING, logger="agent_meow.host.connect"):
         await host.run()
 
     # 2 = redirect attempt + cancel attempt → it genuinely reconnected.
@@ -2088,7 +2088,7 @@ async def test_login_redirect_prints_warning_to_terminal(
     The terminal warning must name the cause and the copy-pasteable
     ``omnigent login <url>`` remedy.
     """
-    monkeypatch.setattr("omnigent.host.connect._RECONNECT_BASE_S", 0.0)
+    monkeypatch.setattr("agent_meow.host.connect._RECONNECT_BASE_S", 0.0)
     spy = _ConnectSpy(
         [
             InvalidURI("https://w/oidc/authorize", "scheme isn't ws or wss"),
@@ -2119,7 +2119,7 @@ async def test_fresh_host_fails_loud_after_persistent_login_redirects(
     of retrying forever with the terminal silent (the silent-hang regression
     could resurface once the redirect was made retryable).
     """
-    monkeypatch.setattr("omnigent.host.connect._RECONNECT_BASE_S", 0.0)
+    monkeypatch.setattr("agent_meow.host.connect._RECONNECT_BASE_S", 0.0)
     # A single queued redirect repeats forever — the streak only ends
     # because the host gives up.
     spy = _ConnectSpy([InvalidURI("https://w/oidc/authorize", "scheme isn't ws or wss")])
@@ -2150,7 +2150,7 @@ async def test_login_redirect_streak_resets_on_other_transient_errors(
     otherwise a fresh host riding out a restart would die from redirects
     accumulated across unrelated errors instead of three in a row.
     """
-    monkeypatch.setattr("omnigent.host.connect._RECONNECT_BASE_S", 0.0)
+    monkeypatch.setattr("agent_meow.host.connect._RECONNECT_BASE_S", 0.0)
     redirect = InvalidURI("https://w/oidc/authorize", "scheme isn't ws or wss")
     # Two redirects, then a 503 (must reset the streak), then redirects
     # repeating forever until the host gives up.
@@ -2178,7 +2178,7 @@ async def test_connected_host_retries_login_redirects_indefinitely(
     killing it would drop its live runners. It must keep retrying past
     the fresh-host fatal threshold.
     """
-    monkeypatch.setattr("omnigent.host.connect._RECONNECT_BASE_S", 0.0)
+    monkeypatch.setattr("agent_meow.host.connect._RECONNECT_BASE_S", 0.0)
     redirect = InvalidURI("https://w/oidc/authorize", "scheme isn't ws or wss")
     # Accepted upgrade first (None), then MORE redirects than the
     # fresh-host fatal threshold of 3, then a cancel to end the test.
@@ -2286,7 +2286,7 @@ async def test_run_reconnects_on_transient_upgrade_failure(
     ``CancelledError`` on the second attempt ends the loop so the test
     terminates; with backoff zeroed the retry is immediate.
     """
-    monkeypatch.setattr("omnigent.host.connect._RECONNECT_BASE_S", 0.0)
+    monkeypatch.setattr("agent_meow.host.connect._RECONNECT_BASE_S", 0.0)
     spy = _ConnectSpy([_invalid_status(status), asyncio.CancelledError()])
     _patch_connect(monkeypatch, spy)
     host = _host()

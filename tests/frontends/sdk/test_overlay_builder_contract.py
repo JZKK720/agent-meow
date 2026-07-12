@@ -15,7 +15,7 @@ The fix is two-fold:
 1. The ``Overlay.builder`` docstring now explicitly recommends
    the ``Group`` pattern with an inline example, so future
    builder authors don't have to spelunk the reference
-   implementation in :mod:`omnigent.repl._repl`.
+   implementation in :mod:`~?agent_meow.repl._repl`.
 2. These tests pin the recommended pattern: a builder returning
    ``Group(*(Text.from_markup(line) for line in lines))`` is
    rendered correctly by the host's overlay-content pipeline,

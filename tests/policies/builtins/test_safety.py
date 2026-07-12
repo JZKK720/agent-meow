@@ -1,6 +1,6 @@
 """
 Tests for the built-in safety policies
-(:mod:`omnigent.policies.builtins.safety`).
+(:mod:`~?agent_meow.policies.builtins.safety`).
 
 Covers:
 
@@ -19,8 +19,8 @@ from __future__ import annotations
 
 import pytest
 
-from omnigent.policies.builtins.safety import ask_on_os_tools, block_skills
-from omnigent.policies.schema import PolicyEvent
+from agent_meow.policies.builtins.safety import ask_on_os_tools, block_skills
+from agent_meow.policies.schema import PolicyEvent
 from tests.policies.builtins.helpers import tool_call_event as tc
 
 # ── ask_on_os_tools: agent-meow sys_os_* tools ─────────────────────────────
@@ -497,7 +497,7 @@ def test_block_skills_slash_then_whitespace_allows(text: str) -> None:
 
 def test_ask_on_add_policy_asks_for_sys_add_policy() -> None:
     """sys_add_policy tool call triggers ASK with a preview."""
-    from omnigent.policies.builtins.safety import ask_on_add_policy
+    from agent_meow.policies.builtins.safety import ask_on_add_policy
 
     result = ask_on_add_policy(
         {
@@ -506,7 +506,7 @@ def test_ask_on_add_policy_asks_for_sys_add_policy() -> None:
                 "name": "sys_add_policy",
                 "arguments": {
                     "name": "block_shell",
-                    "handler": "omnigent.policies.builtins.cel.cel_policy",
+                    "handler": "agent_meow.policies.builtins.cel.cel_policy",
                 },
             },
         }
@@ -518,7 +518,7 @@ def test_ask_on_add_policy_asks_for_sys_add_policy() -> None:
 
 def test_ask_on_add_policy_allows_other_tools() -> None:
     """Non-policy tool calls pass through."""
-    from omnigent.policies.builtins.safety import ask_on_add_policy
+    from agent_meow.policies.builtins.safety import ask_on_add_policy
 
     result = ask_on_add_policy(
         {
@@ -531,7 +531,7 @@ def test_ask_on_add_policy_allows_other_tools() -> None:
 
 def test_ask_on_add_policy_allows_non_tool_events() -> None:
     """Non-tool_call events pass through."""
-    from omnigent.policies.builtins.safety import ask_on_add_policy
+    from agent_meow.policies.builtins.safety import ask_on_add_policy
 
     result = ask_on_add_policy({"type": "request", "data": "hello"})
     assert result["result"] == "ALLOW"
@@ -539,7 +539,7 @@ def test_ask_on_add_policy_allows_non_tool_events() -> None:
 
 def test_ask_on_add_policy_handles_missing_arguments() -> None:
     """Missing or non-dict arguments doesn't crash."""
-    from omnigent.policies.builtins.safety import ask_on_add_policy
+    from agent_meow.policies.builtins.safety import ask_on_add_policy
 
     result = ask_on_add_policy(
         {

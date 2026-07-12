@@ -1,4 +1,4 @@
-"""Tests for omnigent.runtime.agent_cache."""
+"""Tests for agent_meow.runtime.agent_cache."""
 
 from __future__ import annotations
 
@@ -9,9 +9,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from omnigent.errors import OmnigentError
-from omnigent.runtime.agent_cache import AgentCache
-from omnigent.stores.artifact_store.local import LocalArtifactStore
+from agent_meow.errors import OmnigentError
+from agent_meow.runtime.agent_cache import AgentCache
+from agent_meow.stores.artifact_store.local import LocalArtifactStore
 
 # Minimal valid config.yaml for a spec_version=1 agent
 _MINIMAL_CONFIG = yaml.dump(

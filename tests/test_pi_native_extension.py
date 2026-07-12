@@ -50,7 +50,7 @@ fs.writeFileSync(
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "session-1",
     inboxDir,
     authHeaders: { authorization: "Bearer test" },
@@ -177,7 +177,7 @@ const configPath = path.join(require("os").tmpdir(), `pi-usage-${process.pid}.js
 require("fs").writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "session-1",
     authHeaders: { authorization: "Bearer test" },
   }),
@@ -523,7 +523,7 @@ const configPath = path.join(tmpDir, "config.json");
 
 fs.writeFileSync(
   configPath,
-  JSON.stringify({ serverUrl: "http://omnigent.test", sessionId: "session-1" }),
+  JSON.stringify({ serverUrl: "http://agent_meow.test", sessionId: "session-1" }),
 );
 process.env.OMNIGENT_PI_NATIVE_CONFIG = configPath;
 
@@ -794,7 +794,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "conv_abc",
     inboxDir,
     authHeaders: { authorization: "Bearer test" },
@@ -875,7 +875,7 @@ require(extensionPath)(pi);
 
   assert.equal(fetchCalls.length, 1, JSON.stringify(fetchCalls));
   const call = fetchCalls[0];
-  assert.equal(call.url, "http://omnigent.test/v1/sessions/conv_abc/mcp");
+  assert.equal(call.url, "http://agent_meow.test/v1/sessions/conv_abc/mcp");
   assert.equal(call.request.method, "POST");
   assert.equal(call.request.headers.authorization, "Bearer test");
   const body = JSON.parse(call.request.body);
@@ -940,7 +940,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "conv_abc",
     inboxDir,
     authHeaders: {},
@@ -1046,7 +1046,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "conv_abc",
     inboxDir,
     authHeaders: { authorization: "Bearer test" },
@@ -1179,7 +1179,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "conv_abc",
     inboxDir,
     authHeaders: {},
@@ -1268,7 +1268,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "conv_abc",
     inboxDir,
     authHeaders: {},
@@ -1410,7 +1410,7 @@ fs.writeFileSync(
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "session-1",
     inboxDir,
     authHeaders: { authorization: "Bearer test" },
@@ -1543,7 +1543,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(payloadPath, JSON.stringify({ id: "compact-1", type: "compact" }));
 fs.writeFileSync(
   configPath,
-  JSON.stringify({ serverUrl: "http://omnigent.test", sessionId: "session-1", inboxDir }),
+  JSON.stringify({ serverUrl: "http://agent_meow.test", sessionId: "session-1", inboxDir }),
 );
 
 process.env.OMNIGENT_PI_NATIVE_CONFIG = configPath;
@@ -1659,7 +1659,7 @@ fs.writeFileSync(
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "session-1",
     inboxDir,
   }),
@@ -1790,7 +1790,7 @@ fs.writeFileSync(
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "session-1",
     inboxDir,
   }),
@@ -1905,7 +1905,7 @@ fs.writeFileSync(
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "session-1",
     inboxDir,
   }),
@@ -2003,7 +2003,7 @@ const configPath = path.join(tmpDir, "config.json");
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://omnigent.test",
+    serverUrl: "http://agent_meow.test",
     sessionId: "session-1",
     authHeaders: { authorization: "Bearer test" },
   }),
@@ -2326,7 +2326,7 @@ def test_policy_transport_error_fails_closed(tmp_path: Path) -> None:
     so an unevaluable policy must BLOCK, not proceed. Every evaluate POST
     throws a non-abort transport error; after the transient retry budget
     elapses the extension returns a deny verdict (fail closed) rather than
-    null, matching omnigent.policies.types.FAIL_CLOSED_PHASES and the Python
+    null, matching agent_meow.policies.types.FAIL_CLOSED_PHASES and the Python
     native hook's fail_closed_hook_output(PreToolUse) → deny.
     """
     body = r"""
@@ -2546,7 +2546,7 @@ function writeConfig(bearer) {
   fs.writeFileSync(
     configPath,
     JSON.stringify({
-      serverUrl: "http://omnigent.test",
+      serverUrl: "http://agent_meow.test",
       sessionId: "session-1",
       authHeaders: { authorization: bearer },
     }),

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.spec.parser import parse
+from agent_meow.spec.parser import parse
 
 
 def onboarding_agent_dir() -> Path:

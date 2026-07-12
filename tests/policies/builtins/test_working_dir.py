@@ -1,6 +1,6 @@
 """
 Tests for the built-in working-directory / worktree policy
-(:mod:`omnigent.policies.builtins.working_dir`) — the single
+(:mod:`~?agent_meow.policies.builtins.working_dir`) — the single
 ``block_working_dir_changes`` factory gating ``sys_os_shell`` commands that
 switch the working directory or git worktrees.
 
@@ -26,15 +26,15 @@ from __future__ import annotations
 
 import pytest
 
-from omnigent.policies.builtins.working_dir import block_working_dir_changes
-from omnigent.policies.function import FunctionPolicy, resolve_function_policy
-from omnigent.policies.registry import get_registry, load_registry, validate_factory_params
-from omnigent.policies.schema import PolicyEvent, PolicyResponse
-from omnigent.policies.types import EvaluationContext
-from omnigent.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
+from agent_meow.policies.builtins.working_dir import block_working_dir_changes
+from agent_meow.policies.function import FunctionPolicy, resolve_function_policy
+from agent_meow.policies.registry import get_registry, load_registry, validate_factory_params
+from agent_meow.policies.schema import PolicyEvent, PolicyResponse
+from agent_meow.policies.types import EvaluationContext
+from agent_meow.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
 from tests.policies.builtins.helpers import tool_call_event as tc
 
-_HANDLER = "omnigent.policies.builtins.working_dir.block_working_dir_changes"
+_HANDLER = "agent_meow.policies.builtins.working_dir.block_working_dir_changes"
 
 
 def _sh(command: str) -> PolicyEvent:

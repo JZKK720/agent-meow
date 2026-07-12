@@ -6,10 +6,10 @@ deterministic and needs no real credentials.
 **What breaks if this fails:**
 - agent-meow' YAML spec parser regresses on the minimal
   ``name:`` + ``prompt:`` shape.
-- ``omnigent.loader`` stops applying CLI ``--model`` as a
+- ``agent_meow.loader`` stops applying CLI ``--model`` as a
   fallback when the YAML omits ``executor.model``.
 - The default harness selection path regresses.
-- ``omnigent.cli._run_agent`` for the ``-p`` one-shot path
+- ``agent_meow.cli._run_agent`` for the ``-p`` one-shot path
   stops printing the assistant text on turn complete.
 """
 
@@ -27,7 +27,7 @@ from tests.e2e._harness_probes import (
     skip_if_harness_cli_missing,
 )
 from tests.e2e.conftest import configure_mock_llm, reset_mock_llm
-from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.agent_meow._snapshot import compare_snapshot
 
 _PROMPT = "say hi in 5 words"
 

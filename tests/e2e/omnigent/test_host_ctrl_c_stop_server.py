@@ -1,7 +1,7 @@
 """E2E coverage for the ``omnigent host`` Ctrl+C stop-server prompt.
 
 ``omnigent host ""`` (local mode) spawns a *detached* background local
-AP server (:func:`omnigent.host.local_server.ensure_local_omnigent_server`) that
+AP server (:func:`~?agent_meow.host.local_server.ensure_local_omnigent_server`) that
 intentionally outlives the foreground host daemon so sessions and the Web
 UI stay reachable across ``host`` / ``run``. Because users expect Ctrl+C
 to stop "everything", the connect command now prompts on a clean stop:
@@ -226,7 +226,7 @@ def _prespawn_persistent_server(
     :returns: ``(pid, port)`` of the running detached server.
     """
     code = (
-        "from omnigent.host.local_server import ensure_local_omnigent_server;"
+        "from agent_meow.host.local_server import ensure_local_omnigent_server;"
         "print(ensure_local_omnigent_server().url)"
     )
     proc = subprocess.run(

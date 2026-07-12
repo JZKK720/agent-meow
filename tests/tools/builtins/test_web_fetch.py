@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from omnigent.spec.types import (
+from agent_meow.spec.types import (
     AgentSpec,
     ExecutorSpec,
     LLMConfig,
 )
-from omnigent.tools.builtins.web_fetch import (
+from agent_meow.tools.builtins.web_fetch import (
     RESEARCHER_NAME,
     WebFetchTool,
     build_researcher_spec,
@@ -118,7 +118,7 @@ def test_researcher_inherits_parent_sandbox_egress() -> None:
     a sandbox-less child silently bypassed an egress-restricted parent's
     allowlist (e.g. reaching localhost / IMDS the parent blocked).
     """
-    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     sandbox = OSEnvSandboxSpec(
         egress_rules=["GET api.example.com/**"],
@@ -227,7 +227,7 @@ def test_web_fetch_is_runner_dispatched() -> None:
     silent regression. Pinning the membership here keeps the two
     sides honest.
     """
-    from omnigent.runner.tool_dispatch import should_dispatch_locally
+    from agent_meow.runner.tool_dispatch import should_dispatch_locally
 
     assert should_dispatch_locally("web_fetch") is True
 
@@ -245,7 +245,7 @@ def test_runner_handler_validates_query_required() -> None:
     """
     import asyncio
 
-    from omnigent.runner.tool_dispatch import _execute_web_fetch_tool
+    from agent_meow.runner.tool_dispatch import _execute_web_fetch_tool
 
     result = asyncio.run(
         _execute_web_fetch_tool(

@@ -14,7 +14,7 @@ YAML names its local search tool ``search_web`` to avoid the
 collision.
 """
 
-from omnigent.policies.schema import PolicyEvent, PolicyResponse
+from agent_meow.policies.schema import PolicyEvent, PolicyResponse
 
 # Agent-facing tool name the YAML declares (``tools.search_web``).
 # Kept as a module constant so a future YAML rename only touches

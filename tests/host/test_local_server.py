@@ -1,6 +1,6 @@
 """Tests for the persistent background local agent-meow server helpers.
 
-Covers ``omnigent.host.local_server``: reuse-vs-respawn detection
+Covers ``agent_meow.host.local_server``: reuse-vs-respawn detection
 (:func:`local_server_url_if_healthy`) and the spawn wiring
 (:func:`ensure_local_omnigent_server`). The connect daemon owns this server in
 ``--local`` mode; the CLI discovers it via the pidfile these helpers write.
@@ -14,7 +14,7 @@ from typing import Any
 import click
 import pytest
 
-from omnigent.host import local_server
+from agent_meow.host import local_server
 
 
 def test_local_server_url_if_healthy_returns_url_when_alive_and_healthy(
@@ -189,7 +189,7 @@ def test_server_config_signature_changes_with_version(
     """
     import importlib.metadata
 
-    from omnigent.server import auth as auth_mod
+    from agent_meow.server import auth as auth_mod
 
     # Pin auth so only the version varies between the two signatures.
     monkeypatch.setattr(auth_mod, "resolve_auth_source", lambda: "noauth")
@@ -229,7 +229,7 @@ def test_ensure_local_omnigent_server_spawns_when_none_healthy(
         local_server, "_LOCAL_SERVER_LOG_REF_PATH", tmp_path / "local_server.logpath"
     )
     # Point the persistent data dir at tmp so the test does not write to the
-    # developer's real ~/.omnigent.
+    # developer's real ~/.agent_meow.
     monkeypatch.setattr(Path, "home", classmethod(lambda _cls: tmp_path))
     # The spawned server inherits the parent env unmodified — there is no
     # profile flag anymore, so an ambient DATABRICKS_CONFIG_PROFILE must
@@ -420,7 +420,7 @@ def test_local_data_dir_honors_data_dir_not_config_home(
     """
     monkeypatch.delenv("OMNIGENT_DATA_DIR", raising=False)
     monkeypatch.delenv("OMNIGENT_CONFIG_HOME", raising=False)
-    # Default: ~/.omnigent.
+    # Default: ~/.agent_meow.
     assert local_server._local_data_dir() == Path.home() / ".omnigent"
     # CONFIG_HOME does NOT move the data dir — a failure here means config
     # isolation is leaking back into data-dir selection.

@@ -124,12 +124,12 @@ try:
 
     import uvicorn
 
-    from omnigent.runtime import init as init_runtime
-    from omnigent.runtime import telemetry
-    from omnigent.runtime.agent_cache import AgentCache
-    from omnigent.runtime.caps import RuntimeCaps
-    from omnigent.server.app import create_app
-    from omnigent.server.auth import create_auth_provider
+    from agent_meow.runtime import init as init_runtime
+    from agent_meow.runtime import telemetry
+    from agent_meow.runtime.agent_cache import AgentCache
+    from agent_meow.runtime.caps import RuntimeCaps
+    from agent_meow.server.app import create_app
+    from agent_meow.server.auth import create_auth_provider
 
     # OTel: the Databricks Apps platform auto-injects
     # OTEL_EXPORTER_OTLP_ENDPOINT when `telemetry_export_destinations`
@@ -137,22 +137,22 @@ try:
     # OTLP to the platform collector, which writes to the configured
     # UC tables. No-op if neither OTEL nor MLflow env vars are set.
     telemetry.init()
-    from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-    from omnigent.stores.artifact_store.databricks_volumes import (
+    from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+    from agent_meow.stores.artifact_store.databricks_volumes import (
         DatabricksVolumesArtifactStore,
     )
-    from omnigent.stores.comment_store.sqlalchemy_store import (
+    from agent_meow.stores.comment_store.sqlalchemy_store import (
         SqlAlchemyCommentStore,
     )
-    from omnigent.stores.conversation_store.sqlalchemy_store import (
+    from agent_meow.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
-    from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-    from omnigent.stores.host_store import HostStore
-    from omnigent.stores.permission_store.sqlalchemy_store import (
+    from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+    from agent_meow.stores.host_store import HostStore
+    from agent_meow.stores.permission_store.sqlalchemy_store import (
         SqlAlchemyPermissionStore,
     )
-    from omnigent.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
+    from agent_meow.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
 
     DB_URI = f"postgresql+psycopg://{PGUSER}@{PGHOST}:{PGPORT}/{PGDATABASE}"
     ARTIFACT_URI = f"dbfs:{VOLUME_PATH}"
@@ -164,7 +164,7 @@ try:
     # The app SP owns the tables — run any pending Alembic upgrades
     # before the stores boot, since the verify-schema check refuses
     # to start a stale DB. Idempotent: a no-op when the DB is at head.
-    from omnigent.db.utils import _run_migrations as _run_alembic_upgrade
+    from agent_meow.db.utils import _run_migrations as _run_alembic_upgrade
 
     _migration_engine = sqlalchemy.create_engine(DB_URI)
     try:

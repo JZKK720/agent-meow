@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.opencode_native_provider import (
+from agent_meow.opencode_native_provider import (
     DEFAULT_DATABRICKS_GATEWAY_MODEL,
     OpenCodeGatewayResolution,
     _gateway_endpoint_for_model,
@@ -34,7 +34,7 @@ def test_build_omnigent_mcp_server_points_serve_mcp_at_bridge_dir() -> None:
     cmd = entry["command"]
     # Launches the SHARED serve-mcp relay, pointed at THIS bridge dir.
     assert cmd[-3:] == ["serve-mcp", "--bridge-dir", "/tmp/bridge-xyz"]
-    assert "omnigent.claude_native_bridge" in cmd
+    assert "agent_meow.claude_native_bridge" in cmd
     assert entry.get("environment", {}).get("PYTHONUNBUFFERED") == "1"
 
 
@@ -165,7 +165,7 @@ def test_resolve_gateway_none_when_no_token(monkeypatch: pytest.MonkeyPatch) -> 
 def test_build_mcp_block_stdio_and_http() -> None:
     from types import SimpleNamespace as N
 
-    from omnigent.opencode_native_provider import build_opencode_mcp_block
+    from agent_meow.opencode_native_provider import build_opencode_mcp_block
 
     servers = [
         N(
@@ -210,7 +210,7 @@ def test_build_mcp_block_stdio_and_http() -> None:
 def test_build_mcp_block_http_databricks_injects_bearer(monkeypatch: pytest.MonkeyPatch) -> None:
     from types import SimpleNamespace as N
 
-    import omnigent.opencode_native_provider as prov
+    import agent_meow.opencode_native_provider as prov
 
     monkeypatch.setattr(prov, "_databricks_bearer_token", lambda _p: "tok123")
     servers = [

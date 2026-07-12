@@ -15,7 +15,7 @@
 #
 # One-time setup (per index, pypi.org AND test.pypi.org): Trusted Publishers
 # for all three project names pointing at JZKK720/agent-meow +
-# release-omnigent.yml + the test-pypi/pypi environment (unclaimed names
+# release-agent_meow.yml + the test-pypi/pypi environment (unclaimed names
 # reserved via a pending publisher); GitHub envs test-pypi (unprotected)
 # and pypi (required reviewer). Actions are SHA-pinned per repo convention.
 name: Release omnigent (PyPI)
@@ -39,7 +39,7 @@ on:
   # steps are condition-gated off PR events.
   pull_request:
     paths:
-      - ".github/workflows/release-omnigent.yml"
+      - ".github/workflows/release-agent_meow.yml"
 
 permissions:
   contents: read

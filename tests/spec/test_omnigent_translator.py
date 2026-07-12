@@ -1,8 +1,8 @@
-"""Unit tests for ``omnigent.spec.omnigent.agent_spec_to_agent_def``.
+"""Unit tests for ``agent_meow.spec.agent_meow.agent_spec_to_agent_def``.
 
 Phase 1 ships the forward direction only. These tests hand-craft
 :class:`AgentSpec` objects and assert the resulting
-:class:`omnigent.datamodel.AgentDef` has the expected shape. The
+:class:`~?agent_meow.datamodel.AgentDef` has the expected shape. The
 round-trip test (``agent_spec_to_agent_def(agent_def_to_agent_spec(d)) == d``)
 lands in phase 2 once the reverse direction exists.
 
@@ -16,10 +16,10 @@ from __future__ import annotations
 
 import pytest
 
-from omnigent.errors import OmnigentError
-from omnigent.inner.datamodel import OSEnvSpec
-from omnigent.inner.tools import AgentTool, FunctionTool
-from omnigent.spec import (
+from agent_meow.errors import OmnigentError
+from agent_meow.inner.datamodel import OSEnvSpec
+from agent_meow.inner.tools import AgentTool, FunctionTool
+from agent_meow.spec import (
     AgentSpec,
     ExecutorSpec,
     FunctionPolicySpec,
@@ -33,16 +33,16 @@ from omnigent.spec import (
     ToolRuntime,
     ToolsConfig,
 )
-from omnigent.spec.omnigent import (
+from agent_meow.spec.omnigent import (
     agent_def_to_agent_spec,
     agent_spec_to_agent_def,
 )
 
-# SandboxConfig is not re-exported from omnigent.spec's public
+# SandboxConfig is not re-exported from agent_meow.spec's public
 # __init__ because it is only addressable under the ``tools.sandbox``
 # sub-block; the translator test needs it directly to construct a
 # sandboxed ToolsConfig.
-from omnigent.spec.types import SandboxConfig
+from agent_meow.spec.types import SandboxConfig
 
 
 # A sample callable used as the target of dotted-path tool resolution.
@@ -139,7 +139,7 @@ def test_missing_profile_maps_to_none(
     """
     ``executor.config`` may omit ``profile``; the translator
     surfaces ``None`` so the omnigent
-    :class:`~omnigent.datamodel.ExecutorSpec.profile` field
+    :class:`~?agent_meow.datamodel.ExecutorSpec.profile` field
     reflects absence faithfully rather than coercing to a
     sentinel string.
 
@@ -510,7 +510,7 @@ def test_server_runtime_tool_with_no_path_rejected(
     but ``path=None`` is rejected at translation time.
 
     The validator catches this for every spec routed through
-    :func:`omnigent.spec.validator.validate`, but the translator
+    :func:`~?agent_meow.spec.validator.validate`, but the translator
     is also reachable from callers that bypass validation (e.g.
     direct in-memory construction in tests/tools). Failing loud
     here keeps the contract honest end-to-end.

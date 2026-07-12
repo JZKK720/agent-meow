@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from omnigent.llms.adapters.databricks import DatabricksAdapter
+from agent_meow.llms.adapters.databricks import DatabricksAdapter
 
 
 def test_stream_options_stripped_from_streaming_payload() -> None:
@@ -47,8 +47,8 @@ def test_missing_base_url_raises_when_no_auto_resolve(monkeypatch: Any) -> None:
     """
     import asyncio
 
-    from omnigent.errors import OmnigentError
-    from omnigent.llms.adapters import databricks as adapter_mod
+    from agent_meow.errors import OmnigentError
+    from agent_meow.llms.adapters import databricks as adapter_mod
 
     def _raise(profile: Any) -> None:
         raise OSError("Could not resolve Databricks workspace credentials.")
@@ -77,7 +77,7 @@ def test_missing_base_url_raises_when_no_auto_resolve(monkeypatch: Any) -> None:
 def test_auto_resolve_used_when_no_connection_params(monkeypatch: Any) -> None:
     """
     When ``connection_params`` is absent, the adapter calls
-    :func:`~omnigent.runtime.credentials.databricks.resolve_databricks_workspace`
+    :func:`~?agent_meow.runtime.credentials.databricks.resolve_databricks_workspace`
     and uses the result.
 
     We don't make a real HTTP call here — we just verify that the resolved
@@ -85,8 +85,8 @@ def test_auto_resolve_used_when_no_connection_params(monkeypatch: Any) -> None:
     """
     import asyncio
 
-    from omnigent.llms.adapters import databricks as adapter_mod
-    from omnigent.runtime.credentials.databricks import WorkspaceCreds
+    from agent_meow.llms.adapters import databricks as adapter_mod
+    from agent_meow.runtime.credentials.databricks import WorkspaceCreds
 
     monkeypatch.setattr(
         adapter_mod,
@@ -110,7 +110,7 @@ def test_auto_resolve_used_when_no_connection_params(monkeypatch: Any) -> None:
         captured.append({"connection_params": connection_params})
         return {}
 
-    from omnigent.llms.adapters.openai import OpenAICompatibleAdapter
+    from agent_meow.llms.adapters.openai import OpenAICompatibleAdapter
 
     monkeypatch.setattr(OpenAICompatibleAdapter, "chat_completions", _fake_parent)
 

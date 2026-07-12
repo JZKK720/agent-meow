@@ -59,6 +59,6 @@ guardrails:
       type: function
       on: [tool_call]
       function:
-        path: omnigent.inner.nessie.policies.blast_radius
+        path: agent_meow.inner.nessie.policies.blast_radius
         arguments:
           gate_pushes: false

@@ -18,9 +18,9 @@ import click
 import httpx
 import pytest
 
-from omnigent import claude_native, codex_native, native_terminal
-from omnigent.claude_native_bridge import BRIDGE_ID_LABEL_KEY
-from omnigent.host import daemon_launch
+from agent_meow import claude_native, codex_native, native_terminal
+from agent_meow.claude_native_bridge import BRIDGE_ID_LABEL_KEY
+from agent_meow.host import daemon_launch
 
 pytestmark = pytest.mark.asyncio
 
@@ -214,15 +214,15 @@ def _install_daemon_seam_mocks(
         to.
     :returns: None.
     """
-    monkeypatch.setattr("omnigent.chat._remote_headers", lambda server_url=None, **k: {})
-    monkeypatch.setattr("omnigent.chat._server_auth", lambda server_url=None, **k: None)
-    monkeypatch.setattr("omnigent.chat._bundle_agent", lambda path: b"bundle")
+    monkeypatch.setattr("agent_meow.chat._remote_headers", lambda server_url=None, **k: {})
+    monkeypatch.setattr("agent_meow.chat._server_auth", lambda server_url=None, **k: None)
+    monkeypatch.setattr("agent_meow.chat._bundle_agent", lambda path: b"bundle")
     monkeypatch.setattr(
-        "omnigent.cli._ensure_host_daemon",
+        "agent_meow.cli._ensure_host_daemon",
         lambda url: ensured.append(url),
     )
     monkeypatch.setattr(
-        "omnigent.host.identity.load_or_create_host_identity",
+        "agent_meow.host.identity.load_or_create_host_identity",
         lambda *a, **k: SimpleNamespace(host_id="host_1", name="h"),
     )
     monkeypatch.setattr(

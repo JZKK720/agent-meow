@@ -1,5 +1,5 @@
 """
-Tests for :class:`omnigent.runtime.harnesses._scaffold.HarnessApp`.
+Tests for :class:`~?agent_meow.runtime.harnesses._scaffold.HarnessApp`.
 
 End-to-end through real subprocesses spawned via the same
 :class:`HarnessProcessManager` used in production. Each test
@@ -38,11 +38,11 @@ from typing import Any
 import httpx
 import pytest
 
-from omnigent.errors import ErrorCode
-from omnigent.runtime.harnesses import _HARNESS_MODULES
-from omnigent.runtime.harnesses._scaffold import HarnessApp, TurnContext
-from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
-from omnigent.runtime.tool_output import MAX_TOOL_OUTPUT_BYTES
+from agent_meow.errors import ErrorCode
+from agent_meow.runtime.harnesses import _HARNESS_MODULES
+from agent_meow.runtime.harnesses._scaffold import HarnessApp, TurnContext
+from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+from agent_meow.runtime.tool_output import MAX_TOOL_OUTPUT_BYTES
 
 _TEST_HARNESS_NAME = "scaffold_fixture"
 _TEST_HARNESS_MODULE = "tests.runtime.harnesses._test_scaffold_harnesses"
@@ -1742,8 +1742,8 @@ async def test_idle_watchdog_attaches_recent_forwarder_post_failure(
     Fails on the unfixed watchdog (reason omits the forwarder cause); passes
     once the watchdog reads ``_native_forwarder_health``.
     """
-    from omnigent import _native_forwarder_health as health
-    from omnigent.runtime.harnesses import _scaffold
+    from agent_meow import _native_forwarder_health as health
+    from agent_meow.runtime.harnesses import _scaffold
 
     class _WedgedApp(HarnessApp):
         async def run_turn(self, request: Any, ctx: TurnContext) -> None:

@@ -21,13 +21,13 @@ import yaml
 from websockets.exceptions import ConnectionClosedError
 from websockets.frames import Close
 
-from omnigent import claude_native
-from omnigent._runner_startup import RunnerStartupProgress
-from omnigent._startup_profile import StartupProfiler
-from omnigent._terminal_picker_theme import PICKER_ACCENT, PICKER_MUTED
-from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
-from omnigent.spec import load_omnigent_yaml
-from omnigent.terminals.ws_bridge import (
+from agent_meow import claude_native
+from agent_meow._runner_startup import RunnerStartupProgress
+from agent_meow._startup_profile import StartupProfiler
+from agent_meow._terminal_picker_theme import PICKER_ACCENT, PICKER_MUTED
+from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.spec import load_omnigent_yaml
+from agent_meow.terminals.ws_bridge import (
     WS_CLOSE_TERMINAL_DETACHED,
     WS_CLOSE_TERMINAL_NOT_FOUND,
 )
@@ -86,7 +86,7 @@ def test_claude_terminal_request_pins_launch_cwd(tmp_path, monkeypatch) -> None:
     assert mcp_config["mcpServers"]["omnigent"]["args"] == [
         "-I",
         "-m",
-        "omnigent.claude_native_bridge",
+        "agent_meow.claude_native_bridge",
         "serve-mcp",
         "--bridge-dir",
         "/tmp/omnigent-test-bridge",
@@ -134,7 +134,7 @@ def test_claude_terminal_request_launcher_plugin_wraps(tmp_path, monkeypatch) ->
     argv.
     """
 
-    from omnigent.claude_launcher import ClaudeLauncher
+    from agent_meow.claude_launcher import ClaudeLauncher
 
     class _IsaacLauncher(ClaudeLauncher):
         def launch(self, command, args):
@@ -257,7 +257,7 @@ def test_ucode_config_for_profile_reads_allowlisted_claude_state(
     the native wrapper must not blindly forward arbitrary state-file
     environment values into the terminal launch body.
     """
-    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -275,11 +275,11 @@ def test_ucode_config_for_profile_reads_allowlisted_claude_state(
         },
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
+        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.ucode_state.read_ucode_state",
+        "agent_meow.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -309,7 +309,7 @@ def test_ucode_config_for_profile_sets_model_tier_env_vars(
     picker natively shows Databricks gateway model IDs instead of normalising
     them to canonical Anthropic names.
     """
-    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -328,11 +328,11 @@ def test_ucode_config_for_profile_sets_model_tier_env_vars(
         },
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
+        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.ucode_state.read_ucode_state",
+        "agent_meow.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -354,7 +354,7 @@ def test_ucode_config_for_profile_sets_only_present_tier_env_vars(
     If ``claude_models`` only has one tier (e.g. ``"sonnet"``), only
     ``ANTHROPIC_DEFAULT_SONNET_MODEL`` is set — the other three are absent.
     """
-    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -368,11 +368,11 @@ def test_ucode_config_for_profile_sets_only_present_tier_env_vars(
         },
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
+        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.ucode_state.read_ucode_state",
+        "agent_meow.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -394,7 +394,7 @@ def test_ucode_config_for_profile_omits_model_tier_vars_when_no_claude_models(
     Older ucode state files may not include ``claude_models``.  In that
     case the env dict must not gain any spurious default model overrides.
     """
-    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -408,11 +408,11 @@ def test_ucode_config_for_profile_omits_model_tier_vars_when_no_claude_models(
         },
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
+        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.ucode_state.read_ucode_state",
+        "agent_meow.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -437,7 +437,7 @@ def test_ucode_config_for_profile_defaults_model_when_ucode_omits_it(
     back to its host-config model (an Anthropic-direct id like ``opus[1m]``)
     that the Databricks gateway rejects with "model ... may not exist".
     """
-    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -451,11 +451,11 @@ def test_ucode_config_for_profile_defaults_model_when_ucode_omits_it(
         },
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
+        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.ucode_state.read_ucode_state",
+        "agent_meow.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -470,18 +470,18 @@ def test_ucode_config_for_profile_fails_loud_on_malformed_claude_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A selected malformed Claude ucode entry surfaces a setup error."""
-    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
         agents={"claude": UcodeAgentState(auth_command="printf token")},
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
+        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "omnigent.onboarding.ucode_state.read_ucode_state",
+        "agent_meow.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -518,7 +518,7 @@ def test_materialized_session_spec_is_valid_terminal_metadata(tmp_path: Path) ->
     assert raw["prompt"].startswith("Claude Code is running in the session terminal.")
     # ``context_window`` is the conservative pre-first-turn default;
     # the statusLine forwarder overrides it once the real number is
-    # observed (see ``omnigent.claude_native_status``).
+    # observed (see ``agent_meow.claude_native_status``).
     assert raw["executor"] == {"harness": "claude-native", "context_window": 200_000}
     # os_env block is required for the runner's filesystem APIs not
     # to 404 (see _require_os_env in omnigent/runner/app.py).
@@ -711,7 +711,7 @@ def test_local_run_persists_launch_state_on_fresh_session(
     the call there would surface here without affecting the remote
     test (and vice versa).
     """
-    from omnigent.claude_native_state import read_launch_state
+    from agent_meow.claude_native_state import read_launch_state
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -755,11 +755,11 @@ def test_local_run_persists_launch_state_on_fresh_session(
         return True
 
     monkeypatch.chdir(workspace)
-    monkeypatch.setattr("omnigent.chat._find_free_port", lambda: 12345)
-    monkeypatch.setattr("omnigent.chat._start_local_server", fake_start_server)
-    monkeypatch.setattr("omnigent.chat._stop_local_server", lambda server: None)
-    monkeypatch.setattr("omnigent.chat._wait_for_server", lambda *a, **k: None)
-    monkeypatch.setattr("omnigent.chat._bundle_agent", lambda path: b"bundle")
+    monkeypatch.setattr("agent_meow.chat._find_free_port", lambda: 12345)
+    monkeypatch.setattr("agent_meow.chat._start_local_server", fake_start_server)
+    monkeypatch.setattr("agent_meow.chat._stop_local_server", lambda server: None)
+    monkeypatch.setattr("agent_meow.chat._wait_for_server", lambda *a, **k: None)
+    monkeypatch.setattr("agent_meow.chat._bundle_agent", lambda path: b"bundle")
     monkeypatch.setattr(claude_native, "_prepare_claude_terminal", fake_prepare)
     monkeypatch.setattr(claude_native, "attach_local_terminal", fake_attach)
     monkeypatch.setattr(
@@ -871,10 +871,10 @@ def test_local_resume_does_not_print_redundant_resume_hint(
         del attach_url, headers, terminal_gone_probe
         return True
 
-    monkeypatch.setattr("omnigent.chat._find_free_port", lambda: 12346)
-    monkeypatch.setattr("omnigent.chat._start_local_server", fake_start_server)
-    monkeypatch.setattr("omnigent.chat._stop_local_server", lambda server: None)
-    monkeypatch.setattr("omnigent.chat._wait_for_server", lambda *a, **k: None)
+    monkeypatch.setattr("agent_meow.chat._find_free_port", lambda: 12346)
+    monkeypatch.setattr("agent_meow.chat._start_local_server", fake_start_server)
+    monkeypatch.setattr("agent_meow.chat._stop_local_server", lambda server: None)
+    monkeypatch.setattr("agent_meow.chat._wait_for_server", lambda *a, **k: None)
     monkeypatch.setattr(claude_native, "_prepare_claude_terminal", fake_prepare)
     monkeypatch.setattr(claude_native, "attach_local_terminal", fake_attach)
 
@@ -944,15 +944,15 @@ def test_remote_daemon_run_attaches_without_cli_forwarder(
         captured_attach.update(kwargs)
         return claude_native._AttachOutcome.EXITED
 
-    monkeypatch.setattr("omnigent.chat._bundle_agent", lambda path: b"bundle")
+    monkeypatch.setattr("agent_meow.chat._bundle_agent", lambda path: b"bundle")
     monkeypatch.setattr(
-        "omnigent.chat._remote_headers",
+        "agent_meow.chat._remote_headers",
         lambda server_url=None: {"Authorization": "Bearer tok"},
     )
-    monkeypatch.setattr("omnigent.chat._server_auth", lambda server_url=None: None)
-    monkeypatch.setattr("omnigent.cli._ensure_host_daemon", lambda base_url: None)
+    monkeypatch.setattr("agent_meow.chat._server_auth", lambda server_url=None: None)
+    monkeypatch.setattr("agent_meow.cli._ensure_host_daemon", lambda base_url: None)
     monkeypatch.setattr(
-        "omnigent.host.identity.load_or_create_host_identity",
+        "agent_meow.host.identity.load_or_create_host_identity",
         lambda: SimpleNamespace(host_id="host_test"),
     )
     monkeypatch.setattr(claude_native, "_prepare_claude_terminal_via_daemon", fake_prepare)
@@ -1601,7 +1601,7 @@ async def test_prepare_reattaches_existing_claude_terminal(
         :param _session_id: Existing session id.
         :returns: Labels containing the bridge id.
         """
-        return {"omnigent.claude_native.bridge_id": "bridge_abc"}
+        return {"agent_meow.claude_native.bridge_id": "bridge_abc"}
 
     monkeypatch.setattr(claude_native, "_find_running_claude_terminal", fake_find)
     monkeypatch.setattr(claude_native, "_bind_session_runner", fail_bind)
@@ -4551,7 +4551,7 @@ def test_is_claude_native_conversation_returns_true_on_matching_label(
     a resume into the claude wrapper). A False negative here is
     exactly the resume misroute.
     """
-    from omnigent import chat
+    from agent_meow import chat
 
     def _fake_get(url: str, *, headers: dict[str, str], timeout: float) -> httpx.Response:
         """Canned 200 response with the claude-native wrapper label."""
@@ -4593,7 +4593,7 @@ def test_is_claude_native_conversation_returns_false_on_non_matching_label(
     The chat REPL stays on its normal AP-REPL path for these
     conversations.
     """
-    from omnigent import chat
+    from agent_meow import chat
 
     def _fake_get(_url: str, *, headers: dict[str, str], timeout: float) -> httpx.Response:
         """Canned 200 response with the parametrized labels."""
@@ -4627,7 +4627,7 @@ def test_is_claude_native_conversation_logs_warning_on_non_200(
     requires the right handler / propagation, which other tests'
     logging setup can disturb.
     """
-    from omnigent import chat
+    from agent_meow import chat
 
     def _fake_get(_url: str, *, headers: dict[str, str], timeout: float) -> httpx.Response:
         """Canned error response at the parametrized status code."""
@@ -4668,7 +4668,7 @@ def test_is_claude_native_conversation_returns_false_on_transport_error(
     own connect-fail error; we just record what we saw so a flaky
     server doesn't cause a silent misroute.
     """
-    from omnigent import chat
+    from agent_meow import chat
 
     def _raises(*_args: object, **_kwargs: object) -> httpx.Response:
         """Pretend the connect fails."""
@@ -4872,7 +4872,7 @@ def test_align_working_directory_matching_cwd_silent_skip(
     ``/home/me/repo``) would prompt to chdir on every resume,
     which is noise the user has to dismiss every time.
     """
-    from omnigent.claude_native_state import write_launch_state
+    from agent_meow.claude_native_state import write_launch_state
 
     monkeypatch.chdir(tmp_path)
     starting_cwd = Path.cwd().resolve()
@@ -4908,7 +4908,7 @@ def test_align_working_directory_switch_action_chdirs(
     new value. If chdir is missing or points elsewhere, Claude
     will still exit on launch.
     """
-    from omnigent.claude_native_state import write_launch_state
+    from agent_meow.claude_native_state import write_launch_state
 
     recorded = tmp_path / "recorded-ws"
     recorded.mkdir()
@@ -5169,7 +5169,7 @@ def test_align_working_directory_leave_action_cancels_resume(
     third action exits before launch instead. The wrapper must not
     mutate cwd when the user chooses to leave.
     """
-    from omnigent.claude_native_state import write_launch_state
+    from agent_meow.claude_native_state import write_launch_state
 
     recorded = tmp_path / "recorded-leave"
     recorded.mkdir()
@@ -5205,7 +5205,7 @@ def test_align_working_directory_move_without_external_id_fails_loud(
     but this runtime invariant must not rely on ``assert`` because
     Python strips asserts under ``-O``.
     """
-    from omnigent.claude_native_state import write_launch_state
+    from agent_meow.claude_native_state import write_launch_state
 
     recorded = tmp_path / "recorded-no-external"
     recorded.mkdir()
@@ -5245,7 +5245,7 @@ def test_align_working_directory_raises_when_recorded_path_missing(
     can choose to recreate it, move the project back, or start a
     fresh session.
     """
-    from omnigent.claude_native_state import write_launch_state
+    from agent_meow.claude_native_state import write_launch_state
 
     monkeypatch.chdir(tmp_path)
     missing = "/this/path/should/not/exist/anywhere/nope-abcxyz"
@@ -5287,7 +5287,7 @@ def test_align_working_directory_redirect_moves_transcript_and_updates_state(
     and update agent-meow launch state so future resumes treat the
     current cwd as the session home.
     """
-    from omnigent.claude_native_state import read_launch_state, write_launch_state
+    from agent_meow.claude_native_state import read_launch_state, write_launch_state
 
     projects_dir = tmp_path / ".claude" / "projects"
     old_workspace = tmp_path / "old workspace"
@@ -5366,7 +5366,7 @@ def test_align_working_directory_redirect_replaces_stale_target(
     fail on the stale target; it should make the current project the
     only owner of the Claude session id.
     """
-    from omnigent.claude_native_state import read_launch_state, write_launch_state
+    from agent_meow.claude_native_state import read_launch_state, write_launch_state
 
     projects_dir = tmp_path / ".claude" / "projects"
     old_workspace = tmp_path / "old"
@@ -5432,7 +5432,7 @@ def test_align_working_directory_redirect_works_when_recorded_path_missing(
     should offer redirect as the default and the helper should move
     the transcript instead of failing early.
     """
-    from omnigent.claude_native_state import read_launch_state, write_launch_state
+    from agent_meow.claude_native_state import read_launch_state, write_launch_state
 
     projects_dir = tmp_path / ".claude" / "projects"
     current_workspace = tmp_path / "current"
@@ -5660,7 +5660,7 @@ def test_record_launch_for_fresh_session_writes_resolved_cwd(
     in ``/home/me/repo`` (a symlink) and resumed from
     ``/repo`` (the canonical) won't falsely flag as mismatched.
     """
-    from omnigent.claude_native_state import read_launch_state
+    from agent_meow.claude_native_state import read_launch_state
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -5733,7 +5733,7 @@ def _isolated_provider_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 
 def _no_auth_claude_spec() -> Any:
     """A minimal claude-sdk spec with no executor.auth/profile."""
-    from omnigent.spec.types import AgentSpec, ExecutorSpec
+    from agent_meow.spec.types import AgentSpec, ExecutorSpec
 
     return AgentSpec(
         spec_version=1,
@@ -5752,7 +5752,7 @@ def test_provider_config_for_native_claude_key_injects_base_url_and_helper() -> 
     the base_url + default model carried through. Failure means a native
     launch would ignore the configured provider.
     """
-    from omnigent.onboarding.provider_config import load_providers
+    from agent_meow.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -5784,7 +5784,7 @@ def test_provider_config_for_native_claude_key_injects_base_url_and_helper() -> 
 
 def test_provider_config_for_native_claude_uses_auth_command_verbatim() -> None:
     """A provider ``auth_command`` is used as the apiKeyHelper verbatim."""
-    from omnigent.onboarding.provider_config import load_providers
+    from agent_meow.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -5816,7 +5816,7 @@ def test_bedrock_config_for_native_claude_static_key() -> None:
     ignores ``apiKeyHelper``, so a static key must land in the env (never a
     helper) and the base_url maps to ``ANTHROPIC_BEDROCK_BASE_URL``.
     """
-    from omnigent.onboarding.provider_config import load_providers
+    from agent_meow.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -5854,7 +5854,7 @@ def test_bedrock_config_for_native_claude_resolves_auth_command() -> None:
     tokens) silently fell back to Claude's own login. The command's stdout must
     become ``AWS_BEARER_TOKEN_BEDROCK`` since Bedrock mode ignores apiKeyHelper.
     """
-    from omnigent.onboarding.provider_config import load_providers
+    from agent_meow.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -5883,7 +5883,7 @@ def test_bedrock_config_for_native_claude_non_anthropic_returns_none() -> None:
     The native Claude path only routes anthropic-surface providers; anything
     else falls back to Claude Code's own login.
     """
-    from omnigent.onboarding.provider_config import load_providers
+    from agent_meow.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -6042,7 +6042,7 @@ def test_resolve_native_claude_config_ambient_prefixed_key(
 
 def test_bedrock_config_auth_command_failure_returns_none() -> None:
     """A failing bedrock auth_command falls back to Claude's own login (None)."""
-    from omnigent.onboarding.provider_config import load_providers
+    from agent_meow.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -6069,7 +6069,7 @@ def test_bedrock_config_no_model_default_leaves_model_none() -> None:
     """
     import logging
 
-    from omnigent.onboarding.provider_config import load_providers
+    from agent_meow.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {

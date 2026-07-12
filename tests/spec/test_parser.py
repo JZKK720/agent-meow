@@ -1,4 +1,4 @@
-"""Tests for omnigent.spec.parser."""
+"""Tests for agent_meow.spec.parser."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from omnigent.errors import OmnigentError
-from omnigent.spec.parser import discover_host_skills, parse
-from omnigent.spec.types import ApiKeyAuth, DatabricksAuth, ProviderAuth, SharePolicy
+from agent_meow.errors import OmnigentError
+from agent_meow.spec.parser import discover_host_skills, parse
+from agent_meow.spec.types import ApiKeyAuth, DatabricksAuth, ProviderAuth, SharePolicy
 
 
 @pytest.fixture()
@@ -620,7 +620,7 @@ def test_discover_host_skills_skips_invalid_yaml_frontmatter(
     good_dir.mkdir()
     (good_dir / "SKILL.md").write_text("---\nname: good-skill\ndescription: y\n---\nContent.")
 
-    with caplog.at_level("WARNING", logger="omnigent.spec.parser"):
+    with caplog.at_level("WARNING", logger="agent_meow.spec.parser"):
         result = discover_host_skills(agent_root, "all")
 
     names = [s.name for s in result]
@@ -675,7 +675,7 @@ def test_discover_host_skills_skips_unreadable_skill_file(
     (good_dir / "SKILL.md").write_text("---\nname: good\ndescription: y\n---\nContent.")
 
     try:
-        with caplog.at_level("WARNING", logger="omnigent.spec.parser"):
+        with caplog.at_level("WARNING", logger="agent_meow.spec.parser"):
             result = discover_host_skills(agent_root, "all")
     finally:
         # Restore so pytest can clean tmp_path on teardown.
@@ -840,7 +840,7 @@ def test_discover_host_skills_skips_missing_frontmatter(
     :param monkeypatch: Pytest monkeypatch for isolating ``Path.home()``.
     :param capsys: Pytest capture fixture for stderr assertions.
     """
-    from omnigent.spec.parser import discover_host_skills
+    from agent_meow.spec.parser import discover_host_skills
 
     # Use a separate home dir so the walk-up from agent_root
     # doesn't double-scan the same .claude/skills/ as Path.home().
@@ -885,7 +885,7 @@ def test_discover_host_skills_skips_yaml_syntax_error(
     :param monkeypatch: Pytest monkeypatch for isolating ``Path.home()``.
     :param capsys: Pytest capture fixture for stderr assertions.
     """
-    from omnigent.spec.parser import discover_host_skills
+    from agent_meow.spec.parser import discover_host_skills
 
     fake_home = tmp_path / "home"
     fake_home.mkdir()
@@ -922,7 +922,7 @@ def test_discover_host_skills_skips_multiple_bad_skills(
     :param monkeypatch: Pytest monkeypatch for isolating ``Path.home()``.
     :param capsys: Pytest capture fixture for stderr assertions.
     """
-    from omnigent.spec.parser import discover_host_skills
+    from agent_meow.spec.parser import discover_host_skills
 
     fake_home = tmp_path / "home"
     fake_home.mkdir()
@@ -1490,7 +1490,7 @@ def test_parse_os_env_caller_process(tmp_path: Path) -> None:
     What breaks if this fails: native agent-meow YAMLs cannot opt into
     sys_os_* tools — the whole point of step 5l.
     """
-    from omnigent.inner.datamodel import OSEnvSpec
+    from agent_meow.inner.datamodel import OSEnvSpec
 
     config = {
         "spec_version": 1,
@@ -1522,7 +1522,7 @@ def test_parse_os_env_with_sandbox(tmp_path: Path) -> None:
     runtime, leaving sys_os_* tools running with the agent's
     full process privileges.
     """
-    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     config = {
         "spec_version": 1,
@@ -2568,7 +2568,7 @@ def test_parse_os_env_sandbox_env_passthrough_default_none(tmp_path: Path) -> No
     Pinning the default here ensures that future spec changes don't
     silently flip the helper to "inherit everything from the parent",
     which would re-open the credential-leak vector
-    :func:`omnigent.inner.os_env.build_helper_env` is meant to close.
+    :func:`~?agent_meow.inner.os_env.build_helper_env` is meant to close.
     """
     config = {
         "spec_version": 1,
@@ -2811,7 +2811,7 @@ def test_executor_profile_field_lifted_from_yaml(tmp_path: Path) -> None:
     spec = parse(tmp_path)
     # Concrete field populated for every executor type.
     assert spec.executor.profile == "dev"
-    # Back-compat mirror into config["profile"] for omnigent.
+    # Back-compat mirror into config["profile"] for agent_meow.
     # Without this the legacy omnigent executor (which still
     # reads config["profile"]) would silently fall back to env
     # vars / DEFAULT section.

@@ -21,8 +21,8 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.spec import load
-from omnigent.spec.types import AgentSpec
+from agent_meow.spec import load
+from agent_meow.spec.types import AgentSpec
 
 # tests/e2e/omnigent/test_example_agent_with_os_env_bwrap.py -> repo root 3 up.
 _BWRAP_YAML = (

@@ -12,9 +12,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from omnigent.onboarding import antigravity_auth, extra_install
-from omnigent.onboarding import secrets as secret_store
-from omnigent.onboarding.antigravity_auth import (
+from agent_meow.onboarding import antigravity_auth, extra_install
+from agent_meow.onboarding import secrets as secret_store
+from agent_meow.onboarding.antigravity_auth import (
     ANTIGRAVITY_SECRET_NAME,
     antigravity_api_key_configured,
     antigravity_api_key_ref,

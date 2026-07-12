@@ -234,7 +234,7 @@ def test_switch_native_to_sdk_in_place_carries_history(
             assert switched["agent_id"] != original_agent_id, "switch must rebind the agent"
             # Switching to an SDK target must drop terminal-first mode.
             snap = http_client.get(f"/v1/sessions/{session_id}", timeout=30.0).json()
-            assert snap.get("labels", {}).get("omnigent.ui") != "terminal", (
+            assert snap.get("labels", {}).get("agent_meow.ui") != "terminal", (
                 f"SDK target must drop terminal-first mode, got labels {snap.get('labels')!r}"
             )
 

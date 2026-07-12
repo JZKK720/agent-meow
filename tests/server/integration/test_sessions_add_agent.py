@@ -194,9 +194,9 @@ async def test_add_claude_native_child_applies_wrapper_label(
     # Both claude-native labels applied at create time — exact key/values
     # (the wire contracts the runner + Web UI key on), not just presence:
     #  - omnigent.wrapper → runner routes the session to Claude Code.
-    #  - omnigent.ui=terminal → AppShell renders it terminal-first.
+    #  - agent_meow.ui=terminal → AppShell renders it terminal-first.
     assert row["labels"].get("omnigent.wrapper") == "claude-code-native-ui"
-    assert row["labels"].get("omnigent.ui") == "terminal"
+    assert row["labels"].get("agent_meow.ui") == "terminal"
     # The 3-segment "ui:" title still parses to the bound agent + label.
     assert row["tool"] == "claude-native-ui"
     assert row["session_name"] == "1"

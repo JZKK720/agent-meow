@@ -1,6 +1,6 @@
 """Integration tests for the qwen agent fixture, with a mocked ACP subprocess.
 
-Drives :class:`omnigent.inner.qwen_executor.QwenExecutor` end-to-end using the
+Drives :class:`~?agent_meow.inner.qwen_executor.QwenExecutor` end-to-end using the
 same harness / model / system prompt as the real agent
 (``tests/resources/examples/qwen_perm_test.yaml`` — the permanent twin of the
 manual ``tmp/qwen_perm_test.yaml``). The ``qwen --acp`` subprocess is faked via
@@ -23,9 +23,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from omnigent.inner.executor import TextChunk, TurnComplete
-from omnigent.inner.qwen_executor import QwenExecutor
-from omnigent.spec._omnigent_compat import load_omnigent_yaml
+from agent_meow.inner.executor import TextChunk, TurnComplete
+from agent_meow.inner.qwen_executor import QwenExecutor
+from agent_meow.spec._omnigent_compat import load_omnigent_yaml
 
 _AGENT_YAML = (
     Path(__file__).resolve().parents[1] / "resources" / "examples" / "qwen_perm_test.yaml"

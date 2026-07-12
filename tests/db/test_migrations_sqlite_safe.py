@@ -28,7 +28,7 @@ import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 
-import omnigent.db
+import agent_meow.db
 
 # DDL ops that SQLite's native ALTER TABLE cannot perform — they MUST be issued
 # through ``op.batch_alter_table`` (table recreate). Index ops
@@ -46,7 +46,7 @@ _SQLITE_UNSAFE_OPS = frozenset(
     }
 )
 
-_VERSIONS_DIR = Path(omnigent.db.__file__).parent / "migrations" / "versions"
+_VERSIONS_DIR = Path(agent_meow.db.__file__).parent / "migrations" / "versions"
 
 
 def _raw_unsafe_op_calls(source: str) -> list[tuple[str, int]]:
@@ -131,7 +131,7 @@ def test_full_migration_chain_round_trips_on_sqlite() -> None:
         # so the test owns its invocation rather than reaching into the
         # production engine helper.
         config.set_main_option(
-            "script_location", str(Path(omnigent.db.__file__).parent / "migrations")
+            "script_location", str(Path(agent_meow.db.__file__).parent / "migrations")
         )
         config.set_main_option("sqlalchemy.url", uri)
 

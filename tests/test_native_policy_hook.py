@@ -5,8 +5,8 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from omnigent import native_policy_hook
-from omnigent.native_policy_hook import (
+from agent_meow import native_policy_hook
+from agent_meow.native_policy_hook import (
     _is_login_redirect_or_unauthorized,
     evaluation_response_to_hook_output,
     fail_closed_hook_output,
@@ -593,8 +593,8 @@ def test_policy_hook_wrapper_script_bakes_auth_and_routing(
     workspace routing for free — the gap that left the cursor/hermes hooks
     posting unauthenticated and unrouted.
     """
-    import omnigent.cli_auth as cli_auth
-    import omnigent.runner._entry as entry
+    import agent_meow.cli_auth as cli_auth
+    import agent_meow.runner._entry as entry
 
     monkeypatch.setattr(
         entry, "_make_auth_token_factory", lambda *, server_url=None: lambda: "tok"
@@ -624,8 +624,8 @@ def test_policy_hook_wrapper_script_omits_auth_when_unauthenticated(
     The wrapper still exports the (empty) header dict, so the reader yields
     just ``Content-Type`` — non-workspace callers are unaffected.
     """
-    import omnigent.cli_auth as cli_auth
-    import omnigent.runner._entry as entry
+    import agent_meow.cli_auth as cli_auth
+    import agent_meow.runner._entry as entry
 
     monkeypatch.setattr(entry, "_make_auth_token_factory", lambda *, server_url=None: None)
     monkeypatch.setattr(cli_auth, "load_databricks_org_id", lambda _url: None)
@@ -651,7 +651,7 @@ def test_policy_hook_reauth_remints_and_preserves_routing_header(
     workspace-routing header that travels alongside it.
     """
     monkeypatch.setattr(
-        "omnigent.runner._entry._make_auth_token_factory",
+        "agent_meow.runner._entry._make_auth_token_factory",
         lambda _server_url: lambda: "fresh-token",
     )
     reauth = native_policy_hook.policy_hook_reauth(
@@ -666,7 +666,7 @@ def test_policy_hook_reauth_returns_none_without_factory(
 ) -> None:
     """No refresh mechanism (local/unauth) → ``None`` so the caller fails closed."""
     monkeypatch.setattr(
-        "omnigent.runner._entry._make_auth_token_factory",
+        "agent_meow.runner._entry._make_auth_token_factory",
         lambda _server_url: None,
     )
     reauth = native_policy_hook.policy_hook_reauth(

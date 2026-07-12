@@ -1,7 +1,7 @@
 """
 Integration tests for the full policy pipeline (Phase 5).
 
-Loads agent fixtures ported from omnigent examples, builds
+Loads agent fixtures ported from agent_meow examples, builds
 PolicyEngine via the real ``build_policy_engine``, and
 exercises every declared policy through the ``_enforce_policy``
 entry point that the workflow will use in later phases.
@@ -38,18 +38,18 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.policies.types import EvaluationContext
-from omnigent.runtime.policies import (
+from agent_meow.policies.types import EvaluationContext
+from agent_meow.runtime.policies import (
     _enforce_policy,
     build_policy_engine,
 )
-from omnigent.runtime.policies.engine import PolicyEngine
-from omnigent.spec import load
-from omnigent.spec.types import (
+from agent_meow.runtime.policies.engine import PolicyEngine
+from agent_meow.spec import load
+from agent_meow.spec.types import (
     Phase,
     PolicyAction,
 )
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 

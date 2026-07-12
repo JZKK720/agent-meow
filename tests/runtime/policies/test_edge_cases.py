@@ -18,14 +18,14 @@ from __future__ import annotations
 
 import pytest
 
-from omnigent.policies.types import EvaluationContext
-from omnigent.runtime.policies.engine import PolicyEngine
-from omnigent.spec.types import (
+from agent_meow.policies.types import EvaluationContext
+from agent_meow.runtime.policies.engine import PolicyEngine
+from agent_meow.spec.types import (
     Phase,
     PhaseSelector,
     PolicyAction,
 )
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 from tests.runtime.policies.conftest import make_fixed_policy

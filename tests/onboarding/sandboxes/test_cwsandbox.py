@@ -1,4 +1,4 @@
-"""Tests for :mod:`omnigent.onboarding.sandboxes.cwsandbox`."""
+"""Tests for :mod:`~?agent_meow.onboarding.sandboxes.cwsandbox`."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 import click
 import pytest
 
-from omnigent.onboarding.sandboxes.base import DEFAULT_HOST_IMAGE
-from omnigent.onboarding.sandboxes.cwsandbox import (
+from agent_meow.onboarding.sandboxes.base import DEFAULT_HOST_IMAGE
+from agent_meow.onboarding.sandboxes.cwsandbox import (
     HOST_IMAGE_ENV_VAR,
     SANDBOX_ENV_PASSTHROUGH_ENV_VAR,
     CWSandboxLauncher,

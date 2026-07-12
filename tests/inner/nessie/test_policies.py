@@ -1,6 +1,6 @@
 """Unit tests for nessie's bounds + blast-radius policies.
 
-These exercise the real :mod:`omnigent.inner.nessie.policies` evaluator
+These exercise the real :mod:`~?agent_meow.inner.nessie.policies` evaluator
 logic. The callables take and return plain dicts, so no mocks are needed —
 the tests construct real V0 event dicts and assert on the decision. Each
 test fails if the corresponding guard regresses (a command mis-classified,
@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from omnigent.inner.nessie.policies import (
+from agent_meow.inner.nessie.policies import (
     blast_radius,
     headless_subagent_purpose_guard,
     read_only_os,

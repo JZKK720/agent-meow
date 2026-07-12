@@ -177,7 +177,7 @@ def _wait_for_external_session_id(client: httpx.Client, *, session_id: str, time
     Poll a session until its ``external_session_id`` is captured.
 
     A fork only carries history when the SOURCE has a Claude session id
-    recorded — the fork stamps ``omnigent.fork.source_external_session_id``
+    recorded — the fork stamps ``agent_meow.fork.source_external_session_id``
     from it, which the runner reads to find the source transcript.
     Capture happens after Claude's first turn (the hook records the
     transcript path). Forking before then would silently launch the
@@ -611,7 +611,7 @@ def test_fork_native_source_into_sdk_carries_history(
 
             # The clone must NOT inherit the source's terminal-first labels.
             snap = http_client.get(f"/v1/sessions/{fork_id}", timeout=30.0).json()
-            assert snap.get("labels", {}).get("omnigent.ui") != "terminal", (
+            assert snap.get("labels", {}).get("agent_meow.ui") != "terminal", (
                 "SDK clone of a claude-native source must drop terminal-first "
                 f"mode, got labels {snap.get('labels')!r}"
             )

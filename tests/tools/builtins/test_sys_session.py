@@ -4,7 +4,7 @@ Unit tests for ``sys_session_get_history`` and ``sys_session_close``.
 These cover the two tools added in 13a alongside the existing
 ``sys_session_send`` / ``sys_session_list`` family. The tests build a
 real :class:`SqlAlchemyConversationStore` over a temp SQLite DB and
-monkeypatch the ``omnigent.runtime`` accessors so the tools see them.
+monkeypatch the ``agent_meow.runtime`` accessors so the tools see them.
 
 The tasks table has been removed. ``_resolve_parent_conversation_id``
 now reads ``ctx.conversation_id`` directly instead of looking up the
@@ -19,15 +19,15 @@ from dataclasses import dataclass
 
 import pytest
 
-from omnigent.entities.conversation import MessageData, NewConversationItem
-from omnigent.runtime import pending_elicitations
-from omnigent.session_lifecycle import CLOSED_LABEL_KEY, CLOSED_LABEL_VALUE
-from omnigent.spec.types import AgentSpec, ExecutorSpec
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.entities.conversation import MessageData, NewConversationItem
+from agent_meow.runtime import pending_elicitations
+from agent_meow.session_lifecycle import CLOSED_LABEL_KEY, CLOSED_LABEL_VALUE
+from agent_meow.spec.types import AgentSpec, ExecutorSpec
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from omnigent.tools.base import ToolContext
-from omnigent.tools.builtins.spawn import (
+from agent_meow.tools.base import ToolContext
+from agent_meow.tools.builtins.spawn import (
     _CLOSED_TITLE_INFIX,
     _HISTORY_DEFAULT_TAIL,
     _HISTORY_MAX_TAIL,
@@ -92,7 +92,7 @@ def session_fixture(
     Creates a parent conversation and a child conversation titled
     ``"researcher:auth"`` parented by the parent. Adds two items to the
     child (one user message, one assistant message). Monkeypatches
-    ``omnigent.runtime.get_conversation_store`` so the tool's
+    ``agent_meow.runtime.get_conversation_store`` so the tool's
     late-bound lookups resolve to the test store.
 
     ``_resolve_parent_conversation_id`` reads ``ctx.conversation_id``
@@ -134,10 +134,10 @@ def session_fixture(
         ],
     )
 
-    # The tools' invoke() does ``from omnigent.runtime import
+    # The tools' invoke() does ``from agent_meow.runtime import
     # get_conversation_store`` per call (lazy bind), so patching the
     # runtime module's attribute is sufficient.
-    monkeypatch.setattr("omnigent.runtime.get_conversation_store", lambda: conv_store)
+    monkeypatch.setattr("agent_meow.runtime.get_conversation_store", lambda: conv_store)
 
     # conversation_id is the canonical parent session id; _resolve_parent_conversation_id
     # reads ctx.conversation_id directly (tasks table removed).
@@ -651,7 +651,7 @@ def test_close_marks_closed_and_tombstones_internal_title(session_fixture: _Fixt
     """
     Close marks the child closed and internally tombstones its title.
 
-    The explicit ``omnigent.closed=true`` label is the behavioral
+    The explicit ``agent_meow.closed=true`` label is the behavioral
     marker write paths consume. The conv_id title suffix still
     guarantees uniqueness against the partial unique index on
     ``(parent_conversation_id, title)`` even if the same logical

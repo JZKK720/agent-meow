@@ -17,7 +17,7 @@ the antigravity harness is **Gemini-native**: the SDK has no OpenAI-compatible
 ``base_url`` and there is deliberately no Databricks-gateway path, so this test
 does NOT use ``patched_databrickscfg`` / ``omnigent_credentials_env``'s gateway
 URL — it authenticates purely from the configured / ambient Gemini key. This
-mirrors :mod:`tests.e2e.omnigent.test_per_harness_cursor` (the other
+mirrors :mod:`tests.e2e.agent_meow.test_per_harness_cursor` (the other
 backend-native SDK harness): because a Gemini key is not provisioned on CI, the
 test **skips** (rather than fails) when no key is present, so the e2e shards stay
 green; it runs for real wherever a key is configured.
@@ -37,7 +37,7 @@ when the SDK or key is absent.
   extra — ``pip install 'omnigent[antigravity]'``).
 - A Gemini / Antigravity API key configured (a stored ``antigravity:`` config
   block resolvable via
-  :func:`omnigent.onboarding.antigravity_auth.antigravity_api_key_configured`,
+  :func:`~?agent_meow.onboarding.antigravity_auth.antigravity_api_key_configured`,
   or an ambient ``GEMINI_API_KEY`` / ``ANTIGRAVITY_API_KEY``). The SDK *requires*
   a key — there is no login flow.
 
@@ -63,7 +63,7 @@ recognized as the host, not a harness regression.
 - ``--continue`` stops seeding prior-turn history onto a fresh antigravity
   session (#278 regression — the SDK has no history-injection API, so prior
   turns are replayed as a plain-text ``"Conversation so far: ..."`` prefix).
-- ``omnigent.cli``'s ``run`` one-shot / interactive paths stop persisting the
+- ``agent_meow.cli``'s ``run`` one-shot / interactive paths stop persisting the
   assistant reply, or harness dispatch for ``antigravity`` regresses.
 
 **Scope note (stable-on-main behaviors only):** this file is authored off
@@ -80,7 +80,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.entities.conversation import MessageData
+from agent_meow.entities.conversation import MessageData
 
 _HARNESS = "antigravity"
 
@@ -155,7 +155,7 @@ def _antigravity_skip_reason(omnigent_python: Path) -> str | None:
             # SDK's direct fallback (and what ``_build_antigravity_spawn_env`` adopts).
             "import importlib.util, os, sys;"
             "have_sdk = importlib.util.find_spec('google.antigravity') is not None;"
-            "from omnigent.onboarding.antigravity_auth import "
+            "from agent_meow.onboarding.antigravity_auth import "
             "antigravity_api_key_configured as cfg, ANTIGRAVITY_ENV_VARS;"
             "have_key = cfg() or any(os.environ.get(v) for v in ANTIGRAVITY_ENV_VARS);"
             "sys.stdout.write(f'{int(have_sdk)}{int(have_key)}')",
@@ -237,7 +237,7 @@ def _assistant_transcript_texts(db_path: Path) -> list[str]:
     subprocess wrote, rather than scraping the CLI's stdout — the transcript is
     the durable record of what the harness actually produced. Mirrors
     ``_conversation_texts`` in
-    :mod:`tests.e2e.omnigent.test_server_remote_omnigent_autonomous_flows`, but
+    :mod:`tests.e2e.agent_meow.test_server_remote_omnigent_autonomous_flows`, but
     filtered to assistant-authored messages so the assertions can't be satisfied
     by the echoed user prompt.
 
@@ -246,7 +246,7 @@ def _assistant_transcript_texts(db_path: Path) -> list[str]:
     """
     # Lazy import: the conversation store pulls in SQLAlchemy, and keeping it out
     # of module import time means a skipped test (no SDK / key) never pays for it.
-    from omnigent.stores.conversation_store.sqlalchemy_store import (
+    from agent_meow.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
 

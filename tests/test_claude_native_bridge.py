@@ -20,8 +20,8 @@ from typing import Any, TextIO
 
 import pytest
 
-from omnigent import claude_native_bridge, native_cost_popup
-from omnigent.claude_native_bridge import (
+from agent_meow import claude_native_bridge, native_cost_popup
+from agent_meow.claude_native_bridge import (
     _claude_prompt_rendered,
     _hook_record_from_jsonl_record,
     _JsonlRecord,
@@ -47,7 +47,7 @@ from omnigent.claude_native_bridge import (
     stop_hook_seen_since,
     write_tmux_target,
 )
-from omnigent.reasoning_effort import CLAUDE_EFFORTS
+from agent_meow.reasoning_effort import CLAUDE_EFFORTS
 
 
 @pytest.fixture(autouse=True)
@@ -59,8 +59,8 @@ def _trust_tmp_bridge_parent(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     :param tmp_path: Per-test temp directory.
     :returns: None.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path)
 
 
 @pytest.fixture
@@ -70,7 +70,7 @@ def subprocess_bridge_root() -> Iterator[Path]:
 
     :yields: Temporary directory path under the production trusted
         Claude bridge root, so a child
-        ``python -m omnigent.claude_native_bridge`` accepts bridge
+        ``python -m agent_meow.claude_native_bridge`` accepts bridge
         writes without inheriting pytest monkeypatches.
     """
     production_root = Path("/tmp") / f"omnigent-{os.getuid()}" / "claude-native"
@@ -209,8 +209,8 @@ def test_prepare_bridge_dir_preserves_token_and_updates_runtime(
     old token.
     """
     root = tmp_path / "root"
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
 
     first = prepare_bridge_dir(
         "conv_abc",
@@ -245,8 +245,8 @@ def test_prepare_bridge_dir_preserves_permission_hook_config(
     web UI (a regression we guard against).
     """
     root = tmp_path / "root"
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
 
     bridge_dir = prepare_bridge_dir("conv_abc", workspace=tmp_path)
     # ``augment_claude_args`` is the production path that writes
@@ -285,8 +285,8 @@ def test_prepare_bridge_dir_restricts_filesystem_permissions(
     """
     import stat
 
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
 
     bridge_dir = prepare_bridge_dir("conv_abc", workspace=tmp_path)
     bridge_json = bridge_dir / "bridge.json"
@@ -325,8 +325,8 @@ def test_prepare_bridge_dir_refuses_symlinked_ancestor(
     symlink = tmp_path / "claude-native"
     symlink.symlink_to(attacker_dir, target_is_directory=True)
 
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", symlink)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", symlink)
 
     with pytest.raises(RuntimeError, match="symlink"):
         prepare_bridge_dir("conv_abc", workspace=tmp_path)
@@ -352,12 +352,12 @@ def test_trusted_parent_accepts_qwen_native_bridge_dir(
     root`` and the relay never starts (observed in a live runner log). This
     pins the qwen-native branch so the regression can't return.
     """
-    from omnigent import qwen_native_bridge
+    from agent_meow import qwen_native_bridge
 
     # Distinct claude root so the qwen target can't match the claude branch
     # first (the autouse fixture points the claude root at ``tmp_path``).
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     # qwen root mirrors production shape: <uid-scoped temp>/qwen-native.
     qwen_root = tmp_path / "omnigent-test" / "qwen-native"
     monkeypatch.setattr(qwen_native_bridge, "_BRIDGE_ROOT", qwen_root)
@@ -383,12 +383,12 @@ def test_trusted_parent_accepts_kiro_native_bridge_dir(
     and the relay (and serve-mcp's own ``server.json`` write) never start. This
     pins the kiro-native branch.
     """
-    from omnigent import kiro_native_bridge
+    from agent_meow import kiro_native_bridge
 
     # Distinct claude root so the kiro target can't match the claude branch
     # first (the autouse fixture points the claude root at ``tmp_path``).
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     # kiro root mirrors production shape: <uid-scoped temp>/kiro-native.
     kiro_root = tmp_path / "omnigent-test" / "kiro-native"
     monkeypatch.setattr(kiro_native_bridge, "_BRIDGE_ROOT", kiro_root)
@@ -405,12 +405,12 @@ def test_trusted_parent_rejects_path_outside_all_roots_and_names_qwen(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A path under no known root is refused, and the error names the qwen root."""
-    from omnigent import qwen_native_bridge
+    from agent_meow import qwen_native_bridge
 
     # Distinct claude root so ``outside`` below isn't swept under it (the autouse
     # fixture points the claude root at ``tmp_path``).
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     qwen_root = tmp_path / "omnigent-test" / "qwen-native"
     monkeypatch.setattr(qwen_native_bridge, "_BRIDGE_ROOT", qwen_root)
 
@@ -1998,7 +1998,7 @@ def test_augment_claude_args_injects_mcp_and_hooks(tmp_path: Path) -> None:
     # pass the development-channels flag.
     assert "--dangerously-load-development-channels" not in args
     settings = json.loads(args[args.index("--settings") + 1])
-    assert "omnigent.claude_native_hook" in settings["hooks"]["Stop"][0]["hooks"][0]["command"]
+    assert "agent_meow.claude_native_hook" in settings["hooks"]["Stop"][0]["hooks"][0]["command"]
     # ``PreCompact`` must be wired so the forwarder can surface
     # ``response.compaction.in_progress`` while Claude compacts in the
     # terminal. Missing it = no "Compacting…" spinner for claude-native.
@@ -2006,7 +2006,7 @@ def test_augment_claude_args_injects_mcp_and_hooks(tmp_path: Path) -> None:
         f"PreCompact hook must be registered; got hooks {sorted(settings['hooks'])!r}."
     )
     assert (
-        "omnigent.claude_native_hook" in settings["hooks"]["PreCompact"][0]["hooks"][0]["command"]
+        "agent_meow.claude_native_hook" in settings["hooks"]["PreCompact"][0]["hooks"][0]["command"]
     )
     # No built-in tools are disabled anymore: ``AskUserQuestion``
     # routes through its dedicated PreToolUse hook (answers injected
@@ -2133,7 +2133,7 @@ def test_augment_claude_args_registers_permission_command_hook(
     # terminal prompt is still open. A failure here (missing key or a
     # short value) means that premature auto-resolve has regressed.
     assert hook["timeout"] == 86400
-    assert "omnigent.claude_native_hook permission-request" in hook["command"]
+    assert "agent_meow.claude_native_hook permission-request" in hook["command"]
     assert "--bridge-dir" in hook["command"]
     assert "Bearer xyz" not in hook["command"]
     permission_config = json.loads((tmp_path / "permission_hook.json").read_text(encoding="utf-8"))
@@ -2146,7 +2146,7 @@ def test_augment_claude_args_registers_permission_command_hook(
     # statusLine is now intentionally injected (it's the only place
     # Claude Code surfaces ``context_window`` on stdin); ensure it
     # points at our wrapper module rather than something arbitrary.
-    assert "omnigent.claude_native_status" in settings["statusLine"]["command"]
+    assert "agent_meow.claude_native_status" in settings["statusLine"]["command"]
 
 
 def test_augment_claude_args_registers_user_prompt_submit_policy_hook(
@@ -2224,7 +2224,7 @@ def test_augment_claude_args_keeps_permission_hook_without_launch_session_id(
     session_start_command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
     assert "--conversation-url" not in session_start_command
     assert "companyAnnouncements" not in settings
-    assert "omnigent.claude_native_status" in settings["statusLine"]["command"]
+    assert "agent_meow.claude_native_status" in settings["statusLine"]["command"]
 
 
 def test_mcp_server_initialize_omits_blocked_channel_capability(
@@ -2239,14 +2239,14 @@ def test_mcp_server_initialize_omits_blocked_channel_capability(
     Code would refuse to start with that capability advertised under
     org policy, breaking the native wrapper.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
     bridge_dir = prepare_bridge_dir("conv_abc", workspace=tmp_path)
     proc = subprocess.Popen(
         [
             sys.executable,
             "-m",
-            "omnigent.claude_native_bridge",
+            "agent_meow.claude_native_bridge",
             "serve-mcp",
             "--bridge-dir",
             str(bridge_dir),
@@ -2356,7 +2356,7 @@ def test_inject_user_message_pastes_content_then_submits(
     regresses to send-keys argv delivery, drops the trailing Enter, or
     stops clearing the stale buffer.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -2524,7 +2524,7 @@ def test_inject_user_message_waits_for_claude_prompt_before_typing(
     no send-keys is issued until ``capture-pane`` shows the prompt
     glyph, and that injection proceeds once it does.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -2603,7 +2603,7 @@ def test_inject_user_message_raises_when_prompt_never_renders(
     the web UI stuck on "Working…". The RuntimeError surfaces as an
     ExecutorError instead. No keystrokes must be sent on this path.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -2645,7 +2645,7 @@ def test_inject_user_message_ignores_prompt_glyph_in_scrollback(
     appears only in an early line, with later non-empty lines lacking
     it, so the gate must NOT treat the pane as ready.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -2701,12 +2701,12 @@ def test_inject_user_message_resends_enter_when_first_submit_swallowed(
     fire-and-forget Enter would send exactly one and return "success"
     with the message undelivered.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     # Shrink the polling cadence so the retry happens in milliseconds —
     # the production defaults (1s retry spacing) would make this test slow.
-    monkeypatch.setattr("omnigent.claude_native_bridge._CLAUDE_READY_POLL_INTERVAL_S", 0.01)
-    monkeypatch.setattr("omnigent.claude_native_bridge._SUBMIT_RETRY_INTERVAL_S", 0.02)
-    monkeypatch.setattr("omnigent.claude_native_bridge._PASTE_SETTLE_S", 0.0)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._CLAUDE_READY_POLL_INTERVAL_S", 0.01)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._SUBMIT_RETRY_INTERVAL_S", 0.02)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._PASTE_SETTLE_S", 0.0)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -2765,11 +2765,11 @@ def test_inject_user_message_raises_when_draft_never_submits(
     the message still sitting unsent in Claude's input box. The
     RuntimeError surfaces as an ExecutorError instead.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("omnigent.claude_native_bridge._CLAUDE_READY_POLL_INTERVAL_S", 0.01)
-    monkeypatch.setattr("omnigent.claude_native_bridge._SUBMIT_RETRY_INTERVAL_S", 0.02)
-    monkeypatch.setattr("omnigent.claude_native_bridge._SUBMIT_VERIFY_TIMEOUT_S", 0.2)
-    monkeypatch.setattr("omnigent.claude_native_bridge._PASTE_SETTLE_S", 0.0)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._CLAUDE_READY_POLL_INTERVAL_S", 0.01)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._SUBMIT_RETRY_INTERVAL_S", 0.02)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._SUBMIT_VERIFY_TIMEOUT_S", 0.2)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._PASTE_SETTLE_S", 0.0)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -3165,14 +3165,14 @@ async def test_channel_server_relays_active_omnigent_tools(
     This fails if Claude Code can receive web-channel inputs but cannot
     call the agent-meow tools made available to the server-side agent.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
     bridge_dir = prepare_bridge_dir("conv_tools", workspace=tmp_path)
     proc = subprocess.Popen(
         [
             sys.executable,
             "-m",
-            "omnigent.claude_native_bridge",
+            "agent_meow.claude_native_bridge",
             "serve-mcp",
             "--bridge-dir",
             str(bridge_dir),
@@ -3372,8 +3372,8 @@ async def test_serve_mcp_survives_handler_exception_and_keeps_serving(
     ``-32000: Connection closed``). Without the guard, the decode error kills
     ``_serve_mcp`` and the ``tools/list`` read below times out.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
     bridge_dir = prepare_bridge_dir("conv_crash", workspace=tmp_path)
 
     # A relay server that returns HTTP 200 with invalid UTF-8 bytes. This
@@ -3435,7 +3435,7 @@ async def test_serve_mcp_survives_handler_exception_and_keeps_serving(
         [
             sys.executable,
             "-m",
-            "omnigent.claude_native_bridge",
+            "agent_meow.claude_native_bridge",
             "serve-mcp",
             "--bridge-dir",
             str(bridge_dir),
@@ -3516,10 +3516,10 @@ async def test_start_tool_relay_accepts_codex_native_bridge_root(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from omnigent import codex_native_bridge
+    from agent_meow import codex_native_bridge
 
     codex_root = tmp_path / ".omnigent" / "codex-native"
-    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", codex_root)
+    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", codex_root)
     bridge_dir = codex_native_bridge.prepare_bridge_dir("conv_codex")
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
 
@@ -3578,10 +3578,10 @@ async def test_start_tool_relay_accepts_antigravity_native_bridge_root(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from omnigent import antigravity_native_bridge
+    from agent_meow import antigravity_native_bridge
 
     antigravity_root = tmp_path / ".omnigent" / "antigravity-native"
-    monkeypatch.setattr("omnigent.antigravity_native_bridge._BRIDGE_ROOT", antigravity_root)
+    monkeypatch.setattr("agent_meow.antigravity_native_bridge._BRIDGE_ROOT", antigravity_root)
     bridge_dir = antigravity_native_bridge.prepare_bridge_dir("conv_agy")
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
 
@@ -3641,10 +3641,10 @@ async def test_start_tool_relay_accepts_opencode_native_bridge_root(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from omnigent import opencode_native_bridge
+    from agent_meow import opencode_native_bridge
 
     opencode_root = tmp_path / ".omnigent" / "opencode-native"
-    monkeypatch.setattr("omnigent.opencode_native_bridge._BRIDGE_ROOT", opencode_root)
+    monkeypatch.setattr("agent_meow.opencode_native_bridge._BRIDGE_ROOT", opencode_root)
     bridge_dir = opencode_native_bridge.prepare_bridge_dir("conv_oc")
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
 
@@ -3693,8 +3693,8 @@ async def test_relay_close_keeps_advertisement_owned_by_newer_relay(
     and leave it in place. Unconditional unlinking here would erase the
     still-active newer session's ``list_comments`` / ``update_comment``.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
     bridge_dir = prepare_bridge_dir("conv_shared_bridge", workspace=tmp_path)
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
 
@@ -4153,7 +4153,7 @@ def test_prepare_bridge_dir_stores_launch_model(
 ) -> None:
     """``launch_model`` is persisted in bridge.json when provided."""
     root = tmp_path / "root"
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
 
     bridge_dir = prepare_bridge_dir(
         "conv_abc",
@@ -4170,7 +4170,7 @@ def test_prepare_bridge_dir_omits_launch_model_when_none(
 ) -> None:
     """``launch_model`` key is absent from bridge.json when not provided."""
     root = tmp_path / "root"
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
 
     bridge_dir = prepare_bridge_dir(
         "conv_abc",
@@ -4186,7 +4186,7 @@ def test_read_launch_model_returns_stored_value(
 ) -> None:
     """``read_launch_model`` round-trips the value stored by ``prepare_bridge_dir``."""
     root = tmp_path / "root"
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
 
     bridge_dir = prepare_bridge_dir(
         "conv_abc",
@@ -4202,7 +4202,7 @@ def test_read_launch_model_returns_none_when_absent(
 ) -> None:
     """``read_launch_model`` returns ``None`` when no launch model was stored."""
     root = tmp_path / "root"
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
 
     bridge_dir = prepare_bridge_dir(
         "conv_abc",
@@ -4655,7 +4655,7 @@ def test_display_cost_approval_popup_builds_detached_tmux_command(
     cost-popup module with all resolve inputs.
 
     Proves the modal targets the right tmux socket + pane + attached
-    client (``-c``), launches :mod:`omnigent.native_cost_popup`, and
+    client (``-c``), launches :mod:`~?agent_meow.native_cost_popup`, and
     forwards the session/elicitation/message plus THIS bridge's
     ``permission_hook.json`` (where the popup reads the agent-meow url/token). A
     failure means native approval would render at the wrong pane/client,
@@ -4703,7 +4703,7 @@ def test_display_cost_approval_popup_builds_detached_tmux_command(
     assert args[args.index("-t") + 1] == "claude:0.0"
     # Inner command runs the popup module with every resolve input.
     inner = shlex.split(args[-1])
-    assert "omnigent.native_cost_popup" in inner
+    assert "agent_meow.native_cost_popup" in inner
     assert "conv_abc123" in inner  # --session-id value
     assert "elicit_deadbeef" in inner  # --elicitation-id value
     assert "Cost $0.12 crossed the $0.10 checkpoint. Continue?" in inner  # --message
@@ -5043,10 +5043,10 @@ def test_compute_transcript_cumulative_cost_dedupes_by_request_id(
     double-bills (observed ~2x inflation, which leaked into the parent
     badge and the cost-budget gate). The cost must dedupe by ``requestId``.
     """
-    from omnigent.llms.context_window import ModelPricing
+    from agent_meow.llms.context_window import ModelPricing
 
     pricing = ModelPricing(input_per_token=10.0, output_per_token=20.0)
-    monkeypatch.setattr("omnigent.llms.context_window.fetch_model_pricing", lambda model: pricing)
+    monkeypatch.setattr("agent_meow.llms.context_window.fetch_model_pricing", lambda model: pricing)
     claude_native_bridge._TRANSCRIPT_PRICING_CACHE.clear()
     path = tmp_path / "transcript.jsonl"
     _write_transcript_jsonl(
@@ -5075,10 +5075,10 @@ def test_compute_transcript_cumulative_cost_sums_priced_messages(
     a regression in per-message summation or token pricing fails loudly —
     not just "some positive number".
     """
-    from omnigent.llms.context_window import ModelPricing
+    from agent_meow.llms.context_window import ModelPricing
 
     pricing = ModelPricing(input_per_token=10.0, output_per_token=20.0)
-    monkeypatch.setattr("omnigent.llms.context_window.fetch_model_pricing", lambda model: pricing)
+    monkeypatch.setattr("agent_meow.llms.context_window.fetch_model_pricing", lambda model: pricing)
     claude_native_bridge._TRANSCRIPT_PRICING_CACHE.clear()
     path = tmp_path / "transcript.jsonl"
     _write_transcript_jsonl(
@@ -5104,10 +5104,10 @@ def test_compute_transcript_cumulative_cost_excludes_parent_sidechains(
     own transcript would double-bill, so the parent path must drop them.
     The sub-agent path (``include_sidechains=True``) counts everything.
     """
-    from omnigent.llms.context_window import ModelPricing
+    from agent_meow.llms.context_window import ModelPricing
 
     pricing = ModelPricing(input_per_token=10.0, output_per_token=0.0)
-    monkeypatch.setattr("omnigent.llms.context_window.fetch_model_pricing", lambda model: pricing)
+    monkeypatch.setattr("agent_meow.llms.context_window.fetch_model_pricing", lambda model: pricing)
     claude_native_bridge._TRANSCRIPT_PRICING_CACHE.clear()
     path = tmp_path / "parent.jsonl"
     _write_transcript_jsonl(
@@ -5137,7 +5137,7 @@ def test_compute_transcript_cumulative_cost_none_when_nothing_priceable(
     model with no available pricing — each must yield ``None`` so the
     forwarder treats it as "no estimate" rather than "$0 spent".
     """
-    from omnigent.llms.context_window import ModelPricing
+    from agent_meow.llms.context_window import ModelPricing
 
     claude_native_bridge._TRANSCRIPT_PRICING_CACHE.clear()
     # Missing file.
@@ -5149,7 +5149,7 @@ def test_compute_transcript_cumulative_cost_none_when_nothing_priceable(
     )
     # File with no assistant usage.
     pricing = ModelPricing(input_per_token=10.0, output_per_token=20.0)
-    monkeypatch.setattr("omnigent.llms.context_window.fetch_model_pricing", lambda model: pricing)
+    monkeypatch.setattr("agent_meow.llms.context_window.fetch_model_pricing", lambda model: pricing)
     no_usage = tmp_path / "no_usage.jsonl"
     _write_transcript_jsonl(no_usage, [{"message": {"role": "user", "content": "hi"}}])
     assert (
@@ -5158,7 +5158,7 @@ def test_compute_transcript_cumulative_cost_none_when_nothing_priceable(
     )
     # Pricing unavailable for the model.
     claude_native_bridge._TRANSCRIPT_PRICING_CACHE.clear()
-    monkeypatch.setattr("omnigent.llms.context_window.fetch_model_pricing", lambda model: None)
+    monkeypatch.setattr("agent_meow.llms.context_window.fetch_model_pricing", lambda model: None)
     priced = tmp_path / "priced.jsonl"
     _write_transcript_jsonl(priced, [_assistant_entry(model="m", input_tokens=5, output_tokens=5)])
     assert (
@@ -5196,7 +5196,7 @@ def test_format_terminal_failure_tail_caps_length(monkeypatch: pytest.MonkeyPatc
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TERMINAL_FAILURE_TAIL_CHARS", 50)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TERMINAL_FAILURE_TAIL_CHARS", 50)
     pane = "\n".join(f"line {i}" for i in range(100))
     tail = claude_native_bridge._format_terminal_failure_tail(pane)
     body = tail.split("\n", 1)[1]
@@ -5226,7 +5226,7 @@ def test_wait_for_claude_prompt_ready_surfaces_terminal_output_on_timeout(
         "  at parse (unknown)\n"
     )
     monkeypatch.setattr(
-        "omnigent.claude_native_bridge._capture_pane",
+        "agent_meow.claude_native_bridge._capture_pane",
         lambda socket_path, tmux_target: crash_pane,
     )
     with pytest.raises(RuntimeError) as excinfo:

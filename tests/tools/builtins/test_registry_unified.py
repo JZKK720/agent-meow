@@ -16,9 +16,9 @@ from __future__ import annotations
 import importlib
 import pkgutil
 
-import omnigent.tools.builtins as _builtins_pkg
-from omnigent.tools.base import Tool
-from omnigent.tools.builtins import (
+import agent_meow.tools.builtins as _builtins_pkg
+from agent_meow.tools.base import Tool
+from agent_meow.tools.builtins import (
     BUILTIN_NAMES,
     INSTANTIABLE_BUILTINS,
     get_builtin_tool,
@@ -147,7 +147,7 @@ def test_builtin_names_size_matches_registry() -> None:
 
 
 def _all_builtin_tool_subclasses() -> list[type[Tool]]:
-    """Concrete ``Tool`` subclasses defined under ``omnigent.tools.builtins``."""
+    """Concrete ``Tool`` subclasses defined under ``agent_meow.tools.builtins``."""
     for mod_info in pkgutil.iter_modules(_builtins_pkg.__path__):
         importlib.import_module(f"{_builtins_pkg.__name__}.{mod_info.name}")
 
@@ -183,7 +183,7 @@ def test_async_builtins_override_dispatch_async_or_are_runner_dispatched() -> No
     ``dispatch_async`` or is listed in the runner's
     ``_ALL_LOCAL_TOOLS`` set.
     """
-    from omnigent.runner.tool_dispatch import should_dispatch_locally
+    from agent_meow.runner.tool_dispatch import should_dispatch_locally
 
     base_dispatch_async = Tool.dispatch_async
 

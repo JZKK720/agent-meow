@@ -1,5 +1,5 @@
 """
-Unit tests for :class:`omnigent.terminals.TerminalRegistry`.
+Unit tests for :class:`~?agent_meow.terminals.TerminalRegistry`.
 
 Covers the registry's lifecycle invariants directly, without going
 through the ``sys_terminal_*`` tools. The tools are tested separately
@@ -23,11 +23,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from omnigent.inner.terminal import TerminalCreateResult, TerminalInstance
-from omnigent.terminals import TerminalRegistry
-from omnigent.terminals import registry as registry_mod
-from omnigent.terminals.registry import TerminalListEntry, conversation_link_for_id
+from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
+from agent_meow.inner.terminal import TerminalCreateResult, TerminalInstance
+from agent_meow.terminals import TerminalRegistry
+from agent_meow.terminals import registry as registry_mod
+from agent_meow.terminals.registry import TerminalListEntry, conversation_link_for_id
 
 # ── Pure bookkeeping (no tmux) ────────────────────────────────
 
@@ -106,15 +106,15 @@ def test_conversation_link_for_id_maps_workspace_hosted_server_to_ui_mount(
     bar; the link must instead land on the ``/omnigent`` SPA mount and
     carry the ``?o=<org>`` selector ``omnigent login`` recorded, exactly
     like the CLI's ``Web UI:`` line. Pins parity with
-    :func:`omnigent.conversation_browser.conversation_url`.
+    :func:`~?agent_meow.conversation_browser.conversation_url`.
 
     :param tmp_path: Pytest tmp dir for the stubbed auth-token file.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from omnigent.cli_auth import store_databricks_auth
+    from agent_meow.cli_auth import store_databricks_auth
 
     monkeypatch.setattr(
-        "omnigent.cli_auth._token_file_path",
+        "agent_meow.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
     server = "https://example.databricks.com/api/2.0/omnigent"
@@ -722,7 +722,7 @@ async def test_close_with_timeout_still_returns_true(tmp_path: Path) -> None:
 
     # The close should not hang — it uses asyncio.wait_for with _CLOSE_TIMEOUT_S.
     # We patch _CLOSE_TIMEOUT_S to a tiny value so the test finishes quickly.
-    import omnigent.terminals.registry as reg_mod
+    import agent_meow.terminals.registry as reg_mod
 
     original = reg_mod._CLOSE_TIMEOUT_S
     reg_mod._CLOSE_TIMEOUT_S = 0.01

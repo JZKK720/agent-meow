@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`omnigent.runner.pending_approvals`.
+"""Unit tests for :mod:`~?agent_meow.runner.pending_approvals`.
 
 The runner's pending-approvals registry routes policy-ASK verdicts
 between two coroutines in the same process: the dispatch path
@@ -29,7 +29,7 @@ from typing import Any
 
 import pytest
 
-from omnigent.runner import pending_approvals
+from agent_meow.runner import pending_approvals
 
 
 @pytest.fixture(autouse=True)

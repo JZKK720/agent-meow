@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import time
 
-from omnigent.db.converters import sql_agent_to_entity
-from omnigent.db.db_models import SqlAgent
-from omnigent.db.utils import get_or_create_engine, make_managed_session_maker
-from omnigent.entities import Agent
+from agent_meow.db.converters import sql_agent_to_entity
+from agent_meow.db.db_models import SqlAgent
+from agent_meow.db.utils import get_or_create_engine, make_managed_session_maker
+from agent_meow.entities import Agent
 
 
 def _now() -> int:

@@ -1,4 +1,4 @@
-"""Tests for :mod:`omnigent.onboarding.setup`.
+"""Tests for :mod:`~?agent_meow.onboarding.setup`.
 
 Cover the onboarding helpers used by ``omnigent setup``: env-var hygiene
 (``detect_conflicting_env_vars``), profile-host discovery
@@ -16,8 +16,8 @@ from typing import Any
 import pytest
 from click import ClickException
 
-from omnigent.onboarding import setup as setup_mod
-from omnigent.onboarding.setup import (
+from agent_meow.onboarding import setup as setup_mod
+from agent_meow.onboarding.setup import (
     _CONFLICTING_ENV_VARS,
     SKIP_ENV_VAR,
     ProfileSpec,

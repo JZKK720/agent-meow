@@ -1,4 +1,4 @@
-"""Tests for omnigent.tools.manager (ToolManager)."""
+"""Tests for agent_meow.tools.manager (ToolManager)."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from typing import Any
 
 import pytest
 
-from omnigent.errors import OmnigentError
-from omnigent.spec.types import (
+from agent_meow.errors import OmnigentError
+from agent_meow.spec.types import (
     AgentSpec,
     BuiltinToolConfig,
     LLMConfig,
@@ -21,10 +21,10 @@ from omnigent.spec.types import (
     ToolRuntime,
     ToolsConfig,
 )
-from omnigent.tools import ToolManager
-from omnigent.tools.base import ToolContext
-from omnigent.tools.client_specified import ClientSideTool, ClientSideToolSpec
-from omnigent.tools.mcp import clear_discovery_cache
+from agent_meow.tools import ToolManager
+from agent_meow.tools.base import ToolContext
+from agent_meow.tools.client_specified import ClientSideTool, ClientSideToolSpec
+from agent_meow.tools.mcp import clear_discovery_cache
 
 _TEST_CTX = ToolContext(task_id="task_test", agent_id="agent_test")
 
@@ -320,7 +320,7 @@ def test_schemas_isolate_a_failing_tool(
 
     mgr._tools["boom"] = _BoomTool()  # type: ignore[assignment]
 
-    with caplog.at_level(logging.WARNING, logger="omnigent.tools.manager"):
+    with caplog.at_level(logging.WARNING, logger="agent_meow.tools.manager"):
         schemas = mgr.get_tool_schemas()
 
     names = {s["function"]["name"] for s in schemas}
@@ -359,7 +359,7 @@ def test_client_schemas_isolate_a_failing_tool(
 
     mgr._tools["boom"] = _BoomClientTool(ClientSideToolSpec(name="boom", schema={}))
 
-    with caplog.at_level(logging.WARNING, logger="omnigent.tools.manager"):
+    with caplog.at_level(logging.WARNING, logger="agent_meow.tools.manager"):
         schemas = mgr.get_client_tool_schemas()
 
     names = {s["function"]["name"] for s in schemas}
@@ -658,7 +658,7 @@ def test_shutdown_skips_pre_resolved_os_env() -> None:
 
 def test_shutdown_calls_tool_shutdown() -> None:
     """``shutdown()`` calls ``shutdown()`` on every registered tool."""
-    from omnigent.tools.base import Tool
+    from agent_meow.tools.base import Tool
 
     class _TrackingTool(Tool):
         shut_down = False
@@ -798,7 +798,7 @@ def test_client_tool_shadows_skill_tool(
     )
 
     # The registered tool is the client's ClientSideTool, not LoadSkillTool
-    from omnigent.tools.client_specified import ClientSideTool
+    from agent_meow.tools.client_specified import ClientSideTool
 
     assert isinstance(mgr._tools["load_skill"], ClientSideTool), (
         "Expected ClientSideTool after client override, "

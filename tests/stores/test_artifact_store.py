@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from omnigent.stores.artifact_store.local import LocalArtifactStore
+from agent_meow.stores.artifact_store.local import LocalArtifactStore
 
 
 @pytest.fixture()

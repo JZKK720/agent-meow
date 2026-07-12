@@ -11,18 +11,18 @@ from types import SimpleNamespace
 
 import pytest
 
-from omnigent.entities import DEFAULT_ENVIRONMENT_ID
-from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from omnigent.inner.os_env import EditEntry, OpResult, OSEnvironment
-from omnigent.inner.terminal import TerminalInstance
-from omnigent.runner.resource_registry import (
+from agent_meow.entities import DEFAULT_ENVIRONMENT_ID
+from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
+from agent_meow.inner.os_env import EditEntry, OpResult, OSEnvironment
+from agent_meow.inner.terminal import TerminalInstance
+from agent_meow.runner.resource_registry import (
     CLAUDE_NATIVE_TERMINAL_ROLE,
     CODEX_NATIVE_TERMINAL_ROLE,
     SessionResourceRegistry,
     TerminalExitEvent,
     TerminalLifecycle,
 )
-from omnigent.terminals import TerminalRegistry
+from agent_meow.terminals import TerminalRegistry
 from tests.runner.helpers import make_test_terminal_instance
 
 
@@ -690,7 +690,7 @@ def test_resolve_environment_default_pins_none_sandbox_when_no_agent_spec(
     :returns: None.
     """
     monkeypatch.setattr(
-        "omnigent.inner.sandbox.shutil.which",
+        "agent_meow.inner.sandbox.shutil.which",
         lambda name: "/usr/bin/bwrap",
     )
     monkeypatch.setenv("OMNIGENT_RUNNER_OS_ENV_ROOT", str(tmp_path))
@@ -795,7 +795,7 @@ async def test_cleanup_endpoint_returns_confirmation(
     """DELETE /v1/sessions/{id}/resources returns cleanup confirmation."""
     import httpx
 
-    from omnigent.runner import create_runner_app
+    from agent_meow.runner import create_runner_app
 
     os.environ["OMNIGENT_RUNNER_OS_ENV_ROOT"] = str(tmp_path)
     try:
@@ -833,7 +833,7 @@ async def test_cleanup_idempotent_for_unknown_session() -> None:
     """DELETE /v1/sessions/{id}/resources is safe for unknown sessions."""
     import httpx
 
-    from omnigent.runner import create_runner_app
+    from agent_meow.runner import create_runner_app
     from tests.runner.helpers import NullServerClient
 
     reg = SessionResourceRegistry()

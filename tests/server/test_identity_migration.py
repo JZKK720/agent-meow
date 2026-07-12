@@ -1,6 +1,6 @@
 """Tests for the accounts → OIDC identity remap.
 
-Covers :func:`omnigent.server.identity_migration.remap_identities` and
+Covers :func:`~?agent_meow.server.identity_migration.remap_identities` and
 ``build_domain_mapping`` against a real SQLite database, plus the
 ``omnigent debug migrate-accounts-to-oidc`` CLI wrapper via Click's
 ``CliRunner``.
@@ -18,19 +18,19 @@ from click.testing import CliRunner
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from omnigent.cli import cli
-from omnigent.db.db_models import (
+from agent_meow.cli import cli
+from agent_meow.db.db_models import (
     SqlAccountToken,
     SqlComment,
     SqlHost,
     SqlPolicy,
 )
-from omnigent.db.utils import get_or_create_engine
-from omnigent.server.accounts_store import SqlAlchemyAccountStore
-from omnigent.server.identity_migration import build_domain_mapping, remap_identities
-from omnigent.server.passwords import hash_password
-from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
-from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from agent_meow.db.utils import get_or_create_engine
+from agent_meow.server.accounts_store import SqlAlchemyAccountStore
+from agent_meow.server.identity_migration import build_domain_mapping, remap_identities
+from agent_meow.server.passwords import hash_password
+from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 
 def _conversation(db_uri: str) -> str:

@@ -1,5 +1,5 @@
 """
-Unit tests for the REPL's sub-agent tree plumbing in ``omnigent.repl._repl``.
+Unit tests for the REPL's sub-agent tree plumbing in ``agent_meow.repl._repl``.
 
 Covers the two testable seams of the ``↓`` sub-agents feature:
 
@@ -25,9 +25,9 @@ import pytest
 from omnigent_client._sessions import SessionsNamespace
 from omnigent_ui_sdk.terminal._host import TerminalHost
 
-from omnigent.repl import _repl
-from omnigent.repl._repl import _apply_child_session_event, _refresh_subagent_tree
-from omnigent.server.schemas import (
+from agent_meow.repl import _repl
+from agent_meow.repl._repl import _apply_child_session_event, _refresh_subagent_tree
+from agent_meow.server.schemas import (
     SessionChildSessionUpdatedEvent,
     SessionCreatedEvent,
 )

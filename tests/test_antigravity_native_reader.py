@@ -1,4 +1,4 @@
-"""Tests for the RPC read driver (:mod:`omnigent.antigravity_native_reader`).
+"""Tests for the RPC read driver (:mod:`~?agent_meow.antigravity_native_reader`).
 
 The reader replaces the transcript-tail forwarder's read loop: it polls agy's
 connect-RPC for trajectory steps, maps each new step to agent-meow conversation
@@ -58,10 +58,10 @@ from typing import Any, cast
 import httpx
 import pytest
 
-from omnigent import antigravity_native_reader as reader
-from omnigent.antigravity_native_bridge import read_bridge_state
-from omnigent.antigravity_native_rpc import AntigravityRpcError
-from omnigent.antigravity_native_steps import PendingInteraction
+from agent_meow import antigravity_native_reader as reader
+from agent_meow.antigravity_native_bridge import read_bridge_state
+from agent_meow.antigravity_native_rpc import AntigravityRpcError
+from agent_meow.antigravity_native_steps import PendingInteraction
 
 # ---------------------------------------------------------------------------
 # Fixtures + scaffolding
@@ -827,7 +827,7 @@ async def test_step_leaving_waiting_withdraws_surfaced_elicitation(
     ``external_elicitation_resolved`` for that step's deterministic elicitation id
     so the lingering web card clears (#1200, direction 2).
     """
-    from omnigent.antigravity_native_interactions import agy_elicitation_id
+    from agent_meow.antigravity_native_interactions import agy_elicitation_id
 
     waiting = _permission_waiting()
     done = _permission_done()
@@ -978,7 +978,7 @@ async def test_withdraw_helper_pops_and_posts_once_directly() -> None:
     Drives the helper directly with a surfaced id so the pop/no-double-post
     contract is asserted without the full supervise loop.
     """
-    from omnigent.antigravity_native_interactions import agy_elicitation_id
+    from agent_meow.antigravity_native_interactions import agy_elicitation_id
 
     waiting = _permission_waiting()
     done = _permission_done()
@@ -1016,7 +1016,7 @@ async def test_withdraw_helper_pops_and_posts_once_directly() -> None:
 @pytest.mark.asyncio
 async def test_withdraw_helper_noop_while_still_waiting() -> None:
     """``_maybe_withdraw_interaction`` does nothing while the step is still WAITING."""
-    from omnigent.antigravity_native_interactions import agy_elicitation_id
+    from agent_meow.antigravity_native_interactions import agy_elicitation_id
 
     waiting = _permission_waiting()
     key = reader._step_key(waiting)
@@ -1720,7 +1720,7 @@ async def test_stream_waiting_then_non_waiting_withdraws_elicitation(
     poll fallback (a permission answered in the TUI / timed out surfaces as a
     DONE frame after the WAITING frame).
     """
-    from omnigent.antigravity_native_interactions import agy_elicitation_id
+    from agent_meow.antigravity_native_interactions import agy_elicitation_id
 
     waiting = _permission_waiting()
     done = _permission_done()
@@ -3062,7 +3062,7 @@ async def test_rotate_session_for_cascade_mirrors_claude_sequence(
     ``_create_clear_replacement_session`` makes no such PATCH. The old code PATCHed
     it, which 400'd on the auto-cold-started session and looped the rotation.
     """
-    from omnigent.antigravity_native_bridge import (
+    from agent_meow.antigravity_native_bridge import (
         ANTIGRAVITY_NATIVE_BRIDGE_ID_LABEL_KEY,
         read_bridge_state,
     )
@@ -3133,7 +3133,7 @@ async def test_rotate_session_for_cascade_returns_none_on_create_failure(
     binding: ``_rotate_session_for_cascade`` returns ``None`` and bridge state still
     names the OLD cascade (no half-rotation).
     """
-    from omnigent.antigravity_native_bridge import read_bridge_state
+    from agent_meow.antigravity_native_bridge import read_bridge_state
 
     bridge_dir = _bridge_dir(tmp_path)
     snapshot: dict[str, object] = {"agent_id": "agent_xyz", "runner_id": "runner_abc"}
@@ -3212,7 +3212,7 @@ async def test_run_reader_with_bridge_rebinds_after_rotation(
     monkeypatch.setattr(reader, "_rotate_session_for_cascade", _fake_rotate)
     # Avoid importing the heavy interaction-bridge module in this unit test.
     monkeypatch.setattr(
-        "omnigent.antigravity_native_interactions.bridge_interaction",
+        "agent_meow.antigravity_native_interactions.bridge_interaction",
         lambda *a, **k: None,
     )
 
@@ -3278,7 +3278,7 @@ async def test_run_reader_with_bridge_adopts_first_cascade_in_place(
     monkeypatch.setattr(reader, "_rotate_session_for_cascade", _fake_rotate)
     monkeypatch.setattr(reader, "_record_external_session_id", _fake_record_external)
     monkeypatch.setattr(
-        "omnigent.antigravity_native_interactions.bridge_interaction",
+        "agent_meow.antigravity_native_interactions.bridge_interaction",
         lambda *a, **k: None,
     )
 
@@ -3352,7 +3352,7 @@ async def test_run_reader_with_bridge_keeps_old_binding_when_rotation_fails(
     monkeypatch.setattr(reader, "supervise_reader", _fake_supervise)
     monkeypatch.setattr(reader, "_rotate_session_for_cascade", _fake_rotate_fail)
     monkeypatch.setattr(
-        "omnigent.antigravity_native_interactions.bridge_interaction",
+        "agent_meow.antigravity_native_interactions.bridge_interaction",
         lambda *a, **k: None,
     )
 

@@ -13,13 +13,13 @@ import subprocess
 from pathlib import Path
 
 from tests.e2e._run_with_group_timeout import run_with_group_timeout
-from tests.e2e.omnigent.conftest import configure_mock_llm
+from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 # ``databricks-`` prefix is load-bearing on two counts:
 # 1. ``databricks-`` exempts ``llm.connection`` from
-#    ``omnigent.spec.validator._validate_executor_llm``; any other prefix
+#    ``agent_meow.spec.validator._validate_executor_llm``; any other prefix
 #    rejects the YAML before any FM API call happens.
-# 2. ``databricks-gpt-`` routes through ``omnigent.llms.routing.infer_
+# 2. ``databricks-gpt-`` routes through ``agent_meow.llms.routing.infer_
 #    harness_from_model`` to ``openai-agents``; a bare ``databricks-`` prefix
 #    leaves ``executor.harness=""`` and the runtime wedges (no validator
 #    catches the empty harness when ``llm.model`` is set).

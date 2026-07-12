@@ -132,7 +132,7 @@ def _omnigent_server(
 
     # Spawn runner as sibling subprocess.
     runner_proc = subprocess.Popen(
-        [str(python), "-m", "omnigent.runner._entry"],
+        [str(python), "-m", "agent_meow.runner._entry"],
         env={
             **env,
             "OMNIGENT_RUNNER_ID": runner_id,
@@ -287,7 +287,7 @@ def test_session_resources_e2e(
     :param tmp_path: Pytest temp directory for the agent YAML
         and SQLite database.
     """
-    from omnigent.runner.identity import token_bound_runner_id
+    from agent_meow.runner.identity import token_bound_runner_id
 
     python = omnigent_python
     repo_root = omnigent_repo_root

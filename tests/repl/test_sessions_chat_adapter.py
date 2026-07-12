@@ -6,12 +6,12 @@ Three CUJs caught these regressions during manual testing of
 1. ``ResponseCreated`` was imported from the public ``omnigent_client``
    re-export, which doesn't include it. ImportError on first turn.
 2. The adapter passed server-shape events
-   (:class:`omnigent.server.schemas.OutputTextDeltaEvent`) through
+   (:class:`~?agent_meow.server.schemas.OutputTextDeltaEvent`) through
    without translating to the SDK-shape dataclasses in
    :mod:`omnigent_client._events`. Net: spinner spun, server-side
    LLM call completed, no assistant text reached the TUI.
 3. The translator initially used wrong class names from
-   ``omnigent.server.schemas`` (``ResponseTextDeltaEvent`` vs the
+   ``agent_meow.server.schemas`` (``ResponseTextDeltaEvent`` vs the
    actual ``OutputTextDeltaEvent``); silent ImportError on the local
    import inside the translator.
 
@@ -36,12 +36,12 @@ from omnigent_client._events import (
     TextDelta,
 )
 
-from omnigent.repl._repl import (
+from agent_meow.repl._repl import (
     _plan_output_item_render,
     _server_event_to_sdk_event,
     _TurnProseTracker,
 )
-from omnigent.server.schemas import (
+from agent_meow.server.schemas import (
     CancelledEvent,
     CompletedEvent,
     CreatedEvent,
@@ -178,7 +178,7 @@ def test_elicitation_request_event_translates() -> None:
     """``ElicitationRequestEvent`` → :class:`ElicitationRequest` with all fields."""
     from omnigent_client._events import ElicitationRequest
 
-    from omnigent.server.schemas import (
+    from agent_meow.server.schemas import (
         ElicitationRequestEvent,
         ElicitationRequestParams,
     )
@@ -219,7 +219,7 @@ def test_elicitation_request_event_preserves_target_session_id() -> None:
     """
     from omnigent_client._events import ElicitationRequest
 
-    from omnigent.server.schemas import (
+    from agent_meow.server.schemas import (
         ElicitationRequestEvent,
         ElicitationRequestParams,
     )
@@ -254,7 +254,7 @@ def test_elicitation_resolve_session_id_routes_mirrored_child_to_child() -> None
     """
     from omnigent_client._events import ElicitationRequest
 
-    from omnigent.repl._repl import _elicitation_resolve_session_id
+    from agent_meow.repl._repl import _elicitation_resolve_session_id
 
     mirrored = ElicitationRequest(
         elicitation_id="elicit_child",
@@ -284,7 +284,7 @@ def test_elicitation_resolve_session_id_routes_mirrored_child_to_child() -> None
 
 def test_output_item_done_event_passes_through() -> None:
     """``OutputItemDoneEvent`` is returned as-is for adapter-level handling."""
-    from omnigent.server.schemas import OutputItemDoneEvent
+    from agent_meow.server.schemas import OutputItemDoneEvent
 
     event = OutputItemDoneEvent(
         type="response.output_item.done",
@@ -308,7 +308,7 @@ def test_output_item_done_message_passes_through() -> None:
     rendered via ``TextDelta`` streaming) and only rendering
     ``function_call`` / ``function_call_output`` as history entries.
     """
-    from omnigent.server.schemas import OutputItemDoneEvent
+    from agent_meow.server.schemas import OutputItemDoneEvent
 
     event = OutputItemDoneEvent(
         type="response.output_item.done",
@@ -541,7 +541,7 @@ def test_prose_tracker_uncommitted_segment_does_not_match() -> None:
 
 def test_client_task_cancel_event_passes_through() -> None:
     """``ClientTaskCancelEvent`` is returned as-is for adapter-level handling."""
-    from omnigent.server.schemas import ClientTaskCancelEvent
+    from agent_meow.server.schemas import ClientTaskCancelEvent
 
     event = ClientTaskCancelEvent(
         type="response.client_task.cancel",
@@ -576,7 +576,7 @@ def test_render_callback_event_flow() -> None:
 
     from pydantic import TypeAdapter
 
-    from omnigent.server.schemas import ServerStreamEvent
+    from agent_meow.server.schemas import ServerStreamEvent
 
     adapter = TypeAdapter(ServerStreamEvent)
 
@@ -673,13 +673,13 @@ def test_render_callback_event_flow() -> None:
         TextDelta as _TD,
     )
 
-    from omnigent.server.schemas import (
+    from agent_meow.server.schemas import (
         OutputItemDoneEvent as _OIDE,
     )
-    from omnigent.server.schemas import (
+    from agent_meow.server.schemas import (
         SessionInputConsumedEvent as _SICEv,
     )
-    from omnigent.server.schemas import (
+    from agent_meow.server.schemas import (
         SessionStatusEvent as _StatusEv,
     )
 
@@ -755,7 +755,7 @@ def test_session_input_consumed_renders_cross_client_user_message() -> None:
     """
     from pydantic import TypeAdapter
 
-    from omnigent.server.schemas import (
+    from agent_meow.server.schemas import (
         ServerStreamEvent,
         SessionInputConsumedEvent,
     )
@@ -824,7 +824,7 @@ def test_autonomous_turn_renders_without_local_send() -> None:
     """
     from pydantic import TypeAdapter
 
-    from omnigent.server.schemas import ServerStreamEvent
+    from agent_meow.server.schemas import ServerStreamEvent
 
     adapter = TypeAdapter(ServerStreamEvent)
 
@@ -867,10 +867,10 @@ def test_autonomous_turn_renders_without_local_send() -> None:
 
     fake_session = _FakeSession()
 
-    from omnigent.server.schemas import (
+    from agent_meow.server.schemas import (
         SessionInputConsumedEvent as _SICEv,
     )
-    from omnigent.server.schemas import (
+    from agent_meow.server.schemas import (
         SessionStatusEvent as _StatusEv,
     )
 
@@ -947,9 +947,9 @@ def test_failed_status_event_renders_error_message() -> None:
     """
     from omnigent_ui_sdk import RichBlockFormatter
 
-    from omnigent.repl._repl import _render_failed_status_error
-    from omnigent.server.schemas import ErrorDetail
-    from omnigent.server.schemas import SessionStatusEvent as _StatusEv
+    from agent_meow.repl._repl import _render_failed_status_error
+    from agent_meow.server.schemas import ErrorDetail
+    from agent_meow.server.schemas import SessionStatusEvent as _StatusEv
     from tests.repl.helpers import CapturingHost
 
     host = CapturingHost()
@@ -984,8 +984,8 @@ def test_failed_status_event_without_error_falls_back() -> None:
     """
     from omnigent_ui_sdk import RichBlockFormatter
 
-    from omnigent.repl._repl import _render_failed_status_error
-    from omnigent.server.schemas import SessionStatusEvent as _StatusEv
+    from agent_meow.repl._repl import _render_failed_status_error
+    from agent_meow.server.schemas import SessionStatusEvent as _StatusEv
     from tests.repl.helpers import CapturingHost
 
     host = CapturingHost()

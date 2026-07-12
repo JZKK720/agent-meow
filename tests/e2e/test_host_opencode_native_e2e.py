@@ -33,7 +33,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from omnigent.entities.session_resources import terminal_resource_id
+from agent_meow.entities.session_resources import terminal_resource_id
 from tests._helpers.compat import apply_runner_env, compat_runner_cwd, runner_executable
 from tests.e2e.helpers import POLL_INTERVAL_S
 
@@ -56,7 +56,7 @@ def _spawn_host_daemon(*, tmp_path: Path, live_server: str) -> subprocess.Popen[
     daemon_log = tmp_path / "host-daemon.log"
     with open(daemon_log, "w") as log_fh:
         return subprocess.Popen(
-            [runner_executable(), "-m", "omnigent.host._daemon_entry", "--server", live_server],
+            [runner_executable(), "-m", "agent_meow.host._daemon_entry", "--server", live_server],
             env=apply_runner_env(env),
             cwd=compat_runner_cwd(),
             stdout=subprocess.DEVNULL,

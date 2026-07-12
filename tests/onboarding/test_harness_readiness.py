@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-import omnigent.onboarding.harness_install as hi
-from omnigent.onboarding.harness_readiness import (
+import agent_meow.onboarding.harness_install as hi
+from agent_meow.onboarding.harness_readiness import (
     configured_harness_map,
     harness_is_configured,
 )
@@ -255,11 +255,11 @@ def test_configured_harness_map_all_true_with_clis(
     gated) by a detected Gemini OAuth credential — so nothing is reported
     unconfigured.
     """
-    import omnigent.onboarding.gemini_auth as _ga
+    import agent_meow.onboarding.gemini_auth as _ga
 
     _all_clis_installed(monkeypatch)
     monkeypatch.setattr(
-        "omnigent.codex_native._codex_auth_unavailable_reason",
+        "agent_meow.codex_native._codex_auth_unavailable_reason",
         lambda: None,
     )
     monkeypatch.setenv("CURSOR_API_KEY", "crsr_ready")

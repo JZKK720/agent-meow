@@ -39,7 +39,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol, overload
 
-from omnigent.server.schemas import (
+from agent_meow.server.schemas import (
     CancelledEvent,
     CompletedEvent,
     CreatedEvent,

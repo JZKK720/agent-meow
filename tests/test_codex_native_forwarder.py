@@ -1,6 +1,6 @@
 """
 Tests for the codex-native forwarder's model-change sync-back
-(:mod:`omnigent.codex_native_forwarder`).
+(:mod:`~?agent_meow.codex_native_forwarder`).
 
 For codex-native, ``config.toml``'s ``model`` key is the cost-policy source
 of truth (it is what an in-TUI ``/model`` writes). At subscription and at
@@ -21,14 +21,14 @@ from unittest.mock import AsyncMock, MagicMock
 import httpx
 import pytest
 
-from omnigent import codex_native_forwarder as fwd
-from omnigent.codex_native_bridge import (
+from agent_meow import codex_native_forwarder as fwd
+from agent_meow.codex_native_bridge import (
     CodexNativeBridgeState,
     codex_home_for_bridge_dir,
     read_bridge_state,
     write_bridge_state,
 )
-from omnigent.codex_native_forwarder import _persist_codex_compaction_item
+from agent_meow.codex_native_forwarder import _persist_codex_compaction_item
 
 
 class _RecordingClient:
@@ -1021,7 +1021,7 @@ def test_terminal_turn_status_edge_empty_turn_idle_and_warns(
     _seed_active_turn(tmp_path, "turn_123")
     params = {"turn": {"id": "turn_123", "status": "completed", "items": []}}
 
-    with caplog.at_level("WARNING", logger="omnigent.codex_native_forwarder"):
+    with caplog.at_level("WARNING", logger="agent_meow.codex_native_forwarder"):
         edge = fwd._terminal_turn_status_edge(tmp_path, "turn/completed", params)
 
     assert edge is not None
@@ -1810,7 +1810,7 @@ async def test_post_session_event_records_connectivity_failure_for_watchdog(
     ``_log_post_transport_failure``) so the harness idle-turn watchdog can name
     the connectivity cause instead of a generic "wedged LLM" reason.
     """
-    from omnigent import _native_forwarder_health as health
+    from agent_meow import _native_forwarder_health as health
 
     class _AlwaysConnectError:
         """Stub client whose every POST fails to connect."""

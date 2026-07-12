@@ -2,8 +2,8 @@
 
 import pytest
 
-from omnigent.errors import OmnigentError
-from omnigent.llms.routing import RoutedModel, infer_harness_from_model, parse_model_string
+from agent_meow.errors import OmnigentError
+from agent_meow.llms.routing import RoutedModel, infer_harness_from_model, parse_model_string
 
 
 @pytest.mark.parametrize(

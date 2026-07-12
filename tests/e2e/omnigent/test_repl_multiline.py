@@ -16,15 +16,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from tests.e2e.omnigent._pexpect_harness import (
+from tests.e2e.agent_meow._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     wait_for_ready,
 )
-from tests.e2e.omnigent._snapshot import compare_snapshot
-from tests.e2e.omnigent.conftest import configure_mock_llm
+from tests.e2e.agent_meow._snapshot import compare_snapshot
+from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 _MODEL = "mock-model"
 _HARNESS = "openai-agents"

@@ -21,7 +21,7 @@ real ``gpt-4o-mini`` endpoint reached via ``$OPENAI_API_KEY``.
 **What breaks if this fails:**
 
 - The agent-meow translator silently drops the
-  :class:`~omnigent.inner.tools.MCPTool`: the spec loads, but
+  :class:`~?agent_meow.inner.tools.MCPTool`: the spec loads, but
   the omnigent runtime never registers the tool, the LLM
   never calls it, and the ``echo: <probe>`` fingerprint is
   absent. The unit test

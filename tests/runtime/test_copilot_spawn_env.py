@@ -19,8 +19,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from omnigent.runtime.workflow import _build_copilot_spawn_env
-from omnigent.spec.types import (
+from agent_meow.runtime.workflow import _build_copilot_spawn_env
+from agent_meow.spec.types import (
     AgentSpec,
     ApiKeyAuth,
     DatabricksAuth,

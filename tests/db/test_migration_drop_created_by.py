@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import command as alembic_command
 from alembic.config import Config
 
-from omnigent.db.utils import clear_engine_cache, get_or_create_engine
+from agent_meow.db.utils import clear_engine_cache, get_or_create_engine
 
 
 def _column_names(conn: sa.Connection, table: str) -> list[str]:

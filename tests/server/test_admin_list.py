@@ -1,4 +1,4 @@
-"""Tests for the file-backed admin roster (:mod:`omnigent.server.admin_list`).
+"""Tests for the file-backed admin roster (:mod:`~?agent_meow.server.admin_list`).
 
 Covers three layers:
 
@@ -29,9 +29,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from omnigent.server.accounts_config import AccountsConfig
-from omnigent.server.accounts_store import SqlAlchemyAccountStore
-from omnigent.server.admin_list import (
+from agent_meow.server.accounts_config import AccountsConfig
+from agent_meow.server.accounts_store import SqlAlchemyAccountStore
+from agent_meow.server.admin_list import (
     AdminList,
     MtimeCachedIdentitySet,
     load_admin_list,
@@ -39,10 +39,10 @@ from omnigent.server.admin_list import (
     resolve_admin_list_path,
     resolve_data_dir,
 )
-from omnigent.server.auth import UnifiedAuthProvider
-from omnigent.server.passwords import hash_password
-from omnigent.server.routes.accounts_auth import create_accounts_auth_router
-from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from agent_meow.server.auth import UnifiedAuthProvider
+from agent_meow.server.passwords import hash_password
+from agent_meow.server.routes.accounts_auth import create_accounts_auth_router
+from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 # ── File loader: parsing ──────────────────────────────────────────
 

@@ -44,7 +44,7 @@ from __future__ import annotations
 import io
 from pathlib import Path
 
-from tests.e2e.omnigent._pexpect_harness import (
+from tests.e2e.agent_meow._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
@@ -121,7 +121,7 @@ def test_run_omnigent_rate_limit_approval_round_trip(
     :param mock_llm_server_url: Mock server URL for configuring
         response queues.
     """
-    from tests.e2e.omnigent.conftest import configure_mock_llm
+    from tests.e2e.agent_meow.conftest import configure_mock_llm
 
     # Issue 4 search_web tool calls in sequence (3 allowed, 4th hits ASK).
     # After each tool result the mock server needs another response.
@@ -205,7 +205,7 @@ def test_run_omnigent_rate_limit_approval_round_trip(
 
         # Wait for the approval banner. The exact ``approval
         # required · tool_call`` substring is rendered by
-        # :func:`omnigent.repl._repl._make_elicitation_prompt`'s
+        # :func:`~?agent_meow.repl._repl._make_elicitation_prompt`'s
         # banner output. Anchor on a stable substring rather
         # than the full Unicode-prefixed line so a future
         # styling tweak doesn't false-positive break the test.
