@@ -108,7 +108,7 @@ def _declared_from_capabilities(harness: str) -> dict[str, Verdict]:
     # model_override is backed by the registry, not a capability field. An
     # SDK harness takes it via a HARNESS_<H>_MODEL env key (model_env_keys);
     # a native harness takes it as a launch --model argv element (see
-    # omnigent/model_override.py). Either path means the harness accepts a
+    # agent_meow/model_override.py). Either path means the harness accepts a
     # caller-specified model.
     if harness in model_env_keys() or is_native_harness(harness):
         declared["model_override"] = Verdict.SUPPORTED

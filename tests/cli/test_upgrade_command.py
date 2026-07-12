@@ -13,7 +13,7 @@ from agent_meow.update_check import _InstalledWheelInfo
 
 
 def _uv_registry_info() -> _InstalledWheelInfo:
-    """A registry uv-tool install → ``uv tool upgrade omnigent`` (runnable)."""
+    """A registry uv-tool install → ``uv tool upgrade agent-meow`` (runnable)."""
     return _InstalledWheelInfo(
         install_time_epoch=0.0,
         installer="uv",
@@ -127,7 +127,7 @@ def test_upgrade_runs_installer_and_drains_first(
     assert result.exit_code == 0, result.output
     # Drain happened before the stop, before the install ran.
     assert events == ["drained", "stop(force=False)"]
-    assert ran == ["uv tool upgrade omnigent"]
+    assert ran == ["uv tool upgrade agent-meow"]
     assert "Upgraded to v0.2.0" in result.output
 
 
@@ -196,7 +196,7 @@ def test_upgrade_rejects_editable(monkeypatch: pytest.MonkeyPatch, _wheel_instal
     editable = _InstalledWheelInfo(
         install_time_epoch=0.0,
         installer="uv",
-        vcs_url="file:///Users/me/omnigent",
+        vcs_url="file:///Users/me/agent-meow",
         commit_sha=None,
         is_editable=True,
         package_version="0.1.0",
@@ -314,7 +314,7 @@ def test_upgrade_pre_passes_prerelease_flag_to_installer(
     result = CliRunner().invoke(cli, ["upgrade", "--pre"])
 
     assert result.exit_code == 0, result.output
-    assert ran == ["uv tool upgrade omnigent --prerelease allow"]
+    assert ran == ["uv tool upgrade agent-meow --prerelease allow"]
 
 
 # ── ``omni update`` alias ────────────────────────────────────────────

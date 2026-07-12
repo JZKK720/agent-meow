@@ -55,8 +55,8 @@ create the release.
    activates and opens a local server:
 
    ```bash
-   gh release download vscode-v<version> --repo omnigent-ai/omnigent --pattern '*.vsix'
-   code --install-extension omnigent-vscode-<version>.vsix
+   gh release download vscode-v<version> --repo JZKK720/agent-meow --pattern '*.vsix'
+   code --install-extension agent-meow-vscode-<version>.vsix
    ```
 
    Reload VS Code, start a local server (`meow server`), and run the
@@ -64,7 +64,7 @@ create the release.
    running server's UI (not a blank pane or an error). This catches packaging
    problems (missing files, a broken bundle) before anything reaches the
    marketplaces.
-6. **Publish to the marketplaces.** Dispatch `omnigent-vscode.yml` in the
+6. **Publish to the marketplaces.** Dispatch `agent-meow-vscode.yml` in the
    secure-release repo (once it exists), pointing at the `vscode-v<version>`
    tag; run with `dry-run: true` first, then publish for real.
 
@@ -79,8 +79,8 @@ The one-time setup that makes this possible is tracked below.
 | 2   | Maintain `CHANGELOG.md` (strip Jira refs, keep GH issue refs)                                                                                                                                                                                                                                                                                  | `editors/vscode`                                                                                                                                                            | — (done)            |
 | 3   | Verify the build: `npm ci && npm run build && npm run package` → valid `.vsix`                                                                                                                                                                                                                                                                 | local / CI                                                                                                                                                                  | — (done)            |
 | 4   | Release-PR workflow bumps version + CHANGELOG; a manually-dispatched release workflow builds the `.vsix` and attaches it (+`.sha256`) to a draft GitHub release                                                                                                                                                                                | `.github/workflows/vscode-release-pr.yml`, `vscode-extension-release.yml`                                                                                                   | — (done)            |
-| 5   | Ask DECO to register `omnigent-vscode` under the `databricks` publisher + add dedicated `OMNI_VSCE_TOKEN` / `OMNI_OVSX_PAT` secrets (and an `omnigent-vscode-marketplace` environment for the reviewer gate)                                                                                                                                    | Slack `#dev-ecosystem-discuss` ([https://databricks.slack.com/archives/C01KSAWFXG8/p1782971196701749](https://databricks.slack.com/archives/C01KSAWFXG8/p1782971196701749)) | human approval      |
-| 6   | Add an `omnigent-vscode.yml` publish workflow in the secure repo, adapting the existing [`databricks-vscode.yml`](https://github.com/databricks/secure-public-registry-releases-eng/blob/main/.github/workflows/databricks-vscode.yml) (SAML SSO required) — it already does download → scan → `vsce publish` + `ovsx publish` in one workflow | `secure-public-registry-releases-eng`                                                                                                                                       | DECO grant (step 5) |
+| 5   | Ask DECO to register `agent-meow-vscode` under the `databricks` publisher + add dedicated `OMNI_VSCE_TOKEN` / `OMNI_OVSX_PAT` secrets (and an `agent-meow-vscode-marketplace` environment for the reviewer gate)                                                                                                                                    | Slack `#dev-ecosystem-discuss` ([https://databricks.slack.com/archives/C01KSAWFXG8/p1782971196701749](https://databricks.slack.com/archives/C01KSAWFXG8/p1782971196701749)) | human approval      |
+| 6   | Add an `agent-meow-vscode.yml` publish workflow in the secure repo, adapting the existing [`databricks-vscode.yml`](https://github.com/databricks/secure-public-registry-releases-eng/blob/main/.github/workflows/databricks-vscode.yml) (SAML SSO required) — it already does download → scan → `vsce publish` + `ovsx publish` in one workflow | `secure-public-registry-releases-eng`                                                                                                                                       | DECO grant (step 5) |
 | 7   | Populate the dedicated `OMNI_VSCE_TOKEN` + `OMNI_OVSX_PAT` secrets; register rows in `go/npp-release-status`; get sign-off in `#unblock-releases-public`                                                                                                                                                                                       | secure repo + Slack                                                                                                                                                         | steps 5–6           |
 
 
@@ -90,20 +90,20 @@ secure-repo reference workflow.
 ## Notes for the secure-repo workflow
 
 - `databricks-vscode.yml` downloads the `.vsix` from the release with
-`gh release download -R databricks/databricks-vscode`. The omnigent variant
-must point `-R` at `omnigent-ai/omnigent` and relax the filename check (it
-hard-codes `databricks-*-${VERSION}.vsix`; ours is `omnigent-vscode-*.vsix`).
-- We author `omnigent-vscode.yml` ourselves — it's our own pipeline, not a fork
+`gh release download -R databricks/databricks-vscode`. The agent-meow variant
+must point `-R` at `JZKK720/agent-meow` and relax the filename check (it
+hard-codes `databricks-*-${VERSION}.vsix`; ours is `agent-meow-vscode-*.vsix`).
+- We author `agent-meow-vscode.yml` ourselves — it's our own pipeline, not a fork
 of `databricks-vscode.yml`, so we just write it to expect our `vscode-v*`
 tags. `databricks-vscode.yml` is only a structural template; its
 `Validate tag format` step hard-codes `^release-v([0-9]+\.[0-9]+\.[0-9]+)$`,
 which is *their* convention — when copying that step, change the regex to
 match `vscode-v*`. The only thing that must agree is our two ends
-(`vscode-extension-release.yml` and `omnigent-vscode.yml`), and we control
+(`vscode-extension-release.yml` and `agent-meow-vscode.yml`), and we control
 both.
-- Cross-org fetch from the public `omnigent-ai/omnigent` repo is already an
-accepted pattern — `omnigent.yml` checks out `omnigent-ai/omnigent` for the
-PyPI release. So reading a public omnigent release from the hardened runner is
+- Cross-org fetch from the public `JZKK720/agent-meow` repo is already an
+accepted pattern — `agent_meow.yml` checks out `JZKK720/agent-meow` for the
+PyPI release. So reading a public agent-meow release from the hardened runner is
 not a new blocker.
 - Marketplace publish reads **dedicated `OMNI_VSCE_TOKEN` / `OMNI_OVSX_PAT`
 secrets**, separate from databricks-vscode's `VSCE_TOKEN` / `OVSX_PAT`. Same
@@ -111,6 +111,6 @@ secrets**, separate from databricks-vscode's `VSCE_TOKEN` / `OVSX_PAT`. Same
 and the mandatory revoke-after-release step never conflict. (Note: a GitHub
 `environment:` alone would NOT isolate repo-level secrets — the distinct secret
 names are what isolate the tokens. The jobs also bind an
-`omnigent-vscode-marketplace` environment for an independent reviewer gate.)
+`agent-meow-vscode-marketplace` environment for an independent reviewer gate.)
 DECO must add these secrets (step 5) before the first publish.
 

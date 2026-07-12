@@ -288,7 +288,7 @@ def apply_egress_env(
         proxy URL. Pass ``None`` to set a tokenless URL.
     """
     if auth_token is not None:
-        proxy_url = f"http://omnigent:{auth_token}@127.0.0.1:{relay_port}"
+        proxy_url = f"http://agent-meow:{auth_token}@127.0.0.1:{relay_port}"
     else:
         proxy_url = f"http://127.0.0.1:{relay_port}"
     env["HTTP_PROXY"] = proxy_url

@@ -122,7 +122,7 @@ deploy/
 | Deploy on a Databricks workspace (Lakebase + UC Volumes), self-managed | Databricks Apps | [`databricks/README.md`](databricks/README.md): uses Asset Bundles |
 
 > **On Databricks?** The fully managed
-> [agent-meow on Databricks](https://docs.databricks.com/aws/en/omnigent/)
+> [agent-meow on Databricks](https://docs.databricks.com/aws/en/agent_meow/)
 > (Beta) is the recommended path: Databricks operates the server for
 > you, wired to workspace identity, Foundation Models, AI Gateway, and
 > MLflow Tracing. Enable the **agent-meow** preview in your workspace
@@ -230,8 +230,8 @@ meow run path/to/agent.yaml --server https://your-host
 Don't want a laptop to be the host? Run the host in a cloud sandbox instead.
 
 **From the CLI (Modal, Daytona, Islo, or E2B).** Install the provider extra when
-needed (`pip install 'omnigent[modal]'`, `'omnigent[daytona]'`, or
-`'omnigent[e2b]'`; Islo uses the built-in HTTP client), authenticate
+needed (`pip install 'agent-meow[modal]'`, `'agent-meow[daytona]'`, or
+`'agent-meow[e2b]'`; Islo uses the built-in HTTP client), authenticate
 (`modal token new`, `DAYTONA_API_KEY`, `ISLO_API_KEY`, or `E2B_API_KEY`), then:
 
 ```bash
@@ -308,7 +308,7 @@ vars (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`,
 aliases) to its runners:
 
 ```bash
-modal secret create omnigent-llm \
+modal secret create agent-meow-llm \
   OMNIGENT_ANTHROPIC_API_KEY=sk-ant-… OPENAI_API_KEY=sk-…
 ```
 
@@ -321,7 +321,7 @@ sandbox:
   provider: modal
   server_url: https://your-host
   modal:
-    secrets: [omnigent-llm]
+    secrets: [agent-meow-llm]
 ```
 
 For Daytona and Islo, list server environment variable names under

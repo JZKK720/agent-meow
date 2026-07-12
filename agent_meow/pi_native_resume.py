@@ -204,7 +204,7 @@ def pi_session_records_from_session_items(
     session_id: str,
     external_session_id: str,
     cwd: Path,
-    provider: str = "omnigent",
+    provider: str = "agent-meow",
     model: str = "",
 ) -> list[dict[str, Any]]:
     """Convert agent-meow session items into Pi session JSONL records.
@@ -230,7 +230,7 @@ def pi_session_records_from_session_items(
     :param external_session_id: Pi session id for the rebuilt file's header.
     :param cwd: Working directory written into the session header.
     :param provider: Provider id stamped on assistant messages, e.g.
-        ``"omnigent"``. Informational; Pi's resume uses the live provider.
+        ``"agent-meow"``. Informational; Pi's resume uses the live provider.
     :param model: Model id stamped on assistant messages, e.g.
         ``"claude-opus-4-8"``. May be overridden per-item by the item's own
         ``model``.
@@ -397,7 +397,7 @@ def _pi_assistant_message(
     load. The usage is zeroed (synthesized history has no real token accounting).
 
     :param content: Assistant content blocks (text and/or toolCall).
-    :param provider: Provider id, e.g. ``"omnigent"``.
+    :param provider: Provider id, e.g. ``"agent-meow"``.
     :param model: Model id, e.g. ``"claude-opus-4-8"``.
     :returns: Pi assistant message dict.
     """
@@ -537,7 +537,7 @@ async def ensure_local_pi_resume_session(
     external_session_id: str,
     session_dir: Path,
     workspace: Path,
-    provider: str = "omnigent",
+    provider: str = "agent-meow",
     model: str = "",
 ) -> Path | None:
     """Ensure Pi has a local session JSONL to resume with prior history.

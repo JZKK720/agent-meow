@@ -54,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     if raw_argv and raw_argv[0] == "evaluate-policy":
         return _main_evaluate_policy(raw_argv[1:])
     print(
-        f"omnigent codex hook: unknown subcommand {raw_argv[:1]!r}",
+        f"agent-meow codex hook: unknown subcommand {raw_argv[:1]!r}",
         file=sys.stderr,
     )
     return 0
@@ -101,10 +101,10 @@ def _main_evaluate_policy(argv: list[str]) -> int:
     try:
         payload = json.loads(raw or "{}")
     except json.JSONDecodeError as exc:
-        print(f"omnigent codex evaluate-policy hook: malformed JSON: {exc}", file=sys.stderr)
+        print(f"agent-meow codex evaluate-policy hook: malformed JSON: {exc}", file=sys.stderr)
         return 0
     if not isinstance(payload, dict):
-        print("omnigent codex evaluate-policy hook: expected JSON object", file=sys.stderr)
+        print("agent-meow codex evaluate-policy hook: expected JSON object", file=sys.stderr)
         return 0
 
     bridge_dir = Path(args.bridge_dir)
@@ -172,14 +172,14 @@ def _main_evaluate_policy(argv: list[str]) -> int:
     if resp is None:
         return _fail_closed()
     if not resp.content:
-        print("omnigent codex evaluate-policy hook: empty agent-meow response", file=sys.stderr)
+        print("agent-meow codex evaluate-policy hook: empty agent-meow response", file=sys.stderr)
         return _fail_closed()
 
     try:
         eval_response = resp.json()
     except json.JSONDecodeError:
         print(
-            "omnigent codex evaluate-policy hook: malformed agent-meow response",
+            "agent-meow codex evaluate-policy hook: malformed agent-meow response",
             file=sys.stderr,
         )
         return _fail_closed()

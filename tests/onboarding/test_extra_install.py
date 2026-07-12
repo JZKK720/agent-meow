@@ -1,4 +1,4 @@
-"""Tests for ``omnigent/onboarding/extra_install.py``."""
+"""Tests for ``agent_meow/onboarding/extra_install.py``."""
 
 from __future__ import annotations
 
@@ -26,15 +26,15 @@ from agent_meow.onboarding.extra_install import (
     "prefix, expected",
     [
         # Default Linux/macOS layout
-        ("/home/user/.local/share/uv/tools/omnigent/bin/python", True),
+        ("/home/user/.local/share/uv/tools/agent_meow/bin/python", True),
         # Windows layout (forward-slash normalized)
-        ("C:/Users/user/AppData/Local/uv/tools/omnigent/Scripts/python", True),
+        ("C:/Users/user/AppData/Local/uv/tools/agent_meow/Scripts/python", True),
         # Regular virtualenv — not a uv tool install
-        ("/home/user/repos/omnigent/.venv", False),
+        ("/home/user/repos/agent_meow/.venv", False),
         # System Python
         ("/usr", False),
         # pipx venv (should NOT be detected as uv tool)
-        ("/home/user/.local/pipx/venvs/omnigent/bin/python", False),
+        ("/home/user/.local/pipx/venvs/agent_meow/bin/python", False),
     ],
     ids=["linux-uv-tool", "windows-uv-tool", "venv", "system", "pipx"],
 )
@@ -80,8 +80,8 @@ def test_extra_install_command_uv_tool(monkeypatch: pytest.MonkeyPatch) -> None:
         "tool",
         "install",
         "--with",
-        "omnigent[cursor]",
-        "omnigent",
+        "agent-meow[cursor]",
+        "agent-meow",
         "--force",
     ]
 
@@ -92,7 +92,7 @@ def test_extra_install_command_uv_tool_git_source(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: True)
     monkeypatch.setattr(extra_install, "_installed_vcs_url", lambda: url)
     cmd = extra_install_command("cursor")
-    assert cmd == ["uv", "tool", "install", "--force", f"omnigent[cursor] @ {url}"]
+    assert cmd == ["uv", "tool", "install", "--force", f"agent-meow[cursor] @ {url}"]
 
 
 def test_extra_install_command_uv_on_path(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -100,7 +100,7 @@ def test_extra_install_command_uv_on_path(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: "/usr/bin/uv")
     cmd = extra_install_command("antigravity")
-    assert cmd == ["uv", "pip", "install", "omnigent[antigravity]"]
+    assert cmd == ["uv", "pip", "install", "agent-meow[antigravity]"]
 
 
 def test_extra_install_command_pip_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -113,7 +113,7 @@ def test_extra_install_command_pip_fallback(monkeypatch: pytest.MonkeyPatch) -> 
         "-m",
         "pip",
         "install",
-        "omnigent[copilot]",
+        "agent-meow[copilot]",
     ]
 
 
@@ -127,7 +127,7 @@ def test_extra_install_display_matches_command(
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: "/usr/bin/uv")
     display = extra_install_display("cursor")
-    assert "omnigent[cursor]" in display
+    assert "agent-meow[cursor]" in display
     assert display.startswith("uv")
 
 
@@ -142,7 +142,7 @@ def test_extra_install_display_matches_command(
 def test_harness_extra_is_a_real_pyproject_extra(extra: str) -> None:
     """Each harness ``*_EXTRA`` must name a real ``optional-dependencies`` key.
 
-    The install command interpolates the constant into ``omnigent[<extra>]``; a
+    The install command interpolates the constant into ``agent-meow[<extra>]``; a
     typo or a rename in ``pyproject.toml`` would silently produce a command that
     installs a nonexistent extra. This ties the code's name to the packaging.
     """

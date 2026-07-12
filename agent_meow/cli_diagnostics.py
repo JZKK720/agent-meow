@@ -2,7 +2,7 @@
 Always-on CLI diagnostics log.
 
 Captures exceptions, warnings, and diagnostic info to a per-invocation
-log file under ``~/.omnigent/logs/cli-*.log``. Separate from the
+log file under ``~/.agent_meow/logs/cli-*.log``. Separate from the
 ``--log`` conversation JSON transcript and the ``--debug-events`` SSE
 tape — this layer is always on so crash context is available even when
 the user didn't know to enable debugging ahead of time.
@@ -68,7 +68,7 @@ class CliLogContext:
     or ``/report``).
 
     :param path: Absolute path to the current invocation's log file,
-        e.g. ``~/.omnigent/logs/cli-20260518-143012-12345-a1b2c3.log``.
+        e.g. ``~/.agent_meow/logs/cli-20260518-143012-12345-a1b2c3.log``.
     :param invocation_id: Short unique id for this CLI run, e.g.
         ``"12345-a1b2c3"``.
     """
@@ -225,9 +225,9 @@ def _log_dir() -> Path:
     Return the CLI diagnostics log directory.
 
     Uses :func:`omnigent_ui_sdk.state_dir` as the shared
-    ``~/.omnigent`` root so the path is defined in one place.
+    ``~/.agent-meow`` root so the path is defined in one place.
 
-    :returns: ``~/.omnigent/logs``.
+    :returns: ``~/.agent_meow/logs``.
     """
     return Path(state_dir()) / _LOGS_SUBDIR
 
@@ -237,7 +237,7 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
     Configure the always-on CLI diagnostics log.
 
     Creates the log directory, opens a per-invocation log file,
-    installs the redaction filter, wires up the ``omnigent`` and
+    installs the redaction filter, wires up the ``agent-meow`` and
     ``omnigent_ui_sdk`` logger hierarchies, and prunes old log
     files beyond :data:`MAX_LOG_FILES`.
 
@@ -280,7 +280,7 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
 
     # Wire our two package hierarchies at INFO so their records reach
     # the file handler.
-    for name in ("omnigent", "omnigent_ui_sdk"):
+    for name in ("agent-meow", "omnigent_ui_sdk"):
         logger = logging.getLogger(name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
@@ -387,7 +387,7 @@ def print_setup_hint() -> None:
     the model-configuration command. The dominant root cause for CLI
     failures in the wild is a missing or misconfigured model
     credential — a hint that nudges the user toward
-    ``omnigent setup`` keeps the recovery path obvious without
+    ``agent-meow setup`` keeps the recovery path obvious without
     requiring per-call classification of "is this auth?".
 
     Like :func:`log_cli_error_hint`, the line is written through
@@ -400,7 +400,7 @@ def print_setup_hint() -> None:
     dest = getattr(sys.stderr, "_original_stderr", sys.stderr)
     print(
         "If this looks like an auth or configuration problem, run "
-        "`omnigent setup` to configure a model credential.",
+        "`agent-meow setup` to configure a model credential.",
         file=dest,
     )
 
@@ -576,7 +576,7 @@ def _update_latest_symlink(log_dir: Path, log_path: Path) -> None:
 def _safe_mtime(path: Path) -> float:
     """Return *path*'s mtime, or ``0.0`` if it has vanished.
 
-    ``_prune_old_logs`` runs at the start of every ``omnigent run``, so two
+    ``_prune_old_logs`` runs at the start of every ``agent-meow run``, so two
     concurrent launches can glob the same log set then race to delete it. A
     plain ``p.stat()`` in the sort key would then hit a just-removed file and
     raise ``FileNotFoundError``, aborting the whole prune and crashing CLI

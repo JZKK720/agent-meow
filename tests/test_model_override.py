@@ -1,4 +1,4 @@
-"""Unit tests for ``omnigent/model_override.py``.
+"""Unit tests for ``agent_meow/model_override.py``.
 
 The validator guards a spawn boundary: a model override is persisted on
 the session row and later becomes a ``--model`` argv element (native

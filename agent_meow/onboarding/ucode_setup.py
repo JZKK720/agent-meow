@@ -80,7 +80,7 @@ def configure_ucode_for_workspace(
     setup flow: instead of configuring every bundled profile at once, it
     wires the coding harnesses (Claude, Codex, Pi) to the Unity AI Gateway
     of exactly the one workspace the user supplied when adding a
-    ``kind: databricks`` provider via ``omnigent setup --no-internal-beta``.
+    ``kind: databricks`` provider via ``agent-meow setup --no-internal-beta``.
     ucode writes ``~/.ucode/state.json``, which agent-meow then reads for
     per-harness model defaults, base URLs, and the token-refresh command.
 

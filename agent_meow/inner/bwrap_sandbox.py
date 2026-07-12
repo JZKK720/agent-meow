@@ -728,7 +728,7 @@ def _ensure_executable_visible(argv: list[str], cwd: Path) -> list[str]:
     - ``./.venv/bin/python`` inside cwd, symlinking into ``/usr``:
       covered by the cwd bind (literal) plus ``/usr`` (resolved);
       nothing extra emitted.
-    - ``/home/me/omnigent/.venv/bin/python`` while the helper
+    - ``/home/me/agent_meow/.venv/bin/python`` while the helper
       runs in ``/tmp/scratch`` (uv-managed Python with intermediate
       ``cpython-3.12`` symlink): binds the venv bin/lib roots at the
       literal paths and the uv-python install dir at its literal

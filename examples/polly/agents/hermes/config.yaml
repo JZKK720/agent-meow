@@ -7,7 +7,7 @@ description: Hermes Agent coding sub-agent — implements, cross-vendor reviews,
 # approval prompt still fires for dangerous commands and is mirrored to the web
 # UI, so risky actions surface as approval cards rather than being auto-bypassed.
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: hermes-native
 

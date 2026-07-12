@@ -9,7 +9,7 @@
 #
 # Everything (toolchain, project venv, config, data, database, artifacts, logs,
 # caches) lives under one disposable runtime directory that is removed on exit,
-# so the run never touches your real ~/.omnigent, ~/.config / ~/Library, or
+# so the run never touches your real ~/.agent-meow, ~/.config / ~/Library, or
 # package caches.
 #
 # Usage:
@@ -34,7 +34,7 @@ runtime_data="$runtime_root/data"
 runtime_cache="$runtime_root/cache"
 runtime_logs="$runtime_root/logs"
 runtime_artifacts="$runtime_root/artifacts"
-runtime_db="$runtime_data/omnigent/chat.db"
+runtime_db="$runtime_data/agent_meow/chat.db"
 server_pid=""
 
 cleanup() {
@@ -52,7 +52,7 @@ mkdir -p \
   "$runtime_cache/pip" "$runtime_cache/uv" \
   "$runtime_logs" "$runtime_artifacts" \
   "$(dirname "$runtime_db")" \
-  "$runtime_config/omnigent" "$runtime_data/omnigent"
+  "$runtime_config/agent-meow" "$runtime_data/agent-meow"
 
 # Isolated environment shared by every step. HOME is the primary isolation
 # lever (it covers ~/.config on Linux and ~/Library on macOS); the explicit
@@ -72,8 +72,8 @@ env_vars=(
   "UV_CACHE_DIR=$runtime_cache/uv"
   "UV_PROJECT_ENVIRONMENT=$project_venv"
   "UV_PYTHON_DOWNLOAD=never"
-  "OMNIGENT_CONFIG_HOME=$runtime_config/omnigent"
-  "OMNIGENT_DATA_DIR=$runtime_data/omnigent"
+  "OMNIGENT_CONFIG_HOME=$runtime_config/agent-meow"
+  "OMNIGENT_DATA_DIR=$runtime_data/agent-meow"
   "OMNIGENT_DATABASE_URI=sqlite:///$runtime_db"
   "OMNIGENT_SKIP_WEB_UI=true"
 )
@@ -91,7 +91,7 @@ echo "Syncing project dependencies (uv sync --frozen)..."
 
 echo "Starting backend server on 127.0.0.1:$PORT (API-only)..."
 nohup env "${env_vars[@]}" \
-  "$project_venv/bin/omnigent" server \
+  "$project_venv/bin/agent-meow" server \
     --host 127.0.0.1 \
     --port "$PORT" \
     --database-uri "sqlite:///$runtime_db" \

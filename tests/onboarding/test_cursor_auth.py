@@ -1,7 +1,7 @@
-"""Tests for ``omnigent/onboarding/cursor_auth.py`` — the Cursor API-key store.
+"""Tests for ``agent_meow/onboarding/cursor_auth.py`` — the Cursor API-key store.
 
 Cursor's ``CURSOR_API_KEY`` lives in a dedicated top-level ``cursor:`` config
-block (not the shared global ``auth:``) and the omnigent secret store, resolved
+block (not the shared global ``auth:``) and the agent-meow secret store, resolved
 with the same ``resolve_secret`` resolver the provider families use. These
 tests isolate the config + secret store to a tmp dir (file backend, no OS
 keychain) and assert the read/resolve/configured helpers behave — including the
@@ -199,7 +199,7 @@ def test_cursor_install_command_prefers_uv(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: "/usr/bin/uv")
     cmd = cursor_install_command()
-    assert cmd == ["uv", "pip", "install", "omnigent[cursor]"]
+    assert cmd == ["uv", "pip", "install", "agent-meow[cursor]"]
     assert not any("index" in part or "://" in part for part in cmd)
 
 
@@ -213,7 +213,7 @@ def test_cursor_install_command_falls_back_to_pip(monkeypatch: pytest.MonkeyPatc
         "-m",
         "pip",
         "install",
-        "omnigent[cursor]",
+        "agent-meow[cursor]",
     ]
     assert not any("index" in part or "://" in part for part in cmd)
 
@@ -228,8 +228,8 @@ def test_cursor_install_command_uv_tool(monkeypatch: pytest.MonkeyPatch) -> None
         "tool",
         "install",
         "--with",
-        "omnigent[cursor]",
-        "omnigent",
+        "agent-meow[cursor]",
+        "agent-meow",
         "--force",
     ]
 
@@ -258,7 +258,7 @@ def test_install_cursor_sdk_runs_command_then_rechecks(
     monkeypatch.setattr(cursor_auth, "cursor_sdk_installed", lambda: state["installed"])
 
     assert install_cursor_sdk() is True
-    assert calls == [[extra_install.sys.executable, "-m", "pip", "install", "omnigent[cursor]"]]
+    assert calls == [[extra_install.sys.executable, "-m", "pip", "install", "agent-meow[cursor]"]]
 
 
 def test_install_cursor_sdk_false_on_spawn_failure(monkeypatch: pytest.MonkeyPatch) -> None:

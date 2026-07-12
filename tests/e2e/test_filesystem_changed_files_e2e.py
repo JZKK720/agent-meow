@@ -219,7 +219,7 @@ def _build_mock_workspace_writer_bundle(mock_llm_server_url: str) -> bytes:
 # registry (so ``GET .../changes`` is always empty) AND resolves the agent's
 # ``sys_os_write`` cwd to a throwaway ``/tmp`` dir (so writes never land where a
 # watcher could see them) — see ``_effective_runner_os_env_spec`` and
-# ``_resolve_session_fs_registry`` in ``omnigent/runner/app.py``. The agent-write
+# ``_resolve_session_fs_registry`` in ``agent_meow/runner/app.py``. The agent-write
 # tests below need both pointed at a real workspace, so they use a dedicated
 # server+runner pair rooted at an isolated, throwaway **git** workspace (a git
 # tree so the diff test's ``git show HEAD`` baseline works and new files surface
@@ -297,7 +297,7 @@ def fs_ws_server(
     fs_workspace: Path,
     fs_ws_runner_id: str,
 ) -> Iterator[str]:
-    """Spawn an ``omnigent server`` + runner rooted at the isolated git workspace.
+    """Spawn an ``agent-meow server`` + runner rooted at the isolated git workspace.
 
     The runner is given ``OMNIGENT_RUNNER_WORKSPACE=fs_workspace`` (and the
     server CWD matches), so ``create_filesystem_registry`` builds a
@@ -322,7 +322,7 @@ def fs_ws_server(
         **os.environ,
         "OPENAI_API_KEY": llm_api_key,
         # PYTHONPATH stays the repo so the subprocess imports this worktree's
-        # omnigent; only the *workspace* (cwd / OMNIGENT_RUNNER_WORKSPACE) is
+        # agent-meow; only the *workspace* (cwd / OMNIGENT_RUNNER_WORKSPACE) is
         # the throwaway git dir.
         "PYTHONPATH": f"{_REPO_ROOT}{os.pathsep}{os.environ.get('PYTHONPATH', '')}",
         "OMNIGENT_SKIP_ONBOARD": "1",

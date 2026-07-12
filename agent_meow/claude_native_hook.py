@@ -81,7 +81,7 @@ def _env_int(name: str, default: int) -> int:
         return int(raw)
     except ValueError:
         print(
-            f"omnigent hook: ignoring non-integer {name}={raw!r}; using {default}",
+            f"agent-meow hook: ignoring non-integer {name}={raw!r}; using {default}",
             file=sys.stderr,
         )
         return default
@@ -110,7 +110,7 @@ def _env_float(name: str, default: float) -> float:
     # False — both silent footguns, so treat them as malformed.
     if not math.isfinite(value):
         print(
-            f"omnigent hook: ignoring non-finite {name}={raw!r}; using {default}",
+            f"agent-meow hook: ignoring non-finite {name}={raw!r}; using {default}",
             file=sys.stderr,
         )
         return default
@@ -194,10 +194,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         payload = json.loads(raw or "{}")
     except json.JSONDecodeError as exc:
-        print(f"omnigent claude hook: malformed JSON: {exc}", file=sys.stderr)
+        print(f"agent-meow claude hook: malformed JSON: {exc}", file=sys.stderr)
         return 0
     if not isinstance(payload, dict):
-        print("omnigent claude hook: expected JSON object", file=sys.stderr)
+        print("agent-meow claude hook: expected JSON object", file=sys.stderr)
         return 0
     bridge_dir = Path(args.bridge_dir)
     _annotate_resume_session_context(bridge_dir, payload)
@@ -213,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         record_hook_event(bridge_dir, payload)
     except Exception as exc:  # noqa: BLE001 - hook must not break Claude Code.
-        print(f"omnigent claude hook: failed to record hook: {exc}", file=sys.stderr)
+        print(f"agent-meow claude hook: failed to record hook: {exc}", file=sys.stderr)
     conversation_url = _conversation_url_for_active_session(bridge_dir, args.conversation_url)
     if conversation_url and payload.get("hook_event_name") == "SessionStart":
         print(
@@ -373,10 +373,10 @@ def _rotate_session_on_clear(bridge_dir: Path) -> str | None:
                 bridge_dir,
             )
     except httpx.HTTPError as exc:
-        print(f"omnigent claude clear hook: agent-meow rotation failed: {exc}", file=sys.stderr)
+        print(f"agent-meow claude clear hook: agent-meow rotation failed: {exc}", file=sys.stderr)
         return None
     except RuntimeError as exc:
-        print(f"omnigent claude clear hook: rotation failed: {exc}", file=sys.stderr)
+        print(f"agent-meow claude clear hook: rotation failed: {exc}", file=sys.stderr)
         return None
     return new_session_id
 
@@ -419,10 +419,10 @@ def _rotate_session_on_fork(bridge_dir: Path) -> str | None:
                 bridge_dir,
             )
     except httpx.HTTPError as exc:
-        print(f"omnigent claude fork hook: agent-meow fork failed: {exc}", file=sys.stderr)
+        print(f"agent-meow claude fork hook: agent-meow fork failed: {exc}", file=sys.stderr)
         return None
     except RuntimeError as exc:
-        print(f"omnigent claude fork hook: fork failed: {exc}", file=sys.stderr)
+        print(f"agent-meow claude fork hook: fork failed: {exc}", file=sys.stderr)
         return None
     return new_session_id
 
@@ -508,7 +508,7 @@ def _create_clear_replacement_session(
     if clear_resp.status_code >= 400:
         print(
             (
-                "omnigent claude clear hook: failed to clear old runner binding: "
+                "agent-meow claude clear hook: failed to clear old runner binding: "
                 f"{clear_resp.status_code} {clear_resp.text}"
             ),
             file=sys.stderr,
@@ -580,7 +580,7 @@ def _create_fork_replacement_session(
     if clear_resp.status_code >= 400:
         print(
             (
-                "omnigent claude fork hook: failed to clear old runner binding: "
+                "agent-meow claude fork hook: failed to clear old runner binding: "
                 f"{clear_resp.status_code} {clear_resp.text}"
             ),
             file=sys.stderr,
@@ -607,7 +607,7 @@ def _conversation_url_for_active_session(
     session_id = read_active_session_id(bridge_dir)
     if isinstance(ap_server_url, str) and ap_server_url and session_id:
         # ``ap_server_url`` is the API base; route through the shared
-        # builder so workspace-hosted servers land on the ``/omnigent``
+        # builder so workspace-hosted servers land on the ``/agent-meow``
         # SPA mount (with ``?o=<org>``) rather than the JSON API mount.
         from agent_meow.conversation_browser import conversation_url
 
@@ -720,7 +720,7 @@ def _post_hook_with_reattach(
                         headers = refreshed
                         reauthed = True
                         print(
-                            f"omnigent {hook_label} hook: agent-meow auth expired "
+                            f"agent-meow {hook_label} hook: agent-meow auth expired "
                             "(login redirect/401); re-minted token and retrying",
                             file=sys.stderr,
                         )
@@ -730,14 +730,14 @@ def _post_hook_with_reattach(
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code < 500:
                 print(
-                    f"omnigent {hook_label} hook: agent-meow request rejected: {exc}",
+                    f"agent-meow {hook_label} hook: agent-meow request rejected: {exc}",
                     file=sys.stderr,
                 )
                 return None
             # 5xx: server responded but is sick — a hard failure (the spin).
             is_hard_failure = True
             print(
-                f"omnigent {hook_label} hook: agent-meow request failed; retrying: {exc}",
+                f"agent-meow {hook_label} hook: agent-meow request failed; retrying: {exc}",
                 file=sys.stderr,
             )
         except httpx.HTTPError as exc:
@@ -755,7 +755,7 @@ def _post_hook_with_reattach(
                 else ("flapping" if is_hard_failure else "held-poll severed")
             )
             print(
-                f"omnigent {hook_label} hook: agent-meow request failed ({kind}); retrying: {exc}",
+                f"agent-meow {hook_label} hook: agent-meow request failed ({kind}); retrying: {exc}",
                 file=sys.stderr,
             )
         if is_hard_failure:
@@ -766,7 +766,7 @@ def _post_hook_with_reattach(
             consecutive_hard_failures = 0
         if consecutive_hard_failures >= _PERMISSION_MAX_CONSECUTIVE_FAILURES:
             print(
-                f"omnigent {hook_label} hook: giving up after "
+                f"agent-meow {hook_label} hook: giving up after "
                 f"{consecutive_hard_failures} consecutive hard failures "
                 "(server unreachable/sick) — failing ask",
                 file=sys.stderr,
@@ -777,7 +777,7 @@ def _post_hook_with_reattach(
         backoff_s = min(backoff_s * 2, _PERMISSION_RETRY_MAX_BACKOFF_S)
         if time.monotonic() >= deadline:
             print(
-                f"omnigent {hook_label} hook: retry budget exhausted "
+                f"agent-meow {hook_label} hook: retry budget exhausted "
                 f"({_PERMISSION_TIMEOUT_S:.0f}s) — failing ask",
                 file=sys.stderr,
             )
@@ -789,7 +789,7 @@ def _main_permission_request(argv: list[str]) -> int:
     Forward one Claude ``PermissionRequest`` hook to the active agent-meow session.
 
     :param argv: CLI argv after the ``permission-request`` subcommand,
-        e.g. ``["--bridge-dir", "/tmp/x", "--omnigent-server-url",
+        e.g. ``["--bridge-dir", "/tmp/x", "--agent-meow-server-url",
         "http://127.0.0.1:8787"]``.
     :returns: Process exit code. Returns ``0`` on transport failures so
         Claude Code falls back to its terminal prompt.
@@ -799,20 +799,20 @@ def _main_permission_request(argv: list[str]) -> int:
     try:
         payload = json.loads(raw or "{}")
     except json.JSONDecodeError as exc:
-        print(f"omnigent claude permission hook: malformed JSON: {exc}", file=sys.stderr)
+        print(f"agent-meow claude permission hook: malformed JSON: {exc}", file=sys.stderr)
         return 0
     if not isinstance(payload, dict):
-        print("omnigent claude permission hook: expected JSON object", file=sys.stderr)
+        print("agent-meow claude permission hook: expected JSON object", file=sys.stderr)
         return 0
     bridge_dir = Path(args.bridge_dir)
     session_id = read_active_session_id(bridge_dir)
     if not session_id:
-        print("omnigent claude permission hook: active session missing", file=sys.stderr)
+        print("agent-meow claude permission hook: active session missing", file=sys.stderr)
         return 0
     config = read_permission_hook_config(bridge_dir)
     ap_server_url = args.omnigent_server_url or config.get("ap_server_url")
     if not isinstance(ap_server_url, str) or not ap_server_url:
-        print("omnigent claude permission hook: agent-meow server URL missing", file=sys.stderr)
+        print("agent-meow claude permission hook: agent-meow server URL missing", file=sys.stderr)
         return 0
     headers = _parse_headers(args.omnigent_auth_headers_json)
     if not headers:
@@ -865,10 +865,10 @@ def _main_ask_user_question(argv: list[str]) -> int:
     try:
         payload = json.loads(raw or "{}")
     except json.JSONDecodeError as exc:
-        print(f"omnigent ask-user-question hook: malformed JSON: {exc}", file=sys.stderr)
+        print(f"agent-meow ask-user-question hook: malformed JSON: {exc}", file=sys.stderr)
         return 0
     if not isinstance(payload, dict):
-        print("omnigent ask-user-question hook: expected JSON object", file=sys.stderr)
+        print("agent-meow ask-user-question hook: expected JSON object", file=sys.stderr)
         return 0
     # Only intercept in bypassPermissions mode. In any other mode the
     # PermissionRequest hook fires independently and owns the elicitation;
@@ -879,12 +879,12 @@ def _main_ask_user_question(argv: list[str]) -> int:
     bridge_dir = Path(args.bridge_dir)
     session_id = read_active_session_id(bridge_dir)
     if not session_id:
-        print("omnigent ask-user-question hook: active session missing", file=sys.stderr)
+        print("agent-meow ask-user-question hook: active session missing", file=sys.stderr)
         return 0
     config = read_permission_hook_config(bridge_dir)
     ap_server_url = args.omnigent_server_url or config.get("ap_server_url")
     if not isinstance(ap_server_url, str) or not ap_server_url:
-        print("omnigent ask-user-question hook: agent-meow server URL missing", file=sys.stderr)
+        print("agent-meow ask-user-question hook: agent-meow server URL missing", file=sys.stderr)
         return 0
     headers = _parse_headers(args.omnigent_auth_headers_json)
     if not headers:
@@ -915,7 +915,7 @@ def _main_ask_user_question(argv: list[str]) -> int:
     try:
         body = resp.json()
     except ValueError as exc:
-        print(f"omnigent ask-user-question hook: invalid JSON from AP: {exc}", file=sys.stderr)
+        print(f"agent-meow ask-user-question hook: invalid JSON from AP: {exc}", file=sys.stderr)
         return 0
     decision = (
         body.get("hookSpecificOutput", {}).get("decision", {}) if isinstance(body, dict) else {}
@@ -993,10 +993,10 @@ def _main_evaluate_policy(argv: list[str]) -> int:
     try:
         payload = json.loads(raw or "{}")
     except json.JSONDecodeError as exc:
-        print(f"omnigent evaluate-policy hook: malformed JSON: {exc}", file=sys.stderr)
+        print(f"agent-meow evaluate-policy hook: malformed JSON: {exc}", file=sys.stderr)
         return 0
     if not isinstance(payload, dict):
-        print("omnigent evaluate-policy hook: expected JSON object", file=sys.stderr)
+        print("agent-meow evaluate-policy hook: expected JSON object", file=sys.stderr)
         return 0
     bridge_dir = Path(args.bridge_dir)
     session_id = read_active_session_id(bridge_dir)
@@ -1057,13 +1057,13 @@ def _main_evaluate_policy(argv: list[str]) -> int:
     if resp is None:
         return _fail_closed()
     if not resp.content:
-        print("omnigent evaluate-policy hook: empty agent-meow response", file=sys.stderr)
+        print("agent-meow evaluate-policy hook: empty agent-meow response", file=sys.stderr)
         return _fail_closed()
 
     try:
         eval_response = resp.json()
     except json.JSONDecodeError:
-        print("omnigent evaluate-policy hook: malformed agent-meow response", file=sys.stderr)
+        print("agent-meow evaluate-policy hook: malformed agent-meow response", file=sys.stderr)
         return _fail_closed()
 
     hook_output = evaluation_response_to_hook_output(hook_event, eval_response)
@@ -1109,7 +1109,7 @@ def _parse_permission_args(argv: list[str]) -> argparse.Namespace:
         prog="python -m agent_meow.claude_native_hook permission-request"
     )
     parser.add_argument("--bridge-dir", required=True)
-    parser.add_argument("--omnigent-server-url")
+    parser.add_argument("--agent-meow-server-url")
     parser.add_argument("--omnigent-auth-headers-json")
     return parser.parse_args(argv)
 
@@ -1128,7 +1128,7 @@ def _parse_headers(raw: str | None) -> dict[str, str]:
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
-        print(f"omnigent claude permission hook: bad headers JSON: {exc}", file=sys.stderr)
+        print(f"agent-meow claude permission hook: bad headers JSON: {exc}", file=sys.stderr)
         return {}
     if not isinstance(parsed, dict):
         return {}

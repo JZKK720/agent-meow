@@ -582,7 +582,7 @@ class TestInstructionsField(unittest.TestCase):
     def test_instructions_resolves_relative_to_yaml_dir_not_cwd(self):
         """Path resolution anchors on the YAML's parent dir, not os.getcwd().
 
-        A user can run ``omnigent run /elsewhere/agent.yaml`` from
+        A user can run ``agent-meow run /elsewhere/agent.yaml`` from
         anywhere; the ``instructions: AGENTS.md`` reference must
         find ``/elsewhere/AGENTS.md``, not ``./AGENTS.md`` from
         the user's current working directory.
@@ -647,7 +647,7 @@ def test_instructions_rejects_path_traversal() -> None:
 class TestLoaderOsEnvValidation(unittest.TestCase):
     """Validate that ``inner.loader`` mirrors agent-meow parser sandbox checks.
 
-    The legacy ``load_agent_def`` is what the CLI ``omnigent run``
+    The legacy ``load_agent_def`` is what the CLI ``agent-meow run``
     actually invokes (via the omnigent-compat shim). If the legacy
     loader silently accepts a misconfigured sandbox (egress_rules on a
     non-enforcing backend, start_in_scratch without an active sandbox,
@@ -824,9 +824,9 @@ os_env:
                 os.unlink(f.name)
 
     def test_load_agent_def_parses_credential_proxy(self):
-        """Single-file omnigent YAML must parse ``credential_proxy``.
+        """Single-file agent-meow YAML must parse ``credential_proxy``.
 
-        Regression: this loader (the path ``omnigent run agent.yaml``
+        Regression: this loader (the path ``agent-meow run agent.yaml``
         takes, distinct from the bundle ``parse(config.yaml)`` path)
         had no ``credential_proxy`` parsing, so the field was silently
         dropped and the secretless proxy never armed even though the
@@ -939,7 +939,7 @@ os_env:
         SSL_CERT_FILE and verifies TLS via the keychain, so it rejects the
         egress MITM CA and every ``gh`` call fails at runtime with
         ``certificate is not trusted``. The single-file loader (the
-        ``omnigent run agent.yaml`` path) must fail loud at load time with the
+        ``agent-meow run agent.yaml`` path) must fail loud at load time with the
         same explanation as the bundle parser — sharing one detection helper so
         the two paths can't drift.
         """
@@ -1005,7 +1005,7 @@ def test_factory_params_with_unresolvable_handler_does_not_crash() -> None:
 def test_load_agent_def_allows_custom_handler_by_default() -> None:
     """Trusted loading (the default) keeps supporting custom handlers.
 
-    This is the operator/local ``omnigent run`` path — the custom
+    This is the operator/local ``agent-meow run`` path — the custom
     FunctionPolicy feature. An unregistered, non-built-in handler must
     load without error when ``enforce_handler_allowlist`` is not set, so
     the bundle guard does not regress local custom policies.

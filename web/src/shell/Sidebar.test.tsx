@@ -616,7 +616,7 @@ describe("Sidebar project sections", () => {
       conv("conv_pinned", "Claude Code", { labels: { omni_project: "Customer X" } }),
     ]);
     // Pin one of the filed sessions via localStorage (client-side pins).
-    localStorage.setItem("omnigent:pinned-conversation-ids", JSON.stringify(["conv_pinned"]));
+    localStorage.setItem("agent-meow:pinned-conversation-ids", JSON.stringify(["conv_pinned"]));
     renderSidebar();
 
     // Pinned takes precedence over Project: the pinned session leaves the
@@ -810,7 +810,7 @@ describe("Sidebar collapsed project marker", () => {
 // persists across reloads.
 describe("Sidebar default section collapse", () => {
   it("expands Pinned and Sessions by default when there is no stored preference", () => {
-    localStorage.setItem("omnigent:pinned-conversation-ids", JSON.stringify(["conv_pin"]));
+    localStorage.setItem("agent-meow:pinned-conversation-ids", JSON.stringify(["conv_pin"]));
     mockConversations([conv("conv_pin", "Claude Code"), conv("conv_recent", "Claude Code")]);
     renderSidebar();
 
@@ -824,7 +824,7 @@ describe("Sidebar default section collapse", () => {
   it("honors a persisted collapse of the Sessions list across remount", () => {
     // "Chats" is the persisted collapse key (kept stable across the label
     // rename); the header it collapses now reads "Sessions".
-    localStorage.setItem("omnigent:collapsed-sidebar-sections", JSON.stringify(["Chats"]));
+    localStorage.setItem("agent-meow:collapsed-sidebar-sections", JSON.stringify(["Chats"]));
     mockConversations([conv("conv_recent", "Claude Code")]);
     renderSidebar();
 
@@ -840,10 +840,10 @@ describe("Sidebar default section collapse", () => {
 // the just-pinned chat can't silently hide inside the collapsed group.
 describe("Sidebar auto-expand Pinned on pin", () => {
   it("expands a collapsed Pinned section when a session is newly pinned", () => {
-    localStorage.setItem("omnigent:collapsed-sidebar-sections", JSON.stringify(["Pinned"]));
+    localStorage.setItem("agent-meow:collapsed-sidebar-sections", JSON.stringify(["Pinned"]));
     // Start with one already-pinned session (so the Pinned section renders) and
     // one unpinned session to pin.
-    localStorage.setItem("omnigent:pinned-conversation-ids", JSON.stringify(["conv_pinned"]));
+    localStorage.setItem("agent-meow:pinned-conversation-ids", JSON.stringify(["conv_pinned"]));
     mockConversations([conv("conv_pinned", "Claude Code"), conv("conv_plain", "Claude Code")]);
     renderSidebar();
 
@@ -860,7 +860,7 @@ describe("Sidebar auto-expand Pinned on pin", () => {
     // The Pinned section auto-expands so the freshly-pinned session is visible,
     // and the expansion is persisted (dropped from the collapsed list).
     expect(screen.getByRole("button", { name: /Pinned/ })).toHaveAttribute("aria-expanded", "true");
-    expect(JSON.parse(localStorage.getItem("omnigent:collapsed-sidebar-sections")!)).not.toContain(
+    expect(JSON.parse(localStorage.getItem("agent-meow:collapsed-sidebar-sections")!)).not.toContain(
       "Pinned",
     );
   });
@@ -873,7 +873,7 @@ describe("Sidebar auto-expand Pinned on pin", () => {
 describe("Sidebar pin marker visibility", () => {
   it("hover-reveals an unpin control on a pinned row (no persistent marker)", () => {
     mockConversations([conv("conv_pin", "Claude Code")]);
-    localStorage.setItem("omnigent:pinned-conversation-ids", JSON.stringify(["conv_pin"]));
+    localStorage.setItem("agent-meow:pinned-conversation-ids", JSON.stringify(["conv_pin"]));
     renderSidebar();
 
     const pinned = screen.getByText("Pinned").closest("section")!;

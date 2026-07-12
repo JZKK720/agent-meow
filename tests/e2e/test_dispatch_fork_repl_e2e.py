@@ -1,5 +1,5 @@
 """
-PTY-driven e2e: ``omnigent run --harness <harness>`` returns
+PTY-driven e2e: ``agent-meow run --harness <harness>`` returns
 the LLM's reply through the new harness contract (mock LLM).
 
 Why this test exists: it covers the interactive CLI path that
@@ -182,7 +182,7 @@ def test_repl_run_routes_harness_through_new_harness_contract(
     mock_llm_server_url: str,
 ) -> None:
     """
-    Drive the full ``omnigent run --harness <harness>``
+    Drive the full ``agent-meow run --harness <harness>``
     flow under a PTY and verify the mock LLM's reply comes back.
 
     Verifies the path that the HTTP-only e2e tests miss:
@@ -192,7 +192,7 @@ def test_repl_run_routes_harness_through_new_harness_contract(
     2. It spawns a local agent-meow server subprocess.
     3. It uploads the spec via ``/api/agents``.
     4. The agent-meow server's ``_create_executor`` sees an
-       ``executor.type == "omnigent"`` +
+       ``executor.type == "agent-meow"`` +
        ``config.harness == <harness>`` spec (after the
        omnigent-YAML translator runs) and dispatches to
        the harness HTTP client via the step-5f branch.
@@ -284,7 +284,7 @@ def test_repl_pexpect_dependencies_are_present() -> None:
     # Trivially true; the load-time import-or-skip is what
     # matters.
     assert pexpect is not None
-    # Sanity that ``omnigent`` is importable from this
+    # Sanity that ``agent-meow`` is importable from this
     # worktree — if it isn't, the REPL spawn would fail with
     # a confusing ``ModuleNotFoundError`` instead of a clean
     # skip on missing fixtures. ``shutil.which`` is irrelevant

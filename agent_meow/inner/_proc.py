@@ -1,6 +1,6 @@
 """Cross-platform child-process spawning and tree teardown.
 
-Historically omnigent terminated child agent processes by killing their POSIX
+Historically agent-meow terminated child agent processes by killing their POSIX
 process group (``os.killpg``), which only works because children are spawned
 with ``start_new_session=True`` so ``pid == pgid``. Neither process groups nor
 ``os.killpg`` exist on Windows, so this module centralizes the portable

@@ -1,8 +1,8 @@
 """End-to-end tests for canonical local-server lifecycle.
 
-A foreground ``omnigent server`` registers itself in the machine-global
+A foreground ``agent-meow server`` registers itself in the machine-global
 pidfile AND must stamp the config-signature sidecar, so a later
-``omnigent host`` / ``omnigent run`` reuses it instead of stopping
+``agent-meow host`` / ``agent-meow run`` reuses it instead of stopping
 and respawning it. These tests spawn the REAL CLI subprocesses and assert
 process survival across the three scenarios the bug report describes:
 
@@ -18,8 +18,8 @@ without ``--llm-api-key``::
     .venv/bin/python -m pytest tests/e2e/test_local_server_lifecycle_e2e.py -v
 
 Each test isolates ``$HOME`` to a tmp dir so the pidfile / sig / DB land
-under ``<home>/.omnigent`` and never touch the developer's real
-``~/.omnigent`` or a server on the real :8000 (a busy :8000 just makes
+under ``<home>/.agent-meow`` and never touch the developer's real
+``~/.agent-meow`` or a server on the real :8000 (a busy :8000 just makes
 the canonical server fall back to a free port, recorded in the isolated
 pidfile — discovery is via the pidfile, never the port).
 """
@@ -44,7 +44,7 @@ from tests.e2e.helpers import HEALTH_TIMEOUT_S, POLL_INTERVAL_S
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Server boot budget — shared with the e2e suite's live_server fixture: a
-# cold `omnigent server` imports the whole stack and runs SQLite
+# cold `agent-meow server` imports the whole stack and runs SQLite
 # migrations before /health answers.
 _SERVER_BOOT_TIMEOUT_S = HEALTH_TIMEOUT_S
 _POLL_INTERVAL_S = POLL_INTERVAL_S
@@ -120,7 +120,7 @@ def _isolated_env(home: Path) -> dict[str, str]:
     Databricks profile. PYTHONPATH pins the worktree checkout so the
     subprocess imports the branch under test, not a stale installed wheel.
 
-    :param home: The tmp home dir; ``<home>/.omnigent`` holds the pidfile,
+    :param home: The tmp home dir; ``<home>/.agent-meow`` holds the pidfile,
         sig, DB, and artifacts for this test.
     :returns: The environment dict for ``subprocess.Popen``.
     """
@@ -136,9 +136,9 @@ def _pidfile_path(home: Path) -> Path:
     """Return the canonical local-server pidfile path under an isolated home.
 
     :param home: The isolated home dir.
-    :returns: ``<home>/.omnigent/local_server.pid``.
+    :returns: ``<home>/.agent_meow/local_server.pid``.
     """
-    return home / ".omnigent" / "local_server.pid"
+    return home / ".agent-meow" / "local_server.pid"
 
 
 def _read_pidfile(path: Path) -> tuple[int, int] | None:
@@ -271,8 +271,8 @@ def _respawned_server_pids(home: Path) -> set[int]:
     The single-server invariant for scenario 1: ``connect`` must REUSE the
     foreground server, not spawn a competitor. Any respawn goes through
     :func:`ensure_local_omnigent_server`, which spawns a detached
-    ``omnigent server --database-uri sqlite:///<home>/.omnigent/chat.db
-    --artifact-location <home>/.omnigent/artifacts`` — so its argv carries
+    ``agent-meow server --database-uri sqlite:///<home>/.agent_meow/chat.db
+    --artifact-location <home>/.agent_meow/artifacts`` — so its argv carries
     this isolated HOME path. The reused foreground server (spawned here as a
     bare ``["server"]``) does NOT, so every match is a respawned competitor,
     never the original. This is independent of the pidfile, so it catches a
@@ -292,7 +292,7 @@ def _respawned_server_pids(home: Path) -> set[int]:
         text=True,
         check=False,
     ).stdout
-    # Match the home as a directory PREFIX (``<home>/.omnigent/...`` always
+    # Match the home as a directory PREFIX (``<home>/.agent_meow/...`` always
     # appears in a respawn's argv), not a bare substring — so a sibling home
     # sharing a prefix (``/tmp/x/home`` vs ``/tmp/x/home2``) can't false-match.
     home_prefix = f"{home}{os.sep}"
@@ -491,7 +491,7 @@ def test_foreground_server_reuses_connect_owned_server(
     """Scenario 2 (vice versa): ``connect`` then ``server`` — both survive.
 
     The connect-owned local server is already healthy in the pidfile, so a
-    second canonical ``omnigent server`` must reuse it (print "already
+    second canonical ``agent-meow server`` must reuse it (print "already
     running — reusing it" and exit 0) rather than bind a competing server or
     tear the running one down.
     """
@@ -509,7 +509,7 @@ def test_foreground_server_reuses_connect_owned_server(
     rc = server2.wait(timeout=_SERVER_BOOT_TIMEOUT_S)
 
     assert rc == 0, (
-        f"second `omnigent server` exited non-zero (rc={rc}).\n"
+        f"second `agent-meow server` exited non-zero (rc={rc}).\n"
         f"--- log ---\n{_tail(tmp_path / 'server2.log')}"
     )
     assert "reusing it" in _tail(tmp_path / "server2.log"), (

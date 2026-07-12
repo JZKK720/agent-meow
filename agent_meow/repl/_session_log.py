@@ -1,11 +1,11 @@
 """
-JSON dump of an omnigent conversation — the agent-meow mode port of the
+JSON dump of an agent-meow conversation — the agent-meow mode port of the
 legacy ``--log`` feature (see designs/RUN_OMNIGENT_REPL_PARITY.md).
 
 The legacy non-AP path wrote a session-shaped JSON to
-``~/.omnigent/logs/`` at REPL exit (`_write_session_log` /
-``_session_log_dict`` in ``omnigent/inner/cli.py``). That format
-was tied to the in-memory :class:`Session` machinery — omnigent
+``~/.agent_meow/logs/`` at REPL exit (`_write_session_log` /
+``_session_log_dict`` in ``agent_meow/inner/cli.py``). That format
+was tied to the in-memory :class:`Session` machinery — agent-meow
 has no Session, just conversations + items, so this module emits an
 **AP-native** shape instead of translating into the legacy schema:
 
@@ -45,7 +45,7 @@ Sub-agent / child conversations are walked via the parent's items:
 handle dict with ``kind == "sub_agent"`` and a
 ``conversation_id`` pointing at the child. Same parser the
 Ctrl+O debug overlay uses (``_parse_sub_agent_handle`` in
-``omnigent/repl/_repl.py``), so spawn handles are recognized
+``agent_meow/repl/_repl.py``), so spawn handles are recognized
 identically across surfaces. Recursion is bounded by a
 ``visited`` set; a cycle (a child handle that points back at an
 ancestor — shouldn't happen in practice) emits a stub node with
@@ -76,9 +76,9 @@ _LOG_SCHEMA_VERSION = 1
 _LOG_FORMAT = "omnigent-conversation"
 
 # Default log directory. Derives from the shared ``state_dir()``
-# (``~/.omnigent``) so the root is defined in one place. Mirrors
-# the legacy non-AP path's ``~/.omnigent/logs/`` (see
-# ``_default_session_log_path`` in ``omnigent/inner/cli.py``) so
+# (``~/.agent-meow``) so the root is defined in one place. Mirrors
+# the legacy non-AP path's ``~/.agent_meow/logs/`` (see
+# ``_default_session_log_path`` in ``agent_meow/inner/cli.py``) so
 # users don't have to learn a new location when migrating. Created
 # on first write.
 DEFAULT_LOG_DIR = state_dir() / "logs"
@@ -104,7 +104,7 @@ def default_log_zip_path(
     Format: ``{output_dir}/omnigent-logs-{session_slug}-{timestamp}.zip``
     when a session id is available, otherwise
     ``{output_dir}/omnigent-logs-{timestamp}.zip``. ``None`` uses
-    :data:`DEFAULT_LOG_ZIP_DIR`, i.e. ``~/.omnigent/logs``.
+    :data:`DEFAULT_LOG_ZIP_DIR`, i.e. ``~/.agent_meow/logs``.
 
     :param output_dir: Directory where the zip should be written.
     :param session_id: Optional active session/conversation id used
@@ -127,8 +127,8 @@ def collect_log_files(log_paths: list[Path]) -> list[tuple[Path, str]]:
     files known to belong to the active REPL invocation/session (for
     example the freshly-written conversation JSON, this process' CLI
     diagnostics log, and the current ``--debug-events`` JSONL tape).
-    This helper does **not** walk ``~/.omnigent/logs`` or
-    ``~/.omnigent/debug`` wholesale; doing so would include unrelated
+    This helper does **not** walk ``~/.agent_meow/logs`` or
+    ``~/.agent_meow/debug`` wholesale; doing so would include unrelated
     sessions.
 
     Zip files are skipped so repeated ``/logs`` invocations do not nest
@@ -216,7 +216,7 @@ def default_log_path(conversation_id: str, log_dir: Path | None = None) -> Path:
     ``timestamp`` is ``YYYYMMDD-HHMMSS`` (UTC, sortable) and
     ``conv_short`` is the first 16 characters of *conversation_id*
     with any path separators stripped — matching the legacy slug
-    treatment in ``omnigent/inner/cli.py::_default_session_log_path``.
+    treatment in ``agent_meow/inner/cli.py::_default_session_log_path``.
 
     :param conversation_id: The conversation id, e.g.
         ``"conv_a1b2c3d4e5f6..."``.
@@ -251,7 +251,7 @@ async def write_session_log(
     Children are discovered by scanning the parent's items for
     ``function_call_output`` rows that decode to a
     ``sys_session_send`` handle (see :func:`_parse_sub_agent_handle`
-    in ``omnigent/repl/_repl.py`` — same parser the Ctrl+O debug
+    in ``agent_meow/repl/_repl.py`` — same parser the Ctrl+O debug
     overlay uses for sidebar tab discovery, so handles parse
     identically across the two surfaces). Walk recursively from the
     root, dumping each child's items + its own children. A
@@ -268,7 +268,7 @@ async def write_session_log(
         without separately querying the agent registry),
         e.g. ``"resume_test"``.
     :param log_dir: Override the default location. ``None`` uses
-        :data:`DEFAULT_LOG_DIR` (``~/.omnigent/logs/``).
+        :data:`DEFAULT_LOG_DIR` (``~/.agent_meow/logs/``).
     :returns: Path to the written JSON file. The parent directory
         is created if it didn't exist.
     """
@@ -421,7 +421,7 @@ def write_session_log_from_store(
     :class:`~?agent_meow.stores.conversation_store.ConversationStore`
     directly instead of the SDK.
 
-    Used by the one-shot ``omnigent run <yaml> -p "…" --log`` path
+    Used by the one-shot ``agent-meow run <yaml> -p "…" --log`` path
     where the in-process ASGI app doesn't have a connected
     :class:`OmnigentClient` — the run goes through raw httpx +
     ``httpx.ASGITransport`` and tearing all that down to construct

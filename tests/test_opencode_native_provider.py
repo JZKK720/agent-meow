@@ -27,8 +27,8 @@ from agent_meow.opencode_native_provider import (
 
 def test_build_omnigent_mcp_server_points_serve_mcp_at_bridge_dir() -> None:
     block = build_opencode_omnigent_mcp_server(Path("/tmp/bridge-xyz"))
-    assert set(block) == {"omnigent"}
-    entry = block["omnigent"]
+    assert set(block) == {"agent-meow"}
+    entry = block["agent-meow"]
     assert entry["type"] == "local"
     assert entry["enabled"] is True
     cmd = entry["command"]
@@ -40,7 +40,7 @@ def test_build_omnigent_mcp_server_points_serve_mcp_at_bridge_dir() -> None:
 
 def test_build_omnigent_mcp_server_honors_python_executable() -> None:
     block = build_opencode_omnigent_mcp_server(Path("/tmp/b"), python_executable="/custom/python")
-    assert block["omnigent"]["command"][0] == "/custom/python"
+    assert block["agent-meow"]["command"][0] == "/custom/python"
 
 
 def test_build_model_default_config_pins_model_without_provider_block() -> None:

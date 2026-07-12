@@ -466,7 +466,7 @@ async def test_emitted_elicitation_request_matches_mcp_shape(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """Emitted SSE event matches MCP's elicitation primitive
-    byte-for-byte. See ``omnigent/runtime/policies/approval.py``
+    byte-for-byte. See ``agent_meow/runtime/policies/approval.py``
     ``_elicitation_request_event`` and
     ``designs/SERVER_HARNESS_CONTRACT.md`` §"Universal API
     additions"."""

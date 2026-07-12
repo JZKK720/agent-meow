@@ -1,4 +1,4 @@
-"""Phase 5 integration-code tests -- ``omnigent run`` shim (mock LLM).
+"""Phase 5 integration-code tests -- ``agent-meow run`` shim (mock LLM).
 
 Migrated to mock LLM: uses canned responses so the tests are
 deterministic and need no real credentials.
@@ -6,10 +6,10 @@ deterministic and need no real credentials.
 **What breaks if this fails:**
 - The ``run`` dispatch site regresses.
 - The shim's YAML preparation pipeline breaks silently.
-- The in-process omnigent app fails to answer.
+- The in-process agent-meow app fails to answer.
 - The output extraction regresses.
 - ``OMNIGENT_RUNTIME=1`` stops being honored.
-- ``omnigent version`` diverges.
+- ``agent-meow version`` diverges.
 """
 
 from __future__ import annotations
@@ -39,12 +39,12 @@ def _run_omnigent_run_omnigent(
     mock_credentials_env: dict[str, str],
     extra_env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Execute ``omnigent run <hello_world.yaml> ... -p <prompt>``."""
+    """Execute ``agent-meow run <hello_world.yaml> ... -p <prompt>``."""
     yaml_path = omnigent_repo_root / "tests" / "resources" / "examples" / "hello_world.yaml"
     argv: list[str] = [
         str(omnigent_python),
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(yaml_path),
         "--model",
@@ -72,7 +72,7 @@ def _run_omnigent_run_omnigent(
 def _structural_observations(
     result: subprocess.CompletedProcess[str],
 ) -> dict[str, Any]:
-    """Distill structural properties of an ``omnigent run`` result."""
+    """Distill structural properties of an ``agent-meow run`` result."""
     text = result.stdout.strip()
     return {
         "exit_code": result.returncode,
@@ -88,7 +88,7 @@ def test_run_omnigent_smoke(
     mock_llm_server_url: str,
 ) -> None:
     """
-    ``omnigent run hello_world.yaml -p <prompt>`` exits 0,
+    ``agent-meow run hello_world.yaml -p <prompt>`` exits 0,
     prints non-trivial assistant text, and does not re-emit the
     pre-phase-5 hard-error on stderr.
     """
@@ -166,7 +166,7 @@ def test_run_omnigent_env_var_enables_integration(
 ) -> None:
     """
     ``OMNIGENT_RUNTIME=1`` (with no flag on argv) must route
-    through the omnigent shim.
+    through the agent-meow shim.
     """
     reset_mock_llm(mock_llm_server_url)
     configure_mock_llm(
@@ -201,14 +201,14 @@ def test_version_omnigent_matches_version(
     omnigent_repo_root: Path,
 ) -> None:
     """
-    ``omnigent version`` must be stable and independent of
+    ``agent-meow version`` must be stable and independent of
     OMNIGENT_RUNTIME. No LLM credentials needed.
     """
     baseline = subprocess.run(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "version",
         ],
         env={k: v for k, v in os.environ.items() if k != "OMNIGENT_RUNTIME"},
@@ -221,7 +221,7 @@ def test_version_omnigent_matches_version(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "version",
         ],
         env={**os.environ, "OMNIGENT_RUNTIME": "1"},
@@ -233,13 +233,13 @@ def test_version_omnigent_matches_version(
     assert baseline.returncode == 0
     assert with_ap.returncode == 0
     assert baseline.stdout == with_ap.stdout, (
-        "omnigent version diverged between baseline and OMNIGENT_RUNTIME=1. "
+        "agent-meow version diverged between baseline and OMNIGENT_RUNTIME=1. "
         f"baseline={baseline.stdout!r} ap={with_ap.stdout!r}"
     )
     version_text = baseline.stdout.strip()
-    assert version_text, "omnigent version printed no stdout"
-    assert version_text.startswith("omnigent "), f"unexpected version output: {baseline.stdout!r}"
-    after_prefix = version_text[len("omnigent ") :]
+    assert version_text, "agent-meow version printed no stdout"
+    assert version_text.startswith("agent-meow "), f"unexpected version output: {baseline.stdout!r}"
+    after_prefix = version_text[len("agent-meow ") :]
     assert after_prefix and after_prefix[0].isdigit(), (
         f"unexpected version output: {baseline.stdout!r}"
     )

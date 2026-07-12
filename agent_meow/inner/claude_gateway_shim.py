@@ -50,7 +50,7 @@ class _NoSignalServer(uvicorn.Server):
     handlers for its whole lifetime when run on the main thread. The
     harness subprocess already runs its own uvicorn server whose
     graceful shutdown is driven by SIGTERM (see
-    ``omnigent/runtime/harnesses/_runner.py``); a second
+    ``agent_meow/runtime/harnesses/_runner.py``); a second
     signal-capturing server would steal those handlers and break the
     harness's shutdown path. The shim is stopped explicitly via
     :meth:`ClaudeGatewayShim.aclose` (or dies with the process), so it

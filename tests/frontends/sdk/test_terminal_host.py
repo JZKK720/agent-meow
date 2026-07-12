@@ -437,7 +437,7 @@ async def test_window_title_set_on_aenter_and_cleared_on_aexit(
     Entering the host's async context with ``window_title="X"``
     sets the terminal title to ``"X"``; exiting clears it.
 
-    What this proves: a user running ``omnigent run agent.yaml``
+    What this proves: a user running ``agent-meow run agent.yaml``
     sees the agent name in their terminal tab bar instead
     of the generic shell name. If ``set_title`` isn't called on
     enter, the tab bar stays as ``"$SHELL"`` and concurrent
@@ -515,12 +515,12 @@ def test_default_history_file_matches_legacy_omnigent_path() -> None:
     """
     With no ``history_file`` override, the host's prompt session
     persists input history to ``~/.omnigent_history`` — the
-    same path the legacy ``omnigent run`` CLI uses
-    (``omnigent/inner/cli.py:_cli_history_file_path``).
+    same path the legacy ``agent-meow run`` CLI uses
+    (``agent_meow/inner/cli.py:_cli_history_file_path``).
 
     What this proves: a user who flips between
-    ``omnigent run agent.yaml`` (legacy) and
-    ``omnigent run agent.yaml`` sees the same ↑ / Ctrl+R
+    ``agent-meow run agent.yaml`` (legacy) and
+    ``agent-meow run agent.yaml`` sees the same ↑ / Ctrl+R
     recall in both, instead of two divergent histories. If the
     default drifts (e.g. back to ``~/.omnigent-history``,
     or to a fresh location), this test fails loud at the SDK
@@ -540,7 +540,7 @@ def test_default_history_file_matches_legacy_omnigent_path() -> None:
         f"{expected!r}. If the path is ``~/.omnigent-history`` "
         f"(the SDK's pre-unification default), the unification "
         f"with the legacy CLI was reverted — users flipping "
-        f"between legacy and --omnigent would lose ↑ / Ctrl+R recall "
+        f"between legacy and --agent-meow would lose ↑ / Ctrl+R recall "
         f"again."
     )
 
@@ -556,7 +556,7 @@ async def test_window_title_swallows_set_title_failure(
 
     What this proves: the documented "best-effort" contract
     holds. A future Output backend that doesn't support OSC 0
-    won't break ``omnigent run`` — the REPL still boots,
+    won't break ``agent-meow run`` — the REPL still boots,
     just without the tab-label nicety.
     """
 

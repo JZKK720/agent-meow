@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: omnigent-server-config
+  name: agent-meow-server-config
   labels:
-    app: omnigent
+    app: agent-meow
 data:
   config.yaml: |
     # Server config consumed by load_server_config() via OMNIGENT_CONFIG.
@@ -13,7 +13,7 @@ data:
       provider: openshell
       # Public URL that sandboxes dial back to (must be reachable from the
       # sandbox network namespace).
-      server_url: https://omnigent.example.com
+      server_url: https://agent_meow.example.com
       openshell:
         # SERVER env var NAMES whose values are injected into sandboxes
         # at provision time — this is how LLM keys reach the sandbox.

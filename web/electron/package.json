@@ -1,5 +1,5 @@
 {
-  "name": "omnigent-desktop-electron",
+  "name": "agent-meow-desktop-electron",
   "productName": "agent-meow",
   "version": "0.3.0",
   "description": "agent-meow desktop shell (Electron edition) — a thin native wrapper around the server-served web UI.",
@@ -46,7 +46,7 @@
       "category": "public.app-category.developer-tools",
       "icon": "icons/icon.icns",
       "identity": "智方云 (Cubecloud) (<CUBECLOUD_TEAM_ID>)",
-      "provisioningProfile": "signing/omnigent.provisionprofile",
+      "provisioningProfile": "signing/agent_meow.provisionprofile",
       "hardenedRuntime": true,
       "entitlements": "signing/entitlements.mac.plist",
       "entitlementsInherit": "signing/entitlements.mac.inherit.plist",

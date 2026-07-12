@@ -1,6 +1,6 @@
 """Per-harness live characterization test — antigravity (Gemini) SDK harness.
 
-Runs ``omnigent run <spec> --harness antigravity ...`` as a real subprocess and
+Runs ``agent-meow run <spec> --harness antigravity ...`` as a real subprocess and
 asserts structural invariants over the persisted **conversation transcript**
 (not stdout): a non-empty, non-error assistant reply; a pinned + default Gemini
 model both complete; multi-turn history is retained across a ``--continue``
@@ -34,7 +34,7 @@ when the SDK or key is absent.
 
 **Prerequisites (skipped cleanly when absent):**
 - ``google.antigravity`` importable in the agent-meow venv (the ``antigravity``
-  extra — ``pip install 'omnigent[antigravity]'``).
+  extra — ``pip install 'agent-meow[antigravity]'``).
 - A Gemini / Antigravity API key configured (a stored ``antigravity:`` config
   block resolvable via
   :func:`~?agent_meow.onboarding.antigravity_auth.antigravity_api_key_configured`,
@@ -106,14 +106,14 @@ _ERROR_MARKERS: tuple[str, ...] = (
     "traceback (most recent call last)",
 )
 
-# Subprocess timeout per ``omnigent run`` invocation. The antigravity SDK boots
+# Subprocess timeout per ``agent-meow run`` invocation. The antigravity SDK boots
 # a native subprocess and round-trips to the Gemini backend, so cold turns take
 # ~10-60s; 200s keeps headroom on a contended CI host without letting a hung run
 # pin the suite forever.
 _RUN_TIMEOUT_SEC = 200
 
 # Minimal antigravity-native agent spec. Single-file legacy form (``name`` /
-# ``prompt`` / ``executor``) — the form ``omnigent run <file>`` accepts without a
+# ``prompt`` / ``executor``) — the form ``agent-meow run <file>`` accepts without a
 # spec directory. No ``executor.auth`` block: the key resolves from the stored
 # ``antigravity:`` config / ambient ``GEMINI_API_KEY`` via
 # ``_build_antigravity_spawn_env``. The model is pinned per-test via ``--model``
@@ -142,7 +142,7 @@ def _antigravity_skip_reason(omnigent_python: Path) -> str | None:
     subprocess uses), not the current pytest interpreter, because the test shells
     out: the SDK import and the key-config resolution must hold *there*.
 
-    :param omnigent_python: Interpreter the ``omnigent`` subprocess will use.
+    :param omnigent_python: Interpreter the ``agent-meow`` subprocess will use.
     :returns: A human-readable skip reason, or ``None`` when both the
         ``google.antigravity`` SDK and a usable Gemini key are present.
     """
@@ -177,7 +177,7 @@ def _antigravity_skip_reason(omnigent_python: Path) -> str | None:
         return (
             "antigravity prerequisite missing: the 'google.antigravity' SDK is "
             "not importable in the agent-meow venv (install the 'antigravity' "
-            "extra: pip install 'omnigent[antigravity]')."
+            "extra: pip install 'agent-meow[antigravity]')."
         )
     if not have_key:
         return (
@@ -209,7 +209,7 @@ def _antigravity_env(base_env: dict[str, str], home: Path) -> dict[str, str]:
     Starts from the shared ``omnigent_credentials_env`` (so PATH, the onboarding
     suppression knobs, and the worktree ``PYTHONPATH`` propagate) but isolates
     ``$HOME`` and the agent-meow state/config roots into the test's temp dir, so
-    the persistent conversation store this test reads (``$HOME/.omnigent/chat.db``)
+    the persistent conversation store this test reads (``$HOME/.agent_meow/chat.db``)
     is private and the run never threads onto an unrelated prior conversation.
 
     The gateway-oriented ``OPENAI_BASE_URL`` / ``OPENAI_API_KEY`` keys inherited
@@ -225,8 +225,8 @@ def _antigravity_env(base_env: dict[str, str], home: Path) -> dict[str, str]:
     """
     env = dict(base_env)
     env["HOME"] = str(home)
-    env["OMNIGENT_CONFIG_HOME"] = str(home / ".omnigent")
-    env["OMNIGENT_DATA_DIR"] = str(home / ".omnigent")
+    env["OMNIGENT_CONFIG_HOME"] = str(home / ".agent-meow")
+    env["OMNIGENT_DATA_DIR"] = str(home / ".agent-meow")
     return env
 
 
@@ -241,7 +241,7 @@ def _assistant_transcript_texts(db_path: Path) -> list[str]:
     filtered to assistant-authored messages so the assertions can't be satisfied
     by the echoed user prompt.
 
-    :param db_path: Path to ``$HOME/.omnigent/chat.db``.
+    :param db_path: Path to ``$HOME/.agent_meow/chat.db``.
     :returns: Assistant message texts across every conversation in the store.
     """
     # Lazy import: the conversation store pulls in SQLAlchemy, and keeping it out
@@ -278,10 +278,10 @@ def _run_one_shot(
     prompt: str,
     model: str | None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run a one-shot ``omnigent run <spec> --harness antigravity -p <prompt>``.
+    """Run a one-shot ``agent-meow run <spec> --harness antigravity -p <prompt>``.
 
     Session-backed (no ``--no-session``) so the turn is persisted to
-    ``$HOME/.omnigent/chat.db`` for transcript inspection and so a later
+    ``$HOME/.agent_meow/chat.db`` for transcript inspection and so a later
     ``--continue`` can thread onto it.
 
     :param omnigent_python: Interpreter from the ``omnigent_python`` fixture.
@@ -296,7 +296,7 @@ def _run_one_shot(
     argv = [
         str(omnigent_python),
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(spec_path),
         "--harness",
@@ -329,7 +329,7 @@ def _assert_clean_assistant_reply(
     a ``failed`` session + an error item, never a silent empty success).
 
     :param db_path: The session store the run wrote.
-    :param result: The completed ``omnigent run`` process.
+    :param result: The completed ``agent-meow run`` process.
     :param label: Short label for failure messages, e.g. ``"smoke"``.
     :returns: The joined assistant transcript text (for callers that assert more).
     """
@@ -363,12 +363,12 @@ def test_per_harness_antigravity_smoke(
 ) -> None:
     """A real antigravity turn returns a non-empty, non-error assistant reply.
 
-    The end-to-end smoke gate: one ``omnigent run --harness antigravity -p``
+    The end-to-end smoke gate: one ``agent-meow run --harness antigravity -p``
     against the harness default model. Asserts over the persisted transcript
     (not stdout) that the assistant reply is >= ~10 chars and not an error
     string, and that the process exited 0.
 
-    :param omnigent_python: Interpreter with omnigent + the antigravity SDK.
+    :param omnigent_python: Interpreter with agent-meow + the antigravity SDK.
     :param omnigent_repo_root: Cwd for the subprocess.
     : param mock_credentials_env: Base env (PATH / onboarding-suppression /
         worktree PYTHONPATH); the Gemini key resolves independently of the
@@ -392,7 +392,7 @@ def test_per_harness_antigravity_smoke(
         prompt="Reply in one short sentence that you are ready.",
         model=None,
     )
-    _assert_clean_assistant_reply(fake_home / ".omnigent" / "chat.db", result, label="smoke")
+    _assert_clean_assistant_reply(fake_home / ".agent-meow" / "chat.db", result, label="smoke")
 
 
 @pytest.mark.parametrize(
@@ -417,7 +417,7 @@ def test_per_harness_antigravity_model_selection(
     ``gemini-3-pro`` 404s on a plain AI-Studio key.
 
     :param model: The Gemini id under test (parametrized).
-    :param omnigent_python: Interpreter with omnigent + the antigravity SDK.
+    :param omnigent_python: Interpreter with agent-meow + the antigravity SDK.
     :param omnigent_repo_root: Cwd for the subprocess.
     :param mock_credentials_env: Base subprocess env.
     :param antigravity_spec: Materialized antigravity agent YAML.
@@ -440,7 +440,7 @@ def test_per_harness_antigravity_model_selection(
         model=model,
     )
     _assert_clean_assistant_reply(
-        fake_home / ".omnigent" / "chat.db", result, label=f"model={model}"
+        fake_home / ".agent-meow" / "chat.db", result, label=f"model={model}"
     )
 
 
@@ -466,7 +466,7 @@ def test_per_harness_antigravity_multi_turn_history_retention(
     The proof reads turn 2's **assistant transcript items** for the nonce, not
     stdout, keeping it consistent with the other assertions here.
 
-    :param omnigent_python: Interpreter with omnigent + the antigravity SDK.
+    :param omnigent_python: Interpreter with agent-meow + the antigravity SDK.
     :param omnigent_repo_root: Cwd for the subprocess.
     :param mock_credentials_env: Base subprocess env.
     :param antigravity_spec: Materialized antigravity agent YAML.
@@ -479,7 +479,7 @@ def test_per_harness_antigravity_multi_turn_history_retention(
     fake_home = tmp_path / "home"
     fake_home.mkdir()
     env = _antigravity_env(mock_credentials_env, fake_home)
-    db_path = fake_home / ".omnigent" / "chat.db"
+    db_path = fake_home / ".agent-meow" / "chat.db"
     # Fresh per-run nonce so a parallel run can't leak it, and so the model can't
     # "recover" a popular fixture word from its training data instead of history.
     nonce = "nonce" + uuid.uuid4().hex[:12]
@@ -519,7 +519,7 @@ def test_per_harness_antigravity_multi_turn_history_retention(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(antigravity_spec),
             "--harness",
@@ -572,7 +572,7 @@ def test_per_harness_antigravity_graceful_completion(
     a normal assistant reply). Together with the smoke test's content check this
     pins both "a reply came back" and "the turn completed cleanly".
 
-    :param omnigent_python: Interpreter with omnigent + the antigravity SDK.
+    :param omnigent_python: Interpreter with agent-meow + the antigravity SDK.
     :param omnigent_repo_root: Cwd for the subprocess.
     :param mock_credentials_env: Base subprocess env.
     :param antigravity_spec: Materialized antigravity agent YAML.
@@ -585,7 +585,7 @@ def test_per_harness_antigravity_graceful_completion(
     fake_home = tmp_path / "home"
     fake_home.mkdir()
     env = _antigravity_env(mock_credentials_env, fake_home)
-    db_path = fake_home / ".omnigent" / "chat.db"
+    db_path = fake_home / ".agent-meow" / "chat.db"
 
     result = _run_one_shot(
         omnigent_python=omnigent_python,

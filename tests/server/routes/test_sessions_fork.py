@@ -789,7 +789,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             True,
             True,
             True,
-            {"agent_meow.ui": "terminal", "omnigent.wrapper": "claude-code-native-ui"},
+            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "claude-code-native-ui"},
         ),
         # cross-family into a native target: model id is meaningless across
         # providers → reset. History still carries — the runner rebuilds the
@@ -803,7 +803,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             True,
             False,
-            {"agent_meow.ui": "terminal", "omnigent.wrapper": "codex-native-ui"},
+            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "codex-native-ui"},
         ),
         # cursor target carries history via a text preamble (its conversation
         # is server-backed, so the runner can't seed a local store for --resume),
@@ -815,7 +815,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             True,
             False,
-            {"agent_meow.ui": "terminal", "omnigent.wrapper": "cursor-native-ui"},
+            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "cursor-native-ui"},
         ),
         # pi-native CAN carry fork history: the runner rebuilds Pi's JSONL
         # session file from the copied agent-meow items. Cross-family from a
@@ -828,7 +828,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             True,
             False,
-            {"agent_meow.ui": "terminal", "omnigent.wrapper": "pi-native-ui"},
+            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "pi-native-ui"},
         ),
         # qwen-native CAN carry fork history: the runner rebuilds qwen's on-disk
         # chat recording (+ runtime/meta sidecars) from the copied agent-meow items
@@ -842,7 +842,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             True,
             False,
-            {"agent_meow.ui": "terminal", "omnigent.wrapper": "qwen-native-ui"},
+            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "qwen-native-ui"},
         ),
         # native → SDK, same family: model carries, but an SDK target
         # replays the transcript itself so no native-rebuild marker is set.
@@ -858,7 +858,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             True,
             False,
-            {"agent_meow.ui": "terminal", "omnigent.wrapper": "claude-code-native-ui"},
+            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "claude-code-native-ui"},
         ),
     ],
 )

@@ -1,17 +1,17 @@
-"""GitHub Copilot token storage for ``omnigent setup`` and the runtime.
+"""GitHub Copilot token storage for ``agent-meow setup`` and the runtime.
 
 Copilot is deliberately outside the anthropic/openai provider-family + gateway
 machinery (see :func:`~?agent_meow.runtime.workflow._build_copilot_spawn_env`): the
 GitHub Copilot SDK (``github-copilot-sdk``) talks only to GitHub's Copilot
 backend, authenticated by a **GitHub token** — never the Databricks AI gateway.
 It therefore has no ``providers:`` family entry, but a user should still be able
-to register a Copilot token once through ``omnigent setup`` rather than
+to register a Copilot token once through ``agent-meow setup`` rather than
 exporting it in every shell.
 
 This module is that home. The token is stored exactly like the api-key
-providers' secrets — in the omnigent secret store (OS keychain, else a ``0600``
+providers' secrets — in the agent-meow secret store (OS keychain, else a ``0600``
 JSON file; see :mod:`~?agent_meow.onboarding.secrets`) — and referenced from a
-dedicated top-level ``copilot:`` block in ``~/.omnigent/config.yaml``::
+dedicated top-level ``copilot:`` block in ``~/.agent_meow/config.yaml``::
 
     copilot:
       github_token_ref: keychain:copilot   # or env:GH_TOKEN
@@ -141,7 +141,7 @@ def copilot_github_token_ref(config: dict[str, object] | None = None) -> str | N
     ``github_token_ref`` wins when both are present.
 
     :param config: A pre-loaded config mapping; ``None`` loads
-        ``~/.omnigent/config.yaml`` via :func:`load_config`.
+        ``~/.agent_meow/config.yaml`` via :func:`load_config`.
     :returns: The secret reference, e.g. ``"keychain:copilot"`` or
         ``"env:GH_TOKEN"``, or ``None`` when no Copilot token is configured.
     """

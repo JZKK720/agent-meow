@@ -515,7 +515,7 @@ def post_evaluate_with_retry(
                         headers = refreshed
                         reauthed = True
                         print(
-                            f"omnigent {hook_label}: agent-meow auth expired "
+                            f"agent-meow {hook_label}: agent-meow auth expired "
                             "(login redirect/401); re-minted token and retrying",
                             file=sys.stderr,
                         )
@@ -526,18 +526,18 @@ def post_evaluate_with_retry(
             if exc.response.status_code < 500:
                 body_preview = exc.response.text[:200] if exc.response.content else ""
                 print(
-                    f"omnigent {hook_label}: agent-meow returned {exc.response.status_code}"
+                    f"agent-meow {hook_label}: agent-meow returned {exc.response.status_code}"
                     + (f": {body_preview}" if body_preview else ""),
                     file=sys.stderr,
                 )
                 return None
             print(
-                f"omnigent {hook_label}: agent-meow returned {exc.response.status_code}; retrying",
+                f"agent-meow {hook_label}: agent-meow returned {exc.response.status_code}; retrying",
                 file=sys.stderr,
             )
         except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
             print(
-                f"omnigent {hook_label}: agent-meow request failed; retrying: {exc}",
+                f"agent-meow {hook_label}: agent-meow request failed; retrying: {exc}",
                 file=sys.stderr,
             )
         except httpx.HTTPError as exc:
@@ -545,13 +545,13 @@ def post_evaluate_with_retry(
             # etc.) are not retried — retrying a severed ASK would open a new
             # elicitation and prompt the human twice.
             print(
-                f"omnigent {hook_label}: agent-meow request failed: {exc}",
+                f"agent-meow {hook_label}: agent-meow request failed: {exc}",
                 file=sys.stderr,
             )
             return None
         if time.monotonic() + backoff_s >= deadline:
             print(
-                f"omnigent {hook_label}: retry budget exhausted",
+                f"agent-meow {hook_label}: retry budget exhausted",
                 file=sys.stderr,
             )
             return None

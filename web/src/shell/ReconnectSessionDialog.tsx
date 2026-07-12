@@ -26,7 +26,7 @@ const RUN_DESCRIPTION =
  * {@link SessionLiveness} variants that leave the session unreachable:
  *
  * - `host_offline` — the session is host-bound and the host tunnel is
- *   down. The owner reconnects the host (`omnigent host`); a
+ *   down. The owner reconnects the host (`agent-meow host`); a
  *   non-owner can't reach that machine, so cloning is their only path.
  * - `local_stranded` — not host-bound and the runner is down. Whoever
  *   started it relaunches from their machine via the wrapper's resume
@@ -38,14 +38,14 @@ export type ReconnectState = "host_offline" | "local_stranded";
  * Build the CLI command the user pastes to bring an unreachable session
  * back. Two forms, picked by `state`:
  *
- * 1. `host_offline` — `omnigent host` re-registers the host
+ * 1. `host_offline` — `agent-meow host` re-registers the host
  *    machine; the server relaunches the session's runner on demand once
  *    it's back. No `--resume` and no agent YAML (the host launches
  *    whatever the session was bound to), regardless of wrapper.
  * 2. `local_stranded` — the session isn't host-bound, so the user
  *    relaunches a runner directly. claude-native sessions
- *    (`wrapper === "claude-code-native-ui"`) use `omnigent claude
- *    --resume <id>`; everything else uses the generic `omnigent run
+ *    (`wrapper === "claude-code-native-ui"`) use `agent-meow claude
+ *    --resume <id>`; everything else uses the generic `agent-meow run
  *    path/to/agent.yaml --resume <id>`.
  *
  * The Databricks profile stays a placeholder in every form — it's
@@ -65,17 +65,17 @@ export function buildReconnectCommand({
   // Backslash-continued so the command stays readable inside a narrow
   // dialog AND remains valid when pasted into a shell.
   if (state === "host_offline") {
-    return ["omnigent host \\", `  --server ${serverUrl}`].join("\n");
+    return ["agent-meow host \\", `  --server ${serverUrl}`].join("\n");
   }
   if (wrapper === CLAUDE_NATIVE_WRAPPER) {
     return [
-      "omnigent claude \\",
+      "agent-meow claude \\",
       `  --resume ${conversationId} \\`,
       `  --server ${serverUrl}`,
     ].join("\n");
   }
   return [
-    "omnigent run path/to/agent.yaml \\",
+    "agent-meow run path/to/agent.yaml \\",
     `  --resume ${conversationId} \\`,
     `  --server ${serverUrl}`,
   ].join("\n");
@@ -100,8 +100,8 @@ export function buildReconnectCommand({
  * The default tab is Reconnect, except for the non-owner `host_offline`
  * case where reconnecting is impossible and Clone is the only action.
  *
- * @param wrapper - The conversation's `omnigent.wrapper` label
- *   (`"claude-code-native-ui"` for `omnigent claude` sessions). Picks
+ * @param wrapper - The conversation's `agent_meow.wrapper` label
+ *   (`"claude-code-native-ui"` for `agent-meow claude` sessions). Picks
  *   the `local_stranded` command form.
  * @param state - Which unreachable state we're reconnecting from.
  * @param isOwner - Whether the viewer owns the session. Gates the

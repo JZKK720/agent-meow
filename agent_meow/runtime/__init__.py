@@ -374,7 +374,7 @@ def set_harness_process_manager(manager: HarnessProcessManager | None) -> None:
     Set the AP-wide :class:`HarnessProcessManager` singleton.
 
     Called once by the FastAPI lifespan in
-    ``omnigent/server/app.py`` after ``HarnessProcessManager.start()``.
+    ``agent_meow/server/app.py`` after ``HarnessProcessManager.start()``.
     Workflows access the manager via
     :func:`get_harness_process_manager`.
 

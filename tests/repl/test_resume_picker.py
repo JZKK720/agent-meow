@@ -851,7 +851,7 @@ def test_runtime_badge_claude_native() -> None:
     """
     from agent_meow.repl._resume_picker import _runtime_badge
 
-    row = _BadgeRow(labels={"omnigent.wrapper": "claude-code-native-ui"})
+    row = _BadgeRow(labels={"agent_meow.wrapper": "claude-code-native-ui"})
     assert _runtime_badge(row) == "[claude]"
 
 
@@ -863,7 +863,7 @@ def test_runtime_badge_codex_native() -> None:
     """
     from agent_meow.repl._resume_picker import _runtime_badge
 
-    row = _BadgeRow(labels={"omnigent.wrapper": "codex-native-ui"})
+    row = _BadgeRow(labels={"agent_meow.wrapper": "codex-native-ui"})
     assert _runtime_badge(row) == "[codex]"
 
 
@@ -871,7 +871,7 @@ def test_runtime_badge_codex_native() -> None:
     "labels",
     [
         {},
-        {"omnigent.wrapper": "some-other-wrapper"},
+        {"agent_meow.wrapper": "some-other-wrapper"},
         {"unrelated": "x"},
         # Defensive: legacy fakes without a ``labels`` attribute
         # surface as ``None`` (handled via ``getattr`` in production).
@@ -949,7 +949,7 @@ async def test_cross_agent_picker_lists_without_agent_id_filter() -> None:
     SDK list endpoint with ``agent_id=None`` so all runtimes are
     visible. A regression that scoped to a single agent would
     defeat the purpose of the cross-agent picker the top-level
-    ``omnigent resume`` depends on.
+    ``agent-meow resume`` depends on.
     """
     import io
 
@@ -985,7 +985,7 @@ async def test_cross_agent_picker_selection_returns_id_with_runtime_badge_render
         _BadgeRow(
             id="conv_one",
             title="claude session",
-            labels={"omnigent.wrapper": "claude-code-native-ui"},
+            labels={"agent_meow.wrapper": "claude-code-native-ui"},
         ),
         _BadgeRow(id="conv_two", title="chat session", labels={}),
     ]
@@ -1020,13 +1020,13 @@ async def test_wrapper_label_picker_filters_and_lists_without_agent_filter(
         _BadgeRow(
             id="conv_claude_1",
             title="claude one",
-            labels={"omnigent.wrapper": "claude-code-native-ui"},
+            labels={"agent_meow.wrapper": "claude-code-native-ui"},
         ),
         _BadgeRow(id="conv_chat", title="chat one", labels={}),
         _BadgeRow(
             id="conv_claude_2",
             title="claude two",
-            labels={"omnigent.wrapper": "claude-code-native-ui"},
+            labels={"agent_meow.wrapper": "claude-code-native-ui"},
         ),
     ]
     client = _FakeAPClient(rows=rows)
@@ -1072,7 +1072,7 @@ def test_render_workspace_cell_no_state_returns_none(
     from agent_meow.repl._resume_picker import _render_workspace_cell
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
-    row = _BadgeRow(id="conv_no_state", labels={"omnigent.wrapper": "x"})
+    row = _BadgeRow(id="conv_no_state", labels={"agent_meow.wrapper": "x"})
     cell = _render_workspace_cell(row, current_cwd=tmp_path.resolve())
     assert cell is None
 
@@ -1095,7 +1095,7 @@ def test_render_workspace_cell_matching_cwd_no_flag(
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.chdir(tmp_path)
     write_launch_state("conv_match", str(tmp_path.resolve()))
-    row = _BadgeRow(id="conv_match", labels={"omnigent.wrapper": "claude-code-native-ui"})
+    row = _BadgeRow(id="conv_match", labels={"agent_meow.wrapper": "claude-code-native-ui"})
 
     cell = _render_workspace_cell(row, current_cwd=tmp_path.resolve())
     assert cell is not None
@@ -1128,7 +1128,7 @@ def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
     current = tmp_path / "current"
     current.mkdir()
     write_launch_state("conv_mismatch", str(recorded.resolve()))
-    row = _BadgeRow(id="conv_mismatch", labels={"omnigent.wrapper": "claude-code-native-ui"})
+    row = _BadgeRow(id="conv_mismatch", labels={"agent_meow.wrapper": "claude-code-native-ui"})
 
     cell = _render_workspace_cell(row, current_cwd=current.resolve())
     assert cell is not None
@@ -1168,7 +1168,7 @@ def test_workspace_metadata_appears_in_wrapper_picker_list(
     row = _BadgeRow(
         id="conv_ws",
         title="with ws",
-        labels={"omnigent.wrapper": "claude-code-native-ui"},
+        labels={"agent_meow.wrapper": "claude-code-native-ui"},
     )
 
     out = io.StringIO()
@@ -1216,7 +1216,7 @@ def test_render_workspace_cell_codex_native_uses_codex_state(
     row = _BadgeRow(
         id="conv_codex_ws",
         title="codex ws",
-        labels={"omnigent.wrapper": "codex-native-ui"},
+        labels={"agent_meow.wrapper": "codex-native-ui"},
     )
 
     cell = _render_workspace_cell(row, current_cwd=tmp_path.resolve())
@@ -1244,7 +1244,7 @@ def test_workspace_metadata_omits_unrecorded_workspace_segment(
     row = _BadgeRow(
         id="conv_without_ws",
         title="without ws",
-        labels={"omnigent.wrapper": "claude-code-native-ui"},
+        labels={"agent_meow.wrapper": "claude-code-native-ui"},
     )
 
     out = io.StringIO()

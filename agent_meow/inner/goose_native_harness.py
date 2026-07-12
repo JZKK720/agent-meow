@@ -7,7 +7,7 @@ resolves ``"goose-native"`` to this module via
 
 Wraps a :class:`~?agent_meow.inner.goose_native_executor.GooseNativeExecutor`, which
 injects web-UI messages into the running ``goose session`` TUI (launched by
-``omnigent goose`` in the session terminal) via tmux. The bridge dir is read from
+``agent-meow goose`` in the session terminal) via tmux. The bridge dir is read from
 :data:`~?agent_meow.goose_native_bridge.BRIDGE_DIR_ENV_VAR` in the spawn env.
 
 Tool policies: agent-meow's PreToolUse/PostToolUse policy gates (which claude- and

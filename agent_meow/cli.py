@@ -94,20 +94,20 @@ def _server_uvicorn_log_config() -> dict[str, Any]:  # type: ignore[explicit-any
 
 # Path to the user-level global config file, analogous to ~/.gitconfig.
 # Tests may set ``OMNIGENT_CONFIG_HOME`` to isolate subprocesses from a
-# developer's real ``~/.omnigent/config.yaml``.
+# developer's real ``~/.agent_meow/config.yaml``.
 _CONFIG_HOME_ENV_VAR = "OMNIGENT_CONFIG_HOME"
-_GLOBAL_CONFIG_PATH: Path = Path.home() / ".omnigent" / "config.yaml"
+_GLOBAL_CONFIG_PATH: Path = Path.home() / ".agent-meow" / "config.yaml"
 
-# Per-user state directories before / after the omniagents -> omnigent rename.
+# Per-user state directories before / after the omniagents -> agent-meow rename.
 # All per-user state (config, registered agents, auth tokens, the host daemon
 # pidfile, runner identity, native session state, logs) lives under
 # :data:`_STATE_DIR`; :func:`_migrate_legacy_state_dir` relocates the old
 # directory on first run. ``OMNIGENT_DATA_DIR`` is the data-isolation override
 # a worktree / test sets; when present the user manages their own state and
 # migration is skipped.
-_STATE_DIR: Path = Path.home() / ".omnigent"
+_STATE_DIR: Path = Path.home() / ".agent-meow"
 # Pre-rename state directories, newest first. The name evolved
-# ``~/.omniagents`` -> ``~/.omnigents`` -> ``~/.omnigent``; migrate from the
+# ``~/.omniagents`` -> ``~/.omnigents`` -> ``~/.agent-meow``; migrate from the
 # newest legacy directory that still exists.
 _LEGACY_STATE_DIRS: tuple[Path, ...] = (
     Path.home() / ".omnigents",
@@ -118,14 +118,14 @@ _DATA_DIR_ENV_VAR = "OMNIGENT_DATA_DIR"
 
 def _migrate_legacy_state_dir() -> None:
     """
-    One-time relocation of a pre-rename state directory to ``~/.omnigent``.
+    One-time relocation of a pre-rename state directory to ``~/.agent-meow``.
 
     Earlier releases stored all per-user state under ``~/.omniagents`` and then
     ``~/.omnigents`` as the name evolved. To avoid silently losing that state,
-    move the newest surviving legacy directory to ``~/.omnigent`` on first run,
+    move the newest surviving legacy directory to ``~/.agent-meow`` on first run,
     but only when **all** of the following hold:
 
-    - the new ``~/.omnigent`` does not yet exist (never clobber new state),
+    - the new ``~/.agent-meow`` does not yet exist (never clobber new state),
     - at least one directory in :data:`_LEGACY_STATE_DIRS` exists,
     - neither :data:`_CONFIG_HOME_ENV_VAR` nor :data:`_DATA_DIR_ENV_VAR` is set
       (an operator who redirects state elsewhere manages it themselves), and
@@ -133,9 +133,9 @@ def _migrate_legacy_state_dir() -> None:
       pidfile / socket dir out from under a running daemon would wedge it.
 
     On failure the migration is skipped with a warning rather than crashing the
-    CLI; a fresh ``~/.omnigent`` is then created normally and the legacy
+    CLI; a fresh ``~/.agent-meow`` is then created normally and the legacy
     directory is left untouched for the user to migrate by hand. Idempotent:
-    once ``~/.omnigent`` exists this is a no-op.
+    once ``~/.agent-meow`` exists this is a no-op.
 
     :returns: ``None``.
     """
@@ -160,7 +160,7 @@ def _migrate_legacy_state_dir() -> None:
         if legacy_pid is not None and _pid_alive(legacy_pid):
             click.echo(
                 f"Note: found pre-rename state at {legacy_src} but a host daemon "
-                "is still running from it; skipping migration. Run `omnigent stop` "
+                "is still running from it; skipping migration. Run `agent-meow stop` "
                 "and re-run to migrate, or move it manually to ~/.agent_meow.",
                 err=True,
             )
@@ -170,7 +170,7 @@ def _migrate_legacy_state_dir() -> None:
         shutil.move(str(legacy_src), str(_STATE_DIR))
     except OSError as exc:
         click.echo(
-            f"Note: could not migrate {legacy_src} to ~/.omnigent ({exc}); "
+            f"Note: could not migrate {legacy_src} to ~/.agent-meow ({exc}); "
             f"starting with fresh state. Your old data is untouched at {legacy_src}.",
             err=True,
         )
@@ -180,9 +180,9 @@ def _migrate_legacy_state_dir() -> None:
 
 # Project-level config relative to cwd, analogous to .git/config.
 # Resolved at call time so tests can control cwd.
-_LOCAL_CONFIG_RELPATH: Path = Path(".omnigent") / "config.yaml"
+_LOCAL_CONFIG_RELPATH: Path = Path(".agent-meow") / "config.yaml"
 
-# Keys that ``omnigent config`` accepts.  Mirrors the option names in
+# Keys that ``agent-meow config`` accepts.  Mirrors the option names in
 # the ``run`` command so the mapping is explicit and auditable.
 _AUTO_OPEN_CONVERSATION_CONFIG_KEY = "auto_open_conversation"
 _GLOBAL_CONFIG_KEYS: frozenset[str] = frozenset(
@@ -204,7 +204,7 @@ _ConfigValue: TypeAlias = (
     str | int | float | bool | None | list["_ConfigValue"] | dict[str, "_ConfigValue"]
 )
 
-_GLOBAL_AGENTS_DIR: Path = Path.home() / ".omnigent" / "agents"
+_GLOBAL_AGENTS_DIR: Path = Path.home() / ".agent-meow" / "agents"
 _INTERNAL_BETA_DEFAULT_AGENT_NAME: str = "databricks_coding_agent.yaml"
 _INTERNAL_BETA_BUNDLED_AGENTS: tuple[str, ...] = (
     "databricks_coding_agent.yaml",
@@ -307,14 +307,14 @@ def _display_path(path: Path) -> str:
 
     A path under the user's home directory is shown as ``~/...`` for
     readability; anything else is shown as its plain string. Unlike a
-    hardcoded ``~/.omnigent/...`` literal, this reflects the *actual*
+    hardcoded ``~/.agent_meow/...`` literal, this reflects the *actual*
     effective path — so a state dir outside ``$HOME`` (an
     ``OMNIGENT_CONFIG_HOME`` / ``OMNIGENT_DATA_DIR`` override) renders as
     its real location rather than a misleading ``~``.
 
     :param path: The path to display, e.g.
-        ``Path("/Users/alice/.omnigent/logs/server/local-server-ab12.log")``.
-    :returns: ``"~/.omnigent/..."`` when *path* is under ``$HOME``,
+        ``Path("/Users/alice/.agent_meow/logs/server/local-server-ab12.log")``.
+    :returns: ``"~/.agent_meow/..."`` when *path* is under ``$HOME``,
         otherwise ``str(path)``.
     """
     try:
@@ -332,8 +332,8 @@ def _display_config_path(path: Path) -> str:
     where the path is specifically the effective config file.
 
     :param path: The config path to display, e.g.
-        ``Path("/Users/alice/.omnigent/config.yaml")``.
-    :returns: ``"~/.omnigent/config.yaml"`` when *path* is under
+        ``Path("/Users/alice/.agent_meow/config.yaml")``.
+    :returns: ``"~/.agent_meow/config.yaml"`` when *path* is under
         ``$HOME``, otherwise ``str(path)``.
     """
     return _display_path(path)
@@ -341,7 +341,7 @@ def _display_config_path(path: Path) -> str:
 
 def _load_global_config() -> dict[str, Any]:  # type: ignore[explicit-any]
     """
-    Load the global omnigent config from ``~/.omnigent/config.yaml``.
+    Load the global agent-meow config from ``~/.agent_meow/config.yaml``.
 
     Returns an empty dict when the file does not exist or is empty.
     Top-level default keys (``default_agent``, ``server``,
@@ -350,7 +350,7 @@ def _load_global_config() -> dict[str, Any]:  # type: ignore[explicit-any]
     ``auth:`` key holds a nested mapping —
     ``{"type": "databricks", "profile": "oss"}`` or
     ``{"type": "api_key", "api_key": "…"}`` — written by
-    ``omnigent setup`` and used by the runtime to supply executor
+    ``agent-meow setup`` and used by the runtime to supply executor
     credentials when an agent spec does not declare ``executor.auth``.
 
     :returns: Parsed YAML as a dict, e.g.
@@ -367,7 +367,7 @@ def _load_global_config() -> dict[str, Any]:  # type: ignore[explicit-any]
 
 def _load_local_config() -> dict[str, Any]:  # type: ignore[explicit-any]
     """
-    Load the project-level config from ``.omnigent/config.yaml`` in cwd.
+    Load the project-level config from ``.agent_meow/config.yaml`` in cwd.
 
     Returns an empty dict when the file does not exist or is empty.
 
@@ -385,8 +385,8 @@ def _load_effective_config() -> dict[str, Any]:  # type: ignore[explicit-any]
     """
     Merge global and project-level config.
 
-    Precedence (highest last): global (``~/.omnigent/config.yaml``)
-    → local (``.omnigent/config.yaml`` in cwd).  Project config
+    Precedence (highest last): global (``~/.agent_meow/config.yaml``)
+    → local (``.agent_meow/config.yaml`` in cwd).  Project config
     always wins so per-repo settings override user defaults.
 
     :returns: Merged config dict.
@@ -405,7 +405,7 @@ def _peek_default_agent_harness(target: str) -> str | None:
     confirm a match".
 
     :param target: The configured ``default_agent`` value, e.g.
-        ``"/Users/me/.omnigent/agents/databricks_coding_agent.yaml"``.
+        ``"/Users/me/.agent_meow/agents/databricks_coding_agent.yaml"``.
     :returns: The canonical harness, e.g. ``"openai-agents-sdk"``, or ``None``.
     """
     if "://" in target:
@@ -501,7 +501,7 @@ def _pick_first_run_harness() -> _FirstRunPlan | None:
 
 
 def _resolve_first_run_plan() -> _FirstRunPlan | None:
-    """Resolve the harness + default agent for a bare ``omnigent run``.
+    """Resolve the harness + default agent for a bare ``agent-meow run``.
 
     Adopts ambient-detected credentials, then picks a harness from what's
     configured (Claude→polly / Codex / Pi). When nothing is configured,
@@ -572,7 +572,7 @@ def _resolve_default_agent_target(
         return default_agent
     if default_harness is not None:
         click.echo(
-            f"omnigent: default agent '{default_agent}' uses harness "
+            f"agent-meow: default agent '{default_agent}' uses harness "
             f"{default_harness!r}, but you specified --harness {requested!r}; "
             f"launching a minimal built-in {requested!r} agent instead.",
             err=True,
@@ -582,7 +582,7 @@ def _resolve_default_agent_target(
 
 def _parse_config_bool(key: str, value: _ConfigValue) -> bool:
     """
-    Parse a boolean value from YAML or ``omnigent config KEY=VALUE``.
+    Parse a boolean value from YAML or ``agent-meow config KEY=VALUE``.
 
     :param key: Config key being parsed, e.g.
         ``"auto_open_conversation"``.
@@ -609,7 +609,7 @@ def _resolve_auto_open_conversation_setting(cfg: dict[str, Any]) -> bool | None:
 
     Tri-state on purpose so callers can distinguish "the user has not
     expressed a preference" (``None``) from an explicit opt-in/opt-out.
-    ``omnigent run`` uses this to default the browser-open ON for
+    ``agent-meow run`` uses this to default the browser-open ON for
     interactive launches while still honoring an explicit
     ``auto_open_conversation: false``; see :func:`run`.
 
@@ -631,7 +631,7 @@ def _resolve_auto_open_conversation_from_config(cfg: dict[str, Any]) -> bool:  #
     Resolve whether CLI launches should open conversation URLs.
 
     Defaults to ``False`` when the user has not configured the key.
-    ``omnigent run`` does not use this resolver — it defaults the
+    ``agent-meow run`` does not use this resolver — it defaults the
     browser-open ON for interactive launches via
     :func:`_resolve_auto_open_conversation_setting`.
 
@@ -658,13 +658,13 @@ def _save_global_config(  # type: ignore[explicit-any]
     deep_merge_keys: tuple[str, ...] = (),
 ) -> None:
     """
-    Merge *settings* into ``~/.omnigent/config.yaml`` and remove any
+    Merge *settings* into ``~/.agent_meow/config.yaml`` and remove any
     keys listed in *unset_keys*.
 
-    Creates the ``~/.omnigent/`` directory if it does not exist.
+    Creates the ``~/.agent_meow/`` directory if it does not exist.
     Values may be plain strings, booleans, or nested mappings (the
-    ``auth:`` block written by ``omnigent setup``, or a ``providers:``
-    block written by ``omnigent setup --no-internal-beta``).
+    ``auth:`` block written by ``agent-meow setup``, or a ``providers:``
+    block written by ``agent-meow setup --no-internal-beta``).
 
     By default every key in *settings* **replaces** the existing value
     wholesale (a shallow ``dict.update``). For keys listed in
@@ -710,7 +710,7 @@ def _materialize_bundled_example(name: str) -> Path:
 
     ``uv tool install`` installs package files, not the repository checkout, so the
     top-level ``examples/<name>`` paths are not available to users. Materialize a
-    user-editable copy under ``~/.omnigent/agents`` and never overwrite an
+    user-editable copy under ``~/.agent_meow/agents`` and never overwrite an
     existing file so local edits survive reinstalls and reruns.
 
     :param name: Filename of the bundled example (e.g.
@@ -756,10 +756,10 @@ def _save_local_config(
     unset_keys: tuple[str, ...] = (),
 ) -> None:
     """
-    Merge *settings* into ``.omnigent/config.yaml`` in cwd and remove
+    Merge *settings* into ``.agent_meow/config.yaml`` in cwd and remove
     any keys listed in *unset_keys*.
 
-    Creates the ``.omnigent/`` directory if it does not exist.
+    Creates the ``.agent_meow/`` directory if it does not exist.
 
     :param settings: Key/value pairs to set, e.g.
         ``{"default_agent": "examples/agent.yaml",
@@ -778,18 +778,18 @@ def _save_local_config(
 
 
 def _default_db_uri() -> str:
-    """Default DB URI for ``omnigent server`` — the machine-global
+    """Default DB URI for ``agent-meow server`` — the machine-global
     ``<data_dir>/chat.db``.
 
-    Resolves to the same path the ``omnigent run`` daemon spawns its
+    Resolves to the same path the ``agent-meow run`` daemon spawns its
     local server against (``_local_data_dir()``, honoring
-    ``OMNIGENT_DATA_DIR`` → else ``~/.omnigent``). Pinning ``server``
+    ``OMNIGENT_DATA_DIR`` → else ``~/.agent-meow``). Pinning ``server``
     to the same DB as ``run`` means there is **one local DB — and so one
     accounts admin — per machine**, instead of a fresh CWD-relative
-    ``omnigent.db`` (and a fresh admin) for every directory you launch
+    ``agent_meow.db`` (and a fresh admin) for every directory you launch
     from. ``--database-uri`` / the config file still override.
 
-    :returns: e.g. ``"sqlite:////home/alice/.omnigent/chat.db"``.
+    :returns: e.g. ``"sqlite:////home/alice/.agent_meow/chat.db"``.
     """
     from agent_meow.host.local_server import _local_data_dir
 
@@ -797,15 +797,15 @@ def _default_db_uri() -> str:
 
 
 def _default_artifact_location() -> str:
-    """Default artifact dir for ``omnigent server`` — ``<data_dir>/artifacts``.
+    """Default artifact dir for ``agent-meow server`` — ``<data_dir>/artifacts``.
 
     Kept in lock-step with :func:`_default_db_uri` so a default-config
-    ``omnigent server`` and ``omnigent run`` share one coherent
+    ``agent-meow server`` and ``agent-meow run`` share one coherent
     machine-global instance (same DB *and* same artifacts) — otherwise a
     conversation created by one would reference files the other can't
     resolve. ``--artifact-location`` / the config file still override.
 
-    :returns: e.g. ``"/home/alice/.omnigent/artifacts"``.
+    :returns: e.g. ``"/home/alice/.agent_meow/artifacts"``.
     """
     from agent_meow.host.local_server import _local_data_dir
 
@@ -822,12 +822,12 @@ def _ensure_sqlite_parent_dir(db_uri: str) -> None:
     so a first-ever run — or any run after the data dir was cleared — must
     create that dir before the stores connect. The daemon-spawned server
     handles this in ``ensure_local_omnigent_server``; this is the equivalent for
-    the foreground ``omnigent server`` command.
+    the foreground ``agent-meow server`` command.
 
     No-op for non-SQLite URIs (Postgres etc.) and for in-memory SQLite.
 
     :param db_uri: The resolved store DB URI, e.g.
-        ``"sqlite:////home/alice/.omnigent/chat.db"`` or
+        ``"sqlite:////home/alice/.agent_meow/chat.db"`` or
         ``"postgresql://host/db"``.
     :returns: None.
     """
@@ -867,7 +867,7 @@ def _maybe_prompt_first_admin(account_store: Any, auth_provider: Any, *, auto_op
       available).
 
     On success, creates the admin and mints the loopback CLI token so a
-    subsequent ``omnigent run`` against this server is signed in.
+    subsequent ``agent-meow run`` against this server is signed in.
 
     :param account_store: The accounts store, or ``None`` in
         header/OIDC mode (then this is a no-op).
@@ -921,7 +921,7 @@ def _maybe_prompt_first_admin(account_store: Any, auth_provider: Any, *, auto_op
         click.echo("  An admin was just created elsewhere — skipping.", err=True)
         return
 
-    # Mint the loopback CLI token so `omnigent run` is signed in.
+    # Mint the loopback CLI token so `agent-meow run` is signed in.
     # (Reuses cfg/base_url resolved above.)
     if (
         cfg is not None
@@ -979,8 +979,8 @@ def _preregister_agent(  # type: ignore[explicit-any]  # agent_store / artifact_
     runs at server startup for each ``--agent`` flag.
 
     :param agent_source: Either an agent-image directory containing
-        ``config.yaml`` (standard omnigent shape) or a standalone
-        omnigent YAML file (e.g.
+        ``config.yaml`` (standard agent-meow shape) or a standalone
+        agent-meow YAML file (e.g.
         ``examples/coding_supervisor.yaml``). The file-vs-directory
         branch lives inside ``materialize_bundle``; this function
         operates uniformly on a directory downstream of it.
@@ -1053,7 +1053,7 @@ def _preregister_agent(  # type: ignore[explicit-any]  # agent_store / artifact_
             # return the OLD spec, even though the artifact store
             # and the DB row both point at the new bundle.
             # Mirrors what the HTTP PUT /agents/{id} route does at
-            # ``omnigent/server/routes/agents.py:248``.
+            # ``agent_meow/server/routes/agents.py:248``.
             # ``--agent`` registers operator-authored template agents,
             # so ${VAR} may expand against the server env here.
             agent_cache.replace(existing.id, new_loc, bundle_bytes, expand_env=True)
@@ -1077,14 +1077,14 @@ def _format_version() -> str:
     """Render the version line shown by ``--version`` and ``version``.
 
     Always includes the package version. When the build hook in
-    ``setup.py`` wrote ``omnigent/_build_info.py``, the line is
+    ``setup.py`` wrote ``agent_meow/_build_info.py``, the line is
     additionally annotated with the short commit SHA and the build
     time in ISO-8601 UTC. For source checkouts that have never
     been built, only the bare version prints — matching the
     behavior before this feature shipped.
 
-    :returns: Either ``"omnigent 0.1.0"`` (no build info), or
-        ``"omnigent 0.1.0 (010cf77c, built 2026-05-21T14:34:45Z)"``.
+    :returns: Either ``"agent-meow 0.1.0"`` (no build info), or
+        ``"agent-meow 0.1.0 (010cf77c, built 2026-05-21T14:34:45Z)"``.
     """
     import datetime
 
@@ -1094,7 +1094,7 @@ def _format_version() -> str:
     version_str = VERSION
     info = _read_build_info()
     if info is None:
-        return f"omnigent {version_str}"
+        return f"agent-meow {version_str}"
     epoch, sha = info
     when = datetime.datetime.fromtimestamp(epoch, tz=datetime.timezone.utc).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
@@ -1102,9 +1102,9 @@ def _format_version() -> str:
     if sha:
         # Short SHA (first 8 chars) — enough to disambiguate in bug
         # reports without making the line unwieldy.
-        return f"omnigent {version_str} ({sha[:8]}, built {when})"
+        return f"agent-meow {version_str} ({sha[:8]}, built {when})"
     # _build_info exists but has no SHA (built without git available).
-    return f"omnigent {version_str} (built {when})"
+    return f"agent-meow {version_str} (built {when})"
 
 
 def _print_version_callback(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
@@ -1115,7 +1115,7 @@ def _print_version_callback(ctx: click.Context, _param: click.Parameter, value: 
     import time, which would call ``_format_version()`` — and through
     it ``_read_build_info()`` — during ``agent_meow.cli`` import. The
     successful sub-import would then set ``agent_meow._build_info`` as
-    an attribute on the ``omnigent`` package object. Once that
+    an attribute on the ``agent-meow`` package object. Once that
     attribute exists, ``from agent_meow import _build_info`` short-
     circuits *before* consulting ``sys.modules``, defeating the
     test-suite's ``sys.modules[...] = None`` blocker and making most
@@ -1135,10 +1135,10 @@ class _OmnigentCLI(click.Group):
     """Top-level group that prints the brand lockup above its help.
 
     The Otto + wordmark lockup is drawn on stderr (decoration) and is
-    TTY-gated by :func:`~?agent_meow.inner.ui.show_banner`, so ``omnigent
+    TTY-gated by :func:`~?agent_meow.inner.ui.show_banner`, so ``agent-meow
     --help`` shows the banner interactively while piped/CI help stays
     clean. Only the top-level group overrides help; subcommand help
-    (``omnigent run --help``) is untouched.
+    (``agent-meow run --help``) is untouched.
     """
 
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
@@ -1147,7 +1147,7 @@ class _OmnigentCLI(click.Group):
         if ui.show_banner():
             from agent_meow.version import VERSION
 
-            epilogue = [("Get started", "omnigent setup")]
+            epilogue = [("Get started", "agent-meow setup")]
             if VERSION:
                 epilogue.insert(0, ("Version", VERSION))
             ui.print_landing(tagline="all your agents, one cli", epilogue=epilogue)
@@ -1236,11 +1236,11 @@ def _should_skip_update_check(argv: list[str]) -> bool:
 
 def main() -> None:
     """
-    Console-script entry point for ``omnigent``.
+    Console-script entry point for ``agent-meow``.
 
     Dispatches to the click CLI for subcommands like ``run``,
     ``attach``, and ``server``. The removed top-level ad-hoc chat
-    shape (``omnigent [--flags] [prompt]``) is rejected here so it
+    shape (``agent-meow [--flags] [prompt]``) is rejected here so it
     cannot fall back to the legacy in-process runner path.
 
     Also inserts the current working directory at ``sys.path[0]``
@@ -1259,13 +1259,13 @@ def main() -> None:
     if cwd not in sys.path:
         sys.path.insert(0, cwd)
 
-    # Relocate pre-rename ~/.omniagents state before anything reads ~/.omnigent
+    # Relocate pre-rename ~/.omniagents state before anything reads ~/.agent-meow
     # (update-check cache, diagnostics logs, config). No-op once migrated.
     _migrate_legacy_state_dir()
 
     argv = sys.argv[1:]
 
-    # Bare ``omnigent`` with no args behaves like ``omnigent run`` on an
+    # Bare ``agent-meow`` with no args behaves like ``agent-meow run`` on an
     # interactive terminal: ``run`` resolves the configured default agent /
     # first-run plan and drops into ``setup`` when nothing is configured. In
     # a non-interactive context (pipe, CI, no TTY) fall back to ``--help`` so
@@ -1273,7 +1273,7 @@ def main() -> None:
     if not argv:
         argv = ["run"] if sys.stdin.isatty() else ["--help"]
 
-    # Shorthand: ``omnigent --harness claude [opts]`` →
+    # Shorthand: ``agent-meow --harness claude [opts]`` →
     # ``run --harness claude [opts]``. Click group-level options are
     # intentionally tiny (currently only help/version); runner flags live on
     # ``run``. Treat a leading non-top-level flag as bare-run shorthand so
@@ -1281,8 +1281,8 @@ def main() -> None:
     if argv and argv[0].startswith("-") and argv[0] not in {"--help", "-h", "--version"}:
         argv = ["run", *argv]
 
-    # Shorthand: ``omnigent myagent.yaml [opts]`` → ``run myagent.yaml [opts]``.
-    # Allows ``omnigent`` to act as a transparent alias for ``omnigent run``
+    # Shorthand: ``agent-meow myagent.yaml [opts]`` → ``run myagent.yaml [opts]``.
+    # Allows ``agent-meow`` to act as a transparent alias for ``agent-meow run``
     # when the first positional argument is an agent path.
     if _is_run_shorthand(argv):
         argv = ["run", *argv]
@@ -1290,7 +1290,7 @@ def main() -> None:
     if argv and _is_server_url(argv[0]):
         click.echo(
             "Error: server URLs must be passed with --server. "
-            f"Use `omnigent run --server {argv[0]}`.",
+            f"Use `agent-meow run --server {argv[0]}`.",
             err=True,
         )
         raise SystemExit(2)
@@ -1298,14 +1298,14 @@ def main() -> None:
     if _is_removed_ad_hoc_invocation(argv):
         click.echo(
             "Error: top-level ad-hoc chat was removed. Use "
-            "`omnigent run <agent.yaml>` or "
-            "`omnigent run --harness <harness>`.",
+            "`agent-meow run <agent.yaml>` or "
+            "`agent-meow run --harness <harness>`.",
             err=True,
         )
         raise SystemExit(2)
 
     # Always-on diagnostics — captures exceptions, lifecycle events,
-    # and warnings to ~/.omnigent/logs/cli-*.log even when --log
+    # and warnings to ~/.agent_meow/logs/cli-*.log even when --log
     # (conversation JSON) and --debug-events (SSE tape) are off.
     # Skip for pure help/version so quick invocations don't create
     # log litter.
@@ -1322,8 +1322,8 @@ def main() -> None:
 
     setup_cli_logging(argv)
 
-    # ``omnigent setup`` IS the setup wizard — if it fails, telling the
-    # user to "run omnigent setup" would be circular. ``upgrade`` (and its
+    # ``agent-meow setup`` IS the setup wizard — if it fails, telling the
+    # user to "run agent-meow setup" would be circular. ``upgrade`` (and its
     # ``update`` alias) is excluded too: its failures (unreachable index,
     # dev checkout, install error) are never about a missing model
     # credential, so the setup hint would only mislead.
@@ -1359,12 +1359,12 @@ def main() -> None:
 
 
 def _is_run_shorthand(argv: list[str]) -> bool:
-    """Return True when *argv* looks like ``omnigent <target> [opts]``
+    """Return True when *argv* looks like ``agent-meow <target> [opts]``
     where *target* is an agent YAML/directory rather than a subcommand.
 
     Used by :func:`main` to transparently redirect
-    ``omnigent myagent.yaml --model m`` to
-    ``omnigent run myagent.yaml --model m``.
+    ``agent-meow myagent.yaml --model m`` to
+    ``agent-meow run myagent.yaml --model m``.
 
     :param argv: CLI arguments without the program name, e.g.
         ``["myagent.yaml", "--model", "m"]``.
@@ -1403,14 +1403,14 @@ def _is_removed_ad_hoc_invocation(argv: list[str]) -> bool:
     True when:
     - The first non-flag token isn't a known click subcommand and is
       a quoted multi-word prompt (e.g.
-      ``omnigent "what does this repo do?"``) — the free-text shape
+      ``agent-meow "what does this repo do?"``) — the free-text shape
       the removed top-level ad-hoc chat accepted.
 
     False when the first non-flag token matches a known
-    subcommand (``omnigent run ...``, ``omnigent attach ...``),
+    subcommand (``agent-meow run ...``, ``agent-meow attach ...``),
     when the user asks for top-level help/version
-    (``omnigent --help``, ``omnigent --version``), or when the
-    token is a single command-shaped word (e.g. ``omnigent blah``)
+    (``agent-meow --help``, ``agent-meow --version``), or when the
+    token is a single command-shaped word (e.g. ``agent-meow blah``)
     — those stay on the click path so an unknown command produces
     click's standard "No such command" error rather than the ad-hoc
     removal notice.
@@ -1427,7 +1427,7 @@ def _is_removed_ad_hoc_invocation(argv: list[str]) -> bool:
     if argv[0] in {"--help", "-h", "--version"}:
         return False
     # Skip leading flags to find the first positional. If all
-    # tokens are flags (e.g. ``omnigent --system-prompt "..."``),
+    # tokens are flags (e.g. ``agent-meow --system-prompt "..."``),
     # treat it as removed ad-hoc chat rather than handing it to click
     # as a top-level option.
     for token in argv:
@@ -1453,7 +1453,7 @@ def _runner_loopback_host(host: str) -> str:
     return "127.0.0.1" if host in {"0.0.0.0", "::", ""} else host
 
 
-_HOST_PID_PATH = Path.home() / ".omnigent" / "host.pid"
+_HOST_PID_PATH = Path.home() / ".agent-meow" / "host.pid"
 
 
 # host.pid records the daemon PID + the "target" it serves: a normalized
@@ -1476,7 +1476,7 @@ class _HostDaemonRecord:
         mode, e.g. ``"https://example.databricksapps.com"``. ``None``
         for local mode.
     :param log_path: Daemon log file path, e.g.
-        ``"/Users/me/.omnigent/logs/host-daemon/daemon-abc.log"``.
+        ``"/Users/me/.agent_meow/logs/host-daemon/daemon-abc.log"``.
     :param started_at: Unix epoch seconds when the daemon was spawned,
         e.g. ``1710000000``.
     :param host_id: Local host id advertised to agent-meow servers, e.g.
@@ -1590,7 +1590,7 @@ class _SpawnedDaemonProcess:
 
     :param pid: Spawned process id, e.g. ``4242``.
     :param log_path: Daemon log path, e.g.
-        ``"/Users/me/.omnigent/logs/host-daemon/daemon-abc.log"``.
+        ``"/Users/me/.agent_meow/logs/host-daemon/daemon-abc.log"``.
     """
 
     pid: int
@@ -1655,7 +1655,7 @@ def _daemon_registry_dir() -> Path:
     the pidfile's parent instead of capturing ``Path.home()`` separately.
 
     :returns: Registry directory path, e.g.
-        ``Path("~/.omnigent/daemons")``.
+        ``Path("~/.agent_meow/daemons")``.
     """
     return _HOST_PID_PATH.parent / "daemons"
 
@@ -1723,7 +1723,7 @@ def _read_daemon_record(path: Path) -> _HostDaemonRecord | None:
     Read a daemon registry record from disk.
 
     :param path: JSON file path to read, e.g.
-        ``Path("~/.omnigent/daemons/abc.json")``.
+        ``Path("~/.agent_meow/daemons/abc.json")``.
     :returns: Parsed daemon record, or ``None`` if unreadable or malformed.
     """
     try:
@@ -1901,7 +1901,7 @@ def _daemon_host_identity_changed(record: _HostDaemonRecord) -> bool:
     """
     Return whether a daemon record belongs to a different current host id.
 
-    A live daemon can outlast edits to ``~/.omnigent/config.yaml``. Reusing
+    A live daemon can outlast edits to ``~/.agent_meow/config.yaml``. Reusing
     that process leaves commands polling for the new host id while the daemon
     is still connected as the old host id, which can never succeed.
 
@@ -2171,8 +2171,8 @@ def _claim_foreground_daemon_record(
         raise click.ClickException(
             "A host daemon is already running for this server "
             f"(pid={conflict.pid}, target={conflict.target}). "
-            "Run `omnigent host status` to inspect it or "
-            "`omnigent host stop --server ...` to stop it first."
+            "Run `agent-meow host status` to inspect it or "
+            "`agent-meow host stop --server ...` to stop it first."
         )
     previous = _find_daemon_record(record.target)
     if previous is not None and not _pid_alive(previous.pid):
@@ -2353,7 +2353,7 @@ def _ensure_databricks_server_auth(server: str, *, non_interactive: bool = False
     (302 to the workspace OAuth page, or a DatabricksRealm 401) means
     the run would otherwise die much later with an opaque "non-JSON
     response (status=302)" traceback from the session-create call. On a
-    TTY we run the same flow ``omnigent login`` would and continue;
+    TTY we run the same flow ``agent-meow login`` would and continue;
     headless invocations get the exact command to run instead.
 
     Non-Databricks postures are deliberately left alone: local accounts
@@ -2364,7 +2364,7 @@ def _ensure_databricks_server_auth(server: str, *, non_interactive: bool = False
         e.g. ``"https://myapp-123.aws.databricksapps.com"``.
     :param non_interactive: When ``True``, never run the browser login —
         emit the same fail-loud hint a headless invocation gets, even on a
-        TTY. Lets callers (e.g. ``omnigent host --non-interactive``) keep
+        TTY. Lets callers (e.g. ``agent-meow host --non-interactive``) keep
         their scripted, no-prompt behavior.
     :raises click.ClickException: When the server is Databricks-fronted,
         no credentials resolve, and the login flow is suppressed (stdin is
@@ -2390,7 +2390,7 @@ def _ensure_databricks_server_auth(server: str, *, non_interactive: bool = False
     workspace_host = _databricks_workspace_login_target(server, probe)
     if workspace_host is None:
         return
-    login_cmd = f"omnigent login {server}"
+    login_cmd = f"agent-meow login {server}"
     if non_interactive or not sys.stdin.isatty():
         raise click.ClickException(
             f"Not signed in to {server} (Databricks-fronted; /v1/me answered "
@@ -2432,7 +2432,7 @@ def _ensure_backend(server: str | None) -> str:
         # Remote / explicit-server mode: the server isn't ours to restart, so
         # there's no auth-mode-flip "re-run" to surface (config_changed is
         # always False for a non-local target). Expand a bare workspace URL
-        # to its /api/2.0/omnigent mount, then sign in first when the
+        # to its /api/2.0/agent-meow mount, then sign in first when the
         # server is Databricks-fronted and we hold no usable credentials —
         # otherwise the session-create call deep in the REPL bring-up
         # surfaces the edge redirect as an opaque non-JSON-response
@@ -2466,7 +2466,7 @@ def _exit_for_auth_mode_change(base_url: str) -> None:
     via :func:`_ensure_host_daemon`. Continuing the *same* command across
     that restart is brittle — the in-flight session/credential/terminal
     bring-up straddles two server identities. Instead we stop here with a
-    clear, actionable message and exit 0, so the next ``omnigent run`` is
+    clear, actionable message and exit 0, so the next ``agent-meow run`` is
     a clean single-mode start. When the new mode is accounts and no admin
     exists yet, point the user at the one-time setup URL.
 
@@ -2490,9 +2490,9 @@ def _exit_for_auth_mode_change(base_url: str) -> None:
             "(it may have opened automatically),",
             err=True,
         )
-        click.echo("  then re-run `omnigent run` to start.", err=True)
+        click.echo("  then re-run `agent-meow run` to start.", err=True)
     else:
-        click.echo("  Re-run `omnigent run` to start.", err=True)
+        click.echo("  Re-run `agent-meow run` to start.", err=True)
     click.echo("", err=True)
     raise SystemExit(0)
 
@@ -2521,19 +2521,19 @@ def _discover_local_server_url(
         if not _host_daemon_alive():
             raise click.ClickException(
                 "The local daemon exited before its agent-meow server became ready. "
-                "See logs under ~/.omnigent/logs/host-daemon/ and "
-                "~/.omnigent/logs/server/."
+                "See logs under ~/.agent_meow/logs/host-daemon/ and "
+                "~/.agent_meow/logs/server/."
             )
         time.sleep(0.2)
     raise click.ClickException(
         f"Timed out after {timeout:.0f}s waiting for the local agent-meow server to "
-        "start. See ~/.omnigent/logs/server/ for details."
+        "start. See ~/.agent_meow/logs/server/ for details."
     )
 
 
 @dataclass
 class _CliRunnerProcess:
-    """Runner subprocess metadata for the ``omnigent server`` command.
+    """Runner subprocess metadata for the ``agent-meow server`` command.
 
     :param proc: Runner subprocess handle.
     :param runner_id: Runner id used for the WS tunnel, e.g.
@@ -2563,11 +2563,11 @@ def _start_cli_runner_process(
     """Start the out-of-process runner used by CLI server flows.
 
     The runner always connects back over the WebSocket tunnel. Local
-    ``omnigent server`` passes its loopback URL; ``run --server``
+    ``agent-meow server`` passes its loopback URL; ``run --server``
     passes the remote agent-meow server URL.
 
     For remote Databricks-fronted servers, the runner subprocess
-    authenticates via the stored ``omnigent login`` record (or
+    authenticates via the stored ``agent-meow login`` record (or
     ambient Databricks SDK credentials). Tokens are refreshed
     transparently on each WebSocket reconnect and HTTP callback —
     no static token is passed via environment variable.
@@ -2594,7 +2594,7 @@ def _start_cli_runner_process(
         don't paint onto the REPL terminal.
     :param log_dir: Optional base log directory to use when
         ``capture_logs`` is true. Defaults to the shared
-        ``~/.omnigent/logs`` location; tests should pass a
+        ``~/.agent_meow/logs`` location; tests should pass a
         temporary directory to avoid writing to the developer's
         real home.
     :param prewarm_spec_path: Optional YAML path; the runner spawns
@@ -2654,7 +2654,7 @@ def _start_cli_runner_process(
         base_log_dir = (
             Path(log_dir).expanduser()
             if log_dir is not None
-            else Path.home() / ".omnigent" / "logs"
+            else Path.home() / ".agent-meow" / "logs"
         )
         runner_log_dir = base_log_dir / "runner"
         runner_log_dir.mkdir(parents=True, exist_ok=True)
@@ -2844,7 +2844,7 @@ def server(
 ) -> None:
     """Start the agent-meow server in the foreground, or manage the background server.
 
-    Bare ``omnigent server`` runs the server in the FOREGROUND (Ctrl-C to
+    Bare ``agent-meow server`` runs the server in the FOREGROUND (Ctrl-C to
     stop) — for deploys / Docker. Subcommands manage the detached background
     server that ``run`` / ``claude`` / ``codex`` use: ``start`` (ensure it's
     up), ``stop`` (stop it and the local host daemon), ``status`` (is it up?).
@@ -2854,7 +2854,7 @@ def server(
         ``--port`` came from the command line or from the default.
     :param port: TCP port to listen on, e.g. ``6767``.
     :param database_uri: Optional database URI, e.g.
-        ``"sqlite:///omnigent.db"``.
+        ``"sqlite:///agent_meow.db"``.
     :param artifact_location: Optional artifact location, e.g.
         ``"./artifacts"``.
     :param config_path: Optional YAML config file path.
@@ -2894,14 +2894,14 @@ def server(
     # Translate --no-open into the env var the lifespan hook reads.
     # We use an env var rather than threading the flag through
     # create_app so the same toggle works for callers (Docker
-    # entrypoint, future `omnigent run`) that build the app
+    # entrypoint, future `agent-meow run`) that build the app
     # outside this CLI command.
     os.environ["OMNIGENT_ACCOUNTS_AUTO_OPEN"] = "1" if auto_open else "0"
 
     # Unified local-server lifecycle — applies ONLY to a *bare* loopback
-    # `omnigent server` (default port + default DB + artifacts), i.e.
+    # `agent-meow server` (default port + default DB + artifacts), i.e.
     # THE canonical machine-global local server recorded in
-    # ~/.omnigent/local_server.pid:
+    # ~/.agent_meow/local_server.pid:
     #   - If a healthy one is already running (started here OR spawned by
     #     the `run`/`host` daemon), reuse it — print its URL and exit
     #     instead of starting a competing second server on the shared DB.
@@ -2923,13 +2923,13 @@ def server(
         and not port_was_explicit
     )
 
-    # Single-user marker: ANY loopback-bound `omnigent server` running
+    # Single-user marker: ANY loopback-bound `agent-meow server` running
     # the env-unset header default IS a local single-user runtime — the
     # user's own machine, no proxy to inject identity — so it keeps the
     # no-login header-mode "local" fallback (same posture as the daemon
-    # / `omnigent run` spawn paths, which set this var themselves). The
+    # / `agent-meow run` spawn paths, which set this var themselves). The
     # bind address is the discriminator, NOT the port/db-uri: a
-    # dedicated `omnigent server --port 9001 --database-uri …` on
+    # dedicated `agent-meow server --port 9001 --database-uri …` on
     # loopback (manual local runs, the e2e harness) is still single
     # user, so it must not 401 its own headerless traffic. What stays
     # fail-closed: a non-loopback bind (`--host 0.0.0.0`,
@@ -3182,7 +3182,7 @@ def server(
         image_store=image_store,
     )
 
-    click.echo(f"Starting omnigent server on {host}:{port}")
+    click.echo(f"Starting agent-meow server on {host}:{port}")
     click.echo(f"  database:  {db_uri}")
     click.echo(f"  artifacts: {art_loc}")
     # A foreground server streams uvicorn logs to this terminal, but the
@@ -3200,7 +3200,7 @@ def server(
     # First-run terminal setup: the FALLBACK entry point. Fires only on
     # an interactive TTY when no admin exists AND the browser isn't about
     # to open the web Create-admin form (i.e. --no-open, or a non-loopback
-    # base URL). The default `omnigent server` on loopback opens the
+    # base URL). The default `agent-meow server` on loopback opens the
     # browser to the form instead, so this no-ops there. (The other entry
     # points are --admin-password and the web form.)
     _maybe_prompt_first_admin(account_store, auth_provider, auto_open=auto_open)
@@ -3272,7 +3272,7 @@ def _stop_local_server_and_daemon(*, force: bool) -> bool:
     Stops the local-mode host daemon first (the daemon spawns its server
     once and never respawns it, so leaving it alive would only have it
     reconnect-flap against a dead server), then the detached agent-meow server
-    recorded in ``~/.omnigent/local_server.pid``. Best-effort and
+    recorded in ``~/.agent_meow/local_server.pid``. Best-effort and
     idempotent — a missing daemon or server is a no-op.
 
     :param force: SIGKILL the daemon after the grace period if it does not
@@ -3301,7 +3301,7 @@ def server_start() -> None:
     Reuses a healthy background server if one is already up (started here or
     by a prior ``run`` / ``host``); otherwise spawns a detached one on a
     free loopback port and prints its URL. The background counterpart to the
-    foreground bare ``omnigent server``.
+    foreground bare ``agent-meow server``.
 
     :returns: None.
     """
@@ -3315,7 +3315,7 @@ def server_start() -> None:
     # Surface the exact log file so a detached server isn't a black box —
     # `server start` is otherwise the only signal it ever emits. Known for a
     # spawned server and (via the log-path sidecar) for a reused one too;
-    # absent only for a foreground `omnigent server` whose logs stream to
+    # absent only for a foreground `agent-meow server` whose logs stream to
     # its own terminal.
     if startup.log_path is not None:
         click.echo(f"  log: {_display_path(startup.log_path)}")
@@ -3331,9 +3331,9 @@ def server_stop(force: bool) -> None:
     """Stop the background agent-meow server and the local host daemon.
 
     Stops the local host daemon first, then the detached server recorded
-    in ``~/.omnigent/local_server.pid`` — its web UI and sessions become
+    in ``~/.agent_meow/local_server.pid`` — its web UI and sessions become
     unreachable. To stop hosting but KEEP the server up, use
-    ``omnigent host stop``; to stop everything, use ``omnigent stop``.
+    ``agent-meow host stop``; to stop everything, use ``agent-meow stop``.
 
     :param force: SIGKILL the local host daemon after the grace period if it
         does not exit on SIGTERM.
@@ -3351,7 +3351,7 @@ def server_status(json_output: bool) -> None:
     """Show whether the background agent-meow server is running.
 
     Reports the recorded pid/port, URL, live-session count, and whether a
-    local host daemon is attached. Reads ``~/.omnigent/local_server.pid``
+    local host daemon is attached. Reads ``~/.agent_meow/local_server.pid``
     and probes ``/health``.
 
     :param json_output: Emit machine-readable JSON instead of text.
@@ -3405,7 +3405,7 @@ def stop(force: bool) -> None:
     The off switch: stops every host daemon (local and remote-targeted)
     and the detached background server. Runners are reaped when their daemon
     exits. To stop only hosting while keeping the local server (web UI /
-    history) up, use ``omnigent host stop`` instead.
+    history) up, use ``agent-meow host stop`` instead.
 
     :param force: Continue past individual failures and SIGKILL daemons that
         do not exit on SIGTERM.
@@ -3554,7 +3554,7 @@ def _upgrade_vcs_install(
     known_behind = bool(remote_sha and current_sha and remote_sha != current_sha)
 
     if remote_sha and current_sha and remote_sha == current_sha:
-        click.echo(f"omnigent is up to date (git {cur_short}, tracking {info.vcs_url}).")
+        click.echo(f"agent-meow is up to date (git {cur_short}, tracking {info.vcs_url}).")
         return
     if known_behind:
         click.echo(
@@ -3649,9 +3649,9 @@ def _upgrade_vcs_install(
     "installer's allow-pre-releases flag. Useful for validating a TestPyPI rc.",
 )
 def upgrade(check_only: bool, force: bool, pre: bool) -> None:
-    """Upgrade the omnigent CLI to the latest release on PyPI.
+    """Upgrade the agent-meow CLI to the latest release on PyPI.
 
-    Detects how omnigent was installed (uv / pip / pipx / poetry), checks
+    Detects how agent-meow was installed (uv / pip / pipx / poetry), checks
     the configured index for a newer release and — unless ``--check`` —
     drains and stops the local background server and host daemon, then runs
     the matching upgrade command. The next ``omni`` invocation starts a
@@ -3693,7 +3693,7 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
     info = _read_installed_wheel_info()
     if info is None:
         raise click.ClickException(
-            "Couldn't determine how omnigent is installed; upgrade it manually."
+            "Couldn't determine how agent-meow is installed; upgrade it manually."
         )
     if info.is_editable:
         raise click.ClickException(
@@ -3711,7 +3711,7 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
         _upgrade_vcs_install(info, check_only=check_only, force=force, pre=pre)
         return
 
-    current = importlib.metadata.version("omnigent")
+    current = importlib.metadata.version("agent-meow")
     # User-initiated: a more forgiving timeout + one retry so a momentarily slow
     # mirror doesn't spuriously report the index as unreachable.
     latest = fetch_latest_version(
@@ -3723,7 +3723,7 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
             "connection (or OMNIGENT_INDEX_URL / your configured index) and try again."
         )
     if not _is_newer(latest, current):
-        click.echo(f"omnigent is up to date (v{current}).")
+        click.echo(f"agent-meow is up to date (v{current}).")
         return
 
     click.echo(f"A new release is available: v{current} → v{latest}.")
@@ -3769,11 +3769,11 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
         )
         return
     raise click.ClickException(
-        f"The upgrade command ran but omnigent is still v{new_version} (expected "
+        f"The upgrade command ran but agent-meow is still v{new_version} (expected "
         f"v{latest}). The install is likely version-pinned, a cooldown / "
         "exclude-newer is excluding the new release, or the index cache is stale. "
-        "Reinstall it explicitly — e.g. `uv tool upgrade --reinstall omnigent` or "
-        f"`pip install --force-reinstall 'omnigent=={latest}'`."
+        "Reinstall it explicitly — e.g. `uv tool upgrade --reinstall agent-meow` or "
+        f"`pip install --force-reinstall 'agent-meow=={latest}'`."
     )
 
 
@@ -3960,7 +3960,7 @@ class _ExecutorDeploy(BaseModel):  # type: ignore[explicit-any]  # auth is a fre
     env var expansion.
 
     Mirrors the secret-bearing fields the server-side parser
-    expands (``omnigent/spec/parser.py`` — ``_parse_executor`` /
+    expands (``agent_meow/spec/parser.py`` — ``_parse_executor`` /
     ``_parse_executor_auth``): the ``connection`` dict and, for
     ``auth.type == "api_key"``, the ``api_key`` / ``base_url``
     values. Resolving these client-side keeps ``${VAR}`` working
@@ -4111,7 +4111,7 @@ _RESUME_PICKER_SENTINEL = "__resume_picker__"
 def _reject_native_on_windows(harness: str) -> None:
     """Fail a native (tmux/PTY) harness command with an actionable message.
 
-    The ``omnigent claude`` / ``codex`` / ``cursor`` native wrappers drive a
+    The ``agent-meow claude`` / ``codex`` / ``cursor`` native wrappers drive a
     private tmux server and PTY, which don't exist on Windows. Point users at
     the SDK harnesses / web UI instead of letting them hit a tmux crash.
 
@@ -4120,8 +4120,8 @@ def _reject_native_on_windows(harness: str) -> None:
     """
     if IS_WINDOWS:
         raise click.ClickException(
-            f"`omnigent {harness}` (native tmux/PTY terminal) is not supported on "
-            "Windows. Use an SDK-based harness via `omnigent run <agent.yaml>` "
+            f"`agent-meow {harness}` (native tmux/PTY terminal) is not supported on "
+            "Windows. Use an SDK-based harness via `agent-meow run <agent.yaml>` "
             "or the web UI."
         )
 
@@ -4136,7 +4136,7 @@ def _reject_native_on_windows(harness: str) -> None:
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Starts a local runner, binds the session, "
+        "Remote agent-meow URL. Starts a local runner, binds the session, "
         "launches Claude in a terminal resource, and attaches this TTY. "
         'Pass --server "" to auto-spawn a persistent local server in the '
         "background and use that instead of a remote one."
@@ -4169,7 +4169,7 @@ def _reject_native_on_windows(harness: str) -> None:
     is_flag=True,
     default=False,
     help=(
-        "Register this machine as a host (inline equivalent of `omnigent host`). "
+        "Register this machine as a host (inline equivalent of `agent-meow host`). "
         "Requires --server."
     ),
 )
@@ -4229,14 +4229,14 @@ def claude(
 
     \b
     Examples:
-      omnigent claude
-      omnigent claude --resume conv_abc123
-      omnigent claude --resume                  # interactive picker
-      omnigent claude --server https://<app>.databricksapps.com
+      agent-meow claude
+      agent-meow claude --resume conv_abc123
+      agent-meow claude --resume                  # interactive picker
+      agent-meow claude --server https://<app>.databricksapps.com
     """
     _reject_native_on_windows("claude")
     startup_profiler = StartupProfiler.from_env(
-        name="omnigent claude",
+        name="agent-meow claude",
         env_var=_CLAUDE_STARTUP_PROFILE_ENV_VAR,
         explicit=profile_startup,
     )
@@ -4302,7 +4302,7 @@ def claude(
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Ensures the host daemon, asks the "
+        "Remote agent-meow URL. Ensures the host daemon, asks the "
         "daemon-spawned runner to launch Codex, and attaches this TTY. "
         'Pass --server "" to auto-spawn a persistent local server in the '
         "background and use that instead of a remote one."
@@ -4356,10 +4356,10 @@ def codex(
 
     \b
     Examples:
-      omnigent codex
-      omnigent codex --resume conv_abc123
-      omnigent codex --resume                  # interactive picker
-      omnigent codex --server https://<app>.databricksapps.com
+      agent-meow codex
+      agent-meow codex --resume conv_abc123
+      agent-meow codex --resume                  # interactive picker
+      agent-meow codex --server https://<app>.databricksapps.com
     """
     _reject_native_on_windows("codex")
     choice = _split_resume_value(resume)
@@ -4421,7 +4421,7 @@ def codex(
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Ensures the host daemon, asks the "
+        "Remote agent-meow URL. Ensures the host daemon, asks the "
         "daemon-spawned runner to launch OpenCode, and attaches this TTY. "
         'Pass --server "" to auto-spawn a persistent local server in the '
         "background and use that instead of a remote one."
@@ -4466,10 +4466,10 @@ def opencode(
 
     \b
     Examples:
-      omnigent opencode
-      omnigent opencode --resume conv_abc123
-      omnigent opencode --resume                  # interactive picker
-      omnigent opencode --server https://<app>.databricksapps.com
+      agent-meow opencode
+      agent-meow opencode --resume conv_abc123
+      agent-meow opencode --resume                  # interactive picker
+      agent-meow opencode --server https://<app>.databricksapps.com
     """
     from agent_meow.opencode_native import run_opencode_native
 
@@ -4520,7 +4520,7 @@ def opencode(
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Ensures the host daemon, asks the "
+        "Remote agent-meow URL. Ensures the host daemon, asks the "
         "daemon-spawned runner to launch Pi, and attaches this TTY. "
         'Pass --server "" to auto-spawn a persistent local server in the '
         "background and use that instead of a remote one."
@@ -4558,10 +4558,10 @@ def pi(
 
     \b
     Examples:
-      omnigent pi
-      omnigent pi --resume conv_abc123
-      omnigent pi --resume                    # interactive picker
-      omnigent pi --model local-deepseek/deepseek-v4-flash
+      agent-meow pi
+      agent-meow pi --resume conv_abc123
+      agent-meow pi --resume                    # interactive picker
+      agent-meow pi --model local-deepseek/deepseek-v4-flash
     """
     choice = _split_resume_value(resume)
     if session_id is not None and (choice.picker or choice.conversation_id is not None):
@@ -4690,7 +4690,7 @@ def _ensure_bundled_agent_brain_credential(name: str) -> None:
             click.echo(
                 f"No default {family_label(family)} credential set — "
                 f"using {_credential_label(entry_name, entry)} and saving it as "
-                f"the default (change anytime with: omnigent /model).",
+                f"the default (change anytime with: agent-meow /model).",
                 err=True,
             )
             return
@@ -4708,7 +4708,7 @@ def _ensure_bundled_agent_brain_credential(name: str) -> None:
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Ensures the host daemon, asks the "
+        "Remote agent-meow URL. Ensures the host daemon, asks the "
         "daemon-spawned runner to launch the Cursor TUI, and attaches this TTY. "
         'Pass --server "" to auto-spawn a persistent local server in the '
         "background and use that instead of a remote one."
@@ -4766,12 +4766,12 @@ def cursor(
 
     \b
     Examples:
-      omnigent cursor
-      omnigent cursor --model gpt-5.2
-      omnigent cursor --resume conv_abc123
-      omnigent cursor --resume                 # interactive picker
-      omnigent cursor --mode plan              # start in plan (read-only) mode
-      omnigent cursor --mode ask               # start in ask (Q&A) mode
+      agent-meow cursor
+      agent-meow cursor --model gpt-5.2
+      agent-meow cursor --resume conv_abc123
+      agent-meow cursor --resume                 # interactive picker
+      agent-meow cursor --mode plan              # start in plan (read-only) mode
+      agent-meow cursor --mode ask               # start in ask (Q&A) mode
     """
     _reject_native_on_windows("cursor")
     choice = _split_resume_value(resume)
@@ -4818,7 +4818,7 @@ def cursor(
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Ensures the host daemon, asks the "
+        "Remote agent-meow URL. Ensures the host daemon, asks the "
         "daemon-spawned runner to launch the Kiro TUI, and attaches this TTY. "
         'Pass --server "" to auto-spawn a persistent local server in the '
         "background and use that instead of a remote one."
@@ -4884,10 +4884,10 @@ def kiro(
 
     \b
     Examples:
-      omnigent kiro
-      omnigent kiro --resume conv_abc123
-      omnigent kiro --resume                  # interactive picker
-      omnigent kiro --model auto -p "review this repo"
+      agent-meow kiro
+      agent-meow kiro --resume conv_abc123
+      agent-meow kiro --resume                  # interactive picker
+      agent-meow kiro --model auto -p "review this repo"
     """
     choice = _split_resume_value(resume)
     if session_id is not None and (choice.picker or choice.conversation_id is not None):
@@ -4935,7 +4935,7 @@ def _reject_reserved_kiro_resume_args(kiro_args: tuple[str, ...]) -> None:
     if any(arg == flag or arg.startswith(f"{flag}=") for arg in kiro_args for flag in reserved):
         raise click.UsageError(
             "Kiro resume flags are reserved for agent-meow resume handling; use "
-            "`omnigent kiro --resume [CONVERSATION]` instead."
+            "`agent-meow kiro --resume [CONVERSATION]` instead."
         )
 
 
@@ -4971,7 +4971,7 @@ def _build_kiro_launch_args(
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Ensures the host daemon, asks the "
+        "Remote agent-meow URL. Ensures the host daemon, asks the "
         "daemon-spawned runner to launch the Goose TUI, and attaches this TTY. "
         'Pass --server "" to auto-spawn a persistent local server in the '
         "background and use that instead of a remote one."
@@ -5009,9 +5009,9 @@ def goose(
 
     \b
     Examples:
-      omnigent goose
-      omnigent goose --resume conv_abc123
-      omnigent goose --resume                 # interactive picker
+      agent-meow goose
+      agent-meow goose --resume conv_abc123
+      agent-meow goose --resume                 # interactive picker
     """
     choice = _split_resume_value(resume)
     if session_id is not None and (choice.picker or choice.conversation_id is not None):
@@ -5051,7 +5051,7 @@ def goose(
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Ensures the host daemon, asks the "
+        "Remote agent-meow URL. Ensures the host daemon, asks the "
         "daemon-spawned runner to launch the Hermes TUI, and attaches this TTY. "
         'Pass --server "" to auto-spawn a persistent local server in the '
         "background and use that instead of a remote one."
@@ -5089,9 +5089,9 @@ def hermes(
 
     \b
     Examples:
-      omnigent hermes
-      omnigent hermes --resume conv_abc123
-      omnigent hermes --resume                 # interactive picker
+      agent-meow hermes
+      agent-meow hermes --resume conv_abc123
+      agent-meow hermes --resume                 # interactive picker
     """
     choice = _split_resume_value(resume)
     if session_id is not None and (choice.picker or choice.conversation_id is not None):
@@ -5131,7 +5131,7 @@ def hermes(
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Ensures the host daemon, binds a runner, "
+        "Remote agent-meow URL. Ensures the host daemon, binds a runner, "
         "launches Antigravity (agy) in a terminal resource, and attaches "
         'this TTY. Pass --server "" to auto-spawn a persistent local '
         "server in the background and use that instead of a remote one."
@@ -5171,10 +5171,10 @@ def antigravity(
 
     \b
     Examples:
-      omnigent antigravity
-      omnigent antigravity --resume conv_abc123
-      omnigent antigravity --resume                  # interactive picker
-      omnigent antigravity --server https://<app>.databricksapps.com
+      agent-meow antigravity
+      agent-meow antigravity --resume conv_abc123
+      agent-meow antigravity --resume                  # interactive picker
+      agent-meow antigravity --server https://<app>.databricksapps.com
     """
     # Validate option combinations BEFORE any side effects (daemon spawn,
     # server discovery) -- see the same comment in the claude command.
@@ -5225,7 +5225,7 @@ def antigravity(
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Ensures the host daemon, asks the "
+        "Remote agent-meow URL. Ensures the host daemon, asks the "
         "daemon-spawned runner to launch the qwen TUI, and attaches this TTY. "
         'Pass --server "" to auto-spawn a persistent local server in the '
         "background and use that instead of a remote one."
@@ -5263,9 +5263,9 @@ def qwen(
 
     \b
     Examples:
-      omnigent qwen
-      omnigent qwen --resume conv_abc123
-      omnigent qwen --resume                  # interactive picker
+      agent-meow qwen
+      agent-meow qwen --resume conv_abc123
+      agent-meow qwen --resume                  # interactive picker
     """
     choice = _split_resume_value(resume)
     if session_id is not None and (choice.picker or choice.conversation_id is not None):
@@ -5298,15 +5298,15 @@ def qwen(
 def _run_bundled_agent(name: str, run_args: tuple[str, ...]) -> None:
     """Forward a bundled-agent subcommand to ``run`` on its packaged path.
 
-    Implements ``omnigent polly`` / ``omnigent debby``: resolves the bundled
+    Implements ``agent-meow polly`` / ``agent-meow debby``: resolves the bundled
     example directory and re-dispatches through the ``run`` command's own
     parser, so every ``run`` flag (``--server``, ``-p``, ``--resume``, ...)
     works unchanged on the agent shorthands without duplicating ``run``'s
     option declarations.
 
-    ``prog_name`` is pinned to ``"omnigent run"`` so context-derived output —
+    ``prog_name`` is pinned to ``"agent-meow run"`` so context-derived output —
     usage errors and the :func:`_build_resume_parts` replay prefix — renders
-    as the canonical ``omnigent run <path>`` form, which stays valid when
+    as the canonical ``agent-meow run <path>`` form, which stays valid when
     replayed.
 
     :param name: Bundled example directory name, e.g. ``"polly"``.
@@ -5321,7 +5321,7 @@ def _run_bundled_agent(name: str, run_args: tuple[str, ...]) -> None:
     # matching the outer `cli(args=argv, standalone_mode=False)` dispatch.
     run.main(
         args=[_bundled_example_path(name), *run_args],
-        prog_name="omnigent run",
+        prog_name="agent-meow run",
         standalone_mode=False,
     )
 
@@ -5338,15 +5338,15 @@ def polly(run_args: tuple[str, ...]) -> None:
     # :param run_args: Pass-through args for ``run``.
     """Launch polly, the bundled multi-agent coding orchestrator.
 
-    Shorthand for ``omnigent run`` on the packaged polly agent — the same
-    agent a bare ``omnigent`` launches when a Claude credential is
+    Shorthand for ``agent-meow run`` on the packaged polly agent — the same
+    agent a bare ``agent-meow`` launches when a Claude credential is
     configured. All ``run`` options are accepted and forwarded.
 
     \b
     Examples:
-      omnigent polly
-      omnigent polly -p "review the last commit"
-      omnigent polly --server https://<app>.databricksapps.com
+      agent-meow polly
+      agent-meow polly -p "review the last commit"
+      agent-meow polly --server https://<app>.databricksapps.com
     """
     _run_bundled_agent("polly", run_args)
 
@@ -5363,15 +5363,15 @@ def debby(run_args: tuple[str, ...]) -> None:
     # :param run_args: Pass-through args for ``run``.
     """Launch debby, the bundled two-headed brainstorming agent.
 
-    Shorthand for ``omnigent run`` on the packaged debby agent. Debby fans
+    Shorthand for ``agent-meow run`` on the packaged debby agent. Debby fans
     every question out to both a Claude and a GPT sub-agent, so a Claude
     and an OpenAI provider must both be configured. All ``run`` options are
     accepted and forwarded.
 
     \b
     Examples:
-      omnigent debby
-      omnigent debby -p "name ideas for a CLI that runs agents"
+      agent-meow debby
+      agent-meow debby -p "name ideas for a CLI that runs agents"
     """
     _run_bundled_agent("debby", run_args)
 
@@ -5386,7 +5386,7 @@ def debby(run_args: tuple[str, ...]) -> None:
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Ensures the host daemon, asks the "
+        "Remote agent-meow URL. Ensures the host daemon, asks the "
         "daemon-spawned runner to launch the Kimi TUI, and attaches this TTY. "
         'Pass --server "" to auto-spawn a persistent local server in the '
         "background and use that instead of a remote one."
@@ -5429,13 +5429,13 @@ def kimi(
     own backend (``kimi login`` for OAuth, or a Moonshot API key).
 
     For the headless SDK harness (per-turn ``kimi -p`` behind the agent-meow
-    REPL) use ``omnigent run --harness kimi`` instead.
+    REPL) use ``agent-meow run --harness kimi`` instead.
 
     \b
     Examples:
-      omnigent kimi
-      omnigent kimi --resume conv_abc123
-      omnigent kimi --resume                   # interactive picker
+      agent-meow kimi
+      agent-meow kimi --resume conv_abc123
+      agent-meow kimi --resume                   # interactive picker
     """
     choice = _split_resume_value(resume)
     if session_id is not None and (choice.picker or choice.conversation_id is not None):
@@ -5471,9 +5471,9 @@ def kimi(
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. When set, the picker / lookup queries "
+        "Remote agent-meow URL. When set, the picker / lookup queries "
         "this server instead of starting a local one. Required when "
-        "running ``omnigent resume`` without a conversation id."
+        "running ``agent-meow resume`` without a conversation id."
     ),
 )
 def resume(
@@ -5492,8 +5492,8 @@ def resume(
     \b
     With CONV_ID: looks up the conversation and dispatches to the
     matching wrapper. claude-native sessions land in
-    ``omnigent claude``; everything else surfaces a clear hint to
-    use ``omnigent run --resume <id> <agent.yaml>``.
+    ``agent-meow claude``; everything else surfaces a clear hint to
+    use ``agent-meow run --resume <id> <agent.yaml>``.
 
     \b
     Without CONV_ID: opens a cross-agent picker over your prior
@@ -5502,9 +5502,9 @@ def resume(
 
     \b
     Examples:
-      omnigent resume conv_abc123
-      omnigent resume conv_abc123 --server https://<app>.databricksapps.com
-      omnigent resume --server https://<app>.databricksapps.com
+      agent-meow resume conv_abc123
+      agent-meow resume conv_abc123 --server https://<app>.databricksapps.com
+      agent-meow resume --server https://<app>.databricksapps.com
     """
     from agent_meow.resume_dispatch import run_resume
 
@@ -5542,7 +5542,7 @@ _CONTINUE_HELP = "Continue the most recent conversation for this agent."
 _NO_SESSION_HELP = "Use a fresh temporary local session store for this run."
 
 _FORK_HELP = "Fork an existing session by id and open the REPL on the fork."
-_LOG_HELP = "Write a JSON dump of the conversation to ~/.omnigent/logs/ on exit."
+_LOG_HELP = "Write a JSON dump of the conversation to ~/.agent_meow/logs/ on exit."
 
 
 _DEFAULT_HARNESS_PROMPTS = {
@@ -5619,7 +5619,7 @@ def _materialize_harness_launcher_file(
     The generated file uses the single-file agent-meow YAML shape
     (``name`` / ``prompt`` / ``executor``), not native AP
     ``config.yaml``. Passing this file to ``run_chat`` exercises the
-    same compat adapter as ``omnigent run examples/foo.yaml``.
+    same compat adapter as ``agent-meow run examples/foo.yaml``.
 
     Harnesses listed in :data:`_OS_ENV_HARNESSES` get an ``os_env``
     block so the workflow injects ``sys_os_*`` tools into the
@@ -5662,10 +5662,10 @@ def _missing_run_agent_message() -> str:
         "Provide an AGENT path, pass --server to connect to a server, "
         "or pass --harness to launch a built-in "
         "harness directly:\n"
-        "  omnigent run examples/hello_world.yaml\n"
-        "  omnigent run --server http://localhost:6767\n"
-        "  omnigent run --harness claude-sdk\n"
-        "  omnigent run --harness codex"
+        "  agent-meow run examples/hello_world.yaml\n"
+        "  agent-meow run --server http://localhost:6767\n"
+        "  agent-meow run --harness claude-sdk\n"
+        "  agent-meow run --harness codex"
     )
 
 
@@ -5740,7 +5740,7 @@ def _build_resume_parts() -> list[str]:
     Click command handler or a function it calls synchronously).
 
     :returns: Argument list prefix, e.g.
-        ``["omnigent", "run", "agent.yaml", "--server",
+        ``["agent-meow", "run", "agent.yaml", "--server",
         "https://example.com"]``.
     """
     ctx = click.get_current_context()
@@ -5793,8 +5793,8 @@ def _dispatch_native_terminal_harness(
     the harness forwarder mirrors the same message back from the TUI's
     transcript, recording every user message twice. These harnesses are
     terminal-mirror sessions whose turns originate in the TUI, so dispatch
-    straight to the native wrapper (the same code ``omnigent cursor`` /
-    ``omnigent claude`` / etc. run), keeping the TUI the single source of
+    straight to the native wrapper (the same code ``agent-meow cursor`` /
+    ``agent-meow claude`` / etc. run), keeping the TUI the single source of
     turns. A top-level ``--model`` is forwarded as a passthrough CLI flag.
 
     ``--continue`` is honored (not rejected): it resolves to this harness's
@@ -5922,7 +5922,7 @@ def _reject_agent_with_native_terminal_harness(harness: str) -> None:
     raise click.ClickException(
         f"`--harness {harness}` launches the {native_agent.display_name} TUI and "
         f"ignores an AGENT spec; drop the AGENT path and run "
-        f"`omnigent {native_agent.terminal_name}` (or `run --harness {harness}`)."
+        f"`agent-meow {native_agent.terminal_name}` (or `run --harness {harness}`)."
     )
 
 
@@ -5947,11 +5947,11 @@ def _dispatch_run(
     server_from_cli: bool = False,
 ) -> None:
     """
-    Route ``omnigent run`` to the right impl.
+    Route ``agent-meow run`` to the right impl.
 
     The click path always drives the agent-meow server-backed REPL. With
     ``--server <url>``, use that server URL instead of starting a
-    local server. (``omnigent attach`` is a separate attach-only
+    local server. (``agent-meow attach`` is a separate attach-only
     client and does NOT route through here.)
 
     :param target: Agent YAML/directory path, or ``None`` for
@@ -5980,7 +5980,7 @@ def _dispatch_run(
         and pipeline counters in the toolbar.
     :param resume_parts: Pre-built argument list prefix for the
         resume command shown on exit, e.g.
-        ``["omnigent", "run", "agent.yaml", "--harness", "codex"]``.
+        ``["agent-meow", "run", "agent.yaml", "--harness", "codex"]``.
         ``None`` when called outside the Click command path.
     :param auto_open_conversation: When ``True``, open the
         browser conversation URL when the session id becomes known.
@@ -5991,13 +5991,13 @@ def _dispatch_run(
     if target is not None and _is_server_url(target):
         raise click.ClickException(
             "Server URLs are no longer accepted as the AGENT argument. "
-            f"Use `omnigent run --server {target}` instead."
+            f"Use `agent-meow run --server {target}` instead."
         )
 
     if target is None:
         if server_from_cli and server is not None and harness is None:
             # Normalize like every other entry point: expand a bare workspace
-            # URL to its /api/2.0/omnigent mount and strip any ?o= query. Else
+            # URL to its /api/2.0/agent-meow mount and strip any ?o= query. Else
             # a direct ``--server`` request hits the root and bounces to /login.
             base_url = _resolve_server_url(server)
             # Direct ``--server`` (no AGENT) has no local runner to bind, so an
@@ -6270,13 +6270,13 @@ def _require_live_conversation(
         raise click.ClickException(
             f"Couldn't reach a server at {base_url}: {_host_error_text(result.body)}. "
             "`attach` never starts a server — check the URL, or start one with "
-            "`omnigent run`."
+            "`agent-meow run`."
         )
     if result.status_code != 200:
         raise click.ClickException(
             f"No live session '{conversation_id}' on {base_url} "
-            f"(server returned {result.status_code}). Run `omnigent host status` "
-            "to list live sessions, or `omnigent run <agent.yaml>` to start one."
+            f"(server returned {result.status_code}). Run `agent-meow host status` "
+            "to list live sessions, or `agent-meow run <agent.yaml>` to start one."
         )
 
 
@@ -6302,7 +6302,7 @@ def _require_live_conversation(
     default=False,
     help=(
         "Enable the SSE-to-UI debug pipeline: Ctrl+E event tape "
-        "overlay, JSONL event log (~/.omnigent/debug/), and "
+        "overlay, JSONL event log (~/.agent_meow/debug/), and "
         "pipeline stage counters in the toolbar."
     ),
 )
@@ -6318,27 +6318,27 @@ def attach(
     on a server and streams its I/O. It never spawns a server, runner, or
     harness, applies no model/harness defaults, and errors loudly when
     there is nothing live to attach to. To START a session use
-    ``omnigent run``; to reopen/restart a stored one use
-    ``omnigent resume``.
+    ``agent-meow run``; to reopen/restart a stored one use
+    ``agent-meow resume``.
 
     \b
     Examples:
-      omnigent attach conv_abc123
-      omnigent attach conv_abc123 --server https://<app>.databricksapps.com
+      agent-meow attach conv_abc123
+      agent-meow attach conv_abc123 --server https://<app>.databricksapps.com
     """
     cfg = _load_effective_config()
     base_url = _resolve_attach_server(server, cfg.get("server"))
     if base_url is None:
         raise click.ClickException(
             "No server to attach to. `attach` joins a LIVE session on a running "
-            "server — start one with `omnigent run`, or point at one with "
+            "server — start one with `agent-meow run`, or point at one with "
             "`--server <url>`."
         )
     if conversation is None:
         raise click.ClickException(
             "Nothing to attach to: `attach` joins a LIVE session by id. "
-            f"Run `omnigent host status` to list sessions on {base_url}, or "
-            "`omnigent run <agent.yaml>` to start a new one."
+            f"Run `agent-meow host status` to list sessions on {base_url}, or "
+            "`agent-meow run <agent.yaml>` to start a new one."
         )
     _require_live_conversation(base_url=base_url, conversation_id=conversation)
     auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
@@ -6358,7 +6358,7 @@ def attach(
     )
 
 
-# `run` absorbs the legacy ``omnigent run`` subcommand. With an AGENT
+# `run` absorbs the legacy ``agent-meow run`` subcommand. With an AGENT
 # argument it opens the interactive REPL on a freshly started session;
 # without AGENT it can launch a built-in harness directly via ``--harness``.
 # Both paths route through the same agent-meow server+REPL dispatcher.
@@ -6392,7 +6392,7 @@ def attach(
     "--server",
     default=None,
     help=(
-        "Remote omnigent URL. Uploads the local YAML as an ephemeral "
+        "Remote agent-meow URL. Uploads the local YAML as an ephemeral "
         "agent, spawns a LOCAL runner that tunnels to this server (so "
         "terminals/MCPs run on your laptop), and connects the REPL to it. "
         'Pass --server "" to auto-spawn a persistent local server in the '
@@ -6406,7 +6406,7 @@ def attach(
     default=False,
     help=(
         "Enable the SSE-to-UI debug pipeline: Ctrl+E event tape "
-        "overlay, JSONL event log (~/.omnigent/debug/), and "
+        "overlay, JSONL event log (~/.agent_meow/debug/), and "
         "pipeline stage counters in the toolbar."
     ),
 )
@@ -6417,7 +6417,7 @@ def attach(
     default=False,
     help=(
         "Register this machine as a host with the remote server "
-        "(inline equivalent of `omnigent host`). Requires --server."
+        "(inline equivalent of `agent-meow host`). Requires --server."
     ),
 )
 def run(
@@ -6442,7 +6442,7 @@ def run(
     pass ``--server`` to connect directly to a server, or pass
     ``--harness`` to launch a built-in harness directly.
 
-    Default: omnigent server+REPL architecture (spawns a local
+    Default: agent-meow server+REPL architecture (spawns a local
     server, REPL connects as an HTTP client). With ``--server <url>`` and
     no AGENT, connect directly to that server; with AGENT, use local
     runner + remote server topology (RUNNER.md §6 Flow 1) - laptop hosts
@@ -6450,12 +6450,12 @@ def run(
 
     \b
     Examples:
-      omnigent run --harness claude-sdk
-      omnigent run --harness codex -p "review the last commit"
-      omnigent run examples/hello_world.yaml
-      omnigent run examples/hello_world.yaml --harness codex --model gpt-5.4-mini
-      omnigent run --server http://localhost:6767
-      omnigent run examples/databricks_coding_agent.yaml --server https://<app>.databricksapps.com
+      agent-meow run --harness claude-sdk
+      agent-meow run --harness codex -p "review the last commit"
+      agent-meow run examples/hello_world.yaml
+      agent-meow run examples/hello_world.yaml --harness codex --model gpt-5.4-mini
+      agent-meow run --server http://localhost:6767
+      agent-meow run examples/databricks_coding_agent.yaml --server https://<app>.databricksapps.com
     """
     # Apply config defaults for any value the user did not pass explicitly.
     # Explicit CLI args always take precedence; project-local config overrides
@@ -6495,7 +6495,7 @@ def run(
         harness = plan.harness
         target = plan.agent  # polly path for Claude; None (bare harness) for codex/pi
 
-    # Interactive ``omnigent run`` opens the live conversation in the
+    # Interactive ``agent-meow run`` opens the live conversation in the
     # browser by default so users discover the web UI once the server is up
     # (the accounts-mode magic-redeem auto-open used to surface this, but
     # accounts is no longer the default auth). An explicit
@@ -6539,7 +6539,7 @@ class _HostGroup(click.Group):
     """
     ``host`` group that accepts a server URL as a positional argument.
 
-    ``omnigent host <url>`` is shorthand for ``omnigent host
+    ``agent-meow host <url>`` is shorthand for ``agent-meow host
     --server <url>`` when ``<url>`` is URL-like or the empty local-mode
     marker. A leading positional token that matches a registered
     management subcommand (``status``, ``stop``, ``stop-session``)
@@ -6551,7 +6551,7 @@ class _HostGroup(click.Group):
         """
         Redirect a leading URL-like positional into ``--server``.
 
-        ``omnigent host <url>`` is shorthand for ``omnigent host --server
+        ``agent-meow host <url>`` is shorthand for ``agent-meow host --server
         <url>``. We detect a leading URL-like positional with a throwaway
         option parse and, when present, rewrite the argument list to inject
         ``--server <url>`` *before* Click parses it -- so Click sees a normal
@@ -6673,7 +6673,7 @@ def _prompt_stop_local_server() -> None:
 
 
 @cli.group("host", cls=_HostGroup, invoke_without_command=True)
-@click.option("--server", default=None, help="Remote omnigent server URL.")
+@click.option("--server", default=None, help="Remote agent-meow server URL.")
 @click.option(
     "--non-interactive",
     "non_interactive",
@@ -6681,7 +6681,7 @@ def _prompt_stop_local_server() -> None:
     default=False,
     help=(
         "Never prompt for sign-in. When the server requires auth and you "
-        "are not logged in, fail with the `omnigent login` hint instead of "
+        "are not logged in, fail with the `agent-meow login` hint instead of "
         "launching the browser login flow. Use this in scripts and CI."
     ),
 )
@@ -6692,16 +6692,16 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
 
     \b
     Examples:
-      omnigent host https://omnigent-app.databricksapps.com
-      omnigent host --server https://omnigent-app.databricksapps.com
-      omnigent host ""   # spawn + connect to a local server
+      agent-meow host https://omnigent-app.databricksapps.com
+      agent-meow host --server https://omnigent-app.databricksapps.com
+      agent-meow host ""   # spawn + connect to a local server
 
-    The server URL may be given positionally (``omnigent host
+    The server URL may be given positionally (``agent-meow host
     <url>``) or via ``--server <url>``. A leading ``status``, ``stop``,
     or ``stop-session`` token still runs that management subcommand.
 
     When the target server is Databricks-fronted and you are not signed
-    in, ``host`` runs the same flow ``omnigent login`` would before
+    in, ``host`` runs the same flow ``agent-meow login`` would before
     connecting (an interactive browser flow). Pass ``--non-interactive``
     to keep the old scripted behavior: fail with the login command to run
     instead of prompting.
@@ -6712,7 +6712,7 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
         ``"https://example.databricksapps.com"``. ``None`` falls back
         to config; empty string selects local mode.
     :param non_interactive: When ``True``, never launch the browser login
-        for an un-authed remote server — fail with the ``omnigent login``
+        for an un-authed remote server — fail with the ``agent-meow login``
         hint instead.
     """
     ctx.ensure_object(dict)
@@ -6737,7 +6737,7 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
     # spawn a second daemon via ``_ensure_host_daemon``.
     target = _normalize_daemon_target(server)
     # Only true when THIS invocation started the local server (vs reusing one
-    # already started by `omnigent server` or a prior host/run daemon) —
+    # already started by `agent-meow server` or a prior host/run daemon) —
     # gates the Ctrl-C stop-server prompt so we never offer to stop a server
     # we didn't bring up.
     spawned_local_server = False
@@ -6774,7 +6774,7 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
         _restore_replaced_daemon_record(record, previous)
         # Offer to stop the local server only when WE spawned it this run.
         # Not in --server mode (someone else's server), and not when we reused
-        # a server started by `omnigent server` or another daemon — killing
+        # a server started by `agent-meow server` or another daemon — killing
         # that would surprise the user who brought it up independently. Users
         # expect Ctrl-C to stop "everything" they started, so the server we
         # spawned is fair game.
@@ -6784,7 +6784,7 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
 
 def _host_group_option(ctx: click.Context, key: str) -> str | None:
     """
-    Read a group-level ``omnigent host`` option for a subcommand.
+    Read a group-level ``agent-meow host`` option for a subcommand.
 
     :param ctx: Click context passed to a host subcommand.
     :param key: Group option key, e.g. ``"server"``.
@@ -7777,7 +7777,7 @@ def _parse_config_settings(
         if "=" not in item:
             raise click.ClickException(
                 f"Expected KEY=VALUE, got: {item!r}. "
-                "Example: omnigent config set --global default_agent=myagent.yaml"
+                "Example: agent-meow config set --global default_agent=myagent.yaml"
             )
         key, _, value = item.partition("=")
         if key not in _GLOBAL_CONFIG_KEYS:
@@ -7785,7 +7785,7 @@ def _parse_config_settings(
                 f"Unknown config key {key!r}. "
                 f"Supported keys: {', '.join(sorted(_GLOBAL_CONFIG_KEYS))}"
             )
-        # Resolve ``default_agent`` to an absolute path so ``omnigent`` works from
+        # Resolve ``default_agent`` to an absolute path so ``agent-meow`` works from
         # any working directory, not just the directory where config was set.
         if (
             resolve_paths
@@ -7824,9 +7824,9 @@ def _validate_unset_keys(unset_keys: tuple[str, ...]) -> list[str]:
 def _print_config_defaults() -> None:
     """Print the effective CLI defaults (user + project-level).
 
-    The ``KEY=VALUE`` defaults from ``~/.omnigent/config.yaml`` (user) and
-    ``.omnigent/config.yaml`` in the cwd (project, takes precedence).
-    Used by ``omnigent config list``.
+    The ``KEY=VALUE`` defaults from ``~/.agent_meow/config.yaml`` (user) and
+    ``.agent_meow/config.yaml`` in the cwd (project, takes precedence).
+    Used by ``agent-meow config list``.
 
     :returns: None. Side effect: writes to stdout.
     """
@@ -7837,15 +7837,15 @@ def _print_config_defaults() -> None:
     local_cfg = {k: v for k, v in _load_local_config().items() if k in _GLOBAL_CONFIG_KEYS}
     if not global_cfg and not local_cfg:
         click.echo(
-            "  (none set — `omnigent config set key=value` for project,\n"
-            "   or `omnigent config set --global key=value` for user-level)"
+            "  (none set — `agent-meow config set key=value` for project,\n"
+            "   or `agent-meow config set --global key=value` for user-level)"
         )
         return
     global_path = _effective_global_config_path()
     local_path = Path.cwd() / _LOCAL_CONFIG_RELPATH
     # When the cwd IS the home directory, the project-level path
-    # (``cwd/.omnigent/config.yaml``) resolves to the SAME file as the
-    # user-level path (``~/.omnigent/config.yaml``). Dedup on the resolved
+    # (``cwd/.agent_meow/config.yaml``) resolves to the SAME file as the
+    # user-level path (``~/.agent_meow/config.yaml``). Dedup on the resolved
     # absolute path so the one file is shown once, not twice under two
     # spellings. ``resolve()`` collapses ``~`` and symlinks for the compare.
     local_is_global = local_cfg and local_path.resolve() == global_path.resolve()
@@ -7879,17 +7879,17 @@ class _ConfigGroup(click.Group):
         :returns: A hint string for a recognized legacy form, else ``None``.
         """
         if first == "--list":
-            return "`config --list` is now `omnigent config list`."
+            return "`config --list` is now `agent-meow config list`."
         if first == "--unset":
-            return "`config --unset KEY` is now `omnigent config unset KEY`."
+            return "`config --unset KEY` is now `agent-meow config unset KEY`."
         if first == "--global":
             return (
                 "`--global` now goes on the subcommand — "
-                "`omnigent config set --global KEY=VALUE` or "
-                "`omnigent config unset --global KEY`."
+                "`agent-meow config set --global KEY=VALUE` or "
+                "`agent-meow config unset --global KEY`."
             )
         if "=" in first and not first.startswith("-"):
-            return f"setting defaults is now `omnigent config set {first}`."
+            return f"setting defaults is now `agent-meow config set {first}`."
         return None
 
     def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
@@ -7916,9 +7916,9 @@ def config_grp() -> None:
     """Get, set, and view agent-meow defaults and credentials.
 
     Defaults (auto_open_conversation, default_agent, harness, model,
-    server) are used by ``omnigent run``. Project-level config
-    (``.omnigent/config.yaml`` in the cwd, like ``.git/config``) overrides
-    user-level config (``~/.omnigent/config.yaml``, like ``~/.gitconfig``).
+    server) are used by ``agent-meow run``. Project-level config
+    (``.agent_meow/config.yaml`` in the cwd, like ``.git/config``) overrides
+    user-level config (``~/.agent_meow/config.yaml``, like ``~/.gitconfig``).
 
     \b
     Subcommands:
@@ -7934,7 +7934,7 @@ def config_list() -> None:
 
     Prints the defaults (user + project), then the configured model
     credentials grouped by harness with each harness's default marked — the
-    merged view of everything ``omnigent run`` will use (including
+    merged view of everything ``agent-meow run`` will use (including
     ambient-detected credentials).
 
     :returns: None.
@@ -7951,29 +7951,29 @@ def config_list() -> None:
     "is_global",
     is_flag=True,
     default=False,
-    help="Write to ~/.omnigent/config.yaml (user-level) instead of the project config.",
+    help="Write to ~/.agent_meow/config.yaml (user-level) instead of the project config.",
 )
 @click.argument("settings", nargs=-1, required=True, metavar="KEY=VALUE...")
 def config_set(is_global: bool, settings: tuple[str, ...]) -> None:
     """Set one or more agent-meow defaults.
 
-    Without ``--global``, pairs are written to ``.omnigent/config.yaml``
+    Without ``--global``, pairs are written to ``.agent_meow/config.yaml``
     in the current directory (project-level, like ``.git/config``); with
-    ``--global`` to ``~/.omnigent/config.yaml`` (user-level, like
+    ``--global`` to ``~/.agent_meow/config.yaml`` (user-level, like
     ``~/.gitconfig``). Project values take precedence.
 
     Supported keys: auto_open_conversation, default_agent, harness,
     model, server.
 
-    :param is_global: When ``True``, write to ``~/.omnigent/config.yaml``;
-        when ``False``, to ``.omnigent/config.yaml`` in cwd.
+    :param is_global: When ``True``, write to ``~/.agent_meow/config.yaml``;
+        when ``False``, to ``.agent_meow/config.yaml`` in cwd.
     :param settings: ``KEY=VALUE`` pairs to set, e.g.
         ``("default_agent=examples/hello.yaml", "model=gpt-5.4-mini")``.
 
     \b
     Examples:
-      omnigent config set default_agent=examples/hello_world.yaml
-      omnigent config set --global server=https://<app>.databricksapps.com
+      agent-meow config set default_agent=examples/hello_world.yaml
+      agent-meow config set --global server=https://<app>.databricksapps.com
     """
     if is_global:
         parsed = _parse_config_settings(settings, resolve_paths=True)
@@ -7992,14 +7992,14 @@ def config_set(is_global: bool, settings: tuple[str, ...]) -> None:
     "is_global",
     is_flag=True,
     default=False,
-    help="Remove from ~/.omnigent/config.yaml (user-level) instead of the project config.",
+    help="Remove from ~/.agent_meow/config.yaml (user-level) instead of the project config.",
 )
 @click.argument("keys", nargs=-1, required=True, metavar="KEY...")
 def config_unset(is_global: bool, keys: tuple[str, ...]) -> None:
     """Remove one or more agent-meow defaults.
 
-    :param is_global: When ``True``, remove from ``~/.omnigent/config.yaml``;
-        when ``False``, from ``.omnigent/config.yaml`` in cwd.
+    :param is_global: When ``True``, remove from ``~/.agent_meow/config.yaml``;
+        when ``False``, from ``.agent_meow/config.yaml`` in cwd.
     :param keys: Keys to remove, e.g. ``("server", "model")``.
     """
     validated = _validate_unset_keys(keys)
@@ -8144,7 +8144,7 @@ def _isolated_databricks_cfg() -> collections.abc.Generator[None, None, None]:
         if orig_cfg.has_section(spec.name):
             cfg[spec.name] = dict(orig_cfg[spec.name])
 
-    omnigent_dir = Path.home() / ".omnigent"
+    omnigent_dir = Path.home() / ".agent-meow"
     omnigent_dir.mkdir(exist_ok=True)
     tmp_fd, tmp_name = tempfile.mkstemp(
         prefix="databrickscfg-setup-",
@@ -8239,10 +8239,10 @@ def _warn_missing_harness_dependencies() -> None:
     Surfaces every missing/outdated dependency up front (when the user
     opens ``configure harnesses``) so a fresh machine learns about all of
     them at once, rather than discovering each at the moment a harness or
-    wrapper needs it (Node when a harness CLI runs, tmux when ``omnigent
+    wrapper needs it (Node when a harness CLI runs, tmux when ``agent-meow
     claude`` launches). This *warns* rather than aborts on purpose: the
     pure-Python ``openai-agents`` harness runs without either tool, so a
-    hard failure would block a valid flow — but ``omnigent claude`` /
+    hard failure would block a valid flow — but ``agent-meow claude`` /
     ``codex`` do need both, hence the prominent notice.
 
     :returns: None. Side effect: writes a yellow warning block to stderr
@@ -8495,7 +8495,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         the add menu is scoped to credentials that can drive that harness —
         the per-harness "Add a provider" path. ``None`` shows the full menu.
     :returns: A confirmation message for the caller to show as a transient
-        status. Side effect: writes to ``~/.omnigent/config.yaml`` and,
+        status. Side effect: writes to ``~/.agent_meow/config.yaml`` and,
         for a pasted API key, the secret store.
     """
     from agent_meow.onboarding import secrets as secret_store
@@ -8861,7 +8861,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
     else:  # databricks
         # Gate on the `databricks` extra: a `kind: databricks` provider mints
         # workspace OAuth tokens via databricks-sdk at runtime
-        # (omnigent/runtime/credentials/databricks.py), and the SDK is no
+        # (agent_meow/runtime/credentials/databricks.py), and the SDK is no
         # longer a default dependency. Abort before any side effect (the
         # `databricks auth login` browser flow, `ucode configure`) so the
         # user isn't signed into a workspace that routing then can't use.
@@ -9027,13 +9027,13 @@ def _adopt_detected_providers() -> list[str]:
 def _promote_global_auth_to_provider() -> str | None:
     """Backfill a databricks providers entry from an existing global ``auth:`` block.
 
-    Older ``omnigent setup`` runs configured Databricks only via the top-level
+    Older ``agent-meow setup`` runs configured Databricks only via the top-level
     ``auth: {type: databricks}`` block — which ``configure harnesses`` does not
     read — so the readout showed no Databricks provider (and an ambient CLI
     login as the default) even though routing used Databricks. This promotes
     that block into a first-class ``kind: databricks`` providers entry the next
     time ``configure harnesses`` opens, so existing configs self-heal without
-    re-running ``omnigent setup``.
+    re-running ``agent-meow setup``.
 
     Becomes the default only for families with no existing **provider** default —
     mirroring routing precedence (explicit provider default > ``auth:`` block),
@@ -9121,7 +9121,7 @@ def _announce_auto_configured_credentials(adopted: list[str]) -> None:
     single compact, dimmed line naming them inline (e.g. ``Anthropic API Key,
     Claude Subscription, ChatGPT Subscription``) — so a user who never ran an
     explicit setup sees, the first time we auto-configure, exactly which
-    credentials omnigent picked up (rather than silently inheriting them).
+    credentials agent-meow picked up (rather than silently inheriting them).
     Styled ``dim`` rather than the onboarding accent so it reads as a quiet
     notice, not a prominent header.
 
@@ -9143,14 +9143,14 @@ def _announce_auto_configured_credentials(adopted: list[str]) -> None:
         return
     console.print(
         "\n[dim]Found existing credentials on your machine, "
-        f"auto-configured for omnigent: {', '.join(labels)}[/dim]"
+        f"auto-configured for agent-meow: {', '.join(labels)}[/dim]"
     )
 
 
 def _adopt_ambient_credentials(progress: RunnerStartupProgress | None = None) -> list[str]:
     """Self-heal config, adopt ambient credentials, and announce what was added.
 
-    The shared front half of both a bare ``omnigent run``'s first-run path
+    The shared front half of both a bare ``agent-meow run``'s first-run path
     (:func:`_resolve_first_run_plan`) and the ``configure harnesses`` picker
     (:func:`_run_configure_harnesses_interactive`): it (1) backfills a legacy
     databricks ``auth:`` block into a real provider, (2) adopts any
@@ -9430,9 +9430,9 @@ def _manage_cursor_harness() -> None:
     Cursor's own backend with a ``CURSOR_API_KEY`` — the SDK requires one (a
     ``cursor-agent login`` does not apply, and cursor has no provider/gateway
     family). So this manages exactly that credential: set / replace / remove an
-    API key stored in the omnigent secret store, mirroring how the other
+    API key stored in the agent-meow secret store, mirroring how the other
     harnesses persist their api keys (the secret in the store, a
-    ``keychain:``/``env:`` reference in ``~/.omnigent/config.yaml``).
+    ``keychain:``/``env:`` reference in ``~/.agent_meow/config.yaml``).
 
     When the optional ``cursor-sdk`` is missing, the drill-in first offers to
     install it (:func:`_prompt_install_cursor`). Unlike the CLI-backed harnesses
@@ -9440,7 +9440,7 @@ def _manage_cursor_harness() -> None:
     ``cursor:`` key is independently storable. Mirrors Antigravity post-#322.
 
     :returns: None. Side effects: may install the ``cursor`` extra, and may
-        write the ``cursor:`` block of ``~/.omnigent/config.yaml`` and the
+        write the ``cursor:`` block of ``~/.agent_meow/config.yaml`` and the
         secret store.
     """
     from agent_meow.onboarding import secrets as secret_store
@@ -9498,7 +9498,7 @@ def _set_cursor_api_key() -> str | None:
     Offers an existing ``CURSOR_API_KEY`` from the environment first (recorded
     as an ``env:`` reference, so the secret never enters the config or the
     secret store), else reads the key with a hidden prompt and stores it in the
-    omnigent secret store under ``keychain:cursor``. The ``crsr_`` prefix is
+    agent-meow secret store under ``keychain:cursor``. The ``crsr_`` prefix is
     validated with a soft warning so a wrong paste is caught without
     hard-blocking a future key format. The key value is never echoed.
 
@@ -10282,9 +10282,9 @@ def _manage_copilot_harness() -> None:
     Copilot runs via the ``github-copilot-sdk`` package and authenticates against
     GitHub's Copilot backend with a GitHub token — the SDK requires one and it
     has no provider/gateway family. So this manages exactly that credential:
-    set / replace / remove a token stored in the omnigent secret store, mirroring
+    set / replace / remove a token stored in the agent-meow secret store, mirroring
     how cursor / antigravity persist theirs (the secret in the store, a
-    ``keychain:``/``env:`` reference in ``~/.omnigent/config.yaml``).
+    ``keychain:``/``env:`` reference in ``~/.agent_meow/config.yaml``).
 
     When the optional ``github-copilot-sdk`` is missing, the drill-in first
     offers to install it (:func:`_prompt_install_copilot`). Unlike the CLI-backed
@@ -10293,7 +10293,7 @@ def _manage_copilot_harness() -> None:
     antigravity.
 
     :returns: None. Side effects: may install the ``copilot`` extra, and may
-        write the ``copilot:`` block of ``~/.omnigent/config.yaml`` and the
+        write the ``copilot:`` block of ``~/.agent_meow/config.yaml`` and the
         secret store.
     """
     from agent_meow.onboarding import secrets as secret_store
@@ -10457,7 +10457,7 @@ def _manage_credential(provider: str, family: str) -> str | None:
     if entry.kind == SUBSCRIPTION_KIND:
         return _remove_subscription(provider, family)
     # A databricks provider was wired by `ucode configure`, which edits
-    # harness configs outside ~/.omnigent/config.yaml — so removing it
+    # harness configs outside ~/.agent_meow/config.yaml — so removing it
     # also cleans those edits up (otherwise codex keeps routing through
     # the workspace gateway).
     if entry.kind == DATABRICKS_KIND:
@@ -10484,7 +10484,7 @@ def _remove_subscription(provider: str, family: str) -> str | None:
         (Codex).
     :returns: A confirmation message for the level-2 status line, or ``None``
         when the user declined (nothing changed). Side effects: runs the
-        harness logout command and writes ``~/.omnigent/config.yaml``.
+        harness logout command and writes ``~/.agent_meow/config.yaml``.
     """
     from agent_meow.onboarding.harness_install import harness_install_spec, harness_logout
     from agent_meow.onboarding.interactive import select
@@ -10526,7 +10526,7 @@ def _remove_databricks_provider(provider: str) -> str:
 
     A ``kind: databricks`` provider was wired by running ``ucode configure``
     (the add flow), which writes harness configs *outside*
-    ``~/.omnigent/config.yaml`` — most damagingly, for Codex < 0.134.0 it
+    ``~/.agent_meow/config.yaml`` — most damagingly, for Codex < 0.134.0 it
     rewrites the user's real ``~/.codex/config.toml`` (top-level
     ``profile = "ucode"``) so even the bare ``codex`` CLI routes through the
     workspace gateway, and ``ucode revert`` does not undo that edit. Removing
@@ -10543,7 +10543,7 @@ def _remove_databricks_provider(provider: str) -> str:
         the removal and what wiring was cleaned (nothing extra is appended
         when no ucode wiring existed). Side effects: may edit
         ``~/.codex/config.toml``, delete ucode sidecar files, run
-        ``claude mcp remove``, and write ``~/.omnigent/config.yaml``.
+        ``claude mcp remove``, and write ``~/.agent_meow/config.yaml``.
     """
     from agent_meow.errors import OmnigentError
     from agent_meow.onboarding.ucode_cleanup import remove_ucode_wiring
@@ -10578,7 +10578,7 @@ def _set_harness_default(provider: str, family: str) -> str | None:
         harnesses' defaults untouched.
     :returns: A confirmation message for the caller to show as a transient
         status, or ``None`` when there was nothing to do. Side effect:
-        writes ``~/.omnigent/config.yaml``.
+        writes ``~/.agent_meow/config.yaml``.
     """
     from agent_meow.onboarding.configure_models import family_label
     from agent_meow.onboarding.provider_config import load_providers, set_default_provider
@@ -10601,7 +10601,7 @@ def _clear_detection_dismissal(name: str) -> None:
     an ordinary one again.
 
     :param name: The detection name to un-dismiss, e.g. ``"codex-databricks"``.
-    :returns: None. Side effect: writes ``~/.omnigent/config.yaml`` when the
+    :returns: None. Side effect: writes ``~/.agent_meow/config.yaml`` when the
         name was dismissed; no write otherwise.
     """
     from agent_meow.onboarding.detected import (
@@ -10624,7 +10624,7 @@ def _remove_credential(provider: str) -> str | None:
     :param provider: The provider id to remove, e.g. ``"openrouter"``.
     :returns: A confirmation message for the caller to show as a transient
         status, or ``None`` when there was nothing to remove. Side effect:
-        writes ``~/.omnigent/config.yaml`` (and, when the removed entry is
+        writes ``~/.agent_meow/config.yaml`` (and, when the removed entry is
         backed by a live ambient detection that cannot be signed out,
         records its name under ``dismissed_detections`` so the next
         configure open does not silently re-adopt it).
@@ -10905,7 +10905,7 @@ def _manage_opencode_harness() -> None:
 def _run_configure_harnesses_interactive() -> None:
     """Run the interactive model/credential three-level picker.
 
-    Invoked by ``omnigent setup --no-internal-beta`` and the bare-``run``
+    Invoked by ``agent-meow setup --no-internal-beta`` and the bare-``run``
     first-run path, so both drive the identical flow.
     Opening it backfills a legacy databricks ``auth:`` block into a real
     provider and adopts any ambient-detected credential — announcing the
@@ -10919,7 +10919,7 @@ def _run_configure_harnesses_interactive() -> None:
     highlighted row, as the selector's description line, so the overview stays
     uncluttered.
 
-    :returns: None. Side effect: may write ``~/.omnigent/config.yaml`` via
+    :returns: None. Side effect: may write ``~/.agent_meow/config.yaml`` via
         the backfill/adopt steps and any add/set-default/remove the user
         performs while navigating.
     """
@@ -11027,7 +11027,7 @@ def _run_configure_harnesses_interactive() -> None:
 
     def _install_hint(command: str) -> str:
         # Selection-only tooltip. The command is escaped so a bracketed extra
-        # (e.g. ``pip install "omnigent[cursor]"``) renders literally instead of
+        # (e.g. ``pip install "agent-meow[cursor]"``) renders literally instead of
         # parsing as Rich markup.
         return f"Install with `{escape(command)}`"
 
@@ -11366,8 +11366,8 @@ def setup(internal_beta: bool) -> None:
 
     By default this runs the standard model/credential picker — choose a
     provider for each harness and set your defaults, then start a session
-    with ``omnigent run``. (List configured credentials with
-    ``omnigent config list``.) Pass ``--internal-beta`` to configure
+    with ``agent-meow run``. (List configured credentials with
+    ``agent-meow config list``.) Pass ``--internal-beta`` to configure
     Databricks internal-beta defaults and authentication instead.
     """
     from agent_meow.inner import ui
@@ -11390,7 +11390,7 @@ def setup(internal_beta: bool) -> None:
         except ImportError:
             raise click.ClickException(
                 "Databricks internal-beta setup is not available in this build. "
-                "Run `omnigent setup` for the standard model/credential setup."
+                "Run `agent-meow setup` for the standard model/credential setup."
             ) from None
         # Internal-beta routing mints workspace OAuth tokens via
         # databricks-sdk at runtime, and the SDK ships in the `databricks`
@@ -11436,20 +11436,20 @@ def setup(internal_beta: bool) -> None:
             }
         )
         click.echo(f"Set default_agent={agent_path} in {_GLOBAL_CONFIG_PATH}")
-        click.echo("Type `omnigent claude` to get started with Claude Code on agent_meow.")
+        click.echo("Type `agent-meow claude` to get started with Claude Code on agent_meow.")
         return
 
     # --no-internal-beta: the standard model/credential picker. It warns
     # about missing Node/tmux itself, configures providers/defaults, and
-    # returns; the user then starts a session with ``omnigent run``.
+    # returns; the user then starts a session with ``agent-meow run``.
     _run_configure_harnesses_interactive()
 
 
 # ─── sandbox group ────────────────────────────────────────────────
-# The provider-agnostic sandbox CLI lives in omnigent/cli_sandbox.py.
+# The provider-agnostic sandbox CLI lives in agent_meow/cli_sandbox.py.
 # Provider launcher modules are optional and may be absent from a given
 # distribution; hide the group when none are available.
-# `omnigent lakebox` is kept as an alias for `omnigent sandbox …
+# `agent-meow lakebox` is kept as an alias for `agent-meow sandbox …
 # --provider lakebox`, registered only when the lakebox provider ships.
 if _sandbox_providers():
     cli.add_command(_sandbox_group)
@@ -11458,7 +11458,7 @@ if _sandbox_providers():
 
 # ─── debug group ──────────────────────────────────────────────────
 #
-# Operator-only maintenance commands, grouped under ``omnigent debug``
+# Operator-only maintenance commands, grouped under ``agent-meow debug``
 # so they stay out of the everyday surface.
 #
 # ``db-upgrade`` runs manual schema operations on an agent-meow tracking
@@ -11567,11 +11567,11 @@ def debug_migrate_accounts_to_oidc(
     \b
     Examples:
       # Dry run: append the org domain to every username
-      omnigent debug migrate-accounts-to-oidc sqlite:///chat.db --domain example.com
+      agent-meow debug migrate-accounts-to-oidc sqlite:///chat.db --domain example.com
       # Apply it
-      omnigent debug migrate-accounts-to-oidc sqlite:///chat.db --domain example.com --commit
+      agent-meow debug migrate-accounts-to-oidc sqlite:///chat.db --domain example.com --commit
       # Explicit per-user mapping (add --commit to apply)
-      omnigent debug migrate-accounts-to-oidc sqlite:///chat.db --map alice=alice@corp.com
+      agent-meow debug migrate-accounts-to-oidc sqlite:///chat.db --map alice=alice@corp.com
 
     \b
     IMPORTANT: always back up your database before running with
@@ -11647,12 +11647,12 @@ def debug_migrate_accounts_to_oidc(
 
 
 def _workspace_mount_probe_matches(candidate: str, probe: httpx.Response) -> bool:
-    """Whether a ``/api/2.0/omnigent`` mount probe answered like agent_meow.
+    """Whether a ``/api/2.0/agent-meow`` mount probe answered like agent_meow.
 
     :param candidate: The probed mount base URL, e.g.
-        ``"https://example.databricks.com/api/2.0/omnigent"``.
+        ``"https://example.databricks.com/api/2.0/agent-meow"``.
     :param probe: The ``GET <candidate>/v1/me`` response.
-    :returns: ``True`` when the mount answered 200 (omnigent itself) or
+    :returns: ``True`` when the mount answered 200 (agent-meow itself) or
         with a Databricks-fronted shape (302 to ``/oidc/`` or 401 with
         the ``DatabricksRealm`` challenge).
     """
@@ -11687,7 +11687,7 @@ def _with_default_scheme(server_url: str) -> str:
     """Prepend a scheme to a schemeless server URL, defaulting to https.
 
     The internal user guide hands out workspace URLs without a scheme
-    (e.g. ``example.cloud.databricks.com/omnigent``), so a missing
+    (e.g. ``example.cloud.databricks.com/agent-meow``), so a missing
     scheme defaults to ``https`` to let that URL be pasted verbatim.
     Loopback hosts (``localhost``, ``127.0.0.1``, ``::1``) default to
     ``http`` instead — local dev servers are plain http (the examples
@@ -11695,9 +11695,9 @@ def _with_default_scheme(server_url: str) -> str:
     is returned unchanged.
 
     :param server_url: The user-supplied server URL, possibly
-        schemeless, e.g. ``"example.cloud.databricks.com/omnigent"``.
+        schemeless, e.g. ``"example.cloud.databricks.com/agent-meow"``.
     :returns: The URL with a scheme, e.g.
-        ``"https://example.cloud.databricks.com/omnigent"``.
+        ``"https://example.cloud.databricks.com/agent-meow"``.
     """
     from urllib.parse import urlsplit
 
@@ -11710,18 +11710,18 @@ def _with_default_scheme(server_url: str) -> str:
 
 
 def _workspace_api_server_url(server: str) -> str:
-    """Expand a bare Databricks workspace URL to its omnigent API base.
+    """Expand a bare Databricks workspace URL to its agent-meow API base.
 
     ``https://<workspace>`` hosts serve the workspace web app at the
-    root; workspace-hosted omnigent lives at ``/api/2.0/omnigent``.
+    root; workspace-hosted agent-meow lives at ``/api/2.0/agent-meow``.
     Users naturally paste the bare host, so when a path-less server URL
-    answers like a Databricks workspace web app (a non-omnigent reply
+    answers like a Databricks workspace web app (a non-agent-meow reply
     carrying the ``server: databricks`` header) AND the
-    ``/api/2.0/omnigent`` mount answers like the API proxy, the
+    ``/api/2.0/agent-meow`` mount answers like the API proxy, the
     expanded URL is adopted. Detection is behavioral — no hostname
     patterns — and URLs that already carry a path are returned
     untouched without any probe, the one exception being the
-    guide-issued web-UI URL (``https://<ws>/omnigent``): its bare root
+    guide-issued web-UI URL (``https://<ws>/agent-meow``): its bare root
     is probed so the pasted web URL logs in just like the bare host
     (a root that is not a workspace leaves the URL untouched).
 
@@ -11736,7 +11736,7 @@ def _workspace_api_server_url(server: str) -> str:
     :param server: The user-supplied server URL, e.g.
         ``"https://example.databricks.com"``.
     :returns: The normalized base URL without a trailing slash, e.g.
-        ``"https://example.databricks.com/api/2.0/omnigent"`` — or the
+        ``"https://example.databricks.com/api/2.0/agent-meow"`` — or the
         input (normalized) when expansion does not apply.
     """
     from urllib.parse import urlsplit, urlunsplit
@@ -11760,10 +11760,10 @@ def _workspace_api_server_url(server: str) -> str:
         server = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", "")).rstrip("/")
         parsed = urlsplit(server)
     # The internal user guide hands out the workspace web-UI URL
-    # (``https://<ws>/omnigent``) for browser access; accept it for login
+    # (``https://<ws>/agent-meow``) for browser access; accept it for login
     # too by expanding its bare root to the API mount. A root that does
     # not answer as a Databricks workspace leaves the pasted URL
-    # untouched, so a non-workspace server served under ``/omnigent``
+    # untouched, so a non-workspace server served under ``/agent-meow``
     # still works.
     if parsed.scheme == "https" and parsed.path == WORKSPACE_UI_PATH:
         root = urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
@@ -11775,7 +11775,7 @@ def _workspace_api_server_url(server: str) -> str:
         probe = _httpx.get(f"{server}/v1/me", timeout=10.0)
     except _httpx.HTTPError:
         return server
-    # Already something we understand at the root: an omnigent server
+    # Already something we understand at the root: an agent-meow server
     # (200 / 401-with-login_url JSON) or a Databricks Apps edge /
     # API proxy (the login-target detector recognizes both).
     if probe.status_code == 200:
@@ -11792,7 +11792,7 @@ def _workspace_api_server_url(server: str) -> str:
         return server
     if _workspace_mount_probe_matches(candidate, api_probe):
         click.echo(
-            f"Using {display_server_url(candidate)} (Databricks workspace-hosted omnigent)."
+            f"Using {display_server_url(candidate)} (Databricks workspace-hosted agent-meow)."
         )
         return candidate
     # The anonymous probe came back inconclusive (404 on Azure even
@@ -11812,14 +11812,14 @@ def _workspace_api_server_url(server: str) -> str:
             authed_probe = None
         if authed_probe is not None and _workspace_mount_probe_matches(candidate, authed_probe):
             click.echo(
-                f"Using {display_server_url(candidate)} (Databricks workspace-hosted omnigent)."
+                f"Using {display_server_url(candidate)} (Databricks workspace-hosted agent-meow)."
             )
             return candidate
         click.echo(
             f"Note: {server} answers like a Databricks workspace, but "
-            f"{candidate} did not answer as an omnigent server even with "
+            f"{candidate} did not answer as an agent-meow server even with "
             f"the cached workspace credentials. Connecting to {server} as "
-            "given; if omnigent is hosted on this workspace, refresh the "
+            "given; if agent-meow is hosted on this workspace, refresh the "
             f"login with `databricks auth login --host {server}` or pass "
             "the full mount URL."
         )
@@ -11828,7 +11828,7 @@ def _workspace_api_server_url(server: str) -> str:
         f"Note: {server} answers like a Databricks workspace, but "
         f"{candidate} did not answer the anonymous probe "
         f"(HTTP {api_probe.status_code}). Some edges hide the mount from "
-        "unauthenticated requests — if omnigent is hosted on this "
+        "unauthenticated requests — if agent-meow is hosted on this "
         f"workspace, run `databricks auth login --host {server}` and "
         "retry, or pass the full mount URL."
     )
@@ -11842,14 +11842,14 @@ def _resolve_server_url(server: str) -> str:
     Every ``--server`` entry point (and ``login``) needs the same
     normalization, so they all route through here: strip a trailing slash,
     default a schemeless URL to ``https`` (``http`` for loopback hosts),
-    then expand a bare Databricks workspace URL — or the ``/omnigent``
+    then expand a bare Databricks workspace URL — or the ``/agent-meow``
     web-UI URL the internal user guide hands out — to the
-    ``/api/2.0/omnigent`` mount.
+    ``/api/2.0/agent-meow`` mount.
 
     :param server: A non-empty ``--server`` value, e.g.
-        ``"example.cloud.databricks.com/omnigent"``.
+        ``"example.cloud.databricks.com/agent-meow"``.
     :returns: The normalized API base URL without a trailing slash, e.g.
-        ``"https://example.cloud.databricks.com/api/2.0/omnigent"``.
+        ``"https://example.cloud.databricks.com/api/2.0/agent-meow"``.
     """
     return _workspace_api_server_url(_with_default_scheme(server.rstrip("/")))
 
@@ -11865,8 +11865,8 @@ def _databricks_workspace_login_target(server: str, probe: httpx.Response) -> st
       fronting workspace's OIDC authorize endpoint
       (``https://<workspace>/oidc/oauth2/v2.0/authorize?...``); the
       redirect names the workspace to authenticate against.
-    - **Workspace-hosted omnigent** (e.g.
-      ``https://<workspace>/api/2.0/omnigent``): the workspace API
+    - **Workspace-hosted agent-meow** (e.g.
+      ``https://<workspace>/api/2.0/agent-meow``): the workspace API
       proxy answers 401 with ``WWW-Authenticate: Bearer
       realm="DatabricksRealm"``; the workspace is the URL's own host.
 
@@ -11950,7 +11950,7 @@ def _databricks_login(server: str, workspace_host: str, org_id: str | None = Non
     """Log in to a Databricks-fronted agent-meow server.
 
     Covers both Databricks Apps deployments and workspace-hosted
-    omnigent (``https://<workspace>/api/2.0/omnigent``). Reuses an
+    agent-meow (``https://<workspace>/api/2.0/agent-meow``). Reuses an
     existing host-keyed Databricks CLI OAuth grant when one resolves;
     otherwise runs ``databricks auth login --host <workspace>``
     (browser flow). The minted token is verified against the server
@@ -11958,7 +11958,7 @@ def _databricks_login(server: str, workspace_host: str, org_id: str | None = Non
     verification (e.g. a stale token-cache entry minted for a
     different workspace) triggers one fresh browser login and a
     re-verify before failing loud. On success, a pointer record is
-    stored in ``~/.omnigent/auth_tokens.json`` — no profile name is
+    stored in ``~/.agent_meow/auth_tokens.json`` — no profile name is
     created or consulted anywhere.
 
     :param server: The server URL, e.g.
@@ -11983,7 +11983,7 @@ def _databricks_login(server: str, workspace_host: str, org_id: str | None = Non
     if not databricks_sdk_installed():
         raise click.ClickException(
             "Logging in to a Databricks-fronted server (a Databricks App or "
-            "workspace-hosted omnigent) requires the `databricks` extra "
+            "workspace-hosted agent-meow) requires the `databricks` extra "
             f"(databricks-sdk is not installed). Reinstall with:\n  "
             f"{DATABRICKS_EXTRA_INSTALL_HINT}"
         )
@@ -12147,10 +12147,10 @@ def _remember_default_server(server: str) -> None:
     """
     Persist *server* as the user-level default after a successful login.
 
-    A bare ``omnigent`` (and ``omnigent host``) fall back to the
+    A bare ``agent-meow`` (and ``agent-meow host``) fall back to the
     configured ``server`` key when no ``--server`` is passed (see
     :func:`run` and :func:`host`). Without this, a user who runs
-    ``omnigent login <server>`` and then bare ``omnigent`` is still routed
+    ``agent-meow login <server>`` and then bare ``agent-meow`` is still routed
     at whatever default ``setup`` baked in — the confusing "I just logged
     in, yet I'm asked to log in again to a different server" path.
     Recording the just-logged-in server as the default closes that gap.
@@ -12160,7 +12160,7 @@ def _remember_default_server(server: str) -> None:
     available signal of intent.
 
     :param server: Normalized server URL the login succeeded against, e.g.
-        ``"https://example.databricks.com/api/2.0/omnigent"``.
+        ``"https://example.databricks.com/api/2.0/agent-meow"``.
     """
     _save_global_config({"server": server})
     click.echo(f"Set {server} as your default server.")
@@ -12176,35 +12176,35 @@ def login(server_url: str) -> None:
     \b
     - accounts mode: prompts for username + password (no browser
       needed), POSTs ``/auth/login``, stores the session JWT in
-      ``~/.omnigent/auth_tokens.json`` keyed by server URL.
+      ``~/.agent_meow/auth_tokens.json`` keyed by server URL.
     - OIDC mode: opens the browser, polls the CLI ticket endpoint,
       stores the session JWT when the browser flow completes.
     - header mode: no login needed (proxy injects identity); we
       print a hint and exit successfully.
-    - Databricks-fronted (a Databricks App, or omnigent hosted on
+    - Databricks-fronted (a Databricks App, or agent-meow hosted on
       a workspace API path): detected from the probe response — we
       log in to the workspace via ``databricks auth login --host
       <workspace>`` (browser) and store a pointer record so later
       commands mint fresh workspace tokens automatically. Requires
       the ``databricks`` extra.
 
-    Subsequent ``omnigent run --server <url>`` commands then
+    Subsequent ``agent-meow run --server <url>`` commands then
     use the stored token via the runner / host-tunnel auth chain. A
     successful login also records the server as the user-level default
-    (the ``server`` key in ``~/.omnigent/config.yaml``), so a bare
-    ``omnigent`` afterwards targets it instead of whatever default
+    (the ``server`` key in ``~/.agent_meow/config.yaml``), so a bare
+    ``agent-meow`` afterwards targets it instead of whatever default
     ``setup`` baked in.
 
     \b
     Example:
-      omnigent login http://localhost:6767
-      omnigent login example.cloud.databricks.com/omnigent  # https:// assumed
-      omnigent          # connects to the server just logged in to
+      agent-meow login http://localhost:6767
+      agent-meow login example.cloud.databricks.com/agent-meow  # https:// assumed
+      agent-meow          # connects to the server just logged in to
 
     :param server_url: The remote server URL, e.g.
         ``"http://localhost:6767"``. A missing scheme defaults to
         ``https://`` (``http://`` for loopback hosts), and the workspace
-        web-UI URL (``<ws>/omnigent``) is accepted alongside the bare
+        web-UI URL (``<ws>/agent-meow``) is accepted alongside the bare
         workspace root.
     """
     import httpx as _httpx
@@ -12219,7 +12219,7 @@ def login(server_url: str) -> None:
     # accounts, "/auth/login" for OIDC, and no login_url at all
     # for header mode. A 302 to a workspace OAuth page (Databricks
     # Apps) or a 401 with a DatabricksRealm challenge (workspace-
-    # hosted omnigent) means Databricks fronts the server. This
+    # hosted agent-meow) means Databricks fronts the server. This
     # lets one CLI command handle every posture without a flag.
     try:
         probe = _httpx.get(f"{server}/v1/me", timeout=10.0)
@@ -12342,9 +12342,9 @@ def _accounts_login(server: str) -> None:
     - 5xx → "server error".
 
     On success, the session JWT goes to
-    ``~/.omnigent/auth_tokens.json`` via the existing
+    ``~/.agent_meow/auth_tokens.json`` via the existing
     :func:`~?agent_meow.cli_auth.store_token`. From there both
-    ``omnigent run`` and ``omnigent host`` pick it up
+    ``agent-meow run`` and ``agent-meow host`` pick it up
     automatically when they call ``--server <url>``.
     """
     import httpx as _httpx
@@ -12413,23 +12413,23 @@ _PANE_SPLIT_DIRECTIONS = ("v", "h", "w")
     "--parent-pane",
     "parent_pane",
     required=True,
-    help="Tmux pane id of the parent omnigent pane (e.g. '%0'). "
+    help="Tmux pane id of the parent agent-meow pane (e.g. '%0'). "
     "Forwarded by the wrapped key-binding via #{pane_id}.",
 )
 def pane_split(direction: str | None, parent_pane: str) -> None:
     """
-    Split the parent omnigent pane and run the chooser in the new pane.
+    Split the parent agent-meow pane and run the chooser in the new pane.
 
     Internal subcommand invoked by the tmux key-binding wrappers
     installed by ``agent_meow.repl._tmux_pane``. The wrapper fires
-    ``run-shell 'omnigent pane-split -<v|h|w> -p #{pane_id}'`` when
-    the user presses their split key while focused on an omnigent
+    ``run-shell 'agent-meow pane-split -<v|h|w> -p #{pane_id}'`` when
+    the user presses their split key while focused on an agent-meow
     pane; tmux substitutes ``#{pane_id}`` to the focused pane's id
     and we exec the right ``tmux split-window`` / ``new-window``
-    invocation pointing at ``omnigent pane-picker``.
+    invocation pointing at ``agent-meow pane-picker``.
 
     :param direction: One of ``v`` / ``h`` / ``w``. Required.
-    :param parent_pane: The omnigent pane id, e.g. ``%0``. Required.
+    :param parent_pane: The agent-meow pane id, e.g. ``%0``. Required.
     """
     import shlex
 
@@ -12437,7 +12437,7 @@ def pane_split(direction: str | None, parent_pane: str) -> None:
 
     if direction not in _PANE_SPLIT_DIRECTIONS:
         raise click.ClickException("pane-split requires exactly one of -v, -h, or -w")
-    # The new pane runs ``omnigent pane-picker`` which reads the
+    # The new pane runs ``agent-meow pane-picker`` which reads the
     # parent's pane options and exec's into the chosen agent run.
     # We pass the parent pane id explicitly because the new pane's
     # ``$TMUX_PANE`` will be the new pane, not the parent.
@@ -12445,7 +12445,7 @@ def pane_split(direction: str | None, parent_pane: str) -> None:
     # tmux's ``split-window`` / ``new-window`` spawns the new
     # pane's initial command via ``/bin/sh -c``, and that shell
     # inherits the tmux server's PATH — which typically does NOT
-    # include the venv ``bin/`` where ``omnigent`` lives.
+    # include the venv ``bin/`` where ``agent-meow`` lives.
     # ``_resolve_omnigent_argv`` returns either an absolute
     # path to the binary (preferred) or ``[python, "-m",
     # "agent_meow.cli"]`` as a fallback that always works.
@@ -12485,7 +12485,7 @@ def pane_split(direction: str | None, parent_pane: str) -> None:
     "--parent-pane",
     "parent_pane",
     required=True,
-    help="Tmux pane id of the parent omnigent pane (e.g. '%0'). "
+    help="Tmux pane id of the parent agent-meow pane (e.g. '%0'). "
     "Used to read launch context (agent name, launch argv, server URL) "
     "from custom pane options the parent set via "
     "``agent_meow.repl._tmux_pane.register_pane``.",
@@ -12495,9 +12495,9 @@ def pane_picker(parent_pane: str) -> None:
     Launch a fresh REPL conversation in the current new pane.
 
     Internal subcommand. The new tmux pane (created by
-    ``omnigent pane-split``) execs this command, which:
+    ``agent-meow pane-split``) execs this command, which:
 
-    1. Reads the parent omnigent pane's ``@omnigent-launch-argv``
+    1. Reads the parent agent-meow pane's ``@omnigent-launch-argv``
        and friends.
     2. ``os.execvp``\\s the parent's launch argv to spawn a new
        REPL against the same agent in this pane.
@@ -12508,7 +12508,7 @@ def pane_picker(parent_pane: str) -> None:
     ``designs/REPL_TMUX_PANE_SPLIT.md``. With only one option,
     a chooser is friction; we just exec.
 
-    :param parent_pane: The parent omnigent pane id, e.g. ``%0``.
+    :param parent_pane: The parent agent-meow pane id, e.g. ``%0``.
     """
     import json
 
@@ -12520,7 +12520,7 @@ def pane_picker(parent_pane: str) -> None:
     launch_argv_json = read_pane_option(parent_pane, OPT_LAUNCH_ARGV)
     if not launch_argv_json:
         click.echo(
-            f"error: parent pane {parent_pane} has no omnigent context "
+            f"error: parent pane {parent_pane} has no agent-meow context "
             f"(missing {OPT_LAUNCH_ARGV} option). Cannot launch sibling REPL.",
             err=True,
         )

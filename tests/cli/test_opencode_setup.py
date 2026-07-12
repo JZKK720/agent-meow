@@ -14,7 +14,7 @@ from agent_meow.cli import _list_opencode_models, _load_global_config, _set_open
 
 @pytest.fixture
 def _isolated_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    """Point the global config at a tmp file so saves don't touch ``~/.omnigent``."""
+    """Point the global config at a tmp file so saves don't touch ``~/.agent-meow``."""
     path = tmp_path / "config.yaml"
     monkeypatch.setattr("agent_meow.cli._GLOBAL_CONFIG_PATH", path)
     return path

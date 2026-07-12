@@ -20,7 +20,7 @@ Terminal state lives in whichever process owns the
 - **Out-of-process runner** over the WebSocket tunnel: the runner
   owns the tmux socket. The server proxies WebSocket frames over
   the tunnel via a multiplexed WS channel
-  (``omnigent/server/_runner_ws_tunnel.py``), and the runner's
+  (``agent_meow/server/_runner_ws_tunnel.py``), and the runner's
   resource-addressed WS route runs ``tmux attach`` and bridges the
   PTY.
 

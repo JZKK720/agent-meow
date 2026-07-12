@@ -39,7 +39,7 @@ def test_repl_effort_command_show_set_reset(
     The /effort slash commands are handled entirely within the REPL
     process — no LLM turn is required to assert the UI state machine.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         openai-agents installed.
     :param omnigent_repo_root: Working directory for the subprocess.
     :param mock_credentials_env: Mock-LLM env vars.

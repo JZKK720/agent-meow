@@ -12,15 +12,15 @@ One in-tree consumer today:
   ``settings_file`` path that whitelists their ToolState dir for
   writes.
 
-Stdio MCP servers (``omnigent/tools/mcp.py``) used to go
+Stdio MCP servers (``agent_meow/tools/mcp.py``) used to go
 through this helper too, but the wrap was removed in step 7 of
 the harness contract migration — srt's default policy blocks
 outbound network, which broke every useful MCP server (Glean,
 Slack, GitHub, UC, etc. all need outbound HTTPS). Stdio MCPs
 now spawn unsandboxed, matching the legacy inner stack at
-``omnigent/inner/mcp_tools.py`` (which has never sandboxed
+``agent_meow/inner/mcp_tools.py`` (which has never sandboxed
 stdio MCPs). Future per-MCP sandboxing — if reintroduced —
-should flow through the ``omnigent/environments/`` primitive
+should flow through the ``agent_meow/environments/`` primitive
 with explicit outbound-host allowlists, not srt-defaults.
 
 The PTY-mode wrap used by :class:`~?agent_meow.terminals.shell.Shell`

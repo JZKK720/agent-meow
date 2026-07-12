@@ -423,7 +423,7 @@ export interface ClientTaskCancel {
 // ── Session lifecycle events (session.*) ─────────────────
 //
 // Emitted on `GET /v1/sessions/{id}/stream`. Wire shapes vary —
-// see `omnigent/server/schemas.py` for canonical Pydantic models:
+// see `agent_meow/server/schemas.py` for canonical Pydantic models:
 //
 // - `session.status` / `session.created` /
 //   `session.resource.created` / `session.resource.deleted` use a

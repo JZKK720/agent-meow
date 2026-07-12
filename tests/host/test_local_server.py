@@ -212,7 +212,7 @@ def test_ensure_local_omnigent_server_spawns_when_none_healthy(
     """With no healthy server, spawn one on a loopback port and record it.
 
     Verifies the spawn path: a free port is bound, the server subprocess is
-    launched as ``omnigent server`` on 127.0.0.1, the pidfile records
+    launched as ``agent-meow server`` on 127.0.0.1, the pidfile records
     ``pid\\nport``, and the chosen port is returned.
     The readiness poll is stubbed so the test does not depend on a real boot.
     """
@@ -289,7 +289,7 @@ def test_stop_local_omnigent_server_waits_for_process_exit(
 
     The bug: fire-and-forget SIGTERM left the port bound until the OS
     reaped the process, so the next ``ensure_local_omnigent_server`` or
-    ``omnigent server`` failed to bind. The fix polls ``_pid_alive``
+    ``agent-meow server`` failed to bind. The fix polls ``_pid_alive``
     until the process exits. This test verifies the poll loop runs and
     that both the pidfile and sig sidecar are cleaned up.
     """
@@ -411,7 +411,7 @@ def test_local_data_dir_honors_data_dir_not_config_home(
 ) -> None:
     """``_local_data_dir`` isolates the runtime DB via ``OMNIGENT_DATA_DIR`` only.
 
-    Two worktrees sharing ``~/.omnigent/chat.db`` with divergent Alembic
+    Two worktrees sharing ``~/.agent_meow/chat.db`` with divergent Alembic
     heads can't migrate the shared DB, so the daemon-backed server fails to
     boot. ``OMNIGENT_DATA_DIR`` is the purpose-built data-isolation knob.
     ``OMNIGENT_CONFIG_HOME`` MUST NOT move the DB — it isolates config only;
@@ -421,11 +421,11 @@ def test_local_data_dir_honors_data_dir_not_config_home(
     monkeypatch.delenv("OMNIGENT_DATA_DIR", raising=False)
     monkeypatch.delenv("OMNIGENT_CONFIG_HOME", raising=False)
     # Default: ~/.agent_meow.
-    assert local_server._local_data_dir() == Path.home() / ".omnigent"
+    assert local_server._local_data_dir() == Path.home() / ".agent-meow"
     # CONFIG_HOME does NOT move the data dir — a failure here means config
     # isolation is leaking back into data-dir selection.
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "cfg"))
-    assert local_server._local_data_dir() == Path.home() / ".omnigent"
+    assert local_server._local_data_dir() == Path.home() / ".agent-meow"
     # DATA_DIR is the data-isolation knob.
     monkeypatch.setenv("OMNIGENT_DATA_DIR", str(tmp_path / "data"))
     assert local_server._local_data_dir() == tmp_path / "data"
@@ -435,7 +435,7 @@ def test_pick_local_port_returns_preferred_when_free() -> None:
     """``pick_local_port`` returns the preferred port when it's bindable.
 
     The local server prefers a stable port (8000) so its URL is identical
-    across ``omnigent server`` and daemon spawns. We use an
+    across ``agent-meow server`` and daemon spawns. We use an
     OS-assigned free port as ``preferred`` here so the assertion is
     deterministic regardless of what's already bound on the host (8000
     is often busy on shared CI boxes).
@@ -479,7 +479,7 @@ def test_register_then_clear_local_server_round_trip(
 ) -> None:
     """``register_local_server`` writes our pid+port; ``clear`` removes it.
 
-    This is the handshake that lets a foreground ``omnigent server``
+    This is the handshake that lets a foreground ``agent-meow server``
     advertise itself to the daemon: register writes ``<pid>\\n<port>\\n``
     so :func:`local_server_url_if_healthy` can discover it, and the
     shutdown clear leaves no stale record behind.
@@ -512,7 +512,7 @@ def test_register_local_server_stamps_matching_sig(
     """A foreground server's sidecar matches what connect/run compute.
 
     The regression this guards against: ``register_local_server`` wrote only the
-    pidfile, so a foreground ``omnigent server`` presented no sig and the
+    pidfile, so a foreground ``agent-meow server`` presented no sig and the
     next ``connect``/``run`` saw ``None != desired`` and stopped + respawned
     it. With the sig stamped, the reuse path in ``ensure_local_omnigent_server``
     short-circuits to the healthy URL WITHOUT spawning — proving the
@@ -527,7 +527,7 @@ def test_register_local_server_stamps_matching_sig(
         local_server, "_LOCAL_SERVER_LOG_REF_PATH", tmp_path / "local_server.logpath"
     )
 
-    # Foreground `omnigent server` advertises itself in the pidfile + sig.
+    # Foreground `agent-meow server` advertises itself in the pidfile + sig.
     local_server.register_local_server(8000)
     assert sig_file.read_text().strip() == local_server.server_config_signature()
 
@@ -583,7 +583,7 @@ def test_ensure_local_omnigent_server_spawn_records_and_returns_log_path(
 ) -> None:
     """A spawned server returns its captured-log path and records it for status.
 
-    ``omnigent server start`` used to be a black box — it printed only the
+    ``agent-meow server start`` used to be a black box — it printed only the
     URL. The spawn now threads the captured stdout/stderr log file out via
     ``LocalServerStartup.log_path`` AND into the log-path sidecar, so both
     the spawning call and a later ``server status`` can name the exact file.
@@ -621,7 +621,7 @@ def test_ensure_local_omnigent_server_spawn_records_and_returns_log_path(
     assert result.spawned is True
     assert result.log_path is not None
     # The captured log lives under the per-user server log dir as a .log file.
-    assert result.log_path.parent == tmp_path / ".omnigent" / "logs" / "server"
+    assert result.log_path.parent == tmp_path / ".agent-meow" / "logs" / "server"
     assert result.log_path.suffix == ".log"
     assert result.log_path.name.startswith("local-server-")
     # Recorded in the sidecar so a later status/reuse names the same file.
@@ -654,7 +654,7 @@ def test_ensure_local_omnigent_server_reuse_reads_log_path_sidecar(
     sig_file = tmp_path / "local_server.sig"
     sig_file.write_text(local_server.server_config_signature() + "\n")
     log_ref = tmp_path / "local_server.logpath"
-    recorded = tmp_path / ".omnigent" / "logs" / "server" / "local-server-cd34.log"
+    recorded = tmp_path / ".agent-meow" / "logs" / "server" / "local-server-cd34.log"
     log_ref.write_text(str(recorded) + "\n")
     monkeypatch.setattr(local_server, "_LOCAL_SERVER_SIG_PATH", sig_file)
     monkeypatch.setattr(local_server, "_LOCAL_SERVER_LOG_REF_PATH", log_ref)
@@ -676,7 +676,7 @@ def test_register_local_server_clears_stale_log_ref(
 ) -> None:
     """A foreground server clears any stale background log-path sidecar.
 
-    A foreground ``omnigent server`` streams logs to its own terminal, not a
+    A foreground ``agent-meow server`` streams logs to its own terminal, not a
     file. If a prior background server left a log-ref sidecar behind, a later
     ``server status`` for the foreground one must NOT report that defunct
     file — register clears it so the log path resolves to ``None``.

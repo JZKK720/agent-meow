@@ -20,12 +20,12 @@ from agent_meow.spec.types import ExecutorSpec, RetryPolicy
     ("executor", "expected"),
     [
         # omnigent-type agents carry the kind in config.harness.
-        (ExecutorSpec(type="omnigent", config={"harness": "codex"}), "codex"),
+        (ExecutorSpec(type="agent-meow", config={"harness": "codex"}), "codex"),
         (
-            ExecutorSpec(type="omnigent", config={"harness": "claude-native"}),
+            ExecutorSpec(type="agent-meow", config={"harness": "claude-native"}),
             "claude-native",
         ),
-        # Non-omnigent executors carry their kind in `type` and have no
+        # Non-agent-meow executors carry their kind in `type` and have no
         # config.harness — this is the `or self.type` fallback branch.
         # build_agent_bundle always injects config.harness, so only a
         # directly-constructed spec exercises this path.

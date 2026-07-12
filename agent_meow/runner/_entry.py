@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 _RUNNER_SERVER_URL_ENV_VAR = "RUNNER_SERVER_URL"
 _RUNNER_PREWARM_SPEC_PATH_ENV_VAR = "RUNNER_PREWARM_SPEC_PATH"
-# The runner advertises the omnigent version it is actually running (shared
+# The runner advertises the agent-meow version it is actually running (shared
 # with the CLI/server/host) instead of a hard-coded placeholder.
 _RUNNER_VERSION = VERSION
 _RUNNER_CONFIG_HOME_ENV_VAR = "OMNIGENT_CONFIG_HOME"
@@ -68,12 +68,12 @@ def _runner_config_path() -> Path:
     Respects :envvar:`OMNIGENT_CONFIG_HOME` for test isolation and
     subprocess consistency with the CLI/onboarding layer.
 
-    :returns: Config path, e.g. ``Path("~/.omnigent/config.yaml")``.
+    :returns: Config path, e.g. ``Path("~/.agent_meow/config.yaml")``.
     """
     config_home = os.environ.get(_RUNNER_CONFIG_HOME_ENV_VAR)
     if config_home:
         return Path(config_home).expanduser() / "config.yaml"
-    return Path.home() / ".omnigent" / "config.yaml"
+    return Path.home() / ".agent-meow" / "config.yaml"
 
 
 def _load_runner_idle_timeout_s_from_config() -> float:
@@ -289,11 +289,11 @@ def _make_auth_token_factory(
     """Build a callable that mints fresh auth tokens.
 
     Resolution order:
-      1. Stored OIDC token from ``~/.omnigent/auth_tokens.json``
-         (populated by ``omnigent login``), keyed by ``server_url``.
+      1. Stored OIDC token from ``~/.agent_meow/auth_tokens.json``
+         (populated by ``agent-meow login``), keyed by ``server_url``.
       2. Databricks OAuth token (refreshed via the SDK) — host-keyed
          when a Databricks Apps pointer record is stored for
-         ``server_url`` (``omnigent login <apps-url>``), ambient
+         ``server_url`` (``agent-meow login <apps-url>``), ambient
          otherwise.
 
     Returns ``None`` when no credentials are available.
@@ -301,7 +301,7 @@ def _make_auth_token_factory(
     :param server_url: Server URL to look up the stored OIDC token
         for. When omitted, falls back to the ``RUNNER_SERVER_URL``
         env var — the runner subprocess always has this set, but
-        non-runner callers (e.g. ``omnigent host``) must pass
+        non-runner callers (e.g. ``agent-meow host``) must pass
         it explicitly or the OIDC token won't be discovered and the
         factory will silently fall through to the Databricks path.
 
@@ -310,7 +310,7 @@ def _make_auth_token_factory(
       (refreshed on each reconnect).
     - :class:`_RunnerDatabricksAuth` for the httpx client
       (refreshed on each HTTP callback to the agent-meow server).
-    - ``omnigent/host/connect.py`` for the host tunnel's WS upgrade
+    - ``agent_meow/host/connect.py`` for the host tunnel's WS upgrade
       headers.
 
     :returns: A sync callable returning a bearer token string, or
@@ -351,7 +351,7 @@ def _make_auth_token_factory(
         nonlocal sdk_auth, sdk_auth_resolved
         if not sdk_auth_resolved:
             # A stored Databricks Apps pointer record (from
-            # ``omnigent login <apps-url>``) names the exact workspace
+            # ``agent-meow login <apps-url>``) names the exact workspace
             # the Apps edge accepts tokens from, so it beats ambient
             # profile resolution.
             from agent_meow.cli_auth import load_databricks_workspace_host
@@ -379,7 +379,7 @@ def _make_auth_token_factory(
     def _factory() -> str | None:
         """Return a fresh auth token.
 
-        Checks the stored OIDC token first (from ``omnigent login``),
+        Checks the stored OIDC token first (from ``agent-meow login``),
         then falls back to the reused Databricks SDK auth.
 
         :returns: Bearer token string, or ``None`` if no credentials
@@ -884,7 +884,7 @@ def create_app(
     # (os_env, codex, pi) allowlist it so it survives their scrub.
     os.environ[OMNIGENT_SESSION_ENV_VAR] = OMNIGENT_SESSION_ENV_VALUE
 
-    # Keep the harness manager on its default /tmp/omnigent root.
+    # Keep the harness manager on its default /tmp/agent-meow root.
     # Nesting harness UDS paths under caller-provided temp dirs can
     # exceed AF_UNIX path limits on macOS.
     pm = HarnessProcessManager()

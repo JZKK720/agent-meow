@@ -1,5 +1,5 @@
 """
-Tests for ``_build_copilot_spawn_env`` in ``omnigent/runtime/workflow.py``.
+Tests for ``_build_copilot_spawn_env`` in ``agent_meow/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec`` fields to the ``HARNESS_COPILOT_*`` env
 vars the copilot harness wrap reads at first-turn time. Like the cursor builder,
@@ -54,7 +54,7 @@ def _make_spec(
         spec_version=1,
         name=name,
         instructions="You are a test agent.",
-        executor=ExecutorSpec(type="omnigent", config=config, model=model, auth=auth),
+        executor=ExecutorSpec(type="agent-meow", config=config, model=model, auth=auth),
         llm=LLMConfig(model=model) if model is not None else None,
     )
 

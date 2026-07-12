@@ -1,4 +1,4 @@
-# `--omnigent` example-YAML coverage: known gaps
+# `--agent-meow` example-YAML coverage: known gaps
 
 Companion to `test_run_omnigent_example_agents.py` and
 `test_run_omnigent_adapter_rejections.py`. Tracks gaps the e2e audit
@@ -28,24 +28,24 @@ were migrated in the same change.
 
 ### Fixed — Gap 1: harness auto-selection based on model name
 
-Pure omnigent' CLI auto-picks a harness from the model's
+Pure agent-meow' CLI auto-picks a harness from the model's
 prefix: `databricks-claude-*` → `claude-sdk`, `databricks-gpt-*`
-→ `openai-agents`, etc. The `--omnigent` adapter's validator refused
+→ `openai-agents`, etc. The `--agent-meow` adapter's validator refused
 specs without an explicit `harness:` field, so every YAML that
-relied on pure-omnigent auto-selection failed at spec-load:
+relied on pure-agent-meow auto-selection failed at spec-load:
 
 ```
-invalid agent spec synthesized from omnigent YAML:
+invalid agent spec synthesized from agent-meow YAML:
   executor.config.harness: required when executor.type is
-  'omnigent' — must be one of ['claude-sdk', 'codex',
+  'agent-meow' — must be one of ['claude-sdk', 'codex',
   'openai-agents', 'pi']
 ```
 
 Fix: added `_infer_harness_from_model` helper in
-`omnigent.spec.omnigent` with a `_HARNESS_FOR_MODEL_PREFIX`
+`agent_meow.spec.agent-meow` with a `_HARNESS_FOR_MODEL_PREFIX`
 lookup. `_translate_executor_from_def` calls it as the final
 fallback when no explicit or parent harness is present. The
-omnigent CLI's `_apply_overrides_to_yaml` no longer injects a
+agent-meow CLI's `_apply_overrides_to_yaml` no longer injects a
 hard-coded `_AP_DEFAULT_HARNESS = "openai-agents"` fallback — that
 band-aid was preventing the adapter's auto-pick from ever firing
 (it saw the YAML after the CLI had already baked in the default).
@@ -54,7 +54,7 @@ Covered by the unit tests `test_harness_auto_picks_from_model_prefix`
 (parametrized over claude/gpt variants) and the e2e cases
 `simple_chat` and `agent_with_subagent_session`.
 
-### Fixed — Gap 7: Stock omnigent policy callables don't work under agent-meow
+### Fixed — Gap 7: Stock agent-meow policy callables don't work under agent-meow
 
 `resolve_function_policy` now detects legacy `(content, phase)` callables at
 load time and wraps them in `_omnigent_legacy_shim` — a one-argument adapter
@@ -65,7 +65,7 @@ values and exceptions propagate unchanged.
 The motivating example callables (`examples.tool_functions.block_long_sleep`
 and friends) were already rewritten to the modern single-argument signature
 before this fix landed, so they no longer exercise the shim path. The shim
-exists to protect any user-written omnigent-style policy callables that have
+exists to protect any user-written agent-meow-style policy callables that have
 not yet been migrated.
 
 ### Fixed — Gap 2: parent-to-inline-AgentTool `harness:` propagation
@@ -79,7 +79,7 @@ harness. Each sub-spec tripped the `harness-required` validator:
 
 ```
 sub_agents['worker_a'].executor.config.harness: required when
-executor.type is 'omnigent' — must be one of [...]
+executor.type is 'agent-meow' — must be one of [...]
 ```
 
 Fix: `_agent_tool_to_sub_spec` and `_translate_executor_from_def`
@@ -103,7 +103,7 @@ and the e2e cases `agent_with_subagent_session` and
 
 Not an adapter bug: the example ships with `sandbox:
 linux_bwrap` which only works on Linux hosts with bwrap
-installed. Orthogonal to `--omnigent`. Needs either an
+installed. Orthogonal to `--agent-meow`. Needs either an
 environment-aware example or a per-OS test override.
 
 ### Gap 4 — `agent_with_uc_tools.yaml` untested
@@ -122,7 +122,7 @@ the actual error is unclear. Needs investigation.
 
 ### Gap 8 — Can't ban a specific sub-agent by name
 
-If your omnigent YAML declares a sub-agent tool named
+If your agent-meow YAML declares a sub-agent tool named
 `worker` and you want a policy that denies calls to it, the
 natural thing to write is `match_tools: [worker]`. That doesn't
 work under agent-meow. Sub-agents are invoked through a generic
@@ -132,7 +132,7 @@ policy engine sees `sys_session_send` as the tool name and the
 
 Today's workaround: write the policy against `sys_session_send`
 and read the sub-agent name from the call's arguments. That
-works but it's non-obvious and authors following the omnigent
+works but it's non-obvious and authors following the agent-meow
 docs won't expect it.
 
 **Fix options**: (1) rewrite `match_tools: [worker]` at
@@ -142,10 +142,10 @@ sub-agent as its own first-class tool name so the call sites
 match the YAML. Option 2 is cleaner but touches more of the
 spawn path.
 
-### Fixed — Gap 6: `--omnigent` hung when FunctionTools were registered on the top-level agent
+### Fixed — Gap 6: `--agent-meow` hung when FunctionTools were registered on the top-level agent
 
 **Root cause**: the adapter synthesizes `LocalToolInfo.language =
-"omnigent-python-callable"` for every user FunctionTool /
+"agent-meow-python-callable"` for every user FunctionTool /
 CancellableFunctionTool in the YAML. `load_local_python_tools`
 intentionally skips entries where `language != "python"` (it
 only loads tools that live on disk as `tools/python/*.py`), so
@@ -177,9 +177,9 @@ with the already-built `PolicyEngine`.
 
 Verified by:
 - `examples/agent_with_tools.yaml` (xfail removed, passes
-  end-to-end through `--omnigent` with the claude-sdk harness).
-- `tests/e2e/omnigent/test_run_omnigent_policy_enforcement.py::test_policy_denies_tool_call_by_name`
-  (real `omnigent run --omnigent -p "what is 6 + 6?"` subprocess
+  end-to-end through `--agent-meow` with the claude-sdk harness).
+- `tests/e2e/agent_meow/test_run_omnigent_policy_enforcement.py::test_policy_denies_tool_call_by_name`
+  (real `agent-meow run --agent-meow -p "what is 6 + 6?"` subprocess
   with a `type: function` policy narrowed to `calculate` via `action: deny`
   policy; asserts the LLM acknowledged the denial AND "12"
   never appears in output — the tool was short-circuited, not

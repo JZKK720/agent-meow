@@ -17,10 +17,10 @@ browser is the only place that catches a service worker that *looks* fine in the
 source guard but actually serves the shell at runtime.
 
 Unlike the rest of this suite, the PWA contract is independent of the agent /
-LLM, so this spawns a plain ``omnigent server`` (no ``--agent``, no runner, no
+LLM, so this spawns a plain ``agent-meow server`` (no ``--agent``, no runner, no
 Databricks credentials) — keeping the test fast and runnable anywhere. It still
 serves the production static mount + cache/MIME headers from
-``omnigent/server/app.py``, which is exactly what the browser checks rely on.
+``agent_meow/server/app.py``, which is exactly what the browser checks rely on.
 
 Part of the gated e2e_ui suite (excluded from the default ``pytest`` run via
 ``--ignore=tests/e2e_ui``); see this package's ``conftest`` module docstring.
@@ -60,7 +60,7 @@ def _wait_healthy(proc: subprocess.Popen[bytes], base_url: str, log_path: Path) 
         if proc.poll() is not None:
             log = log_path.read_text() if log_path.exists() else ""
             raise RuntimeError(
-                f"omnigent server exited early (code {proc.returncode}).\n{log[:2000]}"
+                f"agent-meow server exited early (code {proc.returncode}).\n{log[:2000]}"
             )
         try:
             resp = httpx.get(f"{base_url}/health", timeout=2)
@@ -72,7 +72,7 @@ def _wait_healthy(proc: subprocess.Popen[bytes], base_url: str, log_path: Path) 
         time.sleep(_HEALTH_POLL_INTERVAL_S)
     log = log_path.read_text() if log_path.exists() else ""
     raise RuntimeError(
-        f"omnigent server not healthy within {_HEALTH_TIMEOUT_S:.0f}s on "
+        f"agent-meow server not healthy within {_HEALTH_TIMEOUT_S:.0f}s on "
         f"{base_url} (last_error={last_error}).\n{log[:2000]}"
     )
 
@@ -83,13 +83,13 @@ def pwa_server(
     request: pytest.FixtureRequest,
     tmp_path_factory: pytest.TempPathFactory,
 ) -> Iterator[str]:
-    """Serve the built SPA via a no-agent ``omnigent server`` and yield its URL.
+    """Serve the built SPA via a no-agent ``agent-meow server`` and yield its URL.
 
     No ``--agent`` (and therefore no runner / LLM credentials) — the PWA
     contract this test checks is agent-independent, so this stays fast and
     creds-free where ``live_server`` cannot. ``--database-uri`` /
     ``--artifact-location`` point at the pytest tmp dir so the user's default
-    ``omnigent.db`` / ``artifacts`` are never touched.
+    ``agent_meow.db`` / ``artifacts`` are never touched.
 
     :param built_spa: Ensures the SPA bundle (incl. the PWA assets) is on disk
         before the server mounts it.

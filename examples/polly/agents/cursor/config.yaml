@@ -4,11 +4,11 @@ description: Cursor coding sub-agent — implements, cross-vendor reviews, or ex
 
 # Native Cursor TUI harness (`cursor-agent`): runs in its own terminal the
 # human can open in the UI's Subagents panel and TAKE OVER. cursor-agent owns
-# its own tool-approval gating (omnigent does not intercept it), so dangerous
+# its own tool-approval gating (agent-meow does not intercept it), so dangerous
 # actions surface in the cursor TUI / mirrored web cards rather than being
 # auto-bypassed.
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: cursor-native
 

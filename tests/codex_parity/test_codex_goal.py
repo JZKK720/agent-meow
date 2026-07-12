@@ -50,7 +50,7 @@ class _CodexGoalConversationStore:
                 agent_id="ag_codex",
                 labels={
                     "agent_meow.ui": "terminal",
-                    "omnigent.wrapper": "codex-native-ui",
+                    "agent_meow.wrapper": "codex-native-ui",
                 },
             ),
             "conv_codex_no_runner": Conversation(
@@ -61,7 +61,7 @@ class _CodexGoalConversationStore:
                 agent_id="ag_codex",
                 labels={
                     "agent_meow.ui": "terminal",
-                    "omnigent.wrapper": "codex-native-ui",
+                    "agent_meow.wrapper": "codex-native-ui",
                 },
             ),
         }

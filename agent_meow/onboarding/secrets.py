@@ -1,9 +1,9 @@
 """A small secret store for OS-keychain-backed provider credentials.
 
 This is the storage layer behind ``keychain:<name>`` secret references in
-``~/.omnigent/config.yaml`` (see
+``~/.agent_meow/config.yaml`` (see
 :func:`~?agent_meow.onboarding.provider_config.resolve_secret`). The
-``omnigent setup --no-internal-beta`` command writes a provider's API key here
+``agent-meow setup --no-internal-beta`` command writes a provider's API key here
 under a stable name (e.g. ``"anthropic"``), and the runtime reads it back
 when a family's ``api_key_ref`` is ``keychain:anthropic``.
 
@@ -45,9 +45,9 @@ import keyring.errors
 _KEYRING_ERRORS: tuple[type[Exception], ...] = (keyring.errors.KeyringError,)
 
 # Service name under which secrets are stored in the OS keychain. A single
-# service groups all omnigent secrets; the per-secret ``name`` is the
+# service groups all agent-meow secrets; the per-secret ``name`` is the
 # keychain "username".
-_KEYRING_SERVICE = "omnigent"
+_KEYRING_SERVICE = "agent-meow"
 
 # Env var that forces the file backend even when ``keyring`` is importable.
 # Useful on CI / headless hosts where an OS keyring exists but is locked.
@@ -102,25 +102,25 @@ def active_backend() -> str:
 
 
 def _config_home() -> str:
-    """Return the omnigent config home directory.
+    """Return the agent-meow config home directory.
 
     Respects ``$OMNIGENT_CONFIG_HOME`` for test isolation, matching the
     convention in :func:`~?agent_meow.onboarding.provider_config._config_path`.
 
-    :returns: The config home path, e.g. ``"/home/u/.omnigent"`` or the
+    :returns: The config home path, e.g. ``"/home/u/.agent-meow"`` or the
         value of ``$OMNIGENT_CONFIG_HOME`` when set.
     """
     config_home = os.environ.get("OMNIGENT_CONFIG_HOME")
     if config_home:
         return config_home
-    return os.path.join(os.path.expanduser("~"), ".omnigent")
+    return os.path.join(os.path.expanduser("~"), ".agent-meow")
 
 
 def _secrets_path() -> str:
     """Return the path to the file-backend secrets file.
 
     :returns: Path to ``secrets.json`` under the config home, e.g.
-        ``"/home/u/.omnigent/secrets.json"``.
+        ``"/home/u/.agent_meow/secrets.json"``.
     """
     return os.path.join(_config_home(), "secrets.json")
 

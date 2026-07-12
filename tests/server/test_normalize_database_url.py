@@ -23,8 +23,8 @@ from agent_meow.db.utils import normalize_database_url
         ),
         # SQLite (local dev) — pass through unchanged
         (
-            "sqlite:///./omnigent.db",
-            "sqlite:///./omnigent.db",
+            "sqlite:///./agent_meow.db",
+            "sqlite:///./agent_meow.db",
         ),
         # Credentials with special characters survive the prefix rewrite
         (

@@ -3,7 +3,7 @@
 ``test_markdown_file_attachment`` runs against the mock LLM server.
 ``test_list_files_finds_uploaded_file`` and
 ``test_download_file_retrieves_content`` require a real LLM (the
-bundled archer agent declares ``tools.builtins`` which the omnigent
+bundled archer agent declares ``tools.builtins`` which the agent-meow
 single-file YAML format does not support for inline agents).
 
 Usage::

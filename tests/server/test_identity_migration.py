@@ -2,7 +2,7 @@
 
 Covers :func:`~?agent_meow.server.identity_migration.remap_identities` and
 ``build_domain_mapping`` against a real SQLite database, plus the
-``omnigent debug migrate-accounts-to-oidc`` CLI wrapper via Click's
+``agent-meow debug migrate-accounts-to-oidc`` CLI wrapper via Click's
 ``CliRunner``.
 
 The load-bearing properties: every user-id-bearing column is repointed,

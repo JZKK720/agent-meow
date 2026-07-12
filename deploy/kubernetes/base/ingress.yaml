@@ -1,23 +1,23 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: omnigent
+  name: agent-meow
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - omnigent.example.com
-      secretName: omnigent-tls
+        - agent_meow.example.com
+      secretName: agent-meow-tls
   rules:
-    - host: omnigent.example.com
+    - host: agent_meow.example.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: omnigent
+                name: agent-meow
                 port:
                   name: http

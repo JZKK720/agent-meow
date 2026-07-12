@@ -109,7 +109,7 @@ def is_tracing_enabled() -> bool:
 def _tracer() -> Any:
     from opentelemetry import trace
 
-    return trace.get_tracer("omnigent")
+    return trace.get_tracer("agent-meow")
 
 
 # ---------------------------------------------------------------------------

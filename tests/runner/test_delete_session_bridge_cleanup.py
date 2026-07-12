@@ -3,7 +3,7 @@
 Each native session's bridge dir holds a per-conversation bridge token + MCP
 config (secret material). ``DELETE /v1/sessions/{id}`` closes the pane but
 historically never removed this SEPARATE dir, so token-bearing
-``/tmp/omnigent-*`` (and ``~/.omnigent``) dirs accumulated even on a clean
+``/tmp/omnigent-*`` (and ``~/.agent-meow``) dirs accumulated even on a clean
 delete. The delete path must now ``rmtree`` it — for ALL 11 native families,
 not just the original 5.
 """

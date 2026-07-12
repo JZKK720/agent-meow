@@ -1,14 +1,14 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: omnigent
+  name: agent-meow
   labels:
-    app: omnigent
+    app: agent-meow
 spec:
-  host: omnigent.apps.example.com
+  host: agent_meow.apps.example.com
   to:
     kind: Service
-    name: omnigent
+    name: agent-meow
     weight: 100
   port:
     targetPort: http

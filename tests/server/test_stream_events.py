@@ -115,12 +115,12 @@ def test_emit_sites_referenced_by_grep_are_all_in_the_union() -> None:
     # routes/sessions.py.
     repo_root = Path(__file__).resolve().parent.parent.parent
     paths = [
-        repo_root / "omnigent/runtime/workflow.py",
-        repo_root / "omnigent/runtime/compaction.py",
-        repo_root / "omnigent/runtime/policies/approval.py",
-        repo_root / "omnigent/runtime/llm_retry.py",
-        repo_root / "omnigent/runtime/tool_retry.py",
-        repo_root / "omnigent/server/routes/sessions.py",
+        repo_root / "agent_meow/runtime/workflow.py",
+        repo_root / "agent_meow/runtime/compaction.py",
+        repo_root / "agent_meow/runtime/policies/approval.py",
+        repo_root / "agent_meow/runtime/llm_retry.py",
+        repo_root / "agent_meow/runtime/tool_retry.py",
+        repo_root / "agent_meow/server/routes/sessions.py",
     ]
     pattern = re.compile(r'"type":\s*"(response\.[^"]+|session\.[^"]+)"')
     found: set[str] = set()
@@ -450,7 +450,7 @@ def test_session_created_event_payload_shape() -> None:
     The DBOS-removal cutover folded the standalone
     ``_publish_session_created_on_parent`` helper from
     ``spawn.py`` into the runner's sub-agent dispatch (see
-    ``omnigent/runner/tool_dispatch.py::_execute_subagent_tool``).
+    ``agent_meow/runner/tool_dispatch.py::_execute_subagent_tool``).
     The wire-level invariants the helper used to encode are still
     enforced by the model itself — that the event identifies a
     parent-side ``conversation_id``, a ``child_session_id``, the

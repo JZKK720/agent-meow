@@ -259,7 +259,7 @@ def test_read_login_url_returns_first_authorize_url() -> None:
 def test_read_login_url_returns_none_when_no_url_printed() -> None:
     """
     A stream that ends without an authorize URL yields ``None`` — not
-    an exception: ``omnigent login`` legitimately completes without a
+    an exception: ``agent-meow login`` legitimately completes without a
     browser step when a cached workspace grant verifies, and the
     caller decides success vs. failure from the exit code.
     """
@@ -301,7 +301,7 @@ def test_login_runs_in_sandbox_and_forwards_callback_port(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Golden path: run ``omnigent login`` inside the box with a forced
+    Golden path: run ``agent-meow login`` inside the box with a forced
     PTY, parse the dynamic callback port from the printed URL, forward
     exactly that port BEFORE opening the URL locally, and clean the
     process up.
@@ -333,11 +333,11 @@ def test_login_runs_in_sandbox_and_forwards_callback_port(
     )
 
     # The login runs INSIDE the sandbox with a forced PTY — and it is
-    # `omnigent login <server>` (which infers the fronting workspace
+    # `agent-meow login <server>` (which infers the fronting workspace
     # itself), NOT a raw `databricks auth login` with profile flags.
     assert launcher.stream_calls == [
         _StreamCall(
-            command="omnigent login https://app.example.com",
+            command="agent-meow login https://app.example.com",
             pty=True,
         )
     ]
@@ -370,7 +370,7 @@ def test_login_runs_in_sandbox_and_forwards_callback_port(
     ]
     # The seed lands before the login spawn (the login reads the cfg).
     assert launcher.log.index(f"run:{launcher.run_commands[0]}") < launcher.log.index(
-        "stream:omnigent login https://app.example.com"
+        "stream:agent-meow login https://app.example.com"
     )
 
 
@@ -378,7 +378,7 @@ def test_login_completes_without_browser_when_no_url_printed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``omnigent login`` reuses a cached workspace grant when one
+    ``agent-meow login`` reuses a cached workspace grant when one
     verifies against the server — it then exits 0 without printing an
     authorize URL. The flow must treat that as success: no port
     forward, no browser, no error.
@@ -728,7 +728,7 @@ def test_ship_wheels_puts_installs_and_persists_path(tmp_path: Path) -> None:
     # with the shipped tarball path — if a generic pip line appears
     # instead, the provider's image-specific flags were bypassed.
     assert launcher.run_commands[0] == "FAKE-INSTALL /tmp/oa-wheels.tgz"
-    # PATH persistence makes `omnigent` resolvable for later
+    # PATH persistence makes `agent-meow` resolvable for later
     # `bash -lc` foreground runs.
     assert ".local/bin" in launcher.run_commands[1]
     # Upload must precede install (can't install a tarball that isn't
@@ -743,8 +743,8 @@ def test_ship_wheels_puts_installs_and_persists_path(tmp_path: Path) -> None:
 
 def test_connect_runs_bare_host_command() -> None:
     """
-    The foreground command must be the bare ``omnigent host --server
-    <url>`` — ``omnigent host`` no longer takes ``--profile``, so any
+    The foreground command must be the bare ``agent-meow host --server
+    <url>`` — ``agent-meow host`` no longer takes ``--profile``, so any
     extra flag here makes the remote command exit with
     "no such option" and the sandbox never registers.
     """
@@ -754,14 +754,14 @@ def test_connect_runs_bare_host_command() -> None:
         "sb-1",
         server_url="https://app.example.com",
     )
-    assert launcher.foreground_commands == ["omnigent host --server https://app.example.com"]
+    assert launcher.foreground_commands == ["agent-meow host --server https://app.example.com"]
 
 
 def test_connect_sets_host_name_before_connecting() -> None:
     """
     When ``host_name`` is set, connect must (a) edit the sandbox's
-    ``~/.omnigent/config.yaml`` to use that name, and (b) THEN run
-    ``omnigent host``. Order matters — the host reads config.yaml at
+    ``~/.agent_meow/config.yaml`` to use that name, and (b) THEN run
+    ``agent-meow host``. Order matters — the host reads config.yaml at
     startup.
     """
     launcher = _FakeLauncher()

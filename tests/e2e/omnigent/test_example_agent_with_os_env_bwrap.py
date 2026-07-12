@@ -24,7 +24,7 @@ import pytest
 from agent_meow.spec import load
 from agent_meow.spec.types import AgentSpec
 
-# tests/e2e/omnigent/test_example_agent_with_os_env_bwrap.py -> repo root 3 up.
+# tests/e2e/agent_meow/test_example_agent_with_os_env_bwrap.py -> repo root 3 up.
 _BWRAP_YAML = (
     Path(__file__).resolve().parents[3]
     / "tests"

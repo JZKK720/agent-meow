@@ -42,8 +42,8 @@ function configureProxy(target: string, useAuth: boolean): NonNullable<ProxyOpti
   const parsed = new URL(target);
   const host = parsed.origin;
   // The URL pathname becomes a prefix prepended to every proxied request.
-  // e.g. OMNIGENT_URL=https://host.com/api/2.0/omnigent means the browser's
-  // /v1/sessions is rewritten to /api/2.0/omnigent/v1/sessions before forwarding.
+  // e.g. OMNIGENT_URL=https://host.com/api/2.0/agent-meow means the browser's
+  // /v1/sessions is rewritten to /api/2.0/agent_meow/v1/sessions before forwarding.
   const basePath = parsed.pathname.replace(/\/$/, "");
 
   return (proxy) => {
@@ -222,7 +222,7 @@ export default defineConfig({
       provider: "v8",
       // With `include` set, vitest counts every matching source file (untested
       // ones as 0%), so the total reflects the whole frontend — parity with the
-      // backend's --cov=omnigent, not just files a test happened to import.
+      // backend's --cov=agent-meow, not just files a test happened to import.
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "src/**/*.test.{ts,tsx}",
@@ -241,7 +241,7 @@ export default defineConfig({
     proxy: proxyConfig,
   },
   build: {
-    outDir: path.resolve(__dirname, "../omnigent/server/static/web-ui"),
+    outDir: path.resolve(__dirname, "../agent_meow/server/static/web-ui"),
     emptyOutDir: true,
   },
 });

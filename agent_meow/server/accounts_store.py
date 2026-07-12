@@ -79,7 +79,7 @@ class SqlAlchemyAccountStore:
     ``create_app`` is mechanical.
 
     :param storage_location: SQLAlchemy database URI, e.g.
-        ``"sqlite:///omnigent.db"``. Shares the connection pool
+        ``"sqlite:///agent_meow.db"``. Shares the connection pool
         with PermissionStore via :func:`get_or_create_engine`.
     """
 

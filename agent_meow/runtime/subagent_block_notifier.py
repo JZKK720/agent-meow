@@ -2,7 +2,7 @@
 
 A blocked sub-agent (e.g. a codex worker asking to run ``git fetch``) never
 reaches a terminal status, so the completion-only parent-wake in
-``omnigent/runner/app.py`` leaves the orchestrator idle and unaware. This
+``agent_meow/runner/app.py`` leaves the orchestrator idle and unaware. This
 module observes every elicitation at the
 ``pending_elicitations.record_publish`` chokepoint. The approval prompt itself
 is mirrored into ancestor chats for the human, so for a child session the

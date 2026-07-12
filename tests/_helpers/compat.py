@@ -78,10 +78,10 @@ def _compat_cwd(env_var: str, label: str) -> str | None:
     A neutral working directory for a redirected subprocess, or ``None``.
 
     ``python -m agent_meow...`` puts the CWD on ``sys.path[0]``, so a subprocess
-    launched from the repo checkout would import the worktree's ``omnigent/``
+    launched from the repo checkout would import the worktree's ``agent_meow/``
     package — shadowing the pinned older install exactly like a ``PYTHONPATH``
     prepend would. A stable empty directory forces the pinned venv's installed
-    ``omnigent`` to resolve.
+    ``agent-meow`` to resolve.
 
     :param env_var: The component's redirect env var.
     :param label: Component label for the cache + temp-dir prefix, e.g.
@@ -127,14 +127,14 @@ def server_pythonpath(repo_root: str | os.PathLike[str]) -> str | None:
     Normally the worktree (*repo_root*) is prepended so the server imports
     the branch's source rather than a stale installed copy. In compat mode
     that prepend is **dropped** — otherwise the worktree would shadow the
-    pinned older ``omnigent`` in the compat venv, silently testing main
+    pinned older ``agent-meow`` in the compat venv, silently testing main
     against main.
 
     :param repo_root: Worktree root to prepend in normal mode, e.g.
-        ``Path("/Users/me/omnigent")``.
+        ``Path("/Users/me/agent-meow")``.
     :returns: ``"<repo_root>:<existing PYTHONPATH>"`` in normal mode;
         ``None`` in compat mode (caller should omit ``PYTHONPATH`` so the
-        compat venv's site-packages resolves ``omnigent``).
+        compat venv's site-packages resolves ``agent-meow``).
     """
     if compat_server_python() is not None:
         return None
@@ -147,7 +147,7 @@ def compat_server_cwd() -> str | None:
     Working directory for the server subprocess, or ``None`` to inherit.
 
     See :func:`_compat_cwd`. In compat mode the server runs from a stable
-    empty directory so the worktree's ``omnigent/`` doesn't shadow the pinned
+    empty directory so the worktree's ``agent_meow/`` doesn't shadow the pinned
     older install via ``sys.path[0]``.
 
     :returns: A stable empty directory path in compat mode; ``None`` outside

@@ -1,4 +1,4 @@
-"""Tests for ``omnigent/onboarding/antigravity_auth.py`` — the Gemini key store.
+"""Tests for ``agent_meow/onboarding/antigravity_auth.py`` — the Gemini key store.
 
 Isolate config + secret store to a tmp dir (file backend) and assert the
 read/resolve/configured helpers — including the soft resolution that returns
@@ -152,7 +152,7 @@ def test_antigravity_install_command_prefers_uv(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: "/usr/bin/uv")
     cmd = antigravity_install_command()
-    assert cmd == ["uv", "pip", "install", "omnigent[antigravity]"]
+    assert cmd == ["uv", "pip", "install", "agent-meow[antigravity]"]
     assert not any("index" in part or "://" in part for part in cmd)
 
 
@@ -166,7 +166,7 @@ def test_antigravity_install_command_falls_back_to_pip(monkeypatch: pytest.Monke
         "-m",
         "pip",
         "install",
-        "omnigent[antigravity]",
+        "agent-meow[antigravity]",
     ]
     assert not any("index" in part or "://" in part for part in cmd)
 
@@ -181,8 +181,8 @@ def test_antigravity_install_command_uv_tool(monkeypatch: pytest.MonkeyPatch) ->
         "tool",
         "install",
         "--with",
-        "omnigent[antigravity]",
-        "omnigent",
+        "agent-meow[antigravity]",
+        "agent-meow",
         "--force",
     ]
 
@@ -212,7 +212,7 @@ def test_install_antigravity_sdk_runs_command_then_rechecks(
 
     assert install_antigravity_sdk() is True
     assert calls == [
-        [extra_install.sys.executable, "-m", "pip", "install", "omnigent[antigravity]"]
+        [extra_install.sys.executable, "-m", "pip", "install", "agent-meow[antigravity]"]
     ]
 
 

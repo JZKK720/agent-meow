@@ -857,8 +857,8 @@ def _default_sandbox_for_platform() -> OSEnvSandboxSpec:
 
 
 def _project_root() -> Path:
-    # File lives at omnigent/inner/sandbox.py; climb two levels to the
-    # repo root that hosts `omnigent/` as a package.
+    # File lives at agent_meow/inner/sandbox.py; climb two levels to the
+    # repo root that hosts `agent_meow/` as a package.
     return Path(__file__).resolve().parents[2]
 
 

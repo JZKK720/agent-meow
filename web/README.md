@@ -49,9 +49,9 @@ cd web
 npm run build
 ```
 
-Vite writes the bundle to `../omnigent/server/static/web-ui/` (configured in
+Vite writes the bundle to `../agent_meow/server/static/web-ui/` (configured in
 `vite.config.ts`). When that directory exists and contains `index.html`, the
-FastAPI app in `omnigent/server/app.py` mounts it at `/`. After a build:
+FastAPI app in `agent_meow/server/app.py` mounts it at `/`. After a build:
 
 ```bash
 .venv/bin/meow server --agent examples/hello_world.yaml

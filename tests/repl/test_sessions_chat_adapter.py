@@ -1,7 +1,7 @@
 """Unit tests for the sessions-API REPL adapter event translator.
 
 Three CUJs caught these regressions during manual testing of
-``omnigent run`` in sessions mode:
+``agent-meow run`` in sessions mode:
 
 1. ``ResponseCreated`` was imported from the public ``omnigent_client``
    re-export, which doesn't include it. ImportError on first turn.
@@ -875,7 +875,7 @@ def test_autonomous_turn_renders_without_local_send() -> None:
     )
 
     # Replay events through the same branching logic as
-    # ``_render_session_event`` in ``omnigent/repl/_repl.py``.
+    # ``_render_session_event`` in ``agent_meow/repl/_repl.py``.
     for event in events:
         if isinstance(event, _StatusEv):
             if event.status == "running":

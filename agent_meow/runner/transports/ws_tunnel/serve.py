@@ -324,7 +324,7 @@ async def serve_tunnel(
                     f"{RUNNER_TUNNEL_REJECTION_PREFIX}"
                     f"(redirect to non-WebSocket URL {redirect_url}); "
                     "the server likely requires auth — "
-                    "run `omnigent setup` to configure credentials"
+                    "run `agent-meow setup` to configure credentials"
                 ) from exc
             http_status = _websocket_http_status(exc)
             if http_status in _REFRESHABLE_HTTP_STATUSES:
@@ -512,7 +512,7 @@ async def _serve_tunnel_once(
     :param tunnel_url: WebSocket URL to connect to, e.g.
         ``"ws://127.0.0.1:6767/v1/runners/runner_abc/tunnel"``.
     :param server_url: HTTP(S) server base URL the tunnel belongs to,
-        e.g. ``"https://example.databricks.com/api/2.0/omnigent"``. Used
+        e.g. ``"https://example.databricks.com/api/2.0/agent-meow"``. Used
         to look up the workspace-routing header (keyed by server URL, not
         the ws tunnel URL).
     :param runner_id: Stable runner id, e.g. ``"runner_abc"``.

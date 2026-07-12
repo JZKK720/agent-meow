@@ -5,7 +5,7 @@
 //   PATCH  /v1/sessions/{id}/resources/documents/{docId}
 //   DELETE /v1/sessions/{id}/resources/documents/{docId}
 //
-// Mirrors omnigent/server/routes/documents.py. Wire is snake_case; the
+// Mirrors agent_meow/server/routes/documents.py. Wire is snake_case; the
 // TS surface is camelCase. Conversions happen at the boundary.
 
 import { authenticatedFetch } from "./identity";

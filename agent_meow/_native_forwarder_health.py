@@ -1,7 +1,7 @@
 """Process-local record of the most recent native-forwarder event-POST failure.
 
 A native-harness subprocess serves exactly one conversation (see
-``app.state.conversation_id`` in ``omnigent/runtime/harnesses/_scaffold.py``),
+``app.state.conversation_id`` in ``agent_meow/runtime/harnesses/_scaffold.py``),
 and its transcript forwarder runs as an ``asyncio`` task in the SAME event loop
 as the harness idle-turn watchdog. When the watchdog fires after a stall, the
 real cause is often that the forwarder could not POST session events to the

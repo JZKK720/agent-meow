@@ -23,7 +23,7 @@ running agent-meow hosts, two ways:
 ## Prerequisites
 
 ```bash
-pip install 'omnigent[e2b]'   # installs the e2b SDK extra
+pip install 'agent-meow[e2b]'   # installs the e2b SDK extra
 npm i -g @e2b/cli             # the E2B CLI, for building the template
 ```
 
@@ -56,10 +56,10 @@ E2B builds a template from a Dockerfile whose base image must be
 one-liner that layers nothing on top of the published image:
 
 ```bash
-mkdir -p omnigent-e2b && cd omnigent-e2b
+mkdir -p agent-meow-e2b && cd agent-meow-e2b
 cat > e2b.Dockerfile <<'EOF'
 # Single-stage, Debian-based — both E2B requirements. The host image
-# already bakes the full omnigent install plus git / tmux / curl, so
+# already bakes the full agent-meow install plus git / tmux / curl, so
 # nothing else is needed here.
 FROM ghcr.io/JZKK720/agent-meow-host:latest
 EOF
@@ -68,7 +68,7 @@ e2b template build --name agent-meow-host --dockerfile e2b.Dockerfile
 ```
 
 `agent-meow-host` is the default template name the launcher looks for
-([`DEFAULT_E2B_TEMPLATE`](../../omnigent/onboarding/sandboxes/e2b.py)), so
+([`DEFAULT_E2B_TEMPLATE`](../../agent_meow/onboarding/sandboxes/e2b.py)), so
 a deployment that uses that name needs no further config. Use a different
 name (or pin a `:sha-<short>` host image) and point the launcher at it
 with `sandbox.e2b.template` / `OMNIGENT_E2B_TEMPLATE`.

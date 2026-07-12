@@ -446,7 +446,7 @@ async def test_serve_tunnel_fails_loud_on_auth_redirect(
     # what the server is asking for.
     assert login_url in message
     # User-actionable next step.
-    assert "omnigent setup" in message
+    assert "agent-meow setup" in message
 
 
 @pytest.mark.asyncio
@@ -623,7 +623,7 @@ async def test_serve_tunnel_once_sends_org_header(
     await _serve_tunnel_once(
         _noop_app,
         tunnel_url="wss://acme.databricks.com/v1/runners/r/tunnel",
-        server_url="https://acme.databricks.com/api/2.0/omnigent",
+        server_url="https://acme.databricks.com/api/2.0/agent-meow",
         runner_id="r",
         runner_version="0.1.0",
         auth_token="tok",

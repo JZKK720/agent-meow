@@ -256,7 +256,7 @@ describe("useSettingsRoute", () => {
     // Basename-agnostic: the sidebar rebases links behind the app's back in the
     // embed, so detection keys off the `settings` segment wherever it lands.
     mocks.accountsEnabled = true;
-    expect(routeHook("/ml/omnigent-embed/settings/members")).toEqual({
+    expect(routeHook("/ml/agent-meow-embed/settings/members")).toEqual({
       inSettings: true,
       section: "members",
     });

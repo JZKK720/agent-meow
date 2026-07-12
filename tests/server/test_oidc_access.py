@@ -150,8 +150,8 @@ def test_config_allowed_domains_union(tmp_path: Path) -> None:
 
 def test_resolve_allowed_domains_path_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     """``OMNIGENT_OIDC_ALLOWED_DOMAINS_PATH`` wins over the default."""
-    monkeypatch.setenv("OMNIGENT_OIDC_ALLOWED_DOMAINS_PATH", "/etc/omnigent/domains")
-    assert resolve_allowed_domains_path() == Path("/etc/omnigent/domains")
+    monkeypatch.setenv("OMNIGENT_OIDC_ALLOWED_DOMAINS_PATH", "/etc/agent_meow/domains")
+    assert resolve_allowed_domains_path() == Path("/etc/agent_meow/domains")
 
 
 def test_resolve_allowed_domains_path_default(monkeypatch: pytest.MonkeyPatch) -> None:

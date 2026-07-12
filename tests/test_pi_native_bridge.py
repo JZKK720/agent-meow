@@ -135,7 +135,7 @@ def test_prepare_bridge_dir_is_owner_only(tmp_path: Path, monkeypatch) -> None:
     """The bridge dir and its inbox are created 0o700 (per-session isolation).
 
     The bearer token written alongside the inbox makes owner-only perms the
-    isolation boundary between sessions sharing ``~/.omnigent/pi-native``.
+    isolation boundary between sessions sharing ``~/.agent_meow/pi-native``.
     """
     monkeypatch.setattr(pi_native_bridge, "_BRIDGE_ROOT", tmp_path / "pi-native")
 

@@ -565,7 +565,7 @@ def _managed_scope(path: str, token: str) -> dict[str, object]:
     :returns: ASGI WebSocket scope with the token header set.
     """
     scope = _websocket_scope(path)
-    scope["headers"] = [(b"x-omnigent-host-token", token.encode("ascii"))]
+    scope["headers"] = [(b"x-agent-meow-host-token", token.encode("ascii"))]
     return scope
 
 

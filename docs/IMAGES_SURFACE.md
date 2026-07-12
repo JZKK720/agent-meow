@@ -11,13 +11,13 @@ new REST routes, new builtin agent tools, and a new UI rail tab.
 ```
 agent-meow Images surface
 ├── Backend
-│   ├── omnigent/entities/image.py             — ImageAsset dataclass
-│   ├── omnigent/db/db_models.py               — SqlImage table
-│   ├── omnigent/stores/image_store/           — ImageStore (abstract + SQLAlchemy)
-│   ├── omnigent/server/routes/images.py       — REST routes (/v1/sessions/{id}/resources/images)
-│   └── omnigent/tools/builtins/images.py      — image_list / image_get / image_upload / image_edit / image_generate tools
+│   ├── agent_meow/entities/image.py             — ImageAsset dataclass
+│   ├── agent_meow/db/db_models.py               — SqlImage table
+│   ├── agent_meow/stores/image_store/           — ImageStore (abstract + SQLAlchemy)
+│   ├── agent_meow/server/routes/images.py       — REST routes (/v1/sessions/{id}/resources/images)
+│   └── agent_meow/tools/builtins/images.py      — image_list / image_get / image_upload / image_edit / image_generate tools
 ├── Migration
-│   └── omnigent/db/migrations/versions/o1a2b3c4d5e6_add_documents_and_images.py
+│   └── agent_meow/db/migrations/versions/o1a2b3c4d5e6_add_documents_and_images.py
 ├── Frontend
 │   ├── web/src/lib/imagesApi.ts               — typed API client
 │   ├── web/src/hooks/useImages.ts             — react-query hooks
@@ -48,7 +48,7 @@ agent-meow Images surface
 | `image_generate` | Generate an image from a text prompt (stub in v1) |
 
 Tools are runner-dispatched (schema-only `Tool` subclasses); the runner
-proxies the server's REST endpoints via `omnigent/runner/tool_dispatch.py`
+proxies the server's REST endpoints via `agent_meow/runner/tool_dispatch.py`
 (`_execute_image_tool`). `image_upload` reads a local file from the
 agent's workspace and POSTs it as multipart. `image_generate` is a v1
 stub — it returns a not-yet-wired message; configure a diffusion

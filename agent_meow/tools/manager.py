@@ -233,7 +233,7 @@ class ToolManager:
         Register the timer builtins when the agent spec opts in.
 
         Gated on :attr:`AgentSpec.timers` (defaults to ``False`` to
-        match ``omnigent/inner/datamodel.py::AgentDef.timers``).
+        match ``agent_meow/inner/datamodel.py::AgentDef.timers``).
         Agents that want timer scheduling declare ``timers: true``
         at the top level of their YAML.
 
@@ -653,7 +653,7 @@ class ToolManager:
                     f"spec-declared client local tool {client_info.name!r} "
                     f"collides with an already-registered tool"
                 )
-            # The validator (see ``omnigent/spec/validator.py``)
+            # The validator (see ``agent_meow/spec/validator.py``)
             # enforces that ``runtime: client`` tools carry an
             # explicit ``parameters`` block — no callable to
             # introspect, so the schema must be authoritative.
@@ -756,7 +756,7 @@ class ToolManager:
                 # fail loud rather than silently override (matches
                 # the file-based path's G27 collision discipline).
                 raise ValueError(
-                    f"omnigent callable tool {callable_tool.name()!r} "
+                    f"agent-meow callable tool {callable_tool.name()!r} "
                     f"collides with an already-registered tool"
                 )
             self._tools[callable_tool.name()] = callable_tool

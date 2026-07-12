@@ -18,7 +18,7 @@
 # Usage:
 #   tests/e2e_ui/visual/regen_baseline_docker.sh [--skip-build]
 #
-#   --skip-build  Reuse an existing omnigent/server/static/web-ui build (e.g.
+#   --skip-build  Reuse an existing agent_meow/server/static/web-ui build (e.g.
 #                 from a prior `cd web && npm run build`) instead of building
 #                 in a container. The bundle is platform-independent, so a host
 #                 build renders the same pixels.
@@ -35,7 +35,7 @@ PLATFORM="linux/amd64"
 # Match CI's npm pin (.github/actions/setup-node) so the SPA bundle the build
 # produces is identical to the one the gate renders.
 NPM_VERSION="11.12.1"
-BUILD_OUTPUT="omnigent/server/static/web-ui"
+BUILD_OUTPUT="agent_meow/server/static/web-ui"
 SNAP_ROOT="tests/e2e_ui/visual/snapshots"
 
 SKIP_BUILD=false

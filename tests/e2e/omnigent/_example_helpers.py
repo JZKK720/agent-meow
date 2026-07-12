@@ -2,7 +2,7 @@
 
 Each example under ``examples/`` has its own test file that
 exercises that example's intended functionality through the real
-``omnigent run`` subprocess. The helpers in this module keep the
+``agent-meow run`` subprocess. The helpers in this module keep the
 per-file boilerplate minimal: resolve the YAML path, build argv,
 run subprocess, assert common invariants.
 
@@ -33,7 +33,7 @@ from tests.e2e._run_with_group_timeout import run_with_group_timeout
 #   args: [-m, agent_meow.inner.databricks_mcps.<X>, --profile,
 #          <profile-name>]
 # in their YAMLs. The Databricks MCP subprocess has three auth
-# modes (see omnigent/inner/databricks_mcps/common/workspace.py):
+# modes (see agent_meow/inner/databricks_mcps/common/workspace.py):
 #   1. ``--host <url> --token <PAT>``  (explicit PAT)
 #   2. ``--profile <name>``            (look up host+token in .databrickscfg)
 #   3. no args                         (fall through to env vars)
@@ -141,9 +141,9 @@ def run_one_shot(
     model: str | None = DEFAULT_MODEL,
 ) -> subprocess.CompletedProcess[str]:
     """
-    Invoke ``omnigent run <yaml> -p <prompt>`` one-shot.
+    Invoke ``agent-meow run <yaml> -p <prompt>`` one-shot.
 
-    :param omnigent_python: Interpreter with omnigent + required
+    :param omnigent_python: Interpreter with agent-meow + required
         SDKs installed. Provided by the ``omnigent_python`` fixture.
     :param omnigent_repo_root: Cwd so the YAML's ``callable:``
         dotted paths resolve via repo-root-on-sys.path. Provided by
@@ -195,7 +195,7 @@ def run_one_shot_at_path(
     ``tmp_path`` (e.g. MCP-profile overrides, omni endpoint
     rewrites).
 
-    :param omnigent_python: Interpreter with omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow installed.
     :param omnigent_repo_root: Cwd (repo root so module lookups
         land).
     :param omnigent_credentials_env: Env.
@@ -208,7 +208,7 @@ def run_one_shot_at_path(
     argv: list[str] = [
         str(omnigent_python),
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(yaml_path),
         "-p",
@@ -257,7 +257,7 @@ def validate_agent_def_structure(
     per-tool / per-policy / per-terminal registration paths —
     all of which the unification touched.
 
-    :param omnigent_python: Interpreter with omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow installed.
     :param omnigent_repo_root: Cwd so module-path resolution
         matches the CLI.
     :param example_name: Example directory under ``examples/``.
@@ -395,7 +395,7 @@ def assert_completed_one_shot(
     example_name: str,
 ) -> None:
     """
-    Assert a one-shot ``omnigent run`` finished cleanly.
+    Assert a one-shot ``agent-meow run`` finished cleanly.
 
     :param result: The completed subprocess, as returned by
         :func:`run_one_shot`.
@@ -404,7 +404,7 @@ def assert_completed_one_shot(
         names the specific example.
     """
     assert result.returncode == 0, (
-        f"{example_name!r}: omnigent run exited with "
+        f"{example_name!r}: agent-meow run exited with "
         f"{result.returncode} (expected 0).\n"
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
@@ -540,7 +540,7 @@ def materialize_yaml_with_mcp_auth(
     Copy *source* into *dest_dir* and rewrite every MCP
     subprocess's auth args to match *override*.
 
-    Returns the path to pass to ``omnigent run``:
+    Returns the path to pass to ``agent-meow run``:
     - For a single-file YAML source, the rewritten single-file
       YAML at ``<dest_dir>/<name>``.
     - For a directory source (AGENTSPEC), a new AGENTSPEC

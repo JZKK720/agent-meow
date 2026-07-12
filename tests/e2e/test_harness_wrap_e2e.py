@@ -201,7 +201,7 @@ async def test_harness_wrap_real_llm_smoke(
         # output for debugging.
         #
         # Wire shape: session-keyed ``MessageEvent`` body per
-        # ``omnigent/runtime/harnesses/_scaffold.py``. The
+        # ``agent_meow/runtime/harnesses/_scaffold.py``. The
         # outer ``type``/``role`` discriminate this as a fresh
         # downward user-side ``message`` event; ``content`` is
         # a list of input blocks the scaffold forwards to the

@@ -415,8 +415,8 @@ class MainActivity : ComponentActivity() {
         // pins to a user-supplied server whose web build may PRE-DATE the Android
         // shell's CSS — it can't be assumed to carry the `[data-android-native]`
         // fold:
-        //   1. `--omnigent-safe-top/bottom` — the app's OWN base inset vars. Every
-        //      build already derives `--omnigent-inset-*` and its layout from
+        //   1. `--agent-meow-safe-top/bottom` — the app's OWN base inset vars. Every
+        //      build already derives `--agent-meow-inset-*` and its layout from
         //      these, defaulting them to `env(safe-area-inset-*)`, which Android
         //      WebView reports as 0. Setting them inline (highest priority)
         //      overrides that 0 everywhere the layout already reads them.
@@ -424,7 +424,7 @@ class MainActivity : ComponentActivity() {
         //      `[data-android-native]` rules when the server IS up to date (folded
         //      via max() in index.css); a harmless no-op otherwise.
         // We deliberately do NOT call `__omnigentNativeEmitInsets` — that feeds the
-        // iOS *floating-bar* footprints (--omnigent-native-*-bar; nativeInsets.ts
+        // iOS *floating-bar* footprints (--agent-meow-native-*-bar; nativeInsets.ts
         // is a "no-op off the iOS shell"), and Android has no such bars. Routing
         // the safe area there would mis-assign it to a bar-footprint variable.
         val bars = lastInsets ?: return
@@ -435,8 +435,8 @@ class MainActivity : ComponentActivity() {
               const s = document.documentElement.style;
               const top = '${bars.top / d}px';
               const bottom = '${bars.bottom / d}px';
-              s.setProperty('--omnigent-safe-top', top);
-              s.setProperty('--omnigent-safe-bottom', bottom);
+              s.setProperty('--agent-meow-safe-top', top);
+              s.setProperty('--agent-meow-safe-bottom', bottom);
               s.setProperty('--agentmeow-android-safe-area-top', top);
               s.setProperty('--agentmeow-android-safe-area-bottom', bottom);
               s.setProperty('--agentmeow-android-safe-area-left', '${bars.left / d}px');
@@ -506,7 +506,7 @@ class MainActivity : ComponentActivity() {
 
         // Agent-generated files arrive as blob:/data: URLs, which DownloadManager
         // can't handle — fetch them in page context and save via the blob bridge
-        // (fixes omnigent-ai/omnigent#969, which the iOS shell leaves broken).
+        // (fixes JZKK720/agent-meow#969, which the iOS shell leaves broken).
         if (url.startsWith("blob:") || url.startsWith("data:")) {
             webView.evaluateJavascript(BlobDownloadScript.fetchAsBase64(url, name), null)
             return

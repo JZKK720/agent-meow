@@ -6,9 +6,9 @@ in the parent — e.g. polly — chat sees it) stamped with
 ``params.target_session_id`` (the child that owns the parked Future),
 and resolving against that CHILD session id must release the worker.
 
-This drives the REAL stack — a local ``omnigent server`` booted from
+This drives the REAL stack — a local ``agent-meow server`` booted from
 this working tree, a local runner + the native ``claude``/``codex``
-CLIs spawned by ``omnigent run --server``, and a real LLM brain. The
+CLIs spawned by ``agent-meow run --server``, and a real LLM brain. The
 ``ask-mode-supervisor`` fixture agent's ``claude_code`` (claude-native,
 ``--permission-mode default``) and ``codex`` (codex-native, default
 approval policy — no ``yolo``) sub-agents run in PROMPTING mode, so a
@@ -70,7 +70,7 @@ description: >-
 # delegates; the substantive command-running work is done by the native
 # sub-agents, which run in their own terminal and prompt for approval.
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: claude-sdk
 
@@ -116,7 +116,7 @@ name: claude_code
 description: Claude Code coding sub-agent in PROMPTING mode (asks before running commands).
 
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: claude-native
     # PROMPTING (not bypass): the server translates this into
@@ -144,7 +144,7 @@ name: codex
 description: Codex coding sub-agent in PROMPTING mode (asks before running commands).
 
 executor:
-  type: omnigent
+  type: agent-meow
   config:
     harness: codex-native
     # PROMPTING (not yolo): with ``yolo`` omitted the server adds NO
@@ -195,7 +195,7 @@ def _clean_env(profile: str = _PROFILE) -> dict[str, str]:
     removed ``--profile`` CLI flag); a stray ``DATABRICKS_TOKEN`` /
     ``ANTHROPIC_API_KEY`` / ``CLAUDE_CODE`` from the outer coding-agent
     process would shadow it.
-    ``PYTHONPATH`` is dropped so the child imports omnigent from
+    ``PYTHONPATH`` is dropped so the child imports agent-meow from
     ``--code-dir`` (this worktree), not a sibling editable install.
 
     :param profile: Databricks profile for the auth block, e.g. ``"oss"``.
@@ -298,12 +298,12 @@ def _kill_tree(pid: int, conv_ids: set[str]) -> None:
     """
     SIGTERM-then-SIGKILL a run subprocess tree + leaked harness runners.
 
-    ``omnigent run`` spawns a detached daemon → runner → per-conversation
+    ``agent-meow run`` spawns a detached daemon → runner → per-conversation
     harness chain plus (for claude-native) a tmux server, which outlive the
     run process. We additionally kill any ``harnesses._runner`` whose
     cmdline names one of this run's conversation ids.
 
-    :param pid: The ``omnigent run`` subprocess pid.
+    :param pid: The ``agent-meow run`` subprocess pid.
     :param conv_ids: Conversation ids of this run (parent + sub-agents) used
         to find leaked harness runners.
     """
@@ -334,7 +334,7 @@ def _kill_native_terminals(conv_ids: set[str]) -> None:
 
     claude-native / codex-native sub-agents launch their CLI inside a tmux
     server (``/tmp/omnigent-terminal-*/tmux.sock``). When the parent's
-    one-shot ``omnigent run`` exits, the detached worker's pane can outlive
+    one-shot ``agent-meow run`` exits, the detached worker's pane can outlive
     it. The pane's ``new-session`` command line embeds the session URL
     (``/c/<conv_id>``) and the worker's bridge dir, so match on the conv id
     and SIGKILL the owning processes. Best-effort; failures are ignored.
@@ -365,9 +365,9 @@ def _kill_native_terminals(conv_ids: set[str]) -> None:
 @pytest.fixture(scope="module")
 def local_server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     """
-    Boot a throwaway ``omnigent server`` from this working tree.
+    Boot a throwaway ``agent-meow server`` from this working tree.
 
-    A bare ``omnigent run`` would route to the developer's configured
+    A bare ``agent-meow run`` would route to the developer's configured
     default (shared) server, which need not carry this branch's code; a
     local server from ``_REPO`` carries it. The server uses a throwaway
     sqlite DB + artifact dir under a temp path and is killed on teardown.
@@ -384,7 +384,7 @@ def local_server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
         [
             sys.executable,
             "-m",
-            "omnigent",
+            "agent-meow",
             "server",
             "--host",
             "127.0.0.1",
@@ -536,12 +536,12 @@ def agent_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     Materialize the ask-mode-supervisor agent bundle into a tmp dir.
 
     Writes the inlined supervisor + sub-agent specs in the on-disk bundle
-    layout ``omnigent run`` expects (``config.yaml`` at the root,
+    layout ``agent-meow run`` expects (``config.yaml`` at the root,
     ``agents/<name>/config.yaml`` per sub-agent).
 
     :param tmp_path_factory: Pytest tmp-dir factory (module-scoped so all
         parametrized cases share one bundle).
-    :returns: Path of the bundle root to pass to ``omnigent run``.
+    :returns: Path of the bundle root to pass to ``agent-meow run``.
     """
     root = tmp_path_factory.mktemp("ask-mode-supervisor")
     (root / "config.yaml").write_text(_SUPERVISOR_CONFIG_YAML)
@@ -593,7 +593,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
     """
     A prompting sub-agent's approval is forwarded to the parent and answered there.
 
-    Drives ``omnigent run ask-mode-supervisor --server <local> -p "..."``
+    Drives ``agent-meow run ask-mode-supervisor --server <local> -p "..."``
     telling the orchestrator to delegate a shell command to ``sub_agent``
     (claude_code or codex). That worker runs in prompting mode, so it
     raises an approval before executing. The test then asserts the
@@ -710,7 +710,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
             [
                 sys.executable,
                 "-m",
-                "omnigent",
+                "agent-meow",
                 "run",
                 str(agent_dir),
                 "--server",
@@ -851,7 +851,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
         # when the toggle never ran (original is ``None``).
         _restore_file(codex_config, codex_config_original)
         _restore_file(claude_settings, claude_settings_original)
-        # ``omnigent run`` exits after the parent's one-shot turn, but its
+        # ``agent-meow run`` exits after the parent's one-shot turn, but its
         # detached daemon/worker tree (and any native tmux pane) keeps
         # running, so always sweep leaked workers by conv id regardless of
         # whether the run process itself is still alive.

@@ -19,7 +19,7 @@ from playwright.sync_api import Page, expect
 
 # Mirrors PINNED_CONVERSATION_IDS_STORAGE_KEY in web/src/shell/sidebarNav.ts —
 # pins are client-side state, so the test seeds them where the app reads them.
-_PINNED_KEY = "omnigent:pinned-conversation-ids"
+_PINNED_KEY = "agent-meow:pinned-conversation-ids"
 
 _SEARCH_WIDTH_JS = """
 () => {

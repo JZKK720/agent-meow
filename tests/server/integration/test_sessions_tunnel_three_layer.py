@@ -170,7 +170,7 @@ class FakeProcessManager:
 def _build_harness_agent_bundle() -> bytes:
     """Build an agent bundle that routes through the harness path.
 
-    Uses ``executor.type='omnigent'`` with
+    Uses ``executor.type='agent-meow'`` with
     ``executor.harness=<TEST_HARNESS>`` so ``_create_executor`` in
     ``runtime/workflow.py`` routes to ``the harness HTTP client`` and
     thus through the runner → harness HTTP chain.
@@ -181,7 +181,7 @@ def _build_harness_agent_bundle() -> bytes:
         "spec_version": 1,
         "name": "echo-tunnel-test",
         "executor": {
-            "type": "omnigent",
+            "type": "agent-meow",
             "config": {"harness": _TEST_HARNESS_NAME},
             "model": "test-model",
         },

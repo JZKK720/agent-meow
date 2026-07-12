@@ -202,7 +202,7 @@ class AgentObject(BaseModel):
         or ``None`` if never updated.
     :param harness: The agent's harness/kind, e.g. ``"codex"``,
         ``"codex-native"``, or ``"claude-native"`` for
-        ``executor.type: omnigent`` agents, otherwise the executor
+        ``executor.type: agent-meow`` agents, otherwise the executor
         type (``"claude_sdk"``, ``"agents_sdk"``). ``None`` when the
         bundle cannot be loaded. Lets the Web UI Add Agent picker
         recognise an agent's kind (Codex vs Claude) without
@@ -237,9 +237,9 @@ class AgentObject(BaseModel):
     :param builtin: Whether this is a server-*seeded* built-in
         agent (deterministic, name-derived id) as opposed to an
         operator/user-registered template (random id, e.g. via
-        ``omnigent server --agent``) or a session-scoped upload.
+        ``agent-meow server --agent``) or a session-scoped upload.
         The Web UI's new-session picker uses this to decide
-        whether a same-named ``omnigent run`` upload may shadow
+        whether a same-named ``agent-meow run`` upload may shadow
         the catalog entry: seeded built-ins are protected, while
         a user-registered template is superseded by a newer
         same-named upload. Always ``False`` for session-scoped
@@ -585,7 +585,7 @@ class ConversationObject(BaseModel):
         the runtime ``Conversation.labels`` dict. Empty dict when
         the PolicyEngine hasn't written any labels yet. Exposed so
         the REPL's Ctrl+O debug overlay can render them at parity
-        with the legacy ``omnigent run`` Ctrl+G overview.
+        with the legacy ``agent-meow run`` Ctrl+G overview.
     """
 
     id: str
@@ -1139,7 +1139,7 @@ class SessionCreateRequest(BaseModel):
     :param host_type: How the session's host is obtained.
         ``"external"`` (the default, and the pre-existing behavior):
         the session runs on a host the caller manages — either a
-        host they registered via ``omnigent host`` (pass
+        host they registered via ``agent-meow host`` (pass
         ``host_id``) or a caller-managed runner (no ``host_id``).
         ``"managed"``: the SERVER provisions a sandbox host from its
         ``sandbox:`` config and binds the session to it —
@@ -1217,7 +1217,7 @@ class SessionCreateRequest(BaseModel):
         ``executor.config.harness`` when spawning the harness for
         this session. Validated server-side: must canonicalize into
         ``OMNIGENT_HARNESSES`` and the bound agent must be an
-        ``executor.type: omnigent`` spec. ``None`` (the default) uses
+        ``executor.type: agent-meow`` spec. ``None`` (the default) uses
         the spec's declared harness. Create-time only — there is no
         PATCH path, since the harness process spawns on the first
         turn.
@@ -1613,7 +1613,7 @@ class SessionResponse(BaseModel):
         ``None`` in all other cases.
     :param external_session_id: Runtime-native session id this
         conversation wraps, e.g. a Claude Code session uuid for
-        ``omnigent claude`` sessions. ``None`` for regular
+        ``agent-meow claude`` sessions. ``None`` for regular
         AP-only conversations. Populated by the wrapper bridge.
     :param terminal_launch_args: Pass-through CLI args the native
         terminal wrapper (claude / codex) was launched with, e.g.
@@ -1656,7 +1656,7 @@ class SessionResponse(BaseModel):
         surface only behind the "Show archived" toggle. ``False``
         for normal sessions. Toggled via ``PATCH /v1/sessions/{id}``.
     :param todos: Current Claude Code todo list items for
-        ``omnigent claude`` sessions, as raw dicts from Claude's
+        ``agent-meow claude`` sessions, as raw dicts from Claude's
         todo JSON file. Each dict has ``content``, ``status``,
         and ``activeForm`` keys. Empty list for non-claude-native
         sessions or when no todos have been reported yet. Sourced
@@ -1794,7 +1794,7 @@ class UpdateSessionRequest(BaseModel):
         alias — is the clear signal, unlike ``model_override``).
     :param external_session_id: Runtime-native session id captured
         by a wrapper bridge (e.g. Claude Code's session uuid for
-        ``omnigent claude`` sessions). Idempotent on same-value
+        ``agent-meow claude`` sessions). Idempotent on same-value
         writes; the server rejects attempts to overwrite an
         already-set different value with ``invalid_input`` to
         surface programmer errors. ``None`` leaves unchanged.
@@ -2053,7 +2053,7 @@ class SessionListItem(BaseModel):
         can display the owner without a separate API call.
     :param external_session_id: Runtime-native session id this
         conversation wraps, e.g. a Claude Code session uuid for
-        ``omnigent claude`` sessions. ``None`` for regular
+        ``agent-meow claude`` sessions. ``None`` for regular
         AP-only conversations. Lets the sidebar / picker render
         a runtime badge without a follow-up GET.
     :param pending_elicitations_count: Number of approval prompts
@@ -2191,7 +2191,7 @@ class PermissionObject(BaseModel):
 # STREAM EVENTS — typed Pydantic union for SSE event boundary
 # ─────────────────────────────────────────────────────────────────────
 #
-# Single source of truth for the omnigent SSE event stream. Every
+# Single source of truth for the agent-meow SSE event stream. Every
 # event the server emits over its two SSE endpoints is modeled below
 # as a Pydantic class with a ``type: Literal[...]`` discriminator, and
 # the ``ServerStreamEvent`` annotated union routes raw event dicts to
@@ -2252,7 +2252,7 @@ class _SSEEventBase(BaseModel):
       subclass so :data:`ServerStreamEvent` can dispatch).
     - ``sequence_number``: monotonic per-stream sequence number
       assigned by the SSE serializer at emit time
-      (``_format_sse`` in ``omnigent/server/routes/sessions.py``).
+      (``_format_sse`` in ``agent_meow/server/routes/sessions.py``).
       Producers leave it ``None``; the route serializer populates
       it on the wire. ``None`` on session-scoped events emitted
       directly by the runtime (the session stream does not number
@@ -2292,7 +2292,7 @@ class SessionStatusEvent(_SSEEventBase):
     The ``waiting`` value is emitted by the runtime's parent agent
     loop when it parks on the ``async_work_complete`` drain
     (``_drain_async_completions(block_for_one=True)`` in
-    ``omnigent/runtime/workflow.py``) — i.e. while the parent
+    ``agent_meow/runtime/workflow.py``) — i.e. while the parent
     turn is suspended waiting for background tools or sub-agents
     to complete. Per the session-rearchitecture spec §3
     ("Event types and direction"), ``waiting`` is the
@@ -2341,7 +2341,7 @@ class SessionUsageEvent(_SSEEventBase):
     Token-usage update from a terminal-backed integration.
 
     Emitted after an ``external_session_usage`` POST from an
-    out-of-AP runtime (e.g. the ``omnigent claude`` transcript
+    out-of-AP runtime (e.g. the ``agent-meow claude`` transcript
     forwarder). Either field may be absent; clients should leave
     cached values untouched for missing fields.
 
@@ -2386,7 +2386,7 @@ class SessionModelEvent(_SSEEventBase):
     Active-model update from a terminal-backed integration.
 
     Emitted after an ``external_model_change`` POST from the
-    ``omnigent claude`` transcript forwarder when the model is
+    ``agent-meow claude`` transcript forwarder when the model is
     switched inside the Claude Code terminal (a ``/model`` command or
     the in-TUI picker). Lets the web model picker reflect a TUI-side
     switch without a reload.
@@ -2493,7 +2493,7 @@ class SessionTodosEvent(_SSEEventBase):
     Todo-list update from a Claude Code terminal-backed session.
 
     Emitted after an ``external_session_todos`` POST from the
-    ``omnigent claude`` transcript forwarder, which captures todo
+    ``agent-meow claude`` transcript forwarder, which captures todo
     updates via ``PostToolUse``/``TodoWrite`` hook events from Claude
     Code and forwards them to the agent-meow server. Lets web render a
     live todo panel in the right column without polling.
@@ -2595,7 +2595,7 @@ class SessionSkillsEvent(_SSEEventBase):
     Skills are discovered against the bound runner's filesystem and
     fetched off the session-snapshot hot path: the snapshot kicks a
     single background fetch (``_load_runner_skills`` in
-    ``omnigent/server/routes/sessions.py``) and serves ``[]`` until
+    ``agent_meow/server/routes/sessions.py``) and serves ``[]`` until
     it lands. This event fires the moment that background fetch
     populates the per-session skills cache, so a connected web client
     can re-read the snapshot and fill its slash-command menu instead
@@ -2720,7 +2720,7 @@ class SessionInterruptedPayload(BaseModel):
     Inner payload of a :class:`SessionInterruptedEvent`.
 
     Built by ``_publish_interrupted`` in
-    ``omnigent/server/routes/sessions.py``.
+    ``agent_meow/server/routes/sessions.py``.
 
     :param requested_at: Unix epoch seconds when the interrupt
         request reached the server, e.g. ``1704067200``.
@@ -2739,7 +2739,7 @@ class SessionInterruptedEvent(_SSEEventBase):
     User-triggered cancel reached the loop.
 
     Emitted by ``_publish_interrupted`` in
-    ``omnigent/server/routes/sessions.py`` when a client posts
+    ``agent_meow/server/routes/sessions.py`` when a client posts
     a ``{"type": "interrupt"}`` to ``POST
     /v1/sessions/{id}/events``. Co-emitted with
     :class:`IncompleteEvent` (with the underlying response carrying
@@ -2760,7 +2760,7 @@ class SessionCreatedEvent(_SSEEventBase):
     """
     A child (sub-agent) session was spawned from this session.
 
-    Emitted by ``omnigent/tools/builtins/spawn.py:_spawn_one``
+    Emitted by ``agent_meow/tools/builtins/spawn.py:_spawn_one``
     onto the **parent** session's conversation stream after the
     child conversation row is created and the child task has been
     started. Per the session-rearchitecture spec §3 ("Event types
@@ -2820,11 +2820,11 @@ class SessionSupersededEvent(_SSEEventBase):
     follow to it.
 
     Emitted by ``_publish_session_superseded`` in
-    ``omnigent/server/routes/sessions.py`` when the claude-native
+    ``agent_meow/server/routes/sessions.py`` when the claude-native
     forwarder rotates a session away on a Claude ``/clear`` (the old
     conversation keeps its history but the live terminal moves to a
     fresh conversation — see ``_post_clear_supersession`` in
-    ``omnigent/claude_native_forwarder.py``). A client actively viewing
+    ``agent_meow/claude_native_forwarder.py``). A client actively viewing
     the superseded conversation auto-redirects to ``target_conversation_id``.
 
     Category: **transient** (SSE-only), live-only by design. There is no
@@ -2862,7 +2862,7 @@ class OutputTextDeltaEvent(_SSEEventBase):
     Incremental assistant-text token emitted during streaming.
 
     Wire shape matches the existing raw-dict emit at
-    ``omnigent/runtime/workflow.py:1352-1356``.
+    ``agent_meow/runtime/workflow.py:1352-1356``.
 
     :param type: Always ``"response.output_text.delta"``.
     :param delta: The text fragment for this chunk, e.g.
@@ -2894,7 +2894,7 @@ class ReasoningStartedEvent(_SSEEventBase):
     Fired even when the reasoning content itself is encrypted /
     redacted (so no delta events follow), letting clients render
     a "thinking…" indicator regardless of provider verification
-    status. Wire shape matches ``omnigent/runtime/workflow.py:1350``.
+    status. Wire shape matches ``agent_meow/runtime/workflow.py:1350``.
 
     :param type: Always ``"response.reasoning.started"``.
     """
@@ -2908,7 +2908,7 @@ class ReasoningTextDeltaEvent(_SSEEventBase):
 
     Only emitted by providers that surface reasoning content
     (e.g. OpenAI o-series with appropriate verification). Wire
-    shape matches ``omnigent/runtime/workflow.py:1358-1364``.
+    shape matches ``agent_meow/runtime/workflow.py:1358-1364``.
 
     :param type: Always ``"response.reasoning_text.delta"``.
     :param delta: The reasoning text fragment, e.g.
@@ -2925,7 +2925,7 @@ class ReasoningSummaryTextDeltaEvent(_SSEEventBase):
 
     Emitted when ``reasoning.summary`` is configured on the
     request. Wire shape matches
-    ``omnigent/runtime/workflow.py:1370-1373``.
+    ``agent_meow/runtime/workflow.py:1370-1373``.
 
     :param type: Always ``"response.reasoning_summary_text.delta"``.
     :param delta: The summary text fragment, e.g. ``"Will use
@@ -2950,7 +2950,7 @@ class OutputItemDoneEvent(_SSEEventBase):
     :param type: Always ``"response.output_item.done"``.
     :param item: The completed item dict. Heterogeneous and
         item-type-specific; see
-        ``omnigent/entities/conversation.py`` for the
+        ``agent_meow/entities/conversation.py`` for the
         per-type ``*Data`` shapes that drive serialization.
         Example for a function_call item: ``{"id": "fc_abc123",
         "type": "function_call", "status": "action_required",
@@ -2996,7 +2996,7 @@ class OutputFileDoneEvent(_SSEEventBase):
     A streamed file output completed materializing.
 
     Emitted by ``_emit_file_annotation_events`` in
-    ``omnigent/runtime/workflow.py`` once per file annotation in
+    ``agent_meow/runtime/workflow.py`` once per file annotation in
     the assistant's output. ``filename`` and ``content_type`` are
     only populated when the originating annotation carried them.
 
@@ -3022,9 +3022,9 @@ class HeartbeatEvent(_SSEEventBase):
 
     Lets consumers detect stalled producers via missed-interval
     timing. Cadence is set by ``_HEARTBEAT_INTERVAL_S`` in
-    ``omnigent/runtime/workflow.py`` (15 seconds at the time of
+    ``agent_meow/runtime/workflow.py`` (15 seconds at the time of
     writing). Wire shape matches the existing emit at
-    ``omnigent/runtime/workflow.py:4636-4639``.
+    ``agent_meow/runtime/workflow.py:4636-4639``.
 
     Per ``designs/SERVER_HARNESS_CONTRACT.md`` §Heartbeats, the
     event MAY carry timing metadata so consumers can do richer
@@ -3124,7 +3124,7 @@ class SessionPresenceEvent(_SSEEventBase):
     reconnect. Viewers are scoped to the session *tree* (the root
     conversation and every sub-agent conversation under it), so a
     user on a sub-agent page and a user on the root page appear in
-    each other's lists. See ``omnigent/server/presence.py`` and
+    each other's lists. See ``agent_meow/server/presence.py`` and
     ``designs/UI/PRESENCE.md``.
 
     :param type: Always ``"session.presence"``.
@@ -3156,7 +3156,7 @@ class ElicitationRequestParams(BaseModel):
     context and mirrored-child routing for the consumer's renderer;
     MCP's ``extra="allow"`` config permits them under the same params
     block. Wire shape matches
-    ``omnigent/runtime/policies/approval.py:175``.
+    ``agent_meow/runtime/policies/approval.py:175``.
 
     :param mode: MCP-standard discriminator. ``"form"`` collects
         structured input via ``requestedSchema``; ``"url"``
@@ -3217,7 +3217,7 @@ class ElicitationRequestEvent(_SSEEventBase):
     without threading elicitations through PATCH.
 
     Wire shape matches the existing emit at
-    ``omnigent/runtime/policies/approval.py:175``.
+    ``agent_meow/runtime/policies/approval.py:175``.
 
     :param type: Always ``"response.elicitation_request"``.
     :param elicitation_id: Unique correlation id for this
@@ -3226,7 +3226,7 @@ class ElicitationRequestEvent(_SSEEventBase):
     :param method: MCP method literal — always
         ``"elicitation/create"`` (the value of
         ``_MCP_ELICITATION_METHOD`` in
-        ``omnigent/runtime/policies/approval.py``).
+        ``agent_meow/runtime/policies/approval.py``).
     :param params: The MCP-shaped params block carrying the
         prompt and (form-mode only) the requested schema.
     """
@@ -3407,8 +3407,8 @@ class RetryEvent(_SSEEventBase):
     """
     A retryable failure was caught and a retry is scheduled.
 
-    Emitted by ``omnigent/runtime/llm_retry.py`` (LLM calls)
-    and ``omnigent/runtime/tool_retry.py`` (tool calls) before
+    Emitted by ``agent_meow/runtime/llm_retry.py`` (LLM calls)
+    and ``agent_meow/runtime/tool_retry.py`` (tool calls) before
     sleeping for the backoff delay. Wire shape matches
     ``llm_retry.py:329-340`` and ``tool_retry.py:168-180``.
 
@@ -3442,7 +3442,7 @@ class ErrorEvent(_SSEEventBase):
     Non-recoverable error reported during the turn.
 
     Emitted from multiple sites in
-    ``omnigent/runtime/workflow.py`` — terminal LLM failures
+    ``agent_meow/runtime/workflow.py`` — terminal LLM failures
     (``_emit_llm_error_event``), execution timeouts
     (``_handle_execution_timeout``), and the agent-loop catch-all
     (``except Exception``). Wire shape matches those emits.
@@ -3466,7 +3466,7 @@ class CompactionInProgressEvent(_SSEEventBase):
     """
     Conversation history is being compacted.
 
-    Emitted by ``omnigent/runtime/compaction.py`` while a
+    Emitted by ``agent_meow/runtime/compaction.py`` while a
     compaction step runs so clients can render a "summarizing
     history…" indicator. Wire shape matches ``compaction.py:765``.
 
@@ -3515,7 +3515,7 @@ class CompactionFailedEvent(_SSEEventBase):
     """
     Conversation history compaction failed.
 
-    Emitted by ``omnigent/server/routes/sessions.py`` when
+    Emitted by ``agent_meow/server/routes/sessions.py`` when
     ``compact_conversation_now()`` raises. Clients that rendered a
     "Compacting…" spinner on :class:`CompactionInProgressEvent`
     should dismiss it without leaving a permanent marker, since the
@@ -3531,7 +3531,7 @@ class ClientTaskCancelEvent(_SSEEventBase):
     """
     Server-side request that the client cancel a tunneled tool call.
 
-    Emitted by ``omnigent/runtime/workflow.py`` when a parent
+    Emitted by ``agent_meow/runtime/workflow.py`` when a parent
     cancellation needs to propagate to a long-running async client
     tool. Wire shape matches ``workflow.py:4258-4266``.
 
@@ -3830,7 +3830,7 @@ def is_known_event(name: str) -> bool:
 
 # Events the harness may emit on its per-turn SSE stream that are
 # runner-internal: the runner intercepts and consumes them (matching by
-# ``type`` on the raw frame, see ``omnigent/runner/app.py`` proxy_stream)
+# ``type`` on the raw frame, see ``agent_meow/runner/app.py`` proxy_stream)
 # and never relays them to clients. They are deliberately NOT part of the
 # public :data:`ServerStreamEvent` union / openapi. This alias types the
 # scaffold's per-turn event queue, which carries both the public events and

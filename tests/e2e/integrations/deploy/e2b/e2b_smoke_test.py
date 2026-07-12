@@ -11,11 +11,11 @@ stream_exec (combined output) -> attach -> public egress -> terminate
 the launcher makes, end to end.
 
 By default it boots from E2B's stock ``base`` template, so it needs NO
-pre-built omnigent host template — it validates the launcher's SDK wiring
-in isolation. Pass ``--template omnigent-host`` (after ``e2b template
+pre-built agent-meow host template — it validates the launcher's SDK wiring
+in isolation. Pass ``--template agent-meow-host`` (after ``e2b template
 build``; see deploy/e2b/README.md) to smoke the real host template too.
 
-    pip install 'omnigent[e2b]'
+    pip install 'agent-meow[e2b]'
     export E2B_API_KEY=e2b_...
     python tests/e2e/integrations/deploy/e2b/e2b_smoke_test.py [--template NAME] [--keep]
 
@@ -30,7 +30,7 @@ import sys
 import time
 
 # The launcher lazy-imports the e2b SDK; surface a clean hint if it (or the
-# omnigent package) isn't importable rather than a raw traceback.
+# agent-meow package) isn't importable rather than a raw traceback.
 try:
     from agent_meow.onboarding.sandboxes.e2b import (
         E2BSandboxLauncher,
@@ -38,7 +38,7 @@ try:
     )
 except ImportError as exc:  # pragma: no cover - environment guard
     print(f"ERROR: cannot import the launcher ({exc}).", file=sys.stderr)
-    print("Run from the repo root with omnigent installed.", file=sys.stderr)
+    print("Run from the repo root with agent-meow installed.", file=sys.stderr)
     raise SystemExit(2) from exc
 
 
@@ -55,7 +55,7 @@ def main() -> int:
         "--template",
         default="base",
         help="E2B template to boot from (default: E2B's stock 'base'; pass "
-        "'omnigent-host' to smoke the real host template once built).",
+        "'agent-meow-host' to smoke the real host template once built).",
     )
     parser.add_argument("--keep", action="store_true", help="don't terminate at the end")
     args = parser.parse_args()

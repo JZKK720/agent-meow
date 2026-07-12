@@ -50,7 +50,7 @@ def normalize_workspace_url(raw: str) -> str:
 # which slug a checkout carries.
 _SOURCE_REPO_URL = "https://github.com/JZKK720/agent-meow.git"
 DATABRICKS_EXTRA_INSTALL_HINT = (
-    f'uv tool install --force "omnigent[databricks] @ git+{_SOURCE_REPO_URL}"'
+    f'uv tool install --force "agent-meow[databricks] @ git+{_SOURCE_REPO_URL}"'
 )
 
 
@@ -88,7 +88,7 @@ DATABRICKS_CLAUDE_DEFAULT_MODEL = "databricks-claude-opus-4-8"
 def list_databricks_profiles() -> list[str]:
     """Return the profile section names declared in ``~/.databrickscfg``.
 
-    Used by ``omnigent setup --no-internal-beta`` to offer the user a pick-list
+    Used by ``agent-meow setup --no-internal-beta`` to offer the user a pick-list
     when adding a ``kind: databricks`` provider, so they don't have to
     recall the exact profile name.
 

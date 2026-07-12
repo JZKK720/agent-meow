@@ -63,7 +63,7 @@ _HTTP_TIMEOUT_S = 10.0
 _AUTH_COMMAND_TIMEOUT_S = 15.0
 
 # Header version the Anthropic models API requires (same value as
-# ``omnigent/llms/adapters/anthropic.py``).
+# ``agent_meow/llms/adapters/anthropic.py``).
 _ANTHROPIC_API_VERSION = "2023-06-01"
 
 # Name tokens that mark a Databricks serving endpoint as an LLM when the

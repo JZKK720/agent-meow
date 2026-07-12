@@ -1,4 +1,4 @@
-"""Tests for ``_codex_native_launch_config`` in ``omnigent/runner/app.py``.
+"""Tests for ``_codex_native_launch_config`` in ``agent_meow/runner/app.py``.
 
 The runner fetches a session snapshot over HTTP and validates it before
 launching a runner-owned Codex terminal. Each malformed field is meant to

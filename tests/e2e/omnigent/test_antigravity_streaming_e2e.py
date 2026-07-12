@@ -116,7 +116,7 @@ def _antigravity_skip_reason() -> str | None:
     if importlib.util.find_spec("google.antigravity") is None:
         return (
             "antigravity prerequisite missing: the 'google-antigravity' package "
-            "is not importable. Install it with: pip install 'omnigent[antigravity]'."
+            "is not importable. Install it with: pip install 'agent-meow[antigravity]'."
         )
     key_present = antigravity_api_key_configured() or bool(
         os.environ.get("GEMINI_API_KEY") or os.environ.get("ANTIGRAVITY_API_KEY")
@@ -229,7 +229,7 @@ def _assistant_text_from_items(http_client: httpx.Client, session_id: str) -> st
     actually streamed and stored. The items endpoint returns the flat
     Responses-style item shape — assistant text lives in ``message`` items with
     ``role == "assistant"`` whose ``content`` carries ``output_text`` blocks
-    (see ``omnigent/server/API.md`` § List Conversation Items).
+    (see ``agent_meow/server/API.md`` § List Conversation Items).
 
     :param http_client: HTTP client pointed at the live server.
     :param session_id: The session/conversation id to read.

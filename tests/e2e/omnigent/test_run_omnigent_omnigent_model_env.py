@@ -1,6 +1,6 @@
-"""E2E coverage for the ``OMNIGENT_MODEL`` env-var fallback on ``omnigent run``.
+"""E2E coverage for the ``OMNIGENT_MODEL`` env-var fallback on ``agent-meow run``.
 
-The fallback fires in ``omnigent/chat.py:_apply_overrides_to_raw`` when the
+The fallback fires in ``agent_meow/chat.py:_apply_overrides_to_raw`` when the
 spec has no ``executor.model`` / ``executor.harness`` and no ``--model`` /
 ``--harness`` flag is passed. Helper-level coverage lives in
 ``tests/cli/test_chat.py``; this file spawns a real subprocess so a regression
@@ -32,7 +32,7 @@ _VALID_MODEL = "mock-model"
 _BOGUS_MODEL = "databricks-gpt-this-model-does-not-exist-omnigent-env-test-9f3a"
 
 _PROMPT = "say hi in 5 words"
-# Wall-clock budget for the subprocess. ``omnigent run`` spawns the
+# Wall-clock budget for the subprocess. ``agent-meow run`` spawns the
 # AP server + runner as grandchildren, so a plain ``subprocess.run``
 # timeout could not reap them — the grandchildren kept the captured
 # pipe open and ``communicate()`` wedged the shard ~15+ min past the
@@ -65,14 +65,14 @@ def _run_omnigent_with_model_env(
     harness: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """
-    Run ``omnigent run <minimal>.yaml -p "..."`` with ``OMNIGENT_MODEL`` set.
+    Run ``agent-meow run <minimal>.yaml -p "..."`` with ``OMNIGENT_MODEL`` set.
 
     Writes a minimal no-``executor`` YAML to *tmp_path*; reusing the shared
     ``hello_world.yaml`` would defeat the test because that file declares
     ``executor.model``, which short-circuits the env-var fallback gate.
 
     Uses :func:`run_with_group_timeout` rather than ``subprocess.run``
-    because ``omnigent run`` spawns the AP server + runner as
+    because ``agent-meow run`` spawns the AP server + runner as
     grandchildren in the same process group; a stock ``subprocess.run``
     timeout only kills the immediate child, leaving the grandchildren to
     hold the captured pipe open and wedge ``communicate()`` long past the
@@ -95,7 +95,7 @@ def _run_omnigent_with_model_env(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "-p",
@@ -125,7 +125,7 @@ def test_omnigent_model_env_var_drives_successful_run(
     succeeds); the bogus-value sibling carries the decisive proof. This test
     catches the env-var path going from "silently dropped" to "actively broken".
 
-    :param omnigent_python: Interpreter with omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow installed.
     :param omnigent_repo_root: Repo root (subprocess cwd).
     :param mock_credentials_env: Mock-LLM env vars.
     :param mock_llm_server_url: Mock server URL for configuring queues.
@@ -144,7 +144,7 @@ def test_omnigent_model_env_var_drives_successful_run(
     # Non-zero exit means either the env var never reached the executor block
     # or the resolved model failed at the FM API — both silently break users.
     assert result.returncode == 0, (
-        f"omnigent run with OMNIGENT_MODEL={_VALID_MODEL!r} exited "
+        f"agent-meow run with OMNIGENT_MODEL={_VALID_MODEL!r} exited "
         f"with code {result.returncode}.\n"
         f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
     )
@@ -175,7 +175,7 @@ def test_omnigent_model_env_var_bogus_value_fails_with_named_error(
     model name so the subprocess fails decisively without hitting a real
     gateway.
 
-    :param omnigent_python: Interpreter with omnigent installed.
+    :param omnigent_python: Interpreter with agent-meow installed.
     :param omnigent_repo_root: Repo root (subprocess cwd).
     :param mock_credentials_env: Mock-LLM env vars.
     :param mock_llm_server_url: Mock server URL for configuring queues.
@@ -208,7 +208,7 @@ def test_omnigent_model_env_var_bogus_value_fails_with_named_error(
 
     # Exit 0 means the env var was dropped and the default model took over.
     assert result.returncode != 0, (
-        f"omnigent run with OMNIGENT_MODEL={_BOGUS_MODEL!r} unexpectedly "
+        f"agent-meow run with OMNIGENT_MODEL={_BOGUS_MODEL!r} unexpectedly "
         f"succeeded (exit 0); the env var was silently dropped.\n"
         f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
     )

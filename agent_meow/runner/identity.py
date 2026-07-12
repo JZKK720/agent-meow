@@ -28,7 +28,7 @@ RUNNER_TUNNEL_TOKEN_HEADER = "X-agent-meow-Runner-Tunnel-Token"
 # server imports it from this module (server -> runner, not the reverse).
 # The non-HTTP scheme is deliberate: a browser computes ``Origin`` from
 # the page URL and can never emit this value.
-OMNIGENT_INTERNAL_WS_ORIGIN = "omnigent://internal"
+OMNIGENT_INTERNAL_WS_ORIGIN = "agent-meow://internal"
 # "1" enables per-session workspace isolation so each session
 # gets its own subdirectory. Set by shared-host servers; single-user
 # CLI flows leave it unset (agent sees the project root directly).
@@ -43,7 +43,7 @@ RUNNER_ISOLATE_SESSION_ENV_VAR = "OMNIGENT_RUNNER_ISOLATE_SESSION"
 # deny-by-default env scrubbers (os_env sandbox, codex CLI, pi CLI) name
 # it in their passthrough allowlists so this one marker survives the
 # scrub.
-OMNIGENT_SESSION_ENV_VAR = "OMNIGENT"
+OMNIGENT_SESSION_ENV_VAR = "agent-meow"
 OMNIGENT_SESSION_ENV_VALUE = "1"
 
 # Env vars carrying the runner's control-plane auth secret. The tunnel
@@ -78,7 +78,7 @@ def get_stable_runner_id() -> str:
     Parent processes may set :data:`RUNNER_ID_ENV_VAR` when they
     need child server and runner processes to agree on one id before
     either process touches the on-disk cache. Without that override,
-    the id is loaded from ``~/.omnigent/runners/runner_id`` or
+    the id is loaded from ``~/.agent_meow/runners/runner_id`` or
     created there on first use.
 
     :returns: A stable runner id, e.g.
@@ -119,7 +119,7 @@ def load_or_create_runner_id(path: Path) -> str:
     """Load a runner id from *path*, creating one if needed.
 
     :param path: Path to the runner id cache file, e.g.
-        ``Path.home() / ".omnigent" / "runners" / "runner_id"``.
+        ``Path.home() / ".agent-meow" / "runners" / "runner_id"``.
     :returns: The cached or newly-created runner id.
     :raises RuntimeError: If the cache file exists but is empty.
     """
@@ -137,6 +137,6 @@ def load_or_create_runner_id(path: Path) -> str:
 def _default_runner_id_path() -> Path:
     """Return the default runner id cache path.
 
-    :returns: ``~/.omnigent/runners/runner_id``.
+    :returns: ``~/.agent_meow/runners/runner_id``.
     """
-    return Path.home() / ".omnigent" / "runners" / "runner_id"
+    return Path.home() / ".agent-meow" / "runners" / "runner_id"

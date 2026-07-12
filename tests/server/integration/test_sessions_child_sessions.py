@@ -1202,7 +1202,7 @@ async def test_native_subagent_session_stamps_terminal_ui_labels(
     )
     assert resp.status_code == 201, resp.text
     labels = resp.json()["labels"]
-    assert labels.get("omnigent.wrapper") == expected_wrapper
+    assert labels.get("agent_meow.wrapper") == expected_wrapper
     assert labels.get("agent_meow.ui") == "terminal"
 
 
@@ -1405,7 +1405,7 @@ async def test_native_subagent_message_uses_native_terminal_forward(
     )
     assert child_resp.status_code == 201, child_resp.text
     child = child_resp.json()
-    assert child["labels"].get("omnigent.wrapper") == expected_wrapper
+    assert child["labels"].get("agent_meow.wrapper") == expected_wrapper
 
     forwarded: list[dict[str, Any]] = []
 
@@ -1520,7 +1520,7 @@ async def test_non_native_subagent_session_has_no_terminal_ui_labels(
     )
     assert resp.status_code == 201, resp.text
     labels = resp.json()["labels"]
-    assert "omnigent.wrapper" not in labels
+    assert "agent_meow.wrapper" not in labels
     assert "agent_meow.ui" not in labels
 
 

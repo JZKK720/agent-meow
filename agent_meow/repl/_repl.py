@@ -1,4 +1,4 @@
-"""Rich-based REPL for omnigent — built on the UI SDK framework.
+"""Rich-based REPL for agent-meow — built on the UI SDK framework.
 
 The public API is ``run_repl(client, agent_name, tool_handler)``.
 """
@@ -181,7 +181,7 @@ class _SessionSnapshot(Protocol):
 # (``{model · state} … hints … state: sleeping``) fits the e2e PTY
 # width (120 cols). Adding an entry here can wrap the toolbar and
 # split the ``state: sleeping`` sync marker the e2e harness waits on
-# (tests/e2e/omnigent/_pexpect_harness.py). /quit discoverability is
+# (tests/e2e/agent_meow/_pexpect_harness.py). /quit discoverability is
 # served by the grouped ``/help`` output instead.
 WELCOME_HINTS = ["/help help", "Ctrl+O debug", "Ctrl+T show tools", "Esc cancel", "Ctrl+C exit"]
 
@@ -209,7 +209,7 @@ _SUBAGENT_POLL_SECONDS = 2.0
 def _load_startup_theme() -> TerminalTheme:
     """Return the persisted startup theme, or run the interactive picker.
 
-    On first launch (no persisted theme in ``~/.omnigent/config.yaml``),
+    On first launch (no persisted theme in ``~/.agent_meow/config.yaml``),
     shows an interactive arrow-key theme picker before the REPL starts.
     The picker uses OSC 11 detection to pre-select dark or light based on
     the terminal's actual background, then persists the user's choice.
@@ -256,7 +256,7 @@ class _StartupHeader:
     :func:`_render_startup_banner_ansi`.
 
     :param folder: The working directory in ``~``-relative form, e.g.
-        ``"~/omnigent"``.
+        ``"~/agent-meow"``.
     :param description: A one-line agent summary (first sentence of the
         spec ``description``, length-capped), e.g. ``"multi-agent coding
         orchestrator"``; ``None`` when the spec declares none.
@@ -285,7 +285,7 @@ def _display_cwd() -> str:
     """Return the current working directory in ``~``-relative form.
 
     :returns: The cwd with ``$HOME`` collapsed to ``~`` (e.g.
-        ``"~/omnigent"``), or the absolute path when it is not
+        ``"~/agent-meow"``), or the absolute path when it is not
         under the home directory.
     """
     import os
@@ -331,7 +331,7 @@ def _header_glyph(kind: str) -> str:
 
     The header drops the subscription ADMISSION TICKETS glyph — its red
     rendering is too loud for the banner box — while every other kind
-    keeps its :func:`kind_glyph`. CLI surfaces (``omnigent setup``, the
+    keeps its :func:`kind_glyph`. CLI surfaces (``agent-meow setup``, the
     ``/model`` readout) keep the ticket.
 
     :param kind: The provider kind, e.g. ``"subscription"`` or ``"key"``.
@@ -485,8 +485,8 @@ def _render_startup_banner_ansi(
 
     remote = _is_remote_server_url(server_url)
     # User-facing form of the URL: a Databricks workspace-hosted server is
-    # connected to on its ``/api/2.0/omnigent`` API mount, but the banner
-    # should show the recognizable workspace ``/omnigent`` URL. Non-Databricks
+    # connected to on its ``/api/2.0/agent-meow`` API mount, but the banner
+    # should show the recognizable workspace ``/agent-meow`` URL. Non-Databricks
     # URLs pass through unchanged. The probe still uses the real base URL via
     # the client; only the displayed string is mapped.
     display_url = display_server_url(server_url) if server_url else server_url
@@ -609,7 +609,7 @@ async def _fetch_server_version(client: OmnigentClient) -> str | None:
 def _is_remote_server_url(url: str | None) -> bool:
     """True if *url* points at a host other than loopback.
 
-    A local ``omnigent run`` spawns its own agent-meow server on
+    A local ``agent-meow run`` spawns its own agent-meow server on
     ``http://127.0.0.1:<port>``; surfacing that URL in the
     welcome banner adds noise without information. A user
     running with ``--server <url>`` is talking to a different
@@ -807,7 +807,7 @@ class _ApprovalState:
         session.
 
         Idempotent — adding a duplicate entry is a no-op. The
-        cache is NEVER persisted to disk; closing ``omnigent chat``
+        cache is NEVER persisted to disk; closing ``agent-meow chat``
         clears it, so the next session starts from a clean
         slate. That matches what users expect from
         session-scoped approvals in other tools.
@@ -1309,7 +1309,7 @@ class _SessionsChatReplAdapter:
             the harness is only known after the snapshot.
         :param attach_only: When ``True``, run as a pure co-drive client:
             never bind/recover a runner (turns post to the session's
-            existing host-bound runner). Used by ``omnigent attach``.
+            existing host-bound runner). Used by ``agent-meow attach``.
             ``False`` (default) is the runner-owning ``run`` path.
         :param field_input_state: Shared state for collecting schema
             field values interactively via the main input loop.
@@ -1671,7 +1671,7 @@ class _SessionsChatReplAdapter:
                 if self._session_bundle is None:
                     raise RuntimeError(
                         "Sessions API fresh session creation requires a local agent bundle. "
-                        "Start the REPL from `omnigent run <agent.yaml>` so the CLI can "
+                        "Start the REPL from `agent-meow run <agent.yaml>` so the CLI can "
                         "upload the bundle through POST /v1/sessions."
                     )
                 if _dbg:
@@ -1786,7 +1786,7 @@ class _SessionsChatReplAdapter:
             if self._runner_id is None:
                 raise RuntimeError(
                     "Sessions API dispatch requires a registered runner id. "
-                    "Start through `omnigent run <agent>` or pass --server so the CLI "
+                    "Start through `agent-meow run <agent>` or pass --server so the CLI "
                     "can launch and bind a runner."
                 )
             if self._bound_runner_id == self._runner_id:
@@ -2796,7 +2796,7 @@ class _TurnProseTracker:
     The relay persists each streamed text segment at a tool-call
     boundary and publishes the persisted item as
     ``response.output_item.done`` so clients learn its store-assigned id
-    (``_flush_relay_text`` in ``omnigent/server/routes/sessions.py``).
+    (``_flush_relay_text`` in ``agent_meow/server/routes/sessions.py``).
     By the time that event reaches the REPL, the tool-call item that
     triggered the flush has already committed the in-flight prose — the
     delta-based skip (``saw_text_deltas``) sees nothing in flight and
@@ -2977,7 +2977,7 @@ async def run_repl(
     :param log_dir: When set, write a JSON dump of the active
         conversation to ``{log_dir}/{timestamp}-{conv_short}.json``
         on REPL exit. ``None`` (default) skips the dump. Maps to
-        the CLI ``--log`` flag (and the ``~/.omnigent/logs/``
+        the CLI ``--log`` flag (and the ``~/.agent_meow/logs/``
         default location); see ``agent_meow.repl._session_log`` for
         the schema. The dump runs in the SAME ``async with
         OmnigentClient(...)`` scope as the REPL itself, so the
@@ -2987,7 +2987,7 @@ async def run_repl(
         terminal down.
     :param debug_events: When ``True``, enable the SSE-to-UI debug
         pipeline: a ``Ctrl+E`` event tape overlay, JSONL event
-        logging to ``~/.omnigent/debug/``, and pipeline stage
+        logging to ``~/.agent_meow/debug/``, and pipeline stage
         counters in the toolbar. Maps to ``--debug-events`` on the
         CLI.
     :param session_bundle: Gzipped agent bundle bytes used to
@@ -3000,7 +3000,7 @@ async def run_repl(
     :param runner_recover: Optional callback that returns the current
         runner id, restarting the local runner if it has exited.
     :param resume_parts: Pre-built argument list prefix for the
-        resume hint, e.g. ``["omnigent", "run", "agent.yaml",
+        resume hint, e.g. ``["agent-meow", "run", "agent.yaml",
         "--server", "https://example.com"]``.  Built from Click's
         parsed context at CLI dispatch time so one-shot flags
         (``-p``, ``--fork``, ``-c``) are already excluded.
@@ -3051,7 +3051,7 @@ async def run_repl(
     # leaving ``/help`` and the Ctrl+O overlay invisible to
     # users.
     # ``window_title`` mirrors the legacy CLI's terminal-title
-    # behavior (omnigent/inner/cli.py:2979 + :2984): when a user
+    # behavior (agent_meow/inner/cli.py:2979 + :2984): when a user
     # has multiple agent sessions open across tabs, the tab bar
     # should show which agent is which. Without this, every tab
     # reads "Terminal" / "$SHELL" and there's no way to tell them
@@ -4036,7 +4036,7 @@ async def run_repl(
             # prompt-toolkit's background-task runner, which swallows
             # it silently — leaving the user staring at the prompt
             # with no idea why the agent produced no output. This
-            # was the exact user-reported bug where ``omnigent chat`` would
+            # was the exact user-reported bug where ``agent-meow chat`` would
             # return to the prompt after "Hello" with zero feedback
             # when ``OPENAI_BASE_URL`` was unset. Render as an
             # :class:`ErrorBlock` so the UI formatter surfaces the
@@ -4072,7 +4072,7 @@ async def run_repl(
     # Why Ctrl+O and not Ctrl+G: Warp terminal (and some others)
     # intercepts Ctrl+G for its own AI Command Search before the
     # sequence reaches the running program, so the binding never
-    # fires in `omnigent chat`'s pinned-prompt mode. Ctrl+O is not grabbed
+    # fires in `agent-meow chat`'s pinned-prompt mode. Ctrl+O is not grabbed
     # by the common terminal emulators we target (iTerm2, Terminal.app,
     # Warp) and prompt-toolkit binds it cleanly.
     from omnigent_ui_sdk import Overlay
@@ -4104,7 +4104,7 @@ async def run_repl(
     # or when the user isn't running inside tmux to begin with —
     # there's nowhere to open the new window otherwise. Mirrors
     # the legacy non-AP mode F20-overlay shortcuts at
-    # ``omnigent/inner/cli.py:1791-1797``.
+    # ``agent_meow/inner/cli.py:1791-1797``.
     from omnigent_ui_sdk import OverlayAction
 
     async def _attach_handler(target: OverlayTarget, *, read_only: bool) -> None:
@@ -4348,7 +4348,7 @@ async def run_repl(
 
         # Mirror the legacy CLI's mascot-art startup banner so the
         # agent-meow REPL feels identical at boot. Raw stdout write
-        # (matching ``omnigent/inner/cli.py:2962``) — the banner
+        # (matching ``agent_meow/inner/cli.py:2962``) — the banner
         # is a pre-formatted ANSI string with explicit centering;
         # routing it through ``host.output`` (which renders via a
         # Rich Console at the current terminal width) risks double-
@@ -4484,7 +4484,7 @@ async def run_repl(
     # the conversation_id for resume purposes. Prefer it over the local
     # ``conversation_id`` fallback.
     conv_id = getattr(session, "session_id", None) or conversation_id
-    # Top-level ``omnigent resume`` only dispatches claude-native today;
+    # Top-level ``agent-meow resume`` only dispatches claude-native today;
     # the REPL exit path is always chat/run, so print the original-invocation
     # form. ``resume_parts`` already carries --server etc.
     resume_hint: str | None = None
@@ -4518,7 +4518,7 @@ async def _maybe_write_session_log(
         ``current_response_id`` we read.
     :param agent_name: Agent name to embed in the dump.
     :param log_dir: Directory to write under,
-        e.g. ``Path("~/.omnigent/logs").expanduser()``.
+        e.g. ``Path("~/.agent_meow/logs").expanduser()``.
     :param host: TerminalHost for surfacing the result line.
     :param fmt: TimedFormatter for muted-text styling.
     """
@@ -4840,7 +4840,7 @@ def _build_model_readout_lines(
     configured:`` line lists them (friendly names + glyphs) with honest
     guidance: ``/model`` only changes the model within the active
     provider — switching the active provider mid-session is not wired, so
-    it goes through ``omnigent setup --no-internal-beta`` + a restart. Falls
+    it goes through ``agent-meow setup --no-internal-beta`` + a restart. Falls
     back to the legacy ``(agent default)`` line when nothing is configured
     for the harness's surface.
 
@@ -4887,7 +4887,7 @@ def _build_model_readout_lines(
         else:
             lines.append("Active:  None  ·  None")
             lines.append(
-                "no model configured — run `omnigent setup --no-internal-beta` to add one"
+                "no model configured — run `agent-meow setup --no-internal-beta` to add one"
             )
         lines.append("usage: /model <name> · /model default | off | reset to clear")
         return lines
@@ -4938,7 +4938,7 @@ def _build_model_readout_lines(
         # provider; switching the active provider mid-session is not wired,
         # so it goes through `configure harnesses` + a restart.
         lines.append(
-            "  /model <name> changes the model. To switch provider: omnigent setup (then restart)."
+            "  /model <name> changes the model. To switch provider: agent-meow setup (then restart)."
         )
     return lines
 
@@ -5054,7 +5054,7 @@ async def _cmd_model(
     a bare ``/model <active-provider>`` resolves that provider's default
     model. A value naming a **different** configured provider fails loud
     with guidance — switching the active provider mid-session is not wired
-    (it goes through ``omnigent setup --no-internal-beta`` + a restart).
+    (it goes through ``agent-meow setup --no-internal-beta`` + a restart).
     ``/model default|off|reset`` clears the override.
     """
     from rich.text import Text
@@ -5119,7 +5119,7 @@ async def _cmd_model(
         host.output(
             Text.from_markup(
                 f"  [{fmt.muted}]Active provider: {active_label}. To use {target_label}, run "
-                f"`omnigent setup --no-internal-beta` and select it as the "
+                f"`agent-meow setup --no-internal-beta` and select it as the "
                 f"default, then restart. "
                 f"(You can still change the model within {active_label}: /model <model-name>.)"
                 f"[/{fmt.muted}]"
@@ -5405,7 +5405,7 @@ async def _attach_to_conversation(
             break
     if last_response_id is None:
         # An empty conversation (no response items yet). On a fresh
-        # `omnigent run` the daemon hands the REPL a freshly-created session
+        # `agent-meow run` the daemon hands the REPL a freshly-created session
         # as the resume target, so this is the normal new-session case — the
         # old "Empty conversation." line was misleading noise at the top of
         # every new run. Render nothing extra on the startup path (the welcome
@@ -6058,7 +6058,7 @@ def _build_github_issue_url(
         "## Console / terminal output",
         "",
         "<!-- Scroll up in your terminal for error output, or run with",
-        "     --debug-events for a JSONL event log in ~/.omnigent/debug/ -->",
+        "     --debug-events for a JSONL event log in ~/.agent_meow/debug/ -->",
     ]
 
     body = "\n".join(body_parts)
@@ -6154,7 +6154,7 @@ async def _cmd_report(
     session_id: str | None = session.session_id if hasattr(session, "session_id") else None
 
     try:
-        version = _pkg_version("omnigent")
+        version = _pkg_version("agent-meow")
     except Exception:  # noqa: BLE001
         version = None
 
@@ -6528,7 +6528,7 @@ async def _collect_terminals_for_conversations(
     sub-agents each with terminals" actually visible in the
     overlay.
 
-    :param client: The omnigent HTTP client.
+    :param client: The agent-meow HTTP client.
     :param conv_ids: Conversations to walk. Order is preserved
         in the output so the sidebar lists main-conversation
         terminals before sub-agent ones.
@@ -6600,7 +6600,7 @@ class _TerminalInfo:
         the ``-S`` arg an attach command needs.
     :param target: Tmux target. Always ``"main"`` per the
         :class:`TerminalInstance.tmux_target` constant
-        (``omnigent/inner/terminal.py:167``); kept on the
+        (``agent_meow/inner/terminal.py:167``); kept on the
         struct for forward compatibility if that constant ever
         becomes per-terminal.
     :param conv_id: The conversation that owns this terminal
@@ -6660,7 +6660,7 @@ def _parse_terminal_tool_output(raw: object) -> dict[str, object] | None:
 
     Mirrors :func:`_parse_sub_agent_handle`'s tolerance for the
     two on-the-wire shapes the workflow persists: raw JSON
-    string (default executor, omnigent builtins) and
+    string (default executor, agent-meow builtins) and
     MCP-content-parts wrapper (claude-sdk harness). Returning
     ``None`` for anything else lets the reconstructor's loop
     skip cleanly.
@@ -6794,7 +6794,7 @@ async def _open_terminal_in_tmux(
     Bound on the Ctrl+O overlay's ``O`` (attach) and ``R``
     (attach read-only) keybindings. Mirrors the legacy
     non-AP mode F20-overlay shortcuts at
-    ``omnigent/inner/cli.py::_open_current_terminal_window``
+    ``agent_meow/inner/cli.py::_open_current_terminal_window``
     so users with muscle memory from the legacy CLI see the
     same behavior under agent-meow mode.
 
@@ -7216,7 +7216,7 @@ def _parse_sub_agent_handle(raw: str) -> dict[str, object] | None:
     """
     Extract a sys_session_send handle dict from a function_call_output.
 
-    Native omnigent builtins (``sys_session_send`` /
+    Native agent-meow builtins (``sys_session_send`` /
     ``sys_session_send`` continuation on the builtin path) persist the output
     as a raw JSON string of the handle dict —
     ``{"kind": "sub_agent", "conversation_id": ..., ...}``.
@@ -7284,7 +7284,7 @@ async def _build_debug_overview(
     """
     Assemble the Ctrl+O debug overview for the REPL.
 
-    The overview intentionally mirrors the ``omnigent run``
+    The overview intentionally mirrors the ``agent-meow run``
     debug panel: a "Session: main" header with session id /
     agent / response / conversation metadata, followed by an
     indexed event stream where every conversation item is
@@ -7297,13 +7297,13 @@ async def _build_debug_overview(
     1. **Session header** — ``Session: main``, Session ID
        (conversation id), Agent, Model, Response, Messages
        count. Matches :func:`_render_overview_session_text`
-       in ``omnigent/cli.py``.
+       in ``agent_meow/cli.py``.
     2. **Event stream** — all items from the conversation,
        paginated via :func:`_list_all_conversation_items`,
        re-rendered via
        :func:`_render_overview_event` into the same
-       ``[N] type=...`` shape omnigent uses. Responses API
-       items map onto the omnigent event vocabulary as
+       ``[N] type=...`` shape agent-meow uses. Responses API
+       items map onto the agent-meow event vocabulary as
        follows: ``message`` (user) → ``user_message``;
        ``message`` (assistant) → ``assistant_message``;
        ``function_call`` → ``tool_call_request``;
@@ -7317,7 +7317,7 @@ async def _build_debug_overview(
     a debug surface, not a critical path, and a transient server
     hiccup shouldn't kill the overlay.
 
-    :param client: The omnigent client used for the items fetch.
+    :param client: The agent-meow client used for the items fetch.
     :param session: The client ``Session`` tracking
         ``current_response_id``.
     :param agent_name: Registered agent name for the header, e.g.
@@ -7328,7 +7328,7 @@ async def _build_debug_overview(
     :param server_log_path: Optional path to the local server log.
     :param event_log_path: Optional path to the JSONL event log.
     :param cli_log_path: Optional path to the always-on CLI
-        diagnostics log (``~/.omnigent/logs/cli-*.log``).
+        diagnostics log (``~/.agent_meow/logs/cli-*.log``).
     :returns: A Rich :class:`Group` suitable for passing to
         :meth:`TerminalHost.add_overlay`'s ``builder`` contract.
     """
@@ -7506,7 +7506,7 @@ async def _build_debug_overview(
     # matching function_call_output only carries ``call_id`` +
     # ``output``. Index names by call_id so the event stream
     # renders ``name=Bash`` on both sides of the request/complete
-    # pair — matching the omnigent event view. When an output
+    # pair — matching the agent-meow event view. When an output
     # arrives without a prior request (e.g. the server trimmed
     # the head of the history), we fall back to ``"?"`` in the
     # renderer.
@@ -7536,7 +7536,7 @@ def _render_overview_event(
     Produces a header line ``[N] type=<event>`` followed by
     indented field lines (``name: ...``, ``args: ...``,
     ``status: ...``, ``result: ...``). The per-type field set
-    matches what ``omnigent/cli.py::_render_overview_item``
+    matches what ``agent_meow/cli.py::_render_overview_item``
     emits so the two overviews read identically.
 
     :param idx: 1-based index for the ``[N]`` header.
@@ -7648,10 +7648,10 @@ def _render_overview_message_event(
     fmt: RichBlockFormatter,
 ) -> list[RenderableType]:
     """
-    Render a ``message`` item as an omnigent event.
+    Render a ``message`` item as an agent-meow event.
 
     Splits on role so the header reads ``user_message`` or
-    ``assistant_message`` (matching omnigent' event vocabulary)
+    ``assistant_message`` (matching agent-meow' event vocabulary)
     instead of the raw Responses API ``message`` label. The
     content parts are flattened to text and printed on indented
     continuation lines, preview-capped at 400 chars so one
@@ -7775,7 +7775,7 @@ def _coerce_arguments_dict(raw: object) -> dict[str, object]:
     """
     Normalize a ``function_call.arguments`` field to a dict.
 
-    The omnigent API surfaces tool-call arguments as a JSON
+    The agent-meow API surfaces tool-call arguments as a JSON
     object dict; some legacy / harness paths persist the raw
     JSON string instead. Accept both so resume rendering works
     regardless of which writer produced the row.
@@ -7879,7 +7879,7 @@ def _render_message_history_item(
         host.output(fmt.user_message(text))
         return
     if role == "assistant":
-        # Skip empty assistant messages. The omnigent workflow
+        # Skip empty assistant messages. The agent-meow workflow
         # persists a trailing empty assistant item alongside every
         # real reply (``[{"type":"output_text","text":""}]``);
         # without this guard, replaying the conversation renders a

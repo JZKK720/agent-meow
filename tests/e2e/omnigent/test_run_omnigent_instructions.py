@@ -5,10 +5,10 @@ so the test proves the instructions file was loaded and used as
 the system prompt.
 
 **What breaks if this fails:**
-- ``omnigent/inner/loader.py::_resolve_instructions`` regresses.
-- ``omnigent/spec/agent_meow.py::agent_def_to_agent_spec`` stops
+- ``agent_meow/inner/loader.py::_resolve_instructions`` regresses.
+- ``agent_meow/spec/agent_meow.py::agent_def_to_agent_spec`` stops
   preferring ``AgentDef.instructions`` over ``AgentDef.prompt``.
-- ``omnigent/spec/_omnigent_compat.py::is_omnigent_yaml``
+- ``agent_meow/spec/_omnigent_compat.py::is_omnigent_yaml``
   starts rejecting YAMLs that have only ``instructions``.
 """
 
@@ -34,11 +34,11 @@ def _argv_run_omnigent(
     yaml_path: Path,
     prompt: str,
 ) -> list[str]:
-    """Build the ``omnigent run -p`` argv."""
+    """Build the ``agent-meow run -p`` argv."""
     return [
         str(omnigent_python),
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(yaml_path),
         "--model",
@@ -60,7 +60,7 @@ def test_instructions_path_field_loaded_via_omnigent_run_omnigent(
 ) -> None:
     """
     A YAML with ``instructions: AGENTS.md`` runs through
-    ``omnigent run`` and the agent starts successfully.
+    ``agent-meow run`` and the agent starts successfully.
 
     The mock LLM is configured to return the marker, proving
     the instructions file was resolved and injected.
@@ -101,7 +101,7 @@ instructions: AGENTS.md
         timeout=_RUN_TIMEOUT_SEC,
     )
     assert result.returncode == 0, (
-        f"omnigent run exited {result.returncode}. "
+        f"agent-meow run exited {result.returncode}. "
         f"stdout={result.stdout!r} stderr={result.stderr!r}"
     )
     assert _MARKER_PATH_CASE in result.stdout, (
@@ -158,7 +158,7 @@ instructions: |
         timeout=_RUN_TIMEOUT_SEC,
     )
     assert result.returncode == 0, (
-        f"omnigent run exited {result.returncode}. "
+        f"agent-meow run exited {result.returncode}. "
         f"stdout={result.stdout!r} stderr={result.stderr!r}"
     )
     assert _MARKER_INLINE_CASE in result.stdout, (

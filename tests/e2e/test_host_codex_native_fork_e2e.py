@@ -72,7 +72,7 @@ pytestmark = pytest.mark.skipif(
 @contextmanager
 def _host_daemon(tmp_path: Path, live_server: str) -> Iterator[None]:
     """
-    Spawn a codex-native ``omnigent connect`` daemon for the test.
+    Spawn a codex-native ``agent-meow connect`` daemon for the test.
 
     :param tmp_path: Per-test temp dir for the daemon log.
     :param live_server: Test server URL the daemon registers with.

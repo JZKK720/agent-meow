@@ -2,7 +2,7 @@
 
 Declares a built-in ``__web_researcher`` sub-agent. The actual spawn
 runs in the runner's tool dispatch (see
-``omnigent/runner/tool_dispatch.py::_execute_web_fetch_tool``) which
+``agent_meow/runner/tool_dispatch.py::_execute_web_fetch_tool``) which
 funnels into ``_execute_subagent_tool`` — the same path
 ``sys_session_send`` uses. The Tool here owns the schema, the parent's
 sub-agent registration, and the researcher spec; ``invoke`` itself is
@@ -110,7 +110,7 @@ def build_researcher_spec(parent_spec: AgentSpec) -> AgentSpec:
       rules, private-destination policy). The runner treats the
       resolved child spec as authoritative for ``sys_os_*`` and only
       wires the egress proxy from ``spec.sandbox`` (see
-      ``omnigent/inner/os_env.py::create_os_environment``). If the
+      ``agent_meow/inner/os_env.py::create_os_environment``). If the
       child dropped the parent's sandbox, an egress-restricted parent
       would silently gain an unrestricted network path through the
       researcher — so the child must never be more privileged than

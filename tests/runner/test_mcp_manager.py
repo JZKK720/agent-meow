@@ -256,14 +256,14 @@ async def test_invalid_tool_name_is_filtered(
     LLM providers reject these at API call time with unhelpful errors;
     filter at schema-injection time and log a warning instead.
     """
-    # Force the `omnigent` package logger to propagate so caplog
+    # Force the `agent-meow` package logger to propagate so caplog
     # captures warnings. Defensive: ``agent_meow.cli_diagnostics
     # .setup_cli_logging`` sets ``agent_meow.propagate = False`` and
     # if a sibling test on this xdist worker invoked it via a fixture
     # that didn't tear down (e.g. crash mid-test), the False sticks
     # for the rest of the worker — caplog's root handler then misses
     # every ``agent_meow.*`` warning.
-    logging.getLogger("omnigent").propagate = True
+    logging.getLogger("agent-meow").propagate = True
     patch_connection["__tools_for__"]["jira"] = [
         _make_tool_def("ok_tool"),
         _make_tool_def("bad name with spaces"),

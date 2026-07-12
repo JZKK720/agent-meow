@@ -16,7 +16,7 @@ ucode-owned sidecar files, but two pieces land in files the *user* owns:
 - **Claude:** a ``web_search`` MCP server is registered into the user-scope
   ``~/.claude.json`` via ``claude mcp add-json``.
 
-Removing the provider entry from ``~/.omnigent/config.yaml`` alone leaves
+Removing the provider entry from ``~/.agent_meow/config.yaml`` alone leaves
 all of that in place. The helpers here strip exactly the ucode-managed keys
 and files — identified by ucode's fixed names (the ``ucode`` profile, the
 ``ucode-databricks`` model provider, the ``UCODE_WEB_SEARCH_MODEL`` env

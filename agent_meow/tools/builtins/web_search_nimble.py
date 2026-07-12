@@ -46,7 +46,7 @@ _VALID_SEARCH_DEPTHS = frozenset({"lite", "deep"})
 # Identifies this integration to Nimble via the ``X-Client-Source`` header that
 # Nimble's own SDKs send (e.g. langchain-nimble sends ``"langchain-nimble"``),
 # so traffic from the agent-meow provider is attributable.
-_CLIENT_SOURCE = "omnigent"
+_CLIENT_SOURCE = "agent-meow"
 
 
 def _nimble_url() -> str:

@@ -9,7 +9,7 @@ action is the desktop entry point; mobile keeps a three-dot menu entry.)
 The seeded session is runner-bound with no workspace, so the dialog takes
 the non-coding path (plain "Clone", no host/directory picker, no runner
 launch). The host-bound "Clone & start" variant fires its runner launch
-in the background and needs a connected ``omnigent host`` daemon this
+in the background and needs a connected ``agent-meow host`` daemon this
 harness doesn't spawn; its pieces are covered by the dialog unit tests
 (background launch + error handoff to ``useForkLaunchStore``) and the
 ``ResumeWithDirectoryDialog`` ``initialError`` test.
@@ -215,6 +215,6 @@ def test_clone_dialog_offers_cross_family_native_target_and_forks(
     assert "agent_meow.fork.source_external_session_id" not in labels, (
         f"fork of an SDK source must not stamp a source native session id, got {labels!r}"
     )
-    assert labels.get("omnigent.wrapper") == "claude-code-native-ui", (
+    assert labels.get("agent_meow.wrapper") == "claude-code-native-ui", (
         f"fork must present as the TARGET (claude-native) harness, got {labels!r}"
     )

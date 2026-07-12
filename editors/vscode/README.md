@@ -14,10 +14,10 @@ scope for now.
 ## How it works
 
 - On activation the extension discovers a locally running server via
-  `~/.omnigent/local_server.pid` and a `/health` probe (or uses `omnigent.serverUrl`
+  `~/.agent_meow/local_server.pid` and a `/health` probe (or uses `agent_meow.serverUrl`
   when set to a localhost URL).
 - The agent-meow activity-bar view offers an **Open agent-meow** button. The
-  **agent-meow: Open** command (`omnigent.open`) — also on the editor title bar and in the
+  **agent-meow: Open** command (`agent_meow.open`) — also on the editor title bar and in the
   command palette — opens an editor-beside pane that frames the running server.
 - The iframe path is used for **local** servers only; a local server is loopback and
   needs no auth, so no token ever appears in the iframe URL.
@@ -26,7 +26,7 @@ scope for now.
 
 | Setting | Default | Purpose |
 |---|---|---|
-| `omnigent.serverUrl` | `""` | Manual **localhost** server URL override (e.g. `http://127.0.0.1:6767`); empty = auto-discover. Non-localhost URLs are not supported in this build. |
+| `agent_meow.serverUrl` | `""` | Manual **localhost** server URL override (e.g. `http://127.0.0.1:6767`); empty = auto-discover. Non-localhost URLs are not supported in this build. |
 
 ## Known limitation
 
@@ -43,7 +43,7 @@ npm ci
 npm run type-check   # tsc --noEmit
 npm run test         # vitest run
 npm run build        # esbuild -> dist/extension.js
-npm run package      # @vscode/vsce package -> omnigent-vscode-<version>.vsix
+npm run package      # @vscode/vsce package -> agent-meow-vscode-<version>.vsix
 ```
 
 Install the resulting `.vsix` via the Extensions view → "Install from VSIX…". The
@@ -54,7 +54,7 @@ Install the resulting `.vsix` via the Extensions view → "Install from VSIX…"
 ```
 src/
 ├── extension.ts        # activate()/deactivate() — wires discovery + panel + command + view
-├── commands/openPanel.ts  # the omnigent.open command
+├── commands/openPanel.ts  # the agent_meow.open command
 ├── panel/              # EditorPanelController, host.ts (render), iframeHtml.ts, csp.ts
 ├── config/             # settings + localhost server-target resolution
 └── discovery/          # local-server discovery (pidfile / health / liveness)

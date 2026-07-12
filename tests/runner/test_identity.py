@@ -127,7 +127,7 @@ def test_importing_identity_does_not_pull_in_fastapi() -> None:
         "'runner.app loaded via identity import'\n"
     )
     # Hand the child the same import roots as this process so it resolves
-    # ``omnigent`` to the code under test (worktree or installed package).
+    # ``agent-meow`` to the code under test (worktree or installed package).
     child_env = {**os.environ, "PYTHONPATH": os.pathsep.join(p for p in sys.path if p)}
 
     result = subprocess.run(

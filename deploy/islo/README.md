@@ -38,7 +38,7 @@ the **server** process for managed sandboxes:
 ```bash
 curl -fsSL https://islo.dev/install.sh | sh   # install the islo CLI
 islo login                                     # browser OAuth (one-time)
-islo api-key create omnigent --show            # prints an islo_key_… value
+islo api-key create agent-meow --show            # prints an islo_key_… value
 export ISLO_API_KEY=islo_key_…
 # Optional: a non-default API endpoint
 # export ISLO_BASE_URL=https://api.islo.dev
@@ -282,7 +282,7 @@ plan/subscription auth — `--tool claude` gives an Anthropic API key, not a
 Claude Pro/Max subscription; `--tool openai` gives an OpenAI API key, not
 a ChatGPT plan. To use a subscription or plan token on any harness (a
 Claude Pro/Max token, a Codex access token), use
-[Option B](#option-b--omnigent-env-injection-your-own-key-or-a-subscription).
+[Option B](#option-b--agent-meow-env-injection-your-own-key-or-a-subscription).
 
 > [!IMPORTANT]
 > If `islo status` shows **"No integrations connected"** for a provider,
@@ -419,7 +419,7 @@ guide](../modal/README.md#git-credentials-private-repositories).
   (below) to keep the agent away from it.
 - **The agent terminal is sandboxed away from those secrets.** Native
   harness terminals run under a bubblewrap OS-sandbox that masks dotfiles
-  (`~/.ssh`, `~/.aws`, the injected `~/.omnigent` server token) and pins
+  (`~/.ssh`, `~/.aws`, the injected `~/.agent-meow` server token) and pins
   the agent to its workspace — defense-in-depth *inside* the Islo sandbox,
   independent of Islo's own isolation. This is why the image must ship
   `bwrap` (see [the host image](#the-host-image)).
@@ -474,7 +474,7 @@ free credits. Rates: [islo.dev](https://islo.dev).
   nothing. Connect one (Option A) or switch to Option B.
 - **"managed host did not come online within 120s."** Check that
   `server_url` is publicly reachable from Islo's cloud, then inspect the
-  in-sandbox host log: `~/.omnigent/logs/host-runner/*.log`.
+  in-sandbox host log: `~/.agent_meow/logs/host-runner/*.log`.
 - **Agent has no credentials.** Verify the injected var names match the
   forwarded set above (or are named in `OMNIGENT_RUNNER_ENV_PASSTHROUGH`),
   and that each name was actually set in the launching environment.

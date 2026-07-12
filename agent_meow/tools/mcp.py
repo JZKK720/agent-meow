@@ -1018,9 +1018,9 @@ class McpServerConnection:
         backend), so ``sandbox: true`` consistently produced silent
         hangs on the first ``tool/call``. Inner-stack stdio MCPs
         have always spawned without sandboxing
-        (``omnigent/inner/mcp_tools.py``); agent-meow now matches that
+        (``agent_meow/inner/mcp_tools.py``); agent-meow now matches that
         baseline. Per-MCP sandboxing — if reintroduced — should
-        flow through the ``omnigent/environments/`` primitive
+        flow through the ``agent_meow/environments/`` primitive
         with explicit outbound-host allowlists, not srt-defaults.
 
         :param stack: The lifecycle task's exit stack.

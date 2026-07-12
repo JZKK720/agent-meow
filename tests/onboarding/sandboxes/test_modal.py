@@ -356,7 +356,7 @@ def test_prepare_raises_with_install_hint_when_sdk_missing(
     monkeypatch.setitem(sys.modules, "modal", None)
     with pytest.raises(click.ClickException) as exc:
         ModalSandboxLauncher().prepare()
-    assert "omnigent[modal]" in str(exc.value)
+    assert "agent-meow[modal]" in str(exc.value)
     assert "modal token new" in str(exc.value)
 
 
@@ -422,7 +422,7 @@ def test_provision_creates_max_lifetime_sandbox_under_shared_app(
     assert create.timeout == MAX_SANDBOX_LIFETIME_S
     # The app handle from lookup must flow into create.
     assert create.app is state.app
-    # Image: the official prebaked host image (omnigent + git/tmux
+    # Image: the official prebaked host image (agent-meow + git/tmux
     # baked in — sandbox creation must not pay an in-sandbox dependency
     # install), pulled anonymously by default.
     assert create.image.tag == DEFAULT_HOST_IMAGE
@@ -437,11 +437,11 @@ def test_provision_honors_image_override_env_var(monkeypatch: pytest.MonkeyPatch
     it's the escape hatch for org-internal copies of the host image.
     """
     state = _install_fake_modal(monkeypatch)
-    monkeypatch.setenv(HOST_IMAGE_ENV_VAR, "ghcr.io/acme/omnigent-host:sha-abc1234")
+    monkeypatch.setenv(HOST_IMAGE_ENV_VAR, "ghcr.io/acme/agent-meow-host:sha-abc1234")
     monkeypatch.delenv(REGISTRY_SECRET_ENV_VAR, raising=False)
     ModalSandboxLauncher().provision("my-host")
 
-    assert state.create_calls[0].image.tag == "ghcr.io/acme/omnigent-host:sha-abc1234"
+    assert state.create_calls[0].image.tag == "ghcr.io/acme/agent-meow-host:sha-abc1234"
 
 
 def test_provision_passes_registry_secret_for_private_pulls(
@@ -612,7 +612,7 @@ def test_exec_foreground_records_pid_and_streams_output(
     sandbox = _seed_sandbox(state)
     sandbox.exec_queue.append(_FakeProcess(stdout="host-output\n"))
 
-    returncode = ModalSandboxLauncher().exec_foreground("sb-1", "omnigent host --server u")
+    returncode = ModalSandboxLauncher().exec_foreground("sb-1", "agent-meow host --server u")
 
     assert returncode == 0
     call = sandbox.exec_calls[0]
@@ -621,7 +621,7 @@ def test_exec_foreground_records_pid_and_streams_output(
     assert "echo $$ > /tmp/oa-foreground.pid" in remote
     assert "TERM=xterm-256color" in remote
     # `exec` keeps the recorded pid across the swap to the real command.
-    assert "exec omnigent host --server u" in remote
+    assert "exec agent-meow host --server u" in remote
     # Output reached the local terminal.
     assert "host-output" in capsys.readouterr().out
 
@@ -637,7 +637,7 @@ def test_exec_foreground_kills_remote_on_interrupt(monkeypatch: pytest.MonkeyPat
     sandbox.exec_queue.append(_FakeProcess(wait_raises=KeyboardInterrupt()))
 
     with pytest.raises(KeyboardInterrupt):
-        ModalSandboxLauncher().exec_foreground("sb-1", "omnigent host --server u")
+        ModalSandboxLauncher().exec_foreground("sb-1", "agent-meow host --server u")
 
     # Second exec is the kill, addressed via the recorded pidfile.
     assert len(sandbox.exec_calls) == 2
@@ -649,7 +649,7 @@ def test_exec_foreground_kills_remote_on_interrupt(monkeypatch: pytest.MonkeyPat
 
 def test_wheel_install_command_overlays_baked_install() -> None:
     """
-    The prebaked host image carries omnigent at the same 0.1.0
+    The prebaked host image carries agent-meow at the same 0.1.0
     version, so the overlay must --force-reinstall (pip would otherwise
     see the version satisfied and silently keep the baked code) and
     --no-deps (the dependency tree is baked; reinstalling it would
@@ -672,7 +672,7 @@ def test_provision_explicit_image_overrides_env_and_gets_secret(
     not silently fall back to an anonymous pull.
     """
     state = _install_fake_modal(monkeypatch)
-    monkeypatch.setenv(HOST_IMAGE_ENV_VAR, "ghcr.io/acme/omnigent-host:env")
+    monkeypatch.setenv(HOST_IMAGE_ENV_VAR, "ghcr.io/acme/agent-meow-host:env")
     monkeypatch.setenv(REGISTRY_SECRET_ENV_VAR, "ghcr-pull")
     ModalSandboxLauncher(image="docker.io/me/custom-host:latest").provision("my-host")
 

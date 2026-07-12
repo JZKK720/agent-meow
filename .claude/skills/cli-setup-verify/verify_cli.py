@@ -5,17 +5,17 @@ This is the reusable engine behind the ``cli-setup-verify`` skill (see
 ``SKILL.md`` next to this file for the playbook and CUJ catalog). One run:
 
 1. Builds an **isolated config/data sandbox** so nothing the CLI writes ever
-   lands in the real ``~/.omnigent`` — it sets the purpose-built
-   ``OMNIGENT_CONFIG_HOME`` / ``OMNIGENT_DATA_DIR`` knobs (``omnigent/cli.py``
+   lands in the real ``~/.agent-meow`` — it sets the purpose-built
+   ``OMNIGENT_CONFIG_HOME`` / ``OMNIGENT_DATA_DIR`` knobs (``agent_meow/cli.py``
    ``_CONFIG_HOME_ENV_VAR`` / ``_DATA_DIR_ENV_VAR``), strips leaked model
    credentials from the child env, and (optionally) points ``HOME`` and a
    minimal ``PATH`` at the sandbox to simulate a brand-new machine.
-2. Drives the real ``omnigent`` binary through ``pexpect`` (a real PTY with a
+2. Drives the real ``agent-meow`` binary through ``pexpect`` (a real PTY with a
    sane ``TERM`` so prompt-toolkit / the raw-termios pickers actually render).
 3. Captures ANSI-stripped frames into an artifacts dir for UX inspection.
 4. Runs the named scenario's assertions and prints a single machine-readable
    ``SUMMARY {json}`` line; exits non-zero on failure.
-5. Proves it left the real ``~/.omnigent`` byte-for-byte unchanged.
+5. Proves it left the real ``~/.agent-meow`` byte-for-byte unchanged.
 
 The point is a **verifiable loop**: run a scenario on the *unfixed* code
 (``--label before``) to capture the baseline, make the change, run the same
@@ -45,13 +45,13 @@ try:
     import pexpect
 except ImportError:  # pragma: no cover - guidance, not logic
     sys.stderr.write(
-        "verify_cli.py needs `pexpect`. Run it with the omnigent project's "
+        "verify_cli.py needs `pexpect`. Run it with the agent-meow project's "
         "venv python (it bundles pexpect), e.g.\n"
         "  <repo>/.venv/bin/python verify_cli.py ...\n"
     )
     raise
 
-# --- PTY constants (mirrors tests/e2e/omnigent/_pexpect_harness.py) ---------
+# --- PTY constants (mirrors tests/e2e/agent_meow/_pexpect_harness.py) ---------
 
 # prompt-toolkit refuses to draw on TERM=dumb; this is what the REPL tests use.
 TERM = "xterm-256color"
@@ -63,7 +63,7 @@ DEFAULT_ROWS = 24
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")
 
-# Stable onboarding anchors (omnigent/cli.py:520, :10064, :10300).
+# Stable onboarding anchors (agent_meow/cli.py:520, :10064, :10300).
 ANCHOR_SEARCHING = "Searching for existing credentials"
 ANCHOR_CONFIGURE = "Configure harnesses"
 ANCHOR_NO_HARNESS = "Found no harnesses configured"
@@ -126,12 +126,12 @@ def build_sandbox(
     strip_path: bool,
     omnigent_bin: Path,
 ) -> Sandbox:
-    """Create an isolated sandbox env that cannot touch the real ``~/.omnigent``.
+    """Create an isolated sandbox env that cannot touch the real ``~/.agent-meow``.
 
     ``HOME`` is redirected into the sandbox **by default**. This is load-bearing,
     not cosmetic: the CLI's diagnostics logger writes a per-invocation
     ``cli-*.log`` under ``state_dir()`` which is hardcoded to ``Path.home() /
-    ".omnigent"`` (``omnigent_ui_sdk/terminal/_config.py``) and ignores
+    ".agent-meow"`` (``omnigent_ui_sdk/terminal/_config.py``) and ignores
     ``OMNIGENT_CONFIG_HOME`` / ``OMNIGENT_DATA_DIR``. So redirecting ``HOME`` is
     the *only* thing that keeps non-help commands (``config list``, the setup
     PTY spawns, ``server stop`` teardown) from writing into the real home.
@@ -142,11 +142,11 @@ def build_sandbox(
         thus its ambient ``~/.claude`` / ``~/.databrickscfg`` auth). Needed to
         reach a real credentialed REPL, but **relaxes the safety guarantee**:
         non-help commands will then write ``cli-*.log`` into the real
-        ``~/.omnigent/logs`` (the broadened fingerprint catches this).
-    :param strip_path: Reduce ``PATH`` to just the omnigent binary's dir + an
+        ``~/.agent_meow/logs`` (the broadened fingerprint catches this).
+    :param strip_path: Reduce ``PATH`` to just the agent-meow binary's dir + an
         empty dir, so node/npm/tmux/claude/codex read as "not installed" — i.e.
         a brand-new machine.
-    :param omnigent_bin: Path to the ``omnigent`` console script being driven.
+    :param omnigent_bin: Path to the ``agent-meow`` console script being driven.
     :returns: A :class:`Sandbox`.
     """
     root = Path(mkdtemp(prefix="omnigent-verify-"))
@@ -179,7 +179,7 @@ def build_sandbox(
 
 
 def fingerprint_real_config() -> dict[str, str]:
-    """Fingerprint the real ``~/.omnigent`` so we can prove we never wrote to it.
+    """Fingerprint the real ``~/.agent-meow`` so we can prove we never wrote to it.
 
     Stat-only (size + mtime, no content reads). It captures two things, both
     cheap:
@@ -187,7 +187,7 @@ def fingerprint_real_config() -> dict[str, str]:
     * the top-level config files (``*.yaml`` / ``*.json`` / ``*.toml`` plus the
       known names) — what onboarding writes; and
     * the set of ``logs/cli-*.log`` diagnostic files — what *any* non-help CLI
-      invocation writes via the hardcoded ``Path.home()/.omnigent`` state dir.
+      invocation writes via the hardcoded ``Path.home()/.agent-meow`` state dir.
       A new ``cli-*.log`` basename after the run means we wrote into the real
       home (the precise violation that slips through ``OMNIGENT_CONFIG_HOME`` /
       ``OMNIGENT_DATA_DIR``). With home isolation on (the default) none appear;
@@ -195,13 +195,13 @@ def fingerprint_real_config() -> dict[str, str]:
 
     It deliberately does **not** read the multi-GB ``logs/*.log`` bodies,
     ``db-backups/`` or native-state dirs (reading them would hang, and other
-    running omnigent daemons churn them → false alarms). The single ``logs/``
+    running agent-meow daemons churn them → false alarms). The single ``logs/``
     glob is bounded by the diagnostics log cap.
 
     :returns: Mapping of relative path → ``"<size>:<mtime_ns>"`` (config files)
         or ``"<mtime_ns>"`` (cli logs). Empty if the directory does not exist.
     """
-    base = Path.home() / ".omnigent"
+    base = Path.home() / ".agent-meow"
     out: dict[str, str] = {}
     if not base.exists():
         return out
@@ -299,13 +299,13 @@ def save_frame(result: Result, artifacts: Path, name: str, raw: str) -> None:
 def scenario_check_isolation(args, sandbox: Sandbox, result: Result) -> None:
     """Smoke-test the sandbox: a read-only CLI call must not touch real config.
 
-    Runs ``omnigent config list`` inside the sandbox (no PTY needed) and
+    Runs ``agent-meow config list`` inside the sandbox (no PTY needed) and
     asserts (a) it executed, (b) the sandbox config home is now used, (c) the
-    real ``~/.omnigent`` fingerprint is unchanged. This is the first thing to
+    real ``~/.agent-meow`` fingerprint is unchanged. This is the first thing to
     run to trust every other scenario.
     """
     proc = subprocess.run(
-        [str(args.omnigent), "config", "list"],
+        [str(args.agent-meow), "config", "list"],
         env=sandbox.env,
         cwd=str(args.repo),
         capture_output=True,
@@ -333,7 +333,7 @@ def scenario_cold_start(args, sandbox: Sandbox, result: Result) -> None:
     then aborts cleanly.
     """
     child = pexpect.spawn(
-        str(args.omnigent),
+        str(args.agent-meow),
         ["setup"],
         env=sandbox.env,
         cwd=str(args.repo),
@@ -386,7 +386,7 @@ def scenario_setup_snapshot(args, sandbox: Sandbox, result: Result) -> None:
     Use ``--nav-down N`` to step down N rows capturing a frame each time.
     """
     child = pexpect.spawn(
-        str(args.omnigent),
+        str(args.agent-meow),
         ["setup"],
         env=sandbox.env,
         cwd=str(args.repo),
@@ -414,7 +414,7 @@ def scenario_setup_snapshot(args, sandbox: Sandbox, result: Result) -> None:
 
 
 def scenario_help_snapshot(args, sandbox: Sandbox, result: Result) -> None:
-    """Render ``omnigent [SUBCOMMAND] --help`` and lint it for known UX issues.
+    """Render ``agent-meow [SUBCOMMAND] --help`` and lint it for known UX issues.
 
     No PTY needed. The lint checks map directly to top-20 findings, so a fix is
     verifiable as a before/after flip:
@@ -422,7 +422,7 @@ def scenario_help_snapshot(args, sandbox: Sandbox, result: Result) -> None:
       * ``no_update_dup``    — top-level help doesn't list both update & upgrade (X2)
     Use ``--subcommand server`` (etc.) to lint a specific command's help.
     """
-    cmd = [str(args.omnigent)]
+    cmd = [str(args.agent-meow)]
     if args.subcommand:
         cmd.append(args.subcommand)
     cmd.append("--help")
@@ -480,7 +480,7 @@ def scenario_repl_commands(args, sandbox: Sandbox, result: Result) -> None:
     if args.model:
         spawn_args += ["--model", args.model]
     child = pexpect.spawn(
-        str(args.omnigent),
+        str(args.agent-meow),
         spawn_args,
         env=sandbox.env,
         cwd=str(args.repo),
@@ -577,7 +577,7 @@ def stop_sandbox_server(args, sandbox: Sandbox) -> None:
     """Best-effort: stop any background server bound to the sandbox data dir."""
     with contextlib.suppress(Exception):
         subprocess.run(
-            [str(args.omnigent), "server", "stop"],
+            [str(args.agent-meow), "server", "stop"],
             env=sandbox.env,
             cwd=str(args.repo),
             capture_output=True,
@@ -590,16 +590,16 @@ def stop_sandbox_server(args, sandbox: Sandbox) -> None:
 
 
 def resolve_omnigent(repo: Path, explicit: str | None) -> Path:
-    """Find the ``omnigent`` console script to drive."""
+    """Find the ``agent-meow`` console script to drive."""
     if explicit:
         return Path(explicit).resolve()
-    venv = repo / ".venv" / "bin" / "omnigent"
+    venv = repo / ".venv" / "bin" / "agent-meow"
     if venv.exists():
         return venv.resolve()
-    found = shutil.which("omnigent")
+    found = shutil.which("agent-meow")
     if found:
         return Path(found).resolve()
-    sys.exit("Could not find an `omnigent` binary; pass --omnigent <path>.")
+    sys.exit("Could not find an `agent-meow` binary; pass --agent-meow <path>.")
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
@@ -616,8 +616,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help="Repo root (child cwd).",
     )
     p.add_argument(
-        "--omnigent",
-        help="Path to the omnigent binary (default: <repo>/.venv/bin/omnigent or PATH).",
+        "--agent-meow",
+        help="Path to the agent-meow binary (default: <repo>/.venv/bin/meow or PATH).",
     )
     p.add_argument(
         "--label",
@@ -633,7 +633,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="Opt out of HOME isolation (use real HOME + ambient auth). "
         "Less safe: non-help commands then write cli-*.log into the real "
-        "~/.omnigent/logs. Use only to reach a real credentialed REPL.",
+        "~/.agent_meow/logs. Use only to reach a real credentialed REPL.",
     )
     p.add_argument(
         "--strip-path",
@@ -675,12 +675,12 @@ def main(argv: Sequence[str]) -> int:
     if not args.scenario:
         sys.exit("Pass --scenario <name> (or --list-scenarios).")
 
-    args.omnigent = resolve_omnigent(args.repo, args.omnigent)
+    args.agent-meow = resolve_omnigent(args.repo, args.agent-meow)
     sandbox = build_sandbox(
         keep_env_creds=args.keep_env_creds,
         inherit_home=args.inherit_home,
         strip_path=args.strip_path,
-        omnigent_bin=args.omnigent,
+        omnigent_bin=args.agent-meow,
     )
     if not args.artifacts:
         args.artifacts = str(sandbox.root / "artifacts")
@@ -699,7 +699,7 @@ def main(argv: Sequence[str]) -> int:
     result.add(
         "real_config_untouched",
         untouched,
-        "~/.omnigent unchanged" if untouched else "REAL CONFIG MUTATED — investigate",
+        "~/.agent-meow unchanged" if untouched else "REAL CONFIG MUTATED — investigate",
     )
 
     if not args.keep_sandbox:

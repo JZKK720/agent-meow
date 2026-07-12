@@ -61,7 +61,7 @@ def _decode_url(url: str) -> dict[str, str]:
 
 
 def test_build_github_issue_url_base_structure() -> None:
-    """URL targets the omnigent-ai/omnigent issues/new endpoint.
+    """URL targets the JZKK720/agent-meow issues/new endpoint.
 
     Failure: the URL would open the wrong repo or be unparseable,
     meaning users file issues in the wrong place.
@@ -250,7 +250,7 @@ async def test_report_command_includes_version_in_url(
     # Patch importlib.metadata.version to return a known string.
     monkeypatch.setattr(
         "importlib.metadata.version",
-        lambda pkg: "9.8.7" if pkg == "omnigent" else "0.0.0",
+        lambda pkg: "9.8.7" if pkg == "agent-meow" else "0.0.0",
     )
 
     host = _Host()

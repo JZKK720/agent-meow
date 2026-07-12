@@ -151,7 +151,7 @@ async def test_list_builtin_agents_exposes_harness_from_spec(
     """
     bundle = build_agent_bundle(
         name="custom-reviewer",
-        executor={"type": "omnigent", "config": {"harness": harness}},
+        executor={"type": "agent-meow", "config": {"harness": harness}},
     )
     _register_builtin_agent(
         agent_store,
@@ -287,7 +287,7 @@ async def test_catalog_keeps_custom_agent_distinct_from_builtin_claude_and_codex
         name="claude-native-ui",
         bundle=build_agent_bundle(
             name="claude-native-ui",
-            executor={"type": "omnigent", "config": {"harness": "claude-sdk"}},
+            executor={"type": "agent-meow", "config": {"harness": "claude-sdk"}},
         ),
     )
     _register_builtin_agent(
@@ -297,7 +297,7 @@ async def test_catalog_keeps_custom_agent_distinct_from_builtin_claude_and_codex
         name="codex-native-ui",
         bundle=build_agent_bundle(
             name="codex-native-ui",
-            executor={"type": "omnigent", "config": {"harness": "codex"}},
+            executor={"type": "agent-meow", "config": {"harness": "codex"}},
         ),
     )
     _register_builtin_agent(
@@ -308,7 +308,7 @@ async def test_catalog_keeps_custom_agent_distinct_from_builtin_claude_and_codex
         description="Custom coding agent",
         bundle=build_agent_bundle(
             name="databricks-coding-agent",
-            executor={"type": "omnigent", "config": {"harness": "openai-agents"}},
+            executor={"type": "agent-meow", "config": {"harness": "openai-agents"}},
         ),
     )
 
@@ -373,7 +373,7 @@ async def test_catalog_entry_exposes_availability_and_reason(
     """
     bundle = build_agent_bundle(
         name="codex-reviewer",
-        executor={"type": "omnigent", "config": {"harness": "codex"}},
+        executor={"type": "agent-meow", "config": {"harness": "codex"}},
     )
     _register_builtin_agent(
         agent_store,

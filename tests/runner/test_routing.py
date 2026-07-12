@@ -135,7 +135,7 @@ def test_runner_dispatch_harness_reads_explicit_harness() -> None:
     """Explicit harness-backed specs dispatch through the runner."""
     spec = _agent_spec(
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "codex"},
         ),
     )
@@ -147,7 +147,7 @@ def test_runner_dispatch_harness_ignores_unmapped_harness() -> None:
     """Specs with a harness not in the runner module table return None."""
     spec = _agent_spec(
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "open-responses"},
         ),
     )

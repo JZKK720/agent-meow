@@ -62,7 +62,7 @@ The per-harness support matrix (interrupt / queue / subagents / reasoning / elic
 
 ### 2.A  Session lifecycle & continuity ✅
 
-Most server logic lives in the (huge) `omnigent/server/routes/sessions.py` + `stores/conversation_store/`.
+Most server logic lives in the (huge) `agent_meow/server/routes/sessions.py` + `stores/conversation_store/`.
 
 - **Create session** — `POST /sessions` (`sessions.py:13329`). JSON (existing agent) vs multipart
   (bundled → session-scoped agent). Optional `host_id` (launch managed sandbox runner,
@@ -84,7 +84,7 @@ Most server logic lives in the (huge) `omnigent/server/routes/sessions.py` + `st
 - **Disconnect → reconnect** — stream ends with `[DONE]` on all exit paths; reconnect re-runs snapshot+tail;
   presence `idle` flip via param; `_poll_request_disconnect` (`:1093`) detects hangup.
 - **Close / archive** — `PATCH /sessions/{id}` archived=true (owner-only); `is_session_closed()`
-  (`session_lifecycle.py:70`) gates input (label `omnigent.closed` OR legacy title `:closed:` marker);
+  (`session_lifecycle.py:70`) gates input (label `agent_meow.closed` OR legacy title `:closed:` marker);
   read still allowed, writes rejected.
 - **Delete** — `DELETE /sessions/{id}` (`:18935`), owner-only; best-effort runner-resource cleanup, file/artifact
   delete, optional `delete_branch` worktree removal. ⚠️ runner offline → orphans runner resources.
@@ -108,16 +108,16 @@ runner binding via atomic CAS (`set_runner_id`, `WHERE runner_id IS NULL`).
 
 **Taxonomy — two families** (this split explains most behavior differences). *In scope: claude + codex only.*
 - **SDK harnesses** — in-process agent loop; agent-meow owns prompt + tool set + turn loop;
-  user sees only the agent-meow WebUI; transcript is 100% agent-meow. Base `omnigent/inner/executor.py`.
+  user sees only the agent-meow WebUI; transcript is 100% agent-meow. Base `agent_meow/inner/executor.py`.
   (in scope: **claude-sdk**, **codex** — headless. **Polly / custom agents** run here too, typically on claude-sdk.)
 - **Native harnesses** — drive a resident vendor CLI/TUI in a tmux pane and **mirror** its
   transcript back; the *vendor* owns the system prompt + tool set; transcript lives in the
-  vendor store + mirrored. Base `omnigent/native_server_harness.py`; dispatch
+  vendor store + mirrored. Base `agent_meow/native_server_harness.py`; dispatch
   `cli.py:5740` (`_dispatch_native_terminal_harness`); metadata `native_coding_agents.py`.
   (in scope: **claude-native**, **codex-native**.)
 
 CUJs:
-- **Select harness at session start** — `omnigent <harness>` or `meow run --harness X`.
+- **Select harness at session start** — `agent-meow <harness>` or `meow run --harness X`.
   Aliases `harness_aliases.py:9` (`claude`→`claude-sdk`). Validate `cli.py:5554`;
   ⚠️ native + AGENT-spec combo rejected `cli.py:5874`.
 - **Switch / override model & effort mid-session (from WebUI)** — SDK applies next turn via
@@ -126,7 +126,7 @@ CUJs:
   claude statusLine mirror `claude_native_forwarder.py:1485`).
   ⚠️ a native override may not affect the *running* turn. Effort validation `reasoning_effort.py`.
 - **Default model / provider resolution** — chain: CLI `--model` → YAML `executor.model` → env
-  (`ANTHROPIC_DEFAULT_MODEL`) → `~/.omnigent/config.yaml` → per-harness default. `chat.py:600`.
+  (`ANTHROPIC_DEFAULT_MODEL`) → `~/.agent_meow/config.yaml` → per-harness default. `chat.py:600`.
   Model catalog `model_catalog.py` (backs `sys_list_models`).
 - **Provider / credential resolution** — spec auth block (`spec/types.py` ExecutorAuth) → env →
   CLI login → ambient detection (`onboarding/ambient.py:500`). Types: databricks profile, api_key,
@@ -147,7 +147,7 @@ user-config vs omni-managed credential mismatch; MCP relay missing → native ca
 ### 2.C  Tools, agent-meow MCP, custom MCP, shells, files, timers ✅
 
 **agent-meow MCP server (the `sys_*` surface)** — exposed via the `serve-mcp` subcommand;
-all tools registered in `omnigent/tools/manager.py`. Grouped (gating in parens):
+all tools registered in `agent_meow/tools/manager.py`. Grouped (gating in parens):
 - **File/shell:** `sys_os_read/write/edit/shell` — `tools/builtins/os_env.py` (reg `manager.py:519`);
   run inside an OSEnvironment (cwd + sandbox).
 - **Terminals:** `sys_terminal_launch/send/read/list/close` — `tools/builtins/sys_terminal.py`
@@ -236,15 +236,15 @@ PreToolUse hook reaching `/policies/evaluate` with a *fresh* token (→ §2.G bu
 
 ### 2.E  Web UI & client-facing features ✅
 
-React app under `web/src/` (note: renamed from `ap-web/` upstream). TUI/REPL under `omnigent/repl/`.
+React app under `web/src/` (note: renamed from `ap-web/` upstream). TUI/REPL under `agent_meow/repl/`.
 
 - **Sidebar list** — `shell/Sidebar.tsx`, `hooks/useConversations.ts` (`fetchConversationsPage`, cursor-paginated
   20/page, sort `updated_at` desc, `?search_query=`). Badges: awaiting count / running. Live via `WS /v1/sessions/updates`
   (watch-set snapshot then changed/removed deltas + heartbeat).
 - **Projects (#7)** — `useProjects()` → `GET /v1/sessions/projects`; **implicit** (exist iff ≥1 session); stored as
-  reserved label `omni_project`; collapsible (localStorage `omnigent:collapsed-sidebar-sections`); lazy
+  reserved label `omni_project`; collapsible (localStorage `agent-meow:collapsed-sidebar-sections`); lazy
   `GET /sessions?project=`. Set at start (NewChatDialog) or kebab → Change project. Design `SESSION_PROJECTS_SIDEBAR.md`.
-- **Pin / unpin (#7)** — localStorage `omnigent:pinned-conversation-ids`; drag-reorder; precedence
+- **Pin / unpin (#7)** — localStorage `agent-meow:pinned-conversation-ids`; drag-reorder; precedence
   Archived > Pinned > Project > Recent.
 - **Archive / unarchive · rename · delete** — PATCH `archived` / PATCH `title` / DELETE; archived hidden by default,
   also managed in Settings → Archived.
@@ -286,14 +286,14 @@ React app under `web/src/` (note: renamed from `ap-web/` upstream). TUI/REPL und
 - **Fork / clone** — `shell/ForkSessionDialog.tsx`. **Approve deep-link** — `pages/ApprovePage.tsx`
   (`/approve/:sessionId/:elicitationId`, pre-auth approval access).
 - **Capabilities probe** — `GET /v1/info` (`lib/CapabilitiesContext.tsx`) gates UI (accounts_enabled, etc.).
-- **TUI / REPL equivalents** — `omnigent/repl/_repl.py` (`run_repl`): rich streaming, slash commands, file-mention
+- **TUI / REPL equivalents** — `agent_meow/repl/_repl.py` (`run_repl`): rich streaming, slash commands, file-mention
   completer, resume picker (`_resume_picker.py`), theme picker, event tape (`_event_tape.py`); open-in-browser link
   `conversation_browser.py`.
 
 **OmniBox is *not* a web component** — it's agent-meow's **OS-level sandbox** (bubblewrap+seccomp / Seatbelt)
 that wraps any agent for unattended/YOLO runs: filesystem isolation + default-deny network egress + credential
 injection (agent holds a placeholder, proxy swaps the real secret). Mapped under §2.C (sandbox) and §2.G
-(credential proxy). Ref: omnigent-site `docs/omnibox`.
+(credential proxy). Ref: agent-meow-site `docs/omnibox`.
 
 ### 2.F  Agents, subagents, executor, routing, inbox mechanics ✅
 
@@ -321,7 +321,7 @@ injection (agent holds a placeholder, proxy swaps the real secret). Mapped under
 - **Runner dispatch / affinity** — `runner/routing.py:RunnerRouter.client_for_conversation` (`:88`): the conversation's
   `runner_id` is **hard affinity (no failover/rebalance)**; validate online + harness capability → httpx over WS tunnel.
   ⚠️ not bound → CONFLICT; offline → RUNNER_UNAVAILABLE; capability mismatch → RUNNER_CAPABILITY_MISMATCH.
-- **Custom agent creation / storage (#)** — `omnigent create` or POST bundle. **Three tiers:** ArtifactStore
+- **Custom agent creation / storage (#)** — `agent-meow create` or POST bundle. **Three tiers:** ArtifactStore
   (content-addressed tarball — source of truth) → Agent DB row (id/name/bundle_location/version/session_id) →
   AgentCache (`runtime/agent_cache.py`: disk extract + in-memory spec, **no TTL**, evict on delete, warm-swap on update).
   Session-scoped agents have non-null `session_id`; template agents null. Version bumps on update.
@@ -340,7 +340,7 @@ injection (agent holds a placeholder, proxy swaps the real secret). Mapped under
 ### 2.G  Onboarding, credentials & auth (incl. token refresh) ✅
 
 **First-run setup** — `meow setup` wizard (`onboarding/wizard.py`): provider picker, **ambient detection**
-(`onboarding/ambient.py` scans installed CLIs — Claude.app, Codex, LM Studio), saves `~/.omnigent/config.yaml`.
+(`onboarding/ambient.py` scans installed CLIs — Claude.app, Codex, LM Studio), saves `~/.agent_meow/config.yaml`.
 Databricks profile aliasing reuses same-host profiles to avoid redundant OAuth (`onboarding/setup.py:_alias_profile`).
 
 **The three credential relationships:**
@@ -349,7 +349,7 @@ Databricks profile aliasing reuses same-host profiles to avoid redundant OAuth (
    `_DatabricksBearerAuth.auth_flow()` calls `Config.authenticate()` **every request** (`databricks_executor.py:289`),
    handles 401 + login-redirect, covers ~1h OAuth. API-key / subscription providers = static (no refresh).
 2. **Runner ↔ server** — `runner/_entry.py:_make_auth_token_factory` (`:271`): stored OIDC token
-   (`~/.omnigent/auth_tokens.json`) OR Databricks OAuth via SDK; `_RunnerDatabricksAuth` refreshes per request
+   (`~/.agent_meow/auth_tokens.json`) OR Databricks OAuth via SDK; `_RunnerDatabricksAuth` refreshes per request
    (handles 401/302, retry-once). ⚠️ **WS tunnel handshake injects the Bearer once at open — no per-message refresh** (§6).
 3. **Client ↔ server** — `server/auth.py:resolve_auth_source` (`:193`), `UnifiedAuthProvider` (`:250`). Three modes:
    **header** (`X-Forwarded-Email` from upstream proxy — default), **accounts** (built-in user/pass → cookie),
@@ -437,7 +437,7 @@ Notes: all four accept mid-session model change but the *mechanism* varies (SDK 
 codex-native `thread/settings/update`; claude-native statusLine mirror, next turn only). "own-config propagation"
 (§2.B #3) is strongest for claude-native (`use_claude_config`) and codex-native (`~/.codex/config.toml`).
 
-**Reasoning-effort source of truth = `omnigent/reasoning_effort.py`** (in-scope families):
+**Reasoning-effort source of truth = `agent_meow/reasoning_effort.py`** (in-scope families):
 `CLAUDE/ANTHROPIC = {low,medium,high,xhigh,max}`, `OPENAI/CODEX = {none,minimal,low,medium,high,xhigh}`.
 Effort is selectable at session start (NewChatDialog) and mid-session (`/effort <level>`); claude-native mirrors
 in-pane `/effort` back to the session row.

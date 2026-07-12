@@ -165,12 +165,12 @@ const WEBAUTHN_KEYCHAIN_ACCESS_GROUP = "<CUBECLOUD_TEAM_ID>.io.cubecloud.agentme
 function registerWebAuthn() {
   if (process.platform !== "darwin") return;
   if (typeof app.configureWebAuthn !== "function") {
-    console.log("[omnigent] webauthn: Electron too old for configureWebAuthn; skipping");
+    console.log("[agent-meow] webauthn: Electron too old for configureWebAuthn; skipping");
     return;
   }
   if (WEBAUTHN_KEYCHAIN_ACCESS_GROUP === null) {
     console.log(
-      "[omnigent] webauthn: WEBAUTHN_KEYCHAIN_ACCESS_GROUP not set; " +
+      "[agent-meow] webauthn: WEBAUTHN_KEYCHAIN_ACCESS_GROUP not set; " +
         "platform passkeys (Touch ID dialog) disabled — security keys still work",
     );
     return;
@@ -182,7 +182,7 @@ function registerWebAuthn() {
   // cleanly so dev keeps the silent security-key path.
   if (!app.isPackaged) {
     console.log(
-      "[omnigent] webauthn: dev run (unsigned, no keychain entitlement); " +
+      "[agent-meow] webauthn: dev run (unsigned, no keychain entitlement); " +
         "platform passkeys disabled — security keys still work",
     );
     return;
@@ -455,7 +455,7 @@ function updateBadge() {
   let total = 0;
   for (const count of perOrigin.values()) total += count;
   const ok = app.setBadgeCount(total);
-  console.log(`[omnigent] setBadgeCount(${total}) -> ${ok}`);
+  console.log(`[agent-meow] setBadgeCount(${total}) -> ${ok}`);
 }
 
 /**
@@ -577,7 +577,7 @@ function broadcastHostStatus() {
   for (const [win, state] of windows) {
     if (win.isDestroyed() || !state.origin || !state.serverUrl) continue;
     try {
-      win.webContents.send("omnigent:host-status-changed");
+      win.webContents.send("agent-meow:host-status-changed");
     } catch {
       // Window torn down between the check and the send; ignore.
     }
@@ -623,7 +623,7 @@ function saveSettings(settings) {
 }
 
 /**
- * Resolve the `omnigent` CLI binary path from the user's configured override
+ * Resolve the `agent-meow` CLI binary path from the user's configured override
  * (``settings.omnigent_path``) plus the standard locations, or null when none
  * is usable. Re-resolved on each call so a freshly-configured path takes
  * effect without a restart.
@@ -1086,7 +1086,7 @@ function openFindBar(target) {
   const existing = findBars.get(target);
   if (existing && !existing.isDestroyed()) {
     existing.focus();
-    existing.webContents.send("omnigent:find-activate");
+    existing.webContents.send("agent-meow:find-activate");
     return;
   }
   const bar = new BrowserWindow({
@@ -1112,7 +1112,7 @@ function openFindBar(target) {
   const reposition = () => positionFindBar(target, bar);
   const onFound = (_event, result) => {
     if (bar.isDestroyed()) return;
-    bar.webContents.send("omnigent:find-result", {
+    bar.webContents.send("agent-meow:find-result", {
       active: result.activeMatchOrdinal,
       matches: result.matches,
     });
@@ -1358,7 +1358,7 @@ function signalForeground() {
       if (win && !win.isFocused()) win.flashFrame(true);
     }
   } catch (err) {
-    console.warn("[omnigent] signalForeground failed:", err);
+    console.warn("[agent-meow] signalForeground failed:", err);
   }
 }
 
@@ -1545,7 +1545,7 @@ function registerIpc() {
   // Setup page → persist URL and navigate the SENDING window to it. We target
   // the window that owns the setup page (via its webContents) rather than a
   // global, so connecting from one window doesn't hijack another.
-  ipcMain.handle("omnigent:set-server-url", async (event, url) => {
+  ipcMain.handle("agent-meow:set-server-url", async (event, url) => {
     if (!isSetupPageSender(event)) {
       // A server page must never be able to re-point which server is saved.
       throw new Error("set-server-url is only available to the setup page");
@@ -1592,7 +1592,7 @@ function registerIpc() {
   });
 
   // Setup page → pre-fill the input with any saved URL.
-  ipcMain.handle("omnigent:get-server-url", (event) => {
+  ipcMain.handle("agent-meow:get-server-url", (event) => {
     if (!isSetupPageSender(event)) {
       throw new Error("get-server-url is only available to the setup page");
     }
@@ -1601,7 +1601,7 @@ function registerIpc() {
 
   // Setup page → recently-connected servers, most recent first, for the
   // quick-pick list under the URL form.
-  ipcMain.handle("omnigent:get-recent-servers", (event) => {
+  ipcMain.handle("agent-meow:get-recent-servers", (event) => {
     if (!isSetupPageSender(event)) {
       throw new Error("get-recent-servers is only available to the setup page");
     }
@@ -1613,9 +1613,9 @@ function registerIpc() {
   // SPA title-bar server picker → the sender window's pinned origin plus the
   // persisted recent-servers list, so the picker can render "current server"
   // and the switch targets. Foreign pages get null (nothing to fingerprint).
-  ipcMain.handle("omnigent:get-server-picker", (event) => {
+  ipcMain.handle("agent-meow:get-server-picker", (event) => {
     if (!isPinnedOriginSender(event)) {
-      console.warn("[omnigent] get-server-picker from untrusted sender dropped");
+      console.warn("[agent-meow] get-server-picker from untrusted sender dropped");
       return null;
     }
     const win = BrowserWindow.fromWebContents(event.sender);
@@ -1633,7 +1633,7 @@ function registerIpc() {
   // grants), so a server page must never be able to pin a window to an
   // arbitrary origin of its choosing — only to servers the user previously
   // connected to by hand.
-  ipcMain.handle("omnigent:switch-server", (event, url) => {
+  ipcMain.handle("agent-meow:switch-server", (event, url) => {
     if (!isPinnedOriginSender(event)) {
       throw new Error("switch-server is only available to a connected server page");
     }
@@ -1670,9 +1670,9 @@ function registerIpc() {
   // SENDING window to the bundled setup page. Unlike Change Server… this
   // keeps the saved default server (connecting from setup overwrites it
   // only when the user actually submits a URL).
-  ipcMain.on("omnigent:open-server-setup", (event) => {
+  ipcMain.on("agent-meow:open-server-setup", (event) => {
     if (!isPinnedOriginSender(event)) {
-      console.warn("[omnigent] open-server-setup from untrusted sender dropped");
+      console.warn("[agent-meow] open-server-setup from untrusted sender dropped");
       return;
     }
     const win = BrowserWindow.fromWebContents(event.sender);
@@ -1686,9 +1686,9 @@ function registerIpc() {
   // Find bar → run/continue a search in its parent window. Empty text
   // clears the highlight and zeroes the counter (findInPage rejects empty
   // queries, so it never reaches it).
-  ipcMain.on("omnigent:find-query", (event, params) => {
+  ipcMain.on("agent-meow:find-query", (event, params) => {
     if (!isFindBarSender(event)) {
-      console.warn("[omnigent] find-query from untrusted sender dropped");
+      console.warn("[agent-meow] find-query from untrusted sender dropped");
       return;
     }
     const target = findBarTarget(event);
@@ -1696,7 +1696,7 @@ function registerIpc() {
     const text = String(params?.text ?? "");
     if (text === "") {
       target.webContents.stopFindInPage("clearSelection");
-      event.sender.send("omnigent:find-result", { active: 0, matches: 0 });
+      event.sender.send("agent-meow:find-result", { active: 0, matches: 0 });
       return;
     }
     target.webContents.findInPage(text, {
@@ -1707,9 +1707,9 @@ function registerIpc() {
 
   // Find bar → dismiss itself (Esc / ✕). Cleanup (stop search, refocus the
   // parent) lives in the bar's "closed" handler in openFindBar.
-  ipcMain.on("omnigent:find-close", (event) => {
+  ipcMain.on("agent-meow:find-close", (event) => {
     if (!isFindBarSender(event)) {
-      console.warn("[omnigent] find-close from untrusted sender dropped");
+      console.warn("[agent-meow] find-close from untrusted sender dropped");
       return;
     }
     const bar = BrowserWindow.fromWebContents(event.sender);
@@ -1719,9 +1719,9 @@ function registerIpc() {
   // Dock/taskbar badge. Each window's SPA reports ITS unread count; the
   // app-wide badge shown is the sum across windows (see updateBadge), so two
   // windows on different servers don't clobber each other's counts.
-  ipcMain.on("omnigent:set-badge-count", (event, count) => {
+  ipcMain.on("agent-meow:set-badge-count", (event, count) => {
     if (!isPinnedOriginSender(event)) {
-      console.warn("[omnigent] set-badge-count from untrusted sender dropped");
+      console.warn("[agent-meow] set-badge-count from untrusted sender dropped");
       return;
     }
     // isPinnedOriginSender guarantees the sender window is tracked.
@@ -1741,11 +1741,11 @@ function registerIpc() {
   // window is focused we add an OS-level attention cue the frontmost app CAN
   // show: bounce the macOS dock icon / flash the taskbar frame. That makes a
   // non-open session's turn-end noticeable even with the app in front.
-  ipcMain.handle("omnigent:notify", (event, params) => {
+  ipcMain.handle("agent-meow:notify", (event, params) => {
     if (!isPinnedOriginSender(event)) {
       // The contract is "resolves false when not shown" — a foreign page
       // gets a quiet false, not an exception it could fingerprint.
-      console.warn("[omnigent] notify from untrusted sender dropped");
+      console.warn("[agent-meow] notify from untrusted sender dropped");
       return false;
     }
     if (!Notification.isSupported()) return false;
@@ -1778,7 +1778,7 @@ function registerIpc() {
       // throw instead of crashing the main process from this async callback.
       if (navigatePath && !event.sender.isDestroyed()) {
         try {
-          event.sender.send("omnigent:notification-activated", navigatePath);
+          event.sender.send("agent-meow:notification-activated", navigatePath);
         } catch {
           // Sender went away after the notification was posted; nothing to do.
         }
@@ -1800,29 +1800,29 @@ function registerIpc() {
   // caller is the server's page, not that the user asked.
   // -------------------------------------------------------------------------
 
-  // Setup page → is the `omnigent` CLI installed and runnable? Includes the
+  // Setup page → is the `agent-meow` CLI installed and runnable? Includes the
   // resolved path, version, and the install one-liner to show when missing.
-  ipcMain.handle("omnigent:get-cli-status", async (event) => {
+  ipcMain.handle("agent-meow:get-cli-status", async (event) => {
     if (!isSetupPageSender(event)) {
       throw new Error("get-cli-status is only available to the setup page");
     }
     return omnigentCli.getCliStatus(loadSettings().omnigent_path);
   });
 
-  // Setup page → set an explicit path to the `omnigent` binary. Persisted only
-  // when that exact path validates as a runnable omnigent (so a typo doesn't
+  // Setup page → set an explicit path to the `agent-meow` binary. Persisted only
+  // when that exact path validates as a runnable agent-meow (so a typo doesn't
   // silently mask a working PATH lookup). Returns the resulting CLI status plus
   // whether the configured path was accepted.
-  ipcMain.handle("omnigent:set-cli-path", async (event, configuredPath) => {
+  ipcMain.handle("agent-meow:set-cli-path", async (event, configuredPath) => {
     if (!isSetupPageSender(event)) {
       throw new Error("set-cli-path is only available to the setup page");
     }
     return applyCliPath(configuredPath);
   });
 
-  // Setup page → native file picker for the omnigent binary. Returns the chosen
+  // Setup page → native file picker for the agent-meow binary. Returns the chosen
   // path (the renderer feeds it back through set-cli-path) or null on cancel.
-  ipcMain.handle("omnigent:browse-cli-path", async (event) => {
+  ipcMain.handle("agent-meow:browse-cli-path", async (event) => {
     if (!isSetupPageSender(event)) {
       throw new Error("browse-cli-path is only available to the setup page");
     }
@@ -1837,24 +1837,24 @@ function registerIpc() {
 
   // Setup page → start (or reuse) the local server. Returns its URL so the
   // setup page can hand off to the normal setServerUrl navigation flow.
-  ipcMain.handle("omnigent:start-local-server", async (event) => {
+  ipcMain.handle("agent-meow:start-local-server", async (event) => {
     if (!isSetupPageSender(event)) {
       throw new Error("start-local-server is only available to the setup page");
     }
     const cliPath = resolvedCliPath();
     if (!cliPath) {
-      return { ok: false, error: "The omnigent CLI was not found. Install it or set its path." };
+      return { ok: false, error: "The agent-meow CLI was not found. Install it or set its path." };
     }
     return serverManager.startLocalServer(cliPath);
   });
 
   // SPA → this machine's identity: is the CLI installed, and its host id. Both
-  // come from local config (no `omnigent host status` subprocess), so this is
+  // come from local config (no `agent-meow host status` subprocess), so this is
   // instant — it lets the new-session picker tag/connect "this machine" without
   // waiting on the slow runner-status check.
-  ipcMain.handle("omnigent:host-get-identity", (event) => {
+  ipcMain.handle("agent-meow:host-get-identity", (event) => {
     if (!isPinnedOriginSender(event)) {
-      console.warn("[omnigent] host-get-identity from untrusted sender dropped");
+      console.warn("[agent-meow] host-get-identity from untrusted sender dropped");
       return null;
     }
     return { cliInstalled: Boolean(resolvedCliPath()), hostId: omnigentCli.localHostId() };
@@ -1862,9 +1862,9 @@ function registerIpc() {
 
   // SPA (in-app Settings → Local CLI) → is the CLI installed and runnable,
   // plus the resolved path / version / source. Read-only; pinned-origin gated.
-  ipcMain.handle("omnigent:cli-get-status", async (event) => {
+  ipcMain.handle("agent-meow:cli-get-status", async (event) => {
     if (!isPinnedOriginSender(event)) {
-      console.warn("[omnigent] cli-get-status from untrusted sender dropped");
+      console.warn("[agent-meow] cli-get-status from untrusted sender dropped");
       return null;
     }
     return omnigentCli.getCliStatus(loadSettings().omnigent_path);
@@ -1876,7 +1876,7 @@ function registerIpc() {
   // point the CLI at an arbitrary binary that host-control would later spawn
   // (and validation runs `<path> --version`). Choosing a path stays on the
   // bundled file:// setup page.
-  ipcMain.handle("omnigent:cli-reset-path", async (event) => {
+  ipcMain.handle("agent-meow:cli-reset-path", async (event) => {
     if (!isPinnedOriginSender(event)) {
       throw new Error("cli-reset-path is only available to a connected server page");
     }
@@ -1885,7 +1885,7 @@ function registerIpc() {
 
   // SPA → start / stop / restart this machine's host daemon for the window's
   // own server (the host selection menu's "connect this machine" action).
-  ipcMain.handle("omnigent:host-control", async (event, action) => {
+  ipcMain.handle("agent-meow:host-control", async (event, action) => {
     if (!isPinnedOriginSender(event)) {
       throw new Error("host-control is only available to a connected server page");
     }
@@ -1893,7 +1893,7 @@ function registerIpc() {
     if (!serverUrl) return { ok: false, error: "this window is not connected to a server" };
     const cliPath = resolvedCliPath();
     if (!cliPath) {
-      return { ok: false, error: "The omnigent CLI was not found. Install it or set its path." };
+      return { ok: false, error: "The agent-meow CLI was not found. Install it or set its path." };
     }
     let result;
     if (action === "start" || action === "restart") {

@@ -29,7 +29,7 @@ _STATE_FILE = "state.json"
 # the tmux/TUI section at the end of this module). Written by the runner after
 # the agy terminal launches; read by the executor's first-turn bootstrap.
 _TMUX_FILE = "tmux.json"
-_BRIDGE_ROOT = Path.home() / ".omnigent" / "antigravity-native"
+_BRIDGE_ROOT = Path.home() / ".agent-meow" / "antigravity-native"
 
 # Prefix of the launcher-minted placeholder conversation id (see
 # ``antigravity_native._mint_agy_conversation_id``). agy mints its own real
@@ -147,7 +147,7 @@ def bridge_root() -> Path:
     Tests may monkeypatch :data:`_BRIDGE_ROOT` to isolate bridge files.
 
     :returns: Absolute root for Antigravity-native bridge directories, e.g.
-        ``Path("~/.omnigent/antigravity-native")``.
+        ``Path("~/.agent_meow/antigravity-native")``.
     """
     return _BRIDGE_ROOT
 
@@ -203,7 +203,7 @@ def bridge_dir_for_bridge_id(bridge_id: str) -> Path:
 
     :param bridge_id: Opaque bridge id, e.g. ``"bridge_abc123"``.
     :returns: Absolute bridge directory under
-        ``~/.omnigent/antigravity-native``.
+        ``~/.agent_meow/antigravity-native``.
     """
     digest = hashlib.sha256(bridge_id.encode("utf-8")).hexdigest()[:32]
     return _BRIDGE_ROOT / digest
@@ -288,7 +288,7 @@ def prepare_bridge_dir(bridge_id: str) -> Path:
 _MCP_CONFIG_DIR = "config"
 _MCP_CONFIG_FILE = "mcp_config.json"
 _BRIDGE_CONFIG_FILE = "bridge.json"
-_MCP_SERVER_NAME = "omnigent"
+_MCP_SERVER_NAME = "agent-meow"
 # agy auto-approves a relay tool when it is named in the server's ``enabledTools``
 # allowlist (agy's per-server MCP schema; mirrors cursor's ``autoApprove``).
 # agent-meow's own TOOL_CALL policy + elicitation gate still applies on the server
@@ -380,7 +380,7 @@ def build_mcp_config(
     ``<python> -I -m agent_meow.claude_native_bridge serve-mcp --bridge-dir <dir>``.
 
     **HOME pinning.** agy spawns this relay as a child. The relay validates its
-    ``--bridge-dir`` against ``bridge_root()`` (``$HOME/.omnigent/antigravity-native``),
+    ``--bridge-dir`` against ``bridge_root()`` (``$HOME/.agent_meow/antigravity-native``),
     which must resolve to the RUNNER's real home where the bridge dir actually
     lives. Pinning ``HOME`` in the relay env keeps that invariant true even when a
     future agy launch path customizes process environment. ``-I`` does not clear

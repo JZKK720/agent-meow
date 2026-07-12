@@ -9,7 +9,7 @@ exactly one of three paths, all of which set the same credential:
 1. **Password flag** — ``--admin-password`` /
    ``OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD``. Headless / CI. Bootstrap
    creates the admin from it directly (this module).
-2. **Terminal prompt** — ``omnigent server`` on a TTY asks for a
+2. **Terminal prompt** — ``agent-meow server`` on a TTY asks for a
    username + password before serving (``cli.py``).
 3. **Web Create-admin form** — when neither of the above applied,
    bootstrap creates nothing and reports ``needs_setup``; the SPA then
@@ -27,9 +27,9 @@ supplied password is ignored with a warning). Rotation is an explicit
 action — Account menu → Change password, or admin Members → Reset.
 
 **Loopback CLI handoff.** On a loopback boot, once an admin exists,
-bootstrap writes a session JWT to ``~/.omnigent/auth_tokens.json``
+bootstrap writes a session JWT to ``~/.agent_meow/auth_tokens.json``
 (via :mod:`~?agent_meow.cli_auth`) keyed to this spawn's URL, so the next
-``omnigent run`` is signed in without a prompt. Skipped for
+``agent-meow run`` is signed in without a prompt. Skipped for
 non-loopback (remote) deploys where the server's machine ≠ the
 operator's.
 """
@@ -127,14 +127,14 @@ class BootstrapResult:
     :param needs_setup: ``True`` when no admin exists yet and none was
         created this boot (no password was supplied) — so the first
         admin must be claimed via the web Create-admin form, the
-        ``omnigent server`` terminal prompt, or a password flag.
+        ``agent-meow server`` terminal prompt, or a password flag.
         Drives ``/v1/info``'s ``needs_setup`` and the browser auto-open.
     :param open_url: URL the lifespan should auto-open once bound, or
         ``None``. Set to the loopback base URL on a needs-setup local
         boot so the browser lands on the Create-admin form.
     :param tui_token_written: ``True`` when a CLI session JWT was
-        written to ``~/.omnigent/auth_tokens.json`` (loopback only),
-        so the next ``omnigent run`` is signed in without a prompt.
+        written to ``~/.agent_meow/auth_tokens.json`` (loopback only),
+        so the next ``agent-meow run`` is signed in without a prompt.
     """
 
     fresh_boot: bool
@@ -191,12 +191,12 @@ def _mint_loopback_cli_token(
     """Write a fresh CLI session token for a loopback server spawn.
 
     The CLI authenticates to a server by a token in
-    ``~/.omnigent/auth_tokens.json`` keyed by the **exact** server
+    ``~/.agent_meow/auth_tokens.json`` keyed by the **exact** server
     URL. The daemon spawns the local server on a fresh random port
     every time, so a token minted at first-boot (and keyed to that
     boot's port) won't match a later spawn — and on a returning boot
     the first-boot handoff never re-fires at all. Without re-minting
-    per spawn, ``omnigent run`` 401s against its own loopback
+    per spawn, ``agent-meow run`` 401s against its own loopback
     server once an admin already exists. This mints a token for
     ``base_url`` (the current spawn's URL) on every boot, so the
     local CLI always has a valid credential. Loopback + single-user,
@@ -234,7 +234,7 @@ def _mint_loopback_cli_token(
     except Exception as exc:  # noqa: BLE001 — best-effort, must not block boot
         logger.warning(
             "accounts: failed to write loopback CLI token (%s) — "
-            "`omnigent run` may need `omnigent login`",
+            "`agent-meow run` may need `agent-meow login`",
             exc,
         )
         return False
@@ -272,7 +272,7 @@ def bootstrap_admin(
 
     :param account_store: The accounts-specific store backing user
         identity + tokens. Mutually exclusive with PermissionStore
-        for accounts concerns — see ``omnigent/server/accounts_store.py``
+        for accounts concerns — see ``agent_meow/server/accounts_store.py``
         for the boundary rationale.
     :param init_admin_password: Optional operator-provided
         password from ``OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD``.
@@ -281,7 +281,7 @@ def bootstrap_admin(
         auto-open) and as the URL to open on a needs-setup local
         boot. ``None`` disables those.
     :param session_ttl_hours: TTL for the CLI session token
-        written to ``~/.omnigent/auth_tokens.json``.
+        written to ``~/.agent_meow/auth_tokens.json``.
     :param cookie_secret: HMAC key for the session JWT. ``None``
         also disables the handoff (no way to mint a valid token).
     :returns: A :class:`BootstrapResult` describing what fired.
@@ -314,7 +314,7 @@ def bootstrap_admin(
         # Bootstrap is a no-op here, but the loopback CLI still needs a
         # fresh token for THIS spawn's port — the daemon picks a new port
         # each spawn and the first-boot handoff token is port-keyed +
-        # one-time. Without this, `omnigent run` 401s against its own
+        # one-time. Without this, `agent-meow run` 401s against its own
         # local server once an admin exists.
         refreshed = False
         if base_url is not None and cookie_secret is not None and _is_loopback_base_url(base_url):
@@ -336,7 +336,7 @@ def bootstrap_admin(
     # through one of three paths:
     #   1. a password flag (handled right below): --admin-password /
     #      OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD — headless / CI;
-    #   2. the `omnigent server` terminal prompt (cli.py, on a TTY);
+    #   2. the `agent-meow server` terminal prompt (cli.py, on a TTY);
     #   3. the web Create-admin form (POST /auth/setup), which the SPA
     #      shows whenever /v1/info reports needs_setup.
     # When no password was supplied we create nothing and report
@@ -373,7 +373,7 @@ def bootstrap_admin(
         )
     logger.info("accounts: created %r admin from supplied password", admin_username)
 
-    # Loopback CLI handoff so `omnigent run` is signed in without a
+    # Loopback CLI handoff so `agent-meow run` is signed in without a
     # prompt (keyed to this spawn's URL; see _mint_loopback_cli_token).
     tui_token_written = False
     if base_url is not None and cookie_secret is not None and _is_loopback_base_url(base_url):

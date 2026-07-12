@@ -33,7 +33,7 @@ pulls it, which can take a few minutes).
 ## Prerequisites
 
 ```bash
-pip install 'omnigent[boxlite]'   # installs the boxlite SDK extra
+pip install 'agent-meow[boxlite]'   # installs the boxlite SDK extra
 ```
 
 **Local mode** additionally needs hardware virtualization on the
@@ -56,7 +56,7 @@ Add a `sandbox:` block to your server config (`meow server -c …` /
 ```yaml
 sandbox:
   provider: boxlite
-  server_url: https://omnigent.example.com   # the in-box host dials this back
+  server_url: https://agent_meow.example.com   # the in-box host dials this back
 ```
 
 `provider` + `server_url` is a complete config: the image defaults to
@@ -67,7 +67,7 @@ the official prebaked host image and boxes run locally.
 ```yaml
 sandbox:
   provider: boxlite
-  server_url: https://omnigent.example.com
+  server_url: https://agent_meow.example.com
   boxlite:
     image: docker.io/me/agent-meow-host:latest     # optional, shared; default: official
     env: [OPENAI_API_KEY, GIT_TOKEN]             # optional, shared; SERVER env var NAMES
@@ -88,7 +88,7 @@ data directory and give it credentials to pull a **private** host image
 ```yaml
 sandbox:
   provider: boxlite
-  server_url: https://omnigent.example.com
+  server_url: https://agent_meow.example.com
   boxlite:
     image: ghcr.io/acme/agent-meow-host:latest   # shared
     local:                           # LOCAL mode block (mutually exclusive with `cloud`)

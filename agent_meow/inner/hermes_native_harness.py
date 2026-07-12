@@ -7,7 +7,7 @@ resolves ``"hermes-native"`` to this module via
 
 Wraps a :class:`~?agent_meow.inner.hermes_native_executor.HermesNativeExecutor`, which
 injects web-UI messages into the running ``hermes`` TUI (launched by
-``omnigent hermes`` in the session terminal) via tmux. The bridge dir is read from
+``agent-meow hermes`` in the session terminal) via tmux. The bridge dir is read from
 :data:`~?agent_meow.hermes_native_bridge.BRIDGE_DIR_ENV_VAR` in the spawn env.
 
 Tool policies: agent-meow policies are enforced via a per-session ``HERMES_HOME``

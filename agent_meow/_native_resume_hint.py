@@ -23,9 +23,9 @@ def format_native_resume_command(
     :param server: Optional agent-meow server URL, e.g.
         ``"https://example.databricks.com"``.
     :returns: Shell-quoted command string, e.g.
-        ``"omnigent claude --resume conv_abc123"``.
+        ``"agent-meow claude --resume conv_abc123"``.
     """
-    parts = ["omnigent", native_command]
+    parts = ["agent-meow", native_command]
     if server is not None:
         parts.extend(["--server", server])
     parts.extend(["--resume", session_id])

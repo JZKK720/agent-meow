@@ -1,7 +1,7 @@
 """
 End-to-end: every example YAML the agent-meow adapter is
 *expected* to accept can actually boot and execute under
-``omnigent run -p <prompt>``.
+``agent-meow run -p <prompt>``.
 
 One parametrized case per YAML. Each case:
 
@@ -103,7 +103,7 @@ _CASES = [
         # The fork's cwd is the repo root, so ``ls`` sees the
         # real repo anchors. Any one match is enough — the mock
         # returns the first marker.
-        ("pyproject.toml", "README.md", "omnigent", "examples"),
+        ("pyproject.toml", "README.md", "agent-meow", "examples"),
         # Harness-side failure markers the supervisor can't
         # hide. If any of these show up in stdout we have a real
         # regression even if the LLM's reply text happens to
@@ -132,7 +132,7 @@ def test_run_omnigent_example_yaml(
     extra_args: tuple[str, ...],
 ) -> None:
     """
-    Drive one example YAML under ``omnigent run -p <prompt>``
+    Drive one example YAML under ``agent-meow run -p <prompt>``
     and assert the agent exercised the declared capability.
 
     :param omnigent_python: Shared interpreter fixture.
@@ -176,12 +176,12 @@ def test_run_omnigent_example_yaml(
     args = [
         str(omnigent_python),
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(yaml_path),
         # ``--no-session`` so each test starts on a fresh
         # ephemeral DBOS db. Without it, every run shares
-        # ``~/.omnigent/chat.db`` and DBOS may attempt to
+        # ``~/.agent_meow/chat.db`` and DBOS may attempt to
         # recover stuck workflows from previous runs before the
         # FastAPI lifespan finishes initializing the
         # HarnessProcessManager — manifests as
@@ -212,7 +212,7 @@ def test_run_omnigent_example_yaml(
         )
 
     assert result.returncode == 0, (
-        f"{yaml_rel}: --omnigent exited {result.returncode}. "
+        f"{yaml_rel}: --agent-meow exited {result.returncode}. "
         f"stderr tail:\n{result.stderr[-2000:]}\n"
         f"stdout tail:\n{result.stdout[-1500:]}"
     )

@@ -1409,7 +1409,7 @@ def _extract_pi_turn_usage(
     Pi (``@earendil-works/pi-coding-agent``) forwards assistant messages
     whose ``usage`` dict carries ``input`` / ``output`` / ``cacheRead`` /
     ``cacheWrite`` / ``totalTokens`` token counts, and the message itself
-    carries the resolved ``model``. This translates those into omnigent's
+    carries the resolved ``model``. This translates those into agent-meow's
     usage schema (see :class:`~?agent_meow.inner.executor.TurnComplete`).
 
     :param message: A pi message dict (e.g. ``event["message"]`` from a

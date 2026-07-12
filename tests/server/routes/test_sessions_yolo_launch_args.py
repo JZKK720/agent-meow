@@ -37,7 +37,7 @@ def _spec_with_config(config: dict[str, str]) -> AgentSpec:
     return AgentSpec(
         spec_version=1,
         name="impl",
-        executor=ExecutorSpec(type="omnigent", config=config),
+        executor=ExecutorSpec(type="agent-meow", config=config),
     )
 
 

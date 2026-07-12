@@ -103,7 +103,7 @@ def test_parse_schema_stored_verbatim(minimal_raw_tool: dict[str, Any]) -> None:
     """
     parse_client_side_tool_spec stores the schema dict verbatim.
 
-    There is no ``omnigent`` extension key to strip — the raw dict
+    There is no ``agent-meow`` extension key to strip — the raw dict
     IS the schema that gets stored and later returned to the LLM.
     """
     spec = parse_client_side_tool_spec(minimal_raw_tool)

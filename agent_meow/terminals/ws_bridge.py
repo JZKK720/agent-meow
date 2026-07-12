@@ -151,7 +151,7 @@ class _SpawnedPty:
 # terminal or the REPL's embedded terminal), never the bridging
 # process's own controlling terminal — so its capabilities, not the
 # ambient ``TERM``, describe the client. Inheriting ambient ``TERM``
-# breaks headless hosts (managed sandboxes, ``omnigent sandbox
+# breaks headless hosts (managed sandboxes, ``agent-meow sandbox
 # connect``): no TTY means no TERM, bash substitutes ``TERM=dumb``,
 # and ``tmux attach`` refuses dumb terminals ("terminal does not
 # support clear") — the web terminal renders that error instead of

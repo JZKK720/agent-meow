@@ -2442,7 +2442,7 @@ def test_create_session_with_agent_top_level_unchanged(
     Verify the no-parent path still creates a top-level default row.
 
     The parent support must not disturb the existing multipart create
-    contract (CLI ``omnigent run`` sessions): kind stays "default",
+    contract (CLI ``agent-meow run`` sessions): kind stays "default",
     no parent link, and the row roots its own tree.
     """
     created = conversation_store.create_session_with_agent(
@@ -3011,7 +3011,7 @@ def test_fork_conversation_drops_instance_scoped_labels(
             # The dangerous bypass opt-in must NOT ride into the fork.
             "agent_meow.codex_native.bypass_sandbox": "1",
             # An ordinary, non-instance label that SHOULD carry over.
-            "omnigent.wrapper": "claude-code-native-ui",
+            "agent_meow.wrapper": "claude-code-native-ui",
         },
     )
 
@@ -3021,7 +3021,7 @@ def test_fork_conversation_drops_instance_scoped_labels(
     # source's per-instance state. A bridge-id here would re-introduce
     # the cross-bridge bug; the metrics would show the source's stale
     # usage.
-    assert fork.labels == {"omnigent.wrapper": "claude-code-native-ui"}, (
+    assert fork.labels == {"agent_meow.wrapper": "claude-code-native-ui"}, (
         f"Fork must drop instance-scoped labels, kept {fork.labels!r}"
     )
 

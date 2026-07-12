@@ -109,7 +109,7 @@ def _validate_spec_version(spec: AgentSpec, result: ValidationResult) -> None:
 
 # agent-meow compat: imported surgically from a dedicated module so
 # the integration's tech debt is removable in one shot. See
-# omnigent/spec/_omnigent_compat.py. Placed after the module's
+# agent_meow/spec/_omnigent_compat.py. Placed after the module's
 # internal helpers (rather than with the top-of-file imports) so the
 # integration's footprint is reviewable as one contiguous block.
 from agent_meow.spec._omnigent_compat import (  # noqa: E402
@@ -472,7 +472,7 @@ def _validate_compaction(spec: AgentSpec, result: ValidationResult) -> None:
 
 # Set of sandbox backends that hard-enforce network isolation
 # (and therefore can host an L7 egress proxy). Mirrors the loader's
-# allow-list in ``omnigent/inner/loader.py``. ``none`` is excluded
+# allow-list in ``agent_meow/inner/loader.py``. ``none`` is excluded
 # — it doesn't install a namespace or SBPL, so egress rules would be
 # inert decoration on the policy.
 _EGRESS_CAPABLE_BACKENDS = frozenset({"linux_bwrap", "darwin_seatbelt"})

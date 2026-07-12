@@ -8,7 +8,7 @@ this, a policy could "launder" an invalid label write by
 emitting it only on ASK (where the engine defers the write
 to post-approval apply).
 
-Load-bearing: the omnigent parity promise is that the
+Load-bearing: the agent-meow parity promise is that the
 same label write rules apply regardless of which path
 (direct ALLOW vs approved ASK) carries the write.
 """

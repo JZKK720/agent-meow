@@ -1,4 +1,4 @@
-"""Tests for ``omnigent/inner/copilot_harness.py`` — the ``harness: copilot`` wrap.
+"""Tests for ``agent_meow/inner/copilot_harness.py`` — the ``harness: copilot`` wrap.
 
 The wrap reads ``HARNESS_COPILOT_*`` env vars and constructs a
 :class:`CopilotExecutor` lazily. Constructing the executor does NOT import the

@@ -46,7 +46,7 @@ Environment requirements (why this is opt-in, not pure-CI):
 * The workspace folder must be trusted in ``~/.claude.json`` or Claude
   shows its folder-trust dialog, which blocks (and confounds) the gate.
   The test trusts a temp workspace and restores the original config on
-  teardown. It does NOT touch ``~/.omnigent/config.yaml``: the test
+  teardown. It does NOT touch ``~/.agent_meow/config.yaml``: the test
   server is a fresh random-port instance, so the daemon's real host
   identity registers there with no collision.
 
@@ -179,7 +179,7 @@ def _spawn_host_daemon(
     extra_path_dir: Path | None = None,
 ) -> subprocess.Popen[bytes]:
     """
-    Spawn an ``omnigent host`` daemon under the real ``$HOME``.
+    Spawn an ``agent-meow host`` daemon under the real ``$HOME``.
 
     claude-native needs the real Claude login (auth can't be relocated),
     so this inherits the real environment. The daemon registers the
@@ -409,15 +409,15 @@ def test_claude_native_first_message_survives_terminal_boot(
 
 def _plant_poisoned_omnigent_package(workspace: Path) -> None:
     """
-    Write a booby-trapped ``omnigent/`` package inside *workspace*.
+    Write a booby-trapped ``agent_meow/`` package inside *workspace*.
 
     Claude Code runs its hook subprocesses (and the relay MCP server)
     with the cwd set to the session's workspace. Absent ``python -I``,
     Python prepends that cwd to ``sys.path[0]``, so ``import agent_meow``
-    in the hook resolves to whatever ``omnigent/`` lives in the
+    in the hook resolves to whatever ``agent_meow/`` lives in the
     workspace -- not the installed package. This plants a copy whose
     ``__init__`` raises on import, faithfully modeling the real failure
-    mode: a git worktree checked out in the workspace whose ``omnigent``
+    mode: a git worktree checked out in the workspace whose ``agent-meow``
     is on a branch lacking the expected hook handlers.
 
     With the ``-I`` fix the cwd is excluded from ``sys.path``, the real
@@ -427,14 +427,14 @@ def _plant_poisoned_omnigent_package(workspace: Path) -> None:
     recorded, and the assistant marker never appears.
 
     :param workspace: Absolute workspace path the session starts in; the
-        package is written as ``workspace/omnigent/__init__.py``.
+        package is written as ``workspace/agent_meow/__init__.py``.
     :returns: None.
     """
-    pkg_dir = workspace / "omnigent"
+    pkg_dir = workspace / "agent-meow"
     pkg_dir.mkdir()
     (pkg_dir / "__init__.py").write_text(
         "raise RuntimeError(\n"
-        '    "POISONED omnigent package imported from the session cwd -- "\n'
+        '    "POISONED agent-meow package imported from the session cwd -- "\n'
         '    "python -I should have excluded the workspace from sys.path"\n'
         ")\n"
     )
@@ -446,10 +446,10 @@ def test_claude_native_hooks_ignore_workspace_omnigent_package(
     tmp_path: Path,
 ) -> None:
     """
-    Hooks import the installed ``omnigent``, not a workspace shadow.
+    Hooks import the installed ``agent-meow``, not a workspace shadow.
 
     Regression for the ``python -I`` fix (cwd import shadowing). The
-    workspace contains a poisoned ``omnigent/`` package that raises on
+    workspace contains a poisoned ``agent_meow/`` package that raises on
     import. Claude Code runs hook subprocesses with cwd set to that
     workspace, so without ``-I`` the hook imports the poisoned copy and
     crashes -- ``record_hook_event`` never runs, the forwarder never

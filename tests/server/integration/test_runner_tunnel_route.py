@@ -956,7 +956,7 @@ async def test_ws_tunnel_managed_resolver_none_still_rejects() -> None:
 async def test_ws_tunnel_loopback_unauthenticated_registers_as_local() -> None:
     """Auth-enabled server still accepts the local loopback runner.
 
-    ``omnigent server`` starts an unauthenticated runner that connects
+    ``agent-meow server`` starts an unauthenticated runner that connects
     over loopback with no credentials. The fail-closed gate
     applies only to non-loopback peers, so this runner must still
     register — owned by the reserved single-user identity, not rejected

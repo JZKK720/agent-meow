@@ -3,11 +3,11 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "omnigent"
+name = "agent-meow"
 # Keep in sync with agent_meow/version.py's VERSION constant.
-# The pip package name stays "omnigent" for SDK dependency compatibility
-# (omnigent-client / omnigent-ui-sdk pin omnigent==X). The user-facing
-# brand is "agent-meow" — see README.md and web/index.html.
+# The PyPI distribution name is "agent-meow" (was "omnigent" pre-rebrand).
+# SDK packages (agent-meow-client / agent-meow-ui-sdk) pin agent-meow==X.
+# The user-facing brand is "agent-meow" — see README.md and web/index.html.
 version = "0.5.0.dev0"
 description = "agent-meow: agent workspace surface for ColorFire and Meow series AIPC and Laptops, with Docs, Images, and Voice surfaces"
 readme = "README.md"

@@ -1,6 +1,6 @@
 """Snapshot loader + comparator for agent-meow Phase 0 characterization tests.
 
-Snapshots are JSON files under ``tests/e2e/omnigent/snapshots/``
+Snapshots are JSON files under ``tests/e2e/agent_meow/snapshots/``
 and capture the *structural* observations a test makes about a
 live agent-meow run. They are the golden-master contract the
 Phase 0 design requires: written against current agent-meow,

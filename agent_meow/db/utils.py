@@ -320,7 +320,7 @@ def _build_alembic_config(db_uri: str) -> Config:
     Build an Alembic ``Config`` pointed at our migrations directory.
 
     Centralized so :func:`_run_migrations` and the
-    :func:`omnigent debug db-upgrade` CLI command share the same
+    :func:`agent-meow debug db-upgrade` CLI command share the same
     config (URL, script location). The script_location in
     ``alembic.ini`` is relative — resolve it against the ini
     file's parent so the config works from any working directory.
@@ -474,7 +474,7 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
                 f"(found revision {current!r}, expected {head!r}) "
                 f"and automatic migration failed. Take a backup of your database, then run\n"
                 f"\n"
-                f"    omnigent debug db-upgrade {db_uri!r}\n"
+                f"    agent-meow debug db-upgrade {db_uri!r}\n"
                 f"\n"
                 f"to inspect or retry the migration manually."
             ) from exc
@@ -486,7 +486,7 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
                 f"(started at {current!r}, now at {migrated!r}, expected {head!r}). "
                 f"Take a backup of your database, then run\n"
                 f"\n"
-                f"    omnigent debug db-upgrade {db_uri!r}\n"
+                f"    agent-meow debug db-upgrade {db_uri!r}\n"
                 f"\n"
                 f"to inspect or retry the migration manually."
             )

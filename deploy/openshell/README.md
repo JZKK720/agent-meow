@@ -14,7 +14,7 @@ This guide covers the agent-meow-specific OpenShell setup:
 - configure CLI-launched or server-managed sandboxes.
 
 ```bash
-pip install 'omnigent[openshell]'
+pip install 'agent-meow[openshell]'
 ```
 
 agent-meow uses OpenShell two ways:

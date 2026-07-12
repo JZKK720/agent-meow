@@ -1,6 +1,6 @@
 """
 Tests for :mod:`~?agent_meow.resume_dispatch` — the top-level
-``omnigent resume`` dispatcher.
+``agent-meow resume`` dispatcher.
 
 The dispatcher's job is to translate the user's "take me back to
 where I was" intent into the right wrapper call. The two important
@@ -26,12 +26,12 @@ from agent_meow import resume_dispatch
 
 def test_run_resume_picker_form_requires_server() -> None:
     """
-    ``omnigent resume`` (no conv id, no --server) must fail loud.
+    ``agent-meow resume`` (no conv id, no --server) must fail loud.
 
     Without ``target`` we'd open the cross-agent picker; without
     ``--server`` we have no agent-meow endpoint to query. Starting an
     empty local server just for the picker would race with any
-    other ``omnigent`` process the user has running, so we
+    other ``agent-meow`` process the user has running, so we
     redirect via UsageError instead of silently doing it.
     """
     with pytest.raises(click.UsageError) as excinfo:
@@ -343,7 +343,7 @@ def test_dispatch_by_runtime_non_wrapper_local_raises_with_hint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Local non-wrapper conv surfaces the ``omnigent run --resume`` hint.
+    Local non-wrapper conv surfaces the ``agent-meow run --resume`` hint.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
@@ -362,7 +362,7 @@ def test_dispatch_by_runtime_non_wrapper_local_raises_with_hint(
 
     msg = excinfo.value.message
     assert "conv_chat" in msg
-    assert "omnigent run --resume" in msg
+    assert "agent-meow run --resume" in msg
     assert "<agent.yaml>" in msg
 
 
@@ -371,7 +371,7 @@ def test_read_wrapper_label_local_reads_persistent_store(
     tmp_path: Path,
 ) -> None:
     """
-    Local dispatch classifies sessions from ``~/.omnigent/chat.db``.
+    Local dispatch classifies sessions from ``~/.agent_meow/chat.db``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary persistent agent-meow directory.
@@ -389,7 +389,7 @@ def test_read_wrapper_label_local_reads_persistent_store(
         agent_name="codex-native-ui",
         agent_bundle_location="ag_codex/bundle",
         agent_description=None,
-        labels={"omnigent.wrapper": "codex-native-ui"},
+        labels={"agent_meow.wrapper": "codex-native-ui"},
     )
     monkeypatch.setattr(chat_mod, "_omnigent_persistent_dir", lambda: tmp_path)
 
@@ -403,7 +403,7 @@ def test_dispatch_by_runtime_non_claude_native_remote_raises_with_hint(
 ) -> None:
     """
     Remote non-claude-native conv ⇒ ``ClickException`` with a
-    copy-pasteable ``omnigent run --resume`` hint.
+    copy-pasteable ``agent-meow run --resume`` hint.
 
     The hint MUST include both the conv id and the original
     ``--server`` URL so the user's next attempt works without
@@ -432,7 +432,7 @@ def test_dispatch_by_runtime_non_claude_native_remote_raises_with_hint(
     msg = excinfo.value.message
     # All three load-bearing pieces of the hint must appear.
     assert "conv_xyz" in msg
-    assert "omnigent run --resume" in msg
+    assert "agent-meow run --resume" in msg
     assert "https://example.com" in msg
 
 
@@ -466,7 +466,7 @@ def test_read_wrapper_label_remote_returns_label_when_present(
                 "agent_id": "ag_1",
                 "status": "idle",
                 "created_at": 1,
-                "labels": {"omnigent.wrapper": "claude-code-native-ui"},
+                "labels": {"agent_meow.wrapper": "claude-code-native-ui"},
             },
         )
 
@@ -487,7 +487,7 @@ def test_read_wrapper_label_remote_returns_none_when_label_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A conv with no ``omnigent.wrapper`` label returns ``None``, which
+    A conv with no ``agent_meow.wrapper`` label returns ``None``, which
     the caller treats as "not claude-native" (the right call — wrappers
     stamp their label on every session they own; absence means a
     different runtime).

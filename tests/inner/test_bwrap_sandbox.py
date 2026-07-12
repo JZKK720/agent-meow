@@ -167,7 +167,7 @@ def _run_helper_probe(
             sandbox=OSEnvSandboxSpec(
                 type="linux_bwrap",
                 # Make the repo root visible so the probe can import
-                # the omnigent package during tests run from a
+                # the agent-meow package during tests run from a
                 # tempdir cwd.
                 read_paths=[str(_repo_root())],
             ),
@@ -217,9 +217,9 @@ def _encode_policy(policy: SandboxPolicy) -> str:
 def _repo_root() -> Path:
     """
     Return the repository root so probes can import
-    :mod:`omnigent` from a clean ``$PYTHONPATH``.
+    :mod:`agent-meow` from a clean ``$PYTHONPATH``.
 
-    :returns: The directory containing the ``omnigent`` package.
+    :returns: The directory containing the ``agent-meow`` package.
     """
     # tests/inner/test_bwrap_sandbox.py → tests/inner/ → tests/ → repo root
     return Path(__file__).resolve().parents[2]

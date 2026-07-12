@@ -1,7 +1,7 @@
-"""End-to-end test: ``omnigent codex`` runs the agent in the launch cwd.
+"""End-to-end test: ``agent-meow codex`` runs the agent in the launch cwd.
 
 The CLI sibling of the host worktree/workspace cwd tests in
-``test_host_codex_native_e2e.py``. The ``omnigent codex`` wrapper launches
+``test_host_codex_native_e2e.py``. The ``agent-meow codex`` wrapper launches
 its runner in the user's current working directory, so a file that exists only
 in that directory must be readable by the Codex agent. This pins the
 wrapper-path half of the codex-native cwd-resolution fix: the runner resolves
@@ -67,9 +67,9 @@ def test_codex_native_cli_runs_in_launch_cwd(
     request: pytest.FixtureRequest,
 ) -> None:
     """
-    ``omnigent codex`` launches the agent in the directory it was run from.
+    ``agent-meow codex`` launches the agent in the directory it was run from.
 
-    Spawns a backgrounded ``omnigent codex`` session whose process cwd is a
+    Spawns a backgrounded ``agent-meow codex`` session whose process cwd is a
     temp directory containing a marker file, then injects (via the server, the
     web-UI path) a request to read that file. The marker exists only in the
     launch cwd (never in the runner's spec-bundle dir), so it can come back
@@ -96,7 +96,7 @@ def test_codex_native_cli_runs_in_launch_cwd(
     (pwd_dir / _CWD_MARKER_FILE).write_text(marker + "\n")
 
     omni = str(omnigent_console_script())
-    # ``--profile`` was removed from the omnigent CLI; cli_env(profile=…)
+    # ``--profile`` was removed from the agent-meow CLI; cli_env(profile=…)
     # supplies the gateway routing via the config-home auth block instead.
     handle = spawn_cli_background(
         [omni, "codex", "--server", resume_test_server],
@@ -132,7 +132,7 @@ def test_codex_native_cli_runs_in_launch_cwd(
                 )
             except AssertionError as exc:
                 raise AssertionError(
-                    f"`omnigent codex` did not return marker {marker!r} from "
+                    f"`agent-meow codex` did not return marker {marker!r} from "
                     f"{_CWD_MARKER_FILE} — it did not run the agent in its launch "
                     "cwd (the wrapper-path cwd resolution regressed, likely the "
                     "spec-bundle dir)."

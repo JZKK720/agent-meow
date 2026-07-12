@@ -1,4 +1,4 @@
-"""omnigent REPL — interactive terminal chat."""
+"""agent-meow REPL — interactive terminal chat."""
 
 from ._repl import register_skill_commands, run_repl, unregister_skill_commands
 

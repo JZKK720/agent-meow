@@ -3,11 +3,11 @@
 single-YAML ``examples/<name>.yaml`` or
 ``tests/resources/examples/<name>.yaml``, or test-only
 ``tests/resources/agents/<name>/`` — must have a dedicated
-``test_example_<name>.py`` file under ``tests/e2e/omnigent/``.
+``test_example_<name>.py`` file under ``tests/e2e/agent_meow/``.
 
 The set of agent roots scanned here is kept in lock-step with the
 resolution order in
-``tests/e2e/omnigent/_example_helpers.py::example_yaml_path`` — the
+``tests/e2e/agent_meow/_example_helpers.py::example_yaml_path`` — the
 helper the per-example tests use to find their YAML. If the guard
 scans fewer roots than the helper resolves, a ``test_example_*.py``
 that points at a real agent in the un-scanned root looks "orphaned"
@@ -36,7 +36,7 @@ def _is_agent_yaml(path: Path) -> bool:
     Whether a top-level ``.yaml`` is an agent spec (has a ``name:``)
     rather than a non-agent config that merely lives alongside the
     examples — e.g. ``server_config_with_policies.yaml``, which is a
-    ``omnigent server --config`` file (only ``policies:``), not an
+    ``agent-meow server --config`` file (only ``policies:``), not an
     agent. Mirrors the ``missing required key 'name'`` check the spec
     loader itself uses to reject non-agent YAMLs.
 
@@ -88,7 +88,7 @@ _ALT_COVERED: frozenset[str] = frozenset(
     {
         # Covered by test_yaml_hello_world.py (via agent_with_tools
         # fixture) and many dedicated hello_world-named e2e tests
-        # under tests/e2e/omnigent/test_run_omnigent_* etc.
+        # under tests/e2e/agent_meow/test_run_omnigent_* etc.
         "hello_world",
         # Covered by test_yaml_hello_world.py's tool-dispatch test.
         "agent_with_tools",
@@ -97,12 +97,12 @@ _ALT_COVERED: frozenset[str] = frozenset(
         # Covered by tests/e2e/test_coder_subagent.py +
         # tests/e2e/test_chat_e2e.py.
         "coder",
-        # Covered by tests/e2e/omnigent/test_run_omnigent_coding_supervisor.py
+        # Covered by tests/e2e/agent_meow/test_run_omnigent_coding_supervisor.py
         # (seven test functions).
         "coding_supervisor",
         # Covered by tests/e2e/test_openai_coder_*.py.
         "openai-coder",
-        # Covered by tests/e2e/omnigent/test_repl_overview_terminal_visibility.py.
+        # Covered by tests/e2e/agent_meow/test_repl_overview_terminal_visibility.py.
         "terminal_workers",
         # Pre-existing coverage gaps — ``chat_model`` is exercised
         # by ``web/``'s integration flow (``web/README.md`` leads
@@ -176,7 +176,7 @@ _ALT_COVERED: frozenset[str] = frozenset(
         # qwen_perm_test: qwen-harness permission fixture exercised by
         # tests/inner/test_qwen_agent_integration.py against a mocked ACP
         # subprocess. The live qwen round-trip lives in
-        # tests/e2e/omnigent/test_per_harness_qwen.py (skipped without a
+        # tests/e2e/agent_meow/test_per_harness_qwen.py (skipped without a
         # qwen CLI), not a test_example_<name>.py file.
         "qwen_perm_test",
         # kimi_hello: single-YAML launcher for the SDK kimi harness. The
@@ -219,7 +219,7 @@ def test_every_agent_has_a_dedicated_test_file() -> None:
         or a test file points at a removed agent.
     """
     repo_root = Path(__file__).resolve().parents[3]
-    e2e_dir = repo_root / "tests" / "e2e" / "omnigent"
+    e2e_dir = repo_root / "tests" / "e2e" / "agent-meow"
 
     # Agent roots. These MUST stay in lock-step with the resolution
     # order in ``_example_helpers.example_yaml_path`` (see the module
@@ -254,7 +254,7 @@ def test_every_agent_has_a_dedicated_test_file() -> None:
     missing = on_disk - named_covered - _ALT_COVERED
     assert missing == set(), (
         f"Agents without a dedicated test file: {sorted(missing)}. "
-        f"Create tests/e2e/omnigent/test_example_<name>.py for "
+        f"Create tests/e2e/agent_meow/test_example_<name>.py for "
         f"each, or add the name to _ALT_COVERED above if coverage "
         f"lives in a differently-named test file."
     )

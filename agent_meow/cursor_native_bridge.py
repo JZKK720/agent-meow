@@ -33,7 +33,7 @@ _TMUX_FILE = "tmux.json"
 _BRIDGE_CONFIG_FILE = "bridge.json"
 _MCP_CONFIG_FILE = "mcp.json"
 _HOOKS_CONFIG_FILE = "hooks.json"
-_MCP_SERVER_NAME = "omnigent"
+_MCP_SERVER_NAME = "agent-meow"
 _CURSOR_AUTO_APPROVE_TOOLS = [
     "list_comments",
     "sys_add_policy",
@@ -369,7 +369,7 @@ def approve_mcp_server_for_workspace(workspace: Path) -> None:
 
     Cursor stores per-workspace MCP approvals using a private hash of the
     concrete server config. Rather than duplicate that implementation here,
-    ask ``cursor-agent mcp enable omnigent`` to write the exact approval entry
+    ask ``cursor-agent mcp enable agent-meow`` to write the exact approval entry
     for this workspace. This is best-effort: the TUI still launches if the
     installed Cursor CLI cannot run the management subcommand, but when it can,
     the hidden server-approval gate is cleared before startup.

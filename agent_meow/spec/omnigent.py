@@ -1,16 +1,16 @@
-"""Bidirectional translator between omnigent ``AgentSpec`` and omnigent ``AgentDef``.
+"""Bidirectional translator between agent-meow ``AgentSpec`` and agent-meow ``AgentDef``.
 
 Two functions live here:
 
 - :func:`agent_spec_to_agent_def` — forward direction, consumed by
   ``OmnigentExecutor`` at executor-construction time.
 - :func:`agent_def_to_agent_spec` — reverse direction, consumed by
-  :func:`~?agent_meow.spec.load` when handed an omnigent YAML so
-  ``omnigent chat foo.yaml`` works transparently.
+  :func:`~?agent_meow.spec.load` when handed an agent-meow YAML so
+  ``agent-meow chat foo.yaml`` works transparently.
 
 The bidirectional invariant
 ``agent_spec_to_agent_def(agent_def_to_agent_spec(d)) == d`` must
-hold for every representative omnigent YAML; the round-trip test
+hold for every representative agent-meow YAML; the round-trip test
 under ``tests/spec/test_omnigent_roundtrip.py`` enforces it.
 
 Design invariants (see designs/OMNIGENT_INTEGRATION.md §1 and §2):
@@ -23,7 +23,7 @@ Design invariants (see designs/OMNIGENT_INTEGRATION.md §1 and §2):
   clean serializable native type — no opaque payloads.
 - Unsupported concepts **fail loud** with an :class:`OmnigentError`
   naming the specific field. Currently unsupported (each is an
-  omnigent spec gap to fix, not a translation to paper over):
+  agent-meow spec gap to fix, not a translation to paper over):
   policies, OSEnv sandbox, MCP-type tools,
   cancellable_function-type tools.
 """
@@ -70,20 +70,20 @@ DynamicCallable: TypeAlias = Callable[..., object]
 
 # Value placed in :attr:`AgentSpec.executor.type` so the runtime
 # selects ``OmnigentExecutor``. Both directions of the translator
-# treat this as the discriminator between native omnigent specs
+# treat this as the discriminator between native agent-meow specs
 # and omnigent-sourced ones.
-OMNIGENT_EXECUTOR_TYPE = "omnigent"
+OMNIGENT_EXECUTOR_TYPE = "agent-meow"
 
 # Value placed in :attr:`LocalToolInfo.language` for tools that were
-# sourced from an omnigent YAML. Distinguishes them from native
-# omnigent tools (``"python"`` / ``"typescript"``) which live as
+# sourced from an agent-meow YAML. Distinguishes them from native
+# agent-meow tools (``"python"`` / ``"typescript"``) which live as
 # files on disk under ``tools/python/``.
 OMNIGENT_TOOL_LANGUAGE = "omnigent-python-callable"
 
 # Version stamped on AgentSpecs synthesized from agent_meow YAMLs.
 # agent-meow YAMLs do not declare ``spec_version`` (it's an
-# omnigent concept), so the adapter writes ``1`` — the currently
-# valid omnigent schema version (see omnigent/spec/validator.py).
+# agent-meow concept), so the adapter writes ``1`` — the currently
+# valid agent-meow schema version (see agent_meow/spec/validator.py).
 _SYNTHETIC_SPEC_VERSION = 1
 
 # Sentinel value used when an inline ``AgentTool`` declares
@@ -92,7 +92,7 @@ _SYNTHETIC_SPEC_VERSION = 1
 # :func:`_resolve_inline_agent_tool_os_env`; the sub-spec stores
 # the resolved dataclass on its top-level ``AgentSpec.os_env``
 # field and the literal string is never persisted past
-# translation. We resolve eagerly because omnigent spawns
+# translation. We resolve eagerly because agent-meow spawns
 # each child as an independent task — no live parent session
 # exists at runtime to walk.
 _OS_ENV_INHERIT_SENTINEL = "inherit"
@@ -117,7 +117,7 @@ _SUBSCRIPTION_AUTH_HARNESSES: frozenset[str] = frozenset({"claude-native", "clau
 
 def agent_spec_to_agent_def(spec: AgentSpec) -> AgentDef:
     """
-    Translate an omnigent ``AgentSpec`` into an omnigent
+    Translate an agent-meow ``AgentSpec`` into an agent-meow
     ``AgentDef`` suitable for
     :func:`~?agent_meow.executor_factory.create_executor`.
 
@@ -125,9 +125,9 @@ def agent_spec_to_agent_def(spec: AgentSpec) -> AgentDef:
     ``executor.config`` (``harness``, ``profile``), and
     function-type local tools encoded as dotted module paths.
 
-    :param spec: The omnigent spec to translate. ``spec.llm``
-        must be set (the omnigent harness needs a model name);
-        ``spec.executor.type`` must be ``"omnigent"`` with
+    :param spec: The agent-meow spec to translate. ``spec.llm``
+        must be set (the agent-meow harness needs a model name);
+        ``spec.executor.type`` must be ``"agent-meow"`` with
         ``executor.config.harness`` populated.
     :returns: A populated :class:`~?agent_meow.datamodel.AgentDef`
         with ``name``, ``prompt``, ``executor``, and ``tools``
@@ -143,7 +143,7 @@ def agent_spec_to_agent_def(spec: AgentSpec) -> AgentDef:
 
     if spec.executor.model is None:
         raise OmnigentError(
-            "executor.type='omnigent' requires a model (set executor.model)",
+            "executor.type='agent-meow' requires a model (set executor.model)",
             code=ErrorCode.INVALID_INPUT,
         )
 
@@ -192,16 +192,16 @@ def _reject_unsupported_concepts(spec: AgentSpec) -> None:
     Fail loud when the spec uses an unsupported concept.
 
     Each branch names the specific field so the caller knows what
-    to remove from the spec (or what omnigent bug to file to
+    to remove from the spec (or what agent-meow bug to file to
     close the gap).
 
-    :param spec: The omnigent spec to check.
+    :param spec: The agent-meow spec to check.
     :raises OmnigentError: On any of:
         ``executor.config.sandbox`` set, an MCP server declared,
         or a ``cancellable_function`` in ``local_tools``.
     """
     # ``guardrails.policies`` is intentionally NOT rejected here.
-    # Policies are enforced by the omnigent workflow layer
+    # Policies are enforced by the agent-meow workflow layer
     # (see ``agent_meow.runtime.policies.build_policy_engine``)
     # BEFORE the harness receives a turn — the
     # :class:`OmnigentExecutor` is invoked with tool calls
@@ -212,17 +212,17 @@ def _reject_unsupported_concepts(spec: AgentSpec) -> None:
     # a spec field" because the field is consumed upstream and
     # has no meaning to the harness.
 
-    # Sandbox declarations (omnigent ``tools.sandbox.container_image``
-    # and the omnigent OSEnvSandboxSpec) are unsupported. Fail loud
+    # Sandbox declarations (agent-meow ``tools.sandbox.container_image``
+    # and the agent-meow OSEnvSandboxSpec) are unsupported. Fail loud
     # if either is populated.
     if spec.tools.sandbox.container_image is not None:
         raise OmnigentError(
-            "tools.sandbox translation to omnigent OSEnvSpec is unsupported; "
+            "tools.sandbox translation to agent-meow OSEnvSpec is unsupported; "
             "the adapter rejects specs with sandbox rather than silently dropping it",
             code=ErrorCode.INVALID_INPUT,
         )
 
-    # ``cancellable_function`` is an omnigent concept — agent-meow'
+    # ``cancellable_function`` is an agent-meow concept — agent-meow'
     # LocalToolInfo has no cancellation flag, so this branch currently
     # only triggers when a caller constructs an AgentSpec with a tool
     # path that we later discover is a cancellable-function runner.
@@ -236,7 +236,7 @@ def _reject_unsupported_concepts(spec: AgentSpec) -> None:
         if _is_cancellable_function_path(tool.path):
             raise OmnigentError(
                 f"cancellable_function tool {tool.name!r} cannot be translated to "
-                "omnigent; cancellation support is an omnigent spec extension",
+                "agent-meow; cancellation support is an agent-meow spec extension",
                 code=ErrorCode.INVALID_INPUT,
             )
 
@@ -248,7 +248,7 @@ def _is_cancellable_function_path(path: str) -> bool:
 
     Agent-plane's ``LocalToolInfo.path`` normally points at a plain
     Python function file. Cancellable-function tools are flagged
-    explicitly in the omnigent spec; omnigent has no spec
+    explicitly in the agent-meow spec; agent-meow has no spec
     surface for that flag yet, so this helper returns ``False``
     today and exists as the hook where future work will wire the
     detection once ``LocalToolInfo`` grows a ``cancellable``
@@ -275,7 +275,7 @@ def _translate_tools_to_omnigent(spec: AgentSpec) -> dict[str, Tool]:
     (``"tools/python/foo.py"``) are not supported — the YAML adapter
     that produces them must encode dotted paths.
 
-    :param spec: The omnigent spec. ``spec.local_tools`` lists
+    :param spec: The agent-meow spec. ``spec.local_tools`` lists
         the tools to translate.
     :returns: A ``dict[str, Tool]`` mapping tool name to
         :class:`FunctionTool`, ready for assignment to
@@ -336,7 +336,7 @@ def _translate_tools_to_omnigent(spec: AgentSpec) -> dict[str, Tool]:
                 code=ErrorCode.INVALID_INPUT,
             )
         # ``parameters`` was populated on the forward trip from
-        # the omnigent tool's ``input_schema``. Re-attach it so
+        # the agent-meow tool's ``input_schema``. Re-attach it so
         # the inner harness advertises the same JSON Schema to
         # the LLM that the YAML declared.
         tools[tool_info.name] = FunctionTool(
@@ -353,12 +353,12 @@ def _translate_tools_to_omnigent(spec: AgentSpec) -> dict[str, Tool]:
         if sub.name and sub.name in exposed:
             tools[sub.name] = _sub_spec_to_agent_tool(sub)
     # MCP servers round-trip back to inner :class:`MCPTool` entries
-    # so the omnigent harness surfaces them to the LLM via its
+    # so the agent-meow harness surfaces them to the LLM via its
     # own MCP machinery (``agent_meow.inner.mcp_tools``). The
     # forward direction translated ``MCPTool`` →
     # :class:`MCPServerConfig` (stdio or http); this is the inverse.
     # ``OmnigentExecutor.from_spec`` calls this reverse path when
-    # wrapping an omnigent spec for an omnigent harness; if the
+    # wrapping an agent-meow spec for an agent-meow harness; if the
     # reverse trip dropped MCP entries the harness would lose every
     # MCP tool the spec declared.
     for mcp in spec.mcp_servers:
@@ -385,7 +385,7 @@ def _mcp_server_to_mcp_tool(config: MCPServerConfig) -> MCPTool:
 
     :param config: The native :class:`MCPServerConfig` to invert.
     :returns: An :class:`MCPTool` with the equivalent transport
-        shape for the inner omnigent runtime.
+        shape for the inner agent-meow runtime.
     :raises OmnigentError: If the config is missing the
         required field for its declared transport (a programmatic
         construction path that bypassed the validator).
@@ -418,14 +418,14 @@ def _mcp_server_to_mcp_tool(config: MCPServerConfig) -> MCPTool:
 
 def _sub_spec_to_agent_tool(sub: AgentSpec) -> AgentTool:
     """
-    Rebuild an omnigent :class:`AgentTool` from a nested
-    omnigent :class:`AgentSpec`.
+    Rebuild an agent-meow :class:`AgentTool` from a nested
+    agent-meow :class:`AgentSpec`.
 
     Inverse of :func:`_agent_tool_to_sub_spec`. Reads the sub-spec's
     ``llm.model`` and ``executor.config`` (harness / profile) to
-    reconstruct the omnigent :class:`ExecutorSpec`. Lossy fields
+    reconstruct the agent-meow :class:`ExecutorSpec`. Lossy fields
     (``max_sessions``, ``os_env``, ``pass_history``,
-    ``pass_histories``) are left at omnigent defaults.
+    ``pass_histories``) are left at agent-meow defaults.
 
     :param sub: The nested :class:`AgentSpec` representing a
         sub-agent exposed to the parent as a tool.
@@ -478,7 +478,7 @@ def _resolve_dotted_attr(dotted_path: str, tool_name: str) -> Any:
     if "/" in dotted_path or dotted_path.endswith(".py"):
         raise OmnigentError(
             f"tool {tool_name!r} has filesystem path {dotted_path!r}; "
-            "omnigent translator requires dotted import paths like "
+            "agent-meow translator requires dotted import paths like "
             "'examples._shared.tool_functions.get_current_time'",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -551,7 +551,7 @@ def _resolve_dotted_callable(
     return cast(Callable[..., object], resolved)
 
 
-# ── Policy translation (omnigent YAML dict → omnigent
+# ── Policy translation (agent-meow YAML dict → agent-meow
 # GuardrailsSpec) ────────────────────────────────────────────────
 #
 # We translate from the RAW YAML dict (read alongside the AgentDef)
@@ -572,13 +572,13 @@ def _translate_guardrails_yaml(
 ) -> GuardrailsSpec | None:
     """
     Translate the guardrails-related top-level fields of an
-    omnigent YAML into an omnigent :class:`GuardrailsSpec`.
+    agent-meow YAML into an agent-meow :class:`GuardrailsSpec`.
 
     agent-meow declares labels/policies at the top level
     (``labels:``, ``label_schema:``, ``policies:``,
-    ``ask_timeout:``); omnigent groups them under a single
-    ``guardrails:`` block. This helper transforms the omnigent
-    shape into the omnigent dict shape and delegates to
+    ``ask_timeout:``); agent-meow groups them under a single
+    ``guardrails:`` block. This helper transforms the agent-meow
+    shape into the agent-meow dict shape and delegates to
     :func:`~?agent_meow.spec.parser._parse_guardrails` for
     validation — so every field-level rule (phase/tool validity,
     action enum coercion, label schema constraints) lands in the
@@ -606,7 +606,7 @@ def _translate_guardrails_yaml(
     :param raw_ask_timeout: agent-meow YAML top-level
         ``ask_timeout:`` (seconds), e.g. ``30``. Passed through
         to ``guardrails.ask_timeout``. ``None`` means use the
-        omnigent default (see
+        agent-meow default (see
         :data:`~?agent_meow.spec.types.DEFAULT_ASK_TIMEOUT`).
     :param parent_profile: Databricks profile from the parent
         agent's executor (``agent_def.executor.profile``). Used
@@ -619,7 +619,7 @@ def _translate_guardrails_yaml(
         when no guardrails-related fields were declared in the
         source YAML.
     :raises OmnigentError: On malformed entries — same error
-        shape the omnigent YAML parser produces for a native
+        shape the agent-meow YAML parser produces for a native
         ``guardrails:`` block, so YAML authors see consistent
         error messages whether their spec came from agent_meow
         or agent_meow.
@@ -641,7 +641,7 @@ def _translate_guardrails_yaml(
         translated["policies"] = policies_yaml
     if raw_ask_timeout is not None:
         translated["ask_timeout"] = raw_ask_timeout
-    # ``expand_env`` is False because the upstream omnigent
+    # ``expand_env`` is False because the upstream agent-meow
     # loader has already expanded env vars in the dict we're
     # handed (per its own conventions). Running the expansion a
     # second time would double-expand ``$`` characters that happen
@@ -654,7 +654,7 @@ def _translate_labels_yaml(
     raw_label_schema: dict[str, Any] | None,
 ) -> dict[str, dict[str, Any]]:
     """
-    Merge omnigent' separate ``labels:`` (initial values) and
+    Merge agent-meow' separate ``labels:`` (initial values) and
     ``label_schema:`` (schemas) into agent-meow' unified
     ``guardrails.labels:`` shape.
 
@@ -691,10 +691,10 @@ def _translate_policies_yaml(
     parent_profile: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """
-    Translate the omnigent ``policies:`` mapping entry-by-entry
-    into the omnigent shape.
+    Translate the agent-meow ``policies:`` mapping entry-by-entry
+    into the agent-meow shape.
 
-    :param raw_policies: Raw ``policies:`` map from the omnigent
+    :param raw_policies: Raw ``policies:`` map from the agent-meow
         YAML, keyed by policy name.
     :param parent_profile: Databricks profile from the parent
         agent's executor — threaded down so ``type: prompt``
@@ -747,7 +747,7 @@ def _translate_policy_entry_yaml(
     policy_type = raw_entry.get("type", _POLICY_TYPE_FUNCTION)
     if policy_type not in _KNOWN_POLICY_TYPES:
         raise OmnigentError(
-            f"omnigent policy {policy_name!r}: unknown type "
+            f"agent-meow policy {policy_name!r}: unknown type "
             f"{policy_type!r} (must be one of {sorted(_KNOWN_POLICY_TYPES)})",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -762,8 +762,8 @@ def _translate_function_policy_yaml(
     raw_entry: dict[str, Any],
 ) -> dict[str, Any]:
     """
-    Translate an omnigent ``type: function`` policy to the
-    omnigent shape.
+    Translate an agent-meow ``type: function`` policy to the
+    agent-meow shape.
 
     Field mapping:
 
@@ -773,7 +773,7 @@ def _translate_function_policy_yaml(
     - Other fields (``condition``, ``action``, ``set_labels``,
       ``ask_timeout``) pass through unchanged. ``on:`` is
       intentionally excluded — ``type: function`` policies no
-      longer accept ``on:`` on the omnigent side; the handler
+      longer accept ``on:`` on the agent-meow side; the handler
       self-selects which events to act on by returning ``None`` to
       abstain.
 
@@ -787,13 +787,13 @@ def _translate_function_policy_yaml(
     out: dict[str, Any] = {}
     # Copy passthrough fields first so the order stays stable for
     # readability. ``type`` is kept for dispatch on the
-    # omnigent parser side. ``on:`` is intentionally omitted —
+    # agent-meow parser side. ``on:`` is intentionally omitted —
     # function policies are now always called for all phases; the
     # handler self-selects by returning ``None`` to abstain.
     for key in ("type", "condition", "action", "set_labels", "ask_timeout"):
         if key in raw_entry:
             out[key] = raw_entry[key]
-    # If ``function:`` is already present in omnigent native
+    # If ``function:`` is already present in agent-meow native
     # format, pass through as-is (no shim wrapping needed).
     if "function" in raw_entry:
         out["function"] = raw_entry["function"]
@@ -804,13 +804,13 @@ def _translate_function_policy_yaml(
     callable_path = raw_entry.get("handler") or raw_entry.get("callable")
     factory_params = raw_entry.get("factory_params")
     if callable_path is None:
-        # Let the omnigent parser surface the "function:
+        # Let the agent-meow parser surface the "function:
         # required" error — it already does so with a clear
         # message referencing the policy name.
         return out
     # Route every omnigent-sourced function policy through the
     # legacy-compat shim so author callables written with the
-    # omnigent ``(content, phase)`` / ``(content, phase, context)``
+    # agent-meow ``(content, phase)`` / ``(content, phase, context)``
     # convention keep working under agent-meow'
     # ``(ctx, context)`` convention. For omnigent-native
     # callables the shim is a pass-through (detected by parameter
@@ -832,11 +832,11 @@ def _resolve_profile_to_connection(profile: str) -> dict[str, str] | None:
     Resolve a Databricks profile name to a
     ``{base_url, api_key}`` dict by reading ``~/.databrickscfg``.
 
-    Used at spec-translation time to make omnigent LLMConfig
+    Used at spec-translation time to make agent-meow LLMConfig
     self-contained — agent-meow' LLM adapters take credentials
     via explicit ``connection:`` fields (per the "spec
     self-containment" design principle) and do not read env vars.
-    Meanwhile omnigent declares Databricks creds via the
+    Meanwhile agent-meow declares Databricks creds via the
     ``profile:`` convenience shortcut. The translator closes the
     gap by resolving profile → connection once at load time.
 
@@ -849,7 +849,7 @@ def _resolve_profile_to_connection(profile: str) -> dict[str, str] | None:
         the policy then falls back to whatever connection the
         YAML declared explicitly, or errors loud at call time).
     """
-    # Import locally to avoid a top-level dependency on omnigent
+    # Import locally to avoid a top-level dependency on agent-meow
     # runtime details from the spec module — only this single
     # translator path needs it.
     from agent_meow.inner.databricks_executor import _read_databrickscfg
@@ -869,18 +869,18 @@ def _translate_prompt_policy_yaml(
     parent_profile: str | None = None,
 ) -> dict[str, Any]:
     """
-    Translate an omnigent ``type: prompt`` policy to the
-    omnigent shape.
+    Translate an agent-meow ``type: prompt`` policy to the
+    agent-meow shape.
 
     Field mapping:
 
     - ``executor: {model: X}`` → ``llm: {model: X}``. The
-      omnigent prompt policy uses ``executor`` to override
-      the classifier LLM; omnigent uses ``llm``.
+      agent-meow prompt policy uses ``executor`` to override
+      the classifier LLM; agent-meow uses ``llm``.
     - When *parent_profile* is set AND the policy has no
       explicit ``connection:``, resolve the profile to a
       ``connection: {base_url, api_key}`` dict so the
-      omnigent classifier actually reaches the Databricks
+      agent-meow classifier actually reaches the Databricks
       gateway. Without this, a policy declaring
       ``model: databricks-claude-sonnet-4`` parses as provider
       ``"openai"`` and the request hits ``api.openai.com``.
@@ -897,7 +897,7 @@ def _translate_prompt_policy_yaml(
         ``executor.profile:`` field. When present and the
         policy has no explicit connection, the translator bakes
         the resolved ``{base_url, api_key}`` into the
-        omnigent LLMConfig so the classifier call at runtime
+        agent-meow LLMConfig so the classifier call at runtime
         routes correctly. ``None`` means no profile — policies
         must carry their own credentials.
     :returns: Agent-plane-shaped dict with ``executor:`` renamed
@@ -931,19 +931,19 @@ def agent_def_to_agent_spec(
     raw_yaml: dict[str, Any] | None = None,
 ) -> AgentSpec:
     """
-    Translate an omnigent :class:`AgentDef` into an omnigent
+    Translate an agent-meow :class:`AgentDef` into an agent-meow
     :class:`AgentSpec`.
 
     Reverse direction of :func:`agent_spec_to_agent_def`. Used by
-    :func:`~?agent_meow.spec.load` when handed an omnigent YAML
-    so ``omnigent chat foo.yaml`` routes the spec through
+    :func:`~?agent_meow.spec.load` when handed an agent-meow YAML
+    so ``agent-meow chat foo.yaml`` routes the spec through
     ``OmnigentExecutor`` at runtime.
 
-    The produced spec sets ``executor.type = "omnigent"`` so the
+    The produced spec sets ``executor.type = "agent-meow"`` so the
     runtime picks ``OmnigentExecutor``, with ``harness`` and
     ``profile`` carried in ``executor.config``.
 
-    :param agent_def: Parsed omnigent agent definition,
+    :param agent_def: Parsed agent-meow agent definition,
         typically from :func:`~?agent_meow.loader.load_agent_def`.
         Example: ``AgentDef(name="hello_world",
         prompt="You are a friendly assistant.", ...)``.
@@ -952,7 +952,7 @@ def agent_def_to_agent_spec(
         fields (``condition``, ``match_tools``, ``action``,
         ``reason``, ``set_labels``) and to translate top-level
         ``labels:`` / ``label_schema:`` / ``ask_timeout:`` into
-        agent-meow' ``guardrails:`` block — the omnigent
+        agent-meow' ``guardrails:`` block — the agent-meow
         loader compiles these into synthetic FunctionPolicy
         callables and drops the YAML-level fields, so we can't
         recover them from the parsed ``AgentDef`` alone. When
@@ -964,7 +964,7 @@ def agent_def_to_agent_spec(
         round-trip ``agent_spec_to_agent_def(
         agent_def_to_agent_spec(d)) == d`` must hold for every
         representative fixture.
-    :raises OmnigentError: When *agent_def* uses an omnigent
+    :raises OmnigentError: When *agent_def* uses an agent-meow
         concept agent-meow' :class:`AgentSpec` cannot currently
         represent. Each such case names the specific field.
         Current unsupported concepts: MCP-type tools.
@@ -1004,8 +1004,8 @@ def agent_def_to_agent_spec(
     # omits ``profile:`` inherits empty string — the inner
     # ClaudeSDKExecutor then resolves credentials with no
     # profile and 403s against the Databricks workspace. Pure
-    # omnigent gets this "for free" via Session → factory; the
-    # omnigent spawn path runs each sub-agent as an
+    # agent-meow gets this "for free" via Session → factory; the
+    # agent-meow spawn path runs each sub-agent as an
     # independent task, so we have to bake the inheritance into
     # the spec.
     parent_profile = agent_def.executor.profile if agent_def.executor is not None else None
@@ -1026,7 +1026,7 @@ def agent_def_to_agent_spec(
     # its own) would end up with an empty harness and fail
     # validation.
     parent_harness: str | None = None
-    if executor_spec.type == "omnigent":
+    if executor_spec.type == "agent-meow":
         # executor_spec.config is ``dict[str, Any]`` by design
         # (kept widened by the tech-debt docstring on
         # :class:`ExecutorSpec`). We narrow here to a string
@@ -1046,9 +1046,9 @@ def agent_def_to_agent_spec(
     # own os_env (or lack thereof) wins.
     parent_os_env = agent_def.os_env if agent_def.os_env is not None else None
 
-    # Split omnigent tools by subtype:
+    # Split agent-meow tools by subtype:
     #   FunctionTool / CancellableFunctionTool
-    #       → AgentSpec.local_tools (omnigent treats every
+    #       → AgentSpec.local_tools (agent-meow treats every
     #         tool as cancellable, so no subtype distinction).
     #   AgentTool
     #       → AgentSpec.sub_agents (one nested AgentSpec each)
@@ -1057,7 +1057,7 @@ def agent_def_to_agent_spec(
     #       → AgentSpec.mcp_servers (one native stdio-transport
     #         MCPServerConfig each; subprocess is spawned by
     #         agent-meow' ToolManager, srt-wrapped when
-    #         available — see omnigent/tools/mcp.py).
+    #         available — see agent_meow/tools/mcp.py).
     #   MCPTool (HTTP) → same, but transport='http'.
     local_tools: list[LocalToolInfo] = []
     sub_agents: list[AgentSpec] = []
@@ -1100,10 +1100,10 @@ def agent_def_to_agent_spec(
     tools_config = ToolsConfig(agents=agent_tool_names) if agent_tool_names else ToolsConfig()
 
     # Translate the guardrails block if the caller handed us the
-    # raw YAML. Policies/labels are lifted from the omnigent
+    # raw YAML. Policies/labels are lifted from the agent-meow
     # top-level YAML fields into agent-meow' ``guardrails:``
-    # block; enforcement then happens in the omnigent workflow
-    # (outside the omnigent harness) via the standard
+    # block; enforcement then happens in the agent-meow workflow
+    # (outside the agent-meow harness) via the standard
     # :class:`PolicyEngine`. When ``raw_yaml`` is ``None`` we
     # don't have the YAML shape needed to translate label
     # policies, so we skip — callers in that position are either
@@ -1118,7 +1118,7 @@ def agent_def_to_agent_spec(
             raw_ask_timeout=raw_yaml.get("ask_timeout"),
             # Baked-in at translation time so agent-meow'
             # classifier LLM calls honor Databricks routing
-            # (omnigent adapters don't read env vars per the
+            # (agent-meow adapters don't read env vars per the
             # spec-self-containment design principle).
             parent_profile=parent_profile,
         )
@@ -1128,13 +1128,13 @@ def agent_def_to_agent_spec(
     # ``terminals:`` declaration into ``AgentSpec.terminals``. Inline
     # AgentTool sub-specs (synthesized in ``_agent_tool_to_sub_spec``)
     # leave ``AgentSpec.terminals=None`` because ``AgentTool`` has no
-    # ``terminals`` field in the omnigent grammar — matches legacy
+    # ``terminals`` field in the agent-meow grammar — matches legacy
     # non-AP mode exactly.
     terminals = dict(agent_def.terminals) if agent_def.terminals else None
 
-    # Top-level ``skills:`` from the raw YAML (the omnigent
+    # Top-level ``skills:`` from the raw YAML (the agent-meow
     # loader doesn't carry this field on AgentDef — it's
-    # omnigent spec config that controls Claude SDK harness
+    # agent-meow spec config that controls Claude SDK harness
     # host-skill loading). Validate the same shapes the
     # spec-side parser does so a typo here surfaces the same
     # error regardless of which spec format the user is on.
@@ -1169,13 +1169,13 @@ def _translate_skills_filter_from_yaml(
     """
     Pull the top-level YAML ``skills:`` field out of a raw
     omnigent-format YAML mapping and validate the same shapes
-    the omnigent spec parser accepts (``"all"`` / ``"none"`` /
+    the agent-meow spec parser accepts (``"all"`` / ``"none"`` /
     list of names).
 
-    The omnigent loader (``inner.loader.load_agent_def``) does
-    NOT read this field — it's omnigent spec config that
+    The agent-meow loader (``inner.loader.load_agent_def``) does
+    NOT read this field — it's agent-meow spec config that
     controls the Claude SDK harness's host-skill loading, not an
-    omnigent runtime concept. So when the YAML is consumed via
+    agent-meow runtime concept. So when the YAML is consumed via
     the legacy compat path, we re-read the raw YAML here to
     recover it.
 
@@ -1301,24 +1301,24 @@ def _agent_tool_to_sub_spec(
     parent_terminals: dict[str, TerminalEnvSpec] | None = None,
 ) -> AgentSpec:
     """
-    Translate an omnigent inline :class:`AgentTool` (sub-agent
-    exposed as a tool) into a nested omnigent :class:`AgentSpec`.
+    Translate an agent-meow inline :class:`AgentTool` (sub-agent
+    exposed as a tool) into a nested agent-meow :class:`AgentSpec`.
 
     The parent's :attr:`ToolsConfig.agents` carries ``tool_name`` so
     the runtime surfaces this sub-agent to the parent LLM as a
     callable tool (matching the legacy ``functions.<tool_name>``
     visibility). The sub-spec itself is a regular
-    :class:`AgentSpec` with ``executor.type == "omnigent"`` so the
+    :class:`AgentSpec` with ``executor.type == "agent-meow"`` so the
     :class:`OmnigentExecutor` runs it when spawned.
 
     Lossy fields (not modeled on agent-meow' AgentSpec yet):
     ``max_sessions``, ``pass_history``, ``pass_histories``.
-    omnigent' runtime falls back to its defaults for these on
+    agent-meow' runtime falls back to its defaults for these on
     the reverse trip.
 
     :param tool_name: The YAML key under which this AgentTool is
         declared on the parent, e.g. ``"claude_worker"``.
-    :param tool: The parsed omnigent :class:`AgentTool`.
+    :param tool: The parsed agent-meow :class:`AgentTool`.
     :param parent_profile: Databricks profile carried on the
         parent agent's executor. Used as the sub-spec's profile
         when the inline AgentTool omits one — inline agents in
@@ -1337,13 +1337,13 @@ def _agent_tool_to_sub_spec(
         ``coding_supervisor_with_forks.yaml`` declare just
         ``prompt:`` + ``os_env:`` + ``tools:`` on their workers,
         expecting the parent's harness to flow down. Pure
-        omnigent resolves this at ``create_executor`` time;
-        omnigent has to do it at spec-translation time because
+        agent-meow resolves this at ``create_executor`` time;
+        agent-meow has to do it at spec-translation time because
         each child runs as an independent task.
     :param parent_os_env: OS environment on the parent agent.
         Used to resolve the ``os_env: inherit`` sentinel on the
-        inline AgentTool — legacy omnigent resolves it from the
-        live Session at runtime, but omnigent runs each child
+        inline AgentTool — legacy agent-meow resolves it from the
+        live Session at runtime, but agent-meow runs each child
         as an independent task with no live parent to consult,
         so we resolve at translation time. ``None`` means "no
         parent os_env known": if the tool said ``inherit``, its
@@ -1352,8 +1352,8 @@ def _agent_tool_to_sub_spec(
         the parent itself has no os_env).
     :param raw_executor: The raw ``executor:`` dict for this inline
         AgentTool taken directly from the parent's YAML (before
-        omnigent' dataclass parsing dropped unknown keys). When set,
-        fields the omnigent :class:`~?agent_meow.inner.datamodel.ExecutorSpec`
+        agent-meow' dataclass parsing dropped unknown keys). When set,
+        fields the agent-meow :class:`~?agent_meow.inner.datamodel.ExecutorSpec`
         datamodel does not expose — ``auth`` and ``use_responses`` —
         are read from this dict and forwarded into the child's
         :class:`ExecutorSpec` via :func:`_translate_executor_from_def`.
@@ -1370,7 +1370,7 @@ def _agent_tool_to_sub_spec(
     # sub-spec so inline sub-agents can launch ``sys_terminal_*``
     # in their own conversation. Without this, the sub-agent's
     # ``ToolManager`` short-circuits the sys_terminal_* registration
-    # (see ``omnigent/tools/manager.py:426`` — "if not
+    # (see ``agent_meow/tools/manager.py:426`` — "if not
     # self._spec.terminals: return") and the sub-agent has no way
     # to spawn a terminal even though the parent has one configured.
     # Each sub-agent's launches land in its OWN conversation registry
@@ -1456,7 +1456,7 @@ def _resolve_inline_agent_tool_os_env(
         return None
     if isinstance(tool_os_env, str):
         # Only the ``"inherit"`` sentinel is meaningful; other
-        # strings would be an omnigent YAML that the loader
+        # strings would be an agent-meow YAML that the loader
         # already rejects, so we don't invent a behavior for
         # them and return None.
         if tool_os_env == _OS_ENV_INHERIT_SENTINEL:
@@ -1467,18 +1467,18 @@ def _resolve_inline_agent_tool_os_env(
 
 def _fail_on_unsupported_concepts_def(agent_def: AgentDef) -> None:
     """
-    Raise :class:`OmnigentError` for every omnigent concept
+    Raise :class:`OmnigentError` for every agent-meow concept
     agent-meow' :class:`AgentSpec` cannot currently represent.
 
     Each unsupported concept gets its own clear error message
     naming the specific field.
 
-    :param agent_def: Parsed omnigent agent definition.
+    :param agent_def: Parsed agent-meow agent definition.
     :raises OmnigentError: On the first unsupported concept
         encountered. Currently the only rejection is MCP-type
         tools; ``policies`` are lifted into
         ``AgentSpec.guardrails.policies`` and enforced by the
-        omnigent workflow (see
+        agent-meow workflow (see
         :func:`_translate_guardrails_yaml`), and ``os_env`` is
         translated and placed on ``AgentSpec.os_env``.
     """
@@ -1492,15 +1492,15 @@ def _fail_on_unsupported_tool(
     tool: Tool,
 ) -> None:
     """
-    Raise :class:`OmnigentError` when *tool* uses an omnigent
-    tool concept omnigent cannot currently represent.
+    Raise :class:`OmnigentError` when *tool* uses an agent-meow
+    tool concept agent-meow cannot currently represent.
 
     :param agent_name: Enclosing agent name, for error messages,
         e.g. ``"coder"``. ``None`` when the agent was not given a
         name — the error message then renders ``None`` verbatim.
     :param tool_name: The YAML key for this tool, e.g.
         ``"glean_search"``.
-    :param tool: The parsed omnigent tool instance.
+    :param tool: The parsed agent-meow tool instance.
     :raises OmnigentError: On MCP tools or cancellable_function
         tools.
     """
@@ -1520,7 +1520,7 @@ def _fail_on_unsupported_tool(
         # HTTP + stdio MCPTools fall through and translate below.
         if tool.databricks_server is not None:
             raise OmnigentError(
-                f"omnigent agent {agent_name!r} declares tool "
+                f"agent-meow agent {agent_name!r} declares tool "
                 f"{tool_name!r} of type `mcp` with "
                 f"``databricks_server={tool.databricks_server!r}`` — "
                 f"agent-meow' MCPServerConfig doesn't understand the "
@@ -1534,17 +1534,17 @@ def _fail_on_unsupported_tool(
 
 def _translate_name_from_def(raw_name: str | None) -> str | None:
     """
-    Translate omnigent ``AgentDef.name`` to :attr:`AgentSpec.name`.
+    Translate agent-meow ``AgentDef.name`` to :attr:`AgentSpec.name`.
 
-    ``AgentDef.name`` is ``str | None`` on the omnigent side;
-    omnigent also uses ``None`` for absence. An empty string on
+    ``AgentDef.name`` is ``str | None`` on the agent-meow side;
+    agent-meow also uses ``None`` for absence. An empty string on
     either side collapses to ``None`` so the round-trip invariant
     holds.
 
     :param raw_name: The raw ``name`` field from
         :class:`AgentDef`, e.g. ``"hello_world"``, ``""``, or
         ``None``.
-    :returns: The omnigent name, or ``None`` when *raw_name*
+    :returns: The agent-meow name, or ``None`` when *raw_name*
         is absent or empty.
     """
     return raw_name if raw_name else None
@@ -1552,16 +1552,16 @@ def _translate_name_from_def(raw_name: str | None) -> str | None:
 
 def _translate_prompt_from_def(raw_prompt: str | None) -> str | None:
     """
-    Translate omnigent ``AgentDef.prompt`` to
+    Translate agent-meow ``AgentDef.prompt`` to
     :attr:`AgentSpec.instructions`.
 
-    ``AgentDef.prompt`` is ``str | None`` on the omnigent side;
-    omnigent also uses ``None`` for absence.
+    ``AgentDef.prompt`` is ``str | None`` on the agent-meow side;
+    agent-meow also uses ``None`` for absence.
 
     :param raw_prompt: The raw ``prompt`` field from
         :class:`AgentDef`, e.g. ``"You are a friendly
         assistant."``, ``""``, or ``None``.
-    :returns: The omnigent instructions text, or ``None``
+    :returns: The agent-meow instructions text, or ``None``
         when *raw_prompt* is absent or empty.
     """
     return raw_prompt if raw_prompt else None
@@ -1573,32 +1573,32 @@ def _translate_llm_from_def(
     raw_executor: dict[str, Any] | None = None,
 ) -> LLMConfig | None:
     """
-    Translate omnigent ``executor.model`` into an omnigent
+    Translate agent-meow ``executor.model`` into an agent-meow
     :class:`LLMConfig`.
 
-    omnigent stores the model string on its own
-    :class:`~?agent_meow.datamodel.ExecutorSpec`. omnigent splits
+    agent-meow stores the model string on its own
+    :class:`~?agent_meow.datamodel.ExecutorSpec`. agent-meow splits
     model selection (``llm.model``) from executor selection
     (``executor.type``). We surface the model in
     :attr:`AgentSpec.llm.model`; the executor block keeps
-    ``type = "omnigent"`` plus the ``harness`` / ``profile``
+    ``type = "agent-meow"`` plus the ``harness`` / ``profile``
     config.
 
-    :param oa_executor: The omnigent
+    :param oa_executor: The agent-meow
         :class:`~?agent_meow.datamodel.ExecutorSpec`, or ``None``
         when the YAML omitted the ``executor:`` block. Example:
         ``OmniExecutorSpec(model="databricks-claude-sonnet-4")``.
-    :param raw_executor: Optional raw omnigent YAML ``executor:``
+    :param raw_executor: Optional raw agent-meow YAML ``executor:``
         mapping. When present and it carries an ``extra:`` dict,
         those kwargs flow into :attr:`LLMConfig.extra` so harness-
         specific overrides (``max_turns`` for the openai-agents
         harness, ``temperature`` for any harness, etc.) propagate
         through to :class:`~?agent_meow.executor.ExecutorConfig.extra`.
-        The omnigent loader drops unknown fields on
+        The agent-meow loader drops unknown fields on
         ``ExecutorSpec`` at parse time, so we read them back from
         the raw dict here.
     :returns: An :class:`LLMConfig` with ``model`` populated, or
-        ``None`` when omnigent declared no model.
+        ``None`` when agent-meow declared no model.
     """
     if oa_executor is None or not oa_executor.model:
         return None
@@ -1618,10 +1618,10 @@ def _translate_executor_from_def(
     raw_executor: dict[str, Any] | None = None,
 ) -> ExecutorSpec:
     """
-    Build the omnigent :class:`ExecutorSpec` for an omnigent
+    Build the agent-meow :class:`ExecutorSpec` for an agent-meow
     agent.
 
-    Returns ``type="omnigent"`` when a harness can be resolved,
+    Returns ``type="agent-meow"`` when a harness can be resolved,
     routing the agent through ``OmnigentExecutor``. Raises
     :class:`OmnigentError` when a model is declared but no
     harness can be inferred — the spec must explicitly declare a
@@ -1642,19 +1642,19 @@ def _translate_executor_from_def(
        through by :func:`_agent_tool_to_sub_spec` for inline
        AgentTools that omit their own ``executor:`` block.
     3. :func:`_infer_harness_from_model` on the resolved model
-       string — mirrors pure omnigent' CLI auto-pick
+       string — mirrors pure agent-meow' CLI auto-pick
        (``databricks-claude-*`` → ``claude-sdk``, etc.) so YAMLs
        that declare only a model continue to work under agent-meow mode.
     4. Error — when all of the above yield an empty string and a
        model is declared, the spec is invalid (no harness can be
        inferred for the model).
 
-    Empty-string coercion mirrors omnigent' own dataclass
+    Empty-string coercion mirrors agent-meow' own dataclass
     defaults (``ExecutorSpec.harness: str = ""``,
     ``ExecutorSpec.profile: str = ""``) so the round-trip is
-    bit-exact against the omnigent side.
+    bit-exact against the agent-meow side.
 
-    :param oa_executor: The omnigent ``ExecutorSpec`` or
+    :param oa_executor: The agent-meow ``ExecutorSpec`` or
         ``None``.
     :param parent_profile: Profile to fall back to when
         *oa_executor* has no profile of its own. Used by
@@ -1674,11 +1674,11 @@ def _translate_executor_from_def(
         When present, ``use_responses`` (``bool | None``) is read
         from it and forwarded into ``executor.config["use_responses"]``
         so the openai-agents harness subprocess reads the correct
-        API surface (chat/completions vs. responses). The omnigent
+        API surface (chat/completions vs. responses). The agent-meow
         loader silently drops unknown fields on its own
         :class:`~?agent_meow.inner.datamodel.ExecutorSpec`, so we
         have to recover this field from the raw dict here.
-    :returns: An :class:`ExecutorSpec` with ``type="omnigent"``
+    :returns: An :class:`ExecutorSpec` with ``type="agent-meow"``
         when a harness is known.
     :raises OmnigentError: When a model is declared but no
         harness can be inferred from it.
@@ -1741,7 +1741,7 @@ def _translate_executor_from_def(
         "harness": harness,
         "profile": profile,
     }
-    # ``use_responses`` is not a field on the omnigent inner
+    # ``use_responses`` is not a field on the agent-meow inner
     # ExecutorSpec (the loader drops unknown keys), so we read it
     # from the raw YAML dict and carry it forward explicitly.
     # The openai-agents harness spawn-env builder reads
@@ -1785,7 +1785,7 @@ def _translate_mcp_tool_from_def(
     tool: MCPTool,
 ) -> MCPServerConfig:
     """
-    Translate one omnigent :class:`MCPTool` into a native
+    Translate one agent-meow :class:`MCPTool` into a native
     :class:`MCPServerConfig`.
 
     Transport dispatch:
@@ -1795,7 +1795,7 @@ def _translate_mcp_tool_from_def(
       SSE endpoint with a Bearer token).
     - ``tool.command`` populated → ``transport="stdio"`` with
       ``args`` + ``env`` carried through verbatim. The
-      subprocess spawns unsandboxed (matching legacy omnigent,
+      subprocess spawns unsandboxed (matching legacy agent-meow,
       which never sandboxed MCPs); the AP-side ``sandbox: bool``
       field that wrapped the spawn with srt was removed in
       step 7 of the harness contract migration.
@@ -1803,7 +1803,7 @@ def _translate_mcp_tool_from_def(
     :param tool_name: YAML key the tool was registered under,
         e.g. ``"glean"``. Used as :attr:`MCPServerConfig.name`
         when the tool doesn't override it.
-    :param tool: The parsed omnigent :class:`MCPTool` instance.
+    :param tool: The parsed agent-meow :class:`MCPTool` instance.
     :returns: A fully populated :class:`MCPServerConfig`.
     :raises OmnigentError: If *tool* has neither ``url`` nor
         ``command`` (shouldn't happen for normal MCPTools, but the
@@ -1829,7 +1829,7 @@ def _translate_mcp_tool_from_def(
             tools=list(tool.tools) if tool.tools else None,
         )
     raise OmnigentError(
-        f"omnigent MCP tool {tool_name!r} has neither 'url' nor "
+        f"agent-meow MCP tool {tool_name!r} has neither 'url' nor "
         f"'command' — cannot translate to an MCPServerConfig",
         code=ErrorCode.INVALID_INPUT,
     )
@@ -1840,7 +1840,7 @@ def _translate_function_tool_from_def(
     tool: Tool,
 ) -> LocalToolInfo:
     """
-    Translate one omnigent function tool into a
+    Translate one agent-meow function tool into a
     :class:`LocalToolInfo`.
 
     The dotted callable path is stored in
@@ -1851,7 +1851,7 @@ def _translate_function_tool_from_def(
 
     :param tool_name: The YAML key for this tool, e.g.
         ``"get_current_time"``.
-    :param tool: The parsed omnigent tool. Must be a
+    :param tool: The parsed agent-meow tool. Must be a
         :class:`FunctionTool` at this point (fail-loud in
         :func:`_fail_on_unsupported_tool` rejects the other
         concrete subtypes).
@@ -1863,7 +1863,7 @@ def _translate_function_tool_from_def(
     """
     if isinstance(tool, CancellableFunctionTool):
         raise OmnigentError(
-            f"omnigent tool {tool_name!r}: "
+            f"agent-meow tool {tool_name!r}: "
             f"``CancellableFunctionTool`` (YAML ``type: "
             f"cancellable_function`` + ``runner:``) was retired in "
             f"step (c) of the harness contract migration. Replace "
@@ -1877,7 +1877,7 @@ def _translate_function_tool_from_def(
         )
     if not isinstance(tool, FunctionTool):
         raise OmnigentError(
-            f"omnigent tool {tool_name!r}: expected FunctionTool, got {type(tool).__name__}.",
+            f"agent-meow tool {tool_name!r}: expected FunctionTool, got {type(tool).__name__}.",
             code=ErrorCode.INVALID_INPUT,
         )
     # Client-runtime tools have no server-side callable — the SDK
@@ -1918,7 +1918,7 @@ def _translate_function_tool_from_def(
     # explicit ``input_schema:`` declared in YAML wins; otherwise
     # introspect the resolved Python callable's signature so the
     # LLM gets ``{"properties": {<arg>: ...}, "required": [...]}``
-    # for typed-parameter tools. Without this fallback, omnigent
+    # for typed-parameter tools. Without this fallback, agent-meow
     # YAMLs that declare a function tool with no ``input_schema:``
     # block (the common case for plain Python callables — e.g.
     # ``examples/_shared/tool_functions.web_search``) ship to the
@@ -1950,7 +1950,7 @@ def _recover_callable_path(
     Recover the dotted import path for a function-type tool's
     callable.
 
-    omnigent' loader resolves the YAML's ``callable:`` field
+    agent-meow' loader resolves the YAML's ``callable:`` field
     into a real Python object and drops the original string. We
     rehydrate the dotted path from the resolved object's
     ``__module__`` + ``__qualname__``. The legacy fallback that
@@ -1972,10 +1972,10 @@ def _recover_callable_path(
     callable_obj = tool.callable
     if callable_obj is None:
         raise OmnigentError(
-            f"omnigent tool {tool_name!r}: function-type tool has "
+            f"agent-meow tool {tool_name!r}: function-type tool has "
             f"no resolved callable (the YAML's `callable:` field was "
             f"missing or could not be imported at load time). The "
-            f"omnigent adapter needs a resolved callable to "
+            f"agent-meow adapter needs a resolved callable to "
             f"recover its dotted path.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -1984,7 +1984,7 @@ def _recover_callable_path(
     if module and qualname:
         return f"{module}.{qualname}"
     raise OmnigentError(
-        f"omnigent tool {tool_name!r}: callable {callable_obj!r} "
+        f"agent-meow tool {tool_name!r}: callable {callable_obj!r} "
         f"has no recoverable dotted path (no __module__/__qualname__ "
         f"on a {type(callable_obj).__name__}).",
         code=ErrorCode.INVALID_INPUT,

@@ -3,7 +3,7 @@
 Provides ``/auth/login``, ``/auth/callback``, ``/auth/logout``,
 ``/auth/cli-login``, and ``/auth/cli-poll`` endpoints that implement
 the full OIDC authorization code flow with PKCE. The ``cli-login``
-/ ``cli-poll`` pair supports the ``omnigent login`` CLI command.
+/ ``cli-poll`` pair supports the ``agent-meow login`` CLI command.
 
 See ``designs/OIDC_AUTH.md`` for the complete design.
 
@@ -107,7 +107,7 @@ def create_auth_router(
 
     # Admission policy: domain allowlist (env ∪ runtime-editable file)
     # with admin-list and (when enabled) invite bypasses. One place
-    # decides who may sign in — see omnigent/server/oidc_access.py.
+    # decides who may sign in — see agent_meow/server/oidc_access.py.
     admission = OidcAdmissionPolicy(
         env_allowed_domains=config.allowed_domains,
         domains_file_path=resolve_allowed_domains_path(),

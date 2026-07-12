@@ -48,7 +48,7 @@ from agent_meow.spec.types import SkillSpec
 
 def test_parse_sub_agent_handle_returns_raw_handle_dict() -> None:
     """
-    Native omnigent builtins persist the spawn output as a raw
+    Native agent-meow builtins persist the spawn output as a raw
     JSON string encoding the handle dict. The parser should return
     it unchanged.
 
@@ -323,7 +323,7 @@ def test_render_history_item_assistant_message_empty_body_is_silently_skipped() 
     """
     Empty assistant items
     (``[{"type":"output_text","text":""}]``) are persisted by the
-    omnigent workflow alongside every real reply. Rendering them
+    agent-meow workflow alongside every real reply. Rendering them
     would produce a phantom ``◆ <model>`` header with no body — the
     "double-label" regression.
 
@@ -940,7 +940,7 @@ def test_terminal_attach_command_uses_socket_and_target() -> None:
 
 def test_parse_terminal_tool_output_handles_direct_dict() -> None:
     """
-    Direct-JSON shape (default executor / omnigent builtins)
+    Direct-JSON shape (default executor / agent-meow builtins)
     decodes to the inner dict.
     """
     raw = json.dumps({"terminal": "bash", "session": "s1", "status": "launched"})
@@ -1198,7 +1198,7 @@ def test_render_startup_banner_contains_agent_name() -> None:
     """
     ansi = _render_startup_banner_ansi("hello world")
     # ``\x1b[1m`` is the SGR Bold sequence; the legacy banner
-    # builder wraps the agent label with it (omnigent/inner/
+    # builder wraps the agent label with it (agent_meow/inner/
     # cli.py:988-989). If the prefix is missing, the agent name
     # would render in the same weight as the dim hint line —
     # the typographic hierarchy that distinguishes them is gone.
@@ -1272,10 +1272,10 @@ def test_render_startup_banner_uses_mascot_accent_color() -> None:
 
 def test_run_banner_uses_magenta_mascot_color() -> None:
     """
-    The ``omnigent run`` banner renders in the starfish
+    The ``agent-meow run`` banner renders in the starfish
     magenta-pink brand accent
     (``MASCOT_ART_COLOR = "#F43BA6"`` → ``38;2;244;59;166``).
-    The default ``art_color`` and the explicit ``--omnigent`` override
+    The default ``art_color`` and the explicit ``--agent-meow`` override
     both resolve to the same brand magenta, so the mascot, box
     border, and prompt marker all read as one accent regardless
     of mode.
@@ -1285,7 +1285,7 @@ def test_run_banner_uses_magenta_mascot_color() -> None:
 
     assert MASCOT_ART_COLOR == "#F43BA6", (
         f"MASCOT_ART_COLOR must be the starfish magenta-pink brand "
-        f"accent (#F43BA6) for the ``omnigent run`` welcome "
+        f"accent (#F43BA6) for the ``agent-meow run`` welcome "
         f"banner; got {MASCOT_ART_COLOR!r}."
     )
 
@@ -1336,7 +1336,7 @@ def test_render_startup_banner_shows_remote_server_url() -> None:
 
     What this proves: a user connected with ``--server <url>``
     sees which workspace they're talking to in the welcome
-    banner. A user running ``omnigent run`` against a freshly
+    banner. A user running ``agent-meow run`` against a freshly
     spawned local server doesn't get the noise.
     """
     remote = "https://example.databricks.com"
@@ -1399,7 +1399,7 @@ def test_startup_header_box_includes_folder_model_and_credential() -> None:
     import re
 
     header = _StartupHeader(
-        folder="~/omnigent",
+        folder="~/agent-meow",
         description="Multi-agent coding orchestrator",
         model_label="claude-sonnet-4-6",
         credential="Subscription",
@@ -1410,7 +1410,7 @@ def test_startup_header_box_includes_folder_model_and_credential() -> None:
     assert "Multi-agent coding orchestrator" in plain  # one-line summary row
     assert "claude-sonnet-4-6" in plain  # model row
     assert "Subscription" in plain  # credential row (glyphless — see _header_glyph)
-    assert "~/omnigent" in plain  # working-folder row
+    assert "~/agent-meow" in plain  # working-folder row
     # No separate creds line was requested, so none is appended.
     assert "→" not in plain
 
@@ -1484,7 +1484,7 @@ def test_startup_header_shows_server_version_on_url_line() -> None:
     import re
 
     header = _StartupHeader(
-        folder="~/omnigent",
+        folder="~/agent-meow",
         description=None,
         model_label=None,
         credential=None,
@@ -1520,7 +1520,7 @@ def test_startup_header_shows_local_server_url_with_version() -> None:
     import re
 
     header = _StartupHeader(
-        folder="~/omnigent",
+        folder="~/agent-meow",
         description=None,
         model_label=None,
         credential=None,
@@ -1540,11 +1540,11 @@ def test_startup_header_shows_local_server_url_with_version() -> None:
 
 
 def test_startup_header_shows_databricks_workspace_url_not_api_mount() -> None:
-    """A Databricks server shows the ``/omnigent`` SPA URL and NO version.
+    """A Databricks server shows the ``/agent-meow`` SPA URL and NO version.
 
     What this proves two things for a workspace mount: (1) the header maps
-    the internal ``/api/2.0/omnigent`` proxy mount to the recognizable
-    workspace ``/omnigent`` URL — a regression rendering the raw
+    the internal ``/api/2.0/agent-meow`` proxy mount to the recognizable
+    workspace ``/agent-meow`` URL — a regression rendering the raw
     ``server_url`` would leak the API path; and (2) the server-version row
     is suppressed even when a version is passed, because a workspace build
     has no meaningful version string to show (its ``/api/version`` returns a
@@ -1559,7 +1559,7 @@ def test_startup_header_shows_databricks_workspace_url_not_api_mount() -> None:
         credential="Subscription",
         creds_line=None,
     )
-    api_mount = "https://e2-dogfood.staging.cloud.databricks.com/api/2.0/omnigent"
+    api_mount = "https://e2-dogfood.staging.cloud.databricks.com/api/2.0/agent-meow"
     plain = re.sub(
         r"\x1b\[[0-9;]*m",
         "",
@@ -1570,8 +1570,8 @@ def test_startup_header_shows_databricks_workspace_url_not_api_mount() -> None:
         ),
     )
     # The clean workspace URL is shown, the internal API path is NOT.
-    assert "https://e2-dogfood.staging.cloud.databricks.com/omnigent" in plain
-    assert "/api/2.0/omnigent" not in plain
+    assert "https://e2-dogfood.staging.cloud.databricks.com/agent-meow" in plain
+    assert "/api/2.0/agent-meow" not in plain
     # No version row for a Databricks workspace server.
     assert "server " not in plain
     assert "0.3.0.dev0" not in plain
@@ -1587,7 +1587,7 @@ def test_startup_header_omits_server_version_when_unresolved() -> None:
     import re
 
     header = _StartupHeader(
-        folder="~/omnigent",
+        folder="~/agent-meow",
         description=None,
         model_label=None,
         credential=None,
@@ -2949,7 +2949,7 @@ def test_resume_hint_appends_resume_flag_to_invocation_parts() -> None:
     import shlex
 
     resume_parts = [
-        "omnigent",
+        "agent-meow",
         "run",
         "examples/databricks_coding_agent.yaml",
         "--server",
@@ -2961,7 +2961,7 @@ def test_resume_hint_appends_resume_flag_to_invocation_parts() -> None:
     ]
     hint = shlex.join([*resume_parts, "--resume", "conv_abc"])
     assert hint == (
-        "omnigent run examples/databricks_coding_agent.yaml "
+        "agent-meow run examples/databricks_coding_agent.yaml "
         "--server https://omnigent-app.databricksapps.com "
         "--profile oss "
         "--harness claude-sdk "

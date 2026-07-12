@@ -7,13 +7,13 @@ resolves ``"cursor-native"`` to this module via
 
 Wraps a :class:`~?agent_meow.inner.cursor_native_executor.CursorNativeExecutor`,
 which injects web-UI messages into the running ``cursor-agent`` TUI (launched by
-``omnigent cursor`` in the session terminal) via tmux. The bridge dir is read
+``agent-meow cursor`` in the session terminal) via tmux. The bridge dir is read
 from :data:`~?agent_meow.cursor_native_bridge.BRIDGE_DIR_ENV_VAR` in the spawn env.
 
 Tool policies: agent-meow's PreToolUse/PostToolUse policy gates (which claude- and
 codex-native enforce via hooks) do NOT apply to cursor-native — ``cursor-agent``
 runs its tools inside its own TUI and gates them with its own in-terminal
-approval prompts (and ``--force``/``--yolo``/sandbox config), which omnigent does
+approval prompts (and ``--force``/``--yolo``/sandbox config), which agent-meow does
 not intercept. Treat the cursor TUI's own approval as the sole tool gate; do not
 assume agent-meow connector/tool deny-policies constrain a cursor-native session.
 """

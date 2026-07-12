@@ -1,7 +1,7 @@
 """E2E coverage for the Alpha sessions-API REPL lifecycle.
 
 Migrated to use the mock LLM server. These tests run real
-``omnigent`` subprocesses under pexpect and exercise the user-visible
+``agent-meow`` subprocesses under pexpect and exercise the user-visible
 flow: session creation, runner binding, streaming text rendering,
 resume, and runner recovery. The mock LLM server provides
 deterministic responses so no real Databricks credentials are required.
@@ -88,13 +88,13 @@ def _stop_host_daemon(home: Path) -> None:
     """
     Stop the connect daemon recorded under an isolated test HOME.
 
-    ``omnigent run --server`` leaves the daemon alive after the REPL exits
+    ``agent-meow run --server`` leaves the daemon alive after the REPL exits
     by design. E2E tests use per-test HOME directories so they clean
     those daemon processes up explicitly.
 
     :param home: HOME directory used by a REPL subprocess.
     """
-    pid_path = home / ".omnigent" / "host.pid"
+    pid_path = home / ".agent-meow" / "host.pid"
     if not pid_path.exists():
         return
     try:
@@ -205,7 +205,7 @@ def _spawn_run(
     no_session: bool = True,
 ) -> pexpect.spawn:
     """
-    Spawn ``omnigent run`` under a real PTY.
+    Spawn ``agent-meow run`` under a real PTY.
 
     :param omnigent_python: Python interpreter with agent-meow installed.
     :param repo_root: Checkout root used as subprocess cwd.
@@ -218,7 +218,7 @@ def _spawn_run(
     """
     args = [
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(yaml_path),
         "--model",
@@ -431,7 +431,7 @@ def _runner_pid_from_daemon_log(home: Path, runner_id: str) -> int:
     Resolve a runner subprocess pid from the connect-daemon log.
 
     The daemon logs ``Launched runner <id> for workspace <ws> (pid=<N>)``
-    when it spawns a runner (omnigent/host/connect.py). Reading the pid
+    when it spawns a runner (agent_meow/host/connect.py). Reading the pid
     from that line is robust across environments — unlike walking the
     daemon's process tree, which assumes the runner is a process-tree
     descendant of the daemon. That holds locally but NOT under CI's
@@ -444,7 +444,7 @@ def _runner_pid_from_daemon_log(home: Path, runner_id: str) -> int:
     :returns: The runner subprocess pid.
     :raises AssertionError: When the pid is not found in the daemon log.
     """
-    log_dir = home / ".omnigent" / "logs" / "host-daemon"
+    log_dir = home / ".agent-meow" / "logs" / "host-daemon"
     logs = sorted(log_dir.glob("daemon-*.log"))
     if not logs:
         raise AssertionError(f"no connect-daemon log under {log_dir}")

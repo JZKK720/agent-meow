@@ -1,6 +1,6 @@
 """TUI→web forwarder for the qwen-native harness.
 
-The ``omnigent qwen`` wrapper launches the real ``qwen`` TUI in a runner-owned
+The ``agent-meow qwen`` wrapper launches the real ``qwen`` TUI in a runner-owned
 tmux pane with ``--json-file`` pointed at the bridge dir, and
 :mod:`~?agent_meow.qwen_native_bridge` appends web-UI messages to its ``--input-file``.
 That covers the web→TUI direction, but the *embedded terminal* is then the only

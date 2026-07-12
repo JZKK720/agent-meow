@@ -1,18 +1,18 @@
 ---
 name: cli-setup-verify
-description: Verify the agent-meow CLI's setup/onboarding flow, terminal UI/UX, and critical user journeys in a completely isolated, reproducible loop. Drives the real `omnigent` binary through a PTY (pexpect) inside a throwaway OMNIGENT_CONFIG_HOME / OMNIGENT_DATA_DIR sandbox that never touches the user's real ~/.omnigent, captures ANSI-stripped frames for UX inspection, and proves a change is verifiable via a before→fix→after baseline diff. Load when developing or reviewing a CLI setup/onboarding/REPL/picker change (omnigent/cli.py, omnigent/onboarding/*, omnigent/repl/*, scripts/install_oss.sh), reproducing a cold-start/first-run UX bug, or confirming a fix actually lands. Several agents can run it concurrently on separate worktrees.
+description: Verify the agent-meow CLI's setup/onboarding flow, terminal UI/UX, and critical user journeys in a completely isolated, reproducible loop. Drives the real `agent-meow` binary through a PTY (pexpect) inside a throwaway OMNIGENT_CONFIG_HOME / OMNIGENT_DATA_DIR sandbox that never touches the user's real ~/.agent-meow, captures ANSI-stripped frames for UX inspection, and proves a change is verifiable via a before→fix→after baseline diff. Load when developing or reviewing a CLI setup/onboarding/REPL/picker change (agent_meow/cli.py, agent_meow/onboarding/*, agent_meow/repl/*, scripts/install_oss.sh), reproducing a cold-start/first-run UX bug, or confirming a fix actually lands. Several agents can run it concurrently on separate worktrees.
 ---
 
 # Verifying the agent-meow CLI setup & UX in a closed loop
 
-The agent-meow CLI's first impression is: `curl | sh` → run `omnigent` → pick a
+The agent-meow CLI's first impression is: `curl | sh` → run `agent-meow` → pick a
 model credential → start a session. This skill lets an agent **enter that flow,
 examine the UI/UX, and prove whether a change is verifiable** — without a
 browser, without real credentials, and **without ever touching the developer's
-real `~/.omnigent`**.
+real `~/.agent-meow`**.
 
 The engine is `verify_cli.py` (next to this file). It drives the real
-`omnigent` binary through a pseudo-terminal (`pexpect`) inside a throwaway
+`agent-meow` binary through a pseudo-terminal (`pexpect`) inside a throwaway
 sandbox, captures what renders, runs assertions, and prints one machine-readable
 `SUMMARY {json}` line.
 
@@ -26,14 +26,14 @@ sandbox, captures what renders, runs assertions, and prints one machine-readable
 
 ## Why this is safe (read first)
 
-The real `~/.omnigent` here can be **many GB** (chat DB, runner logs, native
+The real `~/.agent-meow` here can be **many GB** (chat DB, runner logs, native
 harness state). The sandbox isolates every write three ways:
 
 - **`HOME` is redirected into the sandbox by default.** This is the load-bearing
-  one. `OMNIGENT_CONFIG_HOME` / `OMNIGENT_DATA_DIR` (`omnigent/cli.py`
+  one. `OMNIGENT_CONFIG_HOME` / `OMNIGENT_DATA_DIR` (`agent_meow/cli.py`
   `_CONFIG_HOME_ENV_VAR` / `_DATA_DIR_ENV_VAR`) redirect config + data — but the
   CLI's **diagnostics logger ignores them**: it writes a per-invocation
-  `cli-*.log` under `state_dir()`, hardcoded to `Path.home()/.omnigent/logs`
+  `cli-*.log` under `state_dir()`, hardcoded to `Path.home()/.agent_meow/logs`
   (`omnigent_ui_sdk/terminal/_config.py`). So only redirecting `HOME` keeps a
   non-help command (`config list`, the setup PTY spawns, `server stop`) from
   writing into the real home. The driver does this for you.
@@ -45,9 +45,9 @@ harness state). The sandbox isolates every write three ways:
 **`--inherit-home` opts out** of `HOME` isolation — use it only to reach a real
 credentialed REPL via ambient `~/.claude` / `~/.databrickscfg` auth. It is
 **less safe**: a non-help command then writes `cli-*.log` into the real
-`~/.omnigent/logs`.
+`~/.agent_meow/logs`.
 
-Every run **fingerprints the real `~/.omnigent` before and after** (stat-only,
+Every run **fingerprints the real `~/.agent-meow` before and after** (stat-only,
 no content reads): the top-level config files **and** the set of
 `logs/cli-*.log` diagnostic files. A new config file/mtime *or* a new `cli-*.log`
 basename trips `real_config_untouched: false`. With the default isolation that
@@ -59,11 +59,11 @@ machine.
 ## Prerequisites
 
 - You're in the **worktree whose code you want to test** (each parallel agent
-  on its own worktree). The driver runs `omnigent` from `--repo`'s checkout.
+  on its own worktree). The driver runs `agent-meow` from `--repo`'s checkout.
 - A Python with `pexpect` — the project's `.venv/bin/python` bundles it
   (`pexpect>=4.9` in `pyproject.toml`). Run the driver with that interpreter.
-- An `omnigent` binary: the driver auto-finds `<repo>/.venv/bin/omnigent`, or
-  pass `--omnigent <path>`.
+- An `agent-meow` binary: the driver auto-finds `<repo>/.venv/bin/meow`, or
+  pass `--agent-meow <path>`.
 - The setup / picker / help / cold-start scenarios need **no credentials and no
   harness**. Only `repl-commands` needs a working harness + credential: pass
   `--inherit-home` (ambient `~/.claude` auth) and/or `--keep-env-creds` (env API
@@ -98,10 +98,10 @@ to read it.
 
 | Scenario | What it drives | Key checks / notes | Maps to findings |
 |---|---|---|---|
-| `check-isolation` | `omnigent config list` in the sandbox (no PTY) | `config_list_ran`, `sandbox_config_home_used`, `real_config_untouched` | safety gate for everything |
+| `check-isolation` | `agent-meow config list` in the sandbox (no PTY) | `config_list_ran`, `sandbox_config_home_used`, `real_config_untouched` | safety gate for everything |
 | `cold-start` | `meow setup` via PTY on a simulated fresh machine | `onboarding_rendered`, `harness_menu_present`; note `guided_default_affordance` | cold-start dead-end; missing "recommended start here" |
 | `setup-snapshot` | `meow setup`, optional `--nav-down N` arrow steps | `menu_rendered`; saves a frame per step | picker markers/footer/alignment; narrow-terminal at 80×24 |
-| `help-snapshot` | `omnigent [--subcommand] --help` (no PTY) | `help_rendered`, `no_param_leak`, `no_update_dup`; note `top_level_command_count` | `:param` leak, duplicate `update`/`upgrade`, command sprawl |
+| `help-snapshot` | `agent-meow [--subcommand] --help` (no PTY) | `help_rendered`, `no_param_leak`, `no_update_dup`; note `top_level_command_count` | `:param` leak, duplicate `update`/`upgrade`, command sprawl |
 | `repl-commands` | `meow run <agent>` REPL, sends `/help` + `/quit` | `help_lists_commands`; note `quit_advertised` | REPL discoverability (`/help`, `/quit`) |
 
 `--list-scenarios` prints them too. Captured frames land in the printed
@@ -158,9 +158,9 @@ already has complementary CUJ coverage — use both:
   to code, resume/disconnect, fork/explore, file upload, collaboration, …).
   Run a slice with the project's gated runner, e.g.
   `uv run --frozen --extra dev python -m pytest tests/e2e/test_journey_first_session_to_code.py -q`.
-- **Reusable PTY helpers** live in `tests/e2e/omnigent/_pexpect_harness.py`
+- **Reusable PTY helpers** live in `tests/e2e/agent_meow/_pexpect_harness.py`
   (`spawn_omnigent_run`, `wait_for_ready`, `submit_prompt`, `await_turn_complete`,
-  `clean_exit`) and the snapshot comparator in `tests/e2e/omnigent/_snapshot.py`
+  `clean_exit`) and the snapshot comparator in `tests/e2e/agent_meow/_snapshot.py`
   — prefer extending those over re-inventing.
 
 To drive a surface this skill doesn't script yet, spawn it by hand with the
@@ -172,14 +172,14 @@ sandbox env and the keys the driver exports (`KEY_UP`/`KEY_DOWN`/`KEY_ENTER`/
 - The driver force-kills the PTY child and its descendants, and runs
   `meow server stop` against the sandbox to reap any spawned background
   server. After a run, confirm nothing leaked:
-  `pgrep -af "omnigent.*(server|runner|host._daemon)"` — anything bound to your
+  `pgrep -af "agent_meow.*(server|runner|host._daemon)"` — anything bound to your
   sandbox's data dir is yours to kill.
 - The sandbox temp dir is deleted unless `--keep-sandbox`. If you keep one for
   inspection, `rm -rf` it when done.
 - Always drive the CLI through the driver (which redirects `HOME` + the
   config/data knobs), never a bare `meow setup` — that would write to the
-  real `~/.omnigent`. If you pass `--inherit-home`, expect `cli-*.log` writes to
-  the real `~/.omnigent/logs` and a `real_config_untouched: false` — that's the
+  real `~/.agent-meow`. If you pass `--inherit-home`, expect `cli-*.log` writes to
+  the real `~/.agent_meow/logs` and a `real_config_untouched: false` — that's the
   guard working, not a bug.
 
 ## Honesty
@@ -201,10 +201,10 @@ fix is provable as a single check flip.
 
 ## Code under test
 
-- First-run dispatch / no-arg routing: `omnigent/cli.py` (`run`, the first-run
+- First-run dispatch / no-arg routing: `agent_meow/cli.py` (`run`, the first-run
   plan, `_run_configure_harnesses_interactive`).
-- Onboarding: `omnigent/onboarding/*` (`setup.py`, `interactive.py`,
+- Onboarding: `agent_meow/onboarding/*` (`setup.py`, `interactive.py`,
   `configure_models.py`, `provider_selection.py`, `detected.py`).
-- TUI / REPL & pickers: `omnigent/repl/*` (`_repl.py`, `_theme_picker.py`,
-  `_resume_picker.py`), `omnigent/_terminal_picker_theme.py`.
+- TUI / REPL & pickers: `agent_meow/repl/*` (`_repl.py`, `_theme_picker.py`,
+  `_resume_picker.py`), `agent_meow/_terminal_picker_theme.py`.
 - Installer: `scripts/install_oss.sh`.

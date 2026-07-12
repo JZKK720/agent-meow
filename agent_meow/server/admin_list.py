@@ -57,7 +57,7 @@ def resolve_data_dir() -> Path:
     1. The parent directory of ``OMNIGENT_ADMIN_CREDENTIALS_PATH`` if
        that env var is set (Docker compose mounts
        ``/data/admin-credentials``, so this yields ``/data``).
-    2. ``~/.omnigent`` for a laptop deploy.
+    2. ``~/.agent-meow`` for a laptop deploy.
 
     :returns: The resolved data directory. Not created here — callers
         that only read tolerate a missing directory.
@@ -65,7 +65,7 @@ def resolve_data_dir() -> Path:
     explicit_creds = os.environ.get("OMNIGENT_ADMIN_CREDENTIALS_PATH", "").strip()
     if explicit_creds:
         return Path(explicit_creds).parent
-    return Path.home() / ".omnigent"
+    return Path.home() / ".agent-meow"
 
 
 def resolve_admin_list_path() -> Path:

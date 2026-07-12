@@ -34,7 +34,7 @@ POLICY_ALLOW = "POLICY_ACTION_ALLOW"
 POLICY_DENY = "POLICY_ACTION_DENY"
 
 # Proto-style policy evaluation phases (see _scaffold.evaluate_policy and
-# omnigent/native_policy_hook.py). A tool call is gated at PHASE_TOOL_CALL;
+# agent_meow/native_policy_hook.py). A tool call is gated at PHASE_TOOL_CALL;
 # the request/result phases fire at other points in the turn. The policy
 # probe must scope its DENY to PHASE_TOOL_CALL so a DENY on the request
 # phase cannot masquerade as a tool-call guardrail pass.

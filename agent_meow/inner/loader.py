@@ -94,12 +94,12 @@ def load_agent_def(
         ``_parse_agent_def`` resolves and (for factory policies)
         **calls** it. This is the guard for the untrusted
         agent-bundle upload path: ``agent_meow.spec.load`` routes a
-        single-file omnigent YAML bundle here during
+        single-file agent-meow YAML bundle here during
         ``validate_agent_bundle``, and the loader executes policy
         factories at parse time, so an uploaded
         ``handler: subprocess.Popen`` would otherwise run during
         validation. Defaults to ``False`` so trusted callers (local
-        ``omnigent run``, operator specs, the CLI) keep working with
+        ``agent-meow run``, operator specs, the CLI) keep working with
         custom handlers — the operator already has code execution, so
         the restriction would add no security there.
     """
@@ -656,7 +656,7 @@ def _parse_os_env_spec(data: YamlData | str | bool | None) -> OSEnvSpec | None:
     fork = bool(data.get("fork", False))
     start_in_scratch = bool(data.get("start_in_scratch", False))
     # Mirror the agent-meow YAML parser's cross-field validation
-    # (omnigent/spec/parser.py:_parse_os_env). Keeping the two
+    # (agent_meow/spec/parser.py:_parse_os_env). Keeping the two
     # loaders in lockstep prevents a class of "silently weakens
     # the sandbox on the legacy path" bug — an operator who used
     # ``load_agent_def`` would otherwise get past parse time with
@@ -848,10 +848,10 @@ def load_agent_def_from_path(path_str: str) -> AgentDef:
 
     Supports three shapes:
 
-    - ``foo.yaml`` (single-file omnigent YAML) — parsed directly.
-    - ``my-agent/`` (omnigent AGENTSPEC directory with
+    - ``foo.yaml`` (single-file agent-meow YAML) — parsed directly.
+    - ``my-agent/`` (agent-meow AGENTSPEC directory with
       ``config.yaml``, or a directory containing exactly one
-      omnigent YAML at its root).
+      agent-meow YAML at its root).
     - ``my-agent.tar.gz`` (tarball bundle) — extracted, then same
       directory dispatch.
     """
@@ -890,7 +890,7 @@ def load_agent_def_from_path(path_str: str) -> AgentDef:
         if single is None:
             raise FileNotFoundError(
                 f"{path}: directory has neither a config.yaml "
-                f"nor a single-file omnigent YAML at its root"
+                f"nor a single-file agent-meow YAML at its root"
             )
         return load_agent_def(str(single))
     finally:

@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: omnigent
+  name: agent-meow
   labels:
-    app: omnigent
+    app: agent-meow
 spec:
   type: ClusterIP
   selector:
-    app: omnigent
+    app: agent-meow
   ports:
     - port: 80
       targetPort: http

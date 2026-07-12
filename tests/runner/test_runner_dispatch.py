@@ -4,7 +4,7 @@ The load-bearing assertion: the runner FastAPI app, when given a
 real :class:`HarnessProcessManager`, accepts a
 POST /v1/sessions/{conversation_id}/events?stream=true,
 spawns a harness subprocess (using the existing
-``omnigent/runtime/harnesses/`` machinery — NOT a parallel impl),
+``agent_meow/runtime/harnesses/`` machinery — NOT a parallel impl),
 forwards the request to the harness via UDS, and streams the
 harness's SSE response back through the runner's own SSE response.
 
@@ -556,7 +556,7 @@ async def test_runner_resolves_agent_from_server_snapshot_when_msg_lacks_agent_i
         return AgentSpec(
             spec_version=1,
             name="ondemand-agent",
-            executor=ExecutorSpec(type="omnigent", config={"harness": resolved_harness}),
+            executor=ExecutorSpec(type="agent-meow", config={"harness": resolved_harness}),
         )
 
     captured: dict[str, str] = {}
@@ -779,7 +779,7 @@ async def test_runner_reloads_full_history_on_cold_cache_after_restart() -> None
             spec_version=1,
             name="restart-agent",
             executor=ExecutorSpec(
-                type="omnigent",
+                type="agent-meow",
                 config={"harness": "runner-test-resolved"},
             ),
         )
@@ -917,7 +917,7 @@ async def test_runner_cold_cache_appends_message_when_store_lacks_it() -> None:
             spec_version=1,
             name="cold-cache-agent",
             executor=ExecutorSpec(
-                type="omnigent",
+                type="agent-meow",
                 config={"harness": "runner-test-resolved"},
             ),
         )
@@ -1040,7 +1040,7 @@ async def test_runner_cold_cache_keeps_trailing_user_when_no_persisted_id() -> N
             spec_version=1,
             name="keep-user-agent",
             executor=ExecutorSpec(
-                type="omnigent",
+                type="agent-meow",
                 config={"harness": "runner-test-resolved"},
             ),
         )
@@ -1190,7 +1190,7 @@ async def test_runner_cold_cache_uses_resolved_message_not_stored_file_id() -> N
             spec_version=1,
             name="media-agent",
             executor=ExecutorSpec(
-                type="omnigent",
+                type="agent-meow",
                 config={"harness": "runner-test-resolved"},
             ),
         )
@@ -1393,7 +1393,7 @@ def test_build_spawn_env_applies_model_override(
     spec = AgentSpec(
         spec_version=1,
         name="x",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-sdk"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-sdk"}),
     )
 
     base = _build_spawn_env_from_spec(spec, "claude-sdk")
@@ -1434,7 +1434,7 @@ async def test_resolve_harness_config_applies_harness_override(
     spec = AgentSpec(
         spec_version=1,
         name="x",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "claude-sdk"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-sdk"}),
     )
 
     async def _resolver(_agent_id: str, _session_id: str | None) -> AgentSpec:
@@ -1508,7 +1508,7 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
         return AgentSpec(
             spec_version=1,
             name="claude-sdk-agent",
-            executor=ExecutorSpec(type="omnigent", config={"harness": "claude-sdk"}),
+            executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-sdk"}),
         )
 
     def _raising_build(spec: object, *, workdir: object = None) -> dict[str, str]:
@@ -1602,7 +1602,7 @@ async def test_runner_failed_status_carries_setup_error_message(
         return AgentSpec(
             spec_version=1,
             name="claude-sdk-agent",
-            executor=ExecutorSpec(type="omnigent", config={"harness": "claude-sdk"}),
+            executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-sdk"}),
         )
 
     def _raising_build(spec: object, *, workdir: object = None) -> dict[str, str]:
@@ -1782,7 +1782,7 @@ async def test_runner_publishes_terminal_failed_when_harness_stream_fails(
     """
     conv = f"conv_stream_failed_{until}_{harness.replace('-', '_')}"
     # Keep the codex-native pre-turn bridge writes (write_mcp_bridge_config)
-    # out of the real ``~/.omnigent/codex-native`` tree. The module documents
+    # out of the real ``~/.agent_meow/codex-native`` tree. The module documents
     # this monkeypatch as the supported test isolation point.
     monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path)
 
@@ -1798,7 +1798,7 @@ async def test_runner_publishes_terminal_failed_when_harness_stream_fails(
         return AgentSpec(
             spec_version=1,
             name="stream-fail-agent",
-            executor=ExecutorSpec(type="omnigent", config={"harness": harness}),
+            executor=ExecutorSpec(type="agent-meow", config={"harness": harness}),
         )
 
     app = create_runner_app(
@@ -2781,7 +2781,7 @@ def _spec_with_subagent_harness(harness: str) -> SimpleNamespace:
         sub_agents=[
             SimpleNamespace(
                 name="worker",
-                executor=SimpleNamespace(type="omnigent", config={"harness": harness}),
+                executor=SimpleNamespace(type="agent-meow", config={"harness": harness}),
             )
         ]
     )
@@ -3316,7 +3316,7 @@ def _spec_with_real_subagent(harness: str) -> AgentSpec:
             AgentSpec(
                 spec_version=1,
                 name="worker",
-                executor=ExecutorSpec(type="omnigent", config={"harness": harness}),
+                executor=ExecutorSpec(type="agent-meow", config={"harness": harness}),
             )
         ],
     )
@@ -4143,7 +4143,7 @@ async def test_scaffold_subagent_defers_terminal_delivery_while_continuation_buf
         return AgentSpec(
             spec_version=1,
             name="scaffold-multiturn-agent",
-            executor=ExecutorSpec(type="omnigent", config={"harness": _TEST_HARNESS_NAME}),
+            executor=ExecutorSpec(type="agent-meow", config={"harness": _TEST_HARNESS_NAME}),
         )
 
     app = create_runner_app(
@@ -4497,7 +4497,7 @@ async def test_sys_cancel_task_stops_subagent_and_dedupes_late_completion(
                 201,
                 json={
                     "id": "conv_child_cancel",
-                    "labels": {"omnigent.wrapper": "claude-code-native-ui"},
+                    "labels": {"agent_meow.wrapper": "claude-code-native-ui"},
                 },
             )
         if (
@@ -6411,7 +6411,7 @@ async def test_sys_session_share_surfaces_server_message_on_4xx() -> None:
     from agent_meow.runner.tool_dispatch import execute_tool
 
     # Mirrors the OmnigentError envelope the server's exception handler
-    # emits (omnigent/server/app.py) for the public + level>read guard.
+    # emits (agent_meow/server/app.py) for the public + level>read guard.
     server_message = "Public access is limited to read-only (level 1)"
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:

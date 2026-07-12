@@ -6,9 +6,9 @@ into the full host-bootstrap flow: build the agent-meow wheels locally,
 ship + install them in the sandbox, run the Databricks Apps OAuth flow
 *inside the sandbox* (driving the browser step from the local machine
 over a forwarded callback port), and register the sandbox as a host by
-holding ``omnigent host`` open in it. The end state is a sandbox whose
+holding ``agent-meow host`` open in it. The end state is a sandbox whose
 sessions are reachable from the agent-meow server's UI, TUI, and
-``omnigent resume``.
+``agent-meow resume``.
 
 The OAuth token is minted and stored by the sandbox's own CLI rather
 than shipped from the laptop. Shipping a laptop-minted token was
@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 
 WHEEL_PACKAGE_PATHS: tuple[str, ...] = ("sdks/python-client", "sdks/ui", ".")
 """Repo-relative paths of the three packages we bundle for sandbox
-install: the python client SDK, the UI SDK, and the omnigent package
+install: the python client SDK, the UI SDK, and the agent-meow package
 itself (which path-depends on the first two)."""
 
 DEFAULT_WHEELS_TGZ: str = "/tmp/oa-wheels.tgz"
@@ -64,8 +64,8 @@ checkout's code."""
 DEFAULT_BUILD_LOG: str = "/tmp/lakebox-build.log"
 """Default ``uv build`` log location."""
 
-DEFAULT_SANDBOX_NAME: str = "omnigent-host"
-"""Default label used when ``omnigent sandbox create`` provisions a
+DEFAULT_SANDBOX_NAME: str = "agent-meow-host"
+"""Default label used when ``agent-meow sandbox create`` provisions a
 new sandbox."""
 
 _REMOTE_WHEELS_TGZ: str = "/tmp/oa-wheels.tgz"
@@ -102,8 +102,8 @@ def build_wheels(
     users reason about staleness via a --rebuild-wheels flag, with
     silently shipping old code as the failure mode.)
 
-    :param repo_root: Path to the omnigent repo checkout, e.g.
-        ``Path("/home/me/omnigent")``.
+    :param repo_root: Path to the agent-meow repo checkout, e.g.
+        ``Path("/home/me/agent-meow")``.
     :param tgz_path: Output path for the packed tarball.
     :param build_log: Path to write the combined ``uv build`` log to.
     :param pypi_proxy: ``UV_INDEX_URL`` override, or ``None`` to use
@@ -291,7 +291,7 @@ def _read_login_url(stream: Iterable[str]) -> str | None:
         tests).
     :returns: The authorize URL, or ``None`` when the stream ends
         without printing one — which is NOT necessarily an error:
-        ``omnigent login`` reuses a cached workspace OAuth grant when
+        ``agent-meow login`` reuses a cached workspace OAuth grant when
         one verifies against the server, completing without a browser
         step. The caller distinguishes success from failure by the
         process's exit code.
@@ -386,7 +386,7 @@ def derive_workspace(server_url: str) -> DerivedWorkspace | None:
     """
     Return the Databricks workspace fronting *server_url*, if any.
 
-    Runs the same unauthenticated detection ``omnigent login``
+    Runs the same unauthenticated detection ``agent-meow login``
     performs — but from the LOCAL machine. Two consumers: the in-sandbox
     login step seeds the sandbox's ``~/.databrickscfg`` with the result,
     and the sandbox CLI commands pin their local ``databricks lakebox``
@@ -422,24 +422,24 @@ def login_app_oauth_in_sandbox(
     skip: bool = False,
 ) -> None:
     """
-    Log the sandbox in to *server_url* by running ``omnigent login``
+    Log the sandbox in to *server_url* by running ``agent-meow login``
     **inside the sandbox**, driving the browser step from the local
     machine.
 
     Databricks Apps front their HTTP/WS endpoints with an OAuth edge —
     workspace PATs (including the Lakebox image's baked credential)
-    are rejected; only workspace OAuth tokens pass. ``omnigent
+    are rejected; only workspace OAuth tokens pass. ``agent-meow
     login`` owns the credential inference used everywhere else: it
     probes *server_url*, discovers the fronting workspace
     from the probe response, mints a workspace OAuth grant (running
     ``databricks auth login --host <workspace>`` when no cached grant
-    verifies), and stores a pointer record so ``omnigent host`` and
+    verifies), and stores a pointer record so ``agent-meow host`` and
     runners mint fresh workspace tokens for this server automatically.
     No Databricks profile is created or consulted.
 
     The sandbox is headless, so when the login needs a browser this:
 
-    1. runs ``omnigent login <server_url>`` inside the sandbox over a
+    1. runs ``agent-meow login <server_url>`` inside the sandbox over a
        PTY;
     2. reads the dynamically-chosen loopback callback port back from the
        printed authorize URL;
@@ -526,7 +526,7 @@ def login_app_oauth_in_sandbox(
         )
     login = launcher.stream_exec(
         sandbox_id,
-        f"omnigent login {shlex.quote(server_url)}",
+        f"agent-meow login {shlex.quote(server_url)}",
         pty=True,
     )
     try:
@@ -541,7 +541,7 @@ def _complete_browser_login(
     login: RemoteProcess,
 ) -> None:
     """
-    Drive the browser half of an in-sandbox ``omnigent login``.
+    Drive the browser half of an in-sandbox ``agent-meow login``.
 
     Reads the authorize URL off the login process's output, bridges the
     URL's dynamically-chosen loopback callback port into the sandbox,
@@ -560,13 +560,13 @@ def _complete_browser_login(
     """
     url = _read_login_url(login.lines)
     if url is None:
-        # No browser needed: `omnigent login` verified a cached
+        # No browser needed: `agent-meow login` verified a cached
         # workspace grant against the server (or failed before the
         # browser step — the exit code tells which).
         returncode = login.wait()
         if returncode != 0:
             raise click.ClickException(
-                f"`omnigent login` inside sandbox '{sandbox_id}' exited "
+                f"`agent-meow login` inside sandbox '{sandbox_id}' exited "
                 f"with code {returncode} before printing a verification "
                 "URL. Run it inside the sandbox manually to debug."
             )
@@ -587,7 +587,7 @@ def _complete_browser_login(
         returncode = login.wait()
         if returncode != 0:
             raise click.ClickException(
-                f"`omnigent login` inside sandbox '{sandbox_id}' exited with code {returncode}."
+                f"`agent-meow login` inside sandbox '{sandbox_id}' exited with code {returncode}."
             )
 
 
@@ -596,13 +596,13 @@ def _complete_browser_login(
 
 def set_sandbox_host_name(launcher: SandboxLauncher, sandbox_id: str, host_name: str) -> None:
     """
-    Update the sandbox's ``~/.omnigent/config.yaml`` to use a
+    Update the sandbox's ``~/.agent_meow/config.yaml`` to use a
     specific host name.
 
     The host's ``host_id`` is preserved across the edit — only the
     ``name`` field is rewritten. If config.yaml doesn't exist yet,
     a minimal one is created with a fresh host_id; the next
-    ``omnigent host`` will load that file as-is.
+    ``agent-meow host`` will load that file as-is.
 
     Implementation note: the edit runs as a Python one-liner inside
     the sandbox (instead of ``sed``) so it survives YAML quirks
@@ -613,13 +613,13 @@ def set_sandbox_host_name(launcher: SandboxLauncher, sandbox_id: str, host_name:
     :param host_name: New host name to write into config.yaml.
     :raises click.ClickException: If the remote command fails.
     """
-    click.echo(f"  → setting host name to '{host_name}' in ~/.omnigent/config.yaml")
+    click.echo(f"  → setting host name to '{host_name}' in ~/.agent_meow/config.yaml")
     # Quote the host name in single quotes for the python literal,
     # then escape any single quotes the user passed in.
     safe_name = host_name.replace("'", "\\'")
     py = (
         "import os, uuid, yaml; "
-        "p=os.path.expanduser('~/.omnigent/config.yaml'); "
+        "p=os.path.expanduser('~/.agent_meow/config.yaml'); "
         "os.makedirs(os.path.dirname(p), exist_ok=True); "
         "cfg=yaml.safe_load(open(p)) if os.path.exists(p) else {}; "
         "cfg=cfg or {}; "
@@ -639,20 +639,20 @@ def connect_sandbox_host(
     host_name: str | None = None,
 ) -> None:
     """
-    Register the sandbox as a host by running ``omnigent host`` in it.
+    Register the sandbox as a host by running ``agent-meow host`` in it.
 
     The remote command holds a WebSocket open until interrupted —
     Ctrl-C tears down the foreground transport and the remote process.
 
-    The remote command is always the bare ``omnigent host --server
-    <url>``: ``omnigent host`` no longer takes a ``--profile`` flag
+    The remote command is always the bare ``agent-meow host --server
+    <url>``: ``agent-meow host`` no longer takes a ``--profile`` flag
     — it resolves credentials itself, via a stored
-    ``omnigent login`` token or the sandbox's ambient Databricks
+    ``agent-meow login`` token or the sandbox's ambient Databricks
     credentials (e.g. the Lakebox image's baked workspace PAT, which
     authenticates to servers in the sandbox's own workspace).
 
     When *host_name* is set, the sandbox's
-    ``~/.omnigent/config.yaml`` is updated so the host registers
+    ``~/.agent_meow/config.yaml`` is updated so the host registers
     with that name instead of the default ``socket.gethostname()``.
     This matters for Lakebox sandboxes because all of them share the
     hostname ``databricks``, and the server's ``hosts`` table is
@@ -671,11 +671,11 @@ def connect_sandbox_host(
     click.echo(f"▸ Registering sandbox '{sandbox_id}' as a host with {server_url}")
     if host_name is not None:
         set_sandbox_host_name(launcher, sandbox_id, host_name)
-    click.echo("  → running `omnigent host` in the sandbox (Ctrl-C to detach)")
-    returncode = launcher.exec_foreground(sandbox_id, f"omnigent host --server {server_url}")
+    click.echo("  → running `agent-meow host` in the sandbox (Ctrl-C to detach)")
+    returncode = launcher.exec_foreground(sandbox_id, f"agent-meow host --server {server_url}")
     if returncode != 0:
         raise click.ClickException(
-            f"`omnigent host` on sandbox '{sandbox_id}' exited with code {returncode}."
+            f"`agent-meow host` on sandbox '{sandbox_id}' exited with code {returncode}."
         )
 
 
@@ -696,7 +696,7 @@ def bootstrap_sandbox_host(
     Run the full sandbox-host bootstrap end-to-end.
 
     Six steps: provider preflight → provision or attach sandbox →
-    keep-alive → build wheels → ship wheels → ``omnigent login``
+    keep-alive → build wheels → ship wheels → ``agent-meow login``
     inside the sandbox.
 
     :param launcher: The provider's launcher.
@@ -709,7 +709,7 @@ def bootstrap_sandbox_host(
     :param workspace: The workspace fronting *server_url*, from
         :func:`derive_workspace` (the CLI derives once per command).
         ``None`` when the server is not Databricks-fronted.
-    :param repo_root: Path to the omnigent repo checkout.
+    :param repo_root: Path to the agent-meow repo checkout.
     :param skip_auth: When ``True``, skip the in-sandbox login.
     :returns: The sandbox id (the one we created or attached to).
     :raises click.ClickException: Propagated from any failing step.

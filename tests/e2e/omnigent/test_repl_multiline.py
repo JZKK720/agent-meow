@@ -56,7 +56,7 @@ def test_repl_multiline_ctrl_j_insert(
 
     Uses the mock LLM server for deterministic responses.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         openai-agents installed.
     :param omnigent_repo_root: Working directory for the
         subprocess.

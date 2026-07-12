@@ -101,10 +101,10 @@ def test_conversation_link_for_id_maps_workspace_hosted_server_to_ui_mount(
     Workspace-hosted runners link to the SPA mount, not the API mount.
 
     The runner threads ``RUNNER_SERVER_URL`` — the API proxy base
-    (``/api/2.0/omnigent``) — into the registry. A naive
+    (``/api/2.0/agent-meow``) — into the registry. A naive
     ``{base}/c/<id>`` would put the JSON API path in the tmux status
-    bar; the link must instead land on the ``/omnigent`` SPA mount and
-    carry the ``?o=<org>`` selector ``omnigent login`` recorded, exactly
+    bar; the link must instead land on the ``/agent-meow`` SPA mount and
+    carry the ``?o=<org>`` selector ``agent-meow login`` recorded, exactly
     like the CLI's ``Web UI:`` line. Pins parity with
     :func:`~?agent_meow.conversation_browser.conversation_url`.
 
@@ -117,7 +117,7 @@ def test_conversation_link_for_id_maps_workspace_hosted_server_to_ui_mount(
         "agent_meow.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
-    server = "https://example.databricks.com/api/2.0/omnigent"
+    server = "https://example.databricks.com/api/2.0/agent-meow"
     store_databricks_auth(
         server,
         "https://example.databricks.com",
@@ -126,7 +126,7 @@ def test_conversation_link_for_id_maps_workspace_hosted_server_to_ui_mount(
 
     assert (
         conversation_link_for_id("conv_abc123", base_url=server)
-        == "https://example.databricks.com/omnigent/c/conv_abc123?o=2850744067564480"
+        == "https://example.databricks.com/agent_meow/c/conv_abc123?o=2850744067564480"
     )
 
 

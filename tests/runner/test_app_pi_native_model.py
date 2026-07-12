@@ -174,7 +174,7 @@ async def test_auto_create_pi_terminal_threads_spec_model_into_models_json(
         spec_version=1,
         name="pi-model-e2e",
         executor=ExecutorSpec(
-            type="omnigent",
+            type="agent-meow",
             config={"harness": "pi-native"},
             model="claude-opus-4-7",
         ),
@@ -200,7 +200,7 @@ async def test_auto_create_pi_terminal_threads_spec_model_into_models_json(
     # The managed config dir env was set and its models.json selects the override.
     agent_dir = Path(launched["env"]["PI_CODING_AGENT_DIR"])
     models = json.loads((agent_dir / "models.json").read_text(encoding="utf-8"))
-    assert models["providers"]["omnigent"]["models"] == [{"id": "claude-opus-4-7"}]
+    assert models["providers"]["agent-meow"]["models"] == [{"id": "claude-opus-4-7"}]
 
 
 @pytest.mark.asyncio
@@ -280,7 +280,7 @@ async def test_auto_create_pi_terminal_no_spec_model_uses_provider_default(
     spec = AgentSpec(
         spec_version=1,
         name="pi-default",
-        executor=ExecutorSpec(type="omnigent", config={"harness": "pi-native"}),
+        executor=ExecutorSpec(type="agent-meow", config={"harness": "pi-native"}),
     )
 
     await _auto_create_pi_terminal(
@@ -294,4 +294,4 @@ async def test_auto_create_pi_terminal_no_spec_model_uses_provider_default(
     assert captured["model"] is None
     agent_dir = Path(launched["env"]["PI_CODING_AGENT_DIR"])
     models = json.loads((agent_dir / "models.json").read_text(encoding="utf-8"))
-    assert models["providers"]["omnigent"]["models"] == [{"id": "claude-sonnet-4-6"}]
+    assert models["providers"]["agent-meow"]["models"] == [{"id": "claude-sonnet-4-6"}]

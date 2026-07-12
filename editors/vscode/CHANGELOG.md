@@ -10,7 +10,7 @@ server.
 - Open a running local agent-meow server in an editor-beside panel.
 - **agent-meow: Open** command, available from the editor-title bar and the
 command palette, plus an activity-bar view with an "Open agent-meow" button.
-- Automatically discovers a local server via `~/.omnigent/local_server.pid`, or
-point the extension at one with the `omnigent.serverUrl` setting. Localhost
+- Automatically discovers a local server via `~/.agent_meow/local_server.pid`, or
+point the extension at one with the `agent_meow.serverUrl` setting. Localhost
 servers only in this build.
 

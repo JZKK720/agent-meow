@@ -3,7 +3,7 @@ Python policies for the `policies-demo` fixture agent.
 
 Ports relevant callables from agent_meow
 `examples/tool_functions.py` into a location importable by the
-omnigent parser (dotted path `tests._fixtures.agents.*`).
+agent-meow parser (dotted path `tests._fixtures.agents.*`).
 
 All callables follow the Service Policies V0 contract:
 ``fn(event) -> {"result": ..., "reason": ...}``.

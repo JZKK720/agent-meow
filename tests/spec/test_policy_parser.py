@@ -206,7 +206,7 @@ def test_parse_function_policy_handler_alias() -> None:
     """`handler:` is accepted as an alias for `function:`.
 
     The proto/service-policies convention uses ``handler:`` while
-    the original omnigent YAML uses ``function:``. Both must
+    the original agent-meow YAML uses ``function:``. Both must
     resolve to the same :class:`FunctionPolicySpec`.
     """
     spec = _parse_guardrails(

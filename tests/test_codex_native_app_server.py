@@ -339,7 +339,7 @@ async def test_start_upserts_mcp_server_config_across_relaunches(
 [projects."/repo"]
 trust_level = "trusted"
 
-[mcp_servers.omnigent] # stale generated table
+[mcp_servers.agent-meow] # stale generated table
 command = "/old/python"
 args = ["old"]
 
@@ -369,11 +369,11 @@ args = []
     config_path = codex_home / "config.toml"
     assert not config_path.is_symlink()
     rendered = config_path.read_text(encoding="utf-8")
-    assert rendered.count("[mcp_servers.omnigent]") == 1
+    assert rendered.count("[mcp_servers.agent-meow]") == 1
     assert "[mcp_servers.agent_meow.env]" not in rendered
     parsed = tomllib.loads(rendered)
     assert parsed["mcp_servers"]["other"]["command"] == "other"
-    assert parsed["mcp_servers"]["omnigent"] == {
+    assert parsed["mcp_servers"]["agent-meow"] == {
         "command": "/new/python",
         "args": [
             "-I",
@@ -410,9 +410,9 @@ async def test_start_writes_fresh_mcp_config_without_leading_blanks(
     await server.close()
 
     rendered = (codex_home / "config.toml").read_text(encoding="utf-8")
-    assert rendered.startswith("[mcp_servers.omnigent]\n")
+    assert rendered.startswith("[mcp_servers.agent-meow]\n")
     parsed = tomllib.loads(rendered)
-    assert parsed["mcp_servers"]["omnigent"] == {
+    assert parsed["mcp_servers"]["agent-meow"] == {
         "command": "/new/python",
         "args": [
             "-I",

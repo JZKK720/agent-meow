@@ -14,7 +14,7 @@ things genuinely diverge, and they are the entire reason this is a separate
 driver:
 
 1. **Provisioning** — instead of registering an agent tarball, a native
-   harness needs a **host daemon** (``omnigent host``) registered with the
+   harness needs a **host daemon** (``agent-meow host``) registered with the
    server, the auto-registered ``<harness>-native-ui`` agent, and a session
    created with ``{agent_id, host_id, workspace}``. The runner then launches
    the vendor CLI in tmux itself.

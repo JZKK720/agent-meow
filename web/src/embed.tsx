@@ -9,7 +9,7 @@
 //
 // The embed:
 //   - injects the host transport config (API fetcher + WebSocket URL),
-//   - tags a root element with `.omnigent-app` so the scoped stylesheet
+//   - tags a root element with `.agent-meow-app` so the scoped stylesheet
 //     applies and Radix overlays portal back into this subtree,
 //   - applies the host-provided color scheme (`isDarkMode`): the embed is not
 //     user-toggleable (the theme switcher is hidden via `useIsEmbedded`); the
@@ -66,7 +66,7 @@ const queryClient = new QueryClient({
 
 export interface OmnigentAppProps extends OmnigentHostConfig {
   /**
-   * Router basename, e.g. `/ml/omnigent-embed`. web's routes + navigation
+   * Router basename, e.g. `/ml/agent-meow-embed`. web's routes + navigation
    * use absolute paths (`/`, `/c/:conversationId`), so the app must be nested
    * under the host mount path.
    *
@@ -94,7 +94,7 @@ export interface OmnigentAppProps extends OmnigentHostConfig {
  * already be present — the host (universe) supplies it; the embed renders in
  * the host's same React tree (shared react-router). The embed brings its OWN
  * `<QueryClientProvider>` (react-query is bundled, not shared). Self-contained
- * for styling: renders its own `.omnigent-app` scope wrapper and registers it
+ * for styling: renders its own `.agent-meow-app` scope wrapper and registers it
  * as the Radix portal root, so the host only renders this — no class/portal
  * wiring needed.
  */
@@ -121,7 +121,7 @@ const SERVER_INFO_OFFLINE_FALLBACK: ServerInfo = {
  *
  * WITHOUT this provider, `useServerInfo()` returns the context default
  * (`"loading"`) forever, so `App` hits its `if (info === "loading") return
- * null` guard and the embed renders a permanently blank `.omnigent-app` div.
+ * null` guard and the embed renders a permanently blank `.agent-meow-app` div.
  */
 function EmbedCapabilitiesProvider({ children }: { children: ReactNode }) {
   const [info, setInfo] = useState<ServerInfo | "loading">("loading");
@@ -166,7 +166,7 @@ function OmnigentProviders({
 
   // Register the theme wrapper as the Radix portal container so overlays land
   // inside the themed subtree (and clear it on unmount). It's the inner div —
-  // not the `.omnigent-app` scope root — so portaled overlays inherit the
+  // not the `.agent-meow-app` scope root — so portaled overlays inherit the
   // `.dark` token overrides too.
   const scopeRef = useCallback((el: HTMLDivElement | null) => {
     setEmbedRoot(el);
@@ -174,15 +174,15 @@ function OmnigentProviders({
 
   return (
     // Two nested wrappers on purpose:
-    //   - `.omnigent-app` (outer) is the scope anchor. The scoped stylesheet
-    //     rewrites `:root` → `.omnigent-app` (light tokens) and `.dark` →
-    //     `.omnigent-app .dark`, so the dark class must be a DESCENDANT of the
+    //   - `.agent-meow-app` (outer) is the scope anchor. The scoped stylesheet
+    //     rewrites `:root` → `.agent-meow-app` (light tokens) and `.dark` →
+    //     `.agent-meow-app .dark`, so the dark class must be a DESCENDANT of the
     //     scope root, not the root itself.
     //   - the inner div carries the host-driven `dark` class (when dark) and is
     //     the Radix portal root, so both the app and its overlays read the dark
     //     token overrides. Light mode = no class → inherits the scope root's
     //     light tokens.
-    <div className="omnigent-app" style={{ height: "100%", width: "100%" }}>
+    <div className="agent-meow-app" style={{ height: "100%", width: "100%" }}>
       <div
         ref={scopeRef}
         className={isDarkMode ? "dark" : undefined}
@@ -195,7 +195,7 @@ function OmnigentProviders({
               `enableColorScheme={false}` keep it from mutating the host's
               `<html>` class or `color-scheme`. */}
           <NextThemesProvider
-            attribute="data-omnigent-theme"
+            attribute="data-agent-meow-theme"
             forcedTheme={isDarkMode ? "dark" : "light"}
             enableColorScheme={false}
             disableTransitionOnChange

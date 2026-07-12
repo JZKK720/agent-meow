@@ -9,7 +9,7 @@ actionable error instead of dying inside the executor).
 can reliably determine locally is whether a harness's wrapped CLI binary
 is on ``PATH``. That gates the native CLI harnesses (Claude Code / Codex
 via ``claude`` / ``codex``) and ``pi`` — the common "I picked Claude Code
-but never ran ``omnigent setup`` to install it" case.
+but never ran ``agent-meow setup`` to install it" case.
 
 In-process SDK harnesses (``claude-sdk``, ``openai-agents``) run without
 any CLI and resolve their model credentials at runtime from sources the
@@ -113,7 +113,7 @@ _KIRO_NATIVE_HARNESSES: frozenset[str] = frozenset({"kiro-native", "native-kiro"
 # there is no SDK variant or key to gate on.
 _GOOSE_NATIVE_HARNESSES: frozenset[str] = frozenset({"goose-native", "native-goose"})
 
-# Native Kimi TUI harnesses (``omnigent kimi``). Like the other native CLIs,
+# Native Kimi TUI harnesses (``agent-meow kimi``). Like the other native CLIs,
 # they wrap the resident ``kimi`` binary and can't launch without it on
 # ``PATH`` — gate on it. Distinct from the bare ``kimi`` SDK surface
 # (:data:`KIMI_SURFACE`), which gates on the same binary but renders headlessly.
@@ -219,7 +219,7 @@ def harness_is_configured(harness: str) -> bool:
         # Cursor runs in-process via ``cursor-sdk`` and authenticates with a
         # ``CURSOR_API_KEY`` (a ``cursor-agent login`` does not apply). So,
         # unlike the CLI-wrapping harnesses, there is no binary to gate on:
-        # readiness is whether a key is resolvable — stored by ``omnigent setup``
+        # readiness is whether a key is resolvable — stored by ``agent-meow setup``
         # (the ``cursor:`` block — see :mod:`~?agent_meow.onboarding.cursor_auth`)
         # or inherited from the env. A bad key surfaces at run time.
         #
@@ -237,7 +237,7 @@ def harness_is_configured(harness: str) -> bool:
         # SDK bundles the CLI binary it drives, so there is no separate binary to
         # gate on) and authenticates against GitHub's Copilot backend with a
         # GitHub token. So, like cursor, readiness is whether a token is
-        # resolvable — one stored by ``omnigent setup`` (the ``copilot:`` config
+        # resolvable — one stored by ``agent-meow setup`` (the ``copilot:`` config
         # block — see :mod:`~?agent_meow.onboarding.copilot_auth`) or inherited from
         # the environment. A bad / Copilot-less token surfaces at run time.
         from agent_meow.onboarding.copilot_auth import (

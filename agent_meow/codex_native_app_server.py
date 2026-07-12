@@ -93,7 +93,7 @@ _MIN_POLICY_HOOK_CODEX_VERSION = (0, 129, 0)
 # already routes the override today, so the explicit flag is a parallel,
 # additive path the operator turns on per deployment. Truthy values mirror
 # the ``_TRUE_VALUES`` convention used across the codebase
-# (``omnigent/_startup_profile.py``, ``omnigent/cli.py``).
+# (``agent_meow/_startup_profile.py``, ``agent_meow/cli.py``).
 _MODEL_FLAG_ENV_VAR = "OMNIGENT_CODEX_NATIVE_MODEL_FLAG"
 _MODEL_FLAG_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
 # Timeout for the one-shot ``codex --help`` capability probe. Matches the
@@ -190,8 +190,8 @@ def _toml_table_header_name(line: str) -> str | None:
     left untouched.
 
     :param line: One config line, e.g.
-        ``"[mcp_servers.omnigent] # generated\n"``.
-    :returns: The table name, e.g. ``"mcp_servers.omnigent"``, or
+        ``"[mcp_servers.agent-meow] # generated\n"``.
+    :returns: The table name, e.g. ``"mcp_servers.agent-meow"``, or
         ``None`` when *line* is not a normal table header.
     """
     stripped = line.strip()
@@ -214,11 +214,11 @@ def _remove_toml_table(text: str, table_name: str) -> str:
 
     Used for generated private Codex config before appending the
     agent-meow MCP server table. This avoids accumulating duplicate
-    ``[mcp_servers.omnigent]`` sections across terminal relaunches.
+    ``[mcp_servers.agent-meow]`` sections across terminal relaunches.
 
     :param text: TOML document text.
     :param table_name: Table name to remove, e.g.
-        ``"mcp_servers.omnigent"``.
+        ``"mcp_servers.agent-meow"``.
     :returns: TOML text with the target table block removed.
     """
     kept: list[str] = []
@@ -244,7 +244,7 @@ def _codex_mcp_server_config_section(
     :param python_executable: Python executable for serve-mcp, e.g.
         ``"/path/to/.venv/bin/python"``. ``None`` uses
         :data:`sys.executable`.
-    :returns: TOML text for ``[mcp_servers.omnigent]``.
+    :returns: TOML text for ``[mcp_servers.agent-meow]``.
     """
     python = python_executable or sys.executable
     args = [
@@ -256,7 +256,7 @@ def _codex_mcp_server_config_section(
         str(bridge_dir),
     ]
     args_toml = ", ".join(json.dumps(a) for a in args)
-    return f"[mcp_servers.omnigent]\ncommand = {json.dumps(python)}\nargs = [{args_toml}]\n"
+    return f"[mcp_servers.agent-meow]\ncommand = {json.dumps(python)}\nargs = [{args_toml}]\n"
 
 
 def _pin_codex_config_model(codex_home: Path, model: str) -> None:
@@ -309,7 +309,7 @@ def _inject_mcp_server_config(
     """
     Upsert agent-meow MCP server config into ``config.toml``.
 
-    Writes a ``[mcp_servers.omnigent]`` section that points Codex
+    Writes a ``[mcp_servers.agent-meow]`` section that points Codex
     at the ``serve-mcp`` subprocess. This supplements the ``-c``
     overrides (which ``codex app-server`` may not honor) by writing
     directly to the config file. The write is idempotent so terminal
@@ -336,7 +336,7 @@ def _inject_mcp_server_config(
         existing = config_path.read_text(encoding="utf-8")
     else:
         existing = ""
-    updated = _remove_toml_table(existing, "mcp_servers.omnigent")
+    updated = _remove_toml_table(existing, "mcp_servers.agent-meow")
     section = _codex_mcp_server_config_section(bridge_dir, python_executable)
     rendered = f"{updated}\n\n{section}" if updated else section
     config_path.write_text(rendered, encoding="utf-8")
@@ -361,7 +361,7 @@ class CodexAppServerClient:
         socket_path: Path | None = None,
         *,
         ws_url: str | None = None,
-        client_name: str = "omnigent",
+        client_name: str = "agent-meow",
     ) -> None:
         if socket_path is None and ws_url is None:
             raise ValueError("CodexAppServerClient requires socket_path or ws_url")
@@ -543,7 +543,7 @@ class CodexNativeAppServer:
     :param config_overrides: Codex ``-c`` config override values.
     :param cwd: Working directory for the app-server process.
     :param bridge_dir: Native Codex bridge directory, e.g.
-        ``Path("~/.omnigent/codex-native/<hash>")``. The policy hook
+        ``Path("~/.agent_meow/codex-native/<hash>")``. The policy hook
         subprocess is pointed at it via ``--bridge-dir`` and reads the
         session id + agent-meow coordinates from it.
     :param ap_server_url: agent-meow server base URL the policy hook POSTs tool
@@ -657,11 +657,11 @@ class CodexNativeAppServer:
         # flag simply doesn't get it (passing an unknown flag would error) --
         # the config.toml pin remains the primary route, so the session still
         # launches on the right model regardless.
-        # Read the opt-in from the omnigent server's OWN process environment
+        # Read the opt-in from the agent-meow server's OWN process environment
         # (``os.environ``, the default), NOT ``self.env``: ``self.env`` is the
         # cleaned codex spawn env from ``_clean_codex_env``, whose prefix
         # allowlist strips ``OMNIGENT_*`` keys -- so the flag would never be
-        # visible there. The flag is an operator knob for omnigent, not
+        # visible there. The flag is an operator knob for agent-meow, not
         # something codex itself consumes.
         model_global_args: list[str] = []
         if (
@@ -935,7 +935,7 @@ def _codex_policy_hook_command(bridge_dir: Path, python_executable: str | None) 
         ``"/path/to/python"``. ``None`` uses :data:`sys.executable`.
     :returns: A shell-escaped command string, e.g.
         ``"/path/python -m agent_meow.codex_native_hook evaluate-policy
-        --bridge-dir /home/u/.omnigent/codex-native/abc"``.
+        --bridge-dir /home/u/.agent_meow/codex-native/abc"``.
     """
     python = python_executable or sys.executable
     return shlex.join(
@@ -1515,8 +1515,8 @@ def resolve_native_codex_launch(*, model: str | None) -> NativeCodexLaunch:
 
     Mirrors the in-process codex harness routing precedence
     (:func:`~?agent_meow.runtime.workflow._resolve_provider_for_build`) for the
-    ``openai`` surface, so ``omnigent codex`` and a host-spawned native
-    Codex session route through ``omnigent setup``:
+    ``openai`` surface, so ``agent-meow codex`` and a host-spawned native
+    Codex session route through ``agent-meow setup``:
 
     1. an explicit per-family default provider →
        - ``key`` / ``gateway`` / ``local`` → provider ``-c`` overrides
@@ -1531,7 +1531,7 @@ def resolve_native_codex_launch(*, model: str | None) -> NativeCodexLaunch:
     3. else an ambient-detected provider (first run without configure);
     4. else the codex CLI's own login.
 
-    Credentials are controlled exclusively by ``omnigent setup``
+    Credentials are controlled exclusively by ``agent-meow setup``
     provider config (or the legacy global ``auth:`` block) — there is
     no CLI/env profile override.
 
@@ -1574,7 +1574,7 @@ def resolve_native_codex_launch(*, model: str | None) -> NativeCodexLaunch:
     if entry is None:
         _logger.info(
             "native-codex routing: Codex CLI login (no provider configured for the Codex "
-            "harness, no Databricks profile). Run `omnigent setup --no-internal-beta` to route "
+            "harness, no Databricks profile). Run `agent-meow setup --no-internal-beta` to route "
             "through a provider."
         )
         return NativeCodexLaunch(config_overrides=no_provider_overrides, model=model, profile=None)
@@ -1601,7 +1601,7 @@ def resolve_native_codex_launch(*, model: str | None) -> NativeCodexLaunch:
 def client_for_transport(
     transport: str,
     *,
-    client_name: str = "omnigent",
+    client_name: str = "agent-meow",
 ) -> CodexAppServerClient:
     """
     Build an app-server client for a persisted transport string.
@@ -1619,7 +1619,7 @@ def client_for_transport(
 
     :param transport: App-server transport from bridge state, e.g.
         ``"ws://127.0.0.1:9876"`` or
-        ``"/home/u/.omnigent/codex-native/x/app-server.sock"``.
+        ``"/home/u/.agent_meow/codex-native/x/app-server.sock"``.
     :param client_name: App-server initialize-handshake client name,
         e.g. ``"omnigent-codex-native"``.
     :returns: A client configured for the transport (not yet connected).
@@ -1796,7 +1796,7 @@ def build_codex_remote_args(
         ``None`` starts a fresh remote Codex TUI thread instead of
         resuming an existing one.
     :param remote_url: App-server endpoint the TUI attaches to, e.g.
-        ``"unix:///home/user/.omnigent/codex-native/x/app-server.sock"``
+        ``"unix:///home/user/.agent_meow/codex-native/x/app-server.sock"``
         or ``"ws://127.0.0.1:9876"``.
     :param config_overrides: Codex ``-c`` config override values to apply
         to the TUI, e.g.

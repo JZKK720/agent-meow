@@ -311,7 +311,7 @@ def test_write_policy_hook_config_creates_expected_files(tmp_path) -> None:
     assert allowlist["approvals"][0]["command"] == str(wrapper)
 
     # MCP server registered.
-    mcp = config["mcp_servers"]["omnigent"]
+    mcp = config["mcp_servers"]["agent-meow"]
     assert mcp["command"] == sys.executable
     assert "serve-mcp" in mcp["args"]
     assert "--bridge-dir" in mcp["args"]

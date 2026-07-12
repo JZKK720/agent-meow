@@ -14,16 +14,16 @@ before the workflow wiring lands — if a production agent
 declared any of the three fixture YAMLs, it would behave
 exactly as asserted here.
 
-Fixture parity with omnigent example YAMLs:
+Fixture parity with agent-meow example YAMLs:
 
 - ``tests/_fixtures/agents/policies-demo/`` ↔
-  ``omnigent/examples/agent_with_policies.yaml``
+  ``agent_meow/examples/agent_with_policies.yaml``
 - ``tests/_fixtures/agents/rate-limited-search/`` ↔
-  ``omnigent/examples/rate_limited_search_agent.yaml``
+  ``agent_meow/examples/rate_limited_search_agent.yaml``
 - ``tests/_fixtures/agents/secure-research/`` ↔
-  ``omnigent/examples/secure_research_agent.yaml``
+  ``agent_meow/examples/secure_research_agent.yaml``
 
-Corresponding omnigent test cases ported:
+Corresponding agent-meow test cases ported:
 - ``test_label_examples.py::test_first_db_query_allowed_but_escalates``
 - ``test_label_examples.py::test_second_db_query_requires_ask``
 - ``test_label_examples.py::test_full_pipeline_happy_path``
@@ -104,7 +104,7 @@ async def test_policies_demo_allows_short_sleep(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """Sleep with a short duration passes through the
-    FunctionPolicy. Mirrors the omnigent "Allowed" usage
+    FunctionPolicy. Mirrors the agent-meow "Allowed" usage
     example at the top of agent_with_policies.yaml."""
     engine = _load_engine("policies-demo", conversation_store)
     result = await _enforce_policy(
@@ -119,7 +119,7 @@ async def test_policies_demo_denies_long_sleep(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """Sleep over the threshold blocks. Mirrors the
-    omnigent "Blocked tool call" example at the top of
+    agent-meow "Blocked tool call" example at the top of
     agent_with_policies.yaml."""
     engine = _load_engine("policies-demo", conversation_store)
     result = await _enforce_policy(
@@ -185,7 +185,7 @@ async def test_policies_demo_initial_label_seeded(
 async def test_rate_limited_search_first_three_allowed(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Ports omnigent ``test_first_db_query_allowed_but_escalates``
+    """Ports agent-meow ``test_first_db_query_allowed_but_escalates``
     semantics. The first N calls pass; calls beyond the budget
     ASK for approval (not DENY — lets the user extend the run
     interactively)."""
@@ -208,7 +208,7 @@ async def test_rate_limited_search_first_three_allowed(
 async def test_rate_limited_search_fourth_asks(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Ports omnigent ``test_second_db_query_requires_ask``
+    """Ports agent-meow ``test_second_db_query_requires_ask``
     for our budget=3 policy: the 4th call crosses the budget
     and the FunctionPolicy returns ASK."""
     engine = _load_engine("rate-limited-search", conversation_store)
@@ -271,7 +271,7 @@ async def test_secure_research_initial_labels_seeded(
 async def test_secure_research_clean_agent_allows_shell(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Ports omnigent ``test_clean_agent_calls_freely``. An
+    """Ports agent-meow ``test_clean_agent_calls_freely``. An
     agent that has not touched web_search or confidential
     reads can run shell commands unconditionally."""
     engine = _load_engine("secure-research", conversation_store)
@@ -290,7 +290,7 @@ async def test_secure_research_web_then_shell_asks(
 ) -> None:
     """Web search taints integrity → subsequent shell is
     ASK (low-integrity enforcement). Ports a happy-path slice
-    of omnigent ``test_full_pipeline_happy_path``."""
+    of agent-meow ``test_full_pipeline_happy_path``."""
     engine = _load_engine("secure-research", conversation_store)
 
     # web_search: ALLOW + integrity→0.
@@ -341,7 +341,7 @@ async def test_secure_research_doc_then_shell_asks(
 async def test_secure_research_both_taints_deny_shell(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Ports omnigent
+    """Ports agent-meow
     ``test_indirect_pii_plus_external_asks_on_write`` shape
     for our labels. When BOTH integrity and confidentiality
     are tainted, the stricter DENY policy fires (first in

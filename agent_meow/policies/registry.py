@@ -171,7 +171,7 @@ def is_registered_handler(handler: str) -> bool:
     ``/v1/policies``) and the agent-bundle upload path
     (:func:`~?agent_meow.server.bundles.validate_agent_bundle`, which scans
     parsed specs / raw bundle YAML before any handler is resolved or
-    called). Trusted spec loading (local ``omnigent run``, operator
+    called). Trusted spec loading (local ``agent-meow run``, operator
     configs) deliberately does not run this check, so it keeps
     supporting custom handlers.
 

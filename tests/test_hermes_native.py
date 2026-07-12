@@ -216,7 +216,7 @@ async def test_create_hermes_session_returns_id_or_raises() -> None:
 
 
 async def test_fetch_hermes_session_handles_status() -> None:
-    payload = {"labels": {"omnigent.wrapper": "hermes-native-ui"}}
+    payload = {"labels": {"agent_meow.wrapper": "hermes-native-ui"}}
     assert (
         await hn._fetch_hermes_session(_FakeAsyncClient(_FakeResp(200, payload)), "c") == payload
     )

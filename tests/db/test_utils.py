@@ -1,4 +1,4 @@
-"""Tests for database engine pool configuration (omnigent/db/utils.py)."""
+"""Tests for database engine pool configuration (agent_meow/db/utils.py)."""
 
 from __future__ import annotations
 
@@ -420,7 +420,7 @@ def test_initialize_or_verify_schema_reports_manual_retry_when_auto_migration_fa
     """
     If automatic migration fails, startup still terminates, but with
     an actionable message that includes the stale revision, expected
-    head, DB URL, and manual ``omnigent debug db-upgrade`` retry command.
+    head, DB URL, and manual ``agent-meow debug db-upgrade`` retry command.
     """
     db_path = tmp_path / "stale_failure.db"
     stale_revision = "8a4f1e9c2b07"
@@ -448,7 +448,7 @@ def test_initialize_or_verify_schema_reports_manual_retry_when_auto_migration_fa
     assert head in msg, (
         f"Error message must include the expected head so the operator knows the gap. Got: {msg!r}"
     )
-    assert "omnigent debug db-upgrade" in msg, (
+    assert "agent-meow debug db-upgrade" in msg, (
         f"Error message must include the literal upgrade command "
         f"the operator can run manually. Got: {msg!r}"
     )

@@ -1,7 +1,7 @@
 """
 REPL approval-flow e2e test.
 
-Spawns ``omnigent chat examples/agents/ask-demo/`` as a subprocess
+Spawns ``agent-meow chat examples/agents/ask-demo/`` as a subprocess
 under a pseudo-TTY (pexpect), feeds real input, and asserts
 the agent responds after the user approves a policy ASK.
 This exercises the full Phase 10 path — prompt_toolkit's
@@ -61,13 +61,13 @@ _OUTPUT_GATE_DIR = _FIXTURES_DIR / "e2e-output-gate"
 _TOOL_RESULT_GATE_DIR = _FIXTURES_DIR / "e2e-tool-result-gate"
 _SUBAGENT_TOOL_GATE_DIR = _FIXTURES_DIR / "e2e-subagent-tool-gate"
 
-# Seconds to wait for ``omnigent run`` to reach an input-ready REPL —
+# Seconds to wait for ``agent-meow run`` to reach an input-ready REPL —
 # the LAUNCH phase only (daemon spawn, local-server boot, agent upload,
 # runner bring-up, session attach, wrapper-redirect probe).
 #
 # This MUST exceed the CLI's own internal cold-start budget, which is
 # sequential on the critical path of every launch
-# (``_prepare_chat_session_via_daemon`` in omnigent/chat.py):
+# (``_prepare_chat_session_via_daemon`` in agent_meow/chat.py):
 #
 #   wait_for_host_online           up to 30s  (_DAEMON_CHAT_HOST_ONLINE_TIMEOUT_S)
 #   launch_or_reuse_daemon_runner  ~16.5s     (transient-409 host-reconnect retry)
@@ -151,18 +151,18 @@ def repl_env(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> dict[str, str]:
     """
-    Build the env dict for ``omnigent chat`` — OPENAI_API_KEY plus
+    Build the env dict for ``agent-meow chat`` — OPENAI_API_KEY plus
     whatever PYTHONPATH the outer shell already provides (so
-    ``omnigent`` + ``omnigent_client`` resolve to this
+    ``agent-meow`` + ``omnigent_client`` resolve to this
     worktree, not the sibling editable install).
 
     Redirects ``HOME`` to a temp dir seeded with
-    ``.omnigent/config.yaml`` so the spawned interactive REPL starts
+    ``.agent_meow/config.yaml`` so the spawned interactive REPL starts
     cleanly under pexpect:
 
     - ``tui.theme`` is persisted, so the REPL's first-launch theme
       picker (``_repl._load_startup_theme`` → ``startup_theme_picker``,
-      which reads ``$HOME/.omnigent/config.yaml`` — NOT
+      which reads ``$HOME/.agent_meow/config.yaml`` — NOT
       ``OMNIGENT_CONFIG_HOME``) is skipped. Under pexpect's pty stdin
       is a tty, so without a persisted theme the arrow-key picker blocks
       and the welcome banner never appears (the CI failure, where
@@ -190,7 +190,7 @@ def repl_env(
     """
     real_databrickscfg = Path.home() / ".databrickscfg"
     fake_home = tmp_path_factory.mktemp("repl_home")
-    config_home = fake_home / ".omnigent"
+    config_home = fake_home / ".agent-meow"
     config_home.mkdir(parents=True, exist_ok=True)
     (config_home / "config.yaml").write_text(
         "auto_open_conversation: false\ntui:\n  theme: dark\n"
@@ -282,19 +282,19 @@ def _configure_mock_tool_then_text(
 def _require_omnigent_cli() -> str:
     """
     Resolve the CLI path. Prefers the framework's own
-    ``omnigent`` binary (via the running pytest interpreter's
+    ``agent-meow`` binary (via the running pytest interpreter's
     venv) over a sibling ``ap`` binary on PATH — the legacy
-    ``omnigent`` ``ap`` CLI doesn't understand
+    ``agent-meow`` ``ap`` CLI doesn't understand
     agent-meow-format fixtures.
 
     :returns: Absolute path to an executable.
     """
-    venv_omnigent = Path(sys.executable).parent / "omnigent"
+    venv_omnigent = Path(sys.executable).parent / "agent-meow"
     if venv_agent_meow.exists():
         return str(venv_omnigent)
-    path = shutil.which("omnigent") or shutil.which("ap")
+    path = shutil.which("agent-meow") or shutil.which("ap")
     if path is None:
-        pytest.skip("Neither omnigent nor omnigent CLI on PATH")
+        pytest.skip("Neither agent-meow nor agent-meow CLI on PATH")
     return path
 
 
@@ -312,7 +312,7 @@ def _wait_for_prompt_ready(
     """
     Wait until the REPL is ready for input.
 
-    ``omnigent chat <path>`` starts a local server, waits for
+    ``agent-meow chat <path>`` starts a local server, waits for
     health, then launches the REPL. The welcome block
     (TimedFormatter renders the agent name with dashes →
     spaces) renders BEFORE prompt_toolkit's input loop is

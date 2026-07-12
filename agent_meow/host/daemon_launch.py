@@ -159,7 +159,7 @@ async def wait_for_runner_online(
     message = f"Runner {runner_id!r} did not connect within {timeout_s:.0f}s."
     if last_error is not None:
         message += f" Last connection error: {last_error!r}."
-    message += " Check the host-runner logs under ~/.omnigent/logs/host-runner/."
+    message += " Check the host-runner logs under ~/.agent_meow/logs/host-runner/."
     raise click.ClickException(message)
 
 
@@ -199,7 +199,7 @@ async def launch_or_reuse_daemon_runner(
             json={"runner_id": ""},
         )
     # The host tunnel can be briefly absent from the server's in-memory
-    # registry while it (re)connects — e.g. just after `omnigent host`
+    # registry while it (re)connects — e.g. just after `agent-meow host`
     # restarts, after a server restart/redeploy, or under a flapping tunnel.
     # During that window the launch 409s "host is offline" even though the
     # host is online per the cross-replica DB, and the whole session start

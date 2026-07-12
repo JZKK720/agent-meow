@@ -1,7 +1,7 @@
 # Kiro-native Elicitation
 
 **Status:** implemented for one-time tool approvals observed on Kiro CLI 2.8.1.
-**Code:** `omnigent/kiro_native_permissions.py`, `omnigent/kiro_native_bridge.py`, runner wiring in `omnigent/runner/app.py`.
+**Code:** `agent_meow/kiro_native_permissions.py`, `agent_meow/kiro_native_bridge.py`, runner wiring in `agent_meow/runner/app.py`.
 
 ## Behavior
 
@@ -24,7 +24,7 @@ Not surfaced today:
 
 Kiro's persisted CLI session JSONL under `~/.kiro/sessions/cli` mirrors transcript records, but during the characterization probe it did not contain pending permission records. It contained conversation/tool-result records such as `Prompt`, `AssistantMessage`, and `ToolResults`.
 
-The usable permission signal is Kiro's TUI ACP recorder. The runner sets `KIRO_ACP_RECORD_PATH` to a per-session file under the Kiro bridge directory, then `omnigent/kiro_native_permissions.py` tails that JSONL file. The observed record wrapper is:
+The usable permission signal is Kiro's TUI ACP recorder. The runner sets `KIRO_ACP_RECORD_PATH` to a per-session file under the Kiro bridge directory, then `agent_meow/kiro_native_permissions.py` tails that JSONL file. The observed record wrapper is:
 
 ```json
 {"dir":"out","msg":"{...json-rpc message...}","ts":"..."}

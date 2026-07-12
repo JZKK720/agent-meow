@@ -1,13 +1,13 @@
 """Translate the omnigent-configured model provider into native Pi config.
 
 A native Pi session launches the ``pi`` CLI, which authenticates from its own
-config directory (``~/.pi/agent``). Without help, a user who ran ``omnigent
+config directory (``~/.pi/agent``). Without help, a user who ran ``agent-meow
 setup`` would still have to run ``pi`` ``/login`` separately — unlike
-claude-native / codex-native, which route through the provider that ``omnigent
+claude-native / codex-native, which route through the provider that ``agent-meow
 setup`` configured.
 
 This module closes that gap. It resolves the provider configured for the Pi
-surface (``~/.omnigent/config.yaml``) and writes a per-session ``models.json``
+surface (``~/.agent_meow/config.yaml``) and writes a per-session ``models.json``
 into a *managed* Pi config dir (selected via ``PI_CODING_AGENT_DIR``), so the
 runner-owned ``pi`` process authenticates exactly like the configured harness —
 mirroring how codex-native routes through the Databricks AI Gateway.
@@ -56,7 +56,7 @@ PI_CODING_AGENT_DIR_ENV_VAR = "PI_CODING_AGENT_DIR"
 
 # Provider id registered in the generated ``models.json``. Stable so
 # ``--provider`` can select it.
-_PI_PROVIDER_ID = "omnigent"
+_PI_PROVIDER_ID = "agent-meow"
 
 # Default model for the Databricks AI Gateway's Anthropic surface — the same
 # default the in-process Databricks executor pins. Used when the session
@@ -296,7 +296,7 @@ def _cli_config_pi_provider(entry: ProviderEntry, *, model: str | None) -> PiPro
 
     The common enterprise setup: ``isaac configure codex`` writes a custom
     ``[model_providers.X]`` table (base_url + token-printing ``auth`` command)
-    into ``~/.codex/config.toml`` and ``omnigent setup`` adopts it as a
+    into ``~/.codex/config.toml`` and ``agent-meow setup`` adopts it as a
     ``cli-config`` provider. Codex-native routes through that table; pi-native
     used to return ``None`` here — silently falling back to Pi's own
     ``/login`` (often stale creds) — which is the bug this fixes.
@@ -398,7 +398,7 @@ def resolve_pi_native_provider(
     """Resolve the omnigent-configured provider for a native Pi session.
 
     Reads the default provider for the Pi surface from
-    ``~/.omnigent/config.yaml`` and translates it into Pi ``models.json``
+    ``~/.agent_meow/config.yaml`` and translates it into Pi ``models.json``
     config. Returns ``None`` — leaving Pi to use its own ``/login`` — when no
     usable provider is configured, or the default is a subscription / CLI-login
     provider (a CLI's own login can't be reused outside that CLI).
@@ -412,7 +412,7 @@ def resolve_pi_native_provider(
     """
     try:
         config = config_loader()
-        # Pi is multi-family; ``omnigent setup`` marks defaults per family, not
+        # Pi is multi-family; ``agent-meow setup`` marks defaults per family, not
         # for ``pi``. Use the shared house-pattern selection so pi resolves its
         # default exactly like the rest of the codebase — an explicit pi default
         # wins, else the anthropic (Pi's native surface) then openai family

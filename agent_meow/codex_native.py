@@ -496,7 +496,7 @@ def _materialize_codex_agent_spec(
     model: str | None,
 ) -> Path:
     """
-    Write the terminal-first agent spec used by ``omnigent codex``.
+    Write the terminal-first agent spec used by ``agent-meow codex``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :param model: Optional model id, e.g. ``"gpt-5.4-mini"``.
@@ -750,7 +750,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the omnigent server at {base_url}. "
+            f"Could not reach the agent-meow server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc
@@ -1079,7 +1079,7 @@ async def _prepare_codex_terminal(
         clear_bridge_state(bridge_dir)
         # Route across all offerings: a configured provider (configure
         # harness), the Databricks ucode profile, or Codex's own login —
-        # so `omnigent codex` honors the provider selection like the
+        # so `agent-meow codex` honors the provider selection like the
         # in-process codex harness. Resolved before any rollout synthesis
         # so session_meta can name the provider the launch routes through.
         _codex_launch = resolve_native_codex_launch(model=model)
@@ -1439,7 +1439,7 @@ async def _attach_direct_tmux(socket_path: Path, tmux_target: str) -> None:
 
     This avoids the local WebSocket + PTY relay used for browser and
     non-local runner attaches. ``TMUX`` is removed from the child
-    environment so users who run ``omnigent codex`` inside their own
+    environment so users who run ``agent-meow codex`` inside their own
     tmux session can still attach to agent-meow' private tmux server.
 
     :param socket_path: Runner tmux socket path.
@@ -1562,7 +1562,7 @@ def _find_codex_rollout(codex_home: Path, thread_id: str) -> Path | None:
     ``session_meta.id``. We locate it by that filename suffix.
 
     :param codex_home: A per-session private ``CODEX_HOME``, e.g.
-        ``Path("~/.omnigent/codex-native/<hash>/codex-home")``.
+        ``Path("~/.agent_meow/codex-native/<hash>/codex-home")``.
     :param thread_id: Codex thread id / rollout stem, e.g.
         ``"019e96aa-0be2-7343-8d3b-6f914d60936b"``.
     :returns: Path to the most recent matching rollout, or ``None`` when
@@ -1675,7 +1675,7 @@ def _clone_codex_rollout(
         clone's ``external_session_id`` is set to this so a later relaunch
         resumes it via the normal path.
     :param clone_codex_home: The clone's per-session private ``CODEX_HOME``,
-        e.g. ``Path("~/.omnigent/codex-native/<hash>/codex-home")``.
+        e.g. ``Path("~/.agent_meow/codex-native/<hash>/codex-home")``.
     :param clone_workspace: The resolved directory the clone will run in
         (its worktree or same dir). Written into the structural ``cwd``
         fields. Pass an already-resolved path.
@@ -1812,7 +1812,7 @@ def _codex_resume_rollout_path(codex_home: Path, external_session_id: str) -> Pa
     layout.
 
     :param codex_home: Per-session private ``CODEX_HOME``, e.g.
-        ``Path("~/.omnigent/codex-native/x/codex-home")``.
+        ``Path("~/.agent_meow/codex-native/x/codex-home")``.
     :param external_session_id: Codex thread id / rollout stem, e.g.
         ``"019e96aa-0be2-7343-8d3b-6f914d60936b"``.
     :returns: Rollout JSONL path to overwrite or create.
@@ -1929,7 +1929,7 @@ def _codex_rollout_records_from_session_items(
                 "id": external_session_id,
                 "timestamp": timestamp,
                 "cwd": str(cwd),
-                "originator": "omnigent",
+                "originator": "agent-meow",
                 "cli_version": cli_version,
                 "model_provider": model_provider,
             },

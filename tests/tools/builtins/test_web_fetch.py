@@ -221,7 +221,7 @@ def test_web_fetch_is_runner_dispatched() -> None:
     The Tool itself owns only the schema and the researcher
     sub-agent spec; the actual spawn runs through
     ``_execute_subagent_tool`` from
-    ``omnigent/runner/tool_dispatch.py``. If a future change
+    ``agent_meow/runner/tool_dispatch.py``. If a future change
     drops web_fetch from ``_ALL_LOCAL_TOOLS`` the LLM would call
     ``Tool.invoke`` which now raises ``NotImplementedError`` — a
     silent regression. Pinning the membership here keeps the two
@@ -281,10 +281,10 @@ def testbuild_researcher_spec_copies_llm() -> None:
 
 
 def testbuild_researcher_spec_default_executor() -> None:
-    """Researcher should use default executor (omnigent)."""
+    """Researcher should use default executor (agent-meow)."""
     parent = _make_parent_spec()
     researcher = build_researcher_spec(parent)
-    assert researcher.executor.type == "omnigent"
+    assert researcher.executor.type == "agent-meow"
 
 
 def test_web_fetch_is_sync_in_sessions_native_mode() -> None:

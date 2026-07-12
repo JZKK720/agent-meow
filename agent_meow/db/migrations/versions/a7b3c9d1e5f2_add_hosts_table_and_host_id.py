@@ -5,7 +5,7 @@ Revises: b9c1d2e3f4a5
 Create Date: 2026-05-27 18:00:00.000000
 
 Adds the ``hosts`` table for tracking machines connected via
-``omnigent host``. Each row represents a host that has connected
+``agent-meow host``. Each row represents a host that has connected
 at least once; the ``status`` column reflects whether the host
 currently has an active WebSocket tunnel.
 

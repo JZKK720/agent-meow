@@ -1263,7 +1263,7 @@ class ConversationStore(ABC):
             native transcript from the copied agent-meow items instead.
         :param presentation_labels: When not ``None``, replace the source's
             harness-presentation labels (``agent_meow.ui`` /
-            ``omnigent.wrapper``) on the clone with these. Used when the
+            ``agent_meow.wrapper``) on the clone with these. Used when the
             fork switches agents so the clone's UI mode matches the TARGET
             harness: a native target supplies ``{ui: terminal, wrapper:
             ...}``; an SDK target supplies ``{}`` (drop them → chat mode).
@@ -1337,7 +1337,7 @@ class ConversationStore(ABC):
             the next turn; when ``False``, that label is removed. Set by
             the route only when the target is native AND same-family.
         :param presentation_labels: Replace the session's
-            ``agent_meow.ui`` / ``omnigent.wrapper`` labels with these so
+            ``agent_meow.ui`` / ``agent_meow.wrapper`` labels with these so
             the UI mode matches the TARGET harness (native →
             ``{ui: terminal, wrapper: ...}``; SDK → ``{}`` → chat mode).
         :param previous_builtin_id: Built-in agent id the session is

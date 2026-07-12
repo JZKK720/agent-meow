@@ -29,7 +29,7 @@ browser ───────────────►  Worker (src/index.js)
                           DATABASE_URL ───────┘            │  S3 API (boto3)
                           cloudflare_d1://…                ▼
                                  │                  OMNIGENT_ARTIFACT_URI
-                                 ▼                  s3://omnigent-artifacts
+                                 ▼                  s3://agent-meow-artifacts
                           Cloudflare D1                    │
                           (SQLite, the DB)                 ▼
                                                     Cloudflare R2
@@ -77,14 +77,14 @@ npx wrangler login
 ### 1. Create the D1 database
 
 ```bash
-npx wrangler d1 create omnigent
+npx wrangler d1 create agent-meow
 # note the "database_id" it prints — call it <DATABASE_ID>
 ```
 
 ### 2. Create the R2 bucket
 
 ```bash
-npx wrangler r2 bucket create omnigent-artifacts
+npx wrangler r2 bucket create agent-meow-artifacts
 ```
 
 ### 3. A D1 API token (for `DATABASE_URL`)

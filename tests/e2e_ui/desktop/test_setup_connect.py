@@ -2,7 +2,7 @@
 
 The desktop shell's setup page (``web/electron/setup/index.html``) is the
 user-facing "connect to a server" screen. This exercises it in a real browser:
-the scheme-defaulting this change added means a bare (or ``/omnigent``)
+the scheme-defaulting this change added means a bare (or ``/agent-meow``)
 Databricks workspace URL now connects over https on the first click instead of
 tripping the unencrypted-http warning that the old http:// default produced.
 
@@ -12,7 +12,7 @@ same ``normalizeUrl`` the main process navigates with is also verified in the
 browser — coverage the web-only harness cannot otherwise reach.
 
 These tests drive only the static page plus that shared module; they do not need
-the ``live_server`` omnigent backend.
+the ``live_server`` agent-meow backend.
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def _open_setup_page(page: Page) -> None:
 
 
 def test_bare_workspace_url_connects_without_http_warning(page: Page) -> None:
-    """A schemeless ``<ws>/omnigent`` connects on the first click, no warning.
+    """A schemeless ``<ws>/agent-meow`` connects on the first click, no warning.
 
     Before the scheme default, a schemeless remote host was treated as
     ``http://`` and tripped the unencrypted-remote warning, forcing a second
@@ -66,11 +66,11 @@ def test_bare_workspace_url_connects_without_http_warning(page: Page) -> None:
     """
     _open_setup_page(page)
 
-    page.fill("#url", "dbc-x.cloud.databricks.com/omnigent")
+    page.fill("#url", "dbc-x.cloud.databricks.com/agent-meow")
     page.click("#connect")
 
     page.wait_for_function("() => window.__connectCalls.length === 1")
-    assert page.evaluate("() => window.__connectCalls") == ["dbc-x.cloud.databricks.com/omnigent"]
+    assert page.evaluate("() => window.__connectCalls") == ["dbc-x.cloud.databricks.com/agent-meow"]
     expect(page.locator("#err")).to_have_text("")
 
 
@@ -122,12 +122,12 @@ def test_shared_url_module_defaults_scheme_in_browser(page: Page) -> None:
     """
     _open_setup_page(page)
 
-    # Remote host → https; the guide's /omnigent suffix is preserved.
+    # Remote host → https; the guide's /agent-meow suffix is preserved.
     assert (
         page.evaluate(
-            "() => window.omnigentUrl.normalizeUrl('dbc-x.cloud.databricks.com/omnigent')"
+            "() => window.omnigentUrl.normalizeUrl('dbc-x.cloud.databricks.com/agent-meow')"
         )
-        == "https://dbc-x.cloud.databricks.com/omnigent"
+        == "https://dbc-x.cloud.databricks.com/agent-meow"
     )
     # Loopback stays http for local dev.
     assert (

@@ -1,6 +1,6 @@
 """Phase 0 characterization test — claude-sdk harness, one-shot prompt.
 
-Runs ``omnigent run hello_world.yaml --harness claude-sdk -p
+Runs ``agent-meow run hello_world.yaml --harness claude-sdk -p
 "..."`` as a real subprocess against the mock LLM server and
 snapshots the structural observations (exit code, stderr absence,
 assistant text length).
@@ -62,7 +62,7 @@ def claude_sdk_available(omnigent_python: Path) -> bool:
     harness.
 
     claude-sdk needs BOTH the Python package (inside the
-    *omnigent* venv — the test's own venv is irrelevant because
+    *agent-meow* venv — the test's own venv is irrelevant because
     the test shells out) and the ``claude`` CLI binary on PATH.
     The binary is installed manually by users on their dev
     machines (``npm install -g @anthropic-ai/claude-code``), so
@@ -95,7 +95,7 @@ def test_per_harness_claude_sdk_one_shot(
     claude_sdk_available: bool,
 ) -> None:
     """
-    ``omnigent run hello_world.yaml --harness claude-sdk -p
+    ``agent-meow run hello_world.yaml --harness claude-sdk -p
     <prompt>`` exits 0 and emits a non-trivial assistant reply.
 
     Uses the mock LLM server via ``ANTHROPIC_BASE_URL`` so the
@@ -104,7 +104,7 @@ def test_per_harness_claude_sdk_one_shot(
     the ClaudeSDKExecutor's requests are intercepted and answered
     with canned responses.
 
-    :param omnigent_python: Interpreter with omnigent +
+    :param omnigent_python: Interpreter with agent-meow +
         claude-agent-sdk installed.
     :param omnigent_repo_root: Cwd for the subprocess.
     :param mock_credentials_env: Env vars from the mock-LLM
@@ -146,7 +146,7 @@ def test_per_harness_claude_sdk_one_shot(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--model",

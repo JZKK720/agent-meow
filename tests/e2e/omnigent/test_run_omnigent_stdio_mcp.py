@@ -1,8 +1,8 @@
-"""Live E2E: ``omnigent run`` calls a stdio MCP tool.
+"""Live E2E: ``agent-meow run`` calls a stdio MCP tool.
 
 Proves the full path landed by the stdio-MCP work:
 
-    YAML  →  omnigent agent-meow translator
+    YAML  →  agent-meow agent-meow translator
           (emits ``MCPServerConfig(transport=\"stdio\", ...)``)
           →  ``ToolManager.start()`` (spawns the MCP subprocess
           via ``mcp.client.stdio.stdio_client`` under the shared
@@ -22,7 +22,7 @@ real ``gpt-4o-mini`` endpoint reached via ``$OPENAI_API_KEY``.
 
 - The agent-meow translator silently drops the
   :class:`~?agent_meow.inner.tools.MCPTool`: the spec loads, but
-  the omnigent runtime never registers the tool, the LLM
+  the agent-meow runtime never registers the tool, the LLM
   never calls it, and the ``echo: <probe>`` fingerprint is
   absent. The unit test
   (``test_omnigent_adapter.py::test_load_mcp_stdio_yaml_
@@ -120,7 +120,7 @@ def _skip_without_openai_key() -> str:
 
 def _write_stdio_mcp_yaml(tmp_path: Path, repo_root: Path) -> Path:
     """
-    Materialize an omnigent agent YAML that declares the
+    Materialize an agent-meow agent YAML that declares the
     echo-test MCP as a stdio subprocess.
 
     The YAML is emitted fresh each test run (rather than checked
@@ -169,7 +169,7 @@ def _write_stdio_mcp_yaml(tmp_path: Path, repo_root: Path) -> Path:
 
 def test_omnigent_stdio_mcp_tool_roundtrip(tmp_path: Path) -> None:
     """
-    Run ``omnigent run <yaml>`` with a stdio MCP; the
+    Run ``agent-meow run <yaml>`` with a stdio MCP; the
     LLM must invoke the tool and the echoed string must appear
     in the agent's final reply.
 
@@ -192,7 +192,7 @@ def test_omnigent_stdio_mcp_tool_roundtrip(tmp_path: Path) -> None:
     # the fixture (so it works in any worktree layout).
     repo_root = Path(__file__).resolve().parents[3]
     # Reuse the pytest interpreter for the subprocess so we get the
-    # same ``openai-agents`` / ``omnigent`` install the test is
+    # same ``openai-agents`` / ``agent-meow`` install the test is
     # running under. The in-tree ``.venv`` isn't guaranteed to
     # have the harness SDK installed (some worktrees skip it), so
     # hardcoding ``repo_root / ".venv" / "bin" / "python"`` would
@@ -233,7 +233,7 @@ def test_omnigent_stdio_mcp_tool_roundtrip(tmp_path: Path) -> None:
     args = [
         str(python),
         "-m",
-        "omnigent",
+        "agent-meow",
         "run",
         str(yaml_path),
         "--model",
@@ -272,12 +272,12 @@ def test_omnigent_stdio_mcp_tool_roundtrip(tmp_path: Path) -> None:
     )
     for marker in forbidden:
         assert marker not in combined, (
-            f"Forbidden marker {marker!r} in output — a --omnigent "
+            f"Forbidden marker {marker!r} in output — a --agent-meow "
             f"failure mode fired. stderr tail:\n{result.stderr[-2000:]}"
         )
 
     assert result.returncode == 0, (
-        f"--omnigent exited {result.returncode}. "
+        f"--agent-meow exited {result.returncode}. "
         f"stderr tail:\n{result.stderr[-2000:]}\n"
         f"stdout tail:\n{result.stdout[-2000:]}"
     )

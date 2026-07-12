@@ -2,7 +2,7 @@
 Conftest for the harness process-manager / runner tests.
 
 Ensures the runner subprocesses these tests spawn can import both
-the production ``omnigent`` package AND the test fixture harness
+the production ``agent-meow`` package AND the test fixture harness
 at ``tests.runtime.harnesses._test_harness``.
 
 pytest's :data:`pyproject.toml` ``pythonpath = ["."]`` adds the
@@ -37,7 +37,7 @@ def _ensure_subprocess_pythonpath(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Prepend the project root to the ``PYTHONPATH`` env var for the
     duration of the test, so spawned subprocesses can import
-    ``omnigent`` and ``tests.*``.
+    ``agent-meow`` and ``tests.*``.
 
     Prepend (don't overwrite) so any developer-set ``PYTHONPATH``
     is preserved as the suffix.

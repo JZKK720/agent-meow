@@ -4,7 +4,7 @@ Gateway mode sets ``PI_CODING_AGENT_DIR`` to a per-session temp directory for
 ``models.json``. Without seeding that dir from ``~/.pi/agent``, extensions
 installed via ``pi install`` (or listed in global settings) never load (#1423).
 
-This test drives a real ``omnigent run --harness pi`` subprocess with:
+This test drives a real ``agent-meow run --harness pi`` subprocess with:
 
 - an isolated ``HOME`` carrying ``~/.pi/agent/settings.json`` + a marker
   extension;
@@ -13,7 +13,7 @@ This test drives a real ``omnigent run --harness pi`` subprocess with:
 - a marker file the extension writes on ``session_start``.
 
 **Serial execution:** uses the session-scoped mock LLM server like the other
-``tests/e2e/omnigent/`` pi rows — do not run under xdist against a shared mock.
+``tests/e2e/agent_meow/`` pi rows — do not run under xdist against a shared mock.
 """
 
 from __future__ import annotations
@@ -92,7 +92,7 @@ def test_pi_gateway_run_loads_global_extensions(
     tmp_path: Path,
 ) -> None:
     """
-    ``omnigent run --harness pi`` in gateway mode loads extensions from the
+    ``agent-meow run --harness pi`` in gateway mode loads extensions from the
     user's global Pi agent settings.
 
     The marker extension writes ``~/omnigent-pi-ext-marker`` on
@@ -124,7 +124,7 @@ def test_pi_gateway_run_loads_global_extensions(
         [
             str(omnigent_python),
             "-m",
-            "omnigent",
+            "agent-meow",
             "run",
             str(yaml_path),
             "--model",

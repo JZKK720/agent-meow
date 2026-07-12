@@ -39,7 +39,7 @@ def test_canonicalize_harness(alias: str | None, canonical: str | None) -> None:
     """Alias spellings map to canonical ids; everything else passes through.
 
     A missing ``openai-agents-sdk`` mapping breaks the documented
-    ``omnigent run ... --harness openai-agents-sdk`` invocation at
+    ``agent-meow run ... --harness openai-agents-sdk`` invocation at
     ``_validate_harness``.
     """
     assert canonicalize_harness(alias) == canonical

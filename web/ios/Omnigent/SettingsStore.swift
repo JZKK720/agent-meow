@@ -17,7 +17,7 @@ final class SettingsStore: ObservableObject {
     self.defaults = defaults
     #if DEBUG
       serverURL =
-        ProcessInfo.processInfo.omnigentArgumentValue(after: "--omnigent-server-url")
+        ProcessInfo.processInfo.omnigentArgumentValue(after: "--agent-meow-server-url")
         ?? ProcessInfo.processInfo.environment["OMNIGENT_SCREENSHOT_APP_URL"]
         ?? defaults.string(forKey: Keys.serverURL)
     #else
@@ -52,9 +52,9 @@ final class SettingsStore: ObservableObject {
   }
 
   private enum Keys {
-    static let serverURL = "omnigent.serverURL"
-    static let recentServers = "omnigent.recentServers"
-    static let allowedProtocols = "omnigent.allowedProtocols"
+    static let serverURL = "agent_meow.serverURL"
+    static let recentServers = "agent_meow.recentServers"
+    static let allowedProtocols = "agent_meow.allowedProtocols"
   }
 }
 
