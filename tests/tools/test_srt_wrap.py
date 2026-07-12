@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`omnigent.tools._srt`.
+"""Unit tests for :mod:`~?agent_meow.tools._srt`.
 
 The wrap helper is the shared sandbox-on-or-off contract used by
 both :class:`LocalPythonTool` and the MCP stdio transport. These
@@ -20,7 +20,7 @@ import shlex
 
 import pytest
 
-from omnigent.tools._srt import is_srt_available, wrap_with_srt
+from agent_meow.tools._srt import is_srt_available, wrap_with_srt
 
 
 def test_wrap_with_srt_passthrough_when_disabled() -> None:

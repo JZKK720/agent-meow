@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent import cli_diagnostics
+from agent_meow import cli_diagnostics
 
 
 @dataclass(frozen=True)
@@ -361,7 +361,7 @@ def test_main_logs_click_exceptions(
     :returns: ``None``.
     """
     del isolated_cli_diagnostics
-    from omnigent import cli as cli_module
+    from agent_meow import cli as cli_module
 
     # An unsupported --harness is a deterministic ClickException trigger that
     # raises before any daemon/network work. (A bare `omnigent run` no longer
@@ -407,7 +407,7 @@ async def test_slash_command_exceptions_reach_cli_log(
     del isolated_cli_diagnostics
     from omnigent_ui_sdk import RichBlockFormatter
 
-    from omnigent.repl._repl import handle_slash_command
+    from agent_meow.repl._repl import handle_slash_command
     from tests.repl.helpers import CapturingHost
 
     class _SessionWithoutModelSetter:

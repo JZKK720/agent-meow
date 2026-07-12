@@ -21,8 +21,8 @@ from pathlib import Path
 import pytest
 from sqlalchemy import text
 
-from omnigent.db.db_models import SqlUser
-from omnigent.db.utils import (
+from agent_meow.db.db_models import SqlUser
+from agent_meow.db.utils import (
     _ITEM_TYPE_PREFIX,
     clear_engine_cache,
     delete_fts_by_conversation,

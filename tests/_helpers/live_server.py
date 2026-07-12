@@ -1,5 +1,5 @@
 """
-Shared fixtures for tests that need a live ``omnigent.cli server`` subprocess.
+Shared fixtures for tests that need a live ``agent_meow.cli server`` subprocess.
 
 Lifted out of ``tests/e2e/conftest.py`` so the inner test suite
 (``tests/inner/test_integration.py`` running with agent-meow mode) can
@@ -11,7 +11,7 @@ Provides three primitives:
 - :func:`find_free_port` — pick a free TCP port for the server.
 - :func:`make_live_server_fixture` — factory that builds a
   session-scoped pytest fixture starting a real
-  ``omnigent.cli server`` subprocess. The subprocess inherits
+  ``agent_meow.cli server`` subprocess. The subprocess inherits
   per-harness env vars per the harness/profile selection.
 - :func:`upload_agent` — tar+gzip an agent directory and upload
   via multipart ``POST /v1/sessions``.
@@ -139,7 +139,7 @@ def start_live_server(
     log_path: Path,
 ) -> tuple[subprocess.Popen[bytes], str]:
     """
-    Spawn an ``omnigent.cli server`` subprocess and wait for
+    Spawn an ``agent_meow.cli server`` subprocess and wait for
     health.
 
     :param creds: Harness credentials to thread into the subprocess.
@@ -174,7 +174,7 @@ def start_live_server(
             # system Python 2.7 and SyntaxError.
             server_executable(),
             "-m",
-            "omnigent.cli",
+            "agent_meow.cli",
             "server",
             "--port",
             str(port),
@@ -215,7 +215,7 @@ def make_live_server_fixture(
 ):
     """
     Build a session-scoped pytest fixture starting an
-    ``omnigent.cli server`` subprocess.
+    ``agent_meow.cli server`` subprocess.
 
     Returned fixture yields the server's base URL. Teardown sends
     SIGTERM, escalates to SIGKILL after 10s.

@@ -1,6 +1,6 @@
 import pytest
 
-from omnigent.db.utils import normalize_database_url
+from agent_meow.db.utils import normalize_database_url
 
 
 @pytest.mark.parametrize(

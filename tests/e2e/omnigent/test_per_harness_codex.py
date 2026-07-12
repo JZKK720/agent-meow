@@ -11,7 +11,7 @@ cleanliness, assistant text length).
   message-stream translation in ``codex_executor.run_turn``).
 - The ``codex`` CLI binary disappears from PATH or its
   ``app-server`` subcommand changes its startup contract.
-- ``omnigent.cli._run_agent`` for the ``-p`` one-shot path
+- ``agent_meow.cli._run_agent`` for the ``-p`` one-shot path
   stops printing assistant text to stdout on turn complete.
 
 Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
@@ -37,8 +37,8 @@ from typing import Any
 
 import pytest
 
-from tests.e2e.omnigent._snapshot import compare_snapshot
-from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.agent_meow._snapshot import compare_snapshot
+from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
 
 _HARNESS = "codex"
 _PROMPT = "say hi in 5 words"

@@ -16,16 +16,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from tests.e2e.omnigent._pexpect_harness import (
+from tests.e2e.agent_meow._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     submit_prompt,
 )
-from tests.e2e.omnigent._repl_test_helpers import drain_for
-from tests.e2e.omnigent._snapshot import compare_snapshot
-from tests.e2e.omnigent.conftest import configure_mock_llm
+from tests.e2e.agent_meow._repl_test_helpers import drain_for
+from tests.e2e.agent_meow._snapshot import compare_snapshot
+from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 # Visible turn-synchronization markers (see test_repl_smoke).
 _RUNNING_MARKER = r"working"

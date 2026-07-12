@@ -26,23 +26,23 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from omnigent.entities import Conversation, SessionPermission
-from omnigent.inner.terminal import TerminalInstance
-from omnigent.runtime import (
+from agent_meow.entities import Conversation, SessionPermission
+from agent_meow.inner.terminal import TerminalInstance
+from agent_meow.runtime import (
     _globals,
     set_runner_client,
     set_runner_router,
     set_runner_ws_factory,
 )
-from omnigent.server.auth import (
+from agent_meow.server.auth import (
     LEVEL_EDIT,
     LEVEL_OWNER,
     LEVEL_READ,
     RESERVED_USER_PUBLIC,
     UnifiedAuthProvider,
 )
-from omnigent.server.routes.terminal_attach import create_terminal_attach_router
-from omnigent.terminals import TerminalRegistry
+from agent_meow.server.routes.terminal_attach import create_terminal_attach_router
+from agent_meow.terminals import TerminalRegistry
 from tests.runner.helpers import make_test_terminal_instance
 
 
@@ -150,7 +150,7 @@ def server_registry(tmp_path: Path) -> Iterator[TerminalRegistry]:
     Install a fresh :class:`TerminalRegistry` as the server's
     runtime singleton for the duration of the test.
 
-    The route reads via :func:`omnigent.runtime.get_terminal_registry`,
+    The route reads via :func:`~?agent_meow.runtime.get_terminal_registry`,
     which dereferences the module-level singleton. Tests install
     their own registry and restore the prior value at teardown so
     they're isolated from each other and from any leftover state

@@ -29,18 +29,18 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.policies.types import EvaluationContext
-from omnigent.runtime.policies import (
+from agent_meow.policies.types import EvaluationContext
+from agent_meow.runtime.policies import (
     _enforce_policy,
     build_policy_engine,
 )
-from omnigent.runtime.policies.engine import PolicyEngine
-from omnigent.spec import load
-from omnigent.spec.types import (
+from agent_meow.runtime.policies.engine import PolicyEngine
+from agent_meow.spec import load
+from agent_meow.spec.types import (
     Phase,
     PolicyAction,
 )
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 

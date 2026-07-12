@@ -12,12 +12,12 @@ from typing import Any
 import httpx
 import pytest
 
-from omnigent.runner.app import (
+from agent_meow.runner.app import (
     _pi_native_launch_config,
     _PiNativeLaunchConfig,
     _resolve_pi_resume_session,
 )
-from omnigent.stores.conversation_store import (
+from agent_meow.stores.conversation_store import (
     FORK_CARRY_HISTORY_LABEL_KEY,
     FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY,
 )

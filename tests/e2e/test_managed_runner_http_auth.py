@@ -42,14 +42,14 @@ from pathlib import Path
 import httpx
 import pytest
 
-from omnigent.runner._entry import _make_auth_token_factory, _RunnerDatabricksAuth
-from omnigent.runner.identity import (
+from agent_meow.runner._entry import _make_auth_token_factory, _RunnerDatabricksAuth
+from agent_meow.runner.identity import (
     OMNIGENT_INTERNAL_WS_ORIGIN,
     RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR,
     token_bound_runner_id,
 )
-from omnigent.server.oidc import mint_session_cookie
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.server.oidc import mint_session_cookie
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 from tests._helpers.compat import apply_server_env, compat_server_cwd, server_executable
@@ -131,7 +131,7 @@ def accounts_server(tmp_path: Path) -> Iterator[tuple[str, str]]:
         [
             server_executable(),
             "-m",
-            "omnigent.cli",
+            "agent_meow.cli",
             "server",
             "--port",
             str(port),
@@ -234,7 +234,7 @@ def test_managed_runner_callback_authenticates_end_to_end(
     #    Databricks config. Forcing both credential sources to miss is what a
     #    fresh sandbox actually is, and it routes _make_auth_token_factory to
     #    the managed-mint tier under test.
-    from omnigent.inner.databricks_executor import DatabricksAuthError
+    from agent_meow.inner.databricks_executor import DatabricksAuthError
 
     def _no_databricks_creds(*args: object, **kwargs: object) -> tuple[object, str]:
         """Stand in for _resolve_databricks_auth in a credential-less sandbox."""
@@ -242,9 +242,9 @@ def test_managed_runner_callback_authenticates_end_to_end(
 
     monkeypatch.setenv("RUNNER_SERVER_URL", base_url)
     monkeypatch.setenv(RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR, _BINDING_TOKEN)
-    monkeypatch.setattr("omnigent.cli_auth.load_token", lambda _url: None)
+    monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
     monkeypatch.setattr(
-        "omnigent.inner.databricks_executor._resolve_databricks_auth",
+        "agent_meow.inner.databricks_executor._resolve_databricks_auth",
         _no_databricks_creds,
     )
 

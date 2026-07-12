@@ -57,7 +57,7 @@ tools:
 policies:
   confidential_containment:
     type: function
-    handler: omnigent.policies.builtins.google.gdrive_policy
+    handler: agent_meow.policies.builtins.google.gdrive_policy
     factory_params:
       # The confidential compartment. Replace these with your own document IDs
       # or URLs. Reading any of them confines the session's writes to this set.

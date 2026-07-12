@@ -12,7 +12,7 @@ import logging
 
 import pytest
 
-from omnigent.testing.guardrails import (
+from agent_meow.testing.guardrails import (
     DEV_PORTS,
     TestGuardrailError,
     base_url_violation,
@@ -32,7 +32,7 @@ def _guardrail_warnings(records: list[logging.LogRecord]) -> list[str]:
     return [
         r.getMessage()
         for r in records
-        if r.name == "omnigent.testing.guardrails" and "TEST GUARDRAIL:" in r.getMessage()
+        if r.name == "agent_meow.testing.guardrails" and "TEST GUARDRAIL:" in r.getMessage()
     ]
 
 
@@ -116,7 +116,7 @@ def test_non_test_process_warns(
     simulate a non-test process, then confirm the violation is logged and
     warn mode still returns rather than raising.
     """
-    from omnigent.testing import guardrails
+    from agent_meow.testing import guardrails
 
     monkeypatch.setattr(guardrails, "_imported_modules", frozenset)
     with caplog.at_level(logging.WARNING):

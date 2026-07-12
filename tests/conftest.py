@@ -54,7 +54,7 @@ os.environ.setdefault("OMNIGENT_AUTH_PROVIDER", "header")
 # monkeypatch.delenv-ing this var.
 os.environ.setdefault("OMNIGENT_LOCAL_SINGLE_USER", "1")
 
-from omnigent.db.utils import _engine_cache, _engine_lock, get_or_create_engine
+from agent_meow.db.utils import _engine_cache, _engine_lock, get_or_create_engine
 from tests import _model_pools
 
 pytest_plugins = ["tests._token_usage"]
@@ -112,7 +112,7 @@ def _run_test_environment_guardrails(config: pytest.Config) -> None:
     or port. Set ``OMNIGENT_DISABLE_TEST_GUARDRAILS=1`` to temporarily
     downgrade violations to warn-only for deliberate integration runs.
     """
-    from omnigent.testing.guardrails import check_test_environment
+    from agent_meow.testing.guardrails import check_test_environment
 
     db_uri = os.environ.get("OMNIGENT_DATABASE_URI", "")
     base_url = config.getoption("--omnigent-server-url", default=None)
@@ -259,7 +259,7 @@ def pytest_addoption(parser):
         action="store",
         default=None,
         help=(
-            "Base URL of an externally-managed `omnigent.cli server` to run "
+            "Base URL of an externally-managed `agent_meow.cli server` to run "
             "e2e tests against, e.g. `http://localhost:8080`. When set, "
             "server-fixtures skip the spawn step and yield this URL. Useful "
             "for iterating on tests against a long-running dev server "
@@ -383,7 +383,7 @@ def lowered_idle_thresholds(monkeypatch: pytest.MonkeyPatch) -> None:
     :param monkeypatch: Pytest's monkeypatch fixture; auto-restores
         the original constants at teardown.
     """
-    from omnigent.inner import terminal as terminal_module
+    from agent_meow.inner import terminal as terminal_module
 
     monkeypatch.setattr(terminal_module, "_IDLE_THRESHOLD_SECONDS", 0.4)
     monkeypatch.setattr(terminal_module, "_IDLE_POLL_INTERVAL_SECONDS", 0.1)

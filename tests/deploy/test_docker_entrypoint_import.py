@@ -18,18 +18,18 @@ from typing import NoReturn
 
 import pytest
 
-from omnigent.stores.artifact_store.local import LocalArtifactStore
-from omnigent.stores.artifact_store.s3 import S3ArtifactStore
+from agent_meow.stores.artifact_store.local import LocalArtifactStore
+from agent_meow.stores.artifact_store.s3 import S3ArtifactStore
 
 _ENTRYPOINT_MODULE = "deploy.docker.entrypoint"
 _BOOT_MODULES = (
     "fastapi",
-    "omnigent.db.utils",
-    "omnigent.runtime",
-    "omnigent.server.app",
-    "omnigent.server.server_config",
-    "omnigent.stores.agent_store.sqlalchemy_store",
-    "omnigent.stores.artifact_store.local",
+    "agent_meow.db.utils",
+    "agent_meow.runtime",
+    "agent_meow.server.app",
+    "agent_meow.server.server_config",
+    "agent_meow.stores.agent_store.sqlalchemy_store",
+    "agent_meow.stores.artifact_store.local",
     "uvicorn",
 )
 

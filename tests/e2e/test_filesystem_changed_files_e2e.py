@@ -260,7 +260,7 @@ def fs_workspace(tmp_path_factory: pytest.TempPathFactory) -> Path:
         [
             "git",
             "-c",
-            "user.email=e2e@omnigent.test",
+            "user.email=e2e@agent_meow.test",
             "-c",
             "user.name=omnigent-e2e",
             "commit",
@@ -280,7 +280,7 @@ def fs_ws_runner_id() -> str:
 
     :returns: Runner id string bound to a per-module binding token.
     """
-    from omnigent.runner.identity import token_bound_runner_id
+    from agent_meow.runner.identity import token_bound_runner_id
 
     if "runner_id" not in _fs_ws_runner_state:
         token = secrets.token_urlsafe(32)
@@ -335,7 +335,7 @@ def fs_ws_server(
         [
             sys.executable,
             "-m",
-            "omnigent.cli",
+            "agent_meow.cli",
             "server",
             "--port",
             str(port),
@@ -354,7 +354,7 @@ def fs_ws_server(
     runner_log = tmp_path_factory.mktemp("e2e_fs_runner_logs") / "runner.log"
     runner_log_handle = open(runner_log, "w")  # noqa: SIM115 — closed in cleanup below
     runner_proc = subprocess.Popen(
-        [sys.executable, "-m", "omnigent.runner._entry"],
+        [sys.executable, "-m", "agent_meow.runner._entry"],
         env={
             **env,
             "OMNIGENT_RUNNER_ID": fs_ws_runner_id,

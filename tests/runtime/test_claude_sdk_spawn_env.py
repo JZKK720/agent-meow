@@ -17,8 +17,8 @@ from pathlib import Path
 import pytest
 import yaml as _yaml
 
-from omnigent.runtime.workflow import _build_claude_sdk_spawn_env
-from omnigent.spec.types import (
+from agent_meow.runtime.workflow import _build_claude_sdk_spawn_env
+from agent_meow.spec.types import (
     AgentSpec,
     ApiKeyAuth,
     DatabricksAuth,
@@ -183,7 +183,7 @@ def _ucode_state_without_model(monkeypatch: pytest.MonkeyPatch, *, model: str | 
     :param model: Per-agent ucode model, e.g. ``None`` to simulate a
         workspace that caches no model, or ``"databricks-claude-sonnet-4-6"``.
     """
-    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -197,11 +197,11 @@ def _ucode_state_without_model(monkeypatch: pytest.MonkeyPatch, *, model: str | 
         },
     )
     monkeypatch.setattr(
-        "omnigent.runtime.workflow.get_workspace_url_for_profile",
+        "agent_meow.runtime.workflow.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "omnigent.runtime.workflow.read_ucode_state",
+        "agent_meow.runtime.workflow.read_ucode_state",
         lambda workspace_url: state,
     )
 

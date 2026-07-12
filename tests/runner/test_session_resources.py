@@ -16,28 +16,28 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from omnigent.entities import DEFAULT_ENVIRONMENT_ID
-from omnigent.entities.session_resources import (
+from agent_meow.entities import DEFAULT_ENVIRONMENT_ID
+from agent_meow.entities.session_resources import (
     SessionResourceView,
     default_environment_resource,
     environment_safety_metadata,
     terminal_resource_id,
     terminal_resource_view,
 )
-from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from omnigent.inner.os_env import EditEntry, OpResult, OSEnvironment
-from omnigent.inner.terminal import TerminalInstance
-from omnigent.runner import create_runner_app
-from omnigent.runner import resource_registry as resource_registry_mod
-from omnigent.runner.resource_registry import (
+from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
+from agent_meow.inner.os_env import EditEntry, OpResult, OSEnvironment
+from agent_meow.inner.terminal import TerminalInstance
+from agent_meow.runner import create_runner_app
+from agent_meow.runner import resource_registry as resource_registry_mod
+from agent_meow.runner.resource_registry import (
     _CLAUDE_NATIVE_STATUS_IDLE_THRESHOLD_SECONDS,
     _CLAUDE_NATIVE_STATUS_POLL_INTERVAL_SECONDS,
     _TERMINAL_ACTIVITY_EMIT_MIN_INTERVAL_SECONDS,
     CLAUDE_NATIVE_TERMINAL_ROLE,
     SessionResourceRegistry,
 )
-from omnigent.spec.types import AgentSpec, ExecutorSpec
-from omnigent.terminals import TerminalListEntry, TerminalRegistry
+from agent_meow.spec.types import AgentSpec, ExecutorSpec
+from agent_meow.terminals import TerminalListEntry, TerminalRegistry
 from tests.runner.helpers import NullServerClient, make_test_terminal_instance
 
 
@@ -621,7 +621,7 @@ async def test_reset_state_closes_terminals_and_publishes_deleted(tmp_path: Path
     dead terminal, and attaching to it failed with "terminal resource
     not found or not running".
     """
-    from omnigent.runner.app import _session_event_queues_ref
+    from agent_meow.runner.app import _session_event_queues_ref
 
     conv_id = "conv_switch_term_teardown"
     workspace = tmp_path / "workspace"
@@ -1027,7 +1027,7 @@ async def test_create_terminal_threads_agent_parent_os_env_through(
     ``omnigent claude`` wrapper) could spawn an unsandboxed
     terminal in a session whose YAML declared an egress allow-list.
     """
-    from omnigent.inner.datamodel import AgentDef, OSEnvSandboxSpec, OSEnvSpec
+    from agent_meow.inner.datamodel import AgentDef, OSEnvSandboxSpec, OSEnvSpec
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -1104,7 +1104,7 @@ async def test_create_terminal_uses_declared_terminal_spec_over_body(
     could spawn the YAML-declared terminal name with a completely
     different command.
     """
-    from omnigent.inner.datamodel import (
+    from agent_meow.inner.datamodel import (
         AgentDef,
         OSEnvSandboxSpec,
         OSEnvSpec,
@@ -1187,7 +1187,7 @@ async def test_create_terminal_resolves_declared_placeholder_cwd_to_workspace(
     workspace must be baked into the launched spec (never via
     ``cwd_override``, which the stub asserts stays ``None``).
     """
-    from omnigent.inner.datamodel import (
+    from agent_meow.inner.datamodel import (
         AgentDef,
         OSEnvSandboxSpec,
         OSEnvSpec,
@@ -1267,8 +1267,8 @@ async def test_create_terminal_publishes_bridge_tmux_target(
     the terminal existed, but the launch request failed with a 500
     while trying to write ``tmux.json``.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
 
     resp = await client.post(
         "/v1/sessions/conv_abc/resources/terminals",
@@ -1284,7 +1284,7 @@ async def test_create_terminal_publishes_bridge_tmux_target(
     )
 
     assert resp.status_code == 200
-    from omnigent.claude_native_bridge import bridge_dir_for_conversation_id
+    from agent_meow.claude_native_bridge import bridge_dir_for_conversation_id
 
     derived = bridge_dir_for_conversation_id("conv_abc")
     payload = json.loads((derived / "tmux.json").read_text(encoding="utf-8"))
@@ -1306,8 +1306,8 @@ async def test_create_terminal_ignores_client_supplied_bridge_path(
     below win, and ``tmux.json`` (which carries a live tmux socket)
     would land under it instead of the session-derived directory.
     """
-    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
 
     attacker_path = tmp_path / "attacker-controlled-dir"
     attacker_path.mkdir()
@@ -1327,7 +1327,7 @@ async def test_create_terminal_ignores_client_supplied_bridge_path(
 
     assert resp.status_code == 200
     assert not (attacker_path / "tmux.json").exists()
-    from omnigent.claude_native_bridge import bridge_dir_for_conversation_id
+    from agent_meow.claude_native_bridge import bridge_dir_for_conversation_id
 
     derived = bridge_dir_for_conversation_id("conv_abc")
     assert (derived / "tmux.json").exists()
@@ -2195,7 +2195,7 @@ async def test_claude_terminal_ensure_concurrent_calls_create_once(
         terminal_ready = True
         return fake_view
 
-    monkeypatch.setattr("omnigent.runner.app._auto_create_claude_terminal", fake_auto_create)
+    monkeypatch.setattr("agent_meow.runner.app._auto_create_claude_terminal", fake_auto_create)
 
     async def fake_get_terminal_resource(
         self: Any,

@@ -1,4 +1,4 @@
-"""Tests for omnigent.inner.egress.proxy — MITM proxy with rule enforcement."""
+"""Tests for agent_meow.inner.egress.proxy — MITM proxy with rule enforcement."""
 
 from __future__ import annotations
 
@@ -12,14 +12,14 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.inner.credential_proxy import (
+from agent_meow.inner.credential_proxy import (
     SYNTHETIC_CREDENTIAL_PREFIX,
     CredentialRewriteRule,
 )
-from omnigent.inner.egress.ca import ensure_ca, ensure_ca_bundle
-from omnigent.inner.egress.certs import HostCertCache
-from omnigent.inner.egress.proxy import EgressProxy
-from omnigent.inner.egress.rules import parse_rules
+from agent_meow.inner.egress.ca import ensure_ca, ensure_ca_bundle
+from agent_meow.inner.egress.certs import HostCertCache
+from agent_meow.inner.egress.proxy import EgressProxy
+from agent_meow.inner.egress.rules import parse_rules
 
 
 @pytest.fixture()

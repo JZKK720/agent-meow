@@ -1,4 +1,4 @@
-"""Tests for omnigent.runtime.credentials.databricks."""
+"""Tests for agent_meow.runtime.credentials.databricks."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.runtime.credentials.databricks import (
+from agent_meow.runtime.credentials.databricks import (
     WorkspaceCreds,
     resolve_databricks_workspace,
 )
@@ -351,11 +351,11 @@ def test_sdk_value_error_does_not_emit_warning(
     )
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(cfg))
 
-    with caplog.at_level(logging.DEBUG, logger="omnigent.runtime.credentials.databricks"):
+    with caplog.at_level(logging.DEBUG, logger="agent_meow.runtime.credentials.databricks"):
         resolve_databricks_workspace(profile="dev")
 
     module_records = [
-        r for r in caplog.records if r.name == "omnigent.runtime.credentials.databricks"
+        r for r in caplog.records if r.name == "agent_meow.runtime.credentials.databricks"
     ]
     # WARNING+ would re-introduce the stderr traceback.
     warnings_or_louder = [r for r in module_records if r.levelno >= logging.WARNING]

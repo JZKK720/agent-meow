@@ -1,7 +1,7 @@
 """The registry of official harness bench profiles.
 
 Each profile's descriptive columns and *declared* verdicts derive from the
-canonical capability model (:func:`omnigent.harness_plugins.harness_capabilities`),
+canonical capability model (:func:`~?agent_meow.harness_plugins.harness_capabilities`),
 so there is a single source of truth for "what each harness supports". The
 base fields (model, env_prefix, marker, cli_binary) are reused from
 ``tests.e2e._harness_probes.HARNESS_PROBES`` — a harness added to the e2e
@@ -34,9 +34,9 @@ or correct them as transport coverage lands.
 
 from __future__ import annotations
 
-from omnigent.harness_aliases import is_native_harness
-from omnigent.harness_capabilities import AuthModel, HarnessCapabilities, IntegrationMode
-from omnigent.harness_plugins import harness_capabilities, model_env_keys
+from agent_meow.harness_aliases import is_native_harness
+from agent_meow.harness_capabilities import AuthModel, HarnessCapabilities, IntegrationMode
+from agent_meow.harness_plugins import harness_capabilities, model_env_keys
 from tests.e2e._harness_probes import HARNESS_PROBES, HarnessProbe
 from tests.harness_bench.profile import BenchProfile
 from tests.harness_bench.verdict import Verdict

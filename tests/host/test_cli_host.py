@@ -15,8 +15,8 @@ import psutil
 import pytest
 from click.testing import CliRunner
 
-from omnigent.cli import _ensure_host_daemon, _host_daemon_alive, cli
-from omnigent.host.local_server import LocalServerStartup
+from agent_meow.cli import _ensure_host_daemon, _host_daemon_alive, cli
+from agent_meow.host.local_server import LocalServerStartup
 
 
 @dataclass(frozen=True)
@@ -71,7 +71,7 @@ def test_host_no_server_starts_local_backend(
     server spawn and the (blocking) daemon loop so the command returns.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setattr("omnigent.cli._HOST_PID_PATH", tmp_path / "host.pid")
+    monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     captured_url: list[str] = []
 
     def _fake_run(server_url: str, **kwargs: object) -> None:
@@ -81,10 +81,10 @@ def test_host_no_server_starts_local_backend(
         # spawned=False: this test only checks URL resolution; reused keeps
         # the Ctrl-C stop-server prompt out of the picture (it has its own tests).
         patch(
-            "omnigent.cli.ensure_local_omnigent_server",
+            "agent_meow.cli.ensure_local_omnigent_server",
             lambda: LocalServerStartup(url="http://127.0.0.1:8123", spawned=False),
         ),
-        patch("omnigent.host.connect.run_host_process", _fake_run),
+        patch("agent_meow.host.connect.run_host_process", _fake_run),
     ):
         runner = CliRunner()
         result = runner.invoke(cli, ["host"])
@@ -107,14 +107,14 @@ def test_host_reads_server_from_global_config(
     """
     (tmp_path / "config.yaml").write_text("server: https://from-config.example.com\n")
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setattr("omnigent.cli._HOST_PID_PATH", tmp_path / "host.pid")
+    monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
 
     captured_url: list[str] = []
 
     def _fake_run(server_url: str, **kwargs: object) -> None:
         captured_url.append(server_url)
 
-    with patch("omnigent.host.connect.run_host_process", _fake_run):
+    with patch("agent_meow.host.connect.run_host_process", _fake_run):
         runner = CliRunner()
         result = runner.invoke(cli, ["host"])
 
@@ -137,13 +137,13 @@ def test_host_accepts_server_as_positional(
     and the command exits non-zero — so this test fails loud.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setattr("omnigent.cli._HOST_PID_PATH", tmp_path / "host.pid")
+    monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
 
     def _fake_run(server_url: str, **kwargs: object) -> None:
         runs.append(_HostRun(server_url=server_url))
 
-    with patch("omnigent.host.connect.run_host_process", _fake_run):
+    with patch("agent_meow.host.connect.run_host_process", _fake_run):
         runner = CliRunner()
         result = runner.invoke(cli, ["host", "https://from-arg.example.com"])
 
@@ -170,13 +170,13 @@ def test_host_accepts_option_after_positional_server(
     non-zero with "Unexpected extra argument(s)".
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setattr("omnigent.cli._HOST_PID_PATH", tmp_path / "host.pid")
+    monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
 
     def _fake_run(server_url: str, **kwargs: object) -> None:
         runs.append(_HostRun(server_url=server_url))
 
-    with patch("omnigent.host.connect.run_host_process", _fake_run):
+    with patch("agent_meow.host.connect.run_host_process", _fake_run):
         runner = CliRunner()
         result = runner.invoke(cli, ["host", "https://from-arg.example.com", "--non-interactive"])
 
@@ -199,7 +199,7 @@ def test_host_accepts_empty_positional_as_local_marker(
     """
     (tmp_path / "config.yaml").write_text("server: https://from-config.example.com\n")
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setattr("omnigent.cli._HOST_PID_PATH", tmp_path / "host.pid")
+    monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
 
     def _fake_run(server_url: str, **kwargs: object) -> None:
@@ -209,10 +209,10 @@ def test_host_accepts_empty_positional_as_local_marker(
         # spawned=False: this test only checks the empty-string local-mode URL
         # resolution; reused keeps the Ctrl-C stop-server prompt out of scope.
         patch(
-            "omnigent.cli.ensure_local_omnigent_server",
+            "agent_meow.cli.ensure_local_omnigent_server",
             lambda: LocalServerStartup(url="http://127.0.0.1:8123", spawned=False),
         ),
-        patch("omnigent.host.connect.run_host_process", _fake_run),
+        patch("agent_meow.host.connect.run_host_process", _fake_run),
     ):
         runner = CliRunner()
         result = runner.invoke(cli, ["host", ""])
@@ -236,7 +236,7 @@ def test_host_status_subcommand_still_dispatches(
     loop is never called and the status path is taken instead.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setattr("omnigent.cli._HOST_PID_PATH", tmp_path / "host.pid")
+    monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
     selected_calls: list[dict[str, object]] = []
 
@@ -248,8 +248,8 @@ def test_host_status_subcommand_still_dispatches(
         return []
 
     with (
-        patch("omnigent.host.connect.run_host_process", _fake_run),
-        patch("omnigent.cli._selected_daemon_records", _fake_selected),
+        patch("agent_meow.host.connect.run_host_process", _fake_run),
+        patch("agent_meow.cli._selected_daemon_records", _fake_selected),
     ):
         runner = CliRunner()
         result = runner.invoke(cli, ["host", "status"])
@@ -282,13 +282,13 @@ def test_host_rejects_unknown_plain_token_as_subcommand(
     starting the foreground daemon with ``server_url="sessions"``.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setattr("omnigent.cli._HOST_PID_PATH", tmp_path / "host.pid")
+    monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
 
     def _fake_run(server_url: str, **kwargs: object) -> None:
         runs.append(_HostRun(server_url=server_url))
 
-    with patch("omnigent.host.connect.run_host_process", _fake_run):
+    with patch("agent_meow.host.connect.run_host_process", _fake_run):
         runner = CliRunner()
         result = runner.invoke(cli, ["host", "sessions"])
 
@@ -309,13 +309,13 @@ def test_host_rejects_positional_and_server_option_together(
     regresses, one value would silently win and this test fails.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setattr("omnigent.cli._HOST_PID_PATH", tmp_path / "host.pid")
+    monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
 
     def _fake_run(server_url: str, **kwargs: object) -> None:
         runs.append(_HostRun(server_url=server_url))
 
-    with patch("omnigent.host.connect.run_host_process", _fake_run):
+    with patch("agent_meow.host.connect.run_host_process", _fake_run):
         runner = CliRunner()
         result = runner.invoke(
             cli,
@@ -339,7 +339,7 @@ def test_host_daemon_alive_returns_false_when_no_pid_file(
     If it returns True, the auto-launch would skip spawning a
     daemon even on a fresh machine.
     """
-    with patch("omnigent.cli._HOST_PID_PATH", tmp_path / "host.pid"):
+    with patch("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid"):
         assert _host_daemon_alive() is False
 
 
@@ -356,7 +356,7 @@ def test_host_daemon_alive_returns_false_for_dead_pid(
     pid_path = tmp_path / "host.pid"
     # PID 99999999 almost certainly doesn't exist.
     pid_path.write_text("99999999\nhttp://localhost:8000\n")
-    with patch("omnigent.cli._HOST_PID_PATH", pid_path):
+    with patch("agent_meow.cli._HOST_PID_PATH", pid_path):
         assert _host_daemon_alive() is False
 
 
@@ -394,8 +394,8 @@ def test_ensure_host_daemon_writes_pid_file(
         return proc
 
     with (
-        patch("omnigent.cli._HOST_PID_PATH", pid_path),
-        patch("omnigent.cli.subprocess.Popen", side_effect=_fake_popen),
+        patch("agent_meow.cli._HOST_PID_PATH", pid_path),
+        patch("agent_meow.cli.subprocess.Popen", side_effect=_fake_popen),
     ):
         _ensure_host_daemon("http://localhost:8000")
 
@@ -445,10 +445,10 @@ def test_ensure_host_daemon_keeps_old_for_different_server(
         return _SpawnedDaemon(pid=spawned_pids.pop(0))
 
     with (
-        patch("omnigent.cli._HOST_PID_PATH", pid_path),
-        patch("omnigent.cli._pid_alive", lambda pid: pid in {4242, 4243}),
-        patch("omnigent.cli.os.kill", lambda pid, sig: killed.append(pid)),
-        patch("omnigent.cli.subprocess.Popen", side_effect=_fake_popen),
+        patch("agent_meow.cli._HOST_PID_PATH", pid_path),
+        patch("agent_meow.cli._pid_alive", lambda pid: pid in {4242, 4243}),
+        patch("agent_meow.cli.os.kill", lambda pid, sig: killed.append(pid)),
+        patch("agent_meow.cli.subprocess.Popen", side_effect=_fake_popen),
     ):
         _ensure_host_daemon("http://old-server:8000")
         _ensure_host_daemon("http://new-server:9000")
@@ -499,8 +499,8 @@ def test_ensure_host_daemon_skips_if_alive(
         return original_popen(args, **kwargs)
 
     with (
-        patch("omnigent.cli._HOST_PID_PATH", pid_path),
-        patch("omnigent.cli.subprocess.Popen", side_effect=_counting_popen),
+        patch("agent_meow.cli._HOST_PID_PATH", pid_path),
+        patch("agent_meow.cli.subprocess.Popen", side_effect=_counting_popen),
     ):
         _ensure_host_daemon("http://localhost:8000")
 
@@ -521,7 +521,7 @@ def test_host_stop_treats_zombie_daemon_as_dead(
     with ``--force``) fail forever with "did not exit" and blocks every
     subsequent ``host`` start with "already running".
     """
-    monkeypatch.setattr("omnigent.cli._HOST_PID_PATH", tmp_path / "host.pid")
+    monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
 
     zombie_pid = os.fork()
     if zombie_pid == 0:

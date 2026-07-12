@@ -10,7 +10,7 @@ session uuid, then ``--resume`` it.
 
 The codex→claude test deliberately waits for the SOURCE to capture its
 ``external_session_id`` before forking. That makes the regression sharp:
-the fork route must SKIP the ``omnigent.fork.source_external_session_id``
+the fork route must SKIP the ``agent_meow.fork.source_external_session_id``
 directive on a cross-family switch even though the source has one — if it
 were stamped, the runner's clone branch would look for a native transcript
 in the wrong format, find nothing, and launch FRESH (silently losing
@@ -48,7 +48,7 @@ from typing import Protocol
 import httpx
 import pytest
 
-from omnigent.stores.conversation_store import (
+from agent_meow.stores.conversation_store import (
     FORK_CARRY_HISTORY_LABEL_KEY,
     FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY,
 )

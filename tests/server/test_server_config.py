@@ -1,4 +1,4 @@
-"""Tests for the shared server-config loader (:mod:`omnigent.server.server_config`).
+"""Tests for the shared server-config loader (:mod:`~?agent_meow.server.server_config`).
 
 Covers path resolution (env override → ``<data_dir>/config.yaml`` →
 None), loading + fail-open behavior (missing / malformed / non-mapping
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.server.server_config import (
+from agent_meow.server.server_config import (
     config_str_list,
     load_server_config,
     resolve_config_path,

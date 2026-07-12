@@ -2,7 +2,7 @@
 End-to-end: omnigent example YAMLs that declare unsupported
 concepts MUST fail loud at spec-load time under agent-meow mode.
 
-The adapter in :mod:`omnigent.spec.omnigent` rejects several
+The adapter in :mod:`~?agent_meow.spec.omnigent` rejects several
 concepts it cannot faithfully translate into an omnigent
 :class:`AgentSpec` (see
 :func:`_reject_unsupported_concepts_def`):

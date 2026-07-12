@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.claude_native_state import (
+from agent_meow.claude_native_state import (
     _state_dir_for_conversation_id,
     read_launch_state,
     redirect_launch_state,
@@ -103,7 +103,7 @@ def test_write_different_value_keeps_existing(caplog: pytest.LogCaptureFixture) 
     # Force the `omnigent` package logger to propagate so caplog's
     # root-attached handler captures warnings. Defensive: pollution
     # from a sibling test that runs ``setup_cli_logging`` (which sets
-    # ``omnigent.propagate = False``) can leak into this xdist
+    # ``agent_meow.propagate = False``) can leak into this xdist
     # worker if its cleanup fixture didn't run.
     logging.getLogger("omnigent").propagate = True
     write_launch_state("conv_overwrite", "/home/me/repo")

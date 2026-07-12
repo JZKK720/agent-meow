@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from omnigent.policies.schema import PolicyEvent, PolicyResponse
+from agent_meow.policies.schema import PolicyEvent, PolicyResponse
 
 _ALLOW: PolicyResponse = {"result": "ALLOW"}
 

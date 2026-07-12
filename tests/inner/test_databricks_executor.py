@@ -12,12 +12,12 @@ import databricks.sdk.config as _sdk_config_mod
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from omnigent.inner.databricks_executor import (
+from agent_meow.inner.databricks_executor import (
     DatabricksExecutor,
     _convert_messages,
     _convert_tools_to_openai,
 )
-from omnigent.inner.executor import (
+from agent_meow.inner.executor import (
     ExecutorConfig,
     ExecutorError,
     TextChunk,
@@ -693,7 +693,7 @@ from pathlib import Path as _Path  # noqa: E402
 
 import pytest  # noqa: E402
 
-from omnigent.inner.databricks_executor import (  # noqa: E402
+from agent_meow.inner.databricks_executor import (  # noqa: E402
     DatabricksAuthError,
     _DatabricksBearerAuth,
     _read_databrickscfg,
@@ -893,11 +893,11 @@ def test_codex_executor_gateway_uses_host_only_oauth_profile(
     )
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(cfg_path))
     monkeypatch.setattr(
-        "omnigent.inner.codex_executor._read_databrickscfg",
+        "agent_meow.inner.codex_executor._read_databrickscfg",
         lambda _profile: None,
     )
 
-    from omnigent.inner.codex_executor import CodexExecutor
+    from agent_meow.inner.codex_executor import CodexExecutor
 
     executor = CodexExecutor(
         codex_path=sys.executable,
@@ -1223,7 +1223,7 @@ def test_resolve_databricks_auth_returns_bearer_auth_and_host(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from omnigent.inner.databricks_executor import (
+    from agent_meow.inner.databricks_executor import (
         _DatabricksBearerAuth,
         _resolve_databricks_auth,
     )
@@ -1252,8 +1252,8 @@ def test_resolve_databricks_auth_invalid_profile_raises_clear_error(
     """
     import pytest
 
-    import omnigent.inner.databricks_executor as db_exec
-    from omnigent.inner.databricks_executor import (
+    import agent_meow.inner.databricks_executor as db_exec
+    from agent_meow.inner.databricks_executor import (
         DatabricksAuthError,
         _resolve_databricks_auth,
     )
@@ -1291,8 +1291,8 @@ def test_resolve_databricks_auth_env_profile_falls_back_to_ambient_with_warning(
     """
     import logging
 
-    import omnigent.inner.databricks_executor as db_exec
-    from omnigent.inner.databricks_executor import (
+    import agent_meow.inner.databricks_executor as db_exec
+    from agent_meow.inner.databricks_executor import (
         _DatabricksBearerAuth,
         _resolve_databricks_auth,
     )
@@ -1314,7 +1314,7 @@ def test_resolve_databricks_auth_env_profile_falls_back_to_ambient_with_warning(
     # Profile comes from env var, not an explicit argument.
     monkeypatch.setenv("DATABRICKS_CONFIG_PROFILE", "missing-profile")
 
-    with caplog.at_level(logging.WARNING, logger="omnigent.inner.databricks_executor"):
+    with caplog.at_level(logging.WARNING, logger="agent_meow.inner.databricks_executor"):
         auth, host = _resolve_databricks_auth()  # profile=None — uses env var
 
     assert isinstance(auth, _DatabricksBearerAuth), (
@@ -1345,8 +1345,8 @@ def test_resolve_databricks_auth_explicit_profile_not_found_raises(
     """
     import pytest
 
-    import omnigent.inner.databricks_executor as db_exec
-    from omnigent.inner.databricks_executor import (
+    import agent_meow.inner.databricks_executor as db_exec
+    from agent_meow.inner.databricks_executor import (
         DatabricksAuthError,
         _resolve_databricks_auth,
     )
@@ -1382,7 +1382,7 @@ def test_bearer_auth_injects_fresh_token_per_request():
     """
     import httpx
 
-    from omnigent.inner.databricks_executor import _DatabricksBearerAuth
+    from agent_meow.inner.databricks_executor import _DatabricksBearerAuth
 
     call_count = 0
 
@@ -1417,7 +1417,7 @@ def test_bearer_auth_raises_on_expired_refresh_token():
     import httpx
     import pytest
 
-    from omnigent.inner.databricks_executor import (
+    from agent_meow.inner.databricks_executor import (
         DatabricksAuthError,
         _DatabricksBearerAuth,
     )
@@ -1476,11 +1476,11 @@ def test_claude_sdk_executor_reuses_api_key_helper_between_turns(
         }
 
     monkeypatch.setattr(
-        "omnigent.inner.claude_sdk_executor._resolve_gateway_env",
+        "agent_meow.inner.claude_sdk_executor._resolve_gateway_env",
         _counting_resolve,
     )
 
-    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     # Construct with initial env.
     executor = ClaudeSDKExecutor.__new__(ClaudeSDKExecutor)
@@ -1538,11 +1538,11 @@ def test_codex_executor_uses_cli_auth_command_not_env_token(
         )()
 
     monkeypatch.setattr(
-        "omnigent.inner.codex_executor._read_databrickscfg",
+        "agent_meow.inner.codex_executor._read_databrickscfg",
         _counting_read,
     )
 
-    from omnigent.inner.codex_executor import CodexExecutor
+    from agent_meow.inner.codex_executor import CodexExecutor
 
     executor = CodexExecutor.__new__(CodexExecutor)
     executor._databricks = True
@@ -1682,7 +1682,7 @@ def test_resolve_auth_for_host_prefers_matching_profile(
     workspace). If this regresses to the bare ``databricks-cli`` host
     lookup, the constructed kwargs below change and the test fails.
     """
-    from omnigent.inner import databricks_executor
+    from agent_meow.inner import databricks_executor
 
     cfg_path = tmp_path / "databrickscfg"
     cfg_path.write_text(
@@ -1725,7 +1725,7 @@ def test_resolve_auth_for_host_falls_back_to_cli_when_no_profile_matches(
     cache from ``databricks auth login --host`` — dropping this fallback
     would strand them.
     """
-    from omnigent.inner import databricks_executor
+    from agent_meow.inner import databricks_executor
 
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(tmp_path / "absent"))
 
@@ -1757,7 +1757,7 @@ def test_profiles_for_host_normalizes_scheme_and_slash(
     trailing ``/`` in the wild; a strict string compare would silently
     miss the profile and fall through to the unreliable CLI host lookup.
     """
-    from omnigent.inner.databricks_executor import _databrickscfg_profiles_for_host
+    from agent_meow.inner.databricks_executor import _databrickscfg_profiles_for_host
 
     cfg_path = tmp_path / "databrickscfg"
     cfg_path.write_text(
@@ -1777,7 +1777,7 @@ def test_profiles_for_host_missing_file_returns_empty(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """No config file → no profile candidates (CLI fallback territory)."""
-    from omnigent.inner.databricks_executor import _databrickscfg_profiles_for_host
+    from agent_meow.inner.databricks_executor import _databrickscfg_profiles_for_host
 
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(tmp_path / "absent"))
 

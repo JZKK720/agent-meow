@@ -20,15 +20,15 @@ import httpx
 import pytest
 from cachetools import TTLCache
 
-import omnigent.model_catalog as model_catalog
-from omnigent.model_catalog import (
+import agent_meow.model_catalog as model_catalog
+from agent_meow.model_catalog import (
     catalog_for_spec,
     list_models_for_worker,
     resolve_model_provider,
     spec_harness,
 )
-from omnigent.runtime.credentials.databricks import WorkspaceCreds
-from omnigent.spec.types import AgentSpec, ApiKeyAuth, DatabricksAuth, ExecutorSpec
+from agent_meow.runtime.credentials.databricks import WorkspaceCreds
+from agent_meow.spec.types import AgentSpec, ApiKeyAuth, DatabricksAuth, ExecutorSpec
 
 
 @pytest.fixture(autouse=True)
@@ -52,7 +52,7 @@ def _no_ambient_detection(monkeypatch: pytest.MonkeyPatch) -> None:
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    monkeypatch.setattr("omnigent.onboarding.detected.detect_providers", list)
+    monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
 
 
 def _isolate_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, yaml_text: str) -> None:

@@ -15,7 +15,7 @@ from typing import Any
 import httpx
 import pytest
 
-from omnigent.runner._entry import (
+from agent_meow.runner._entry import (
     _DEFAULT_RUNNER_IDLE_TIMEOUT_S,
     _agent_cache_dest,
     _load_runner_idle_timeout_s_from_config,
@@ -34,8 +34,8 @@ from omnigent.runner._entry import (
     _server_url_from_env,
     main,
 )
-from omnigent.runner.identity import RUNNER_TUNNEL_TOKEN_HEADER
-from omnigent.runner.transports.ws_tunnel.serve import RUNNER_TUNNEL_REJECTION_PREFIX
+from agent_meow.runner.identity import RUNNER_TUNNEL_TOKEN_HEADER
+from agent_meow.runner.transports.ws_tunnel.serve import RUNNER_TUNNEL_REJECTION_PREFIX
 
 # Force-load the MCP streamable-http client before any test monkeypatches
 # httpx.AsyncClient: the MCP SDK evaluates `httpx.AsyncClient | None` eagerly at
@@ -134,7 +134,7 @@ def test_make_auth_token_factory_returns_factory_when_databricks_creds_available
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    from omnigent.inner.databricks_executor import _DatabricksBearerAuth
+    from agent_meow.inner.databricks_executor import _DatabricksBearerAuth
 
     class _Cfg:
         """Config double whose authenticate() yields a Bearer header."""
@@ -146,7 +146,7 @@ def test_make_auth_token_factory_returns_factory_when_databricks_creds_available
     # once) and reads tokens through _DatabricksBearerAuth.current_token().
     monkeypatch.delenv("RUNNER_SERVER_URL", raising=False)  # skip OIDC branch
     monkeypatch.setattr(
-        "omnigent.inner.databricks_executor._resolve_databricks_auth",
+        "agent_meow.inner.databricks_executor._resolve_databricks_auth",
         lambda profile=None: (_DatabricksBearerAuth(_Cfg(), profile_name=None), "https://ex.test"),
     )
 
@@ -171,7 +171,7 @@ def test_make_auth_token_factory_returns_none_without_databricks_creds(
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    from omnigent.inner.databricks_executor import DatabricksAuthError
+    from agent_meow.inner.databricks_executor import DatabricksAuthError
 
     def _no_creds(profile: str | None = None) -> tuple[Any, str]:
         """Stand in for _resolve_databricks_auth with no credentials."""
@@ -181,7 +181,7 @@ def test_make_auth_token_factory_returns_none_without_databricks_creds(
     # runner connects to a local unauthenticated server without a bearer.
     monkeypatch.delenv("RUNNER_SERVER_URL", raising=False)  # skip OIDC branch
     monkeypatch.setattr(
-        "omnigent.inner.databricks_executor._resolve_databricks_auth",
+        "agent_meow.inner.databricks_executor._resolve_databricks_auth",
         _no_creds,
     )
 
@@ -202,18 +202,18 @@ def test_make_auth_token_factory_uses_managed_mint_when_only_binding_token(
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    from omnigent.inner.databricks_executor import DatabricksAuthError
+    from agent_meow.inner.databricks_executor import DatabricksAuthError
 
     def _no_sdk(profile: str | None = None) -> tuple[Any, str]:
         """Stand in for _resolve_databricks_auth with no credentials."""
         raise DatabricksAuthError("no Databricks credentials configured")
 
-    monkeypatch.setenv("RUNNER_SERVER_URL", "https://omnigent.example.com")
+    monkeypatch.setenv("RUNNER_SERVER_URL", "https://agent_meow.example.com")
     monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", "managed-binding-token")
-    monkeypatch.setattr("omnigent.cli_auth.load_token", lambda _url: None)
-    monkeypatch.setattr("omnigent.inner.databricks_executor._resolve_databricks_auth", _no_sdk)
+    monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
+    monkeypatch.setattr("agent_meow.inner.databricks_executor._resolve_databricks_auth", _no_sdk)
     monkeypatch.setattr(
-        "omnigent.runner._entry._mint_managed_owner_token",
+        "agent_meow.runner._entry._mint_managed_owner_token",
         lambda mint_url, server_url, binding_token: ("managed-jwt", time.time() + 1800),
     )
 
@@ -235,16 +235,16 @@ def test_make_auth_token_factory_none_without_creds_or_binding_token(
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    from omnigent.inner.databricks_executor import DatabricksAuthError
+    from agent_meow.inner.databricks_executor import DatabricksAuthError
 
     def _no_sdk(profile: str | None = None) -> tuple[Any, str]:
         """Stand in for _resolve_databricks_auth with no credentials."""
         raise DatabricksAuthError("no Databricks credentials configured")
 
-    monkeypatch.setenv("RUNNER_SERVER_URL", "https://omnigent.example.com")
+    monkeypatch.setenv("RUNNER_SERVER_URL", "https://agent_meow.example.com")
     monkeypatch.delenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", raising=False)
-    monkeypatch.setattr("omnigent.cli_auth.load_token", lambda _url: None)
-    monkeypatch.setattr("omnigent.inner.databricks_executor._resolve_databricks_auth", _no_sdk)
+    monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
+    monkeypatch.setattr("agent_meow.inner.databricks_executor._resolve_databricks_auth", _no_sdk)
 
     assert _make_auth_token_factory() is None
 
@@ -268,7 +268,7 @@ def test_managed_mint_factory_caches_token_until_refresh_skew(
         calls.append(1)
         return (f"jwt-{len(calls)}", time.time() + 1800)
 
-    monkeypatch.setattr("omnigent.runner._entry._mint_managed_owner_token", _fake_mint)
+    monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _fake_mint)
 
     # The construction probe mints jwt-1 once; the factory installs.
     factory = _make_managed_mint_factory("https://s.example.com", "btok")
@@ -302,7 +302,7 @@ def test_managed_mint_factory_serves_cached_token_when_refresh_fails(
             return ("jwt-1", time.time() + 250)
         raise httpx.ConnectError("mint endpoint unreachable")
 
-    monkeypatch.setattr("omnigent.runner._entry._mint_managed_owner_token", _fake_mint)
+    monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _fake_mint)
 
     # Construction probe mints jwt-1 (near expiry); the factory installs.
     factory = _make_managed_mint_factory("https://s.example.com", "btok")
@@ -336,7 +336,7 @@ def test_managed_mint_factory_no_factory_when_server_definitively_refuses(
             "unsupported", request=request, response=httpx.Response(400, request=request)
         )
 
-    monkeypatch.setattr("omnigent.runner._entry._mint_managed_owner_token", _refuses)
+    monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _refuses)
 
     assert _make_managed_mint_factory("https://s.example.com", "btok") is None
 
@@ -359,7 +359,7 @@ def test_managed_mint_factory_installs_for_retry_on_transient_boot_failure(
         """A transient failure — the endpoint is momentarily unreachable."""
         raise httpx.ConnectError("mint endpoint unreachable at boot")
 
-    monkeypatch.setattr("omnigent.runner._entry._mint_managed_owner_token", _blip)
+    monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _blip)
 
     factory = _make_managed_mint_factory("https://s.example.com", "btok")
     assert factory is not None  # installed despite the boot blip
@@ -386,7 +386,7 @@ def test_managed_mint_factory_recovers_after_transient_boot_failure(
             raise httpx.ConnectError("boot blip")
         return ("jwt-recovered", time.time() + 1800)
 
-    monkeypatch.setattr("omnigent.runner._entry._mint_managed_owner_token", _fake_mint)
+    monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _fake_mint)
 
     factory = _make_managed_mint_factory("https://s.example.com", "btok")
     assert factory is not None  # installed despite the boot-probe failure
@@ -425,7 +425,7 @@ def test_managed_mint_factory_declines_at_request_time_and_auth_sends_bare(
             "no auth provider", request=request, response=httpx.Response(400, request=request)
         )
 
-    monkeypatch.setattr("omnigent.runner._entry._mint_managed_owner_token", _boot_blip_then_refuse)
+    monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _boot_blip_then_refuse)
 
     factory = _make_managed_mint_factory("https://s.example.com", "btok")
     assert factory is not None  # boot blip is transient → installed
@@ -469,7 +469,7 @@ def test_mint_managed_owner_token_posts_binding_token_and_parses_response(
         """Build a real sync client backed by the capturing MockTransport."""
         return real_client(transport=httpx.MockTransport(_handler), **kwargs)
 
-    monkeypatch.setattr("omnigent.runner._entry.httpx.Client", _fake_client)
+    monkeypatch.setattr("agent_meow.runner._entry.httpx.Client", _fake_client)
 
     token, expires_at = _mint_managed_owner_token(
         "https://s.example.com/v1/runners/runner_token_abc/token",
@@ -1138,7 +1138,7 @@ async def test_runner_shutdown_closes_terminal_registry(
     startup/shutdown hooks directly and verifies shutdown includes the
     TerminalRegistry, not just harness subprocesses and MCPs.
     """
-    import omnigent.runner._entry as entry_mod
+    import agent_meow.runner._entry as entry_mod
 
     process_managers: list[_FakeProcessManager] = []
     terminal_registries: list[_TrackingTerminalRegistry] = []
@@ -1187,7 +1187,7 @@ async def test_runner_shutdown_closes_terminal_registry(
 
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://runner.test")
     monkeypatch.setattr(
-        "omnigent.runtime.harnesses.process_manager.HarnessProcessManager",
+        "agent_meow.runtime.harnesses.process_manager.HarnessProcessManager",
         _FakeProcessManager,
     )
     monkeypatch.setattr(
@@ -1198,7 +1198,7 @@ async def test_runner_shutdown_closes_terminal_registry(
     monkeypatch.setattr(entry_mod.httpx, "Client", _sync_client_factory)
     monkeypatch.setattr(entry_mod, "_make_auth_token_factory", lambda: None)
     monkeypatch.setattr(
-        "omnigent.runner.identity.get_stable_runner_id",
+        "agent_meow.runner.identity.get_stable_runner_id",
         lambda: "runner-test-id",
     )
 
@@ -1428,7 +1428,7 @@ def test_main_reports_tunnel_rejection_without_traceback(
         )
 
     monkeypatch.setattr(
-        "omnigent.runner._entry._run_tunnel_from_env",
+        "agent_meow.runner._entry._run_tunnel_from_env",
         _raise_tunnel_rejection,
     )
 
@@ -1478,11 +1478,11 @@ def test_main_installs_timestamped_runner_log_format(
         """
 
     monkeypatch.setattr(
-        "omnigent.runner._entry.logging.basicConfig",
+        "agent_meow.runner._entry.logging.basicConfig",
         _capture_basic_config,
     )
     monkeypatch.setattr(
-        "omnigent.runner._entry._run_tunnel_from_env",
+        "agent_meow.runner._entry._run_tunnel_from_env",
         _stop_immediately,
     )
 
@@ -1514,7 +1514,7 @@ def test_main_preserves_unexpected_runtime_errors(
         raise RuntimeError("programming bug")
 
     monkeypatch.setattr(
-        "omnigent.runner._entry._run_tunnel_from_env",
+        "agent_meow.runner._entry._run_tunnel_from_env",
         _raise_unexpected_runtime_error,
     )
 
@@ -1541,7 +1541,7 @@ def test_make_auth_token_factory_resolves_sdk_auth_once(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    import omnigent.inner.databricks_executor as dbx
+    import agent_meow.inner.databricks_executor as dbx
 
     class _CountingConfig:
         """Config double whose authenticate() counts calls."""
@@ -1566,7 +1566,7 @@ def test_make_auth_token_factory_resolves_sdk_auth_once(
 
     monkeypatch.setattr(dbx, "_resolve_databricks_auth", _fake_resolve)
     # No stored OIDC token → the factory falls through to the SDK path.
-    monkeypatch.setattr("omnigent.cli_auth.load_token", lambda _url: None)
+    monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
 
     factory = _make_auth_token_factory(server_url="https://ex.databricks.com")
     assert factory is not None

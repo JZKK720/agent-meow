@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 import pytest
 
-from omnigent import cursor_native
+from agent_meow import cursor_native
 
 
 class _FakeAsyncClient:

@@ -1,8 +1,8 @@
-"""Unit tests for PaaS bind-host + base-URL derivation (omnigent.server.paas_env)."""
+"""Unit tests for PaaS bind-host + base-URL derivation (agent_meow.server.paas_env)."""
 
 import pytest
 
-from omnigent.server.paas_env import detect_base_url, resolve_bind_host
+from agent_meow.server.paas_env import detect_base_url, resolve_bind_host
 
 # A minimal env that trips the Railway detection (any RAILWAY_-prefixed key).
 _RAILWAY_ENV = {"RAILWAY_PUBLIC_DOMAIN": "svc.up.railway.app"}

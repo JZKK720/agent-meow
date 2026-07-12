@@ -1,4 +1,4 @@
-"""Tests for omnigent.tools.client_specified."""
+"""Tests for agent_meow.tools.client_specified."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from omnigent.tools.base import ToolContext
-from omnigent.tools.client_specified import (
+from agent_meow.tools.base import ToolContext
+from agent_meow.tools.client_specified import (
     ClientSideTool,
     ClientSideToolSpec,
     parse_client_side_tool_spec,

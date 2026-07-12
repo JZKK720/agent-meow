@@ -19,14 +19,14 @@ from typing import Any
 import pytest
 import yaml
 
-from omnigent.errors import OmnigentError
-from omnigent.spec.parser import (
+from agent_meow.errors import OmnigentError
+from agent_meow.spec.parser import (
     _ConfigYamlLoader,
     _parse_condition,
     _parse_guardrails,
     parse,
 )
-from omnigent.spec.types import (
+from agent_meow.spec.types import (
     DEFAULT_ASK_TIMEOUT,
     FunctionPolicySpec,
 )
@@ -306,21 +306,21 @@ policies:
     type: function
     on: [request]
     function:
-      path: omnigent.policies.builtins.prompt.prompt_policy
+      path: agent_meow.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
   second:
     type: function
     on: [request]
     function:
-      path: omnigent.policies.builtins.prompt.prompt_policy
+      path: agent_meow.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
   third:
     type: function
     on: [request]
     function:
-      path: omnigent.policies.builtins.prompt.prompt_policy
+      path: agent_meow.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
 """)
@@ -372,7 +372,7 @@ policies:
     type: function
     on: [response]
     function:
-      path: omnigent.policies.builtins.prompt.prompt_policy
+      path: agent_meow.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
     ask_timeout: 300
@@ -394,7 +394,7 @@ policies:
     type: function
     on: [request]
     function:
-      path: omnigent.policies.builtins.prompt.prompt_policy
+      path: agent_meow.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
     ask_timeout: 0
@@ -480,7 +480,7 @@ policies:
     type: function
     on: [request, response]
     function:
-      path: omnigent.policies.builtins.prompt.prompt_policy
+      path: agent_meow.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
 """)

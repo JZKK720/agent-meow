@@ -27,14 +27,14 @@ from typing import Any
 
 import pytest
 
-from omnigent.spec import AgentSpec
-from omnigent.tools.builtins.async_inbox import (
+from agent_meow.spec import AgentSpec
+from agent_meow.tools.builtins.async_inbox import (
     SysCallAsyncTool,
     SysCancelAsyncTool,
     SysCancelTaskTool,
     SysReadInboxTool,
 )
-from omnigent.tools.manager import ToolManager
+from agent_meow.tools.manager import ToolManager
 
 
 @pytest.fixture()
@@ -320,7 +320,7 @@ def test_yaml_async_true_sets_flag(tmp_path: Any) -> None:
     LLM-spec-author-facing surface; the dataclass field name is
     internal.
     """
-    from omnigent.spec import parse
+    from agent_meow.spec import parse
 
     (tmp_path / "config.yaml").write_text("spec_version: 1\nasync: true\n")
     spec = parse(tmp_path)
@@ -338,7 +338,7 @@ def test_yaml_async_omitted_defaults_true(tmp_path: Any) -> None:
     agent-meow mode and the legacy path. Pinning this so a future
     parser refactor can't silently revert the default.
     """
-    from omnigent.spec import parse
+    from agent_meow.spec import parse
 
     (tmp_path / "config.yaml").write_text("spec_version: 1\n")
     spec = parse(tmp_path)
@@ -356,7 +356,7 @@ def test_yaml_async_false_disables(tmp_path: Any) -> None:
     ``True``, but the off path must remain wired for the
     times an author needs it.
     """
-    from omnigent.spec import parse
+    from agent_meow.spec import parse
 
     (tmp_path / "config.yaml").write_text("spec_version: 1\nasync: false\n")
     spec = parse(tmp_path)

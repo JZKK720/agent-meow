@@ -13,14 +13,14 @@ from unittest.mock import MagicMock
 import jwt
 import pytest
 
-from omnigent.server.auth import (
+from agent_meow.server.auth import (
     RESERVED_USER_LOCAL,
     UnifiedAuthProvider,
     create_auth_provider,
     resolve_auth_header,
     resolve_auth_header_strip_prefix,
 )
-from omnigent.server.oidc import (
+from agent_meow.server.oidc import (
     OIDCConfig,
     derive_code_challenge,
     generate_code_verifier,
@@ -872,12 +872,12 @@ def test_oidc_redirect_uri_derived_from_domain(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_ID", "test")
     monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_SECRET", "test")
     monkeypatch.delenv("OMNIGENT_OIDC_REDIRECT_URI", raising=False)
-    monkeypatch.setenv("OMNIGENT_DOMAIN", "omnigent.example.com")
+    monkeypatch.setenv("OMNIGENT_DOMAIN", "agent_meow.example.com")
     monkeypatch.setenv("OMNIGENT_OIDC_COOKIE_SECRET", "aa" * 32)
 
     config = OIDCConfig.from_env()
 
-    assert config.redirect_uri == "https://omnigent.example.com/auth/callback"
+    assert config.redirect_uri == "https://agent_meow.example.com/auth/callback"
     # Derived URI is https → secure cookies + __Host- prefix.
     assert config.secure_cookies is True
 
@@ -888,7 +888,7 @@ def test_oidc_explicit_redirect_uri_wins_over_domain(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_ID", "test")
     monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_SECRET", "test")
     monkeypatch.setenv("OMNIGENT_OIDC_REDIRECT_URI", "http://10.0.0.5:8000/auth/callback")
-    monkeypatch.setenv("OMNIGENT_DOMAIN", "omnigent.example.com")
+    monkeypatch.setenv("OMNIGENT_DOMAIN", "agent_meow.example.com")
     monkeypatch.setenv("OMNIGENT_OIDC_COOKIE_SECRET", "aa" * 32)
 
     config = OIDCConfig.from_env()

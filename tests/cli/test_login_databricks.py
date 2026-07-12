@@ -22,7 +22,7 @@ import httpx
 import pytest
 from click.testing import CliRunner
 
-import omnigent.cli as cli_mod
+import agent_meow.cli as cli_mod
 
 cli_group = cli_mod.cli
 
@@ -93,7 +93,7 @@ def token_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     :returns: The temp directory path.
     """
     monkeypatch.setattr(
-        "omnigent.cli_auth._token_file_path",
+        "agent_meow.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
@@ -126,7 +126,7 @@ def _patch_login_env(
     # login body's own requests.
     monkeypatch.setattr(cli_mod, "_workspace_api_server_url", lambda server: server)
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.databricks_sdk_installed",
+        "agent_meow.onboarding.databricks_config.databricks_sdk_installed",
         lambda: sdk_installed,
     )
     tokens = list(cached_tokens if cached_tokens is not None else ["tok-cached"])
@@ -159,7 +159,7 @@ def test_login_apps_redirect_stores_pointer_record(
     The record (not a bearer) is what later commands resolve to fresh
     workspace tokens — this is the core of the no-profile Apps CUJ.
     """
-    from omnigent.cli_auth import load_databricks_workspace_host
+    from agent_meow.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -189,7 +189,7 @@ def test_login_workspace_hosted_401_uses_url_host(
     the workspace IS the server host, and the record must key on the full
     server URL (path included).
     """
-    from omnigent.cli_auth import load_databricks_workspace_host
+    from agent_meow.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -220,7 +220,7 @@ def test_login_apps_fails_loud_without_databricks_extra(
     fallback to the OIDC flow would produce a baffling ticket-endpoint
     error instead.
     """
-    from omnigent.cli_auth import load_databricks_workspace_host
+    from agent_meow.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(responses=[_response(302, headers={"location": _APPS_REDIRECT})])
     _patch_login_env(monkeypatch, fake_httpx=fake, sdk_installed=False)
@@ -241,7 +241,7 @@ def test_login_runs_databricks_auth_login_when_no_cached_grant(
     The login is host-keyed (no ``--profile`` / profile name anywhere);
     after it succeeds the token resolves and the record is stored.
     """
-    from omnigent.cli_auth import load_databricks_workspace_host
+    from agent_meow.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -275,7 +275,7 @@ def test_login_fails_loud_when_app_rejects_workspace_token(
     can't reach the app; storing the record anyway would make every later
     command fail with the same opaque 403.
     """
-    from omnigent.cli_auth import load_databricks_workspace_host
+    from agent_meow.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -324,7 +324,7 @@ def test_login_stale_cached_grant_triggers_fresh_login_and_retry(
     server 302s/403s. Failing outright would strand the user; the fresh
     login replaces the bad cache entry and the retry succeeds.
     """
-    from omnigent.cli_auth import load_databricks_workspace_host
+    from agent_meow.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -417,7 +417,7 @@ def test_login_threads_org_id_through_workspace_login_and_verify(
     workspace (else it defaults to the account → HTTP 503). The selector is
     also persisted so later commands replay it.
     """
-    from omnigent.cli_auth import load_databricks_org_id, load_databricks_workspace_host
+    from agent_meow.cli_auth import load_databricks_org_id, load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -509,7 +509,7 @@ def test_login_accounts_mode_sets_default_server(
     """
     fake = _FakeHttpx(responses=[_response(401, body={"login_url": "/login"})])
     _patch_login_env(monkeypatch, fake_httpx=fake)
-    monkeypatch.setattr("omnigent.cli._accounts_login", lambda server: None)
+    monkeypatch.setattr("agent_meow.cli._accounts_login", lambda server: None)
 
     result = CliRunner().invoke(cli_group, ["login", "http://omni.internal:6767"])
 
@@ -717,7 +717,7 @@ def test_workspace_url_expands_when_mount_hidden_from_anonymous_probe(
     )
     monkeypatch.setattr(httpx, "get", fake.get)
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.databricks_sdk_installed",
+        "agent_meow.onboarding.databricks_config.databricks_sdk_installed",
         lambda: True,
     )
     minted_for: list[str] = []
@@ -767,7 +767,7 @@ def test_workspace_url_hints_when_mount_dark_and_no_cached_grant(
     )
     monkeypatch.setattr(httpx, "get", fake.get)
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.databricks_sdk_installed",
+        "agent_meow.onboarding.databricks_config.databricks_sdk_installed",
         lambda: True,
     )
     monkeypatch.setattr(cli_mod, "_databricks_workspace_token", lambda workspace_host: None)
@@ -807,7 +807,7 @@ def test_workspace_url_hints_when_authed_probe_also_misses(
     )
     monkeypatch.setattr(httpx, "get", fake.get)
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.databricks_sdk_installed",
+        "agent_meow.onboarding.databricks_config.databricks_sdk_installed",
         lambda: True,
     )
     monkeypatch.setattr(cli_mod, "_databricks_workspace_token", lambda workspace_host: "tok-ws")
@@ -843,7 +843,7 @@ def test_workspace_url_skips_authed_probe_without_databricks_extra(
     )
     monkeypatch.setattr(httpx, "get", fake.get)
     monkeypatch.setattr(
-        "omnigent.onboarding.databricks_config.databricks_sdk_installed",
+        "agent_meow.onboarding.databricks_config.databricks_sdk_installed",
         lambda: False,
     )
 
@@ -1020,7 +1020,7 @@ def test_login_defaults_scheme_to_https(monkeypatch: pytest.MonkeyPatch, token_d
     to https so the probe reaches the workspace API proxy and the stored
     record keys on the https URL.
     """
-    from omnigent.cli_auth import load_databricks_workspace_host
+    from agent_meow.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[

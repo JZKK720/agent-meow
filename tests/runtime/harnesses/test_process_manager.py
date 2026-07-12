@@ -1,5 +1,5 @@
 """
-Tests for :class:`omnigent.runtime.harnesses.process_manager.HarnessProcessManager`.
+Tests for :class:`~?agent_meow.runtime.harnesses.process_manager.HarnessProcessManager`.
 
 Covers the lifecycle / behavior surface defined by §Process
 management of ``designs/SERVER_HARNESS_CONTRACT.md``: lazy spawn,
@@ -35,8 +35,8 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.runtime.harnesses import _HARNESS_MODULES
-from omnigent.runtime.harnesses.process_manager import (
+from agent_meow.runtime.harnesses import _HARNESS_MODULES
+from agent_meow.runtime.harnesses.process_manager import (
     _AP_PID_FILE,
     _TMP_PARENT_ENV_VAR,
     HarnessProcessManager,
@@ -863,7 +863,7 @@ async def test_runner_subprocess_exits_on_sigterm(
     """A harness runner exits promptly after a plain SIGTERM.
 
     This catches the failure mode where ``pkill`` left
-    ``omnigent.runtime.harnesses._runner`` processes alive because
+    ``agent_meow.runtime.harnesses._runner`` processes alive because
     shutdown never reached uvicorn's normal exit path.
     """
     await manager.start()
@@ -902,8 +902,8 @@ async def test_runner_subprocess_exits_when_spawning_parent_exits(
         import asyncio
         import os
         import pathlib
-        from omnigent.runtime.harnesses import _HARNESS_MODULES
-        from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
+        from agent_meow.runtime.harnesses import _HARNESS_MODULES
+        from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
 
         async def main():
             _HARNESS_MODULES[{_TEST_HARNESS_NAME!r}] = {_TEST_HARNESS_MODULE!r}
@@ -948,7 +948,7 @@ async def test_runner_subprocess_hard_exits_when_sigterm_shutdown_wedges(
     The fixture starts a background task that ignores cancellation,
     which prevents uvicorn's graceful shutdown from reaching lifespan
     teardown. This exercises the fallback for plain
-    ``pkill -f omnigent.runtime.harnesses._runner``: the runner
+    ``pkill -f agent_meow.runtime.harnesses._runner``: the runner
     should not remain alive forever just because graceful shutdown is
     stuck.
     """
@@ -977,7 +977,7 @@ async def test_orphan_sweep_escalates_to_sigkill(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Orphan sweep SIGKILLs runners that survive SIGTERM."""
-    from omnigent.runtime.harnesses import process_manager as pm_mod
+    from agent_meow.runtime.harnesses import process_manager as pm_mod
 
     killed: list[tuple[int, signal.Signals]] = []
     calls = 0

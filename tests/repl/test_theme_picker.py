@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from omnigent_ui_sdk.terminal._theme import DARK_THEME, LIGHT_THEME
 
-from omnigent.repl._theme_picker import (
+from agent_meow.repl._theme_picker import (
     _build_dark_preview,
     _build_light_preview,
     _build_preview,
@@ -193,7 +193,7 @@ def test_startup_picker_non_tty_defaults_to_light(
     monkeypatch.setattr("sys.stdin.isatty", lambda: False)
     # Mock OSC 11 detection to return None (non-tty can't detect).
     monkeypatch.setattr(
-        "omnigent.repl._theme_picker._detect_terminal_background",
+        "agent_meow.repl._theme_picker._detect_terminal_background",
         lambda: None,
     )
 
@@ -215,7 +215,7 @@ def test_startup_picker_non_tty_respects_dark_detection(
     monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
     monkeypatch.setattr("sys.stdin.isatty", lambda: False)
     monkeypatch.setattr(
-        "omnigent.repl._theme_picker._detect_terminal_background",
+        "agent_meow.repl._theme_picker._detect_terminal_background",
         lambda: "dark",
     )
 

@@ -44,7 +44,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
-    from omnigent.stores.artifact_store import ArtifactStore
+    from agent_meow.stores.artifact_store import ArtifactStore
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr, force=True)
 logger = logging.getLogger("omnigent-docker")
@@ -102,7 +102,7 @@ def run_migrations(database_url: str) -> None:
     """
     import sqlalchemy
 
-    from omnigent.db.utils import _run_migrations as _run_alembic_upgrade
+    from agent_meow.db.utils import _run_migrations as _run_alembic_upgrade
 
     migration_engine = sqlalchemy.create_engine(database_url)
     try:
@@ -114,9 +114,9 @@ def run_migrations(database_url: str) -> None:
 def _resolve_config() -> _ResolvedConfig:
     """Load config and resolve startup settings before migrations run."""
 
-    from omnigent.db.utils import normalize_database_url
-    from omnigent.server.paas_env import detect_base_url, resolve_bind_host
-    from omnigent.server.server_config import load_server_config
+    from agent_meow.db.utils import normalize_database_url
+    from agent_meow.server.paas_env import detect_base_url, resolve_bind_host
+    from agent_meow.server.server_config import load_server_config
 
     # ── Configuration ────────────────────────────────────────
     # Non-secret settings come from a YAML config file (default
@@ -188,7 +188,7 @@ def _resolve_config() -> _ResolvedConfig:
     # kill-switch path gets the marker: an EXPLICIT
     # OMNIGENT_AUTH_PROVIDER=header deploy declared a header-injecting
     # proxy and must stay strict.
-    from omnigent.server.auth import env_var_is_truthy
+    from agent_meow.server.auth import env_var_is_truthy
 
     # Compose passes OMNIGENT_AUTH_PROVIDER as "" when unset
     # ("${VAR:-}"): empty and missing both mean "not explicitly pinned".
@@ -202,10 +202,10 @@ def _resolve_config() -> _ResolvedConfig:
     # compose up` deploy works with zero config. Gate on the *resolved*
     # selection so an explicit header/oidc deploy (or AUTH_ENABLED=0)
     # doesn't mint accounts secrets it never reads.
-    from omnigent.server.auth import resolve_auth_source
+    from agent_meow.server.auth import resolve_auth_source
 
     if resolve_auth_source() == "accounts":
-        from omnigent.server.accounts_secret import load_or_generate_cookie_secret
+        from agent_meow.server.accounts_secret import load_or_generate_cookie_secret
 
         # Empty-check, not setdefault: compose passes these as empty strings
         # ("${VAR:-}"), which setdefault would leave in place — defeating the default.
@@ -245,10 +245,10 @@ def _select_artifact_store(resolved_config: _ResolvedConfig) -> ArtifactStore:
     :returns: The selected
         :class:`~omnigent.stores.artifact_store.ArtifactStore`.
     """
-    from omnigent.stores.artifact_store.local import LocalArtifactStore
+    from agent_meow.stores.artifact_store.local import LocalArtifactStore
 
     if resolved_config.artifact_store_uri:
-        from omnigent.stores.artifact_store.s3 import S3ArtifactStore
+        from agent_meow.stores.artifact_store.s3 import S3ArtifactStore
 
         return S3ArtifactStore(resolved_config.artifact_store_uri)
     return LocalArtifactStore(str(resolved_config.artifact_dir))
@@ -260,8 +260,8 @@ def build_app(resolved_config: _ResolvedConfig | None = None) -> _BuiltApp:
     This function intentionally does not run migrations; ``main()`` runs
     them explicitly after config resolution and before store construction.
     """
-    from omnigent.server.app import create_app
-    from omnigent.server.server_config import config_str_list
+    from agent_meow.server.app import create_app
+    from agent_meow.server.server_config import config_str_list
 
     if resolved_config is None:
         resolved_config = _resolve_config()
@@ -272,27 +272,27 @@ def build_app(resolved_config: _ResolvedConfig | None = None) -> _BuiltApp:
 
     # ── Stores ───────────────────────────────────────────────
 
-    from omnigent.runtime import init as init_runtime
-    from omnigent.runtime import telemetry
-    from omnigent.runtime.agent_cache import AgentCache
-    from omnigent.runtime.caps import RuntimeCaps
-    from omnigent.server.managed_hosts import parse_sandbox_config
-    from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-    from omnigent.stores.comment_store.sqlalchemy_store import (
+    from agent_meow.runtime import init as init_runtime
+    from agent_meow.runtime import telemetry
+    from agent_meow.runtime.agent_cache import AgentCache
+    from agent_meow.runtime.caps import RuntimeCaps
+    from agent_meow.server.managed_hosts import parse_sandbox_config
+    from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+    from agent_meow.stores.comment_store.sqlalchemy_store import (
         SqlAlchemyCommentStore,
     )
-    from omnigent.stores.conversation_store.sqlalchemy_store import (
+    from agent_meow.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
-    from omnigent.stores.document_store.sqlalchemy_store import (
+    from agent_meow.stores.document_store.sqlalchemy_store import (
         SqlAlchemyDocumentStore,
     )
-    from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-    from omnigent.stores.host_store import HostStore
-    from omnigent.stores.image_store.sqlalchemy_store import (
+    from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+    from agent_meow.stores.host_store import HostStore
+    from agent_meow.stores.image_store.sqlalchemy_store import (
         SqlAlchemyImageStore,
     )
-    from omnigent.stores.permission_store.sqlalchemy_store import (
+    from agent_meow.stores.permission_store.sqlalchemy_store import (
         SqlAlchemyPermissionStore,
     )
 
@@ -333,13 +333,13 @@ def build_app(resolved_config: _ResolvedConfig | None = None) -> _BuiltApp:
     # so internally, so this same code path can opt out by passing
     # None for non-accounts deploys (matching the structural
     # contract used on the hosted product).
-    from omnigent.server.auth import UnifiedAuthProvider as _UAP
-    from omnigent.server.auth import create_auth_provider
+    from agent_meow.server.auth import UnifiedAuthProvider as _UAP
+    from agent_meow.server.auth import create_auth_provider
 
     auth_provider = create_auth_provider()
     account_store = None
     if isinstance(auth_provider, _UAP) and auth_provider._source == "accounts":
-        from omnigent.server.accounts_store import SqlAlchemyAccountStore
+        from agent_meow.server.accounts_store import SqlAlchemyAccountStore
 
         account_store = SqlAlchemyAccountStore(database_url)
 
@@ -387,7 +387,7 @@ def main() -> None:
 
         import uvicorn
 
-        from omnigent.runner.transports.ws_tunnel.limits import (
+        from agent_meow.runner.transports.ws_tunnel.limits import (
             RUNNER_TUNNEL_MAX_MESSAGE_BYTES,
         )
 

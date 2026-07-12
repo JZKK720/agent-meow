@@ -47,7 +47,7 @@ def _build_repl_env(mock_llm_server_url: str, tmp_home: Path) -> dict[str, str]:
     Points ``OPENAI_BASE_URL`` at the mock LLM server so the spawned
     ``omnigent run`` subprocess uses mock responses.
     """
-    from tests.e2e.omnigent._pexpect_harness import ensure_repl_test_theme_env
+    from tests.e2e.agent_meow._pexpect_harness import ensure_repl_test_theme_env
 
     sdk_paths = [
         str(_REPO_ROOT / "sdks" / "python-client"),

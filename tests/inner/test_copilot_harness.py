@@ -13,8 +13,8 @@ import json
 
 import pytest
 
-from omnigent.inner import copilot_harness as ch
-from omnigent.inner.copilot_executor import CopilotExecutor
+from agent_meow.inner import copilot_harness as ch
+from agent_meow.inner.copilot_executor import CopilotExecutor
 
 
 @pytest.fixture(autouse=True)

@@ -10,10 +10,10 @@ the input area, and (c) pressing Enter accepts the match back into
 the input buffer.
 
 **What breaks if this fails:**
-- ``omnigent.cli`` removes the ``@kb.add("c-r")`` binding that
+- ``agent_meow.cli`` removes the ``@kb.add("c-r")`` binding that
   delegates to prompt-toolkit's
   ``start_reverse_incremental_search``.
-- ``omnigent.cli`` forgets to bind Enter while searching to
+- ``agent_meow.cli`` forgets to bind Enter while searching to
   prompt-toolkit's ``accept_search``, so the surfaced match
   cannot be selected.
 - ``SearchToolbar`` stops rendering its default
@@ -31,16 +31,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from tests.e2e.omnigent._pexpect_harness import (
+from tests.e2e.agent_meow._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     submit_prompt,
 )
-from tests.e2e.omnigent._repl_test_helpers import drain_for
-from tests.e2e.omnigent._snapshot import compare_snapshot
-from tests.e2e.omnigent.conftest import configure_mock_llm
+from tests.e2e.agent_meow._repl_test_helpers import drain_for
+from tests.e2e.agent_meow._snapshot import compare_snapshot
+from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 _MODEL = "mock-ctrl-r-model"
 _HARNESS = "openai-agents"

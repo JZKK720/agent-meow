@@ -39,7 +39,7 @@ Two test scenarios:
   in step (c); cancellable behavior now flows through
   ``sys_call_async`` + ``sys_cancel_task`` for plain callables.
 - The
-  :func:`omnigent.spec.omnigent._sub_spec_to_agent_tool`
+  :func:`~?agent_meow.spec.agent_meow._sub_spec_to_agent_tool`
   reverse translation stops emitting ``AgentTool`` entries —
   :class:`OmnigentExecutor.from_spec` reconstructs an
   ``AgentDef`` without the sub-agent tools, and the supervisor
@@ -56,11 +56,11 @@ import pexpect
 import pytest
 
 from tests.e2e._run_with_group_timeout import run_with_group_timeout
-from tests.e2e.omnigent._pexpect_harness import (
+from tests.e2e.agent_meow._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
 )
-from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
 
 # coding_supervisor's declared openai-agents harness + mock model.
 # We don't pass ``--model`` here; the YAML's model wins.

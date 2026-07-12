@@ -7,7 +7,7 @@ pre-translated omnigent-native fixtures. The fixtures there
 are hand-maintained ports; any bug in the omnigent → omnigent
 adapter layer (e.g. ``condition: {}`` parse rejection,
 ``match_tools`` → ``on:`` expansion) slips past those tests. This module goes through
-:func:`omnigent.spec.load` — the same path ``omnigent run``
+:func:`~?agent_meow.spec.load` — the same path ``omnigent run``
 uses — so the adapter is exercised on every run.
 
 Scenarios mirror the user-documented trigger matrix:
@@ -44,15 +44,15 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.policies.types import EvaluationContext
-from omnigent.runtime.policies import (
+from agent_meow.policies.types import EvaluationContext
+from agent_meow.runtime.policies import (
     _enforce_policy,
     build_policy_engine,
 )
-from omnigent.runtime.policies.engine import PolicyEngine
-from omnigent.spec import load
-from omnigent.spec.types import Phase, PolicyAction
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.runtime.policies.engine import PolicyEngine
+from agent_meow.spec import load
+from agent_meow.spec.types import Phase, PolicyAction
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -83,7 +83,7 @@ def _load_engine_from_yaml(
     Parse an omnigent-format example YAML and build a real
     :class:`PolicyEngine` bound to a fresh conversation.
 
-    Goes through :func:`omnigent.spec.load`, so the
+    Goes through :func:`~?agent_meow.spec.load`, so the
     ``_omnigent_compat`` adapter runs on every call. A bug
     there (condition parsing, match_tools expansion) will
     surface at ``load()`` time and fail the test at fixture

@@ -1,15 +1,15 @@
-"""Tests for omnigent.harness_aliases."""
+"""Tests for agent_meow.harness_aliases."""
 
 from __future__ import annotations
 
 import pytest
 
-from omnigent.harness_aliases import (
+from agent_meow.harness_aliases import (
     canonicalize_harness,
     is_native_harness,
     native_terminal_name,
 )
-from omnigent.spec._omnigent_compat import OMNIGENT_HARNESSES
+from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
 
 
 @pytest.mark.parametrize(

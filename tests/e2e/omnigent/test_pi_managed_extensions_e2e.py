@@ -27,7 +27,7 @@ import pytest
 import yaml
 
 from tests.e2e._harness_probes import cli_unavailable_reason
-from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
 
 _EXTENSION_PATH = (
     Path(__file__).resolve().parents[2] / "resources" / "pi_extensions" / "e2e_marker_extension.js"

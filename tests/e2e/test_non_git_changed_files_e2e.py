@@ -121,7 +121,7 @@ def non_git_runner_id() -> str:
 
     :returns: Runner id string, e.g. ``"runner_token_abc123..."``.
     """
-    from omnigent.runner.identity import token_bound_runner_id
+    from agent_meow.runner.identity import token_bound_runner_id
 
     if "runner_id" not in _non_git_runner_state:
         token = secrets.token_urlsafe(32)
@@ -174,7 +174,7 @@ def non_git_server(
         [
             sys.executable,
             "-m",
-            "omnigent.cli",
+            "agent_meow.cli",
             "server",
             "--port",
             str(port),
@@ -197,7 +197,7 @@ def non_git_server(
     runner_log = tmp_path_factory.mktemp("e2e_ng_runner_logs") / "runner.log"
     runner_log_handle = open(runner_log, "w")  # noqa: SIM115
     runner_proc = subprocess.Popen(
-        [sys.executable, "-m", "omnigent.runner._entry"],
+        [sys.executable, "-m", "agent_meow.runner._entry"],
         env={
             **env,
             "OMNIGENT_RUNNER_ID": non_git_runner_id,

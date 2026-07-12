@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.runtime.workflow import _build_pi_spawn_env
-from omnigent.spec.types import AgentSpec, ExecutorSpec, LLMConfig
+from agent_meow.runtime.workflow import _build_pi_spawn_env
+from agent_meow.spec.types import AgentSpec, ExecutorSpec, LLMConfig
 
 
 @pytest.fixture(autouse=True)
@@ -92,7 +92,7 @@ def _ucode_state_for_pi(
         entry at all, exercising the early-return in
         ``configure_agent_harness_with_ucode``.
     """
-    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     agents = (
         {
@@ -113,11 +113,11 @@ def _ucode_state_for_pi(
         agents=agents,
     )
     monkeypatch.setattr(
-        "omnigent.runtime.workflow.get_workspace_url_for_profile",
+        "agent_meow.runtime.workflow.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "omnigent.runtime.workflow.read_ucode_state",
+        "agent_meow.runtime.workflow.read_ucode_state",
         lambda workspace_url: state,
     )
 

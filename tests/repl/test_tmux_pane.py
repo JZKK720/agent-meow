@@ -27,7 +27,7 @@ from typing import Any
 
 import pytest
 
-from omnigent.repl._tmux_pane import (
+from agent_meow.repl._tmux_pane import (
     OPT_AGENT_NAME,
     OPT_AGENT_YAML,
     OPT_CONV_ID,
@@ -401,7 +401,7 @@ def test_wrap_binding_supports_python_m_fallback_argv(
 ) -> None:
     """
     When :func:`_resolve_omnigent_argv` falls back to
-    ``[sys.executable, "-m", "omnigent.cli"]`` (no resolvable
+    ``[sys.executable, "-m", "agent_meow.cli"]`` (no resolvable
     binary on the PATH the running process inherited), the
     wrapper must embed the full three-element argv into the
     chooser shell command.
@@ -415,15 +415,15 @@ def test_wrap_binding_supports_python_m_fallback_argv(
     monkeypatch.setattr(subprocess, "run", _make_capturing_runner(captured))
     _wrap_binding(
         SplitBinding(key='"', direction="v", original_command="split-window"),
-        ["/usr/bin/python3", "-m", "omnigent.cli"],
+        ["/usr/bin/python3", "-m", "agent_meow.cli"],
     )
     chooser = captured[0][8]
     # All three prefix tokens must appear, joined by spaces, BEFORE
     # the ``pane-split`` subcommand. If only the python path
     # appears, the fallback path was truncated.
-    assert "/usr/bin/python3 -m omnigent.cli pane-split -v" in chooser, (
+    assert "/usr/bin/python3 -m agent_meow.cli pane-split -v" in chooser, (
         f"python-m fallback prefix not propagated; got chooser={chooser!r}. "
-        f"If ``-m omnigent.cli`` is missing, the wrapper would invoke "
+        f"If ``-m agent_meow.cli`` is missing, the wrapper would invoke "
         f"the bare python interpreter without telling it what to run."
     )
 
@@ -444,7 +444,7 @@ def test_resolve_argv_uses_abspath_when_argv0_is_path_shaped(
     would lose user-supplied paths that aren't on the PATH the
     Python process inherited.
     """
-    from omnigent.repl._tmux_pane import _resolve_omnigent_argv
+    from agent_meow.repl._tmux_pane import _resolve_omnigent_argv
 
     monkeypatch.setattr("sys.argv", ["/some/abs/path/omnigent", "run"])
     argv = _resolve_omnigent_argv()
@@ -467,7 +467,7 @@ def test_resolve_argv_uses_which_when_argv0_is_bare_name(
     would fall through to the python-m fallback even though a
     perfectly good binary is on PATH.
     """
-    from omnigent.repl._tmux_pane import _resolve_omnigent_argv
+    from agent_meow.repl._tmux_pane import _resolve_omnigent_argv
 
     monkeypatch.setattr("sys.argv", ["omnigent", "run"])
     monkeypatch.setattr(shutil, "which", lambda name: "/resolved/bin/omnigent")
@@ -482,21 +482,21 @@ def test_resolve_argv_falls_back_to_python_m_when_which_misses(
     When neither argv[0] inspection nor ``shutil.which`` can find a
     binary (degraded environment, sandboxed PATH, etc.), the
     resolver falls back to ``[sys.executable, "-m",
-    "omnigent.cli"]`` — bulletproof because if Python is
-    running this code, ``omnigent.cli`` is importable.
+    "agent_meow.cli"]`` — bulletproof because if Python is
+    running this code, ``agent_meow.cli`` is importable.
 
     Claim: the fallback is exactly three elements with the
     running interpreter and the correct module path. A regression
     that returned a bare name would propagate the 127 ("command
     not found") error the original bug report described.
     """
-    from omnigent.repl._tmux_pane import _resolve_omnigent_argv
+    from agent_meow.repl._tmux_pane import _resolve_omnigent_argv
 
     monkeypatch.setattr("sys.argv", ["omnigent", "run"])
     monkeypatch.setattr(shutil, "which", lambda name: None)
     monkeypatch.setattr("sys.executable", "/path/to/python")
     argv = _resolve_omnigent_argv()
-    assert argv == ["/path/to/python", "-m", "omnigent.cli"], (
+    assert argv == ["/path/to/python", "-m", "agent_meow.cli"], (
         f"python-m fallback regressed; got {argv!r}. The fallback is "
         f"the only path that works in environments where the omnigent "
         f"binary isn't directly findable, so silent breakage here means "
@@ -543,7 +543,7 @@ def test_discover_unwraps_existing_wrapper_to_recover_original(
         lambda cmd, **_: type("R", (), {"stdout": fake_output, "returncode": 0})(),
     )
 
-    from omnigent.repl._tmux_pane import _discover_split_bindings
+    from agent_meow.repl._tmux_pane import _discover_split_bindings
 
     bindings = _discover_split_bindings()
     assert len(bindings) == 1, (
@@ -576,15 +576,15 @@ def test_register_pane_strips_existing_python_m_prefix_idempotently(
     """
     Register-twice scenario: the second invocation receives a
     launch_argv that ALREADY starts with
-    ``[<python>, -m, omnigent.cli, ...]`` (because the first
+    ``[<python>, -m, agent_meow.cli, ...]`` (because the first
     invocation normalized it and the user's REPL is now running
-    via ``python -m omnigent.cli``). The second invocation must
+    via ``python -m agent_meow.cli``). The second invocation must
     NOT re-prepend, which would produce a doubled
-    ``-m omnigent.cli -m omnigent.cli`` and break the picker
+    ``-m agent_meow.cli -m agent_meow.cli`` and break the picker
     when it tries to ``os.execvp`` the duplicated argv.
 
     Claim: after a second ``register_pane`` call, the stored
-    ``@omnigent-launch-argv`` has exactly one ``-m omnigent.cli``
+    ``@omnigent-launch-argv`` has exactly one ``-m agent_meow.cli``
     marker in the prefix — same shape as a first-time call.
     A regression that re-prepended the prefix would store a
     doubled form and crash the picker on subsequent splits.
@@ -610,13 +610,13 @@ def test_register_pane_strips_existing_python_m_prefix_idempotently(
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     # Simulate the second register_pane invocation: launch_argv is
-    # ALREADY in [python, -m, omnigent.cli, run, ...] form —
+    # ALREADY in [python, -m, agent_meow.cli, run, ...] form —
     # what a pane-picker-launched REPL would see at boot.
     register_pane(
         conv_id="conv_x",
         agent_name="a",
         agent_yaml=None,
-        launch_argv=["/p/python", "-m", "omnigent.cli", "run", "/x.yaml", "--omnigent"],
+        launch_argv=["/p/python", "-m", "agent_meow.cli", "run", "/x.yaml", "--omnigent"],
         server_url=None,
     )
 
@@ -626,14 +626,14 @@ def test_register_pane_strips_existing_python_m_prefix_idempotently(
     assert stored_argv == [
         "/p/python",
         "-m",
-        "omnigent.cli",
+        "agent_meow.cli",
         "run",
         "/x.yaml",
         "--omnigent",
     ], (
         f"launch-argv regressed to a doubled form: {stored_argv!r}. The "
         f"picker calls ``os.execvp(argv[0], argv)``, so a doubled "
-        f"``-m omnigent.cli`` would crash with a Python module-import "
+        f"``-m agent_meow.cli`` would crash with a Python module-import "
         f"error or invoke a wrong subcommand."
     )
 
@@ -644,9 +644,9 @@ def test_register_pane_repairs_already_doubled_prefix(
 ) -> None:
     """
     Regression test for the live state observed on a real pane:
-    ``[python, -m, omnigent.cli, -m, omnigent.cli, run, ...]``
+    ``[python, -m, agent_meow.cli, -m, agent_meow.cli, run, ...]``
     — left there by an earlier register_pane that stripped only
-    one ``-m omnigent.cli`` prefix and re-prepended a fresh
+    one ``-m agent_meow.cli`` prefix and re-prepended a fresh
     one. The new normalization scans for the user's first
     subcommand (``run``) and slices from there, so any number
     of leading launcher tokens get collapsed to exactly one
@@ -684,9 +684,9 @@ def test_register_pane_repairs_already_doubled_prefix(
         launch_argv=[
             "/p/python",
             "-m",
-            "omnigent.cli",
+            "agent_meow.cli",
             "-m",
-            "omnigent.cli",
+            "agent_meow.cli",
             "run",
             "/x.yaml",
             "--omnigent",
@@ -702,7 +702,7 @@ def test_register_pane_repairs_already_doubled_prefix(
     assert stored_argv == [
         "/p/python",
         "-m",
-        "omnigent.cli",
+        "agent_meow.cli",
         "run",
         "/x.yaml",
         "--omnigent",
@@ -814,7 +814,7 @@ def _pane_integration_enabled(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]
     wrapper logic to actually run must explicitly enable it; this
     fixture makes the dependency obvious at the test signature.
     """
-    monkeypatch.setattr("omnigent.repl._tmux_pane.PANE_INTEGRATION_ENABLED", True)
+    monkeypatch.setattr("agent_meow.repl._tmux_pane.PANE_INTEGRATION_ENABLED", True)
     yield
 
 

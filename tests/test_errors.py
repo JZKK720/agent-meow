@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from omnigent.errors import _CODE_TO_HTTP_STATUS, ErrorCode, OmnigentError
+from agent_meow.errors import _CODE_TO_HTTP_STATUS, ErrorCode, OmnigentError
 
 
 def test_harness_protocol_violation_string_value() -> None:

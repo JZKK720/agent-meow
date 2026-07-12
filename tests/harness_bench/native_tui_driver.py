@@ -57,13 +57,13 @@ from typing import Any
 
 import httpx
 
-from omnigent.host.daemon_launch import (
+from agent_meow.host.daemon_launch import (
     launch_or_reuse_daemon_runner,
     wait_for_host_online,
     wait_for_runner_online,
 )
-from omnigent.native_terminal import bind_session_runner
-from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.native_terminal import bind_session_runner
+from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 from tests._helpers.compat import apply_runner_env, compat_runner_cwd, runner_executable
 from tests.e2e.helpers import lookup_databricks_host
 from tests.harness_bench.driver import TurnResult
@@ -239,7 +239,7 @@ class NativeTuiDriver:
             "DATABRICKS_CONFIG_PROFILE": self._db_profile,
             "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token,
         }
-        # codex reads its provider from omnigent's global config, not from
+        # codex reads its provider from agent_meow's global config, not from
         # DATABRICKS_CONFIG_PROFILE; without it the TUI hits the vendor login
         # screen and never starts a thread.
         if self._vendor.needs_terminal_ensure:
@@ -339,7 +339,7 @@ class NativeTuiDriver:
         # (auth cannot be relocated for native harnesses).
         log = (self._tmp / "host-daemon.log").open("wb")
         return subprocess.Popen(
-            [runner_executable(), "-m", "omnigent.host._daemon_entry", "--server", self._base_url],
+            [runner_executable(), "-m", "agent_meow.host._daemon_entry", "--server", self._base_url],
             env=apply_runner_env(base_env),
             cwd=compat_runner_cwd(),
             stdout=subprocess.DEVNULL,

@@ -2,7 +2,7 @@
 """
 Smoke test for the E2B sandbox provider.
 
-Drives the REAL :class:`~omnigent.onboarding.sandboxes.e2b.E2BSandboxLauncher`
+Drives the REAL :class:`~?agent_meow.onboarding.sandboxes.e2b.E2BSandboxLauncher`
 against a live E2B sandbox to validate every primitive the managed-host /
 CLI-bootstrap flows rely on: provision -> run (incl. the non-zero-exit
 ``CommandExitException`` path) -> put + read-back -> keep_alive ->
@@ -32,7 +32,7 @@ import time
 # The launcher lazy-imports the e2b SDK; surface a clean hint if it (or the
 # omnigent package) isn't importable rather than a raw traceback.
 try:
-    from omnigent.onboarding.sandboxes.e2b import (
+    from agent_meow.onboarding.sandboxes.e2b import (
         E2BSandboxLauncher,
         resolve_max_lifetime_s,
     )

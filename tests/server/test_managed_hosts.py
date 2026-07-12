@@ -1,4 +1,4 @@
-"""Tests for :mod:`omnigent.server.managed_hosts`."""
+"""Tests for :mod:`~?agent_meow.server.managed_hosts`."""
 
 from __future__ import annotations
 
@@ -10,11 +10,11 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
 
-from omnigent.db.utils import now_epoch
-from omnigent.onboarding.sandboxes.e2b import managed_token_ttl_s as e2b_managed_token_ttl_s
-from omnigent.runtime.agent_cache import AgentCache
-from omnigent.server.app import create_app
-from omnigent.server.managed_hosts import (
+from agent_meow.db.utils import now_epoch
+from agent_meow.onboarding.sandboxes.e2b import managed_token_ttl_s as e2b_managed_token_ttl_s
+from agent_meow.runtime.agent_cache import AgentCache
+from agent_meow.server.app import create_app
+from agent_meow.server.managed_hosts import (
     BOXLITE_MANAGED_TOKEN_TTL_S,
     DAYTONA_MANAGED_TOKEN_TTL_S,
     ISLO_MANAGED_TOKEN_TTL_S,
@@ -29,11 +29,11 @@ from omnigent.server.managed_hosts import (
     relaunch_managed_host,
     terminate_managed_host,
 )
-from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from omnigent.stores.artifact_store.local import LocalArtifactStore
-from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
-from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from omnigent.stores.host_store import HostStore
+from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from agent_meow.stores.artifact_store.local import LocalArtifactStore
+from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from agent_meow.stores.host_store import HostStore
 from tests.server.helpers import (
     FakeSandboxLauncher,
     HostStartInvocation,
@@ -479,21 +479,21 @@ def test_parse_valid_kubernetes_config_builds_parameterized_factory(
     cfg = parse_sandbox_config(
         {
             "provider": "kubernetes",
-            "server_url": "http://omnigent.omnigent.svc.cluster.local/",
+            "server_url": "http://agent_meow.agent_meow.svc.cluster.local/",
             "kubernetes": {
                 "image": "ghcr.io/me/omnigent-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
                 "namespace": "omnigent-sandboxes",
                 "secret_name": "omnigent-creds",
                 "service_account": "omnigent-runner",
-                "node_selector": {"omnigent.ai/runner-ready": "true"},
+                "node_selector": {"agent_meow.ai/runner-ready": "true"},
                 "in_cluster": True,
                 "resources": {"requests": {"cpu": "500m"}, "limits": {"memory": "8Gi"}},
             },
         }
     )
     assert cfg is not None
-    assert cfg.server_url == "http://omnigent.omnigent.svc.cluster.local"
+    assert cfg.server_url == "http://agent_meow.agent_meow.svc.cluster.local"
     assert cfg.token_ttl_s == KUBERNETES_MANAGED_TOKEN_TTL_S
     assert cfg.managed_launch_supported is True
     assert cfg.provider == "kubernetes"
@@ -505,7 +505,7 @@ def test_parse_valid_kubernetes_config_builds_parameterized_factory(
     assert fake.namespace == "omnigent-sandboxes"
     assert fake.secret_name == "omnigent-creds"
     assert fake.service_account == "omnigent-runner"
-    assert fake.node_selector == {"omnigent.ai/runner-ready": "true"}
+    assert fake.node_selector == {"agent_meow.ai/runner-ready": "true"}
     assert fake.in_cluster is True
     assert fake.resources == {"requests": {"cpu": "500m"}, "limits": {"memory": "8Gi"}}
 
@@ -532,7 +532,7 @@ def test_parse_kubernetes_without_section_defaults(monkeypatch: pytest.MonkeyPat
     ("kubernetes_block", "expected_fragment"),
     [
         ({"namespace": "Bad_NS"}, "sandbox.kubernetes.namespace"),
-        ({"node_selector": {"omnigent.ai/x": "Bad Value"}}, "node_selector"),
+        ({"node_selector": {"agent_meow.ai/x": "Bad Value"}}, "node_selector"),
         ({"resources": {"requests": {"cpu": "not a quantity!"}}}, "valid Kubernetes quantity"),
         ({"resources": {"requests": {"disk": "1Gi"}}}, "unknown key"),
         ({"in_cluster": "yes"}, "must be a boolean"),
@@ -1132,8 +1132,8 @@ async def test_launch_online_timeout_terminates_and_deletes_host(
     # Shrink the polling budget so the timeout path runs in
     # milliseconds; production values are module constants read at
     # call time.
-    monkeypatch.setattr("omnigent.server.managed_hosts.MANAGED_HOST_ONLINE_TIMEOUT_S", 0.05)
-    monkeypatch.setattr("omnigent.server.managed_hosts._ONLINE_POLL_INTERVAL_S", 0.01)
+    monkeypatch.setattr("agent_meow.server.managed_hosts.MANAGED_HOST_ONLINE_TIMEOUT_S", 0.05)
+    monkeypatch.setattr("agent_meow.server.managed_hosts._ONLINE_POLL_INTERVAL_S", 0.01)
     host_store = HostStore(db_uri)
 
     with pytest.raises(HTTPException) as exc:

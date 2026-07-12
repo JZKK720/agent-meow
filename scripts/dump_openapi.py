@@ -10,7 +10,7 @@ correctly to consuming SDK / docs tooling.
 
 This script:
 
-1. Imports :func:`omnigent.server.app.create_app` and instantiates
+1. Imports :func:`agent_meow.server.app.create_app` and instantiates
    it against in-memory store stubs (no DB needed).
 2. Calls ``app.openapi()`` to get the FastAPI-generated 3.1 dict.
 3. Bumps the top-level ``openapi`` field to ``"3.2.0"``.
@@ -318,17 +318,17 @@ def _build_app_with_stub_stores() -> Any:
     """
     import tempfile
 
-    from omnigent.runtime.agent_cache import AgentCache
-    from omnigent.server.app import create_app
-    from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-    from omnigent.stores.artifact_store.local import LocalArtifactStore
-    from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-    from omnigent.stores.conversation_store.sqlalchemy_store import (
+    from agent_meow.runtime.agent_cache import AgentCache
+    from agent_meow.server.app import create_app
+    from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+    from agent_meow.stores.artifact_store.local import LocalArtifactStore
+    from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+    from agent_meow.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
-    from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-    from omnigent.stores.host_store import HostStore
-    from omnigent.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
+    from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+    from agent_meow.stores.host_store import HostStore
+    from agent_meow.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
 
     # On-disk SQLite (mkdtemp ensures uniqueness so concurrent
     # invocations don't collide).
@@ -370,7 +370,7 @@ def _server_stream_event_schema() -> dict[str, Any]:
         * ``"definitions"`` — the per-variant component schemas
           (merged into ``components.schemas``).
     """
-    from omnigent.server.schemas import ServerStreamEvent
+    from agent_meow.server.schemas import ServerStreamEvent
 
     adapter: TypeAdapter[ServerStreamEvent] = TypeAdapter(ServerStreamEvent)
     schema = adapter.json_schema(ref_template="#/components/schemas/{model}")

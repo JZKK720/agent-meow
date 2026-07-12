@@ -22,8 +22,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from omnigent.errors import OmnigentError
-from omnigent.server.bundles import validate_agent_bundle
+from agent_meow.errors import OmnigentError
+from agent_meow.server.bundles import validate_agent_bundle
 
 _SECRET_ENV_VAR = "OMNIGENT_W7_BUNDLE_SECRET"
 _SECRET_VALUE = "server-side-secret-token"
@@ -53,7 +53,7 @@ def _single_file_yaml_bundle(yaml_text: str) -> bytes:
     Pack *yaml_text* into a ``.tar.gz`` bundle holding one ``agent.yaml``.
 
     Produces the single-file omnigent YAML shape (no ``config.yaml``),
-    which ``omnigent.spec.load`` dispatches to the inner loader — the
+    which ``agent_meow.spec.load`` dispatches to the inner loader — the
     parse-time-execution path the handler-allowlist guard must cover.
 
     :param yaml_text: The agent YAML document, e.g.
@@ -179,7 +179,7 @@ def test_validate_bundle_accepts_registered_policy_handler() -> None:
             "policies:\n"
             "  ask_os:\n"
             "    type: function\n"
-            "    handler: omnigent.policies.builtins.safety.ask_on_os_tools\n"
+            "    handler: agent_meow.policies.builtins.safety.ask_on_os_tools\n"
         ),
     )
     assert spec.name == "gated_agent"
@@ -280,7 +280,7 @@ def test_validate_bundle_accepts_registered_handler_in_sub_agent() -> None:
                 + "  policies:\n"
                 + "    ask_os:\n"
                 + "      type: function\n"
-                + "      function: omnigent.policies.builtins.safety.ask_on_os_tools\n"
+                + "      function: agent_meow.policies.builtins.safety.ask_on_os_tools\n"
             ),
         }
     )
@@ -425,9 +425,9 @@ def test_reject_uploaded_callable_tools_recurses_into_sub_agents() -> None:
     recursion itself — the defense-in-depth that any future surfacing path
     relies on, matching the handler-allowlist guard's sub-agent coverage.
     """
-    from omnigent.server.bundles import _reject_uploaded_callable_tools
-    from omnigent.spec import AgentSpec
-    from omnigent.spec.types import LocalToolInfo, ToolRuntime
+    from agent_meow.server.bundles import _reject_uploaded_callable_tools
+    from agent_meow.spec import AgentSpec
+    from agent_meow.spec.types import LocalToolInfo, ToolRuntime
 
     sub = AgentSpec(name="evil_sub", spec_version=1)
     sub.local_tools = [

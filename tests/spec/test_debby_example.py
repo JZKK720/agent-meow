@@ -18,8 +18,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from omnigent.spec.parser import parse
-from omnigent.spec.types import DatabricksAuth
+from agent_meow.spec.parser import parse
+from agent_meow.spec.types import DatabricksAuth
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEBBY_DIR = _REPO_ROOT / "examples" / "debby"

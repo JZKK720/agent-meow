@@ -1,4 +1,4 @@
-"""Tests for omnigent.onboarding.provider_config."""
+"""Tests for agent_meow.onboarding.provider_config."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.errors import OmnigentError
-from omnigent.onboarding.provider_config import (
+from agent_meow.errors import OmnigentError
+from agent_meow.onboarding.provider_config import (
     ANTHROPIC_FAMILY,
     GEMINI_FAMILY,
     OPENAI_FAMILY,
@@ -640,7 +640,7 @@ def test_parse_cli_config_entry() -> None:
     Failure means adoption-written entries stop loading (every configure
     open would crash) or the entry loses its harness surface.
     """
-    from omnigent.onboarding.provider_config import load_providers, provider_families
+    from agent_meow.onboarding.provider_config import load_providers, provider_families
 
     entry = load_providers(
         {
@@ -687,8 +687,8 @@ def test_parse_cli_config_entry_invalid(body: dict[str, object], message_fragmen
     Failure means a broken entry would parse into a launch that pins
     nothing (or the wrong CLI) at run time.
     """
-    from omnigent.errors import OmnigentError
-    from omnigent.onboarding.provider_config import load_providers
+    from agent_meow.errors import OmnigentError
+    from agent_meow.onboarding.provider_config import load_providers
 
     with pytest.raises(OmnigentError, match=r"cli-config|model_provider|cli"):
         load_providers({"providers": {"bad": body}})
@@ -706,7 +706,7 @@ def test_describe_active_credential_cli_config() -> None:
     Failure means the readout would crash on (or misname) an adopted
     isaac-style provider.
     """
-    from omnigent.onboarding.provider_config import describe_active_credential
+    from agent_meow.onboarding.provider_config import describe_active_credential
 
     config = {
         "providers": {
@@ -738,8 +738,8 @@ def test_bedrock_kind_rejected_for_non_native_harnesses() -> None:
     the Bedrock endpoint as if it were the Anthropic Messages API. Each non-native
     harness must raise rather than mis-configure.
     """
-    from omnigent.errors import ErrorCode
-    from omnigent.runtime.workflow import configure_agent_harness_with_provider
+    from agent_meow.errors import ErrorCode
+    from agent_meow.runtime.workflow import configure_agent_harness_with_provider
 
     entry = load_providers(
         {

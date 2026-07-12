@@ -30,13 +30,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from omnigent.server.accounts_store import SqlAlchemyAccountStore
-from omnigent.server.admin_list import AdminList
-from omnigent.server.auth import UnifiedAuthProvider
-from omnigent.server.oidc import OIDCConfig, mint_session_cookie
-from omnigent.server.oidc_access import OidcAdmissionPolicy
-from omnigent.server.routes.auth import create_auth_router
-from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from agent_meow.server.accounts_store import SqlAlchemyAccountStore
+from agent_meow.server.admin_list import AdminList
+from agent_meow.server.auth import UnifiedAuthProvider
+from agent_meow.server.oidc import OIDCConfig, mint_session_cookie
+from agent_meow.server.oidc_access import OidcAdmissionPolicy
+from agent_meow.server.routes.auth import create_auth_router
+from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 _TEST_SECRET = bytes.fromhex("aa" * 32)
 
@@ -67,7 +67,7 @@ def _oidc_config(*, allow_invites: bool, allowed_domains: frozenset[str] | None)
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    # Follows the project env-var convention (omnigent.server.auth
+    # Follows the project env-var convention (agent_meow.server.auth
     # .env_var_is_truthy): 1/true/yes are truthy (case-insensitive);
     # everything else — including "on" — is false.
     [("1", True), ("true", True), ("YES", True), ("on", False), ("0", False), ("", False)],

@@ -14,7 +14,7 @@ from typing import Any
 import httpx
 import pytest
 
-from omnigent.runner.app import _codex_native_launch_config
+from agent_meow.runner.app import _codex_native_launch_config
 
 
 class _Resp:
@@ -117,10 +117,10 @@ async def test_happy_path_parses_full_config(monkeypatch: pytest.MonkeyPatch) ->
         "model_override": "gpt-5.4-mini",
         "external_session_id": "thread_abc",
         "labels": {
-            "omnigent.fork.source_id": "conv_source",
-            "omnigent.fork.source_external_session_id": "thread_src",
-            "omnigent.fork.carry_history": "1",
-            "omnigent.codex_native.bypass_sandbox": "1",
+            "agent_meow.fork.source_id": "conv_source",
+            "agent_meow.fork.source_external_session_id": "thread_src",
+            "agent_meow.fork.carry_history": "1",
+            "agent_meow.codex_native.bypass_sandbox": "1",
         },
     }
     cfg = await _run(_Client(_Resp(200, snapshot)))
@@ -143,9 +143,9 @@ async def test_happy_path_parses_full_config(monkeypatch: pytest.MonkeyPatch) ->
     [
         None,  # no labels at all
         {},  # labels present but no bypass key
-        {"omnigent.codex_native.bypass_sandbox": "0"},  # explicit off
-        {"omnigent.codex_native.bypass_sandbox": "true"},  # only "1" arms it
-        {"omnigent.codex_native.bypass_sandbox": ""},  # empty string
+        {"agent_meow.codex_native.bypass_sandbox": "0"},  # explicit off
+        {"agent_meow.codex_native.bypass_sandbox": "true"},  # only "1" arms it
+        {"agent_meow.codex_native.bypass_sandbox": ""},  # empty string
     ],
 )
 async def test_bypass_sandbox_defaults_off_unless_label_is_one(

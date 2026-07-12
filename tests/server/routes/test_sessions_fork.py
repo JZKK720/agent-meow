@@ -14,9 +14,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.testclient import TestClient
 
-from omnigent.entities import Agent, Conversation, ConversationItem, MessageData, PagedList
-from omnigent.errors import OmnigentError
-from omnigent.server.routes.sessions import create_sessions_router
+from agent_meow.entities import Agent, Conversation, ConversationItem, MessageData, PagedList
+from agent_meow.errors import OmnigentError
+from agent_meow.server.routes.sessions import create_sessions_router
 
 # ── Minimal store stubs ──────────────────────────────────────────
 
@@ -789,7 +789,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             True,
             True,
             True,
-            {"omnigent.ui": "terminal", "omnigent.wrapper": "claude-code-native-ui"},
+            {"agent_meow.ui": "terminal", "omnigent.wrapper": "claude-code-native-ui"},
         ),
         # cross-family into a native target: model id is meaningless across
         # providers → reset. History still carries — the runner rebuilds the
@@ -803,7 +803,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             True,
             False,
-            {"omnigent.ui": "terminal", "omnigent.wrapper": "codex-native-ui"},
+            {"agent_meow.ui": "terminal", "omnigent.wrapper": "codex-native-ui"},
         ),
         # cursor target carries history via a text preamble (its conversation
         # is server-backed, so the runner can't seed a local store for --resume),
@@ -815,7 +815,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             True,
             False,
-            {"omnigent.ui": "terminal", "omnigent.wrapper": "cursor-native-ui"},
+            {"agent_meow.ui": "terminal", "omnigent.wrapper": "cursor-native-ui"},
         ),
         # pi-native CAN carry fork history: the runner rebuilds Pi's JSONL
         # session file from the copied agent-meow items. Cross-family from a
@@ -828,7 +828,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             True,
             False,
-            {"omnigent.ui": "terminal", "omnigent.wrapper": "pi-native-ui"},
+            {"agent_meow.ui": "terminal", "omnigent.wrapper": "pi-native-ui"},
         ),
         # qwen-native CAN carry fork history: the runner rebuilds qwen's on-disk
         # chat recording (+ runtime/meta sidecars) from the copied agent-meow items
@@ -842,7 +842,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             True,
             False,
-            {"omnigent.ui": "terminal", "omnigent.wrapper": "qwen-native-ui"},
+            {"agent_meow.ui": "terminal", "omnigent.wrapper": "qwen-native-ui"},
         ),
         # native → SDK, same family: model carries, but an SDK target
         # replays the transcript itself so no native-rebuild marker is set.
@@ -858,7 +858,7 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             True,
             False,
-            {"omnigent.ui": "terminal", "omnigent.wrapper": "claude-code-native-ui"},
+            {"agent_meow.ui": "terminal", "omnigent.wrapper": "claude-code-native-ui"},
         ),
     ],
 )
@@ -896,7 +896,7 @@ async def test_fork_switch_model_and_carry_gating(
     # Target every switch at ag_claude_native; the stub cache, not the
     # bundle, dictates the harness each agent reports.
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
+        "agent_meow.server.routes.sessions.get_agent_cache",
         lambda: _StubAgentCache({"ag_test": source_harness, "ag_claude_native": target_harness}),
     )
     client = TestClient(_build_app(conv_store, agent_store=agent_store))
@@ -945,7 +945,7 @@ async def test_fork_no_switch_native_source_carries_history(
         items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
     )
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
+        "agent_meow.server.routes.sessions.get_agent_cache",
         lambda: _StubAgentCache({"ag_test": "claude-native"}),
     )
     client = TestClient(_build_app(conv_store))
@@ -998,7 +998,7 @@ async def test_fork_cursor_pi_native_carry_gating(
         items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
     )
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
+        "agent_meow.server.routes.sessions.get_agent_cache",
         lambda: _StubAgentCache({"ag_test": harness}),
     )
     client = TestClient(_build_app(conv_store))
@@ -1046,7 +1046,7 @@ async def test_fork_reversed_native_spelling_carry_gating(
         items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
     )
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
+        "agent_meow.server.routes.sessions.get_agent_cache",
         lambda: _StubAgentCache({"ag_test": harness}),
     )
     client = TestClient(_build_app(conv_store))
@@ -1106,7 +1106,7 @@ async def test_fork_with_model_override_passes_through(
         items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
     )
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
+        "agent_meow.server.routes.sessions.get_agent_cache",
         lambda: _StubAgentCache({"ag_test": "codex-native"}),
     )
     client = TestClient(_build_app(conv_store))
@@ -1135,7 +1135,7 @@ async def test_fork_with_invalid_model_override_rejected(
         items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
     )
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
+        "agent_meow.server.routes.sessions.get_agent_cache",
         lambda: _StubAgentCache({"ag_test": "codex-native"}),
     )
     client = TestClient(_build_app(conv_store))
@@ -1164,7 +1164,7 @@ async def test_fork_with_cross_family_model_override_rejected(
         items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
     )
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
+        "agent_meow.server.routes.sessions.get_agent_cache",
         lambda: _StubAgentCache({"ag_test": "codex-native"}),
     )
     client = TestClient(_build_app(conv_store))
@@ -1197,11 +1197,11 @@ async def test_fork_model_override_rejected_when_harness_unresolvable(
     # Harness loads fine for the OTHER route paths; only the override family
     # check sees None (simulating an unloadable / unresolvable fork bundle).
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
+        "agent_meow.server.routes.sessions.get_agent_cache",
         lambda: _StubAgentCache({"ag_test": "codex-native"}),
     )
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions._agent_harness_id",
+        "agent_meow.server.routes.sessions._agent_harness_id",
         lambda _agent: None,
     )
     client = TestClient(_build_app(conv_store))
@@ -1233,11 +1233,11 @@ async def test_fork_unresolvable_harness_ok_without_model_override(
         items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
     )
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
+        "agent_meow.server.routes.sessions.get_agent_cache",
         lambda: _StubAgentCache({"ag_test": "codex-native"}),
     )
     monkeypatch.setattr(
-        "omnigent.server.routes.sessions._agent_harness_id",
+        "agent_meow.server.routes.sessions._agent_harness_id",
         lambda _agent: None,
     )
     client = TestClient(_build_app(conv_store))

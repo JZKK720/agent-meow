@@ -56,7 +56,7 @@ from pathlib import Path
 
 import httpx
 
-from omnigent.entities.session_resources import terminal_resource_id
+from agent_meow.entities.session_resources import terminal_resource_id
 from tests.e2e.helpers import POLL_INTERVAL_S
 
 # Worktree root: tests/e2e/<this file> -> parents[2]. Threaded onto the CLI

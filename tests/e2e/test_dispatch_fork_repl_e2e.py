@@ -138,7 +138,7 @@ def repl_env(mock_llm_server_url: str, tmp_path: Path) -> dict[str, str]:
     :param tmp_path: Isolated temp directory for OMNIGENT_CONFIG_HOME.
     :returns: Env mapping for ``pexpect.spawn``.
     """
-    from tests.e2e.omnigent._pexpect_harness import ensure_repl_test_theme_env
+    from tests.e2e.agent_meow._pexpect_harness import ensure_repl_test_theme_env
 
     config_home = tmp_path / "omnigent-config"
     config_home.mkdir()
@@ -150,7 +150,7 @@ def repl_env(mock_llm_server_url: str, tmp_path: Path) -> dict[str, str]:
         **os.environ,
         "OMNIGENT_CONFIG_HOME": str(config_home),
         # PYTHONPATH so the worktree wins over any sibling
-        # editable install of omnigent.
+        # editable install of agent_meow.
         "PYTHONPATH": (f"{_REPO_ROOT}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"),
         # Force ANSI on; we strip it per-assertion via _ANSI_RE.
         "TERM": "xterm-256color",
@@ -224,7 +224,7 @@ def test_repl_run_routes_harness_through_new_harness_contract(
         sys.executable,
         [
             "-m",
-            "omnigent.cli",
+            "agent_meow.cli",
             "run",
             "tests/resources/examples/hello_world.yaml",
             "--harness",

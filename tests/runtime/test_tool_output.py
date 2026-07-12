@@ -1,12 +1,12 @@
 """
-Tests for :func:`omnigent.runtime.tool_output.cap_tool_output` — the canonical
+Tests for :func:`~?agent_meow.runtime.tool_output.cap_tool_output` — the canonical
 size cap applied to every ``function_call_output`` producer's ``output`` field.
 Each assertion is chosen so the corresponding production breakage turns it red.
 """
 
 from __future__ import annotations
 
-from omnigent.runtime.tool_output import MAX_TOOL_OUTPUT_BYTES, cap_tool_output
+from agent_meow.runtime.tool_output import MAX_TOOL_OUTPUT_BYTES, cap_tool_output
 
 _TRUNCATION_MARKER = "[output truncated by omnigent:"
 

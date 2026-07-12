@@ -17,13 +17,13 @@ import httpx
 import yaml
 from fastapi import FastAPI
 
-from omnigent.onboarding.sandboxes import (
+from agent_meow.onboarding.sandboxes import (
     RemoteCommandResult,
     RemoteProcess,
     SandboxLauncher,
 )
-from omnigent.runner.transports.ws_tunnel.frames import HelloFrame
-from omnigent.runtime import session_stream
+from agent_meow.runner.transports.ws_tunnel.frames import HelloFrame
+from agent_meow.runtime import session_stream
 
 # Sentinel ready event so a stream collector's registration is a
 # deterministic sync point (first delivered item) rather than a
@@ -314,7 +314,7 @@ def install_fake_modal_launcher(
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import omnigent.onboarding.sandboxes.modal as modal_mod
+    import agent_meow.onboarding.sandboxes.modal as modal_mod
 
     def _ctor(
         *, image: str | None = None, secrets: list[str] | None = None
@@ -341,7 +341,7 @@ def install_fake_daytona_launcher(
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import omnigent.onboarding.sandboxes.daytona as daytona_mod
+    import agent_meow.onboarding.sandboxes.daytona as daytona_mod
 
     def _ctor(*, image: str | None = None, env: list[str] | None = None) -> FakeSandboxLauncher:
         """Stand-in constructor recording the construction wiring."""
@@ -366,7 +366,7 @@ def install_fake_boxlite_launcher(
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import omnigent.onboarding.sandboxes.boxlite as boxlite_mod
+    import agent_meow.onboarding.sandboxes.boxlite as boxlite_mod
 
     def _ctor(
         *,
@@ -403,7 +403,7 @@ def install_fake_islo_launcher(
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import omnigent.onboarding.sandboxes.islo as islo_mod
+    import agent_meow.onboarding.sandboxes.islo as islo_mod
 
     def _ctor(
         *,
@@ -446,7 +446,7 @@ def install_fake_e2b_launcher(
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import omnigent.onboarding.sandboxes.e2b as e2b_mod
+    import agent_meow.onboarding.sandboxes.e2b as e2b_mod
 
     def _ctor(*, template: str | None = None, env: list[str] | None = None) -> FakeSandboxLauncher:
         """Stand-in constructor recording the construction wiring."""
@@ -475,7 +475,7 @@ def install_fake_openshell_launcher(
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import omnigent.onboarding.sandboxes.openshell as openshell_mod
+    import agent_meow.onboarding.sandboxes.openshell as openshell_mod
 
     def _ctor(
         *,
@@ -508,7 +508,7 @@ def install_fake_kubernetes_launcher(
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import omnigent.onboarding.sandboxes.kubernetes as kubernetes_mod
+    import agent_meow.onboarding.sandboxes.kubernetes as kubernetes_mod
 
     def _ctor(
         *,
@@ -878,7 +878,7 @@ class CapturingRunnerClient:
     ``/events`` and signals when a ``cost_approval_popup`` arrives. A real
     class (not MagicMock) so an unexpected call shape fails loud rather than
     silently returning a mock. Install it as the global runner client with
-    ``monkeypatch.setattr("omnigent.runtime._globals._runner_client", c)``;
+    ``monkeypatch.setattr("agent_meow.runtime._globals._runner_client", c)``;
     the server's forward falls back to it when no runner is bound.
 
     :param posted: Accumulated ``{"url", "json"}`` records of each POST.

@@ -9,14 +9,14 @@ from typing import Any
 
 import pytest
 
-from omnigent.codex_native_bridge import (
+from agent_meow.codex_native_bridge import (
     CodexNativeBridgeState,
     read_bridge_state,
     write_bridge_startup_error,
     write_bridge_state,
 )
-from omnigent.inner.codex_native_executor import CodexNativeExecutor
-from omnigent.inner.executor import ExecutorConfig, ExecutorError, TurnComplete
+from agent_meow.inner.codex_native_executor import CodexNativeExecutor
+from agent_meow.inner.executor import ExecutorConfig, ExecutorError, TurnComplete
 
 # A 1x1 transparent PNG, base64-encoded — a real decodable image small
 # enough to embed, used to prove image blocks are materialized to disk
@@ -161,7 +161,7 @@ def test_web_started_codex_turn_returns_without_waiting_for_terminal_event(
     # Patch at the source so the executor's client_for_transport builds
     # the fake for either transport (ws:// or unix path).
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         _FakeCodexNativeClient,
     )
     write_bridge_state(
@@ -214,7 +214,7 @@ def test_image_block_is_sent_as_local_image_not_inline_base64(
     _FakeCodexNativeClient.created = []
     _FakeCodexNativeClient.next_turn = 1
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         _FakeCodexNativeClient,
     )
     write_bridge_state(
@@ -299,7 +299,7 @@ def test_input_file_text_is_inlined_as_a_text_item(
     _FakeCodexNativeClient.created = []
     _FakeCodexNativeClient.next_turn = 1
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         _FakeCodexNativeClient,
     )
     write_bridge_state(
@@ -356,7 +356,7 @@ def test_input_file_binary_is_materialized_and_referenced_by_path(
     _FakeCodexNativeClient.created = []
     _FakeCodexNativeClient.next_turn = 1
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         _FakeCodexNativeClient,
     )
     write_bridge_state(
@@ -420,7 +420,7 @@ async def test_executor_reaches_app_server_over_ws_transport(
     _FakeCodexNativeClient.requests = []
     _FakeCodexNativeClient.created = []
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         _FakeCodexNativeClient,
     )
     ws_url = "ws://127.0.0.1:9876"
@@ -484,7 +484,7 @@ def test_next_web_message_starts_new_codex_turn_after_forwarder_marks_idle(
     # Patch at the source so the executor's client_for_transport builds
     # the fake for either transport (ws:// or unix path).
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         _FakeCodexNativeClient,
     )
     write_bridge_state(
@@ -588,7 +588,7 @@ async def test_concurrent_steering_during_turn_start_is_not_dropped(
             return {"result": {}}
 
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         _BlockingStartCodexClient,
     )
     write_bridge_state(
@@ -714,7 +714,7 @@ def test_web_model_pick_applied_via_thread_settings_update(
     _FakeCodexNativeClient.created = []
     _FakeCodexNativeClient.next_turn = 1
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         _FakeCodexNativeClient,
     )
     _start_state(tmp_path)
@@ -761,7 +761,7 @@ def test_no_settings_update_when_overrides_unset(
     _FakeCodexNativeClient.created = []
     _FakeCodexNativeClient.next_turn = 1
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         _FakeCodexNativeClient,
     )
     _start_state(tmp_path)
@@ -791,7 +791,7 @@ def test_settings_update_drops_invalid_effort_keeps_model(
     _FakeCodexNativeClient.created = []
     _FakeCodexNativeClient.next_turn = 1
     monkeypatch.setattr(
-        "omnigent.codex_native_app_server.CodexAppServerClient",
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
         _FakeCodexNativeClient,
     )
     _start_state(tmp_path)

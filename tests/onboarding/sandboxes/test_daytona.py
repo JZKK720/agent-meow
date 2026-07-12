@@ -1,4 +1,4 @@
-"""Tests for :mod:`omnigent.onboarding.sandboxes.daytona`."""
+"""Tests for :mod:`~?agent_meow.onboarding.sandboxes.daytona`."""
 
 from __future__ import annotations
 
@@ -10,11 +10,11 @@ from pathlib import Path
 import click
 import pytest
 
-from omnigent.onboarding.sandboxes.base import (
+from agent_meow.onboarding.sandboxes.base import (
     DEFAULT_HOST_IMAGE,
     SandboxCapabilityError,
 )
-from omnigent.onboarding.sandboxes.daytona import (
+from agent_meow.onboarding.sandboxes.daytona import (
     HOST_IMAGE_ENV_VAR,
     SANDBOX_ENV_PASSTHROUGH_ENV_VAR,
     DaytonaSandboxLauncher,
@@ -653,7 +653,7 @@ def test_terminate_retries_state_change_conflicts(
     (launch-failure cleanup vs session delete), so terminate must ride
     out the conflict window rather than surface it.
     """
-    monkeypatch.setattr("omnigent.onboarding.sandboxes.daytona._TERMINATE_CONFLICT_BACKOFF_S", 0.0)
+    monkeypatch.setattr("agent_meow.onboarding.sandboxes.daytona._TERMINATE_CONFLICT_BACKOFF_S", 0.0)
     launcher = DaytonaSandboxLauncher()
     sandbox_id = launcher.provision("a")
     # First two attempts conflict; the third (final allowed attempt)
@@ -673,7 +673,7 @@ def test_terminate_conflict_exhaustion_raises(
     teardown callers are best-effort and log it; swallowing forever
     could hide a wedged sandbox that never gets reaped.
     """
-    monkeypatch.setattr("omnigent.onboarding.sandboxes.daytona._TERMINATE_CONFLICT_BACKOFF_S", 0.0)
+    monkeypatch.setattr("agent_meow.onboarding.sandboxes.daytona._TERMINATE_CONFLICT_BACKOFF_S", 0.0)
     launcher = DaytonaSandboxLauncher()
     sandbox_id = launcher.provision("a")
     fake_daytona.delete_raises = [_FakeConflictError("stuck")] * 3

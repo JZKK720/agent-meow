@@ -17,14 +17,14 @@ from types import SimpleNamespace
 import click
 import pytest
 
-import omnigent.onboarding.sandboxes.kubernetes as k8s
-from omnigent.host.identity import (
+import agent_meow.onboarding.sandboxes.kubernetes as k8s
+from agent_meow.host.identity import (
     HOST_ID_ENV_VAR,
     HOST_NAME_ENV_VAR,
     HOST_TOKEN_ENV_VAR,
 )
-from omnigent.onboarding.sandboxes.base import SandboxCapabilityError
-from omnigent.onboarding.sandboxes.kubernetes import (
+from agent_meow.onboarding.sandboxes.base import SandboxCapabilityError
+from agent_meow.onboarding.sandboxes.kubernetes import (
     KubernetesSandboxLauncher,
     build_pod_manifest,
     build_token_secret_manifest,

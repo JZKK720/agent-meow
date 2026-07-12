@@ -1,5 +1,5 @@
 """
-Unit tests for :mod:`omnigent.runtime.pending_elicitations`.
+Unit tests for :mod:`~?agent_meow.runtime.pending_elicitations`.
 
 The pending-elicitations index is a per-conversation set of
 outstanding elicitation ids that powers the sidebar's "needs
@@ -14,7 +14,7 @@ attention" badge. Tests here pin its core invariants directly:
 * :func:`counts_for` is a one-pass batch lookup that includes
   every requested id (0 for untracked).
 
-The wire-up between :func:`omnigent.runtime.session_stream.publish`
+The wire-up between :func:`~?agent_meow.runtime.session_stream.publish`
 and the index lives in
 :file:`tests/runtime/test_session_stream.py`; this file tests the
 module in isolation.
@@ -26,7 +26,7 @@ from typing import Any
 
 import pytest
 
-from omnigent.runtime import pending_elicitations
+from agent_meow.runtime import pending_elicitations
 
 
 @pytest.fixture(autouse=True)

@@ -1,10 +1,10 @@
 """End-to-end test: the OpenCode-native client speaks to a REAL ``opencode serve``.
 
-The opencode-native harness's HTTP+SSE client (``omnigent.opencode_native_client``)
+The opencode-native harness's HTTP+SSE client (``agent_meow.opencode_native_client``)
 is hand-shaped from the pinned OpenCode OpenAPI (vendored at
 ``omnigent/opencode/openapi-1.17.7.json``), so the rest of the suite exercises it
 only against in-process fakes. This test boots a real ``opencode serve`` via the
-PR's own :class:`~omnigent.opencode_native_app_server.OpenCodeNativeServer` and
+PR's own :class:`~?agent_meow.opencode_native_app_server.OpenCodeNativeServer` and
 drives the provider-independent endpoints the harness relies on, validating the
 wire contract against the actual binary — the one thing the fakes cannot prove.
 
@@ -32,7 +32,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent.opencode_native_app_server import (
+from agent_meow.opencode_native_app_server import (
     OpenCodeNativeServer,
     OpenCodeVersionError,
 )

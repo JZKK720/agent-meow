@@ -13,7 +13,7 @@ import httpx
 import pytest
 import yaml
 
-from omnigent import qwen_native as qn
+from agent_meow import qwen_native as qn
 
 
 def test_resolve_qwen_executable_found() -> None:

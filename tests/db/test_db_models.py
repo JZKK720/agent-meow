@@ -12,7 +12,7 @@ import time
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from omnigent.db.db_models import (
+from agent_meow.db.db_models import (
     SqlAccountToken,
     SqlAgent,
     SqlComment,
@@ -26,7 +26,7 @@ from omnigent.db.db_models import (
     SqlUser,
     SqlUserDailyCost,
 )
-from omnigent.db.utils import get_or_create_engine, make_managed_session_maker
+from agent_meow.db.utils import get_or_create_engine, make_managed_session_maker
 
 # ── helpers ───────────────────────────────────────────
 
@@ -667,7 +667,7 @@ class TestSqlPolicy:
             name="cost-guard",
             created_at=_now(),
             type="python",
-            handler="omnigent.policies.cost_guard:handler",
+            handler="agent_meow.policies.cost_guard:handler",
             enabled=True,
         )
         with managed() as session:

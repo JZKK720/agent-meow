@@ -1,5 +1,5 @@
 """
-Unit tests for the ``omnigent.runtime.telemetry`` helpers.
+Unit tests for the ``agent_meow.runtime.telemetry`` helpers.
 
 Exercises pure helpers (no spans created) and the trace-context
 wrapper with an in-memory OTel exporter so the tests stay fast
@@ -24,7 +24,7 @@ from opentelemetry.trace import (
     StatusCode,
 )
 
-from omnigent.runtime import telemetry
+from agent_meow.runtime import telemetry
 
 _RESP_HEX = "d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3"
 _RESP_ID = f"resp_{_RESP_HEX}"
@@ -54,7 +54,7 @@ def _opt_in_telemetry(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         # init()/enable_tracing() in a telemetry test flips global tracing on
         # and never resets it; clear it so it can't leak "tracing on" into
         # other suites (e.g. the executor-adapter tests).
-        from omnigent.inner.tracing import disable_tracing
+        from agent_meow.inner.tracing import disable_tracing
 
         disable_tracing()
         telemetry._initialized = False
@@ -573,7 +573,7 @@ def test_tracing_context_stamps_session_id_on_agent_span(
 
     :param in_memory_exporter: In-memory span exporter fixture.
     """
-    from omnigent.inner.tracing import TracingContext
+    from agent_meow.inner.tracing import TracingContext
 
     tctx = TracingContext(session_id="conv_abc123")
     agent_span = tctx.start_agent_span("my-agent", "hello")
@@ -895,7 +895,7 @@ def test_consume_frame_span_omits_payload_when_capture_off(
     ):
         pass
     span = in_memory_exporter.get_finished_spans()[-1]
-    assert "omnigent.message.payload" not in (span.attributes or {})
+    assert "agent_meow.message.payload" not in (span.attributes or {})
 
 
 def test_consume_frame_span_records_redacted_payload_when_capture_on(
@@ -919,7 +919,7 @@ def test_consume_frame_span_records_redacted_payload_when_capture_on(
     ):
         pass
     span = in_memory_exporter.get_finished_spans()[-1]
-    payload = (span.attributes or {})["omnigent.message.payload"]
+    payload = (span.attributes or {})["agent_meow.message.payload"]
     assert "SUPER_SECRET" not in payload
     assert "[redacted]" in payload
     assert "traceparent" not in payload
@@ -938,7 +938,7 @@ def test_record_message_payload_truncates(
     with telemetry.span("x") as span:
         telemetry.record_message_payload({"blob": "A" * 9000}, span=span)
     out = in_memory_exporter.get_finished_spans()[-1]
-    payload = (out.attributes or {})["omnigent.message.payload"]
+    payload = (out.attributes or {})["agent_meow.message.payload"]
     assert payload.endswith("…[truncated]")
     assert len(payload) <= telemetry._CONTENT_MAX_LEN + len("…[truncated]")
 

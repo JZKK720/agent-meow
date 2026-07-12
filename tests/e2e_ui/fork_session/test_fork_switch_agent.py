@@ -15,7 +15,7 @@ native CLI: the fork is created on the TARGET agent, the copied transcript
 renders, and the fork's labels route the runner correctly —
 
   - native targets that can replay fork history stamp
-    ``omnigent.fork.carry_history`` (the runner must rebuild the native
+    ``agent_meow.fork.carry_history`` (the runner must rebuild the native
     transcript; absent → the clone would launch fresh and lose history) and
     every native target stamps the TARGET ``omnigent.wrapper`` (so the clone
     opens in the right UI mode, not the source's chat mode);
@@ -47,8 +47,8 @@ from tests.e2e_ui.conftest import _FILES_PROBE_ENV_AGENT_NAME
 _MARKER = "tangerine-switch-marker"
 
 _WRAPPER_LABEL_KEY = "omnigent.wrapper"
-_CARRY_HISTORY_LABEL_KEY = "omnigent.fork.carry_history"
-_SOURCE_EXTERNAL_SESSION_LABEL_KEY = "omnigent.fork.source_external_session_id"
+_CARRY_HISTORY_LABEL_KEY = "agent_meow.fork.carry_history"
+_SOURCE_EXTERNAL_SESSION_LABEL_KEY = "agent_meow.fork.source_external_session_id"
 
 
 def _agent_id_by_name(base_url: str, name: str) -> str:

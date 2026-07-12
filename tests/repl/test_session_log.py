@@ -1,5 +1,5 @@
 """
-Tests for :mod:`omnigent.repl._session_log` — the JSON dump
+Tests for :mod:`~?agent_meow.repl._session_log` — the JSON dump
 helper that ports the legacy ``--log`` flag to agent-meow mode.
 
 Two layers:
@@ -25,17 +25,17 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from omnigent.entities import (
+from agent_meow.entities import (
     FunctionCallOutputData,
     MessageData,
     NewConversationItem,
 )
-from omnigent.repl._session_log import (
+from agent_meow.repl._session_log import (
     DEFAULT_LOG_DIR,
     default_log_path,
     write_session_log_from_store,
 )
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 

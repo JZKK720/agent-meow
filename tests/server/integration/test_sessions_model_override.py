@@ -318,7 +318,7 @@ def _stub_runner_client(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     :returns: A dict the test inspects after the runner POST runs;
         contains ``path`` and ``body`` keys once the route fires.
     """
-    from omnigent.server.routes import sessions as sessions_mod
+    from agent_meow.server.routes import sessions as sessions_mod
 
     captured: dict[str, Any] = {}
 
@@ -435,7 +435,7 @@ async def test_context_window_uses_effective_model(
     the override is cleared. Stub the litellm lookup so we can assert
     *which* model the snapshot used to size the window.
     """
-    from omnigent.llms import context_window as context_window_mod
+    from agent_meow.llms import context_window as context_window_mod
 
     lookup_calls: list[str] = []
 
@@ -485,7 +485,7 @@ async def test_context_window_override_bypasses_declared_window(
     model's real window instead. Before the shared resolver these two paths
     drifted (PR #769).
     """
-    from omnigent.llms import context_window as context_window_mod
+    from agent_meow.llms import context_window as context_window_mod
 
     lookup_calls: list[str] = []
 
@@ -546,7 +546,7 @@ async def test_silent_patch_skips_claude_native_forward(
     """
     import json
 
-    from omnigent.runtime import set_runner_client
+    from agent_meow.runtime import set_runner_client
 
     captured: list[tuple[str, dict[str, Any] | None]] = []
 

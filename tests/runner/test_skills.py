@@ -23,9 +23,9 @@ from typing import Any
 import httpx
 import pytest
 
-from omnigent.runner import create_runner_app
-from omnigent.runner.app import ResolvedSpec
-from omnigent.spec.types import SkillSpec
+from agent_meow.runner import create_runner_app
+from agent_meow.runner.app import ResolvedSpec
+from agent_meow.spec.types import SkillSpec
 
 
 def _skill_md(name: str, description: str) -> str:
@@ -453,7 +453,7 @@ async def test_session_skills_cache_ttl_expiry_rediscovers(
     home = tmp_path / "home"
     (home / ".claude" / "skills").mkdir(parents=True)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
-    monkeypatch.setattr("omnigent.runner.app._SESSION_SKILLS_CACHE_TTL_SECONDS", 0.0)
+    monkeypatch.setattr("agent_meow.runner.app._SESSION_SKILLS_CACHE_TTL_SECONDS", 0.0)
 
     workspace = tmp_path / "workspace"
     first_skill = workspace / ".claude" / "skills" / "first"

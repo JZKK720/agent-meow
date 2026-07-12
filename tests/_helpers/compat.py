@@ -4,12 +4,12 @@ Helpers for the version backwards-compatibility harness.
 See ``docs/SERVER_VERSION_COMPAT_CI.md``. Two independent redirect knobs and
 their version skips:
 
-1. **Server redirect (Config 1)** — pin the ``omnigent.cli server`` subprocess
+1. **Server redirect (Config 1)** — pin the ``agent_meow.cli server`` subprocess
    to an older build (``OMNIGENT_COMPAT_SERVER_PYTHON``) while the client,
    runner, host, and tests stay on main. Skip newer-than-server features with
    ``@pytest.mark.min_server_version(...)``.
-2. **Runner/host redirect (Config 2)** — pin the ``omnigent.runner._entry`` and
-   ``omnigent.host._daemon_entry`` subprocesses to an older build
+2. **Runner/host redirect (Config 2)** — pin the ``agent_meow.runner._entry`` and
+   ``agent_meow.host._daemon_entry`` subprocesses to an older build
    (``OMNIGENT_COMPAT_RUNNER_PYTHON``) while the server, client, and tests stay
    on main. Runner and host are colocated (one install, one version), so a
    single knob governs both. Skip newer-than-runner features with
@@ -77,7 +77,7 @@ def _compat_cwd(env_var: str, label: str) -> str | None:
     """
     A neutral working directory for a redirected subprocess, or ``None``.
 
-    ``python -m omnigent...`` puts the CWD on ``sys.path[0]``, so a subprocess
+    ``python -m agent_meow...`` puts the CWD on ``sys.path[0]``, so a subprocess
     launched from the repo checkout would import the worktree's ``omnigent/``
     package — shadowing the pinned older install exactly like a ``PYTHONPATH``
     prepend would. A stable empty directory forces the pinned venv's installed
@@ -112,7 +112,7 @@ def compat_server_python() -> str | None:
 
 def server_executable() -> str:
     """
-    Interpreter to launch ``omnigent.cli server`` with.
+    Interpreter to launch ``agent_meow.cli server`` with.
 
     :returns: The compat interpreter in compat mode, else ``sys.executable``
         (the test process's own python).
@@ -191,7 +191,7 @@ def compat_runner_python() -> str | None:
 
 def runner_executable() -> str:
     """
-    Interpreter to launch ``omnigent.runner._entry`` / ``omnigent.host._daemon_entry``.
+    Interpreter to launch ``agent_meow.runner._entry`` / ``agent_meow.host._daemon_entry``.
 
     :returns: The pinned-old interpreter in runner compat mode, else
         ``sys.executable`` (the test process's own python = main).

@@ -1,6 +1,6 @@
 """
 Tests for the built-in Google Workspace policies
-(:mod:`omnigent.policies.builtins.google`) — the three sibling factories
+(:mod:`~?agent_meow.policies.builtins.google`) — the three sibling factories
 ``gdrive_policy`` / ``gmail_policy`` / ``gcalendar_policy`` in one module.
 
 Layers per policy:
@@ -22,25 +22,25 @@ from typing import Any
 
 import pytest
 
-from omnigent.policies.builtins.google import (
+from agent_meow.policies.builtins.google import (
     CREATED_DRAFTS_STATE_KEY,
     CREATED_FILES_STATE_KEY,
     gcalendar_policy,
     gdrive_policy,
     gmail_policy,
 )
-from omnigent.policies.function import FunctionPolicy, resolve_function_policy
-from omnigent.policies.registry import get_registry, load_registry, validate_factory_params
-from omnigent.policies.types import EvaluationContext
-from omnigent.runtime.policies.engine import PolicyEngine
-from omnigent.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
-from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from agent_meow.policies.function import FunctionPolicy, resolve_function_policy
+from agent_meow.policies.registry import get_registry, load_registry, validate_factory_params
+from agent_meow.policies.types import EvaluationContext
+from agent_meow.runtime.policies.engine import PolicyEngine
+from agent_meow.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
+from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
 from tests.policies.builtins.helpers import tool_call_event as tc
 from tests.policies.builtins.helpers import tool_result_event as tr
 
-_DRIVE_HANDLER = "omnigent.policies.builtins.google.gdrive_policy"
-_GMAIL_HANDLER = "omnigent.policies.builtins.google.gmail_policy"
-_CAL_HANDLER = "omnigent.policies.builtins.google.gcalendar_policy"
+_DRIVE_HANDLER = "agent_meow.policies.builtins.google.gdrive_policy"
+_GMAIL_HANDLER = "agent_meow.policies.builtins.google.gmail_policy"
+_CAL_HANDLER = "agent_meow.policies.builtins.google.gcalendar_policy"
 _DOC_ID = "1AbCdefGHIjklMNOpqrSTUvwxyz0123456789"
 _DOC_URL = f"https://docs.google.com/document/d/{_DOC_ID}/edit?tab=t.0"
 

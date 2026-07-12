@@ -4,8 +4,8 @@ The goose-native sibling of ``test_cursor_native_cli_e2e``. ``goose-native`` is 
 *terminal-first* harness: ``omnigent goose`` launches Block's ``goose session``
 TUI in a runner-owned tmux pane, and each web-UI turn is injected into that pane
 (bracketed paste + Enter) by
-:class:`omnigent.inner.goose_native_executor.GooseNativeExecutor`. The TUI's own
-SQLite session store is tailed by :mod:`omnigent.goose_native_forwarder`, which
+:class:`~?agent_meow.inner.goose_native_executor.GooseNativeExecutor`. The TUI's own
+SQLite session store is tailed by :mod:`~?agent_meow.goose_native_forwarder`, which
 mirrors Goose's replies back onto the agent-meow conversation as assistant items.
 
 These tests drive the full stack the way a user does — spawn ``omnigent goose``,

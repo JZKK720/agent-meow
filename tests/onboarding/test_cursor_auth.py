@@ -16,9 +16,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from omnigent.onboarding import cursor_auth, extra_install
-from omnigent.onboarding import secrets as secret_store
-from omnigent.onboarding.cursor_auth import (
+from agent_meow.onboarding import cursor_auth, extra_install
+from agent_meow.onboarding import secrets as secret_store
+from agent_meow.onboarding.cursor_auth import (
     CURSOR_SECRET_NAME,
     cursor_api_key_configured,
     cursor_api_key_ref,

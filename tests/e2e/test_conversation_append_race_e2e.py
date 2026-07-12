@@ -15,7 +15,7 @@ when:
    where the agent-meow server is a subprocess of the REPL).
 2. The store's session factory + busy_timeout pragmas come
    from the production code path
-   (:func:`omnigent.db.utils.make_managed_session_maker`),
+   (:func:`~?agent_meow.db.utils.make_managed_session_maker`),
    not a test-only override.
 
 The bug shape: the user's REPL session 2026-04-30 hit
@@ -67,8 +67,8 @@ from pathlib import Path
 import httpx
 import pytest
 
-from omnigent.entities import MessageData, NewConversationItem
-from omnigent.stores.conversation_store.sqlalchemy_store import (
+from agent_meow.entities import MessageData, NewConversationItem
+from agent_meow.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -124,7 +124,7 @@ def ap_server_with_shared_db() -> Iterator[tuple[str, str]]:
         [
             str(_REPO_ROOT / ".venv" / "bin" / "python"),
             "-m",
-            "omnigent.cli",
+            "agent_meow.cli",
             "server",
             "--port",
             str(port),

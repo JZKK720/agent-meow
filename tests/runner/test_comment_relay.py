@@ -27,14 +27,14 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from omnigent.claude_native_bridge import bridge_dir_for_bridge_id, prepare_bridge_dir
-from omnigent.entities.session_resources import SessionResourceView, terminal_resource_view
-from omnigent.inner.datamodel import TerminalEnvSpec
-from omnigent.runner import create_runner_app
-from omnigent.terminals import TerminalListEntry
+from agent_meow.claude_native_bridge import bridge_dir_for_bridge_id, prepare_bridge_dir
+from agent_meow.entities.session_resources import SessionResourceView, terminal_resource_view
+from agent_meow.inner.datamodel import TerminalEnvSpec
+from agent_meow.runner import create_runner_app
+from agent_meow.terminals import TerminalListEntry
 from tests.runner.helpers import NullServerClient, make_test_terminal_instance
 
-# Matches ``_TOOL_RELAY_FILE`` in ``omnigent.claude_native_bridge``.
+# Matches ``_TOOL_RELAY_FILE`` in ``agent_meow.claude_native_bridge``.
 _TOOL_RELAY_FILE = "tool_relay.json"
 
 
@@ -253,7 +253,7 @@ def _skip_tools_changed_notification(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # The runner imports the name from this module at call time, so patching
     # the module attribute is picked up by _ensure_comment_relay_started.
-    monkeypatch.setattr("omnigent.claude_native_bridge.post_tools_changed", _noop)
+    monkeypatch.setattr("agent_meow.claude_native_bridge.post_tools_changed", _noop)
 
 
 @pytest.fixture
@@ -460,11 +460,11 @@ async def test_relay_executor_routes_through_omnigent_in_omnigent_mode(
 
     Verifies that when the runner is configured with a server_client (AP mode),
     the ``_relay_tool_executor`` closure routes calls through
-    :class:`~omnigent.runner.proxy_mcp_manager.ProxyMcpManager` instead of
+    :class:`~?agent_meow.runner.proxy_mcp_manager.ProxyMcpManager` instead of
     dispatching directly to comment/session-query handlers.  Policy enforcement
     on these relay tools was previously bypassed; this test pins the fix.
     """
-    import omnigent.claude_native_bridge as _bridge_mod
+    import agent_meow.claude_native_bridge as _bridge_mod
 
     # Records every POST sent to the fake agent-meow server.
     ap_mcp_posts: list[dict[str, Any]] = []

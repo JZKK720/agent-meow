@@ -1,4 +1,4 @@
-"""Tests for omnigent.pi_native_credentials (native Pi provider wiring)."""
+"""Tests for agent_meow.pi_native_credentials (native Pi provider wiring)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from omnigent import pi_native_credentials as creds
+from agent_meow import pi_native_credentials as creds
 
 
 def _databricks_config() -> dict[str, object]:
@@ -28,7 +28,7 @@ def test_resolves_databricks_default_to_anthropic_gateway(monkeypatch: pytest.Mo
     surface — which Pi speaks natively — and build a gateway provider with a
     bearer-token refresh command.
     """
-    from omnigent.inner import databricks_executor
+    from agent_meow.inner import databricks_executor
 
     def _host(profile: str | None) -> str:
         return "https://wkspc.example.com/"
@@ -49,7 +49,7 @@ def test_resolves_databricks_default_to_anthropic_gateway(monkeypatch: pytest.Mo
 
 def test_databricks_unresolvable_host_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """No host for the profile → fall back to Pi's own login (None)."""
-    from omnigent.inner import databricks_executor
+    from agent_meow.inner import databricks_executor
 
     def _no_host(profile: str | None) -> None:
         return None
@@ -411,7 +411,7 @@ def test_cli_config_databricks_warns_on_unresolvable(
     monkeypatch.setenv("HOME", str(tmp_path))
     import logging
 
-    with caplog.at_level(logging.INFO, logger="omnigent.pi_native_credentials"):
+    with caplog.at_level(logging.INFO, logger="agent_meow.pi_native_credentials"):
         assert (
             creds.resolve_pi_native_provider(config_loader=_cli_config_databricks_config) is None
         )
@@ -683,7 +683,7 @@ def test_model_override_beats_databricks_default(monkeypatch: pytest.MonkeyPatch
     so the rendered ``models.json`` selects the requested model rather than the
     ``databricks-claude-sonnet-4-6`` default.
     """
-    from omnigent.inner import databricks_executor
+    from agent_meow.inner import databricks_executor
 
     monkeypatch.setattr(
         databricks_executor,

@@ -1,4 +1,4 @@
-"""Tests for :mod:`omnigent.onboarding.sandboxes.bootstrap`."""
+"""Tests for :mod:`~?agent_meow.onboarding.sandboxes.bootstrap`."""
 
 from __future__ import annotations
 
@@ -15,14 +15,14 @@ import click
 import httpx
 import pytest
 
-from omnigent.onboarding.sandboxes import bootstrap as bootstrap_mod
-from omnigent.onboarding.sandboxes.base import (
+from agent_meow.onboarding.sandboxes import bootstrap as bootstrap_mod
+from agent_meow.onboarding.sandboxes.base import (
     RemoteCommandResult,
     RemoteProcess,
     SandboxCapabilityError,
     SandboxLauncher,
 )
-from omnigent.onboarding.sandboxes.bootstrap import (
+from agent_meow.onboarding.sandboxes.bootstrap import (
     DEFAULT_SANDBOX_NAME,
     DerivedWorkspace,
     _extract_oauth_url,

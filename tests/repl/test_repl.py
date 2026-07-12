@@ -1,4 +1,4 @@
-"""Tests for omnigent.repl._repl helpers.
+"""Tests for agent_meow.repl._repl helpers.
 
 Covers pure parsing helpers used by the Ctrl+O debug overlay. The
 overlay fetches items from the conversation store and walks
@@ -15,7 +15,7 @@ import json
 import pytest
 from prompt_toolkit.document import Document
 
-from omnigent.repl._repl import (
+from agent_meow.repl._repl import (
     _SLASH_COMMAND_ALIASES,
     COMMANDS,
     WELCOME_HINTS,
@@ -43,7 +43,7 @@ from omnigent.repl._repl import (
     _tmux_pane_snapshot,
     _tmux_session_alive,
 )
-from omnigent.spec.types import SkillSpec
+from agent_meow.spec.types import SkillSpec
 
 
 def test_parse_sub_agent_handle_returns_raw_handle_dict() -> None:
@@ -1251,7 +1251,7 @@ def test_render_startup_banner_uses_mascot_accent_color() -> None:
     ANSI on the agent-meow path or swapping Rich for raw text), the
     banner would render as a plain unstyled box and visually
     diverge from the rest of the UI. The override happens in
-    :func:`omnigent.repl._repl._render_startup_banner_ansi`.
+    :func:`~?agent_meow.repl._repl._render_startup_banner_ansi`.
     """
     ansi = _render_startup_banner_ansi("agent")
     # ``38;2;244;59;166`` is the SGR truecolor foreground encoding
@@ -1280,8 +1280,8 @@ def test_run_banner_uses_magenta_mascot_color() -> None:
     border, and prompt marker all read as one accent regardless
     of mode.
     """
-    from omnigent.inner.banner import startup_banner_strings
-    from omnigent.inner.mascots import MASCOT_ART_COLOR
+    from agent_meow.inner.banner import startup_banner_strings
+    from agent_meow.inner.mascots import MASCOT_ART_COLOR
 
     assert MASCOT_ART_COLOR == "#F43BA6", (
         f"MASCOT_ART_COLOR must be the starfish magenta-pink brand "
@@ -1490,7 +1490,7 @@ def test_startup_header_shows_server_version_on_url_line() -> None:
         credential=None,
         creds_line=None,
     )
-    remote = "https://omnigent.example.com"
+    remote = "https://agent_meow.example.com"
     plain = re.sub(
         r"\x1b\[[0-9;]*m",
         "",
@@ -1634,7 +1634,7 @@ def _fake_version_client(by_path: dict[str, dict]) -> tuple[object, list[str]]:
             return _FakeResp({})
 
     class _FakeClient:
-        _base_url = "https://omnigent.example.com"
+        _base_url = "https://agent_meow.example.com"
         _http = _FakeHttp()
 
     return _FakeClient(), targets
@@ -1665,7 +1665,7 @@ def test_fetch_server_version_parses_info(payload, expected) -> None:
     client, targets = _fake_version_client({"/v1/info": payload, "/api/version": {}})
     assert _run(_fetch_server_version(client)) == expected
     # The richer capabilities probe is always tried first, via the authed _http.
-    assert targets[0] == "https://omnigent.example.com/v1/info"
+    assert targets[0] == "https://agent_meow.example.com/v1/info"
 
 
 def test_fetch_server_version_falls_back_to_api_version() -> None:
@@ -1687,8 +1687,8 @@ def test_fetch_server_version_falls_back_to_api_version() -> None:
     )
     assert _run(_fetch_server_version(client)) == "0.1.2"
     assert targets == [
-        "https://omnigent.example.com/v1/info",
-        "https://omnigent.example.com/api/version",
+        "https://agent_meow.example.com/v1/info",
+        "https://agent_meow.example.com/api/version",
     ]
 
 
@@ -1706,7 +1706,7 @@ def test_fetch_server_version_never_raises() -> None:
             raise RuntimeError("network down")
 
     class _FakeClient:
-        _base_url = "https://omnigent.example.com"
+        _base_url = "https://agent_meow.example.com"
         _http = _BoomHttp()
 
     assert _run(_fetch_server_version(_FakeClient())) is None
@@ -1946,7 +1946,7 @@ async def test_list_all_conversation_items_paginates_past_100(
     ``list_items(limit=100)`` call): the assertion ``len(items)
     == total`` fails with ``100 != 217``.
     """
-    from omnigent.repl._repl import _list_all_conversation_items
+    from agent_meow.repl._repl import _list_all_conversation_items
 
     # Build a 217-item synthetic conversation: enough to require
     # 3 pages (100 + 100 + 17). Item ids encode position so the
@@ -2028,7 +2028,7 @@ async def test_list_all_conversation_items_handles_empty_conversation() -> None:
     Catches a regression where the loop infinite-loops on an
     empty first page or makes redundant fetches.
     """
-    from omnigent.repl._repl import _list_all_conversation_items
+    from agent_meow.repl._repl import _list_all_conversation_items
 
     fetch_count = 0
 
@@ -2062,7 +2062,7 @@ async def test_list_all_conversation_items_falls_back_on_error() -> None:
     so an error mid-pagination should surface a partial item
     list rather than crashing the overlay builder.
     """
-    from omnigent.repl._repl import _list_all_conversation_items
+    from agent_meow.repl._repl import _list_all_conversation_items
 
     fetch_count = 0
 
@@ -2296,7 +2296,7 @@ class _StubFmt:
 
 def test_clear_command_registered_in_help() -> None:
     """``/clear`` is in the COMMANDS registry so /help lists it."""
-    from omnigent.repl._repl import COMMANDS
+    from agent_meow.repl._repl import COMMANDS
 
     assert "/clear" in COMMANDS, "/clear missing — /help would not list it"
     help_text, _ = COMMANDS["/clear"]
@@ -2367,7 +2367,7 @@ class _StubSkillSession:
 
 async def test_registered_skill_command_uses_structured_slash_command() -> None:
     """Skill slash commands no longer send a visible ``load_skill`` prompt."""
-    from omnigent.repl import _repl as repl_mod
+    from agent_meow.repl import _repl as repl_mod
 
     skill = SkillSpec(
         name="meta-skill-test",
@@ -2396,7 +2396,7 @@ async def test_registered_skill_command_uses_structured_slash_command() -> None:
 
 def test_register_skill_commands_skips_non_user_invocable() -> None:
     """``user-invocable: false`` skills are not registered as REPL slash commands."""
-    from omnigent.repl import _repl as repl_mod
+    from agent_meow.repl import _repl as repl_mod
 
     invocable = SkillSpec(name="visible-skill", description="d", content="c")
     internal = SkillSpec(name="internal-skill", description="d", content="c", user_invocable=False)
@@ -2411,7 +2411,7 @@ def test_register_skill_commands_skips_non_user_invocable() -> None:
 
 def test_register_skill_commands_skips_invalid_command_names() -> None:
     """Skill names that aren't valid slash-command tokens are skipped + not registered."""
-    from omnigent.repl import _repl as repl_mod
+    from agent_meow.repl import _repl as repl_mod
 
     valid = SkillSpec(name="superpowers:using-superpowers", description="d", content="c")
     namespaced = SkillSpec(name="fe-innovate--innovate", description="d", content="c")
@@ -2467,7 +2467,7 @@ async def test_clear_command_clears_screen_and_resets_session(
     (resets local session state). The old conversation persists
     server-side and is resumable via ``/switch``.
     """
-    from omnigent.repl import _repl as repl_mod
+    from agent_meow.repl import _repl as repl_mod
 
     clear_calls: list[None] = []
     monkeypatch.setattr(repl_mod, "_clear_screen", lambda: clear_calls.append(None))
@@ -2500,7 +2500,7 @@ async def test_new_command_resets_session_without_clearing_screen(
     ``/new`` starts a new conversation but leaves the visible
     scrollback intact — distinguishes it from ``/clear``.
     """
-    from omnigent.repl import _repl as repl_mod
+    from agent_meow.repl import _repl as repl_mod
 
     clear_calls: list[None] = []
     monkeypatch.setattr(repl_mod, "_clear_screen", lambda: clear_calls.append(None))
@@ -2555,7 +2555,7 @@ async def test_clear_command_in_sessions_mode_calls_start_new_conversation(
     Without this, sessions mode would either skip the unbind (if it
     called ``reset()`` only) or double-fire (if it called both).
     """
-    from omnigent.repl import _repl as repl_mod
+    from agent_meow.repl import _repl as repl_mod
 
     clear_calls: list[None] = []
     monkeypatch.setattr(repl_mod, "_clear_screen", lambda: clear_calls.append(None))
@@ -2584,7 +2584,7 @@ async def test_new_command_in_sessions_mode_calls_start_new_conversation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Same dispatch contract as ``/clear`` but ``/new`` does not clear scrollback."""
-    from omnigent.repl import _repl as repl_mod
+    from agent_meow.repl import _repl as repl_mod
 
     clear_calls: list[None] = []
     monkeypatch.setattr(repl_mod, "_clear_screen", lambda: clear_calls.append(None))
@@ -2612,7 +2612,7 @@ async def test_clear_command_renders_error_when_unbind_fails(
     + welcome banner — leaving the REPL on the prior conversation so
     the user can retry.
     """
-    from omnigent.repl import _repl as repl_mod
+    from agent_meow.repl import _repl as repl_mod
 
     clear_calls: list[None] = []
     monkeypatch.setattr(repl_mod, "_clear_screen", lambda: clear_calls.append(None))
@@ -2641,7 +2641,7 @@ async def test_slash_command_exception_renders_inline_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Slash-command failures render instead of escaping background tasks."""
-    from omnigent.repl import _repl as repl_mod
+    from agent_meow.repl import _repl as repl_mod
 
     async def raise_remote_error(
         arg,
@@ -2804,7 +2804,7 @@ def test_server_event_to_sdk_event_translates_llm_error_event() -> None:
     from omnigent_client._events import ErrorEvent as _SDKErrorEvent
     from omnigent_client._types import ErrorInfo
 
-    from omnigent.server.schemas import ErrorEvent, RetryErrorDetail
+    from agent_meow.server.schemas import ErrorEvent, RetryErrorDetail
 
     server_event = ErrorEvent(
         type="response.error",
@@ -2837,7 +2837,7 @@ def test_server_event_to_sdk_event_translates_tool_error_event() -> None:
     """
     from omnigent_client._events import ErrorEvent as _SDKErrorEvent
 
-    from omnigent.server.schemas import ErrorEvent, RetryErrorDetail
+    from agent_meow.server.schemas import ErrorEvent, RetryErrorDetail
 
     server_event = ErrorEvent(
         type="response.error",

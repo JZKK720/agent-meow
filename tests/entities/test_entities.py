@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from omnigent.entities import (
+from agent_meow.entities import (
     NON_CONTENT_ITEM_TYPES,
     Conversation,
     ConversationItem,

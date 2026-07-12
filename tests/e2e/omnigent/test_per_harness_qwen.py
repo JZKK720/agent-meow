@@ -12,7 +12,7 @@ the qwen harness.
   subprocess lifecycle, the ACP JSON-RPC 2.0 event protocol).
 - The ``qwen`` CLI binary disappears from PATH or changes its
   ``--acp`` startup contract.
-- ``omnigent.cli._run_agent`` for the ``-p`` one-shot path
+- ``agent_meow.cli._run_agent`` for the ``-p`` one-shot path
   stops printing assistant text to stdout on turn complete.
 
 Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
@@ -29,7 +29,7 @@ import pytest
 
 from tests._model_pools import resolve_model
 from tests.e2e._harness_probes import cli_unavailable_reason
-from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.agent_meow._snapshot import compare_snapshot
 
 # Model + harness are hardcoded because the test name advertises
 # "qwen harness".
