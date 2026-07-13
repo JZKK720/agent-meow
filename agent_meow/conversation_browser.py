@@ -12,8 +12,8 @@ from collections.abc import Callable
 # mounted on different workspace paths. ``conversation_url`` maps the
 # server (API) base onto the UI mount so browser links land on the SPA
 # instead of the JSON API.
-WORKSPACE_API_PATH = "/api/2.0/agent-meow"
-WORKSPACE_UI_PATH = "/agent-meow"
+WORKSPACE_API_PATH = "/api/2.0/agent_meow"
+WORKSPACE_UI_PATH = "/agent_meow"
 
 
 def is_workspace_hosted_url(base_url: str) -> bool:

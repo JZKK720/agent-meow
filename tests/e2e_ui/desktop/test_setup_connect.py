@@ -66,11 +66,11 @@ def test_bare_workspace_url_connects_without_http_warning(page: Page) -> None:
     """
     _open_setup_page(page)
 
-    page.fill("#url", "dbc-x.cloud.databricks.com/agent-meow")
+    page.fill("#url", "dbc-x.cloud.databricks.com/agent_meow")
     page.click("#connect")
 
     page.wait_for_function("() => window.__connectCalls.length === 1")
-    assert page.evaluate("() => window.__connectCalls") == ["dbc-x.cloud.databricks.com/agent-meow"]
+    assert page.evaluate("() => window.__connectCalls") == ["dbc-x.cloud.databricks.com/agent_meow"]
     expect(page.locator("#err")).to_have_text("")
 
 
@@ -125,9 +125,9 @@ def test_shared_url_module_defaults_scheme_in_browser(page: Page) -> None:
     # Remote host → https; the guide's /agent-meow suffix is preserved.
     assert (
         page.evaluate(
-            "() => window.omnigentUrl.normalizeUrl('dbc-x.cloud.databricks.com/agent-meow')"
+            "() => window.omnigentUrl.normalizeUrl('dbc-x.cloud.databricks.com/agent_meow')"
         )
-        == "https://dbc-x.cloud.databricks.com/agent-meow"
+        == "https://dbc-x.cloud.databricks.com/agent_meow"
     )
     # Loopback stays http for local dev.
     assert (

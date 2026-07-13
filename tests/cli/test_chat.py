@@ -2318,7 +2318,7 @@ def test_remote_headers_adds_org_id_header(monkeypatch: pytest.MonkeyPatch) -> N
         "agent_meow.cli_auth.load_databricks_org_id", lambda _url: "2850744067564480"
     )
 
-    headers = _remote_headers(server_url="https://acme.databricks.com/api/2.0/agent-meow")
+    headers = _remote_headers(server_url="https://acme.databricks.com/api/2.0/agent_meow")
 
     assert headers == {
         "Authorization": "Bearer rec-tok",
@@ -2339,7 +2339,7 @@ def test_remote_headers_omits_org_when_no_record(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(chat_module, "_stored_databricks_record_token", lambda _url: "rec-tok")
     monkeypatch.setattr("agent_meow.cli_auth.load_databricks_org_id", lambda _url: None)
 
-    headers = _remote_headers(server_url="https://single.databricks.com/api/2.0/agent-meow")
+    headers = _remote_headers(server_url="https://single.databricks.com/api/2.0/agent_meow")
 
     assert headers == {"Authorization": "Bearer rec-tok"}
     assert "X-Databricks-Org-Id" not in headers
@@ -2885,7 +2885,7 @@ def test_databricks_token_auth_sets_org_header(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(chat_module._DatabricksTokenAuth, "_sdk_token", lambda self: None)
 
     auth = chat_module._DatabricksTokenAuth(
-        server_url="https://acme.databricks.com/api/2.0/agent-meow"
+        server_url="https://acme.databricks.com/api/2.0/agent_meow"
     )
     flow = auth.auth_flow(
         httpx.Request("GET", "https://acme.databricks.com/api/2.0/agent_meow/v1/sessions")

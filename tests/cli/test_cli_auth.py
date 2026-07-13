@@ -238,19 +238,19 @@ def test_databricks_request_headers_org_only(token_dir) -> None:
     from agent_meow.cli_auth import databricks_request_headers, store_databricks_auth
 
     store_databricks_auth(
-        server_url="https://acme.databricks.com/api/2.0/agent-meow",
+        server_url="https://acme.databricks.com/api/2.0/agent_meow",
         workspace_host="https://acme.databricks.com",
         org_id="2850744067564480",
     )
-    assert databricks_request_headers("https://acme.databricks.com/api/2.0/agent-meow") == {
+    assert databricks_request_headers("https://acme.databricks.com/api/2.0/agent_meow") == {
         "X-Databricks-Org-Id": "2850744067564480"
     }
 
     store_databricks_auth(
-        server_url="https://single.databricks.com/api/2.0/agent-meow",
+        server_url="https://single.databricks.com/api/2.0/agent_meow",
         workspace_host="https://single.databricks.com",
     )
-    assert databricks_request_headers("https://single.databricks.com/api/2.0/agent-meow") == {}
+    assert databricks_request_headers("https://single.databricks.com/api/2.0/agent_meow") == {}
 
 
 def test_databricks_request_headers_pairs_bearer_and_org(token_dir) -> None:
@@ -264,11 +264,11 @@ def test_databricks_request_headers_pairs_bearer_and_org(token_dir) -> None:
     from agent_meow.cli_auth import databricks_request_headers, store_databricks_auth
 
     store_databricks_auth(
-        server_url="https://acme.databricks.com/api/2.0/agent-meow",
+        server_url="https://acme.databricks.com/api/2.0/agent_meow",
         workspace_host="https://acme.databricks.com",
         org_id="2850744067564480",
     )
-    recorded = "https://acme.databricks.com/api/2.0/agent-meow"
+    recorded = "https://acme.databricks.com/api/2.0/agent_meow"
     # Bearer + org travel together.
     assert databricks_request_headers(recorded, bearer_token="tok") == {
         "Authorization": "Bearer tok",
