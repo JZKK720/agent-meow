@@ -1120,26 +1120,26 @@
   animation: meowcat-blink 3.4s ease-in-out infinite;
 }
 
-/* ── Landing surface: warm-cream paw/cross/circle pattern ──
- * Mirrors the brand workspace design mockups (docs/assets/branding/
- * workspace-design-01.png). The pattern is an SVG data URI so it tiles
- * without an extra HTTP request. Three motifs — paw print, saltire
- * cross, hollow circle — in warm cream / soft ember, scattered on a
- * subtle grid. The background is the landing panel only (NewChatDialog),
- * not the sidebar or right-rail. Dark mode uses a muted version on the
- * charcoal base (design-02). */
+/* ── Landing surface: real 猫元素图案 cat-element pattern ──
+ * The brand pattern is 猫元素图案_p1.png (from
+ * docs/assets/branding/original/exports/), tiled at 480x480. The pattern
+ * is monochromatic in cream + orange tabby — no pink, no purple. The
+ * source is 8504x14174, so the natural tile period is ~2835px. We
+ * export a 480x480 derivative at web/public/patterns/cat-element-tile-light.png
+ * (and a dark variant). The background is the landing panel only
+ * (NewChatDialog), not the sidebar or right-rail. */
 .new-chat-landing-pattern {
-  background-color: #faf7f2;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg transform='translate(20 15)' fill='%23e8d5c4' opacity='0.35'%3E%3Cpath d='M12 0c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm-7 8c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3zm14 0c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3zm-7 6c3.3 0 6 2.7 6 6 0 3.9-2.7 7-6 7s-6-3.1-6-7c0-3.3 2.7-6 6-6z'/%3E%3C/g%3E%3Cg transform='translate(80 55)' fill='%23d4a76a' opacity='0.25'%3E%3Cpath d='M7 0l7 7-7 7-7-7z'/%3E%3C/g%3E%3Cg transform='translate(45 85)' fill='%23c9a0dc' opacity='0.20'%3E%3Ccircle cx='8' cy='8' r='6' stroke='%23c9a0dc' stroke-width='1.5' fill='none'/%3E%3C/g%3E%3Cg transform='translate(90 95)' fill='%23e8d5c4' opacity='0.30'%3E%3Cpath d='M12 0c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm-7 8c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3zm14 0c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3zm-7 6c3.3 0 6 2.7 6 6 0 3.9-2.7 7-6 7s-6-3.1-6-7c0-3.3 2.7-6 6-6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-color: #f8e0b6;
+  background-image: url("/patterns/cat-element-tile-light.png");
   background-repeat: repeat;
-  background-size: 120px 120px;
+  background-size: 480px 480px;
 }
 
 .dark .new-chat-landing-pattern {
-  background-color: #1a1816;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg transform='translate(20 15)' fill='%234a3f35' opacity='0.40'%3E%3Cpath d='M12 0c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm-7 8c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3zm14 0c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3zm-7 6c3.3 0 6 2.7 6 6 0 3.9-2.7 7-6 7s-6-3.1-6-7c0-3.3 2.7-6 6-6z'/%3E%3C/g%3E%3Cg transform='translate(80 55)' fill='%236b4f2a' opacity='0.30'%3E%3Cpath d='M7 0l7 7-7 7-7-7z'/%3E%3C/g%3E%3Cg transform='translate(45 85)' fill='%235a4a6a' opacity='0.25'%3E%3Ccircle cx='8' cy='8' r='6' stroke='%235a4a6a' stroke-width='1.5' fill='none'/%3E%3C/g%3E%3Cg transform='translate(90 95)' fill='%234a3f35' opacity='0.35'%3E%3Cpath d='M12 0c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm-7 8c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3zm14 0c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3zm-7 6c3.3 0 6 2.7 6 6 0 3.9-2.7 7-6 7s-6-3.1-6-7c0-3.3 2.7-6 6-6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-color: #1c1a18;
+  background-image: url("/patterns/cat-element-tile-dark.png");
   background-repeat: repeat;
-  background-size: 120px 120px;
+  background-size: 480px 480px;
 }
 
 @keyframes compaction-slide {
