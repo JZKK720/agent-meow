@@ -2034,7 +2034,7 @@ def test_build_connect_headers_adds_org_header(monkeypatch: pytest.MonkeyPatch) 
         "agent_meow.cli_auth.load_databricks_org_id", lambda _url: "2850744067564480"
     )
 
-    headers = _host("https://acme.databricks.com/api/2.0/agent-meow")._build_connect_headers()
+    headers = _host("https://acme.databricks.com/api/2.0/agent_meow")._build_connect_headers()
 
     assert headers["X-Databricks-Org-Id"] == "2850744067564480"
 

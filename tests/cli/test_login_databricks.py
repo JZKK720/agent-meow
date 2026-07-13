@@ -29,7 +29,7 @@ cli_group = cli_mod.cli
 _APPS_URL = "https://myapp-1234.aws.databricksapps.com"
 _WORKSPACE = "https://example.databricks.com"
 _APPS_REDIRECT = f"{_WORKSPACE}/oidc/oauth2/v2.0/authorize?client_id=abc&response_type=code"
-_WORKSPACE_API_URL = f"{_WORKSPACE}/api/2.0/agent-meow"
+_WORKSPACE_API_URL = f"{_WORKSPACE}/api/2.0/agent_meow"
 
 
 @dataclass
@@ -871,8 +871,8 @@ def test_workspace_url_skips_authed_probe_without_databricks_extra(
     [
         # The guide hands out the web URL without a scheme; default https.
         (
-            "dbc-a5d4177a-49dc.cloud.databricks.com/agent-meow",
-            "https://dbc-a5d4177a-49dc.cloud.databricks.com/agent-meow",
+            "dbc-a5d4177a-49dc.cloud.databricks.com/agent_meow",
+            "https://dbc-a5d4177a-49dc.cloud.databricks.com/agent_meow",
         ),
         ("example.cloud.databricks.com", "https://example.cloud.databricks.com"),
         # Loopback hosts stay http — local dev servers are plain http.
@@ -918,7 +918,7 @@ def test_resolve_server_url_defaults_scheme_and_expands(
     )
 
     assert cli_mod._resolve_server_url("example.databricks.com") == _WORKSPACE_API_URL
-    assert cli_mod._resolve_server_url("example.databricks.com/agent-meow") == _WORKSPACE_API_URL
+    assert cli_mod._resolve_server_url("example.databricks.com/agent_meow") == _WORKSPACE_API_URL
 
 
 def test_resolve_server_url_strips_query_and_expands(
@@ -985,7 +985,7 @@ def test_workspace_url_expands_web_ui_path_to_api_mount(
         },
     )
 
-    assert cli_mod._workspace_api_server_url(f"{_WORKSPACE}/agent-meow") == _WORKSPACE_API_URL
+    assert cli_mod._workspace_api_server_url(f"{_WORKSPACE}/agent_meow") == _WORKSPACE_API_URL
     # The bare root and its API mount were probed — never the UI path itself.
     assert f"{_WORKSPACE}/agent_meow/v1/me" not in probed
 
@@ -1031,7 +1031,7 @@ def test_login_defaults_scheme_to_https(monkeypatch: pytest.MonkeyPatch, token_d
     _patch_login_env(monkeypatch, fake_httpx=fake)
 
     # Schemeless input (no https://) — the guide hands out bare URLs.
-    result = CliRunner().invoke(cli_group, ["login", "example.databricks.com/api/2.0/agent-meow"])
+    result = CliRunner().invoke(cli_group, ["login", "example.databricks.com/api/2.0/agent_meow"])
 
     assert result.exit_code == 0, result.output
     # The probe used the https:// default, and the record keys on it.

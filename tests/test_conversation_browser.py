@@ -14,18 +14,18 @@ import agent_meow.conversation_browser as browser
     [
         # Databricks workspace API mount → the recognizable /agent-meow SPA URL.
         (
-            "https://e2-dogfood.staging.cloud.databricks.com/api/2.0/agent-meow",
-            "https://e2-dogfood.staging.cloud.databricks.com/agent-meow",
+            "https://e2-dogfood.staging.cloud.databricks.com/api/2.0/agent_meow",
+            "https://e2-dogfood.staging.cloud.databricks.com/agent_meow",
         ),
         # A trailing ``?o=<org>`` selector on the API base is dropped.
         (
-            "https://ws.databricks.com/api/2.0/agent-meow?o=123",
-            "https://ws.databricks.com/agent-meow",
+            "https://ws.databricks.com/api/2.0/agent_meow?o=123",
+            "https://ws.databricks.com/agent_meow",
         ),
         # Trailing slash on the API mount still maps cleanly.
         (
             "https://ws.databricks.com/api/2.0/agent_meow/",
-            "https://ws.databricks.com/agent-meow",
+            "https://ws.databricks.com/agent_meow",
         ),
         # Non-Databricks URLs pass through unchanged (sans trailing slash).
         ("http://127.0.0.1:6767", "http://127.0.0.1:6767"),
@@ -49,9 +49,9 @@ def test_display_server_url_maps_databricks_api_mount(url: str, expected: str) -
 @pytest.mark.parametrize(
     "url,expected",
     [
-        ("https://ws.databricks.com/api/2.0/agent-meow", True),
+        ("https://ws.databricks.com/api/2.0/agent_meow", True),
         ("https://ws.databricks.com/api/2.0/agent_meow/", True),
-        ("https://ws.databricks.com/agent-meow", False),  # the SPA URL, not the API mount
+        ("https://ws.databricks.com/agent_meow", False),  # the SPA URL, not the API mount
         ("http://127.0.0.1:6767", False),
         ("https://omnigent-02m5.onrender.com", False),
     ],
@@ -247,7 +247,7 @@ def test_conversation_url_maps_workspace_hosted_server_to_ui_mount(tmp_path, mon
         "agent_meow.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
-    server = "https://example.databricks.com/api/2.0/agent-meow"
+    server = "https://example.databricks.com/api/2.0/agent_meow"
     store_databricks_auth(
         server,
         "https://example.databricks.com",
@@ -272,7 +272,7 @@ def test_conversation_url_workspace_hosted_without_org_record(tmp_path, monkeypa
         lambda: tmp_path / "auth_tokens.json",
     )
 
-    url = conversation_url("https://example.databricks.com/api/2.0/agent-meow", "conv_abc123")
+    url = conversation_url("https://example.databricks.com/api/2.0/agent_meow", "conv_abc123")
 
     assert url == "https://example.databricks.com/agent_meow/c/conv_abc123"
 

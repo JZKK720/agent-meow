@@ -623,7 +623,7 @@ async def test_serve_tunnel_once_sends_org_header(
     await _serve_tunnel_once(
         _noop_app,
         tunnel_url="wss://acme.databricks.com/v1/runners/r/tunnel",
-        server_url="https://acme.databricks.com/api/2.0/agent-meow",
+        server_url="https://acme.databricks.com/api/2.0/agent_meow",
         runner_id="r",
         runner_version="0.1.0",
         auth_token="tok",

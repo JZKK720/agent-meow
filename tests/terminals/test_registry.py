@@ -117,7 +117,7 @@ def test_conversation_link_for_id_maps_workspace_hosted_server_to_ui_mount(
         "agent_meow.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
-    server = "https://example.databricks.com/api/2.0/agent-meow"
+    server = "https://example.databricks.com/api/2.0/agent_meow"
     store_databricks_auth(
         server,
         "https://example.databricks.com",
