@@ -10,13 +10,15 @@ into one frame; a lone keystroke still flushes immediately).
 """
 
 from __future__ import annotations
+import pytest
+
 
 import asyncio
 import contextlib
-import fcntl
+pytest.importorskip("fcntl", reason="POSIX-only test (fcntl)")
 import json
 import os
-import pty
+pytest.importorskip("pty", reason="POSIX-only test (pty)")
 import shutil
 import signal
 import stat

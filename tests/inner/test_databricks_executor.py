@@ -1,5 +1,7 @@
 """Tests for DatabricksExecutor with a mock OpenAI client."""
 
+import pytest
+
 import asyncio
 import json
 import sys
@@ -8,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+databricks = pytest.importorskip("databricks")
 import databricks.sdk.config as _sdk_config_mod
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))

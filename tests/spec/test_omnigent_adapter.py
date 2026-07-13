@@ -30,7 +30,7 @@ import yaml
 
 from agent_meow.errors import OmnigentError
 from agent_meow.spec import load
-from agent_meow.spec.agent-meow import (
+from agent_meow.spec.omnigent import (
     OMNIGENT_EXECUTOR_TYPE,
     OMNIGENT_TOOL_LANGUAGE,
     agent_def_to_agent_spec,
@@ -765,7 +765,7 @@ def test_mcp_stdio_yaml_reverse_trip_recovers_mcp_tool(mcp_tool_yaml: Path) -> N
     against.
     """
     from agent_meow.inner.tools import MCPTool
-    from agent_meow.spec.agent-meow import agent_spec_to_agent_def
+    from agent_meow.spec.omnigent import agent_spec_to_agent_def
 
     spec = load(mcp_tool_yaml)
     agent_def = agent_spec_to_agent_def(spec)
@@ -927,7 +927,7 @@ def test_cancellable_function_parameters_forward_trip_preserves_input_schema() -
     from agent_meow.inner.datamodel import AgentDef
     from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
     from agent_meow.inner.tools import CancellableFunctionTool
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     seconds_schema = {
         "type": "object",
@@ -975,8 +975,8 @@ def test_function_tool_parameters_round_trip_preserves_input_schema(
     from agent_meow.inner.datamodel import AgentDef
     from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
     from agent_meow.inner.tools import FunctionTool
-    from agent_meow.spec import agent_meow as spec_omni
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec import omnigent as spec_omni
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     seconds_schema = {
         "type": "object",
@@ -1069,7 +1069,7 @@ def test_os_env_round_trips_through_translator() -> None:
     from agent_meow.inner.datamodel import (
         ExecutorSpec as OmniExecutorSpec,
     )
-    from agent_meow.spec.agent-meow import (
+    from agent_meow.spec.omnigent import (
         agent_def_to_agent_spec,
         agent_spec_to_agent_def,
     )
@@ -1128,7 +1128,7 @@ def test_inline_agent_tool_inherit_resolves_to_parent_os_env() -> None:
         ExecutorSpec as OmniExecutorSpec,
     )
     from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     parent_os_env = OSEnvSpec(type="caller_process", cwd=".")
     parent = AgentDef(
@@ -1184,7 +1184,7 @@ def test_inline_agent_tool_concrete_os_env_not_overridden_by_parent() -> None:
         ExecutorSpec as OmniExecutorSpec,
     )
     from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     parent_os_env = OSEnvSpec(type="caller_process", cwd=".")
     child_os_env = OSEnvSpec(type="caller_process", cwd="/tmp/sandbox")
@@ -1232,7 +1232,7 @@ def test_inline_agent_tool_inherit_with_no_parent_os_env_yields_none() -> None:
         ExecutorSpec as OmniExecutorSpec,
     )
     from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="supervisor",
@@ -1280,7 +1280,7 @@ def test_instructions_field_resolved_path_wins_over_prompt() -> None:
     instructions.
     """
     from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     agent_def = AgentDef(
         name="instr-precedence",
@@ -1298,7 +1298,7 @@ def test_instructions_field_falls_back_to_prompt_when_unset() -> None:
     agent-meow YAML written before the field existed.
     """
     from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     agent_def = AgentDef(name="prompt-only", prompt="just the prompt")
     spec = agent_def_to_agent_spec(agent_def)
@@ -1355,7 +1355,7 @@ def test_terminals_thread_through_translator() -> None:
     from agent_meow.inner.datamodel import (
         ExecutorSpec as OmniExecutorSpec,
     )
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     bash_terminal = TerminalEnvSpec(
         command="bash",
@@ -1412,7 +1412,7 @@ def test_terminals_none_when_parent_has_no_terminals() -> None:
     from agent_meow.inner.datamodel import (
         ExecutorSpec as OmniExecutorSpec,
     )
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="no_terminals",
@@ -1467,7 +1467,7 @@ def test_inline_agent_tool_inherits_parent_terminals() -> None:
         ExecutorSpec as OmniExecutorSpec,
     )
     from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="supervisor",
@@ -1542,7 +1542,7 @@ def test_harness_auto_picks_from_model_prefix(
     """
     from agent_meow.inner.datamodel import AgentDef
     from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     agent_def = AgentDef(
         name="auto_pick_probe",
@@ -1566,7 +1566,7 @@ def test_harness_auto_pick_doesnt_override_explicit_declaration() -> None:
     """
     from agent_meow.inner.datamodel import AgentDef
     from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     agent_def = AgentDef(
         name="explicit_probe",
@@ -1596,7 +1596,7 @@ def test_harness_auto_pick_unknown_model_raises() -> None:
     from agent_meow.errors import OmnigentError
     from agent_meow.inner.datamodel import AgentDef
     from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     agent_def = AgentDef(
         name="unknown_probe",
@@ -1630,7 +1630,7 @@ def test_inline_agent_tool_without_executor_inherits_parent_harness() -> None:
     from agent_meow.inner.datamodel import AgentDef
     from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
     from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="supervisor",
@@ -1665,7 +1665,7 @@ def test_inline_agent_tool_explicit_harness_wins_over_parent() -> None:
     from agent_meow.inner.datamodel import AgentDef
     from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
     from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="supervisor",
@@ -1700,7 +1700,7 @@ def test_inline_agent_tool_falls_through_to_model_auto_pick() -> None:
     from agent_meow.inner.datamodel import AgentDef
     from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
     from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.agent-meow import agent_def_to_agent_spec
+    from agent_meow.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="supervisor",

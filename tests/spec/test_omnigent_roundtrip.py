@@ -28,7 +28,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.spec.agent-meow import (
+from agent_meow.spec.omnigent import (
     agent_def_to_agent_spec,
     # NOTE: imported from the same module as the reverse
     # direction — both functions ship in
