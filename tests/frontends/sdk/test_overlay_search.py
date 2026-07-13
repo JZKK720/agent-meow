@@ -38,12 +38,13 @@ drives the UI SDK's overlay through that exact interaction:
 
 from __future__ import annotations
 
+import pytest
 import sys
 import time
 from pathlib import Path
 
-import pexpect
-import pyte
+pytest.importorskip("pexpect", reason="POSIX-only TTY/terminal")
+pytest.importorskip("pyte", reason="POSIX-only TTY/terminal")
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))

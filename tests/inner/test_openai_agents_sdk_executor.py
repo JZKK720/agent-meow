@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import base64
 
+databricks = pytest.importorskip("databricks")
 import databricks.sdk.config as _sdk_config_mod
 
 from agent_meow.inner.executor import (
