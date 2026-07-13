@@ -4,6 +4,8 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource/noto-sans-sc";
+@import "@fontsource/noto-serif-sc";
 
 /* Streamdown ships utility classes pre-compiled in its dist; this @source
  * pragma tells Tailwind v4 to scan those files so the classes survive the
@@ -14,12 +16,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  /* Inter as the primary sans, with Noto Sans SC as the first fallback for
-     * CJK characters (Inter has limited CJK coverage). The system stack
+  --font-heading: "Noto Serif SC", serif;
+  /* Noto Sans SC as the primary sans for CJK-first design (Inter fills in
+     * for Latin glyphs where Noto Sans SC is heavier). The system stack
      * after that handles any remaining glyphs. */
   --font-sans:
-    "Inter Variable", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif,
+    "Noto Sans SC", "Inter Variable", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
   /* 13px/20px text step between text-xs (12px) and text-sm (14px) —
