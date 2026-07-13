@@ -1239,11 +1239,11 @@ def test_ensure_backend_defaults_scheme_https(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
     monkeypatch.setattr(cli, "_ensure_databricks_server_auth", lambda server: None)
 
-    result = _ensure_backend("dbc-x.cloud.databricks.com/agent-meow")
+    result = _ensure_backend("dbc-x.cloud.databricks.com/agent_meow")
 
     # Scheme defaulted to https before the workspace expansion ran.
-    assert seen == ["https://dbc-x.cloud.databricks.com/agent-meow"]
-    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent-meow")
+    assert seen == ["https://dbc-x.cloud.databricks.com/agent_meow"]
+    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent_meow")
 
 
 def test_discover_local_server_url_returns_when_healthy(
@@ -1718,10 +1718,10 @@ def test_resolve_attach_server_defaults_scheme_https(monkeypatch: pytest.MonkeyP
     seen: list[str] = []
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
 
-    result = _resolve_attach_server("dbc-x.cloud.databricks.com/agent-meow", configured_server=None)
+    result = _resolve_attach_server("dbc-x.cloud.databricks.com/agent_meow", configured_server=None)
 
-    assert seen == ["https://dbc-x.cloud.databricks.com/agent-meow"]
-    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent-meow")
+    assert seen == ["https://dbc-x.cloud.databricks.com/agent_meow"]
+    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent_meow")
 
 
 def test_resolve_host_server_expands_explicit_workspace_url(
@@ -1776,11 +1776,11 @@ def test_resolve_host_server_defaults_scheme_and_accepts_omnigent(
     seen: list[str] = []
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
 
-    result = _resolve_host_server("dbc-x.cloud.databricks.com/agent-meow")
+    result = _resolve_host_server("dbc-x.cloud.databricks.com/agent_meow")
 
     # Scheme defaulted to https before the expansion saw the URL.
-    assert seen == ["https://dbc-x.cloud.databricks.com/agent-meow"]
-    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent-meow")
+    assert seen == ["https://dbc-x.cloud.databricks.com/agent_meow"]
+    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent_meow")
 
 
 def test_host_command_defaults_scheme_and_accepts_omnigent_web_url(
@@ -1805,14 +1805,14 @@ def test_host_command_defaults_scheme_and_accepts_omnigent_web_url(
     )
 
     result = CliRunner().invoke(
-        cli_group, ["host", "--server", "dbc-x.cloud.databricks.com/agent-meow"]
+        cli_group, ["host", "--server", "dbc-x.cloud.databricks.com/agent_meow"]
     )
 
     assert result.exit_code == 0, result.output
     # Scheme defaulted to https before the workspace expansion ran.
-    assert seen == ["https://dbc-x.cloud.databricks.com/agent-meow"]
+    assert seen == ["https://dbc-x.cloud.databricks.com/agent_meow"]
     # The foreground connect targeted the expanded API-mount URL.
-    assert observed == [_expand_marker("https://dbc-x.cloud.databricks.com/agent-meow")]
+    assert observed == [_expand_marker("https://dbc-x.cloud.databricks.com/agent_meow")]
 
 
 def test_resume_command_expands_server_url(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1870,9 +1870,9 @@ def test_resume_command_defaults_scheme_https(monkeypatch: pytest.MonkeyPatch) -
 
     result = CliRunner().invoke(
         cli_group,
-        ["resume", "conv_abc123", "--server", "dbc-x.cloud.databricks.com/agent-meow"],
+        ["resume", "conv_abc123", "--server", "dbc-x.cloud.databricks.com/agent_meow"],
     )
 
     assert result.exit_code == 0, result.output
-    assert seen == ["https://dbc-x.cloud.databricks.com/agent-meow"]
-    assert captured["server"] == _expand_marker("https://dbc-x.cloud.databricks.com/agent-meow")
+    assert seen == ["https://dbc-x.cloud.databricks.com/agent_meow"]
+    assert captured["server"] == _expand_marker("https://dbc-x.cloud.databricks.com/agent_meow")
