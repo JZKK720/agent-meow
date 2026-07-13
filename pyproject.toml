@@ -100,6 +100,9 @@ dependencies = [
     # version against the latest PyPI release. Previously only a
     # transitive dep; pinned here now that we import it directly.
     "packaging>=23,<26",
+    # Protobuf schema for the AI-gateway routing API (omnigent/api/routing.proto).
+    # Previously only a transitive dep; declared directly now that we ship a proto.
+    "protobuf>=6,<7",
 ]
 
 [project.optional-dependencies]
