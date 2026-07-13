@@ -33,7 +33,7 @@ from agent_meow.spec import (
     ToolRuntime,
     ToolsConfig,
 )
-from agent_meow.spec.agent-meow import (
+from agent_meow.spec.omnigent import (
     agent_def_to_agent_spec,
     agent_spec_to_agent_def,
 )

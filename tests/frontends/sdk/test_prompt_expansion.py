@@ -9,14 +9,14 @@ though the prompt buffer contained the full text.
 
 from __future__ import annotations
 
+import pytest
 import os
 import sys
 import time
 from pathlib import Path
 
-import pexpect
-import pyte
-
+pytest.importorskip("pexpect", reason="POSIX-only TTY/terminal")
+pytest.importorskip("pyte", reason="POSIX-only TTY/terminal")
 _TERM = "xterm-256color"
 _ROWS = 24
 _COLS = 80

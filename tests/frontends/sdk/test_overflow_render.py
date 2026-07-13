@@ -57,14 +57,15 @@ exact same guard.
 
 from __future__ import annotations
 
+import pytest
 import contextlib
-import fcntl
+pytest.importorskip("fcntl", reason="POSIX-only")
 import os
-import pty
+pytest.importorskip("pty", reason="POSIX-only")
 import select
 import struct
 import sys
-import termios
+pytest.importorskip("termios", reason="POSIX-only")
 import time
 from pathlib import Path
 

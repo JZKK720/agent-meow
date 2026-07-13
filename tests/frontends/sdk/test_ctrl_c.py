@@ -30,9 +30,11 @@ import sys
 import time
 from pathlib import Path
 
-import pexpect
-import pyte
 import pytest
+
+# POSIX-only TTY test — skip on Windows where pexpect/pyte are absent.
+pytest.importorskip("pexpect", reason="POSIX-only TTY library")
+pytest.importorskip("pyte", reason="optional terminal emulator")
 
 sys.path.insert(0, str(Path(__file__).parent))
 # mypy can't resolve this — the driver isn't a proper package
