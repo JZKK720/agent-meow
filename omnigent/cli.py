@@ -8145,12 +8145,14 @@ def _echo_daemon_payloads(payloads: list[_HostPayload]) -> None:
 @host.command("status")
 @click.option("--server", default=None, help="Inspect only this server target.")
 @click.option("--all", "all_targets", is_flag=True, help="Inspect all known daemon targets.")
+@click.option("--sessions", is_flag=True, help="Include session table.")
 @click.option("--json", "json_output", is_flag=True, help="Emit JSON.")
 @click.pass_context
 def host_status(
     ctx: click.Context,
     server: str | None,
     all_targets: bool,
+    sessions: bool,
     json_output: bool,
 ) -> None:
     """
@@ -8160,6 +8162,7 @@ def host_status(
     :param server: Optional server target to inspect, e.g.
         ``"https://example.databricksapps.com"``.
     :param all_targets: Whether to inspect every known daemon target.
+    :param sessions: Whether to include the session table.
     :param json_output: Whether to emit machine-readable JSON.
     """
     if server is None:
@@ -8168,7 +8171,7 @@ def host_status(
     payloads = [
         _daemon_status_payload(
             record,
-            include_sessions=True,
+            include_sessions=sessions,
             connected_sessions_only=True,
         )
         for record in records
