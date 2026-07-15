@@ -1,5 +1,22 @@
 # Copilot Code Review Instructions
 
+## Development environment
+
+- **Dev OS**: macOS or Linux (WSL2). Windows is not directly supported — `pexpect`/`pyte` are excluded on Windows.
+- **Python**: 3.12+ (`.python-version` = 3.12), managed via `uv`
+- **Setup**: `uv sync --extra all --extra dev` then `source .venv/bin/activate` (or prefix with `uv run`)
+- **Backend test**: `uv run pytest` (unit tests only; e2e/live/integration skipped by default)
+- **Frontend test**: `cd web && npm test` (vitest, colocated `*.test.ts`/`*.test.tsx`)
+- **Lint**: `uv run ruff check .` (Python), `cd web && npm run lint` (oxlint)
+- **Type check**: `uv run mypy agent_meow` (strict), `cd web && npm run type-check` (tsc -b)
+- **Pre-commit**: `uv run pre-commit run --all-files`
+- See `AGENTS.md` for the full quick-reference command list and architecture overview.
+
+## Git safety — push before you lose work
+
+- **Commit with DCO**: `git commit -s` (sign-off required).
+- **Push frequently**: push to `origin/main` after completing work — unpushed local-only commits are unrecoverable if the machine is lost.
+
 ## E2E Test Requirement
 
 Every pull request that introduces a new feature **must** include at least one
