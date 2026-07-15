@@ -424,6 +424,10 @@ export function useArchiveConversation() {
       // or drops it from that project folder's own paginated list.
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
       void queryClient.invalidateQueries({ queryKey: ["project-sessions"] });
+      // Archiving can change (or empty) a project's newest member, which the
+      // composer prefill reuses — refresh it so prefill never anchors on a
+      // session that just left the active list.
+      void queryClient.invalidateQueries({ queryKey: ["project-newest-session"] });
       // Archive membership just changed, so the archived-view picker's option
       // set may have gained/lost a project.
       void queryClient.invalidateQueries({ queryKey: ARCHIVED_PROJECT_NAMES_KEY });
@@ -497,6 +501,9 @@ export function useStopAndDeleteConversation() {
       // list, /v1/sessions/projects reads the DB directly (no search-index
       // lag), so this can't resurrect the deleted row.
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      // The deleted session may have been a project's newest member, which
+      // the composer prefill anchors on — refresh it too.
+      void queryClient.invalidateQueries({ queryKey: ["project-newest-session"] });
       // Deleting an archived session may empty its project of archived members.
       void queryClient.invalidateQueries({ queryKey: ARCHIVED_PROJECT_NAMES_KEY });
     },
@@ -559,6 +566,7 @@ export function useBulkArchiveConversations() {
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
       void queryClient.invalidateQueries({ queryKey: ["project-sessions"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-newest-session"] });
       void queryClient.invalidateQueries({ queryKey: ARCHIVED_PROJECT_NAMES_KEY });
     },
   });
@@ -614,6 +622,7 @@ export function useBulkDeleteConversations() {
       // Refresh the project list so a project emptied by these deletes drops
       // its now-empty folder (DB-direct read, no search-index lag).
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-newest-session"] });
       void queryClient.invalidateQueries({ queryKey: ARCHIVED_PROJECT_NAMES_KEY });
     },
     onError: (err: any) => {
@@ -632,6 +641,7 @@ export function useBulkDeleteConversations() {
           queryClient.removeQueries({ queryKey: ["session", id] });
         }
         void queryClient.invalidateQueries({ queryKey: ["projects"] });
+        void queryClient.invalidateQueries({ queryKey: ["project-newest-session"] });
         void queryClient.invalidateQueries({ queryKey: ARCHIVED_PROJECT_NAMES_KEY });
       }
     },
@@ -821,8 +831,10 @@ export function useMoveToProject() {
       markConversationSeen(updated.id, updated.updated_at);
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
-      // Moving into/out of a project changes both folders' paginated lists.
+      // Moving into/out of a project changes both folders' paginated lists,
+      // and can change either project's newest member the prefill anchors on.
       void queryClient.invalidateQueries({ queryKey: ["project-sessions"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-newest-session"] });
       // Moving an archived session relabels which project owns it, shifting the
       // archived-view picker's option set.
       void queryClient.invalidateQueries({ queryKey: ARCHIVED_PROJECT_NAMES_KEY });
@@ -886,11 +898,12 @@ export async function fetchProjectSessionIds(project: string, limit = 2): Promis
 async function fetchProjectSessionsPage(
   project: string,
   after?: string,
+  limit = 20,
 ): Promise<ConversationsPage> {
   const params = new URLSearchParams({
     order: "desc",
     sort_by: "updated_at",
-    limit: "20",
+    limit: String(limit),
     project,
   });
   if (after) params.set("after", after);
@@ -917,6 +930,24 @@ export function useProjectSessions(project: string, enabled: boolean) {
     getNextPageParam: (lastPage) =>
       lastPage.has_more ? (lastPage.last_id ?? undefined) : undefined,
     enabled,
+  });
+}
+
+/**
+ * The newest (non-archived) session filed under a project, or `null` when
+ * the project has no session the caller can read. Powers the new-session
+ * landing screen's project prefill: starting another session in a project
+ * reuses its most recent session's host, repo, and agent.
+ */
+export function useNewestProjectSession(project: string | null) {
+  return useQuery({
+    queryKey: ["project-newest-session", project],
+    queryFn: async () => {
+      const page = await fetchProjectSessionsPage(project as string, undefined, 1);
+      return page.data[0] ?? null;
+    },
+    enabled: project !== null && project !== "",
+    staleTime: 30_000,
   });
 }
 
@@ -957,6 +988,7 @@ export function useDeleteProject() {
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
       void queryClient.invalidateQueries({ queryKey: ["project-sessions"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-newest-session"] });
       // Deleting a project archives its members, growing the archived set.
       void queryClient.invalidateQueries({ queryKey: ARCHIVED_PROJECT_NAMES_KEY });
     },
