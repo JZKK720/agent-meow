@@ -1762,9 +1762,6 @@ export function NewChatLandingScreen() {
   const { data: agents } = useAvailableAgents();
   const brainHarnessLabels = useBrainHarnessLabels();
   const { data: hosts, isLoading: hostsLoading } = useHosts();
-  // Sessions the caller can access, to warn when a new session would share a
-  // working directory with a live one (see the conflict tooltip below).
-  const { data: directorySessions } = useDirectorySessions(true);
 
   const agentList = useMemo(
     () =>
@@ -1881,6 +1878,9 @@ export function NewChatLandingScreen() {
   const [selectedHostId, setSelectedHostId] = useState<string | null>(
     () => landingDraft?.selectedHostId ?? null,
   );
+  // Sessions on the selected host — fetched only when a host is selected,
+  // to avoid registering hundreds of sessions into the health poll at idle.
+  const { data: directorySessions } = useDirectorySessions(selectedHostId !== null);
   // True when the user picked the sandbox option instead of a connected
   // host — the server provisions a sandbox host at create time
   // (host_type: "managed"), so no host_id or workspace is sent.
@@ -2316,9 +2316,10 @@ export function NewChatLandingScreen() {
   const isCloudHost =
     sandboxSelected || (selectedHost?.name?.toLowerCase().includes("cloud") ?? false);
 
-  // Sessions on the selected host that have a workspace — candidates for a
-  // directory conflict, fed to the runner-health poll so only *connected*
-  // agents count (same /health signal as the sidebar dots).
+  // Sessions on the selected host that have a workspace — the narrow set
+  // the health poll needs to check for live directory conflicts. Much
+  // smaller than all 200 directorySessions (only host-matched + workspace
+  // rows), so registering them into the /health poll is cheap.
   const conflictCandidates = useMemo(
     () =>
       (directorySessions ?? []).filter((s) => s.host_id === selectedHostId && s.workspace != null),
