@@ -6,10 +6,14 @@ handles SSL automatically. No local tooling required.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/JZKK720/agent-meow)
 
-> **Note:** The button points at the public repo `github.com/JZKK720/agent-meow`.
-> It goes live once that repo **and** the `ghcr.io/JZKK720/agent-meow-server`
-> package are public; until then it only works if you connect Render to the
-> (private) repo in the dashboard first.
+> **Pre-launch note:** The repo and the `ghcr.io/JZKK720/agent-meow-server`
+> package are **private** until launch. The one-click Deploy button won't work
+> until both are public. Until then, deploy manually: connect Render to the
+> private repo in the dashboard (Settings → Repository), and register a GHCR
+> `read:packages` token as a Render registry credential (named `ghcr-read`)
+> so the service can pull the private image — `render.yaml` references it via
+> `image.creds.fromRegistryCreds`. At launch, flip the repo and package public
+> and drop the `creds` block.
 
 ## What gets provisioned
 
@@ -17,9 +21,10 @@ The `render.yaml` blueprint at the repo root defines:
 
 - **agent-meow** (Starter web service) — pulls the pre-built image
   `ghcr.io/JZKK720/agent-meow-server:latest` (CI-built; ships the web UI
-  bundle), served on `https://agent-meow-\u003chash\u003e.onrender.com`. While the GHCR
-  package is private, add a Render registry credential and reference it from
-  `render.yaml` (`image.creds`); once public, the pull is anonymous.
+  bundle), served on `https://agent-meow-\u003chash\u003e.onrender.com`. The GHCR
+  package is private pre-launch, so `render.yaml` references a Render registry
+  credential (`ghcr-read`, a GHCR `read:packages` token) via `image.creds`;
+  drop it once the package is public at launch.
 - **agent-meow-db** (`basic-256mb` managed Postgres) — `DATABASE_URL` is injected
   into the service automatically
 - **artifact-data** (10 GB persistent disk) — mounted at `/data` so server
