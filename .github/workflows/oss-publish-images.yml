@@ -20,9 +20,9 @@
 # `sort -V` gets wrong, so the max is computed with .github/scripts/
 # oss-publish-images/maxver.py (Python `packaging`).
 #
-# First run creates the GHCR packages PRIVATE; flip them to public once in the
-# org package settings to allow unauthenticated pulls (cannot be done in CI).
-name: Publish images (public)
+# GHCR packages are PRIVATE pre-launch. Flip them to public in the org package
+# settings at launch to allow unauthenticated pulls (cannot be done in CI).
+name: Publish images
 
 on:
   push:
