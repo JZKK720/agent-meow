@@ -75,6 +75,7 @@ from omnigent.server.routes.sessions import (
 )
 from omnigent.server.routes.sharing import create_sharing_router
 from omnigent.server.routes.terminal_attach import create_terminal_attach_router
+from omnigent.server.scheduled import ScheduledTaskScheduler
 from omnigent.server.ws_origin import WebSocketOriginMiddleware
 from omnigent.stores import (
     AgentStore,
@@ -87,6 +88,7 @@ from omnigent.stores.conversation_store import SessionConnectivity
 from omnigent.stores.host_store import HostStore
 from omnigent.stores.permission_store import PermissionStore
 from omnigent.stores.policy_store import PolicyStore
+from omnigent.stores.scheduled_task_store import ScheduledTaskStore
 
 _logger = logging.getLogger(__name__)
 
@@ -1065,6 +1067,18 @@ def _ensure_default_polly_agent(
     )
 
 
+async def _placeholder_on_fire(scheduled_task_id: str) -> None:
+    """Default scheduler fire callback (no-op placeholder that logs).
+
+    Exercises the ``on_fire`` seam without side effects: the real fire path
+    (creating an agent session for the task) supplies its own callback.
+    """
+    _logger.info(
+        "scheduler: task %s is due (no fire path wired yet — skipping)",
+        scheduled_task_id,
+    )
+
+
 def create_app(
     agent_store: AgentStore,
     file_store: FileStore,
@@ -1075,6 +1089,7 @@ def create_app(
     comment_store: CommentStore | None = None,
     policy_store: PolicyStore | None = None,
     permission_store: PermissionStore | None = None,
+    scheduled_task_store: ScheduledTaskStore | None = None,
     auth_provider: AuthProvider | None = None,
     host_store: HostStore | None = None,
     account_store: Any | None = None,  # SqlAlchemyAccountStore — accounts mode only
@@ -1114,6 +1129,11 @@ def create_app(
         CRUD endpoints.
     :param permission_store: Store for session-level access grants.
         ``None`` disables permission checks (all access allowed).
+    :param scheduled_task_store: Store backing the recurring-task
+        scheduler. When provided, the FastAPI lifespan
+        starts an :class:`ScheduledTaskScheduler` that arms a timer per
+        active task and fires the injected ``on_fire`` callback on
+        schedule. ``None`` disables the scheduler entirely.
     :param auth_provider: Pre-constructed auth provider for
         identity resolution. ``None`` disables auth (anonymous
         access). **Required** when ``permission_store`` is
@@ -1358,9 +1378,35 @@ def create_app(
                 otel_publisher=server_metrics_otel,
             )
         )
+
+        # Recurring-task scheduler: arm a timer per active
+        # scheduled task and fire the injected ``on_fire`` callback on
+        # schedule. The default callback is a no-op that logs; a real fire
+        # path (creating a session) can be injected in its place.
+        scheduled_task_scheduler: ScheduledTaskScheduler | None = None
+        if scheduled_task_store is not None:
+            scheduled_task_scheduler = ScheduledTaskScheduler(
+                store=scheduled_task_store,
+                on_fire=_placeholder_on_fire,
+            )
+            app_inst.state.scheduled_task_scheduler = scheduled_task_scheduler
+            # Scheduled tasks are a non-critical subsystem: a failure loading the
+            # schedule (e.g. a DB error in list_active()) must not take down
+            # server boot. Log and continue with the scheduler unstarted.
+            try:
+                await scheduled_task_scheduler.start()
+            except Exception as exc:
+                _logger.exception(
+                    "scheduled task scheduler failed to start; continuing "
+                    "without recurring tasks (%s)",
+                    exc,
+                )
+
         try:
             yield
         finally:
+            if scheduled_task_scheduler is not None:
+                scheduled_task_scheduler.stop()
             metrics_publish_task.cancel()
             with suppress(asyncio.CancelledError):
                 await metrics_publish_task
