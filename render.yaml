@@ -9,8 +9,11 @@ services:
     runtime: image
     image:
       url: ghcr.io/JZKK720/agent-meow-server:latest
-      # While the package is private, add image.creds.fromRegistryCreds (a GHCR
-      # read:packages token registered in the Render dashboard). Drop once public.
+      # GHCR package is private pre-launch. Register a GHCR read:packages token
+      # in the Render dashboard as a registry credential named `ghcr-read`, then
+      # reference it here. Drop `creds` once the package is public at launch.
+      creds:
+        fromRegistryCreds: ghcr-read
     plan: starter
     healthCheckPath: /health
     disk:

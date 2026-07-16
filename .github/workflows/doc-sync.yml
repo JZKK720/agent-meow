@@ -17,8 +17,9 @@
 #
 # The cross-repo PR uses the agent-meow-ci App (already installed on agent-meow-site;
 # sync-openapi-to-site.yml uses it too). If the App is unavailable the draft still
-# runs and prints its diff to the run summary but doesn't push (relies on
-# agent-meow-site being public for the read-only checkout).
+# runs and prints its diff to the run summary but doesn't push. The read-only
+# agent-meow-site checkout uses the AGENT_MEOW_SITE_READ_TOKEN secret (the repo
+# is private pre-launch).
 #
 # Security model + residual risk (unsandboxed drafter, secret-scan coverage) live
 # in .github/agents/doc-drafter/config.yaml.
@@ -441,23 +442,25 @@ jobs:
           gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file /tmp/unclassified_comment.md
 
       # --- Draft path ---
-      # Read-only checkout (agent-meow-site is public), no persisted creds so no token
-      # sits in .git/config for the unsandboxed drafter. Write-token minted later.
+      # Read-only checkout of agent-meow-site (private pre-launch). Uses a
+      # read-scoped PAT (AGENT_MEOW_SITE_READ_TOKEN) so checkout + ls-remote/fetch
+      # work on the private repo; no write token is persisted in .git/config for
+      # the unsandboxed drafter. The write-token is minted later (after the drafter).
       - name: Check out agent-meow-site (docs)
         if: steps.decide.outputs.draft == 'true'
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           repository: JZKK720/agent-meow-site
           path: agent-meow-site
-          token: ${{ github.token }}
+          token: ${{ secrets.AGENT_MEOW_SITE_READ_TOKEN }}
           persist-credentials: false
 
       # Point the working tree at the docs staging branch BEFORE the drafter runs,
       # so it sees docs already accumulated this cycle and re-drafts merge cleanly.
-      # Reads need no auth (agent-meow-site is public); no creds are persisted, so
-      # the unsandboxed drafter can't read a token from .git/config. If the branch
-      # doesn't exist on the remote yet, create it locally off the default branch —
-      # the first push (with the App token, later) publishes it.
+      # The read-only PAT covers ls-remote/fetch on the private repo; no write creds
+      # are persisted, so the unsandboxed drafter can't read a token from .git/config.
+      # If the branch doesn't exist on the remote yet, create it locally off the
+      # default branch — the first push (with the App token, later) publishes it.
       - name: Switch site checkout to docs branch
         if: steps.decide.outputs.draft == 'true'
         working-directory: agent-meow-site
@@ -643,8 +646,9 @@ jobs:
           # Credentials are NOT persisted in .git/config (so the unsandboxed drafter
           # couldn't read them); the App token is minted only now (after the drafter)
           # and used solely for the push URL below. GitHub registers it as a masked
-          # secret, so it's redacted from logs. Reads (ls-remote/fetch) need no auth —
-          # agent-meow-site is public.
+          # secret, so it's redacted from logs. Reads (ls-remote/fetch) use the
+          # read-only PAT (AGENT_MEOW_SITE_READ_TOKEN) since agent-meow-site is
+          # private pre-launch.
           PUSH_URL="https://x-access-token:${SITE_TOKEN}@github.com/${SITE_REPO_SLUG}.git"
 
           # Ensure the docs staging branch exists on the remote — it's the PR base.

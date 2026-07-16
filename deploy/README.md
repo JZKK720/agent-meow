@@ -10,6 +10,12 @@ the machines that register as hosts (see [Execution model](#execution-model)).
 
 ## Deploy in one click
 
+> **Pre-launch:** The repo and GHCR images are **private** until launch, so the
+> one-click buttons below are inactive. To deploy now, connect your platform to
+> the private repo in its dashboard and authenticate GHCR pulls (see
+> [Private registry access](#private-registry-access) below). At launch the repo
+> and images go public and the buttons work as documented.
+
 No local tooling needed. Pick a platform, click the button, and your
 agent-meow server is live with HTTPS in a few minutes.
 
@@ -39,6 +45,22 @@ always-on web server with a durable artifact Volume). See the menu below.
 Fly and HF Spaces can run on the **SQLite lite tier** with no database to
 provision (see [Database: Postgres or SQLite](#database-postgres-or-sqlite));
 Modal needs a bring-your-own Postgres.
+
+### Private registry access
+
+While the repo is private (pre-launch), the GHCR images
+(`ghcr.io/JZKK720/agent-meow-server`, `-host`) are private too, so an
+unauthenticated `docker pull` will fail. Authenticate first:
+
+1. Create a GitHub PAT with `read:packages` scope
+   (Settings → Developer settings → Personal access tokens).
+2. `echo "$PAT" | docker login ghcr.io -u <github-username> --password-stdin`
+3. Pull as usual: `docker pull ghcr.io/JZKK720/agent-meow-server:latest`
+
+Platform-specific: Render uses a registered registry credential (see
+[`render/README.md`](render/README.md)); Fly/Modal/etc. set the registry auth
+in their CLI or dashboard. At launch the images go public and these steps are
+no longer needed.
 
 ---
 
