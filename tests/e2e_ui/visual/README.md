@@ -20,6 +20,49 @@ Pages covered:
   question + assistant markdown reply) rendered as message bubbles, with the
   composer below. [`test_chat_snapshot.py`](test_chat_snapshot.py)
 
+### Functional / plain-UI snapshots
+
+A second track captures the same surfaces **without** the brand layer — the
+mascot, "What should we do?" hero, cat-element wallpaper, and sidebar wordmark
+are stripped so the committed baselines show only the functional UI (panels,
+pickers, lists). This is for reviewing layouts and flows without the logo/IP/hero
+art dominating the frame.
+
+The brand stripping happens entirely at the test layer — **no app code changes**.
+Three shared fixtures in [`conftest.py`](conftest.py) power it:
+
+- `hide_brand_style` — a CSS string that hides `MeowCatMascot` / `MeowCatIcon`
+  (`[class*="meowcat"]`), the landing hero row inside
+  `[data-testid="new-chat-landing"]`, the `.new-chat-landing-pattern` wallpaper,
+  and the sidebar wordmark link.
+- `blank_brand_routes` — registers `page.route` handlers that return a 1×1
+  transparent PNG for every raster brand asset (`mascot-hero.png`, `patterns/*`,
+  `favicon*`, `pwa-*`, `apple-touch-icon*`, `agent-meow-hero.png`).
+- `plain_page` — composes `snapshot_page` (fixed viewport + light palette) with
+  the brand CSS (injected via `add_init_script` so it applies **before** first
+  paint — the mascot/hero/wallpaper never flash) and the raster-asset routes.
+
+Plain-UI pages covered:
+
+- **Workspace (`/` + `/c/{id}`)** — the sidebar + landing composer, and a mocked
+  chat transcript, both with branding hidden.
+  [`test_workspace_snapshot.py`](test_workspace_snapshot.py)
+- **Right workspace rail** — one baseline per tab (files, docs, images,
+  subagents, terminals, todos) with the session hydrated and per-tab data
+  stubbed. [`test_right_rail_snapshot.py`](test_right_rail_snapshot.py)
+- **Settings** — one baseline per section (appearance, shortcuts, language,
+  account, members, policies, archived) with boot + section data stubbed.
+  The `cli` section is Electron-only and excluded.
+  [`test_settings_snapshot.py`](test_settings_snapshot.py)
+- **Inbox (`/inbox`)** — approval + comment rows with stubbed session list,
+  per-session elicitations, and comments.
+  [`test_inbox_snapshot.py`](test_inbox_snapshot.py)
+
+To add a new plain-UI snapshot, take `plain_page` instead of `snapshot_page`
+(plus the same `live_server`, `fulfill_json`, `settle_for_snapshot`, and
+`assert_snapshot` fixtures), stub the page's data calls, and follow steps 2–4
+of [Adding a new page snapshot](#adding-a-new-page-snapshot) below.
+
 Baselines are committed under `snapshots/<test_module>/<test_name>/<name>[chromium][linux].png`.
 
 - Gate workflow: [`.github/workflows/ui-snapshot.yml`](../../../.github/workflows/ui-snapshot.yml)
