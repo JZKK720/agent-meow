@@ -269,3 +269,251 @@ class DocGenerateTool(Tool):
                 },
             },
         }
+
+
+class DocCreateOfficeTool(Tool):
+    """Create a blank or templated Office document (.docx/.xlsx/.pptx).
+
+    Runner-dispatched: the runner shells out to the ``officecli`` binary
+    (resolved via ``shutil.which`` or ``OFFICECLI_BIN``) to run ``create``
+    and ``add`` commands, then persists the generated file as a session
+    document resource.
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return "doc_create_office"
+
+    @classmethod
+    def description(cls) -> str:
+        return (
+            "Create a blank Office document (.docx, .xlsx, or .pptx) and "
+            "optionally seed it with content. Backed by the officecli CLI. "
+            "Requires session_id and format (one of docx, xlsx, pptx). "
+            "Returns the new document's id and title."
+        )
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": DocCreateOfficeTool.name(),
+                "description": DocCreateOfficeTool.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "The session to create the document in.",
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Document title / filename stem.",
+                        },
+                        "format": {
+                            "type": "string",
+                            "enum": ["docx", "xlsx", "pptx"],
+                            "description": "Office format: docx (Word), xlsx (Excel), or pptx (PowerPoint).",
+                        },
+                        "content_md": {
+                            "type": "string",
+                            "description": (
+                                "Optional initial content. For docx, treated as "
+                                "paragraph text (one paragraph per line). For pptx, "
+                                "each line becomes a slide title. Ignored for xlsx."
+                            ),
+                        },
+                    },
+                    "required": ["session_id", "title", "format"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+
+
+class DocEditOfficeTool(Tool):
+    """Edit an Office document via path-based element operations.
+
+    Runner-dispatched: the runner shells out to ``officecli`` to run
+    ``add``/``set``/``move``/``query`` commands against the document file.
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return "doc_edit_office"
+
+    @classmethod
+    def description(cls) -> str:
+        return (
+            "Edit an Office document (.docx/.xlsx/.pptx) using officecli "
+            "path-based element operations: add, set, move, remove, query. "
+            "Requires session_id, document_id (the session doc resource), "
+            "command (add|set|move|remove|query), path (element path), and "
+            "optional props (JSON object of element properties)."
+        )
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": DocEditOfficeTool.name(),
+                "description": DocEditOfficeTool.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "The session that owns the document.",
+                        },
+                        "document_id": {
+                            "type": "string",
+                            "description": "The session document resource id to edit.",
+                        },
+                        "command": {
+                            "type": "string",
+                            "enum": ["add", "set", "move", "remove", "query"],
+                            "description": "The officecli DOM operation to perform.",
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": (
+                                "Element path, e.g. '/body' (add a paragraph), "
+                                "'/body/p[1]' (set first paragraph), "
+                                "'/sheet1/A1' (xlsx cell)."
+                            ),
+                        },
+                        "type": {
+                            "type": "string",
+                            "description": (
+                                "Element type for 'add' commands, e.g. 'paragraph', "
+                                "'slide', 'sheet', 'row'."
+                            ),
+                        },
+                        "props": {
+                            "type": "object",
+                            "description": (
+                                "Element properties as a JSON object, e.g. "
+                                "{\"text\": \"Hello\", \"bold\": true}."
+                            ),
+                        },
+                    },
+                    "required": ["session_id", "document_id", "command", "path"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+
+
+class DocExportTool(Tool):
+    """Export/render an Office document to HTML, PNG, or PDF.
+
+    Runner-dispatched: the runner shells out to ``officecli view`` with the
+    requested mode (html, screenshot, pdf) and persists the rendered output
+    as a session artifact.
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return "doc_export"
+
+    @classmethod
+    def description(cls) -> str:
+        return (
+            "Export an Office document (.docx/.xlsx/.pptx) to a rendered "
+            "format — html, png (screenshot), or pdf — using officecli's "
+            "built-in rendering engine. Useful for letting the agent 'see' "
+            "the document. Requires session_id, document_id, and mode "
+            "(html|png|pdf). Returns the artifact id and download url."
+        )
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": DocExportTool.name(),
+                "description": DocExportTool.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "The session that owns the document.",
+                        },
+                        "document_id": {
+                            "type": "string",
+                            "description": "The session document resource id to export.",
+                        },
+                        "mode": {
+                            "type": "string",
+                            "enum": ["html", "png", "pdf"],
+                            "description": "Render mode: html (static snapshot), png (screenshot), or pdf.",
+                        },
+                        "page": {
+                            "type": "integer",
+                            "description": "Optional page/slide number for png/pdf export (1-indexed).",
+                        },
+                    },
+                    "required": ["session_id", "document_id", "mode"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+
+
+class DocConvertTool(Tool):
+    """Convert any file or URL to Markdown for ingestion/RAG.
+
+    Runner-dispatched: the runner shells out to the ``markitdown`` CLI to
+    convert PDF, Office, audio, image, HTML, or URL inputs into Markdown
+    text suitable for LLM consumption and search indexing.
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return "doc_convert"
+
+    @classmethod
+    def description(cls) -> str:
+        return (
+            "Convert a local file or URL to Markdown text for LLM ingestion "
+            "and search. Supports PDF, Word, Excel, PowerPoint, images (OCR), "
+            "audio (transcription), HTML, CSV, JSON, and more via MarkItDown. "
+            "Requires session_id and source (a file path or http(s) URL). "
+            "Returns the converted Markdown text and, if persist=True, a new "
+            "document resource id."
+        )
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": DocConvertTool.name(),
+                "description": DocConvertTool.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "The session to create the converted document in.",
+                        },
+                        "source": {
+                            "type": "string",
+                            "description": (
+                                "Path to a local file or an http(s):// URL to "
+                                "convert to Markdown."
+                            ),
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Optional title for the resulting document. Defaults to the source filename.",
+                        },
+                        "persist": {
+                            "type": "boolean",
+                            "description": "If true (default), persist the Markdown as a new document resource. If false, return the text only.",
+                        },
+                    },
+                    "required": ["session_id", "source"],
+                    "additionalProperties": False,
+                },
+            },
+        }

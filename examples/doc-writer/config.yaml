@@ -21,12 +21,24 @@ prompt: |
   - doc_list: list all documents in the session.
   - doc_update: update a document's title and/or content.
   - doc_generate: generate a full markdown document from a topic + outline.
+  - doc_create_office: create a blank Office document (.docx/.xlsx/.pptx)
+    and optionally seed it with content (officecli).
+  - doc_edit_office: edit an Office document via path-based element operations
+    (add/set/move/remove/query — officecli).
+  - doc_export: export an Office document to html/png/pdf for review
+    (officecli rendering engine).
+  - doc_convert: convert a local file or URL to Markdown for ingestion
+    (MarkItDown).
 
   When the user asks for a document:
   1. If they give a topic + outline, call doc_generate.
   2. If they give full content, call doc_create.
   3. If they want to revise an existing doc, call doc_get first, then
      doc_update with the revised content.
+  4. If they want an Office file (Word/Excel/PowerPoint), call
+     doc_create_office, then doc_edit_office to refine, then doc_export to
+     render it to PNG so you can "see" the result.
+  5. If they want to ingest a PDF/URL into Markdown, call doc_convert.
 
   Always return the document id so the user can open it in the Docs panel.
   Keep prose clear and well-structured. Prefer markdown headings (##, ###)

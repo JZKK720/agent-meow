@@ -7,6 +7,7 @@ from agent_meow.stores.document_store import DocumentStore
 from agent_meow.stores.file_store import FileStore
 from agent_meow.stores.image_store import ImageStore
 from agent_meow.stores.permission_store import PermissionStore
+from agent_meow.stores.video_store import VideoStore
 
 __all__ = [
     "AgentStore",
@@ -16,4 +17,5 @@ __all__ = [
     "FileStore",
     "ImageStore",
     "PermissionStore",
+    "VideoStore",
 ]

@@ -218,11 +218,20 @@ _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
     "doc_list": None,
     "doc_update": None,
     "doc_generate": None,
+    # Office document create/edit/export (officecli) + convert (markitdown).
+    "doc_create_office": None,
+    "doc_edit_office": None,
+    "doc_export": None,
+    "doc_convert": None,
     "image_list": None,
     "image_get": None,
     "image_upload": None,
     "image_edit": None,
     "image_generate": None,
+    # AI image editing — background removal (rembg) + inpaint/outpaint/upscale
+    # (A1111 HTTP or ComfyUI MCP). Runner-dispatched, schema-only.
+    "image_remove_bg": None,
+    "image_edit_ai": None,
     # agent-meow voice surface tools — runner-dispatched, schema-only.
     # transcribe_audio shells out to Handy CLI; text_to_speech / speak
     # call a VibeVoice TTS gateway; transcribe_audio_high_quality calls

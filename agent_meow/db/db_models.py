@@ -880,3 +880,31 @@ class SqlImage(Base):
         Index("ix_images_conversation_id", "conversation_id"),
         Index("ix_images_created_at", "created_at"),
     )
+
+
+class SqlVideo(Base):
+    """SQLAlchemy model for the ``videos`` table (agent-meow Video surface).
+
+    Mirrors :class:`SqlImage` but adds ``duration_seconds`` and drops
+    ``edit_json`` (videos are not canvas-edited in v1).
+    """
+
+    __tablename__ = "videos"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(64))
+    filename: Mapped[str] = mapped_column(String(512))
+    mime: Mapped[str] = mapped_column(String(128))
+    artifact_key: Mapped[str] = mapped_column(String(512))
+    duration_seconds: Mapped[float] = mapped_column(Float, default=0.0)
+    width: Mapped[int] = mapped_column(Integer, default=0)
+    height: Mapped[int] = mapped_column(Integer, default=0)
+    bytes_size: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[int] = mapped_column(BigInteger)
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    __table_args__ = (
+        Index("ix_videos_conversation_id", "conversation_id"),
+        Index("ix_videos_created_at", "created_at"),
+    )
