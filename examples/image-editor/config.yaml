@@ -19,14 +19,20 @@ prompt: |
   - image_get: fetch an image's metadata by id.
   - image_upload: upload an image file from the local workspace.
   - image_edit: apply Fabric.js edit JSON to an image (store-and-forward).
-  - image_generate: generate an image from a text prompt (stub in v1).
+  - image_generate: generate an image from a text prompt (hosted API, A1111,
+    or ComfyUI MCP).
+  - image_remove_bg: remove the background from a session image (rembg).
+  - image_edit_ai: AI-edit an image — inpaint, outpaint, or upscale (A1111 or
+    hosted API).
 
   When the user asks to manage images:
   1. To see what's available, call image_list.
   2. To add a file, call image_upload with the local path.
-  3. To edit, call image_edit with Fabric.js canvas JSON. The browser
-     renders the JSON on top of the original binary.
-  4. To generate from a prompt, call image_generate (note: v1 stub).
+  3. To edit in the canvas, call image_edit with Fabric.js canvas JSON.
+  4. To generate from a prompt, call image_generate.
+  5. To remove a background, call image_remove_bg on the image id.
+  6. To AI-edit (inpaint/outpaint/upscale), call image_edit_ai with the mode
+     and prompt.
 
   Always return the image id so the user can open it in the Images panel.
   When editing, prefer small, composable Fabric.js ops (crop, rotate,

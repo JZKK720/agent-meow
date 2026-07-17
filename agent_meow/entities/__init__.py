@@ -29,6 +29,7 @@ from agent_meow.entities.image import ImageAsset
 from agent_meow.entities.pagination import PagedList
 from agent_meow.entities.permission import ResolvedAccess, SessionPermission
 from agent_meow.entities.policy import Policy
+from agent_meow.entities.video import VideoAsset
 from agent_meow.entities.session_resources import (
     DEFAULT_ENVIRONMENT_ID,
     SessionResourceView,
@@ -69,6 +70,7 @@ __all__ = [
     "SlashCommandData",
     "StoredFile",
     "TerminalCommandData",
+    "VideoAsset",
     "filter_resources_by_type",
     "get_resource_by_id",
     "parse_item_data",

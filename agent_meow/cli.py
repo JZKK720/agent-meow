@@ -3023,9 +3023,13 @@ def server(
     from agent_meow.stores.image_store.sqlalchemy_store import (
         SqlAlchemyImageStore as _SqlImageStore,
     )
+    from agent_meow.stores.video_store.sqlalchemy_store import (
+        SqlAlchemyVideoStore as _SqlVideoStore,
+    )
 
     document_store = _SqlDocumentStore(db_uri)
     image_store = _SqlImageStore(db_uri)
+    video_store = _SqlVideoStore(db_uri)
 
     # Initialize the runtime with store references so workflow code
     # can access them via getter functions (get_agent_cache(), etc.).
@@ -3180,6 +3184,7 @@ def server(
         sandbox_config=sandbox_config,
         document_store=document_store,
         image_store=image_store,
+        video_store=video_store,
     )
 
     click.echo(f"Starting agent-meow server on {host}:{port}")

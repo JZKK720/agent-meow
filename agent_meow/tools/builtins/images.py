@@ -204,12 +204,12 @@ class ImageEditTool(Tool):
 
 
 class ImageGenerateTool(Tool):
-    """Generate an image from a prompt (stub for future diffusion-model hook).
+    """Generate an image from a text prompt.
 
-    Schema-only: the runner's tool dispatch intercepts the call by name and
-    routes it to a configured image-generation provider (Stability, OpenAI
-    images, ComfyUI MCP) when available. In v1 the call returns a stub error
-    indicating image generation is not yet wired.
+    Runner-dispatched: the runner resolves a provider via env vars
+    (``IMAGE_GEN_PROVIDER``, ``IMAGE_GEN_API_URL``, ``A1111_API_URL``) or
+    a configured ComfyUI MCP server, generates the image, uploads it to
+    the session's image resources, and returns the new image id/url.
     """
 
     @classmethod
@@ -219,9 +219,11 @@ class ImageGenerateTool(Tool):
     @classmethod
     def description(cls) -> str:
         return (
-            "Generate an image from a text prompt. In v1 this tool is only a "
-            "stub and returns an explanatory error until an image-generation "
-            "provider is configured and wired. Requires session_id and prompt."
+            "Generate an image from a text prompt. The backend is resolved "
+            "from configuration: a hosted API (Stability/OpenAI/Grok), a "
+            "local A1111 instance, or a ComfyUI MCP server. Returns the new "
+            "image id and download url. Requires session_id and prompt; "
+            "width and height are optional."
         )
 
     def get_schema(self) -> dict[str, Any]:
@@ -251,6 +253,134 @@ class ImageGenerateTool(Tool):
                         },
                     },
                     "required": ["session_id", "prompt"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+
+
+class ImageRemoveBgTool(Tool):
+    """Remove the background from a session image.
+
+    Runner-dispatched: the runner shells out to the ``rembg`` CLI (resolved
+    via ``shutil.which`` or ``REMBG_BIN``) to remove the background, then
+    uploads the result as a new session image resource.
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return "image_remove_bg"
+
+    @classmethod
+    def description(cls) -> str:
+        return (
+            "Remove the background from a session image using rembg. "
+            "Returns a new image (with transparent background) as a session "
+            "resource. Requires session_id and image_id. Optional model "
+            "(u2net|isnet|bria-rmbg), only_mask (return just the mask), and "
+            "alpha_matting (higher-quality edges)."
+        )
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": ImageRemoveBgTool.name(),
+                "description": ImageRemoveBgTool.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "The session that owns the source image.",
+                        },
+                        "image_id": {
+                            "type": "string",
+                            "description": "The source image id to remove the background from.",
+                        },
+                        "model": {
+                            "type": "string",
+                            "description": "rembg model name. Defaults to 'u2net'. Options: u2net, u2netp, isnet-general-use, bria-rmbg.",
+                        },
+                        "only_mask": {
+                            "type": "boolean",
+                            "description": "If true, return only the binary mask (black/white). Defaults to false.",
+                        },
+                        "alpha_matting": {
+                            "type": "boolean",
+                            "description": "If true, use alpha matting for higher-quality edge refinement. Defaults to false.",
+                        },
+                    },
+                    "required": ["session_id", "image_id"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+
+
+class ImageEditAiTool(Tool):
+    """AI-powered image editing: inpaint, outpaint, or upscale.
+
+    Runner-dispatched: the runner resolves a provider (A1111 HTTP API or
+    ComfyUI MCP server) and performs the requested AI edit on a session
+    image, uploading the result as a new image resource.
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return "image_edit_ai"
+
+    @classmethod
+    def description(cls) -> str:
+        return (
+            "AI-edit a session image: inpaint (fill masked area from prompt), "
+            "outpaint (extend canvas), or upscale (increase resolution). "
+            "Backed by A1111 (HTTP API) or ComfyUI (MCP server). Requires "
+            "session_id, image_id, mode (inpaint|outpaint|upscale), and "
+            "prompt. For inpaint, optionally provide mask_json (Fabric.js "
+            "path data defining the region to fill)."
+        )
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": ImageEditAiTool.name(),
+                "description": ImageEditAiTool.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "The session that owns the source image.",
+                        },
+                        "image_id": {
+                            "type": "string",
+                            "description": "The source image id to edit.",
+                        },
+                        "mode": {
+                            "type": "string",
+                            "enum": ["inpaint", "outpaint", "upscale"],
+                            "description": "The AI edit mode: inpaint (fill masked region), outpaint (extend canvas), or upscale (increase resolution).",
+                        },
+                        "prompt": {
+                            "type": "string",
+                            "description": "Text prompt guiding the edit (e.g. 'add a hat', 'extend the sky'). Required for inpaint/outpaint; optional for upscale.",
+                        },
+                        "mask_json": {
+                            "type": "string",
+                            "description": "For inpaint: Fabric.js path JSON defining the masked region to fill. If omitted for inpaint, the entire image is used.",
+                        },
+                        "denoising_strength": {
+                            "type": "number",
+                            "description": "For inpaint/outpaint: how much to change the image (0.0-1.0). Defaults to 0.75.",
+                        },
+                        "upscale_factor": {
+                            "type": "number",
+                            "description": "For upscale: resolution multiplier (e.g. 2.0 for 2x). Defaults to 2.0.",
+                        },
+                    },
+                    "required": ["session_id", "image_id", "mode"],
                     "additionalProperties": False,
                 },
             },
