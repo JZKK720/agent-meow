@@ -353,6 +353,81 @@ The validator (`validator.py`) enforces:
 
 ---
 
+## Environment Variables — Media Surfaces
+
+The Docs, Images, and Video surfaces are auto-registered (no `tools.builtins:`
+entry needed); the runner intercepts their tool calls by name. Backends are
+resolved from environment variables at call time.
+
+### Docs surface — Office document tools (officecli / markitdown)
+
+| Variable | Purpose |
+|---|---|
+| `OFFICECLI_BIN` | Path to the `officecli` binary (overrides `shutil.which`). Install from https://github.com/iOfficeAI/OfficeCLI |
+| `MARKITDOWN_BIN` | Path to the `markitdown` binary (overrides `shutil.which`). Install via `pip install markitdown[all]` |
+
+Tools: `doc_create_office`, `doc_edit_office`, `doc_export` (officecli);
+`doc_convert` (markitdown).
+
+**MCP alternative:** instead of shelling out, declare the `officecli mcp`
+or `markitdown-mcp` stdio MCP servers under `tools.mcp_servers:` for
+agent-driven use without the runner shelling out.
+
+### Images surface — generation & editing
+
+| Variable | Purpose |
+|---|---|
+| `IMAGE_GEN_PROVIDER` | Explicit provider: `hosted`, `a1111`, or `comfyui`. If unset, auto-detected from the URL env vars below. |
+| `IMAGE_GEN_API_URL` | Hosted generation API base URL (e.g. `https://api.openai.com/v1`). Enables `hosted`. |
+| `IMAGE_GEN_API_KEY` | Bearer token for the hosted API. |
+| `IMAGE_GEN_API_VENDOR` | Hosted API vendor: `openai` (default), `stability`, or `grok`. Shapes the request/response format. |
+| `A1111_API_URL` | A1111 (stable-diffusion-webui) base URL (e.g. `http://localhost:7860`). Enables `a1111`. |
+| `REMBG_BIN` | Path to the `rembg` binary (overrides `shutil.which`). Install via `pip install rembg[cpu,cli]` |
+| `COMFYUI_MCP_SERVER` | Hint that a ComfyUI MCP server is configured. ComfyUI is declared in `tools.mcp_servers:` and called as a namespaced MCP tool. |
+
+Tools: `image_generate`, `image_remove_bg` (rembg), `image_edit_ai`
+(inpaint/outpaint/upscale via A1111 or hosted API).
+
+### Video surface — generation
+
+The video surface resolves a provider from environment variables in a
+**quality ladder** (highest quality / zero-infra first). Set
+`VIDEO_GEN_PROVIDER` to pick one explicitly, or leave it unset and the
+runner auto-detects from which env vars are set.
+
+| Variable | Purpose |
+|---|---|
+| `VIDEO_GEN_PROVIDER` | Explicit provider: `fal`, `happy-horse`, `pixelle`, or `openmontage`. If unset, auto-detected below. |
+| `FAL_KEY` | fal.ai API key. Enables `fal` (hosted SOTA models). Get one at https://fal.ai/dashboard/keys |
+| `VIDEO_GEN_API_URL` | Alternative: a fal.ai-compatible hosted API base URL. Enables `fal`. |
+| `VIDEO_GEN_MODEL` | fal.ai model id. Defaults to `fal-ai/wan-2.1-i2v`. Options: `fal-ai/wan-2.1-t2v`, `fal-ai/hunyuan-video`, `fal-ai/ltx-video-13b-dev`, `fal-ai/veo`, `fal-ai/kling-video`, `fal-ai/minimax-video`, `fal-ai/seedance`, etc. |
+| `HAPPY_HORSE_API_URL` | Happy Horse 1.0 API base URL. Enables `happy-horse`. See https://happy-horse.art/ |
+| `HAPPY_HORSE_API_KEY` | Happy Horse 1.0 API key (bearer token). |
+| `HAPPY_HORSE_RESOLUTION` | Happy Horse output resolution. Defaults to `1080p`. |
+| `PIXELLE_VIDEO_URL` | Pixelle-Video FastAPI gateway base URL. Enables `pixelle`. Deploy from https://github.com/AIDC-AI/Pixelle-Video |
+
+Tools: `video_generate` (async + poll, returns `provider` in the result),
+`video_list`, `video_get`.
+
+**Provider comparison:**
+
+| Provider | Quality | Cost | Infra | Notes |
+|---|---|---|---|---|
+| `fal` | SOTA (Wan2.1/HunyuanVideo/LTX + Veo/Kling) | Pay-per-gen | None | Best breadth; single API unlocks all top open models + proprietary. Recommended default. |
+| `happy-horse` | 15B unified Transformer, native audio-video, 7-language lip-sync, #1 Artificial Analysis Arena | Credits/subscription | None | Joint audio-video synthesis in one pass; ~38s 1080p on H100. |
+| `pixelle` | Good (ComfyUI backend) | Free | Local/hosted server | Topic→finished-video orchestration (script + images + TTS + BGM). |
+| `openmontage` | Advanced multi-pipeline | Free | External MCP server | AGPLv3 — keep external; declare in `tools.mcp_servers:`. |
+
+**Note:** OpenMontage is AGPLv3 — keep it an external, user-deployed MCP
+server; never bundle it into agent-meow.
+
+### One-ComfyUI-server quickstart
+
+Pixelle-Video uses ComfyUI as its image/video backend. A user with one
+ComfyUI server can serve both `image_generate` (via a ComfyUI MCP server in
+`tools.mcp_servers:`) and `video_generate` (via Pixelle-Video pointing at
+the same ComfyUI instance). Configure once, use for both surfaces.
+
 ## Not Yet
 
 - **`interaction.schema`** — structured I/O contract for the agent. When

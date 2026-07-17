@@ -63,6 +63,7 @@ from agent_meow.server.routes.default_policies import create_default_policies_ro
 from agent_meow.server.routes.documents import create_documents_router
 from agent_meow.server.routes.harnesses import create_harnesses_router
 from agent_meow.server.routes.images import create_images_router
+from agent_meow.server.routes.videos import create_videos_router
 from agent_meow.server.routes.policy_registry import create_policy_registry_router
 from agent_meow.server.routes.runner_tunnel import create_runner_tunnel_router
 from agent_meow.server.routes.session_mcp_servers import create_session_mcp_servers_router
@@ -81,6 +82,7 @@ from agent_meow.stores import (
     DocumentStore,
     FileStore,
     ImageStore,
+    VideoStore,
 )
 from agent_meow.stores.comment_store import CommentStore
 from agent_meow.stores.conversation_store import SessionConnectivity
@@ -1025,6 +1027,7 @@ def create_app(
     sandbox_config: ManagedSandboxConfig | None = None,
     document_store: DocumentStore | None = None,
     image_store: ImageStore | None = None,
+    video_store: VideoStore | None = None,
 ) -> FastAPI:
     """
     Build and return the FastAPI application with all routes mounted.
@@ -1865,6 +1868,18 @@ def create_app(
             ),
             prefix="/v1",
             tags=["images"],
+        )
+    if video_store is not None:
+        app.include_router(
+            create_videos_router(
+                video_store,
+                artifact_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+                conversation_store=conversation_store,
+            ),
+            prefix="/v1",
+            tags=["videos"],
         )
 
     app.include_router(
