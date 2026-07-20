@@ -460,6 +460,74 @@ jobs:
                 >> "${SITE}/${post}"
             fi
 
+            # Generate the hero illustration from the drafter's IMAGE_PROMPT (the
+            # per-feature subject) plus a fixed brand style suffix, via the image
+            # model on the same gateway host. Fail-soft: any error leaves heroArt
+            # blank (the index falls back to a placeholder card), never blocking
+            # the draft. The scene is machine-drawn from the prompt, so no secret
+            # can reach it; the drafted-file secret scan above already ran.
+            image_prompt="$(sed -n 's/^IMAGE_PROMPT:[[:space:]]*//p' "/tmp/drafter_out_${i}.txt" | head -n1)"
+            if [ -n "$post" ] && [ -n "$image_prompt" ]; then
+              # GATEWAY_BASE_URL is scoped to THIS invocation only (not the step
+              # env), so the unsandboxed drafter run above never sees it and it
+              # can't reach the drafter's scanned stdout.
+              GATEWAY_BASE_URL='${{ secrets.GATEWAY_BASE_URL }}' \
+              IMAGE_PROMPT="$image_prompt" SLUG="$slug" SITE="$SITE" POST="$post" \
+              python3 -u <<'PYEOF' || echo "::warning::hero image generation failed for ${slug}; leaving heroArt blank"
+          import base64, json, os, pathlib, re, urllib.request
+          gw = os.environ.get("GATEWAY_BASE_URL", "")
+          key = os.environ.get("LLM_API_KEY", "")
+          if not gw or not key:
+              raise SystemExit("no gateway/key for image generation")
+          # The image model lives on the same workspace host as the anthropic
+          # gateway (GATEWAY_BASE_URL = <host>/anthropic). Derive scheme://host.
+          m = re.match(r"(https?://[^/]+)", gw)
+          if not m:
+              raise SystemExit(f"cannot parse gateway host from {gw!r}")
+          model = os.environ.get("IMAGE_MODEL", "databricks-gemini-3-pro-image")
+          url = f"{m.group(1)}/serving-endpoints/{model}/invocations"
+          style = (" Flat vector illustration, dark navy tech background with subtle "
+                   "circuit lines, teal and pink accents, 16:9 wide, no text, no words, "
+                   "no logos.")
+          body = json.dumps({"messages": [{"role": "user",
+                 "content": os.environ["IMAGE_PROMPT"] + style}], "max_tokens": 4096}).encode()
+          req = urllib.request.Request(url, data=body, method="POST", headers={
+              "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+          with urllib.request.urlopen(req, timeout=120) as resp:
+              data = json.load(resp)
+          # The image is the content part of type image_url (a data: URI).
+          uri = None
+          for part in data["choices"][0]["message"]["content"]:
+              if isinstance(part, dict) and part.get("type") == "image_url":
+                  uri = part["image_url"]["url"]
+                  break
+          if not uri or "," not in uri:
+              raise SystemExit("no image in model response")
+          raw = base64.b64decode(uri.split(",", 1)[1])
+          if raw[:8] != b"\x89PNG\r\n\x1a\n":
+              raise SystemExit("model returned non-PNG data")
+          slug = os.environ["SLUG"]
+          # Defense-in-depth: slug is validated as strict kebab-case upstream, but
+          # this is the one place it names a new file — re-check before writing.
+          if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
+              raise SystemExit(f"unsafe slug for hero path: {slug!r}")
+          dest = pathlib.Path(os.environ["SITE"], "public", "images", "blog", f"{slug}.png")
+          dest.parent.mkdir(parents=True, exist_ok=True)
+          dest.write_bytes(raw)
+          # Point heroArt at the served path (public/ maps to site root).
+          post_path = pathlib.Path(os.environ["SITE"], os.environ["POST"])
+          text = post_path.read_text(encoding="utf-8")
+          text, n = re.subn(r'heroArt:\s*"[^"]*"', f'heroArt: "/images/blog/{slug}.png"', text, count=1)
+          if not n:
+              # No double-quoted heroArt to rewrite — drop the orphan PNG so we
+              # don't commit an image nothing references.
+              dest.unlink(missing_ok=True)
+              raise SystemExit("no heroArt: \"\" field to rewrite; discarding hero image")
+          post_path.write_text(text, encoding="utf-8")
+          print(f"generated hero image ({len(raw)} bytes) -> /images/blog/{slug}.png")
+          PYEOF
+            fi
+
             # Prettier the drafter's changed files so they pass the site's
             # `fmt:check` gate — LLM-generated MDX/JS (and the CTA footer appended
             # above) are rarely prettier-clean. Run from inside $SITE so prettier
@@ -549,7 +617,7 @@ jobs:
             fi
 
             summary="$(sed -n '/<!-- BLOG_DRAFT_SUMMARY -->/,$p' "/tmp/drafter_out_${idx}.txt" | tail -n +2 || true)"
-            body="$(printf 'Drafts a feature-blog post for **%s**, selected by `feature-blog-scout` at the %s release cut.\n\n> **This is a DRAFT.** Before merging, a human must: record the mandatory demo (replace the `DEMO REQUIRED` marker), add hero art, set the author byline, and do a final voice pass.\n\n%s\n\nGenerated by omnigent `.github/workflows/feature-blog.yml`.' "$title" "$TAG" "$summary")"
+            body="$(printf 'Drafts a feature-blog post for **%s**, selected by `feature-blog-scout` at the %s release cut.\n\n> **This is a DRAFT.** Before merging, a human must: record the mandatory demo (replace the `DEMO REQUIRED` marker) and do a final voice pass. The hero image and `author: omnigent` byline are auto-generated — review and optionally replace them.\n\n%s\n\nGenerated by omnigent `.github/workflows/feature-blog.yml`.' "$title" "$TAG" "$summary")"
             url="$(gh pr create \
               --repo "$SITE_REPO" \
               --base main \
