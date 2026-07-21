@@ -309,4 +309,60 @@ def create_admin_catalog_router(
                         by_name[name]["blocked_by_policy"] = policy.name
         return {"object": "list", "data": list(by_name.values())}
 
+    @router.get("/admin/mcp-servers")
+    async def list_mcp_servers(request: Request) -> dict[str, Any]:
+        """List every MCP server declared across all template agents, grouped.
+
+        Walks every built-in (template) agent's ``spec.mcp_servers`` via
+        ``agent_store.list`` (which filters to ``session_id IS NULL``) and
+        groups by ``(name, transport)``. Session-scoped agents are out of
+        scope here — they're created on demand and already editable via the
+        per-session ``/sessions/{id}/agent/mcp-servers`` route; the catalog
+        deep-links into that flow for edits, so it doesn't need to enumerate
+        them. Each entry carries the list of template agents that declare it
+        (with ``session_scoped=False``) and a ``used_by_session_count`` that
+        is always 0 for the template-only walk.
+
+        :param request: Incoming request for auth.
+        :returns: ``{"object": "list", "data": [McpCatalogEntry]}``.
+        """
+        await _require_admin(request, auth_provider, permission_store)
+        grouped: dict[tuple[str, str], dict[str, Any]] = {}
+        builtins_page = await asyncio.to_thread(agent_store.list, 500)
+        for agent in builtins_page.data:
+            try:
+                loaded = await asyncio.to_thread(
+                    partial(agent_cache.load, expand_env=True),
+                    agent.id,
+                    agent.bundle_location,
+                )
+            except Exception:  # noqa: BLE001 — unreadable bundle must not break the list
+                continue
+            for srv in loaded.spec.mcp_servers:
+                key = (srv.name, srv.transport)
+                entry = grouped.setdefault(
+                    key,
+                    {
+                        "name": srv.name,
+                        "transport": srv.transport,
+                        "url": srv.url,
+                        "command": srv.command,
+                        "args": list(srv.args) if srv.args else [],
+                        "description": srv.description,
+                        "used_by_agents": [],
+                        "used_by_session_count": 0,
+                    },
+                )
+                entry["used_by_agents"].append(
+                    {
+                        "id": agent.id,
+                        "name": agent.name,
+                        "session_id": agent.session_id,
+                        "session_scoped": agent.session_id is not None,
+                    }
+                )
+                if agent.session_id is not None:
+                    entry["used_by_session_count"] += 1
+        return {"object": "list", "data": list(grouped.values())}
+
     return router
