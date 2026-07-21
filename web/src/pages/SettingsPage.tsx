@@ -75,6 +75,9 @@ const MembersPage = lazy(() =>
 const PoliciesPage = lazy(() =>
   import("@/pages/PoliciesPage").then((m) => ({ default: m.PoliciesPage })),
 );
+const HarnessesPage = lazy(() =>
+  import("@/pages/HarnessesPage").then((m) => ({ default: m.HarnessesPage })),
+);
 
 /**
  * Settings content panel. The section nav lives in the sidebar card
@@ -97,10 +100,16 @@ export function SettingsPage() {
   // Rendered in ANY multi-user mode (accounts AND OIDC), not gated on
   // `accountsEnabled` — the nav + pages handle admin gating, and Members runs
   // read-only under OIDC (no password actions).
-  if (section === "members" || section === "policies") {
+  if (section === "members" || section === "policies" || section === "harnesses") {
     return (
       <Suspense fallback={null}>
-        {section === "members" ? <MembersPage /> : <PoliciesPage />}
+        {section === "members" ? (
+          <MembersPage />
+        ) : section === "policies" ? (
+          <PoliciesPage />
+        ) : (
+          <HarnessesPage />
+        )}
       </Suspense>
     );
   }
@@ -492,6 +501,7 @@ function AccountSection() {
 }
 
 function ArchivedSection() {
+  const { t } = useTranslation();
   // includeArchived:true is the only way to load archived rows; the
   // default sidebar query no longer surfaces them.
   const query = useConversations("", true);
@@ -502,13 +512,13 @@ function ArchivedSection() {
 
   return (
     <Section
-      title="Archived sessions"
-      description="Sessions you've archived. Restore one to the sidebar, or delete it for good."
+      title={t("archived.title")}
+      description={t("archived.description")}
     >
       {query.isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
       ) : archived.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No archived sessions.</p>
+        <p className="text-sm text-muted-foreground">{t("archived.none")}</p>
       ) : (
         <ul className="flex flex-col gap-0.5">
           {archived.map((conv) => (
