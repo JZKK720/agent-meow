@@ -189,6 +189,17 @@
     "copySetup": "Copy meow setup",
     "copy": "Copy"
   },
+  "skills": {
+    "title": "Skills",
+    "noPermission": "You don't have permission to view skills.",
+    "description": "Skills discoverable by your agents across bundles and host directories.",
+    "noneConfigured": "No skills found.",
+    "bundledIn": "Bundled in {{count}} agent(s)",
+    "blocked": "blocked",
+    "manage": "manage",
+    "addFooter": "To add a skill, drop a SKILL.md into one of these discovery paths:",
+    "blockFooter": "To block a skill, add it to the block_skills policy under Policies."
+  },
   "archived": {
     "title": "Archived sessions",
     "description": "Sessions you've archived. Restore one to the sidebar, or delete it for good.",

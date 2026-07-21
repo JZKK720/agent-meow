@@ -189,6 +189,17 @@
     "copySetup": "复制 meow setup",
     "copy": "复制"
   },
+  "skills": {
+    "title": "Skills",
+    "noPermission": "您没有权限查看 Skills。",
+    "description": "您的代理在 bundle 和主机目录中可发现的 Skills。",
+    "noneConfigured": "未找到 Skills。",
+    "bundledIn": "已打包在 {{count}} 个代理中",
+    "blocked": "已屏蔽",
+    "manage": "管理",
+    "addFooter": "要添加 Skill，请将 SKILL.md 放入以下任一发现路径：",
+    "blockFooter": "要屏蔽 Skill，请在策略下的 block_skills 策略中添加它。"
+  },
   "archived": {
     "title": "已归档会话",
     "description": "您已归档的会话。可恢复到侧边栏，或永久删除。",
