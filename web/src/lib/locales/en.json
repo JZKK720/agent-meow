@@ -25,7 +25,19 @@
     "system": "System",
     "light": "Light",
     "dark": "Dark",
-    "appearanceEmbedded": "Appearance is controlled by the host application."
+    "appearanceEmbedded": "Appearance is controlled by the host application.",
+    "harnesses": "Harnesses",
+    "skills": "Skills",
+    "mcpServers": "MCP servers"
+  },
+  "harnesses": {
+    "title": "Harnesses",
+    "noPermission": "You don't have permission to view harness status.",
+    "description": "Status of every built-in harness on this server.",
+    "noneConfigured": "No harnesses found.",
+    "installFooter": "To install or sign in, run meow setup on the host.",
+    "copySetup": "Copy meow setup",
+    "copy": "Copy"
   },
   "docs": {
     "title": "Documents",

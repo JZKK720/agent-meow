@@ -25,7 +25,19 @@
     "system": "跟随系统",
     "light": "浅色",
     "dark": "深色",
-    "appearanceEmbedded": "外观由宿主应用控制。"
+    "appearanceEmbedded": "外观由宿主应用控制。",
+    "harnesses": "Harness",
+    "skills": "Skills",
+    "mcpServers": "MCP 服务器"
+  },
+  "harnesses": {
+    "title": "Harness",
+    "noPermission": "您没有权限查看 Harness 状态。",
+    "description": "此服务器上每个内置 Harness 的状态。",
+    "noneConfigured": "未找到 Harness。",
+    "installFooter": "要安装或登录，请在主机上运行 meow setup。",
+    "copySetup": "复制 meow setup",
+    "copy": "复制"
   },
   "docs": {
     "title": "文档",
