@@ -15,6 +15,9 @@ CRUD for MCP servers. See ``designs/INTEGRATIONS_ADMIN.md``.
 from __future__ import annotations
 
 import asyncio
+import os
+from functools import partial
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -28,9 +31,13 @@ from agent_meow.onboarding.harness_install import (
     harness_install_command,
     required_cli_for_harness,
 )
+from agent_meow.runtime.agent_cache import AgentCache
 from agent_meow.server.auth import AuthProvider
 from agent_meow.server.routes._auth_helpers import get_user_id
+from agent_meow.spec.parser import discover_host_skills
+from agent_meow.stores import AgentStore
 from agent_meow.stores.permission_store import PermissionStore
+from agent_meow.stores.policy_store import PolicyStore
 
 
 async def _require_admin(
@@ -163,15 +170,30 @@ def _install_command(spec: HarnessInstallSpec | None) -> str | None:
     return spec.install_hint
 
 
+# Handler path for the bundled "block skills" policy. The skills admin page
+# annotates each skill with whether any default policy with this handler lists
+# it in its ``blocked`` factory param, so the UI can deep-link into Policies
+# for blocking instead of duplicating the blocklist here.
+_BLOCK_SKILLS_HANDLER = "agent_meow.policies.builtins.safety.block_skills"
+
+
 def create_admin_catalog_router(
     *,
+    agent_store: AgentStore,
+    agent_cache: AgentCache,
     auth_provider: AuthProvider | None = None,
     permission_store: PermissionStore | None = None,
+    policy_store: PolicyStore | None = None,
 ) -> APIRouter:
     """Build the admin catalog router (all routes admin-gated, read-only).
 
+    :param agent_store: Store for agent metadata (used by skills + MCP routes).
+    :param agent_cache: Cache for loading parsed agent specs (skills + MCP).
     :param auth_provider: Auth provider, or ``None`` in single-user mode.
     :param permission_store: Permission store, or ``None`` to disable gating.
+    :param policy_store: Policy store, or ``None`` to skip the ``block_skills``
+        annotation on the skills route (the route still works; every entry
+        reports ``blocked=False``).
     :returns: Configured :class:`APIRouter`.
     """
     router = APIRouter()
@@ -206,5 +228,85 @@ def create_admin_catalog_router(
                 }
             )
         return {"object": "list", "data": entries}
+
+    @router.get("/admin/skills")
+    async def list_skills(request: Request) -> dict[str, Any]:
+        """List every discoverable skill across bundles + host dirs.
+
+        Bundled skills come from each built-in agent's parsed spec; host skills
+        come from ``~/.claude/skills/`` / ``~/.agents/skills/`` via the generic
+        host walk (:func:`discover_host_skills`). Each entry is annotated with
+        whether a ``block_skills`` default policy lists it in its ``blocked``
+        factory param, so the UI can deep-link into the Policies page for
+        blocking instead of duplicating the blocklist here.
+
+        :param request: Incoming request for auth.
+        :returns: ``{"object": "list", "data": [SkillAdminEntry]}``.
+        """
+        await _require_admin(request, auth_provider, permission_store)
+        by_name: dict[str, dict[str, Any]] = {}
+        # 1. Bundle skills from every built-in agent (session_id IS NULL).
+        #    ``AgentStore.list(limit, after, before, order)`` — pass limit
+        #    positionally because ``asyncio.to_thread`` forwards *args, not
+        #    kwargs, to the callable.
+        builtins_page = await asyncio.to_thread(agent_store.list, 500)
+        for agent in builtins_page.data:
+            try:
+                # ``AgentCache.load``'s ``expand_env`` is keyword-only, and
+                # ``asyncio.to_thread`` forwards *args only — wrap in
+                # ``functools.partial`` to pass the keyword. Built-in agents
+                # are operator-authored (``session_id IS None``), so env
+                # expansion is safe here.
+                loaded = await asyncio.to_thread(
+                    partial(agent_cache.load, expand_env=True),
+                    agent.id,
+                    agent.bundle_location,
+                )
+            except Exception:  # noqa: BLE001 — unreadable bundle must not break the list
+                continue
+            for skill in loaded.spec.skills:
+                entry = by_name.setdefault(
+                    skill.name,
+                    {
+                        "name": skill.name,
+                        "description": skill.description,
+                        "source": "bundle",
+                        "source_path": str(skill.skill_dir) if skill.skill_dir else None,
+                        "bundled_in_agents": [],
+                        "blocked": False,
+                        "blocked_by_policy": None,
+                    },
+                )
+                entry["bundled_in_agents"].append(agent.id)
+        # 2. Host skills from the user-global skills directories.
+        home = Path(os.path.expanduser("~"))
+        for skill in discover_host_skills(home, "all"):
+            by_name.setdefault(
+                skill.name,
+                {
+                    "name": skill.name,
+                    "description": skill.description,
+                    "source": "host",
+                    "source_path": str(skill.skill_dir) if skill.skill_dir else None,
+                    "bundled_in_agents": [],
+                    "blocked": False,
+                    "blocked_by_policy": None,
+                },
+            )
+        # 3. Annotate blocked skills from any block_skills default policy.
+        if policy_store is not None:
+            for policy in policy_store.list_defaults():
+                if policy.handler != _BLOCK_SKILLS_HANDLER:
+                    continue
+                blocked_names = (policy.factory_params or {}).get("blocked", [])
+                if not isinstance(blocked_names, list):
+                    continue
+                for name in blocked_names:
+                    if not isinstance(name, str):
+                        continue
+                    if name in by_name:
+                        by_name[name]["blocked"] = True
+                        by_name[name]["blocked_by_policy"] = policy.name
+        return {"object": "list", "data": list(by_name.values())}
 
     return router
