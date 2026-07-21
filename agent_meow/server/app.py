@@ -57,6 +57,7 @@ from agent_meow.server.performance_metrics import (
     set_request_session_id_for_access_log,
     set_request_user_agent_for_access_log,
 )
+from agent_meow.server.routes.admin_catalog import create_admin_catalog_router
 from agent_meow.server.routes.builtin_agents import create_builtin_agents_router
 from agent_meow.server.routes.comments import create_comments_router
 from agent_meow.server.routes.default_policies import create_default_policies_router
@@ -1927,6 +1928,14 @@ def create_app(
         create_harnesses_router(auth_provider=auth_provider),
         prefix="/v1",
         tags=["harnesses"],
+    )
+    app.include_router(
+        create_admin_catalog_router(
+            auth_provider=auth_provider,
+            permission_store=permission_store,
+        ),
+        prefix="/v1",
+        tags=["admin_catalog"],
     )
     app.include_router(
         create_terminal_attach_router(
