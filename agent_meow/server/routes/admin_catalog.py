@@ -177,6 +177,35 @@ def _install_command(spec: HarnessInstallSpec | None) -> str | None:
 _BLOCK_SKILLS_HANDLER = "agent_meow.policies.builtins.safety.block_skills"
 
 
+def _build_harness_entries() -> list[dict[str, Any]]:
+    """Build the harness admin catalog entries (sync — call via to_thread).
+
+    Wraps :func:`harness_catalog` + the CLI install/login probes
+    (:func:`required_cli_for_harness`, :func:`harness_cli_installed`,
+    :func:`harness_cli_logged_in`) into one sync helper so the async route can
+    offload the whole blocking batch (subprocess calls) to a worker thread.
+
+    :returns: A list of ``HarnessAdminEntry`` dicts.
+    """
+    entries: list[dict[str, Any]] = []
+    for row in harness_catalog():
+        harness_id = row["id"]
+        spec = required_cli_for_harness(harness_id)
+        entries.append(
+            {
+                "id": harness_id,
+                "label": row["label"],
+                "binary": spec.binary if spec else None,
+                "install_status": _install_status(harness_id, spec),
+                "login_status": _login_status(spec),
+                "install_command": _install_command(spec),
+                "auth_hint": spec.auth_hint if spec else None,
+                "capabilities": row.get("capabilities", {}),
+            }
+        )
+    return entries
+
+
 def create_admin_catalog_router(
     *,
     agent_store: AgentStore,
@@ -207,26 +236,15 @@ def create_admin_catalog_router(
         in-process harnesses report ``install_status="installed"`` and
         ``login_status="n/a"`` (no CLI).
 
+        The catalog + CLI probes (``harness_cli_installed`` /
+        ``harness_cli_logged_in``) run subprocess calls, so the whole list is
+        built inside ``asyncio.to_thread`` to avoid blocking the event loop.
+
         :param request: Incoming request for auth.
         :returns: ``{"object": "list", "data": [HarnessAdminEntry]}``.
         """
         await _require_admin(request, auth_provider, permission_store)
-        entries: list[dict[str, Any]] = []
-        for row in harness_catalog():
-            harness_id = row["id"]
-            spec = required_cli_for_harness(harness_id)
-            entries.append(
-                {
-                    "id": harness_id,
-                    "label": row["label"],
-                    "binary": spec.binary if spec else None,
-                    "install_status": _install_status(harness_id, spec),
-                    "login_status": _login_status(spec),
-                    "install_command": _install_command(spec),
-                    "auth_hint": spec.auth_hint if spec else None,
-                    "capabilities": row.get("capabilities", {}),
-                }
-            )
+        entries = await asyncio.to_thread(_build_harness_entries)
         return {"object": "list", "data": entries}
 
     @router.get("/admin/skills")
