@@ -141,3 +141,60 @@ async def test_list_skills_host_walk_runs_without_error(
     body = resp.json()
     assert body["object"] == "list"
     assert isinstance(body["data"], list)
+
+
+# ── GET /v1/admin/mcp-servers ────────────────────────────────────────
+
+
+async def test_list_mcp_servers_returns_list_shape(
+    admin_client: httpx.AsyncClient,
+) -> None:
+    """The MCP catalog returns a well-formed list of server entries.
+
+    Walks every built-in (template) agent's ``spec.mcp_servers`` and groups
+    by ``(name, transport)``. The default seeded agents (claude-native-ui,
+    codex-native-ui, ...) declare no MCP servers, so a fresh test app may
+    surface zero entries — the route must still return a list, not 500.
+    """
+    resp = await admin_client.get("/v1/admin/mcp-servers")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["object"] == "list"
+    assert isinstance(body["data"], list)
+    for entry in body["data"]:
+        assert "name" in entry and isinstance(entry["name"], str)
+        assert entry["transport"] in {"http", "stdio"}
+        assert "url" in entry  # one of url/command is set
+        assert "command" in entry
+        assert isinstance(entry["args"], list)
+        assert "description" in entry  # may be None
+        assert isinstance(entry["used_by_agents"], list)
+        assert isinstance(entry["used_by_session_count"], int)
+        for agent_ref in entry["used_by_agents"]:
+            assert "id" in agent_ref and isinstance(agent_ref["id"], str)
+            assert "name" in agent_ref and isinstance(agent_ref["name"], str)
+            assert "session_id" in agent_ref  # None for built-ins
+            assert "session_scoped" in agent_ref and isinstance(
+                agent_ref["session_scoped"], bool
+            )
+
+
+async def test_list_mcp_servers_session_count_zero_for_builtins(
+    admin_client: httpx.AsyncClient,
+) -> None:
+    """Built-in (template) agents never contribute to ``used_by_session_count``.
+
+    ``session_scoped`` is ``False`` for every agent ref surfaced by
+    ``agent_store.list`` (which filters to ``session_id IS NULL``), so the
+    per-entry ``used_by_session_count`` is the count of session-scoped
+    agents only — built-ins don't increment it.
+    """
+    resp = await admin_client.get("/v1/admin/mcp-servers")
+    assert resp.status_code == 200
+    body = resp.json()
+    for entry in body["data"]:
+        for agent_ref in entry["used_by_agents"]:
+            assert agent_ref["session_scoped"] is False, agent_ref
+            assert agent_ref["session_id"] is None, agent_ref
+        # All refs are built-in, so session count must be 0.
+        assert entry["used_by_session_count"] == 0, entry
