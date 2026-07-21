@@ -200,6 +200,18 @@
     "addFooter": "To add a skill, drop a SKILL.md into one of these discovery paths:",
     "blockFooter": "To block a skill, add it to the block_skills policy under Policies."
   },
+  "mcpServers": {
+    "title": "MCP servers",
+    "noPermission": "You don't have permission to view MCP servers.",
+    "description": "MCP servers declared across all template agents.",
+    "noneConfigured": "No MCP servers found.",
+    "refresh": "Refresh",
+    "usedBy": "Used by {{count}} agent(s)",
+    "sessionScoped": "session-scoped",
+    "builtIn": "built-in",
+    "addFooter": "To add an MCP server, edit the agent that needs it.",
+    "addFooterStep": "Open the session → Agent tab → MCP servers → Add."
+  },
   "archived": {
     "title": "Archived sessions",
     "description": "Sessions you've archived. Restore one to the sidebar, or delete it for good.",

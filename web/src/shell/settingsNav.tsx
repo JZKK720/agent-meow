@@ -14,6 +14,7 @@ import {
   LanguagesIcon,
   PaletteIcon,
   PanelRightOpenIcon,
+  PlugIcon,
   ShieldCheckIcon,
   SparklesIcon,
   TerminalIcon,
@@ -39,6 +40,7 @@ export type SettingsSectionId =
   | "policies"
   | "harnesses"
   | "skills"
+  | "mcpServers"
   | "archived"
   | "cli";
 
@@ -51,6 +53,7 @@ const SECTION_IDS: readonly SettingsSectionId[] = [
   "policies",
   "harnesses",
   "skills",
+  "mcpServers",
   "archived",
   "cli",
 ];
@@ -118,6 +121,7 @@ export function settingsNavGroups(
         { id: "policies", label: t("settings.policies"), icon: ShieldCheckIcon },
         { id: "harnesses", label: t("settings.harnesses"), icon: TerminalIcon },
         { id: "skills", label: t("settings.skills"), icon: SparklesIcon },
+        { id: "mcpServers", label: t("settings.mcpServers"), icon: PlugIcon },
       ],
     });
   }

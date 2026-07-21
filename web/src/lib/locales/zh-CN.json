@@ -200,6 +200,18 @@
     "addFooter": "要添加 Skill，请将 SKILL.md 放入以下任一发现路径：",
     "blockFooter": "要屏蔽 Skill，请在策略下的 block_skills 策略中添加它。"
   },
+  "mcpServers": {
+    "title": "MCP 服务器",
+    "noPermission": "您没有权限查看 MCP 服务器。",
+    "description": "所有模板代理声明的 MCP 服务器。",
+    "noneConfigured": "未找到 MCP 服务器。",
+    "refresh": "刷新",
+    "usedBy": "被 {{count}} 个代理使用",
+    "sessionScoped": "会话级",
+    "builtIn": "内置",
+    "addFooter": "要添加 MCP 服务器，请编辑需要它的代理。",
+    "addFooterStep": "打开会话 → Agent 标签页 → MCP 服务器 → 添加。"
+  },
   "archived": {
     "title": "已归档会话",
     "description": "您已归档的会话。可恢复到侧边栏，或永久删除。",
