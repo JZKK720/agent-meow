@@ -1931,8 +1931,11 @@ def create_app(
     )
     app.include_router(
         create_admin_catalog_router(
+            agent_store=agent_store,
+            agent_cache=agent_cache,
             auth_provider=auth_provider,
             permission_store=permission_store,
+            policy_store=policy_store,
         ),
         prefix="/v1",
         tags=["admin_catalog"],

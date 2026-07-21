@@ -75,3 +75,69 @@ async def test_list_harnesses_returns_catalog(admin_client: httpx.AsyncClient) -
         assert "capabilities" in entry
         assert entry["install_status"] in {"installed", "missing"}
         assert entry["login_status"] in {"logged_in", "logged_out", "n/a"}
+
+
+# ── GET /v1/admin/skills ──────────────────────────────────────────────
+
+
+async def test_list_skills_returns_list_shape(admin_client: httpx.AsyncClient) -> None:
+    """The skills catalog returns a well-formed list of skill entries.
+
+    Bundle skills come from the seeded built-in agents (the onboarding agent
+    bundles omnigent-knowledge / build-omnigent / detect-framework); host
+    skills come from the user's ``~/.claude/skills/`` walk. We don't assert
+    specific names here (host discovery depends on the dev machine), only
+    the per-entry shape and that the response is a list.
+    """
+    resp = await admin_client.get("/v1/admin/skills")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["object"] == "list"
+    assert isinstance(body["data"], list)
+    for entry in body["data"]:
+        assert "name" in entry and isinstance(entry["name"], str)
+        assert "description" in entry
+        assert entry["source"] in {"bundle", "host"}
+        assert "source_path" in entry  # may be None
+        assert isinstance(entry["bundled_in_agents"], list)
+        assert "blocked" in entry and isinstance(entry["blocked"], bool)
+        assert "blocked_by_policy" in entry  # policy name or None
+
+
+async def test_list_skills_bundle_entries_well_formed(
+    admin_client: httpx.AsyncClient,
+) -> None:
+    """Any bundle-sourced skill in the catalog carries a non-empty agent list.
+
+    The default seeded agents (claude-native-ui, codex-native-ui, ...) are
+    synthesized CLI wrappers with no bundled skills, so a fresh test app may
+    surface zero bundle skills. When bundle skills ARE present (a deploy that
+    registered a custom agent with a ``skills/`` dir), each must carry at
+    least one agent id. This keeps the bundle-walk code path under test without
+    depending on a specific seeded skill.
+    """
+    resp = await admin_client.get("/v1/admin/skills")
+    assert resp.status_code == 200
+    body = resp.json()
+    for entry in body["data"]:
+        if entry["source"] == "bundle":
+            assert len(entry["bundled_in_agents"]) >= 1, (
+                f"bundle skill {entry['name']!r} has no agents: {entry}"
+            )
+            assert all(isinstance(aid, str) for aid in entry["bundled_in_agents"])
+
+
+async def test_list_skills_host_walk_runs_without_error(
+    admin_client: httpx.AsyncClient,
+) -> None:
+    """The host-skills walk over ``~/.claude/skills/`` completes and returns 200.
+
+    On a dev machine this surfaces many host skills; on a clean CI box it
+    surfaces none. Either way the route must not 500 — it must return a list
+    (possibly empty) so the UI can render the discovery view.
+    """
+    resp = await admin_client.get("/v1/admin/skills")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["object"] == "list"
+    assert isinstance(body["data"], list)
