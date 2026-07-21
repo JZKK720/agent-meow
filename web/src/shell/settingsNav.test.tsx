@@ -104,11 +104,11 @@ describe("settingsNavGroups", () => {
     expect(ids(false, false)).not.toContain("members");
     // Admin on an accounts deploy → all three admin siblings appear, grouped under "Admin".
     const accountsAdmin = settingsNavGroups(true, false, true).find((g) => g.title === "Admin");
-    expect(accountsAdmin?.items.map((i) => i.id)).toEqual(["members", "policies", "harnesses"]);
+    expect(accountsAdmin?.items.map((i) => i.id)).toEqual(["members", "policies", "harnesses", "skills"]);
     // Admin under OIDC (accountsEnabled false) → still appears. This is the
     // #1489 fix: OIDC previously had no admin chrome at all.
     const oidcAdmin = settingsNavGroups(false, false, true).find((g) => g.title === "Admin");
-    expect(oidcAdmin?.items.map((i) => i.id)).toEqual(["members", "policies", "harnesses"]);
+    expect(oidcAdmin?.items.map((i) => i.id)).toEqual(["members", "policies", "harnesses", "skills"]);
   });
 });
 

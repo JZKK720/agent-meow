@@ -15,6 +15,7 @@ import {
   PaletteIcon,
   PanelRightOpenIcon,
   ShieldCheckIcon,
+  SparklesIcon,
   TerminalIcon,
   UserCogIcon,
   UsersIcon,
@@ -37,6 +38,7 @@ export type SettingsSectionId =
   | "members"
   | "policies"
   | "harnesses"
+  | "skills"
   | "archived"
   | "cli";
 
@@ -48,6 +50,7 @@ const SECTION_IDS: readonly SettingsSectionId[] = [
   "members",
   "policies",
   "harnesses",
+  "skills",
   "archived",
   "cli",
 ];
@@ -114,6 +117,7 @@ export function settingsNavGroups(
         { id: "members", label: t("settings.members"), icon: UsersIcon },
         { id: "policies", label: t("settings.policies"), icon: ShieldCheckIcon },
         { id: "harnesses", label: t("settings.harnesses"), icon: TerminalIcon },
+        { id: "skills", label: t("settings.skills"), icon: SparklesIcon },
       ],
     });
   }
