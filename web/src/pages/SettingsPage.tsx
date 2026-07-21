@@ -78,6 +78,9 @@ const PoliciesPage = lazy(() =>
 const HarnessesPage = lazy(() =>
   import("@/pages/HarnessesPage").then((m) => ({ default: m.HarnessesPage })),
 );
+const SkillsPage = lazy(() =>
+  import("@/pages/SkillsPage").then((m) => ({ default: m.SkillsPage })),
+);
 
 /**
  * Settings content panel. The section nav lives in the sidebar card
@@ -100,15 +103,22 @@ export function SettingsPage() {
   // Rendered in ANY multi-user mode (accounts AND OIDC), not gated on
   // `accountsEnabled` — the nav + pages handle admin gating, and Members runs
   // read-only under OIDC (no password actions).
-  if (section === "members" || section === "policies" || section === "harnesses") {
+  if (
+    section === "members" ||
+    section === "policies" ||
+    section === "harnesses" ||
+    section === "skills"
+  ) {
     return (
       <Suspense fallback={null}>
         {section === "members" ? (
           <MembersPage />
         ) : section === "policies" ? (
           <PoliciesPage />
-        ) : (
+        ) : section === "harnesses" ? (
           <HarnessesPage />
+        ) : (
+          <SkillsPage />
         )}
       </Suspense>
     );
