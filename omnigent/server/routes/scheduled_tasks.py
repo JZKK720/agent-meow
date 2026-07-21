@@ -13,6 +13,7 @@ below the minimum-interval floor) is a 400.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from typing import Any
@@ -25,6 +26,7 @@ from omnigent.entities import ScheduledTask
 from omnigent.errors import ErrorCode, OmnigentError
 from omnigent.server.auth import RESERVED_USER_LOCAL, AuthProvider
 from omnigent.server.routes._auth_helpers import require_user
+from omnigent.server.routes._host_launch import resolve_host_owner
 from omnigent.server.routes._session_create_validation import (
     validate_existing_host_workspace,
     validate_session_agent,
@@ -49,8 +51,15 @@ class CreateScheduledTaskRequest(BaseModel):
     timezone: str = "UTC"
     model_override: str | None = None
     reasoning_effort: str | None = None
-    workspace: str = Field(min_length=1)
-    host_id: str = Field(min_length=1)
+    # Optional: no PINNED host/workspace. When both are unset the fire path
+    # resolves the owner's online host at fire time and defaults the workspace to
+    # that host's home directory (a failed run is recorded if none is online) —
+    # it does not run hostless. ``min_length=1`` still rejects an empty string
+    # (the field is unset via omission / null, not ""), mirroring the PATCH
+    # request. PATCH still cannot null an already-set workspace/host_id (see
+    # ``UpdateScheduledTaskRequest``).
+    workspace: str | None = Field(default=None, min_length=1)
+    host_id: str | None = Field(default=None, min_length=1)
 
 
 class UpdateScheduledTaskRequest(BaseModel):
@@ -158,12 +167,21 @@ def create_scheduled_tasks_router(
         *,
         owner: str,
         agent_id: str,
-        host_id: str,
-        workspace: str,
+        host_id: str | None,
+        workspace: str | None,
         model_override: str | None,
         reasoning_effort: str | None,
-    ) -> tuple[str, str | None, str | None]:
-        """Validate inputs that scheduled tasks persist into future sessions."""
+    ) -> tuple[str | None, str | None, str | None]:
+        """Validate inputs that scheduled tasks persist into future sessions.
+
+        Workspace is always optional. When it is unset the canonical workspace
+        persists as ``None`` and the fire path defaults it to the launch host's
+        home directory — this holds whether the host was pinned or is resolved
+        from the owner's live hosts at fire time. Only a workspace pinned WITHOUT
+        a host is an error (a path with no machine is meaningless). When both a
+        host and a workspace are supplied, the workspace is validated against the
+        host boundary here so a bad pin fails fast at create.
+        """
         user_id = None if owner == RESERVED_USER_LOCAL else owner
         agent = await validate_session_agent(
             user_id=user_id,
@@ -176,6 +194,36 @@ def create_scheduled_tasks_router(
             model_override=model_override,
             reasoning_effort=reasoning_effort,
         )
+        if workspace is None:
+            # No pinned workspace: the fire path defaults it to the launch host's
+            # HOME, so there is nothing to validate against the host boundary
+            # here (a bare host with no workspace is allowed). But a PINNED host
+            # must still be authorized at create — existence + ownership — even
+            # without a workspace, so a non-owned / nonexistent host reference
+            # fails fast with a clean 4xx instead of persisting and only
+            # surfacing as a failed run at fire time. This is a LOCAL store read
+            # (no host.stat / workspace RPC), via the same resolve_host_owner the
+            # workspace-present branch below uses inside
+            # validate_existing_host_workspace — and whose semantics
+            # fire.py:_authorize_pinned_host mirrors — so create-time and
+            # fire-time host authorization cannot drift. When user_id is None
+            # (single-user / auth disabled) resolve_host_owner skips the owner
+            # check, matching the fire path and the rest of the server.
+            if host_id is not None:
+                host_store = getattr(request.app.state, "host_store", None)
+                if host_store is not None:
+                    await asyncio.to_thread(
+                        resolve_host_owner,
+                        user_id=user_id,
+                        host_id=host_id,
+                        host_store=host_store,
+                    )
+            return None, validated_model, validated_effort
+        if host_id is None:
+            raise OmnigentError(
+                "host_id required when workspace is set",
+                code=ErrorCode.INVALID_INPUT,
+            )
         canonical_workspace = await validate_existing_host_workspace(
             user_id=user_id,
             host_id=host_id,
