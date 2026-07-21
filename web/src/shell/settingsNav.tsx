@@ -36,6 +36,7 @@ export type SettingsSectionId =
   | "account"
   | "members"
   | "policies"
+  | "harnesses"
   | "archived"
   | "cli";
 
@@ -46,6 +47,7 @@ const SECTION_IDS: readonly SettingsSectionId[] = [
   "account",
   "members",
   "policies",
+  "harnesses",
   "archived",
   "cli",
 ];
@@ -111,6 +113,7 @@ export function settingsNavGroups(
       items: [
         { id: "members", label: t("settings.members"), icon: UsersIcon },
         { id: "policies", label: t("settings.policies"), icon: ShieldCheckIcon },
+        { id: "harnesses", label: t("settings.harnesses"), icon: TerminalIcon },
       ],
     });
   }
@@ -216,7 +219,7 @@ export function SettingsSidebarBody({
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="Close sidebar"
+              aria-label={i18n.t("sidebar.closeSidebar")}
               onClick={onClose}
               className="rounded-full"
             >
