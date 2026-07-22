@@ -1,13 +1,13 @@
 """
 ``harness: pi`` wrap.
 
-Thin module exposing :func:`create_app` â€” the entrypoint the
-shared :mod:`~?agent_meow.runtime.harnesses._runner` invokes after
+Thin module exposing :func:`create_app` â€?the entrypoint the
+shared :mod:`agent_meow.runtime.harnesses._runner` invokes after
 the parent process resolves ``"pi"`` to this module via
-:data:`~?agent_meow.runtime.harnesses._HARNESS_MODULES`.
+:data:`agent_meow.runtime.harnesses._HARNESS_MODULES`.
 
-Internally, instantiates :class:`~?agent_meow.runtime.harnesses._executor_adapter.ExecutorAdapter`
-around a :class:`~?agent_meow.inner.pi_executor.PiExecutor`
+Internally, instantiates :class:`agent_meow.runtime.harnesses._executor_adapter.ExecutorAdapter`
+around a :class:`agent_meow.inner.pi_executor.PiExecutor`
 configured from env vars the parent process sets before spawning.
 Mirrors the claude-sdk wrap (``claude_sdk_harness.py``) and codex
 wrap (``codex_harness.py``); see the claude-sdk module's docstring
@@ -36,13 +36,14 @@ Env vars read at startup:
 - ``HARNESS_PI_CWD``: working directory the executor launches
   the Pi CLI in. ``None`` falls back to ``OMNIGENT_RUNNER_WORKSPACE`` if set,
   then to the subprocess's inherited cwd.
-- ``HARNESS_PI_PATH``: absolute path to a ``pi`` CLI binary.
-  ``None`` searches ``PATH``.
+- ``OMNIGENT_PI_PATH``: absolute path to a ``pi`` CLI binary.
+  ``None`` searches ``PATH``. (Legacy ``HARNESS_PI_PATH`` still honored,
+  deprecated.)
 - ``HARNESS_PI_OS_ENV``: JSON-encoded :class:`OSEnvSpec`
   (from :func:`dataclasses.asdict`). When unset, the wrap
   falls back to a default
   ``OSEnvSpec(type="caller_process", sandbox=type="none")`` so
-  agent-meow mode parity with the legacy non-AP path holds for
+  Omnigent mode parity with the legacy non-AP path holds for
   specs that don't declare an ``os_env:`` block.
 - ``HARNESS_PI_SKILLS_FILTER``: JSON-encoded
   ``str | list[str]`` carrying ``spec.skills_filter``. When
@@ -71,6 +72,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 
+from agent_meow.harness_startup_config import resolve_harness_path
 from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 from agent_meow.inner.executor import Executor
 from agent_meow.inner.pi_executor import PiExecutor
@@ -86,7 +88,10 @@ _ENV_GATEWAY = "HARNESS_PI_GATEWAY"
 _ENV_DATABRICKS_PROFILE = "HARNESS_PI_DATABRICKS_PROFILE"
 _ENV_GATEWAY_HOST = "HARNESS_PI_GATEWAY_HOST"
 _ENV_CWD = "HARNESS_PI_CWD"
-_ENV_PI_PATH = "HARNESS_PI_PATH"
+_ENV_PI_PATH = "OMNIGENT_PI_PATH"
+# Deprecated alias â€?read via resolve_harness_path() which warns on use.
+# Remove this constant and the HARNESS_PI_PATH read in v0.8.0.
+_LEGACY_ENV_PI_PATH = "HARNESS_PI_PATH"
 _ENV_OS_ENV = "HARNESS_PI_OS_ENV"
 _ENV_SKILLS_FILTER = "HARNESS_PI_SKILLS_FILTER"
 _ENV_BUNDLE_DIR = "HARNESS_PI_BUNDLE_DIR"
@@ -98,7 +103,7 @@ _ENV_GATEWAY_AUTH_REFRESH_INTERVAL_MS = "HARNESS_PI_GATEWAY_AUTH_REFRESH_INTERVA
 
 # Truthy strings the wrap accepts for boolean env vars. Must
 # match the claude-sdk and codex wraps' parsers for consistency
-# â€” operators learn one set of conventions, not five.
+# â€?operators learn one set of conventions, not five.
 _TRUTHY_STRINGS = ("1", "true", "yes")
 
 
@@ -146,10 +151,10 @@ def _resolve_os_env() -> OSEnvSpec:
     Resolve the inner-executor :class:`OSEnvSpec` from env config.
 
     Reads :data:`_ENV_OS_ENV` and decodes the JSON-encoded dict
-    agent-meow serialized via :func:`dataclasses.asdict` on its
+    Omnigent serialized via :func:`dataclasses.asdict` on its
     :class:`OSEnvSpec`. When the env var is missing or
     malformed, falls back to ``caller_process + sandbox=none``
-    so AP-bridged tools stay enabled â€” matches the legacy
+    so AP-bridged tools stay enabled â€?matches the legacy
     non-AP path's default for specs without an
     ``os_env:`` block.
 
@@ -195,16 +200,16 @@ def _build_pi_executor() -> Executor:
 
     Called lazily by the :class:`ExecutorAdapter` on the first
     turn. Heavyweight init (CLI discovery, eager Databricks
-    credential resolution) happens at this point â€” operators
+    credential resolution) happens at this point â€?operators
     see the failure surface as a startup error on the first
     request, not at FastAPI app boot.
 
     :returns: A configured :class:`PiExecutor` instance.
     :raises ImportError: If the ``pi`` CLI isn't on PATH and
-        ``HARNESS_PI_PATH`` isn't set â€” the inner executor's
+        ``OMNIGENT_PI_PATH`` (legacy ``HARNESS_PI_PATH``) isn't set â€?the inner executor's
         constructor surfaces this as a clear ImportError.
     :raises OSError: If ``HARNESS_PI_GATEWAY`` is set but
-        credentials are missing â€” the inner executor's
+        credentials are missing â€?the inner executor's
         constructor fails loud.
     """
     bundle_dir_raw = os.environ.get(_ENV_BUNDLE_DIR, "").strip()
@@ -215,7 +220,7 @@ def _build_pi_executor() -> Executor:
         cwd=os.environ.get(_ENV_CWD) or os.environ.get("OMNIGENT_RUNNER_WORKSPACE"),
         os_env=_resolve_os_env(),
         model=os.environ.get(_ENV_MODEL),
-        pi_path=os.environ.get(_ENV_PI_PATH),
+        pi_path=resolve_harness_path("pi"),
         gateway=_parse_truthy(_ENV_GATEWAY, default=False),
         databricks_profile=os.environ.get(_ENV_DATABRICKS_PROFILE),
         gateway_host=os.environ.get(_ENV_GATEWAY_HOST) or None,
@@ -235,7 +240,7 @@ def _resolve_skills_filter() -> str | list[str]:
     Reads :data:`_ENV_SKILLS_FILTER` and decodes the JSON-encoded
     ``str | list[str]`` (``"all"``, ``"none"``, or a list of skill
     names). Falls back to ``"all"`` on missing or malformed input
-    â€” matches the SDK default behavior.
+    â€?matches the SDK default behavior.
 
     :returns: ``"all"``, ``"none"``, or a list of skill names.
     """
@@ -267,9 +272,9 @@ def create_app() -> FastAPI:
     """
     Build the pi harness's FastAPI app.
 
-    Required entry point per the harness contract â€” the runner
+    Required entry point per the harness contract â€?the runner
     imports this module (resolved from
-    :data:`~?agent_meow.runtime.harnesses._HARNESS_MODULES`) and
+    :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`) and
     invokes ``create_app()`` to get the app it serves.
 
     :returns: The FastAPI app from :class:`ExecutorAdapter`'s

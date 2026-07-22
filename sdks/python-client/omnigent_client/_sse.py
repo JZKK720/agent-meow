@@ -1,4 +1,4 @@
-"""SSE frame parser â€” converts raw byte chunks into typed events.
+"""SSE frame parser â€?converts raw byte chunks into typed events.
 
 Handles the ``event:`` / ``data:`` / ``[DONE]`` framing from the
 server's ``text/event-stream`` responses.
@@ -16,6 +16,8 @@ from agent_meow.server import schemas as _srv_events
 from ._events import (
     NATIVE_TOOL_TYPES,
     ClientTaskCancel,
+    CompactionCompleted,
+    CompactionFailed,
     CompactionInProgress,
     ElicitationRequest,
     ErrorEvent,
@@ -47,21 +49,21 @@ def _wire_type(cls: type) -> str:
     """
     Extract the wire ``type`` literal from a server event class.
 
-    Each :mod:`omnigent.server.schemas` event class pins its
+    Each :mod:`agent_meow.server.schemas` event class pins its
     ``type`` field as ``Literal["..."]``; this helper unwraps that
     to a plain string so the SDK's ``str == str`` dispatch table
     stays a ``str`` comparison rather than introducing a class-side
     isinstance check.
 
     :param cls: A subclass of the server's ``_SSEEventBase``,
-        e.g. :class:`omnigent.server.schemas.OutputTextDeltaEvent`.
+        e.g. :class:`agent_meow.server.schemas.OutputTextDeltaEvent`.
     :returns: The wire ``type`` literal, e.g.
         ``"response.output_text.delta"``.
     """
     return cls.model_fields["type"].annotation.__args__[0]  # type: ignore[union-attr]
 
 
-# Wire type literals â€” pulled from the server's typed source of
+# Wire type literals â€?pulled from the server's typed source of
 # truth so a rename there is a one-edit change here as well.
 _T_RESPONSE_CREATED = _wire_type(_srv_events.CreatedEvent)
 _T_RESPONSE_QUEUED = _wire_type(_srv_events.QueuedEvent)
@@ -79,6 +81,8 @@ _T_RESPONSE_OUTPUT_FILE_DONE = _wire_type(_srv_events.OutputFileDoneEvent)
 _T_RESPONSE_RETRY = _wire_type(_srv_events.RetryEvent)
 _T_RESPONSE_ERROR = _wire_type(_srv_events.ErrorEvent)
 _T_RESPONSE_COMPACTION_IN_PROGRESS = _wire_type(_srv_events.CompactionInProgressEvent)
+_T_RESPONSE_COMPACTION_COMPLETED = _wire_type(_srv_events.CompactionCompletedEvent)
+_T_RESPONSE_COMPACTION_FAILED = _wire_type(_srv_events.CompactionFailedEvent)
 _T_RESPONSE_CLIENT_TASK_CANCEL = _wire_type(_srv_events.ClientTaskCancelEvent)
 _T_RESPONSE_ELICITATION_REQUEST = _wire_type(_srv_events.ElicitationRequestEvent)
 
@@ -137,7 +141,7 @@ def _normalize_event_type(event_type: str) -> str:
     the enum value.
     """
     if ".TaskStatus." in event_type:
-        # "response.TaskStatus.COMPLETED" â†’ "response.completed"
+        # "response.TaskStatus.COMPLETED" â†?"response.completed"
         parts = event_type.split(".")
         status = parts[-1].lower()
         return f"response.{status}"
@@ -150,7 +154,7 @@ def _parse_event(event_type: str, data: dict[str, Any]) -> StreamEvent | None:
     :param event_type: Wire name of the SSE ``event:`` field, e.g.
         ``"response.output_text.delta"``. Compared against the
         ``_T_RESPONSE_*`` wire-type constants (sourced from
-        :mod:`omnigent.server.schemas`) to dispatch.
+        :mod:`agent_meow.server.schemas`) to dispatch.
     :param data: Decoded JSON payload from the SSE ``data:`` field.
     :returns: A typed :class:`StreamEvent` for known event names, or
         ``None`` when the payload is missing required fields or the
@@ -235,6 +239,23 @@ def _parse_event(event_type: str, data: dict[str, Any]) -> StreamEvent | None:
     # Compaction
     if event_type == _T_RESPONSE_COMPACTION_IN_PROGRESS:
         return CompactionInProgress()
+    if event_type == _T_RESPONSE_COMPACTION_COMPLETED:
+        raw_total_tokens = data.get("total_tokens")
+        raw_summary = data.get("summary")
+        raw_summary_model = data.get("summary_model")
+        raw_compacted_messages = data.get("compacted_messages")
+        return CompactionCompleted(
+            total_tokens=raw_total_tokens
+            if isinstance(raw_total_tokens, int) and not isinstance(raw_total_tokens, bool)
+            else None,
+            summary=raw_summary if isinstance(raw_summary, str) else None,
+            summary_model=raw_summary_model if isinstance(raw_summary_model, str) else None,
+            compacted_messages=raw_compacted_messages
+            if isinstance(raw_compacted_messages, list)
+            else None,
+        )
+    if event_type == _T_RESPONSE_COMPACTION_FAILED:
+        return CompactionFailed()
 
     # Async client-tool cancel notification
     if event_type == _T_RESPONSE_CLIENT_TASK_CANCEL:
@@ -252,7 +273,7 @@ def _parse_event(event_type: str, data: dict[str, Any]) -> StreamEvent | None:
     # mirrors MCP's ``ElicitRequestFormParams`` field-for-field;
     # we surface it as a typed event so the stream consumer can
     # route it to the elicitation hook (not into a ToolHandler).
-    if event_type == "response.elicitation_request":
+    if event_type == _T_RESPONSE_ELICITATION_REQUEST:
         elicitation_id = data.get("elicitation_id")
         if not isinstance(elicitation_id, str) or not elicitation_id:
             _log.warning(
@@ -268,11 +289,12 @@ def _parse_event(event_type: str, data: dict[str, Any]) -> StreamEvent | None:
             )
             return None
         requested_schema = params.get("requestedSchema")
+        target_session_id = params.get("target_session_id")
         return ElicitationRequest(
             elicitation_id=elicitation_id,
             message=str(params.get("message") or ""),
             # MCP spec restricts requestedSchema to a JSON-Schema
-            # dict â€” we accept anything dict-shaped and pass it
+            # dict â€?we accept anything dict-shaped and pass it
             # through; non-dict inputs (defensive against
             # malformed producers) become an empty schema.
             requested_schema=requested_schema if isinstance(requested_schema, dict) else {},
@@ -281,9 +303,12 @@ def _parse_event(event_type: str, data: dict[str, Any]) -> StreamEvent | None:
             policy_name=str(params.get("policy_name") or ""),
             content_preview=str(params.get("content_preview") or ""),
             url=str(params["url"]) if isinstance(params.get("url"), str) else None,
+            target_session_id=target_session_id
+            if isinstance(target_session_id, str) and target_session_id
+            else None,
         )
 
-    # Unknown event â€” skip gracefully for forward-compatibility
+    # Unknown event â€?skip gracefully for forward-compatibility
     _log.debug("Skipping unknown SSE event type: %s", event_type)
     return None
 
@@ -342,7 +367,7 @@ def _parse_output_item(data: dict[str, Any]) -> StreamEvent | None:
             data=item,
         )
 
-    # Compaction items, reasoning items, etc. â€” skip
+    # Compaction items, reasoning items, etc. â€?skip
     _log.debug("Skipping output item type: %s", item_type)
     return None
 

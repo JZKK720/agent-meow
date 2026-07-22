@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
-from agent_meow.harness_plugins import harness_catalog
+from agent_meow.harness_plugins import harness_catalog, harness_setup_steps_by_spelling
 from agent_meow.server.auth import AuthProvider
 from agent_meow.server.routes._auth_helpers import require_user
 
@@ -16,8 +16,17 @@ def create_harnesses_router(*, auth_provider: AuthProvider | None = None) -> API
     router = APIRouter()
 
     @router.get("/harnesses")
-    async def list_harnesses(request: Request) -> dict[str, list[dict[str, Any]]]:
+    async def list_harnesses(request: Request) -> dict[str, Any]:
         require_user(request, auth_provider)
-        return {"data": harness_catalog()}
+        # ``data`` is the picker catalog (keyed by picker id). ``setup_steps``
+        # is a separate map keyed by EVERY harness spelling a session may
+        # declare â€?native wrappers (``codex-native``) and installable ids that
+        # aren't picker rows (``opencode``/``qwen``) â€?so the setup dialog can
+        # resolve steps by the harness it actually holds without the picker
+        # list gaining non-pickable rows.
+        return {
+            "data": harness_catalog(),
+            "setup_steps": harness_setup_steps_by_spelling(),
+        }
 
     return router

@@ -42,8 +42,8 @@ function configureProxy(target: string, useAuth: boolean): NonNullable<ProxyOpti
   const parsed = new URL(target);
   const host = parsed.origin;
   // The URL pathname becomes a prefix prepended to every proxied request.
-  // e.g. OMNIGENT_URL=https://host.com/api/2.0/agent-meow means the browser's
-  // /v1/sessions is rewritten to /api/2.0/agent_meow/v1/sessions before forwarding.
+  // e.g. OMNIGENT_URL=https://host.com/api/2.0/omnigent means the browser's
+  // /v1/sessions is rewritten to /api/2.0/omnigent/v1/sessions before forwarding.
   const basePath = parsed.pathname.replace(/\/$/, "");
 
   return (proxy) => {
@@ -134,15 +134,15 @@ const proxyConfig = createProxyConfig(OMNIGENT_URL, useAuth);
 // treating reinstalls/updates as the same app.
 const PWA_MANIFEST = {
   id: "/",
-  name: "agent-meow",
-  short_name: "agent-meow",
-  description: "agent-meow — a common layer over coding agents.",
+  name: "Omnigent",
+  short_name: "Omnigent",
+  description: "Omnigent — a common layer over coding agents.",
   start_url: "/",
   scope: "/",
   display: "standalone",
   orientation: "any",
-  theme_color: "#1A1410",
-  background_color: "#FFFBF5",
+  theme_color: "#0d1218",
+  background_color: "#0d1218",
   icons: [
     { src: "/pwa-192.png", sizes: "192x192", type: "image/png" },
     { src: "/pwa-512.png", sizes: "512x512", type: "image/png" },
@@ -203,8 +203,57 @@ function emitPwaAssets(): Plugin {
   };
 }
 
+// Safari < 16.4 cannot parse regex lookbehind; these dependency regexes would
+// otherwise throw there, at module scope during boot or on the first rendered
+// markdown message (#1978):
+// - marked probes lookbehind support with `new RegExp("(?<=1)(?<!1)")` inside
+//   try/catch, but rolldown constant-folds the probe to `true`; route the
+//   constructor through `globalThis` so it stays a runtime check.
+// - remend builds its single-tilde repair regex at module scope with no
+//   guard; fall back to a never-matching regex so the repair no-ops.
+// - mdast-util-gfm-autolink-literal's email regex is constructed when a GFM
+//   message renders; fall back to a never-matching regex (plain-text emails
+//   just don't autolink).
+const LOOKBEHIND_REWRITES: [string, string][] = [
+  ['new RegExp("(?<=1)(?<!1)")', 'new globalThis.RegExp("(?<=1)(?<!1)")'],
+  [
+    'new RegExp("(?<=[\\\\p{L}\\\\p{N}_])~(?!~)(?=[\\\\p{L}\\\\p{N}_])","gu")',
+    '(() => { try { return new globalThis.RegExp("(?<=[\\\\p{L}\\\\p{N}_])~(?!~)(?=[\\\\p{L}\\\\p{N}_])", "gu"); } catch { return /(?!)/gu; } })()',
+  ],
+  [
+    "/(?<=^|\\s|\\p{P}|\\p{S})([-.\\w+]+)@([-\\w]+(?:\\.[-\\w]+)+)/gu",
+    '(() => { try { return new globalThis.RegExp("(?<=^|\\\\s|\\\\p{P}|\\\\p{S})([-.\\\\w+]+)@([-\\\\w]+(?:\\\\.[-\\\\w]+)+)", "gu"); } catch { return /(?!)/gu; } })()',
+  ],
+];
+const LOOKBEHIND_REWRITE_MODULES = [
+  "/node_modules/marked/",
+  "/node_modules/remend/",
+  "/node_modules/mdast-util-gfm-autolink-literal/",
+];
+
+function isLookbehindRewriteModule(id: string): boolean {
+  const normalizedId = id.replaceAll("\\", "/");
+  return LOOKBEHIND_REWRITE_MODULES.some((modulePath) => normalizedId.includes(modulePath));
+}
+
+function safariLookbehindWorkarounds(): Plugin {
+  return {
+    name: "safari-lookbehind-workarounds",
+    transform(code, id) {
+      if (!isLookbehindRewriteModule(id)) return;
+
+      let out = code;
+      for (const [from, to] of LOOKBEHIND_REWRITES) {
+        out = out.replaceAll(from, to);
+      }
+      if (out === code) return;
+      return { code: out, map: null };
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [emitPwaAssets(), react(), tailwindcss()],
+  plugins: [emitPwaAssets(), safariLookbehindWorkarounds(), react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -222,7 +271,7 @@ export default defineConfig({
       provider: "v8",
       // With `include` set, vitest counts every matching source file (untested
       // ones as 0%), so the total reflects the whole frontend — parity with the
-      // backend's --cov=agent-meow, not just files a test happened to import.
+      // backend's --cov=omnigent, not just files a test happened to import.
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "src/**/*.test.{ts,tsx}",
@@ -241,7 +290,9 @@ export default defineConfig({
     proxy: proxyConfig,
   },
   build: {
-    outDir: path.resolve(__dirname, "../agent_meow/server/static/web-ui"),
+    // default baseline is Safari 16.4+; iPadOS 15 can't parse dep regex lookbehinds (#1978)
+    target: ["chrome111", "edge111", "firefox114", "safari15", "ios15"],
+    outDir: path.resolve(__dirname, "../omnigent/server/static/web-ui"),
     emptyOutDir: true,
   },
 });

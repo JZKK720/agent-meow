@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from agent_meow._wrapper_labels import (
     KIRO_NATIVE_WRAPPER_VALUE,
     PI_NATIVE_WRAPPER_VALUE,
@@ -13,6 +15,7 @@ from agent_meow.harness_plugins import KIRO_NATIVE_CODING_AGENT, PI_NATIVE_CODIN
 from agent_meow.native_coding_agents import (
     native_coding_agent_for_harness,
     native_coding_agent_for_wrapper_label,
+    native_shell_terminal_spec,
     public_agent_name,
 )
 
@@ -21,7 +24,7 @@ def test_native_pi_alias_resolves_like_canonical() -> None:
     """``native-pi`` resolves to the same native agent as ``pi-native``.
 
     ``AgentSpec.harness_kind`` returns the raw ``executor.config.harness``, so
-    an agent authored as ``native-pi`` must still resolve â€” else fork/switch
+    an agent authored as ``native-pi`` must still resolve â€?else fork/switch
     would drop its terminal-first presentation labels. ``canonicalize_harness``
     folds the alias before the lookup.
     """
@@ -99,10 +102,47 @@ def test_public_agent_name_hides_native_ui_wrapper_names() -> None:
 def test_public_agent_name_passes_through_regular_names() -> None:
     """Non-wrapper names (and ``None``) are returned unchanged.
 
-    Regular agent-meow agents have user-meaningful names that are safe to expose,
+    Regular Omnigent agents have user-meaningful names that are safe to expose,
     so only the native-UI wrappers are rewritten.
     """
     assert public_agent_name("researcher") == "researcher"
     assert public_agent_name("nessie") == "nessie"
     assert public_agent_name("") == ""
     assert public_agent_name(None) is None
+
+
+@pytest.mark.posix_only
+def test_native_shell_terminal_spec_offers_installed_shells_default_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """One terminal per installed shell, keyed by name, ``$SHELL`` first.
+
+    Every native wrapper declares this so "+ New shell" opens the user's login
+    shell by default while still offering the other installed shells. Each entry
+    is keyed and commanded by its basename and is an unsandboxed caller-process
+    shell with cwd override allowed.
+    """
+    monkeypatch.setattr("shutil.which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setenv("SHELL", "/usr/local/bin/fish")
+    spec = native_shell_terminal_spec()
+    # $SHELL (fish) leads, then the remaining offered shells in order.
+    assert list(spec) == ["fish", "bash", "zsh"]
+    for name, entry in spec.items():
+        assert entry["command"] == name
+        assert entry["allow_cwd_override"] is True
+        assert entry["os_env"] == {
+            "type": "caller_process",
+            "cwd": ".",
+            "sandbox": {"type": "none"},
+        }
+
+
+def test_native_shell_terminal_spec_falls_back_to_bash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With no shells installed the spec still offers a single bash terminal."""
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    monkeypatch.delenv("SHELL", raising=False)
+    spec = native_shell_terminal_spec()
+    assert list(spec) == ["bash"]
+    assert spec["bash"]["command"] == "bash"

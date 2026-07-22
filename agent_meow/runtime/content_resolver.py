@@ -31,7 +31,7 @@ _logger = logging.getLogger(__name__)
 # get rejected at the provider with a 400 ``invalid_value`` referencing
 # ``input[N].content[M].file_data``. The accompanying ``filename``
 # already tells the model the original extension, so collapsing to
-# ``text/plain`` loses no signal â€” see :func:`_safe_file_data_mime`.
+# ``text/plain`` loses no signal â€?see :func:`_safe_file_data_mime`.
 _FILE_DATA_PASSTHROUGH_MIMES: frozenset[str] = frozenset(
     {
         "application/pdf",
@@ -95,18 +95,31 @@ _EXTRA_MIME_TYPES: dict[str, str] = {
 # Uploaded attachments are inlined into the model context as base64 (see
 # :func:`resolve_content_references`) and re-sent every turn, so sizes are
 # bounded well under the model's context budget and the provider's API
-# limits â€” Anthropic accepts images up to ~5 MB, PDFs up to ~32 MB / 100
+# limits â€?Anthropic accepts images up to ~5 MB, PDFs up to ~32 MB / 100
 # pages, and ~32 MB per request total. The per-type caps below keep a
 # single attachment usable across a multi-turn conversation; the global
 # ceiling backstops the total request size after base64 inflation (~1.33x).
-# Mirrored client-side in web/src/lib/attachments.ts â€” keep in sync.
+# Mirrored client-side in web/src/lib/attachments.ts â€?keep in sync.
 MAX_IMAGE_UPLOAD_BYTES: int = 5 * 1024 * 1024
 MAX_PDF_UPLOAD_BYTES: int = 20 * 1024 * 1024
 MAX_TEXT_UPLOAD_BYTES: int = 10 * 1024 * 1024
 MAX_ATTACHMENT_UPLOAD_BYTES: int = 25 * 1024 * 1024
 
+# Copy-at-spawn limits (see the ``files:copy`` endpoint). A parent forwarding
+# files to a subagent copies them through the server, which reads each source
+# blob to re-store it under the child. Bounding the count and the summed
+# ``StoredFile.bytes`` â€?checked against metadata BEFORE any blob is read â€?
+# stops a single send from spiking shared-server memory. Defaults are the
+# floor; a deployment can raise or lower them via ``server_config`` (see
+# :func:`agent_meow.server.server_config.copy_file_count_limit` and
+# :func:`~agent_meow.server.server_config.copy_total_bytes_limit`). For
+# reference, OpenAI caps code-interpreter at 20 files, Anthropic Files at
+# 500 MB/file.
+MAX_COPY_FILES: int = 20
+MAX_COPY_TOTAL_BYTES: int = 256 * 1024 * 1024
+
 # ``application/*`` MIME types we treat as text-like. The rest of the
-# text-like surface is ``text/*`` (covered by the prefix check) â€” these
+# text-like surface is ``text/*`` (covered by the prefix check) â€?these
 # are the text-bearing ``application/*`` types code/data files resolve to.
 _TEXT_LIKE_APPLICATION_MIMES: frozenset[str] = frozenset(
     {
@@ -125,11 +138,11 @@ def attachment_upload_limit(content_type: str) -> int | None:
     not an allowed attachment.
 
     Allowed: images, PDF, and text-like files (``text/*`` plus a few
-    text-bearing ``application/*`` types â€” JSON, JS, JSONL, notebooks).
-    Office / binary formats (pptx, docx, xlsx, zip, â€¦) return ``None`` and
+    text-bearing ``application/*`` types â€?JSON, JS, JSONL, notebooks).
+    Office / binary formats (pptx, docx, xlsx, zip, â€? return ``None`` and
     are rejected at upload: the model can't read their raw bytes
     (Anthropic's base64 ``document`` source accepts only PDF), so inlining
-    them only produces garbled UTF-8 or â€” for large files â€” an oversized,
+    them only produces garbled UTF-8 or â€?for large files â€?an oversized,
     context-blowing request. Callers reject ``None`` with HTTP 415.
 
     :param content_type: The resolved MIME type, e.g. ``"image/png"``.
@@ -149,10 +162,10 @@ def attachment_upload_limit(content_type: str) -> int | None:
 
 
 # Extensions accepted as text/code attachments even when the upload's
-# declared MIME mislabels them as binary â€” e.g. a ``.csv`` tagged
+# declared MIME mislabels them as binary â€?e.g. a ``.csv`` tagged
 # ``application/vnd.ms-excel`` on Windows, or a ``.ts`` tagged
 # ``video/mp2t``. Mirrors TEXT_CODE_EXTENSIONS in
-# web/src/lib/attachments.ts â€” keep in sync.
+# web/src/lib/attachments.ts â€?keep in sync.
 _TEXT_CODE_EXTENSIONS: frozenset[str] = frozenset(
     {
         ".txt",
@@ -273,7 +286,7 @@ def resolve_content_references(
 
     Resolves ``file_id`` on **any** block type (``input_image``,
     ``input_file``, or future types like ``input_audio``). External
-    URLs (``image_url``, ``file_url``) are never fetched â€” they pass
+    URLs (``image_url``, ``file_url``) are never fetched â€?they pass
     through unchanged (SSRF protection).
 
     :param items: Persisted conversation items in chronological
@@ -306,10 +319,10 @@ def resolve_content_references(
                 session_id=session_id,
             )
             if resolved_content is item.data.content:
-                # No file_id references found â€” reuse original.
+                # No file_id references found â€?reuse original.
                 result.append(item)
             else:
-                # Content was modified â€” deep-copy and replace.
+                # Content was modified â€?deep-copy and replace.
                 item_copy = copy.deepcopy(item)
                 assert isinstance(item_copy.data, MessageData)
                 item_copy.data.content = resolved_content
@@ -410,7 +423,7 @@ def _resolve_file_id_block(
     :returns: A new dict with ``file_id`` replaced by inline
         content. All other fields are preserved.
     :raises ValueError: If ``file_id`` is not found in the file
-        store â€” the file was deleted between request validation
+        store â€?the file was deleted between request validation
         and agent loop execution.
     """
     file_id = block["file_id"]
@@ -420,7 +433,7 @@ def _resolve_file_id_block(
         file_meta.session_id is not None and file_meta.session_id != owner_session_id
     ):
         raise ValueError(
-            f"Referenced file '{file_id}' no longer exists â€” "
+            f"Referenced file '{file_id}' no longer exists â€?"
             f"it may have been deleted after the request was accepted"
         )
 
@@ -446,7 +459,7 @@ def _resolve_file_id_block(
         # Uses a data: URI so providers (OpenAI, etc.) can parse
         # the media type alongside the payload. The Responses API
         # rejects most non-standard text MIMEs here, so coerce
-        # to a safe type â€” see :func:`_safe_file_data_mime`.
+        # to a safe type â€?see :func:`_safe_file_data_mime`.
         safe_type = _safe_file_data_mime(content_type)
         resolved["file_data"] = f"data:{safe_type};base64,{encoded}"
 
@@ -463,7 +476,7 @@ def _safe_file_data_mime(content_type: str) -> str:
     that we'd normally hand back from :func:`_resolve_content_type`
     (``text/yaml``, ``text/x-rust``, ``text/typescript`` and friends, plus
     JSONL-ish ``application/x-*`` variants) collapses to ``text/plain``.
-    The base64 payload is unchanged â€” only the MIME hint shifts â€” and the
+    The base64 payload is unchanged â€?only the MIME hint shifts â€?and the
     block's ``filename`` field carries the original extension for the
     model to interpret.
 
@@ -498,9 +511,9 @@ def _resolve_content_type(
     Determine the MIME type for a file, with fallbacks.
 
     Priority: stored content_type (unless it's the generic
-    ``application/octet-stream``) â†’ ``mimetypes.guess_type``
-    from filename â†’ ``_EXTRA_MIME_TYPES`` lookup â†’ ``text/plain``
-    for text-like extensions â†’ ``application/octet-stream``.
+    ``application/octet-stream``) â†?``mimetypes.guess_type``
+    from filename â†?``_EXTRA_MIME_TYPES`` lookup â†?``text/plain``
+    for text-like extensions â†?``application/octet-stream``.
 
     Some LLM providers (OpenAI) reject ``application/octet-stream``
     for text files, so we try hard to resolve a specific type.
@@ -519,9 +532,9 @@ def _resolve_content_type(
 
     if filename:
         suffix = PurePath(filename).suffix.lower()
-        # Our map takes priority over mimetypes â€” the stdlib has
-        # wrong mappings for some code extensions (e.g. .ts â†’
-        # video/mp2t, .rs â†’ application/rls-services+xml).
+        # Our map takes priority over mimetypes â€?the stdlib has
+        # wrong mappings for some code extensions (e.g. .ts â†?
+        # video/mp2t, .rs â†?application/rls-services+xml).
         if suffix in _EXTRA_MIME_TYPES:
             return _EXTRA_MIME_TYPES[suffix]
         guessed = _mt.guess_type(filename)[0]

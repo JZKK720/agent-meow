@@ -1,4 +1,4 @@
-"""Persistent client-side state for ``agent-meow claude`` sessions.
+"""Persistent client-side state for ``omnigent claude`` sessions.
 
 The wrapper records a small amount of per-conversation state at session
 creation time and reads it back on resume. Today the only recorded fact
@@ -18,22 +18,22 @@ other clients or to the server. Putting it on the server would:
 * embed client-process state in a server-side entity (poor layering),
 * require a database migration for a fact the client owns.
 
-Why under ``~/.agent_meow/`` and not the existing bridge dir at
+Why under ``~/.omnigent/`` and not the existing bridge dir at
 ``/tmp/omnigent-<uid>/claude-native/``: tmpfs gets cleared on
 reboot (and by tmp-cleaner cron on many distros). The bridge dir is
 correctly transient for hooks / tmux / token state, but the launch
 cwd needs to survive across reboots so a user who resumes a session
-the day after creating it still gets the chdir prompt. ``~/.agent_meow/``
-is where the persistent agent-meow server SQLite db and other durable
+the day after creating it still gets the chdir prompt. ``~/.omnigent/``
+is where the persistent Omnigent server SQLite db and other durable
 single-user state already live.
 
 Layout (per conversation):
 
-    ~/.agent_meow/claude-native/<sha256(conv_id)[:32]>/launch.json
+    ~/.omnigent/claude-native/<sha256(conv_id)[:32]>/launch.json
 
 The directory is hashed (not the raw conv id) so a malicious server
 returning an attacker-chosen conversation id like ``"../../../etc"``
-cannot escape ``~/.agent_meow/claude-native/``. A short hash is enough
+cannot escape ``~/.omnigent/claude-native/``. A short hash is enough
 because we never enumerate the directory by id; we only look up the
 deterministic path for a known conv id.
 """
@@ -50,7 +50,7 @@ from pathlib import Path
 # Env-var override for the persistent state root. Reserved for tests
 # (and for advanced users who want to put state on a non-default
 # volume). When unset, the module falls back to
-# ``~/.agent_meow/claude-native``. Tests should set this to a per-
+# ``~/.omnigent/claude-native``. Tests should set this to a per-
 # test ``tmp_path`` via monkeypatch.setenv so they never touch the
 # user's real home directory.
 _STATE_ROOT_ENV_VAR = "OMNIGENT_CLAUDE_NATIVE_STATE_DIR"
@@ -66,7 +66,7 @@ _LAUNCH_FILE = "launch.json"
 # How many hex chars of the conv-id sha256 to use. 32 chars (128 bits)
 # is far more than collision-safe given a single-user namespace, and
 # matches the existing bridge-dir convention in
-# :mod:`~?agent_meow.claude_native_bridge`.
+# :mod:`agent_meow.claude_native_bridge`.
 _ID_HASH_CHARS = 32
 
 
@@ -93,11 +93,11 @@ def _claude_native_state_root() -> Path:
     point the state tree at a per-test ``tmp_path`` without
     clobbering the user's real home directory. Production callers
     leave the env unset and get the default
-    ``~/.agent_meow/claude-native``.
+    ``~/.omnigent/claude-native``.
 
     Lazy: created on first write, never on read (the resume / picker
     paths read first and a stat-only check has no business creating
-    directories on disk). Lives under ``~/.agent_meow/claude-native/``
+    directories on disk). Lives under ``~/.omnigent/claude-native/``
     so it sits next to the existing ``chat.db`` / ``logs/`` / etc.
 
     :returns: Absolute path to the state root.
@@ -105,7 +105,7 @@ def _claude_native_state_root() -> Path:
     override = os.environ.get(_STATE_ROOT_ENV_VAR)
     if override:
         return Path(override)
-    return Path.home() / ".agent-meow" / "claude-native"
+    return Path.home() / ".omnigent" / "claude-native"
 
 
 def _state_dir_for_conversation_id(conversation_id: str) -> Path:
@@ -119,12 +119,23 @@ def _state_dir_for_conversation_id(conversation_id: str) -> Path:
     every byte that lands in the path is hex, so the result is
     always a single child of the state root.
 
-    :param conversation_id: agent-meow conversation id, e.g.
-        ``"conv_abc123"``.
+    Sessions created before ids dropped the ``conv_`` prefix hashed the
+    prefixed string, so their directories live under the legacy digest; when
+    the bare-digest directory is absent, the legacy one is returned (never
+    renamed â€?files inside may embed their own absolute path).
+
+    :param conversation_id: Omnigent conversation id, bare 32-char hex
+        (a legacy ``conv_``-prefixed form is accepted and normalised).
     :returns: Absolute directory path; not guaranteed to exist.
     """
-    digest = hashlib.sha256(conversation_id.encode("utf-8")).hexdigest()[:_ID_HASH_CHARS]
-    return _claude_native_state_root() / digest
+    bare = conversation_id.removeprefix("conv_")
+    root = _claude_native_state_root()
+    state_dir = root / hashlib.sha256(bare.encode("utf-8")).hexdigest()[:_ID_HASH_CHARS]
+    if not state_dir.exists():
+        legacy = root / hashlib.sha256(f"conv_{bare}".encode()).hexdigest()[:_ID_HASH_CHARS]
+        if legacy.exists():
+            return legacy
+    return state_dir
 
 
 def write_launch_state(conversation_id: str, working_directory: str) -> None:
@@ -144,7 +155,7 @@ def write_launch_state(conversation_id: str, working_directory: str) -> None:
     leaves a half-written JSON blob that a later resume would fail
     to parse.
 
-    :param conversation_id: agent-meow conversation id, e.g.
+    :param conversation_id: Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :param working_directory: Absolute filesystem path the wrapper
         was invoked from, e.g. ``"/home/me/repo"``. Should already be
@@ -203,7 +214,7 @@ def redirect_launch_state(conversation_id: str, working_directory: str) -> None:
     redirect action changes the launch cwd contract for future
     resumes, so the persisted cwd must follow it.
 
-    :param conversation_id: agent-meow conversation id, e.g.
+    :param conversation_id: Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :param working_directory: New absolute filesystem path for
         future resumes, e.g. ``"/home/me/new-repo"``.
@@ -235,7 +246,7 @@ def read_launch_state(conversation_id: str) -> ClaudeNativeLaunchState | None:
     Never raises on a missing file -- ``None`` means "no recorded
     state for this conversation" (legacy session created before this
     tracking landed, a session created on a different machine, or a
-    user who wiped ``~/.agent_meow/claude-native/``). The callers
+    user who wiped ``~/.omnigent/claude-native/``). The callers
     treat ``None`` as "skip the cwd-mismatch check" and proceed.
 
     Returns ``None`` (with a warning log) for malformed JSON or
@@ -243,7 +254,7 @@ def read_launch_state(conversation_id: str) -> ClaudeNativeLaunchState | None:
     nicety, not a correctness primitive; a corrupted file shouldn't
     block resume. The user can still chdir manually if Claude exits.
 
-    :param conversation_id: agent-meow conversation id, e.g.
+    :param conversation_id: Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :returns: Parsed state, or ``None`` if missing / malformed.
     """

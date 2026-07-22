@@ -1,4 +1,4 @@
-"""Shared conversion between native-harness hooks and agent-meow policy events.
+"""Shared conversion between native-harness hooks and Omnigent policy events.
 
 Both Claude Code and Codex expose a command-hook system whose
 ``PreToolUse`` / ``PostToolUse`` payloads use the same field names
@@ -8,8 +8,8 @@ and whose ``UserPromptSubmit`` payload carries the user prompt under
 that hook shape and the server's proto-compatible ``EvaluationRequest``
 / ``EvaluationResponse`` schema served by
 ``POST /v1/sessions/{id}/policies/evaluate``, so the per-harness hook
-entrypoints (:mod:`~?agent_meow.claude_native_hook`,
-:mod:`~?agent_meow.codex_native_hook`) share one implementation.
+entrypoints (:mod:`agent_meow.claude_native_hook`,
+:mod:`agent_meow.codex_native_hook`) share one implementation.
 
 The output contract differs by hook event: ``PreToolUse`` enforces via
 ``hookSpecificOutput.permissionDecision``, while ``UserPromptSubmit``
@@ -43,10 +43,10 @@ _EVALUATE_POLICY_CONNECT_TIMEOUT_S = 5.0
 
 # Hook event names that gate tool execution and therefore carry policy
 # meaning. ``PreToolUse`` fires before the tool runs (can block);
-# ``PostToolUse`` fires after (observational â€” can only warn).
+# ``PostToolUse`` fires after (observational â€?can only warn).
 _PRE_TOOL_USE = "PreToolUse"
 _POST_TOOL_USE = "PostToolUse"
-# ``UserPromptSubmit`` fires when a new user prompt reaches the harness â€”
+# ``UserPromptSubmit`` fires when a new user prompt reaches the harness â€?
 # for native sessions this is the request-phase gate (the server-level
 # ``_evaluate_input_policy`` is bypassed for native message events, so
 # this hook is the sole REQUEST gate and covers both web-UI-injected and
@@ -58,19 +58,19 @@ _USER_PROMPT_SUBMIT = "UserPromptSubmit"
 # body). Mirrors the runner-side fail-closed default in
 # ``agent_meow.runner.app._evaluate_policy_via_omnigent``.
 _EVAL_UNAVAILABLE_REASON = (
-    "agent-meow policy evaluation unavailable (could not reach or authenticate to the "
-    "agent-meow server); failing closed for this tool call."
+    "Omnigent policy evaluation unavailable (could not reach or authenticate to the "
+    "Omnigent server); failing closed for this tool call."
 )
 _EVAL_UNAVAILABLE_REQUEST_REASON = (
-    "agent-meow policy evaluation unavailable (could not reach or authenticate to the "
-    "agent-meow server); failing closed for this request."
+    "Omnigent policy evaluation unavailable (could not reach or authenticate to the "
+    "Omnigent server); failing closed for this request."
 )
 
 
 # Env var carrying the one-shot auth + workspace-routing headers from the
 # executor (which writes the hook wrapper) to the hook subprocess. The hook
 # is import-free of the runner, so the headers are passed in rather than
-# resolved in-process â€” the same reason ``ap_auth_headers`` is baked for the
+# resolved in-process â€?the same reason ``ap_auth_headers`` is baked for the
 # claude/codex/kimi hooks.
 _AUTH_HEADERS_ENV = "_OMNIGENT_AUTH_HEADERS"
 
@@ -81,9 +81,9 @@ def policy_hook_request_headers() -> dict[str, str]:
     Always carries ``Content-Type``, and merges the one-shot auth +
     workspace-routing headers the executor baked into :data:`_AUTH_HEADERS_ENV`
     at launch (see :func:`policy_hook_wrapper_script`). Without them the POST
-    is unauthenticated and unrouted â€” it 401s on an authenticated server and
+    is unauthenticated and unrouted â€?it 401s on an authenticated server and
     misroutes to the account on a unified-account workspace. Missing or
-    malformed env â†’ just ``Content-Type`` (a local unauthenticated server
+    malformed env â†?just ``Content-Type`` (a local unauthenticated server
     needs no auth).
 
     :returns: Request headers for ``post_evaluate_with_retry``.
@@ -103,14 +103,14 @@ def policy_hook_request_headers() -> dict[str, str]:
 def policy_hook_wrapper_script(server_url: str, session_id: str, hook_script_path: str) -> str:
     """Build the ``/bin/sh`` wrapper a native policy hook is launched as.
 
-    Resolves a one-shot agent-meow-server token and bakes the auth +
+    Resolves a one-shot Omnigent-server token and bakes the auth +
     workspace-routing headers (via
-    :func:`~?agent_meow.cli_auth.databricks_request_headers`) into
+    :func:`agent_meow.cli_auth.databricks_request_headers`) into
     :data:`_AUTH_HEADERS_ENV`, so the hook's POST authenticates and routes to
     the workspace. The token is a secret, so callers MUST write the returned
-    wrapper ``0o700`` (owner-only) â€” it is never world-readable.
+    wrapper ``0o700`` (owner-only) â€?it is never world-readable.
 
-    :param server_url: agent-meow server base URL the hook posts to.
+    :param server_url: Omnigent server base URL the hook posts to.
     :param session_id: Session / conversation id for policy evaluation.
     :param hook_script_path: Absolute path to the hook's Python entrypoint.
     :returns: Shell-script text for the wrapper (write it ``0o700``).
@@ -130,64 +130,92 @@ def policy_hook_wrapper_script(server_url: str, session_id: str, hook_script_pat
     )
 
 
-def policy_hook_reauth(
-    server_url: str, headers: dict[str, str]
-) -> Callable[[], dict[str, str] | None]:
-    """Build a callable that re-mints the agent-meow bearer for *server_url*.
+class PolicyHookReauth:
+    """Callable that re-mints the Omnigent bearer for a policy hook subprocess.
 
     The baked one-shot token dies with the ~1h Databricks OAuth lifetime; on a
-    lapsed-token signal (401 or Apps ``302â†’/oidc/``) ``post_evaluate_with_retry``
+    lapsed-token signal (401 or Apps ``302â†?oidc/``) ``post_evaluate_with_retry``
     calls this once to mint a fresh bearer through the same factory the
     refresh-capable runtime auth uses, keeping the other headers (e.g.
-    ``X-Databricks-Org-Id``) so routing survives. Returns ``None`` when no
-    refresh mechanism is available, so the caller fails closed.
+    ``X-Databricks-Org-Id``) so routing survives.
 
-    :param server_url: agent-meow server base URL the hook POSTs to.
-    :param headers: Current (lapsed) headers; the fresh bearer is merged over
-        a copy so routing headers survive.
-    :returns: A zero-arg callable returning fresh headers, or ``None``.
+    The ``failure_reason`` attribute is set to a short diagnostic string when
+    the re-mint fails so callers can surface it in the fail-closed message shown
+    to the user â€?stderr from hook subprocesses is discarded by the harness, so
+    this is the only channel that reaches the UI.
     """
 
-    def _reauth() -> dict[str, str] | None:
+    failure_reason: str | None
+
+    def __init__(self, server_url: str, headers: dict[str, str]) -> None:
+        self._server_url = server_url
+        self._headers = headers
+        self.failure_reason = None
+
+    def __call__(self) -> dict[str, str] | None:
         # Lazy import: paid only on the rare re-auth path, off the hot path.
         try:
             from agent_meow.runner._entry import _make_auth_token_factory
-        except Exception:  # noqa: BLE001 â€” best-effort; fail closed if unavailable
+        except Exception as exc:  # noqa: BLE001 â€?best-effort; fail closed if unavailable
+            self.failure_reason = f"auth factory unavailable: {exc}"
             return None
-        factory = _make_auth_token_factory(server_url)
+        factory = _make_auth_token_factory(self._server_url)
         if factory is None:
+            self.failure_reason = (
+                "no credential resolved "
+                f"(no stored token and no Databricks SDK auth for {self._server_url!r})"
+            )
             return None
         try:
             token = factory()
-        except Exception:  # noqa: BLE001 â€” transient mint failure; fail closed
+        except Exception as exc:  # noqa: BLE001 â€?transient mint failure; fail closed
+            self.failure_reason = f"token mint failed: {exc}"
             return None
         if not token:
+            self.failure_reason = "auth factory returned empty token"
             return None
-        return {**headers, "Authorization": f"Bearer {token}"}
+        self.failure_reason = None
+        return {**self._headers, "Authorization": f"Bearer {token}"}
 
-    return _reauth
+
+def policy_hook_reauth(server_url: str, headers: dict[str, str]) -> PolicyHookReauth:
+    """Build a :class:`PolicyHookReauth` callable for *server_url*.
+
+    :param server_url: Omnigent server base URL the hook POSTs to.
+    :param headers: Current (lapsed) headers; the fresh bearer is merged over
+        a copy so routing headers survive.
+    :returns: A :class:`PolicyHookReauth` instance. Call it to attempt a
+        re-mint; check ``.failure_reason`` afterwards when it returns ``None``.
+    """
+    return PolicyHookReauth(server_url, headers)
 
 
 def _is_login_redirect_or_unauthorized(response: httpx.Response) -> bool:
     """
-    Return ``True`` when a response means "the bearer is no good â€” re-auth".
+    Return ``True`` when a response means "the bearer is no good â€?re-auth".
 
     Mirrors :func:`agent_meow.runner._entry._is_login_redirect_or_unauthorized`,
     duplicated here so the dependency-light hook need not import the runner
     package. The Databricks Apps front door bounces an *expired* bearer with a
-    ``302`` to the OAuth login flow (``/oidc/`` or ``/.auth/``) â€” **not** a
-    ``401`` â€” so a hook that only treats ``401`` as auth failure silently fails
+    ``302`` to the OAuth login flow (``/oidc/`` or ``/.auth/``) â€?**not** a
+    ``401`` â€?so a hook that only treats ``401`` as auth failure silently fails
     closed once the one-shot ``ap_auth_headers`` token (snapshotted at launch by
     ``build_hook_settings``) lapses with the ~1h Databricks OAuth lifetime.
-    Treat both the 401 and the OAuth-login redirect as a re-auth signal.
+    Treat the 401, 403 "Invalid Token", and the OAuth-login redirect as
+    re-auth signals.
 
     Unrelated 3xx (an application-level redirect to another resource) return
     ``False`` so the caller does not waste a token round-trip on every redirect.
 
+    Note: Databricks Apps returns 403 (not 401) with body "Invalid Token"
+    when a bearer has expired, in addition to the 302â†’``/oidc/`` bounce. A
+    caller that only watches for 401 and the redirect silently fails closed
+    on sessions older than ~1h.
+
     :param response: The hook's POST response to classify.
     :returns: ``True`` when the caller should re-mint a token and retry.
     """
-    if response.status_code == 401:
+    if response.status_code in (401, 403):
         return True
     if not response.is_redirect:
         return False
@@ -205,10 +233,10 @@ def hook_payload_to_evaluation_request(
     Maps ``PreToolUse`` to a ``PHASE_TOOL_CALL`` event, ``PostToolUse``
     to a ``PHASE_TOOL_RESULT`` event, and ``UserPromptSubmit`` to a
     ``PHASE_REQUEST`` event (the prompt text from the payload's
-    ``prompt`` field becomes the request content). agent-meow MCP tools
+    ``prompt`` field becomes the request content). Omnigent MCP tools
     (``mcp__omnigent__*``) are skipped because they are already
-    policy-checked by the relay path (``ProxyMcpManager`` â†’ agent-meow
-    ``/mcp`` endpoint â†’ ``_evaluate_tool_call_policy``); evaluating
+    policy-checked by the relay path (``ProxyMcpManager`` â†?Omnigent
+    ``/mcp`` endpoint â†?``_evaluate_tool_call_policy``); evaluating
     them here would double-count. Connector-native MCP tools
     (for example ``mcp__github__*``) still need this pre-call gate.
 
@@ -237,8 +265,8 @@ def hook_payload_to_evaluation_request(
             },
         }
     tool_name = payload.get("tool_name", "")
-    # agent-meow MCP tools are already policy-checked by the relay path
-    # (ProxyMcpManager â†’ agent-meow /mcp endpoint â†’ _evaluate_tool_call_policy).
+    # Omnigent MCP tools are already policy-checked by the relay path
+    # (ProxyMcpManager â†?Omnigent /mcp endpoint â†?_evaluate_tool_call_policy).
     # Skip only those here to avoid double evaluation; connector-native MCP
     # tools such as mcp__github__* must still go through this hook.
     if isinstance(tool_name, str) and tool_name.startswith("mcp__omnigent__"):
@@ -282,31 +310,31 @@ def evaluation_response_to_hook_output(
     """
     Convert an ``EvaluationResponse`` into native-harness hook output JSON.
 
-    For ``PreToolUse`` the policy layer only *enforces* â€” it emits a
+    For ``PreToolUse`` the policy layer only *enforces* â€?it emits a
     ``hookSpecificOutput.permissionDecision`` solely for verdicts that
-    constrain the tool: ``POLICY_ACTION_DENY`` â†’ ``"deny"`` (with
+    constrain the tool: ``POLICY_ACTION_DENY`` â†?``"deny"`` (with
     ``permissionDecisionReason``). ``POLICY_ACTION_ASK`` is resolved
     server-side now (URL-based elicitation: ``POST /policies/evaluate``
     holds the gate and returns a hard ALLOW/DENY), so the hook should
     never see ASK; if it does, it fails closed with ``"deny"`` rather
-    than the old ``"defer"`` â€” ``defer`` handed control back to the
+    than the old ``"defer"`` â€?``defer`` handed control back to the
     harness's ``permission_mode``, which ``acceptEdits`` /
     ``bypassPermissions`` would auto-approve, bypassing the human.
-    ``POLICY_ACTION_ALLOW`` â€” which is the engine's default verdict when
-    no policy matches a tool call, not just an explicit author allow â€”
+    ``POLICY_ACTION_ALLOW`` â€?which is the engine's default verdict when
+    no policy matches a tool call, not just an explicit author allow â€?
     returns ``None`` ("no opinion") so the harness's *own* permission
     system still runs. Emitting ``"allow"`` here would auto-approve the
     tool and suppress the harness's native permission prompt (and, for
     Claude Code, the ``PermissionRequest`` hook that routes that prompt
-    to the web UI), collapsing two independent gates â€” the deployment's
-    policy gate and the user's own consent gate â€” into one. The policy
+    to the web UI), collapsing two independent gates â€?the deployment's
+    policy gate and the user's own consent gate â€?into one. The policy
     layer may block (DENY) or demand approval (ASK); it must not silence
     the user's consent. For ``PostToolUse`` a ``DENY`` is surfaced as
     ``additionalContext`` because the tool result is already committed
-    â€” PostToolUse hooks cannot block.
+    â€?PostToolUse hooks cannot block.
 
     For ``UserPromptSubmit`` the output uses the top-level ``decision`` /
-    ``reason`` contract (not ``permissionDecision``): ``DENY`` â†’ ``{"decision":
+    ``reason`` contract (not ``permissionDecision``): ``DENY`` â†?``{"decision":
     "block", "reason": ...}``, which drops the prompt before the model sees
     it. ASK is resolved server-side (``_hold_native_ask_gate`` collapses it
     to a hard ALLOW/DENY before the response reaches the hook), so the hook
@@ -332,7 +360,7 @@ def evaluation_response_to_hook_output(
     if hook_event == _USER_PROMPT_SUBMIT:
         # DENY blocks the prompt; a stray ASK fails closed (also block) since
         # ASK is meant to be resolved server-side before reaching the hook.
-        # ALLOW / no-match â†’ None so the prompt proceeds. A non-empty reason
+        # ALLOW / no-match â†?None so the prompt proceeds. A non-empty reason
         # is required for the block to take effect (both harnesses drop a
         # block with an empty reason), so default one in.
         if action in ("POLICY_ACTION_DENY", "POLICY_ACTION_ASK"):
@@ -343,7 +371,7 @@ def evaluation_response_to_hook_output(
         return None
 
     if hook_event == _PRE_TOOL_USE:
-        # ALLOW (the engine default when no policy matches) is omitted â†’ None,
+        # ALLOW (the engine default when no policy matches) is omitted â†?None,
         # so the harness's own permission prompt still fires; see docstring.
         decision_map = {
             "POLICY_ACTION_DENY": "deny",
@@ -351,7 +379,7 @@ def evaluation_response_to_hook_output(
             # POST /policies/evaluate holds the gate and returns a hard
             # ALLOW/DENY), so the hook should never see ASK here. If it
             # somehow does, fail closed with ``deny`` rather than the old
-            # ``defer`` â€” ``defer`` returns control to the harness's
+            # ``defer`` â€?``defer`` returns control to the harness's
             # permission_mode, which acceptEdits / bypassPermissions would
             # auto-approve, re-opening the very bypass this closes.
             "POLICY_ACTION_ASK": "deny",
@@ -380,13 +408,15 @@ def evaluation_response_to_hook_output(
     return None
 
 
-def fail_closed_hook_output(hook_event: str) -> dict[str, object] | None:
+def fail_closed_hook_output(
+    hook_event: str, detail: str | None = None
+) -> dict[str, object] | None:
     """
     Build the fail-closed hook output for an unobtainable policy verdict.
 
     Called by the per-harness hooks when the ``/policies/evaluate``
     round-trip cannot produce a usable verdict for an *already-governed*
-    session â€” the server is unreachable, returns a non-2xx status, or
+    session â€?the server is unreachable, returns a non-2xx status, or
     returns an empty / malformed body. Without this the hooks emitted "no
     opinion" on those paths, silently letting the gated tool run: for
     native harnesses this hook is the sole enforcement point (it gates
@@ -395,38 +425,50 @@ def fail_closed_hook_output(hook_event: str) -> dict[str, object] | None:
     enforcement.
 
     The default is phase-aware, matching
-    :data:`~?agent_meow.policies.types.FAIL_CLOSED_PHASES` (the runner-side
-    precedent from PR #163) â€” but expressed in hook-event terms so the
+    :data:`agent_meow.policies.types.FAIL_CLOSED_PHASES` (the runner-side
+    precedent from PR #163) â€?but expressed in hook-event terms so the
     lightweight hook subprocess need not import the policy package:
 
-    - ``PreToolUse`` (``PHASE_TOOL_CALL``) fails CLOSED â†’ ``deny``. This is
+    - ``PreToolUse`` (``PHASE_TOOL_CALL``) fails CLOSED â†?``deny``. This is
       the authoritative pre-execution gate; an unevaluable policy must not
       let the call through.
-    - ``UserPromptSubmit`` (``PHASE_REQUEST``) fails CLOSED â†’
+    - ``UserPromptSubmit`` (``PHASE_REQUEST``) fails CLOSED â†?
       ``{"decision": "block", ...}``. This is the sole pre-turn enforcement
       point for native sessions; a server hiccup must not let an over-budget
       or otherwise-blocked request proceed.
-    - ``PostToolUse`` (``PHASE_TOOL_RESULT``) fails OPEN â†’ ``None``. By the
+    - ``PostToolUse`` (``PHASE_TOOL_RESULT``) fails OPEN â†?``None``. By the
       result phase the tool has already executed, so denying would only block
       an already-incurred side effect.
 
     :param hook_event: Hook event name, e.g. ``"PreToolUse"``.
+    :param detail: Optional short diagnostic string appended to the reason
+        shown in the UI, e.g. a reauth failure message from
+        :attr:`PolicyHookReauth.failure_reason`. Omit when no detail is
+        available.
     :returns: A ``permissionDecision: "deny"`` hook output for
         ``PreToolUse``; a ``decision: "block"`` output for
         ``UserPromptSubmit``; ``None`` for every other event (fail open).
     """
+    tool_reason = (
+        f"{_EVAL_UNAVAILABLE_REASON} Detail: {detail}" if detail else _EVAL_UNAVAILABLE_REASON
+    )
+    request_reason = (
+        f"{_EVAL_UNAVAILABLE_REQUEST_REASON} Detail: {detail}"
+        if detail
+        else _EVAL_UNAVAILABLE_REQUEST_REASON
+    )
     if hook_event == _PRE_TOOL_USE:
         return {
             "hookSpecificOutput": {
                 "hookEventName": _PRE_TOOL_USE,
                 "permissionDecision": "deny",
-                "permissionDecisionReason": _EVAL_UNAVAILABLE_REASON,
+                "permissionDecisionReason": tool_reason,
             },
         }
     if hook_event == _USER_PROMPT_SUBMIT:
         return {
             "decision": "block",
-            "reason": _EVAL_UNAVAILABLE_REQUEST_REASON,
+            "reason": request_reason,
         }
     return None
 
@@ -438,9 +480,9 @@ def post_evaluate_with_retry(
     read_timeout: float,
     hook_label: str,
     reauth: Callable[[], dict[str, str] | None] | None = None,
-) -> httpx.Response | None:
+) -> tuple[httpx.Response, None] | tuple[None, str]:
     """
-    POST to the agent-meow policy evaluate endpoint, retrying on transient errors.
+    POST to the Omnigent policy evaluate endpoint, retrying on transient errors.
 
     Retries on 5xx HTTP responses and connection-level errors
     (:class:`httpx.ConnectError`, :class:`httpx.ConnectTimeout`) within
@@ -451,12 +493,12 @@ def post_evaluate_with_retry(
     every attempt. When the server parks an ASK gate and the connection
     drops (5xx or :class:`httpx.ConnectError`), the retry re-POSTs the
     same id so the server re-attaches to the existing elicitation rather
-    than minting a new one â€” mirroring the ``_post_hook_with_reattach``
+    than minting a new one â€?mirroring the ``_post_hook_with_reattach``
     idiom used by the ``PermissionRequest`` hook. This prevents a
     second approval card from appearing when the first was already
     published before the error.
 
-    4xx responses are final â€” a bad request won't succeed on retry. Other
+    4xx responses are final â€?a bad request won't succeed on retry. Other
     mid-stream errors (e.g. :class:`httpx.ReadTimeout`) are also not retried:
     a read timeout fires *after* the server received the request and may
     mean the long-polling ASK gate was severed mid-wait; retrying with the
@@ -465,7 +507,7 @@ def post_evaluate_with_retry(
     responsible for fail-closed handling on ``None``.
 
     :param url: Absolute URL of the evaluate endpoint.
-    :param headers: Auth headers for the agent-meow server.
+    :param headers: Auth headers for the Omnigent server.
     :param eval_request: ``EvaluationRequest`` JSON body to POST.
     :param read_timeout: Per-attempt read timeout in seconds. Should be
         large (e.g. one day) to accommodate long-polling ASK gates.
@@ -473,15 +515,16 @@ def post_evaluate_with_retry(
         e.g. ``"evaluate-policy hook"`` or ``"codex evaluate-policy hook"``.
     :param reauth: Optional callable that re-mints fresh auth headers when
         the server bounces the request to its OAuth login flow (the Apps
-        front door 302â†’``/oidc/``) or returns ``401`` â€” i.e. the one-shot
+        front door 302â†’``/oidc/``) or returns ``401`` â€?i.e. the one-shot
         ``ap_auth_headers`` token lapsed. Called at most once; returning new
         headers triggers an immediate retry with them, mirroring the runner's
         refresh-capable :class:`~agent_meow.runner._entry._RunnerDatabricksAuth`.
         ``None`` (the default) keeps the legacy behavior for callers that have
         no token source. Returning ``None`` from it falls through to the
         normal failure handling (the caller fails closed).
-    :returns: Successful :class:`httpx.Response`, or ``None`` when retries
-        are exhausted or the error is non-retryable.
+    :returns: ``(response, error)`` â€?on success, ``(response, None)``; on
+        failure, ``(None, short_error_string)`` describing the last error so
+        callers can surface it in the deny/block reason shown to the user.
     """
     # Mint one stable id for the whole retry sequence. Each retry re-sends
     # it so the server can re-park the SAME elicitation rather than opening
@@ -493,6 +536,7 @@ def post_evaluate_with_retry(
     backoff_s = _EVALUATE_POLICY_RETRY_INITIAL_BACKOFF_S
     timeout = httpx.Timeout(read_timeout, connect=_EVALUATE_POLICY_CONNECT_TIMEOUT_S)
     reauthed = False
+    last_error: str = "unknown error"
     while True:
         try:
             with httpx.Client(headers=headers, timeout=timeout) as client:
@@ -504,9 +548,9 @@ def post_evaluate_with_retry(
                 ):
                     # The one-shot ``ap_auth_headers`` token lapsed (~1h
                     # Databricks OAuth lifetime): the Apps front door bounces
-                    # an expired bearer with a 302â†’/oidc/ (or a 401). Re-mint
+                    # an expired bearer with a 302â†?oidc/ (or a 401). Re-mint
                     # and retry once with the fresh token instead of failing
-                    # closed â€” exactly as ``_RunnerDatabricksAuth`` does for the
+                    # closed â€?exactly as ``_RunnerDatabricksAuth`` does for the
                     # runner's own callbacks. Without this, every tool call on a
                     # session older than the token lifetime fails CLOSED while
                     # chat (refresh-capable) keeps working.
@@ -515,46 +559,52 @@ def post_evaluate_with_retry(
                         headers = refreshed
                         reauthed = True
                         print(
-                            f"agent-meow {hook_label}: agent-meow auth expired "
+                            f"omnigent {hook_label}: Omnigent auth expired "
                             "(login redirect/401); re-minted token and retrying",
                             file=sys.stderr,
                         )
                         continue
                 resp.raise_for_status()
-                return resp
+                return resp, None
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code < 500:
-                body_preview = exc.response.text[:200] if exc.response.content else ""
+            status = exc.response.status_code
+            body_preview = exc.response.text[:200] if exc.response.content else ""
+            last_error = f"server returned {status}" + (
+                f": {body_preview}" if body_preview else ""
+            )
+            if status < 500:
                 print(
-                    f"agent-meow {hook_label}: agent-meow returned {exc.response.status_code}"
+                    f"omnigent {hook_label}: Omnigent returned {status}"
                     + (f": {body_preview}" if body_preview else ""),
                     file=sys.stderr,
                 )
-                return None
+                return None, last_error
             print(
-                f"agent-meow {hook_label}: agent-meow returned {exc.response.status_code}; retrying",
+                f"omnigent {hook_label}: Omnigent returned {status}; retrying",
                 file=sys.stderr,
             )
         except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            last_error = f"connection error: {exc}"
             print(
-                f"agent-meow {hook_label}: agent-meow request failed; retrying: {exc}",
+                f"omnigent {hook_label}: Omnigent request failed; retrying: {exc}",
                 file=sys.stderr,
             )
         except httpx.HTTPError as exc:
             # Other HTTP errors (ReadTimeout while a long ASK poll is in flight,
-            # etc.) are not retried â€” retrying a severed ASK would open a new
+            # etc.) are not retried â€?retrying a severed ASK would open a new
             # elicitation and prompt the human twice.
+            last_error = f"request error: {exc}"
             print(
-                f"agent-meow {hook_label}: agent-meow request failed: {exc}",
+                f"omnigent {hook_label}: Omnigent request failed: {exc}",
                 file=sys.stderr,
             )
-            return None
+            return None, last_error
         if time.monotonic() + backoff_s >= deadline:
             print(
-                f"agent-meow {hook_label}: retry budget exhausted",
+                f"omnigent {hook_label}: retry budget exhausted",
                 file=sys.stderr,
             )
-            return None
+            return None, f"retry budget exhausted (last error: {last_error})"
         # Two-step backoff; not worth a retry library in this dependency-light hook.
         time.sleep(backoff_s)
         backoff_s = min(backoff_s * 2, _EVALUATE_POLICY_RETRY_MAX_BACKOFF_S)

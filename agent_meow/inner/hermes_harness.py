@@ -1,13 +1,13 @@
 """
 ``harness: hermes`` wrap.
 
-Thin module exposing :func:`create_app` â€” the entrypoint the
-shared :mod:`~?agent_meow.runtime.harnesses._runner` invokes after
+Thin module exposing :func:`create_app` â€?the entrypoint the
+shared :mod:`agent_meow.runtime.harnesses._runner` invokes after
 the parent process resolves ``"hermes"`` to this module via
-:data:`~?agent_meow.runtime.harnesses._HARNESS_MODULES`.
+:data:`agent_meow.runtime.harnesses._HARNESS_MODULES`.
 
-Internally, instantiates :class:`~?agent_meow.runtime.harnesses._executor_adapter.ExecutorAdapter`
-around a :class:`~?agent_meow.inner.hermes_executor.HermesExecutor`
+Internally, instantiates :class:`agent_meow.runtime.harnesses._executor_adapter.ExecutorAdapter`
+around a :class:`agent_meow.inner.hermes_executor.HermesExecutor`
 configured from env vars the parent process sets before spawning.
 
 Mirrors the pi harness wrap (``pi_harness.py``); see that module's
@@ -20,13 +20,14 @@ Env vars read at startup:
   ``None`` falls back to Hermes' own configured default.
 - ``HARNESS_HERMES_CWD``: working directory the subprocess runs in.
   ``None`` falls back to ``os.getcwd()``.
-- ``HARNESS_HERMES_PATH``: absolute path to the ``hermes`` CLI binary.
-  ``None`` searches ``PATH``.
+- ``OMNIGENT_HERMES_PATH``: absolute path to the ``hermes`` CLI binary.
+  ``None`` searches ``PATH``. (Legacy ``HARNESS_HERMES_PATH`` still honored,
+  deprecated.)
 - ``HARNESS_HERMES_OS_ENV``: JSON-encoded :class:`OSEnvSpec`
   (from :func:`dataclasses.asdict`). When unset, the wrap
   falls back to a default
   ``OSEnvSpec(type="caller_process", sandbox=type="none")`` so
-  agent-meow mode parity with the legacy non-AP path holds for
+  Omnigent mode parity with the legacy non-AP path holds for
   specs that don't declare an ``os_env:`` block.
 - ``HARNESS_HERMES_SKILLS_FILTER``: JSON-encoded
   ``str | list[str]`` carrying ``spec.skills_filter``. When
@@ -48,6 +49,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 
+from agent_meow.harness_startup_config import resolve_harness_path
 from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 from agent_meow.inner.executor import Executor
 from agent_meow.inner.hermes_executor import HermesExecutor
@@ -60,7 +62,10 @@ _logger = logging.getLogger(__name__)
 # so misconfigurations surface as a single grep target.
 _ENV_MODEL = "HARNESS_HERMES_MODEL"
 _ENV_CWD = "HARNESS_HERMES_CWD"
-_ENV_HERMES_PATH = "HARNESS_HERMES_PATH"
+_ENV_HERMES_PATH = "OMNIGENT_HERMES_PATH"
+# Deprecated alias â€?read via resolve_harness_path() which warns on use.
+# Remove this constant and the HARNESS_HERMES_PATH read in v0.8.0.
+_LEGACY_ENV_HERMES_PATH = "HARNESS_HERMES_PATH"
 _ENV_OS_ENV = "HARNESS_HERMES_OS_ENV"
 _ENV_SKILLS_FILTER = "HARNESS_HERMES_SKILLS_FILTER"
 _ENV_BUNDLE_DIR = "HARNESS_HERMES_BUNDLE_DIR"
@@ -72,10 +77,10 @@ def _resolve_os_env() -> OSEnvSpec:
     Resolve the inner-executor :class:`OSEnvSpec` from env config.
 
     Reads :data:`_ENV_OS_ENV` and decodes the JSON-encoded dict
-    agent-meow serialized via :func:`dataclasses.asdict` on its
+    Omnigent serialized via :func:`dataclasses.asdict` on its
     :class:`OSEnvSpec`. When the env var is missing or
     malformed, falls back to ``caller_process + sandbox=none``
-    so AP-bridged tools stay enabled â€” matches the legacy
+    so AP-bridged tools stay enabled â€?matches the legacy
     non-AP path's default for specs without an
     ``os_env:`` block.
 
@@ -122,7 +127,7 @@ def _resolve_skills_filter() -> str | list[str]:
     Reads :data:`_ENV_SKILLS_FILTER` and decodes the JSON-encoded
     ``str | list[str]`` (``"all"``, ``"none"``, or a list of skill
     names). Falls back to ``"all"`` on missing or malformed input
-    â€” matches the SDK default behavior.
+    â€?matches the SDK default behavior.
 
     :returns: ``"all"``, ``"none"``, or a list of skill names.
     """
@@ -156,19 +161,19 @@ def _build_hermes_executor() -> Executor:
 
     Called lazily by the :class:`ExecutorAdapter` on the first
     turn. Heavyweight init (CLI discovery) happens at this point
-    â€” operators see the failure surface as a startup error on the
+    â€?operators see the failure surface as a startup error on the
     first request, not at FastAPI app boot.
 
     :returns: A configured :class:`HermesExecutor` instance.
     :raises FileNotFoundError: If ``hermes`` is not on PATH and
-        ``HARNESS_HERMES_PATH`` isn't set.
+        ``OMNIGENT_HERMES_PATH`` (legacy ``HARNESS_HERMES_PATH``) isn't set.
     """
     bundle_dir_raw = os.environ.get(_ENV_BUNDLE_DIR, "").strip()
     bundle_dir = str(Path(bundle_dir_raw)) if bundle_dir_raw else None
     agent_name_raw = os.environ.get(_ENV_AGENT_NAME, "").strip()
     agent_name = agent_name_raw or None
     return HermesExecutor(
-        hermes_path=os.environ.get(_ENV_HERMES_PATH),
+        hermes_path=resolve_harness_path("hermes"),
         cwd=os.environ.get(_ENV_CWD) or os.environ.get("OMNIGENT_RUNNER_WORKSPACE"),
         os_env=_resolve_os_env(),
         model=os.environ.get(_ENV_MODEL),
@@ -182,9 +187,9 @@ def create_app() -> FastAPI:
     """
     Build the hermes harness's FastAPI app.
 
-    Required entry point per the harness contract â€” the runner
+    Required entry point per the harness contract â€?the runner
     imports this module (resolved from
-    :data:`~?agent_meow.runtime.harnesses._HARNESS_MODULES`) and
+    :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`) and
     invokes ``create_app()`` to get the app it serves.
 
     :returns: The FastAPI app from :class:`ExecutorAdapter`'s

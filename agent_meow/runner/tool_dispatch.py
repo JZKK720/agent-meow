@@ -3,7 +3,7 @@
 Per designs/RUNNER_TOOL_DISPATCH.md, the runner dispatches most tools
 locally and relays action_required events upstream UNCHANGED for
 visibility (the executor emits ToolCallInProgress/ToolCallObserved for
-the REPL but doesn't dispatch itself — it checks should_dispatch_locally
+the REPL but doesn't dispatch itself �?it checks should_dispatch_locally
 and skips).
 
 Tool categories:
@@ -23,7 +23,9 @@ import asyncio
 import dataclasses
 import json
 import logging
+import mimetypes
 import os
+import re
 import tempfile
 import uuid
 from collections.abc import Callable
@@ -57,6 +59,7 @@ from agent_meow.session_lifecycle import (
 )
 from agent_meow.tools import ToolManager
 from agent_meow.tools.base import ToolContext
+from agent_meow.tools.builtins._arguments import parse_json_object_arguments
 from agent_meow.tools.builtins.async_inbox import (
     SysCallAsyncTool,
     SysCancelAsyncTool,
@@ -71,6 +74,7 @@ from agent_meow.tools.builtins.os_env import (
     SysOsShellTool,
     SysOsWriteTool,
 )
+from agent_meow.tools.builtins.session_rename import SysSessionRenameTool
 from agent_meow.tools.builtins.spawn import (
     # Shared contract values with the in-process sys_session_* tools. Imported
     # (not duplicated) so the runner's REST-backed peek clamps to the same
@@ -88,6 +92,12 @@ from agent_meow.tools.builtins.sys_terminal import (
     SysTerminalReadTool,
     SysTerminalSendTool,
 )
+from agent_meow.tools.builtins.timer import (
+    # Shared with the in-process sys_timer_set tool so the runner's firing
+    # loop validates the same argument shape and delay ceiling the LLM-facing
+    # schema advertises.
+    validate_timer_set_args,
+)
 from agent_meow.tools.builtins.update_comment import UpdateCommentTool
 from agent_meow.tools.builtins.upload_file import UploadFileTool, safe_resolve
 
@@ -103,7 +113,7 @@ _SESSION_WRAPPER_LABEL_KEY = "agent_meow.wrapper"
 # Read budget for runner→server message-send POSTs that are gated at the
 # recipient's REQUEST phase, which can PARK behind a human-approval ASK gate
 # (e.g. session_cost_budget) for the deciding policy's ``ask_timeout``. Held at
-# one day (86400s) — matching that default — so the send WAITS for the verdict
+# one day (86400s) �?matching that default �?so the send WAITS for the verdict
 # instead of severing the parked gate at a short read timeout (a 30s cut
 # previously fail-closed to DENY). Fast connect (30s) so an unreachable server
 # still fails out promptly. Guarded by tests/test_ask_timeout_infinite.py.
@@ -111,7 +121,7 @@ _ASK_GATE_DELIVERY_READ_TIMEOUT_S: float = 86400.0
 _ASK_GATE_DELIVERY_TIMEOUT = httpx.Timeout(_ASK_GATE_DELIVERY_READ_TIMEOUT_S, connect=30.0)
 
 # Read timeouts for the two MCP-proxy hops that carry a tool call back to the
-# runner (runner → agent-meow server → runner). ``sys_os_shell`` accepts caller-provided
+# runner (runner �?Omnigent server �?runner). ``sys_os_shell`` accepts caller-provided
 # timeouts, so these must sit above the runner's execution timeout rather than
 # only above the 120-second shell default. Keep the outer hop larger so the
 # AP→runner leg fails first with the more specific error when the proxy wedges.
@@ -154,7 +164,7 @@ class _SubagentInboxEvaluation:
 # ── Tool sets (Phase 0 reorganization) ─────────────────────
 # Use class .name() methods where available for single-source-of-truth.
 
-# Priority 5a: OS env tools — runner-local OSEnvironment-backed execution.
+# Priority 5a: OS env tools �?runner-local OSEnvironment-backed execution.
 _OS_ENV_TOOLS = frozenset(
     {
         SysOsReadTool.name(),
@@ -164,11 +174,11 @@ _OS_ENV_TOOLS = frozenset(
     }
 )
 
-# Priority 5b: REST-backed tools — runner calls server REST APIs.
+# Priority 5b: REST-backed tools �?runner calls server REST APIs.
 # (sys_call_async / sys_cancel_async moved to _ASYNC_INBOX_TOOLS)
 _REST_TOOLS: frozenset[str] = frozenset()
 
-# Priority 5c: File tools — runner calls server file APIs.
+# Priority 5c: File tools �?runner calls server file APIs.
 _FILE_TOOLS = frozenset(
     {
         UploadFileTool.name(),
@@ -177,7 +187,7 @@ _FILE_TOOLS = frozenset(
     }
 )
 
-# Priority 5d: Terminal tools — runner-local TerminalRegistry.
+# Priority 5d: Terminal tools �?runner-local TerminalRegistry.
 _TERMINAL_TOOLS = frozenset(
     {
         SysTerminalLaunchTool.name(),
@@ -188,7 +198,7 @@ _TERMINAL_TOOLS = frozenset(
     }
 )
 
-# Priority 5e: Async inbox tools — runner-local, backed by
+# Priority 5e: Async inbox tools �?runner-local, backed by
 # per-session asyncio queues (SESSION_REARCHITECTURE Step 7).
 _ASYNC_INBOX_TOOLS = frozenset(
     {
@@ -205,15 +215,15 @@ _SUBAGENT_TOOLS = frozenset({"sys_session_send"})
 
 # Priority 5f.0a: Session-create write. ``sys_session_create`` spawns a
 # child session (parent forced to the caller) from an existing agent_id
-# via the JSON POST /v1/sessions create — same server-permission posture
+# via the JSON POST /v1/sessions create �?same server-permission posture
 # as _execute_subagent_tool.
 _SESSION_CREATE_TOOLS = frozenset({"sys_session_create"})
 
-# Priority 5f.0: Session query tools — peek/list/close/get_info/share. The
+# Priority 5f.0: Session query tools �?peek/list/close/get_info/share. The
 # runner has no in-process ConversationStore, so these read/mutate session
-# state via the agent-meow server's existing REST endpoints (GET /items, GET
+# state via the Omnigent server's existing REST endpoints (GET /items, GET
 # /child_sessions, GET /sessions/{id}, PATCH /sessions/{id}, PUT
-# /sessions/{id}/permissions) over server_client — same channel and security
+# /sessions/{id}/permissions) over server_client �?same channel and security
 # posture as _execute_subagent_tool / _execute_comment_tool.
 _SESSION_QUERY_TOOLS = frozenset(
     {
@@ -225,10 +235,12 @@ _SESSION_QUERY_TOOLS = frozenset(
     }
 )
 
+_SESSION_SELF_WRITE_TOOLS = frozenset({SysSessionRenameTool.name()})
+
 # Grantee sentinel for an anonymous, public read-only share. Mirrors the
 # server's RESERVED_USER_PUBLIC; only specs with
 # ``agent_session_sharing: public`` may grant it (enforced in
-# _session_share_via_rest — the server can't see the agent's sharing
+# _session_share_via_rest �?the server can't see the agent's sharing
 # policy, so the runner is the gate).
 _PUBLIC_USER_SENTINEL = "__public__"
 
@@ -239,34 +251,40 @@ _PUBLIC_USER_SENTINEL = "__public__"
 _SHARE_ENABLED_POLICIES = frozenset({"non-public", "public"})
 _SHARE_PUBLIC_POLICY = "public"
 
-# Priority 5f.1: web_fetch — translates the LLM-facing query/url
+# Priority 5f.1: web_fetch �?translates the LLM-facing query/url
 # arguments into a sys_session_send call against the built-in
 # ``__web_researcher`` sub-agent, then reuses
 # ``_execute_subagent_tool``.
 _WEB_FETCH_TOOLS = frozenset({"web_fetch"})
 
-# Priority 5f.1b: web_search — the first-party search builtin. Runner-local
+# Priority 5f.1b: web_search �?the first-party search builtin. Runner-local
 # so a non-OpenAI model's web_search function call resolves to the spec's
 # configured backend (google / perplexity / nimble) via WebSearchTool.invoke.
 # (OpenAI models use the native web_search_preview passthrough and never reach
 # this path.) Without this entry the call fell through to the spec-callable
-# branch and errored "tool unavailable" — the gap behind the non-OpenAI
+# branch and errored "tool unavailable" �?the gap behind the non-OpenAI
 # web_search known-failure.
 _WEB_SEARCH_TOOLS = frozenset({"web_search"})
 
-# Priority 5f.2: sys_list_models — runner-local because provider resolution
+# Hindsight long-term memory builtins. Runner-local (like web_search) so that a
+# wrapped harness's (claude-sdk / codex / cursor / pi) tool call resolves to the
+# spec-configured Hindsight tool via its ``invoke``. Without this entry the call
+# falls through to the harness, which has no such tool, and silently no-ops.
+_HINDSIGHT_TOOLS = frozenset({"hindsight_retain", "hindsight_recall", "hindsight_reflect"})
+
+# Priority 5f.2: sys_list_models �?runner-local because provider resolution
 # reads the runner host's config/credentials, same as the spawn paths.
 _LIST_MODELS_TOOLS = frozenset({"sys_list_models"})
 
-# Priority 5g: Timer tools — runner-local asyncio.sleep tasks
+# Priority 5g: Timer tools �?runner-local asyncio.sleep tasks
 # (RUNNER_TIMER_DISPATCH.md).
 _TIMER_TOOLS = frozenset({"sys_timer_set", "sys_timer_cancel"})
 
-# Priority 5f.3: sys_advise_models — server-side via MCP intercept;
+# Priority 5f.3: sys_advise_models �?server-side via MCP intercept;
 # included in the tool surface only when smart routing is enabled.
 _ADVISE_MODELS_TOOLS = frozenset({"sys_advise_models"})
 
-# Priority 5h: Task lifecycle tools — runner-local sys_cancel_task.
+# Priority 5h: Task lifecycle tools �?runner-local sys_cancel_task.
 # The only cancellable task ids visible to the LLM are async dispatches
 # and sub-agent handles; observation happens through sys_read_inbox.
 _TASK_LIFECYCLE_TOOLS = frozenset(
@@ -275,12 +293,12 @@ _TASK_LIFECYCLE_TOOLS = frozenset(
     }
 )
 
-# Priority 5i: Skill tools — load_skill and read_skill_file.
+# Priority 5i: Skill tools �?load_skill and read_skill_file.
 # Dispatched locally in the runner so harness subprocesses can
-# call them via the action_required → dispatch_tool_locally path.
+# call them via the action_required �?dispatch_tool_locally path.
 _SKILL_TOOLS = frozenset({"load_skill", "read_skill_file"})
 
-# Priority 5j: Comment tools — list_comments and update_comment.
+# Priority 5j: Comment tools �?list_comments and update_comment.
 # Auto-registered by ToolManager. The runner has no in-process
 # CommentStore, so _execute_comment_tool uses server_client REST
 # calls (GET/PATCH /v1/sessions/{id}/comments) instead.
@@ -291,82 +309,67 @@ _COMMENT_TOOLS = frozenset(
     }
 )
 
-# Priority 5k: Agent-management reads — sys_agent_get / sys_agent_download /
+# Priority 5k: Agent-management reads �?sys_agent_get / sys_agent_download /
 # sys_agent_list. The runner has no in-process AgentStore/ArtifactStore, so
-# these proxy the agent-meow server's REST endpoints (GET /v1/sessions/{id}/agent,
+# these proxy the Omnigent server's REST endpoints (GET /v1/sessions/{id}/agent,
 # .../agent/contents, GET /v1/agents, GET /v1/sessions) over server_client.
 # sys_agent_download writes the bundle bytes into the agent's local os_env
 # cwd so sys_os_* can read it; sys_agent_list also scans that cwd for
 # locally-authored configs.
 _AGENT_TOOLS = frozenset({"sys_agent_get", "sys_agent_download", "sys_agent_list"})
 
-# Priority 5l: Policy management — sys_add_policy.
-# The runner proxies the agent-meow server's session policy REST endpoint.
+# Priority 5l: Policy management �?sys_add_policy.
+# The runner proxies the Omnigent server's session policy REST endpoint.
 _POLICY_TOOLS = frozenset({"sys_add_policy", "sys_policy_registry"})
 
-# Priority 5m: agent-meow Docs surface — doc_create / doc_get / doc_list /
-# doc_update / doc_generate. The runner has no in-process DocumentStore,
-# so these proxy the agent-meow server's REST endpoints
-# (POST/GET/PATCH/DELETE /v1/sessions/{id}/resources/documents) over
-# server_client. ``doc_generate`` is a special case: it routes back into
-# the agent's own LLM loop with a doc-generation system prompt, then
-# persists the result via ``doc_create``.
-_DOC_TOOLS = frozenset(
+# Priority 5l.1: Scheduled-task management �?the runner proxies the Omnigent
+# server's /v1/scheduled-tasks REST endpoints (same posture as _POLICY_TOOLS).
+_SCHEDULED_TASK_TOOLS = frozenset(
     {
-        "doc_create",
-        "doc_get",
-        "doc_list",
-        "doc_update",
-        "doc_generate",
-        "doc_create_office",
-        "doc_edit_office",
-        "doc_export",
-        "doc_convert",
+        "sys_scheduled_task_create",
+        "sys_scheduled_task_list",
+        "sys_scheduled_task_update",
+        "sys_scheduled_task_delete",
     }
 )
 
-# Priority 5n: agent-meow Images surface — image_list / image_get /
-# image_upload / image_edit / image_generate. The runner proxies the
-# agent-meow server's REST endpoints
-# (POST/GET/PATCH/DELETE /v1/sessions/{id}/resources/images) over
-# server_client. ``image_generate`` is a stub in v1 (returns a
-# not-yet-wired message).
-_IMAGE_TOOLS = frozenset(
+# Priority 5m: Embedded-browser tools.
+# Runner dispatch POSTs a blocking action request to the server, which parks a
+# Future + publishes ``browser.action_request`` on the session stream; the
+# Omnigent desktop renderer claims and executes the action, then POSTs the
+# result back. Execution lives HERE (not in Tool.invoke) because the browser
+# protocol needs the runner's ``server_client`` and ``ToolContext`` carries
+# none. See omnigent/tools/builtins/browser.py for the schema-only classes.
+_BROWSER_TOOLS = frozenset(
     {
-        "image_list",
-        "image_get",
-        "image_upload",
-        "image_edit",
-        "image_generate",
-        "image_remove_bg",
-        "image_edit_ai",
+        "browser_navigate",
+        "browser_snapshot",
+        "browser_click",
+        "browser_type",
+        "browser_screenshot",
     }
 )
 
-# Priority 5o: agent-meow Voice surface — transcribe_audio (Handy CLI,
-# the required STT integration), transcribe_audio_high_quality (VibeVoice-ASR
-# gateway for diarized long-form), text_to_speech / speak (Voicebox REST,
-# the required TTS integration). Handy + Voicebox are the canonical
-# STT/TTS pair for agent-meow voice integration.
-_VOICE_TOOLS = frozenset(
-    {"transcribe_audio", "transcribe_audio_high_quality", "text_to_speech", "speak"}
-)
+# Runner-side outer HTTP read timeout for a browser action POST. The read
+# budget (60s) MUST exceed the server-side browser-action await (30s) so the
+# runner never severs the still-open POST before the server returns either the
+# action result JSON or the clean timeout-error JSON. Fast connect (30s) so an
+# unreachable server still fails promptly.
+_BROWSER_ACTION_TIMEOUT = httpx.Timeout(60.0, connect=30.0)
 
-# Priority 5p: agent-meow Video surface — video_generate (multi-provider
-# quality ladder: fal.ai / Happy Horse 1.0 / Pixelle-Video gateway /
-# OpenMontage external MCP), video_list / video_get (session video
-# resources). The runner proxies the agent-meow server's REST endpoints for
-# list/get and calls the configured video-generation gateway for generate.
-_VIDEO_TOOLS = frozenset(
-    {"video_generate", "video_list", "video_get"}
+# Returned as the tool output (HTTP 200 body, not an exception) when the server
+# browser-action await elapses with no renderer result �?a clear
+# "is the session open?" message so the LLM gets a clean, actionable error.
+_BROWSER_TIMEOUT_ERROR = (
+    '{"error": "browser action timed out �?is the session open in the Omnigent desktop app?"}'
 )
 
 # Builtin tools the claude-native / codex-native relay advertises to the
 # real CLI, beyond the always-relayed ``sys_os_*`` family. Native harnesses
 # ignore the harness ``tools`` list, so the relay is their ONLY tool
 # surface; this set is the runner-/server-proxied builtin surface that
-# rides through the agent-meow ``/mcp`` endpoint (comment, session read/write,
-# async inbox, task lifecycle, agent-discovery, and terminal families —
+# rides through the Omnigent ``/mcp`` endpoint (comment, session read/write,
+# async inbox, task lifecycle, agent-discovery, and terminal families �?
 # the same dispatch posture non-native harnesses get via
 # ``request.tools``). ``sys_terminal_*`` inherits the spec gate for
 # free: the relay only advertises names that ``ToolManager(spec)``
@@ -379,6 +382,7 @@ _VIDEO_TOOLS = frozenset(
 _NATIVE_RELAY_BUILTIN_TOOLS = (
     _COMMENT_TOOLS
     | _SESSION_QUERY_TOOLS
+    | _SESSION_SELF_WRITE_TOOLS
     | _ASYNC_INBOX_TOOLS
     | _SUBAGENT_TOOLS
     | _LIST_MODELS_TOOLS
@@ -387,23 +391,30 @@ _NATIVE_RELAY_BUILTIN_TOOLS = (
     | _TASK_LIFECYCLE_TOOLS
     | _AGENT_TOOLS
     | _POLICY_TOOLS
+    | _SCHEDULED_TASK_TOOLS
     | _TERMINAL_TOOLS
-    | _DOC_TOOLS
-    | _IMAGE_TOOLS
-    | _VOICE_TOOLS
-    | _VIDEO_TOOLS
+    # ``browser_*`` must ride the native relay: the Omnigent desktop app
+    # runs native (claude/codex/pi) sessions, which ignore ``request.tools``
+    # and see ONLY this relay surface �?without this union member the
+    # feature is dead for its real target. The relay still filters
+    # ``ToolManager(spec).get_tool_schemas()``, so browser schemas appear
+    # only when the spec declares the builtins (see builtins/__init__.py).
+    | _BROWSER_TOOLS
+    # Memory builtins are relayed to native harnesses too �?unlike web_search,
+    # native harnesses have no built-in long-term memory of their own.
+    | _HINDSIGHT_TOOLS
 )
 
 
 def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
-    """Build the flat agent-meow tool surface for native harness bridges.
+    """Build the flat Omnigent tool surface for native harness bridges.
 
     Returns the same tool set the claude-native / codex-native relay advertises
     and that pi-native registers via ``pi.registerTool``: the spec-gated builtin
-    surface (``_NATIVE_RELAY_BUILTIN_TOOLS`` — comment, session read/write,
+    surface (``_NATIVE_RELAY_BUILTIN_TOOLS`` �?comment, session read/write,
     agent-discovery, policy, and terminal families) plus the ``sys_os_*`` tools,
     relayed unconditionally so they override any harness-static versions and get
-    centralized policy enforcement on the agent-meow server.
+    centralized policy enforcement on the Omnigent server.
 
     Each entry is a flat ``{"name", "description", "parameters"}`` dict (the
     ``"function"`` sub-dict of an OpenAI tool schema), which is exactly what
@@ -418,39 +429,6 @@ def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
         SysAgentDownloadTool,
         SysAgentGetTool,
         SysAgentListTool,
-    )
-    from agent_meow.tools.builtins.docs import (
-        DocConvertTool,
-        DocCreateOfficeTool,
-        DocCreateTool,
-        DocEditOfficeTool,
-        DocExportTool,
-        DocGenerateTool,
-        DocGetTool,
-        DocListTool,
-        DocUpdateTool,
-    )
-    from agent_meow.tools.builtins.images import (
-        ImageEditAiTool,
-        ImageEditTool,
-        ImageGenerateTool,
-        ImageGetTool,
-        ImageListTool,
-        ImageRemoveBgTool,
-        ImageUploadTool,
-    )
-    from agent_meow.tools.builtins.transcribe import (
-        TranscribeAudioHighQualityTool,
-        TranscribeAudioTool,
-    )
-    from agent_meow.tools.builtins.tts import (
-        SpeakTool,
-        TextToSpeechTool,
-    )
-    from agent_meow.tools.builtins.videos import (
-        VideoGenerateTool,
-        VideoGetTool,
-        VideoListTool,
     )
     from agent_meow.tools.builtins.list_comments import ListCommentsTool
     from agent_meow.tools.builtins.os_env import (
@@ -495,34 +473,12 @@ def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
             SysSessionListTool,
             SysSessionGetHistoryTool,
             SysSessionGetInfoTool,
+            SysSessionRenameTool,
             SysAgentGetTool,
             SysAgentListTool,
             SysAgentDownloadTool,
             SysAddPolicyTool,
             SysPolicyRegistryTool,
-            DocCreateTool,
-            DocGetTool,
-            DocListTool,
-            DocUpdateTool,
-            DocGenerateTool,
-            DocCreateOfficeTool,
-            DocEditOfficeTool,
-            DocExportTool,
-            DocConvertTool,
-            ImageListTool,
-            ImageGetTool,
-            ImageUploadTool,
-            ImageEditTool,
-            ImageGenerateTool,
-            ImageRemoveBgTool,
-            ImageEditAiTool,
-            TranscribeAudioTool,
-            TranscribeAudioHighQualityTool,
-            TextToSpeechTool,
-            SpeakTool,
-            VideoGenerateTool,
-            VideoListTool,
-            VideoGetTool,
         ):
             _append(_cls().get_schema()["function"])
 
@@ -548,7 +504,7 @@ def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
         ):
             _append(_tool.get_schema()["function"])
         _os_env.close()
-    except Exception:  # noqa: BLE001 — OS env setup is best-effort for schema only
+    except Exception:  # noqa: BLE001 �?OS env setup is best-effort for schema only
         _logger.debug("Could not create OSEnvironment for native relay OS tool schemas")
 
     return schemas
@@ -557,8 +513,8 @@ def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
 # sys_agent_list: locally-authored agent config YAMLs live under this
 # subdirectory of the agent's os_env cwd, so the list tool can find them
 # and the agent can read/edit them via sys_os_* (configs are authored with
-# sys_os_write, e.g. following the ``build-agent-meow`` skill).
-_AGENT_CONFIG_SUBDIR = ".agent_meow/agent-configs"
+# sys_os_write, e.g. following the ``build-omnigent`` skill).
+_AGENT_CONFIG_SUBDIR = ".omnigent/agent-configs"
 
 # Broad page size for the sys_agent_list fan-out reads. Orchestrators want
 # the full launchable surface in one call, not a 20-row default page.
@@ -576,18 +532,17 @@ _ALL_LOCAL_TOOLS = (
     | _ADVISE_MODELS_TOOLS
     | _SESSION_CREATE_TOOLS
     | _SESSION_QUERY_TOOLS
+    | _SESSION_SELF_WRITE_TOOLS
     | _WEB_FETCH_TOOLS
     | _WEB_SEARCH_TOOLS
+    | _HINDSIGHT_TOOLS
     | _TIMER_TOOLS
     | _TASK_LIFECYCLE_TOOLS
     | _SKILL_TOOLS
     | _COMMENT_TOOLS
     | _AGENT_TOOLS
     | _POLICY_TOOLS
-    | _DOC_TOOLS
-    | _IMAGE_TOOLS
-    | _VOICE_TOOLS
-    | _VIDEO_TOOLS
+    | _SCHEDULED_TASK_TOOLS
 )
 _PLACEHOLDER_CWDS = (None, "", ".", "./")
 
@@ -621,7 +576,7 @@ def should_dispatch_locally(tool_name: str) -> bool:
     Used by BOTH the runner's proxy_stream (to decide whether to
     dispatch) AND the server-side executor (to skip its own dispatch
     for tools the runner already handled). The executor imports this
-    function directly — Phase 5 of RUNNER_TOOL_DISPATCH.md.
+    function directly �?Phase 5 of RUNNER_TOOL_DISPATCH.md.
     """
     return tool_name in _ALL_LOCAL_TOOLS
 
@@ -815,7 +770,7 @@ async def _execute_uc_function_tool(
     Resolves the ``catalog_path`` from the spec's ``local_tools``,
     extracts the Databricks profile and warehouse ID from the
     executor config, then delegates to
-    :func:`~?agent_meow.runner.uc_function.execute_uc_function`.
+    :func:`agent_meow.runner.uc_function.execute_uc_function`.
 
     :param tool_name: Tool name from the LLM, e.g.
         ``"classify_text"``.
@@ -932,18 +887,28 @@ async def _list_child_sessions(
     server_client: httpx.AsyncClient,
     conversation_id: str,
     limit: int = 100,
+    tool: str | None = None,
+    session_name: str | None = None,
 ) -> list[dict[str, Any]] | str:
     """
     Fetch child-session summaries for a parent session.
 
-    :param server_client: agent-meow server client.
+    :param server_client: Omnigent server client.
     :param conversation_id: Parent session id, e.g. ``"conv_parent123"``.
     :param limit: Maximum child rows to request, e.g. ``100``.
+    :param tool: When set alongside ``session_name``, filter to
+        children whose title is ``"{tool}:{session_name}"``
+        server-side.
+    :param session_name: See ``tool``.
     :returns: List of child summary dicts, or an error string.
     """
+    params: dict[str, Any] = {"limit": limit, "order": "desc"}
+    if tool and session_name:
+        params["tool"] = tool
+        params["session_name"] = session_name
     resp = await server_client.get(
         f"/v1/sessions/{conversation_id}/child_sessions",
-        params={"limit": limit, "order": "desc"},
+        params=params,
         timeout=30.0,
     )
     if resp.status_code >= 400:
@@ -969,11 +934,9 @@ async def _find_existing_child_session(
     pair continue the existing child. The runner must therefore look
     up the row before trying to create a new one; otherwise the
     server's unique child-title constraint turns a continuation into
-    a duplicate-create failure. This currently fetches up to 1000
-    children and scans locally because the child-session endpoint does
-    not provide a ``(tool, session_name)`` filter yet.
+    a duplicate-create failure.
 
-    :param server_client: agent-meow server client.
+    :param server_client: Omnigent server client.
     :param conversation_id: Parent session id, e.g. ``"conv_parent123"``.
     :param agent: Sub-agent name, e.g. ``"claude"``.
     :param title: Caller-chosen child title, e.g. ``"issue-1756"``.
@@ -983,16 +946,16 @@ async def _find_existing_child_session(
     children = await _list_child_sessions(
         server_client=server_client,
         conversation_id=conversation_id,
-        limit=1000,
+        limit=1,
+        tool=agent,
+        session_name=title,
     )
     if isinstance(children, str):
         return children
     for child in children:
         if is_session_closed(child.get("labels"), child.get("title")):
             continue
-        label = _subagent_label(child)
-        if label.agent == agent and label.title == title:
-            return child
+        return child
     return None
 
 
@@ -1024,7 +987,7 @@ def _subagent_model_from_args(args: dict[str, Any]) -> str | None:
 
     The optional ``model`` field lives inside the object form of
     ``args`` (``{"input": ..., "model": ...}``). Malformed values fail
-    loud instead of being silently dropped — the value later crosses
+    loud instead of being silently dropped �?the value later crosses
     the harness spawn boundary as a ``--model`` argv element.
 
     :param args: Parsed ``sys_session_send`` arguments, e.g.
@@ -1042,6 +1005,193 @@ def _subagent_model_from_args(args: dict[str, Any]) -> str | None:
     if not isinstance(raw_model, str):
         raise ValueError("'model' must be a string when provided")
     return validate_model_override(raw_model)
+
+
+def _subagent_file_ids_from_args(args: dict[str, Any]) -> list[str]:
+    """
+    Extract the optional ``file_ids`` from ``sys_session_send`` args.
+
+    ``file_ids`` lives only in the object form of ``args``
+    (``{"input": ..., "file_ids": [...]}``); the plain-string form
+    carries no files. A present-but-malformed value fails loud rather
+    than being silently dropped �?the ids later drive a parent→child
+    file copy whose failure must surface to the caller.
+
+    :param args: Parsed ``sys_session_send`` arguments, e.g.
+        ``{"args": {"input": "review", "file_ids": ["file_abc"]}}``.
+    :returns: The requested file ids in order, or ``[]`` when absent.
+    :raises ValueError: If ``file_ids`` is present but is not a non-empty
+        list of unique non-empty strings.
+    """
+    raw_message = args.get("args")
+    if not isinstance(raw_message, dict):
+        return []
+    raw_ids = raw_message.get("file_ids")
+    if raw_ids is None:
+        return []
+    if not isinstance(raw_ids, list) or not all(isinstance(fid, str) and fid for fid in raw_ids):
+        raise ValueError("'file_ids' must be a list of non-empty strings when provided")
+    if not raw_ids:
+        raise ValueError("'file_ids' must contain at least one file id when provided")
+    if len(set(raw_ids)) != len(raw_ids):
+        raise ValueError("'file_ids' must not contain duplicate file ids")
+    return list(raw_ids)
+
+
+async def _teardown_failed_child(
+    server_client: httpx.AsyncClient,
+    child_session_id: str,
+    *,
+    created_child: bool,
+) -> str | None:
+    """Undo a failed named-send spawn so it leaves no phantom behind.
+
+    Unregisters the runner-local child/work mappings and, when this send
+    just created the server child session, deletes it. Deleting the child
+    also reclaims any files copied into it before the failure �?leaving an
+    empty child behind would poison a retry with the same ``(agent, title)``
+    (the next send would attach to the phantom instead of spawning clean)
+    and orphan the copied file rows. Used on both the copy/content failure
+    and the message-post failure paths so they tear down identically.
+
+    :returns: ``None`` when no server cleanup was needed or cleanup
+        succeeded, otherwise a parent-visible warning string.
+    """
+    from agent_meow.runner import app as _runner_app
+
+    _runner_app.unregister_child_session(child_session_id)
+    _runner_app.unregister_subagent_work(child_session_id)
+    if not created_child:
+        return None
+
+    last_error = ""
+    for attempt in range(2):
+        try:
+            resp = await server_client.delete(
+                f"/v1/sessions/{child_session_id}",
+                timeout=30.0,
+            )
+        except httpx.HTTPError as exc:
+            last_error = f"{type(exc).__name__}: {exc}"
+        else:
+            if resp.status_code < 400:
+                return None
+            last_error = f"{resp.status_code} {resp.text[:200]}"
+            if resp.status_code < 500:
+                break
+        if attempt == 0:
+            await asyncio.sleep(0.1)
+
+    _logger.warning(
+        "Failed to delete child session after failed spawn: session=%s error=%s",
+        child_session_id,
+        last_error,
+    )
+    return (
+        "Warning: failed to delete newly-created child session "
+        f"{child_session_id!r}; retrying the same named send may attach "
+        f"to that orphaned session. Delete error: {last_error}"
+    )
+
+
+@dataclass(frozen=True)
+class CopyResult:
+    """
+    Outcome of building a subagent's first-turn content.
+
+    Exactly one field is set: ``content`` on success, ``error`` on failure.
+    Replaces the earlier ``(value, error)`` tuple union �?the dispatch path
+    branches on ``error is not None`` to tear down the child and surface the
+    message to the parent agent.
+
+    :param content: The first-turn content blocks, or ``None`` on failure.
+    :param error: A human-readable error string, or ``None`` on success.
+    """
+
+    content: list[dict[str, Any]] | None = None
+    error: str | None = None
+
+
+async def _build_subagent_message_content(
+    message: str,
+    file_ids: list[str],
+    *,
+    child_session_id: str,
+    parent_session_id: str,
+    server_client: httpx.AsyncClient,
+) -> CopyResult:
+    """
+    Build the child's first-turn content, copying parent files first.
+
+    With no ``file_ids`` this returns the single ``input_text`` block the
+    text-only path has always sent (byte-for-byte unchanged). With
+    ``file_ids`` it copies those files from the parent into the child via
+    the lineage-scoped copy endpoint, then appends one file block per
+    original id (in order) referencing the MAPPED child-scoped id.
+
+    The block type mirrors ``_resolve_forwarded_message_content``: an
+    ``image/*`` content type yields ``input_image``; everything else
+    yields ``input_file``. The content type comes straight from the copy
+    response (preserved from the source row), so no per-file metadata
+    fetch is needed; when the source had no recorded type, the filename is
+    the fallback signal.
+
+    :param message: The user message text.
+    :param file_ids: Parent-owned source file ids to forward, in order.
+    :param child_session_id: Destination (child) session id.
+    :param parent_session_id: Source session id (the dispatching runner's
+        own session), passed as the copy ``source_session_id``.
+    :param server_client: Authenticated Omnigent server client.
+    :returns: A :class:`CopyResult` �?``content`` set on success, ``error``
+        set when the copy fails (surfaced to the parent agent).
+    """
+    content: list[dict[str, Any]] = [{"type": "input_text", "text": str(message)}]
+    if not file_ids:
+        return CopyResult(content=content)
+
+    try:
+        copy_resp = await server_client.post(
+            f"/v1/sessions/{child_session_id}/resources/files:copy",
+            json={"source_session_id": parent_session_id, "file_ids": file_ids},
+            timeout=30.0,
+        )
+    except httpx.HTTPError as exc:
+        return CopyResult(
+            error=f"Error: failed to copy files to child: {type(exc).__name__}: {exc}"
+        )
+    if copy_resp.status_code >= 400:
+        return CopyResult(
+            error=(
+                f"Error: failed to copy files to child: "
+                f"{copy_resp.status_code} {copy_resp.text[:200]}"
+            )
+        )
+
+    mapping = copy_resp.json().get("mapping")
+    if not isinstance(mapping, dict):
+        return CopyResult(error="Error: file copy response missing 'mapping'")
+
+    for old_id in file_ids:
+        entry = mapping.get(old_id)
+        if not isinstance(entry, dict):
+            return CopyResult(error=f"Error: file copy mapping missing entry for {old_id!r}")
+        new_id = entry.get("new_id")
+        if not isinstance(new_id, str) or not new_id:
+            return CopyResult(error=f"Error: file copy mapping missing new id for {old_id!r}")
+        # The copy response preserves the source's content_type, so the
+        # image-vs-file split uses the true type �?no per-file metadata GET.
+        # Fall back to a filename guess only when the source had none.
+        content_type = entry.get("content_type")
+        if not content_type:
+            filename = entry.get("filename")
+            guessed, _ = (
+                mimetypes.guess_type(filename) if isinstance(filename, str) else (None, None)
+            )
+            content_type = guessed or ""
+        block_type = "input_image" if content_type.startswith("image/") else "input_file"
+        content.append({"type": block_type, "file_id": new_id})
+
+    return CopyResult(content=content)
 
 
 def _find_subagent_spec(sub_agent_name: str, agent_spec: Any | None) -> Any | None:
@@ -1070,7 +1220,7 @@ def _subagent_harness(sub_agent_name: str, agent_spec: Any | None) -> str | None
     ``_resolve_harness_config`` (``executor.config["harness"]`` falling
     back to ``executor.type``) for the AP-style ``sub_agents`` spec
     shape. Returns ``None`` when the sub-spec or its executor cannot be
-    resolved — callers treat that as "unknown harness" and fail loud.
+    resolved �?callers treat that as "unknown harness" and fail loud.
 
     :param sub_agent_name: Name of the sub-agent, e.g. ``"claude_code"``.
     :param agent_spec: Parent agent's spec. ``None`` when no spec is
@@ -1170,7 +1320,7 @@ def _subagent_allowed_harnesses(sub_agent_name: str, agent_spec: Any | None) -> 
     Resolve the canonical harness allowlist a sub-agent opts into.
 
     Reads ``executor.config.allowed_harnesses`` from the named sub-agent's
-    spec — the explicit opt-in that gates ``args.harness``. Each entry is
+    spec �?the explicit opt-in that gates ``args.harness``. Each entry is
     canonicalized so a user-facing alias still matches.
 
     :param sub_agent_name: Name of the sub-agent, e.g. ``"opencode"``.
@@ -1207,12 +1357,12 @@ def _normalize_subagent_model(
     Localize a per-dispatch model id for the child's resolved provider.
 
     Runs after the family guard (see
-    :func:`~?agent_meow.model_override.normalize_model_for_provider` for
+    :func:`agent_meow.model_override.normalize_model_for_provider` for
     the ordering rationale): a canonical vendor id is prefixed with
     ``databricks-`` when the child routes through the Databricks
     gateway, and the prefix is stripped for a vendor-direct child. When
     the child's provider cannot be determined, the id passes through
-    unchanged — the existing fail-loud harness error stays the net.
+    unchanged �?the existing fail-loud harness error stays the net.
 
     :param model: The validated requested model id, e.g.
         ``"claude-sonnet-4-6"``.
@@ -1226,7 +1376,7 @@ def _normalize_subagent_model(
     sub_spec = _find_subagent_spec(sub_agent_name, agent_spec)
     if sub_spec is None or harness is None:
         return model
-    # resolve_model_provider is total — undeterminable providers come
+    # resolve_model_provider is total �?undeterminable providers come
     # back as kind "none", which normalize passes through.
     provider = resolve_model_provider(sub_spec, harness)
     normalized = normalize_model_for_provider(model, provider.kind)
@@ -1247,9 +1397,9 @@ async def _execute_list_models_tool(*, agent_spec: Any | None) -> str:
     """
     Dispatch ``sys_list_models``: per-worker model availability.
 
-    Runs the enumeration off the event loop — provider resolution reads
+    Runs the enumeration off the event loop �?provider resolution reads
     config files and the listing fetches hit provider HTTP APIs (TTL-
-    cached in :mod:`~?agent_meow.model_catalog`).
+    cached in :mod:`agent_meow.model_catalog`).
 
     :param agent_spec: The calling session's agent spec; its
         ``sub_agents`` define the worker rows.
@@ -1288,7 +1438,7 @@ async def _execute_subagent_tool(
         ``args`` (user message text, or an object with ``input`` plus
         optional ``purpose`` / ``model`` dispatch metadata),
         ``title`` (instance label).
-    :param server_client: httpx client pointed at the agent-meow server.
+    :param server_client: httpx client pointed at the Omnigent server.
     :param conversation_id: Parent session/conversation ID,
         e.g. ``"conv_abc123"``.
     :param agent_spec: Parent agent's :class:`AgentSpec`. Used
@@ -1320,6 +1470,11 @@ async def _execute_subagent_tool(
         return f"Error: sys_session_send invalid 'model': {exc}"
 
     try:
+        file_ids = _subagent_file_ids_from_args(args)
+    except ValueError as exc:
+        return f"Error: sys_session_send invalid 'file_ids': {exc}"
+
+    try:
         harness_override = _subagent_harness_override_from_args(args)
     except ValueError as exc:
         return f"Error: sys_session_send invalid 'harness': {exc}"
@@ -1339,7 +1494,7 @@ async def _execute_subagent_tool(
         if args.get("agent") or args.get("title"):
             return (
                 "Error: sys_session_send received both 'session_id' and "
-                "'agent'/'title' — supply exactly one addressing mode"
+                "'agent'/'title' �?supply exactly one addressing mode"
             )
         if model is not None:
             return (
@@ -1347,6 +1502,12 @@ async def _execute_subagent_tool(
                 "sub-agent session is first created; it cannot change an "
                 "existing session. Re-send without 'model' to continue "
                 f"session {target_session_id!r}."
+            )
+        if file_ids:
+            return (
+                "Error: sys_session_send 'file_ids' is supported only when "
+                "addressing a sub-agent by 'agent'/'title'; it cannot be "
+                f"forwarded to an existing session by id ({target_session_id!r})."
             )
         if harness_override is not None:
             return (
@@ -1382,7 +1543,7 @@ async def _execute_subagent_tool(
     if not _has_subagent(sub_agent_name, agent_spec):
         return f"Error: sub-agent {sub_agent_name!r} not found in agent spec"
 
-    # Use the PARENT's agent_id — inline sub-agents are part of
+    # Use the PARENT's agent_id �?inline sub-agents are part of
     # the same bundle, not separately registered. The runner
     # resolves the sub-agent spec from the parent's sub_agents
     # list when it starts the child turn.
@@ -1426,6 +1587,15 @@ async def _execute_subagent_tool(
                 "it, or sys_session_close it first to spawn a fresh "
                 "session on the requested model."
             )
+        if file_ids:
+            return (
+                f"Error: sys_session_send 'file_ids' applies only when a "
+                f"sub-agent session is first created; {sub_agent_name!r} "
+                f"title {session_name!r} already exists as "
+                f"{child_session_id}. Re-send without 'file_ids' to "
+                "continue it, or sys_session_close it first to spawn a "
+                "fresh session with the requested files."
+            )
         if cost_budget is not None:
             return (
                 f"Error: sys_session_send 'cost_budget' applies only when a "
@@ -1444,12 +1614,16 @@ async def _execute_subagent_tool(
         ):
             return (
                 f"Error: sub-agent {sub_agent_name!r} title {session_name!r} "
-                "already has a launching or running turn; wait for completion before sending again"
+                "already has a launching or running turn. Use a distinct task-based title "
+                "for independent parallel work; reuse this title only to continue the same "
+                "conversation after completion."
             )
         if existing.get("busy") is True:
             return (
                 f"Error: sub-agent {sub_agent_name!r} title {session_name!r} "
-                "is already running; wait for completion before sending again"
+                "is already running. Use a distinct task-based title for independent "
+                "parallel work; reuse this title only to continue the same conversation "
+                "after completion."
             )
     else:
         child_harness = _subagent_harness(str(sub_agent_name), agent_spec)
@@ -1458,7 +1632,7 @@ async def _execute_subagent_tool(
         # and the requested harness must canonicalize into OMNIGENT_HARNESSES.
         # NOTE: the server create route (``_validated_harness_override`` in
         # server/routes/sessions.py) independently re-validates a session-create
-        # override against the GLOBAL ``OMNIGENT_HARNESSES`` (plus the agent-meow
+        # override against the GLOBAL ``OMNIGENT_HARNESSES`` (plus the omnigent
         # executor-type rule), but it does NOT re-check the per-spec
         # ``allowed_harnesses`` allowlist. So this orchestrator-dispatch check is
         # the sole enforcement of that per-spec allowlist; a direct
@@ -1516,7 +1690,7 @@ async def _execute_subagent_tool(
                     f"Install it with: {install} "
                     f"(or don't dispatch to {sub_agent_name!r} here)."
                 )
-        # Create child session on the server (no initial items —
+        # Create child session on the server (no initial items �?
         # those go via a separate POST so the server forwards them
         # to the runner and triggers a turn).
         create_body: dict[str, Any] = {
@@ -1529,7 +1703,7 @@ async def _execute_subagent_tool(
             create_body["harness_override"] = harness_override_canonical
         if model is not None:
             # Reject up front when the child harness would silently
-            # ignore the persisted override — no silent drops.
+            # ignore the persisted override �?no silent drops.
             if not harness_supports_model_override(child_harness):
                 return (
                     f"Error: sys_session_send 'model' is not supported for "
@@ -1611,10 +1785,10 @@ async def _execute_subagent_tool(
         )
         # Route through the runner's per-session queue, NOT session_stream
         # directly: in the out-of-process (--server) runner, session_stream
-        # has no subscribers (they live in the agent-meow server), so a direct
+        # has no subscribers (they live in the Omnigent server), so a direct
         # publish here is silently dropped. ``publish_event`` enqueues onto
-        # the parent's queue, which the agent-meow server's relay republishes onto
-        # session_stream — the same channel terminals use. Falls back
+        # the parent's queue, which the Omnigent server's relay republishes onto
+        # session_stream �?the same channel terminals use. Falls back
         # to a direct publish only for in-process callers without a queue.
         if publish_event is not None:
             publish_event(conversation_id, _evt.model_dump())
@@ -1652,6 +1826,29 @@ async def _execute_subagent_tool(
         publish_event=publish_event,
     )
 
+    # Copy any forwarded parent files into the child and build the
+    # first-turn content (input_text plus a file block per copied id).
+    # On copy failure we surface the error to the parent and post no
+    # event �?but first undo the registrations made above so a failed
+    # spawn doesn't leak a phantom child.
+    copy_result = await _build_subagent_message_content(
+        message,
+        file_ids,
+        child_session_id=child_session_id,
+        parent_session_id=conversation_id,
+        server_client=server_client,
+    )
+    if copy_result.error is not None:
+        teardown_warning = await _teardown_failed_child(
+            server_client,
+            child_session_id,
+            created_child=created_child,
+        )
+        if teardown_warning is not None:
+            return f"{copy_result.error}\n{teardown_warning}"
+        return copy_result.error
+    message_content = copy_result.content
+
     # Send the user message as a separate event so the server's
     # post_event forwards it to the runner and starts the child
     # turn.
@@ -1662,26 +1859,38 @@ async def _execute_subagent_tool(
                 "type": "message",
                 "data": {
                     "role": "user",
-                    "content": [{"type": "input_text", "text": str(message)}],
+                    "content": message_content,
                 },
             },
             # This message is gated at the recipient's REQUEST phase, which can
             # PARK on a human ASK (e.g. session_cost_budget) up to the policy's
-            # ``ask_timeout``. A 30s read budget severed that park → fail-closed
-            # /retry → duplicate cards. Wait for the real verdict (one-day read
+            # ``ask_timeout``. A 30s read budget severed that park �?fail-closed
+            # /retry �?duplicate cards. Wait for the real verdict (one-day read
             # budget, fast connect); a non-parking eval still returns immediately.
             timeout=_ASK_GATE_DELIVERY_TIMEOUT,
         )
     except httpx.HTTPError as exc:
-        _runner_app.unregister_child_session(child_session_id)
-        _runner_app.unregister_subagent_work(child_session_id)
-        return f"Error: failed to send message to child: {type(exc).__name__}: {exc}"
+        teardown_warning = await _teardown_failed_child(
+            server_client,
+            child_session_id,
+            created_child=created_child,
+        )
+        error = f"Error: failed to send message to child: {type(exc).__name__}: {exc}"
+        if teardown_warning is not None:
+            return f"{error}\n{teardown_warning}"
+        return error
     if msg_resp.status_code >= 400:
-        _runner_app.unregister_child_session(child_session_id)
-        _runner_app.unregister_subagent_work(child_session_id)
-        return (
+        teardown_warning = await _teardown_failed_child(
+            server_client,
+            child_session_id,
+            created_child=created_child,
+        )
+        error = (
             f"Error: failed to send message to child: {msg_resp.status_code} {msg_resp.text[:200]}"
         )
+        if teardown_warning is not None:
+            return f"{error}\n{teardown_warning}"
+        return error
 
     # Return the structured handle mirrored from ``spawn.py``. The debug panel
     # parses this to discover child sessions in the sidebar.
@@ -1718,19 +1927,19 @@ async def _send_to_existing_session(
     The by-session-id mode of ``sys_session_send``. **Child-only**: the
     target must be a direct child of the caller (its
     ``parent_session_id`` equals ``conversation_id``), so a caller can
-    only drive sessions inside its own subtree — never a sibling or an
+    only drive sessions inside its own subtree �?never a sibling or an
     unrelated session it merely has access to. Looks the target up to
-    verify parentage (404 → ``session_not_found``; wrong parent or
-    denied read → ``session_out_of_tree``), registers the child→parent
+    verify parentage (404 �?``session_not_found``; wrong parent or
+    denied read �?``session_out_of_tree``), registers the child→parent
     fan-out and work mappings, posts the message, and returns a
-    ``running`` handle immediately — the completion lands in the parent's
+    ``running`` handle immediately �?the completion lands in the parent's
     ``sys_read_inbox`` queue, matching named-mode send.
 
     :param target_session_id: The existing child session id, e.g.
         ``"conv_abc123"``.
     :param message: The user message text to post.
-    :param server_client: HTTP client pointed at the agent-meow server.
-    :param conversation_id: The caller's own session id — the required
+    :param server_client: HTTP client pointed at the Omnigent server.
+    :param conversation_id: The caller's own session id �?the required
         parent of the target.
     :returns: JSON handle on success; a JSON/text error otherwise.
     """
@@ -1853,22 +2062,25 @@ def _build_session_create_body(
     conversation_id: str,
     title: Any,
     message: Any,
+    model: Any = None,
 ) -> dict[str, Any]:
     """
     Build the JSON ``POST /v1/sessions`` body for ``sys_session_create``.
 
-    ``parent_session_id`` is hard-forced to ``conversation_id`` — this is
+    ``parent_session_id`` is hard-forced to ``conversation_id`` �?this is
     what makes the write child-only (an orchestrator cannot create a
-    top-level or sibling session). A non-empty ``title`` and ``message``
-    are included when provided; the message becomes the child's first
-    queued user turn via ``initial_items``.
+    top-level or sibling session). A non-empty ``title``, ``message``, and
+    ``model`` are included when provided; the message becomes the child's
+    first queued user turn via ``initial_items``.
 
     :param agent_id: The existing agent to launch, e.g. ``"ag_abc123"``.
-    :param conversation_id: The caller's session id — the forced parent.
+    :param conversation_id: The caller's session id �?the forced parent.
     :param title: Optional session label; included only when a non-empty
         string.
     :param message: Optional first user message; included only when a
         non-empty string.
+    :param model: Optional model override, e.g. ``"databricks-glm-5-2"``;
+        written as ``model_override`` on the session.
     :returns: The JSON request body.
     """
     body: dict[str, Any] = {
@@ -1877,6 +2089,8 @@ def _build_session_create_body(
     }
     if isinstance(title, str) and title:
         body["title"] = title
+    if isinstance(model, str) and model:
+        body["model_override"] = model
     if isinstance(message, str) and message:
         body["initial_items"] = [
             {
@@ -1960,9 +2174,9 @@ async def _execute_session_create(
 
     Two modes, split on the provided argument (exactly one required):
 
-    - ``agent_id`` — spawn from an existing agent via the JSON
+    - ``agent_id`` �?spawn from an existing agent via the JSON
       ``POST /v1/sessions`` create.
-    - ``config_path`` — upload a NEW agent from local disk (an agent
+    - ``config_path`` �?upload a NEW agent from local disk (an agent
       config YAML, agent directory, or pre-built ``.tar.gz`` bundle
       inside the caller's working directory) via the multipart
       ``POST /v1/sessions`` create.
@@ -1972,16 +2186,16 @@ async def _execute_session_create(
     queued initial message starts a turn immediately. Returns a handle
     the orchestrator can monitor (``sys_session_get_history`` /
     ``sys_session_get_info``) or drive (``sys_session_send`` by
-    ``conversation_id``) — unlike named-mode send, it does NOT block on
+    ``conversation_id``) �?unlike named-mode send, it does NOT block on
     the child turn.
 
     Maps a 404 to ``agent_not_found`` and 401/403 to ``access_denied``.
 
     :param args: Parsed arguments; exactly one of ``agent_id`` /
         ``config_path`` required, ``title`` / ``message`` optional.
-    :param server_client: HTTP client pointed at the agent-meow server; ``None``
+    :param server_client: HTTP client pointed at the Omnigent server; ``None``
         returns an error string.
-    :param conversation_id: The caller's session id — the forced parent;
+    :param conversation_id: The caller's session id �?the forced parent;
         ``None`` returns an error string.
     :param publish_event: SSE publish callback for ``session.created``.
     :param agent_spec: The calling agent's spec, used (with
@@ -2022,7 +2236,11 @@ async def _execute_session_create(
             runner_workspace=runner_workspace,
         )
     body = _build_session_create_body(
-        str(agent_id), conversation_id, args.get("title"), args.get("message")
+        str(agent_id),
+        conversation_id,
+        args.get("title"),
+        args.get("message"),
+        model=args.get("model"),
     )
     try:
         resp = await server_client.post("/v1/sessions", json=body, timeout=30.0)
@@ -2065,7 +2283,7 @@ def _bundle_local_agent_source(source: Path) -> bytes:
 
     :param source: Local agent config YAML, agent directory, or
         bundle file, e.g.
-        ``Path("/work/.agent_meow/agent-configs/helper.yaml")``.
+        ``Path("/work/.omnigent/agent-configs/helper.yaml")``.
     :returns: Gzipped tarball bytes for the multipart ``bundle`` part.
     :raises FileNotFoundError: If ``source`` does not exist.
     """
@@ -2104,7 +2322,7 @@ async def _post_child_first_message(
     :param child_session_id: The new child session id,
         e.g. ``"conv_abc123"``.
     :param message: The first user message text.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: ``None`` on success; a JSON error string (carrying the
         created ``conversation_id`` so the orchestrator can retry via
         ``sys_session_send``) on failure.
@@ -2161,10 +2379,10 @@ async def _upload_config_bundle(
 
     :param config_path: Caller-supplied path to the agent config YAML,
         agent directory, or ``.tar.gz`` bundle, relative to the os_env
-        cwd, e.g. ``".agent_meow/agent-configs/helper.yaml"``.
+        cwd, e.g. ``".omnigent/agent-configs/helper.yaml"``.
     :param args: Parsed tool arguments; optional ``title``.
-    :param server_client: HTTP client pointed at the agent-meow server.
-    :param conversation_id: The caller's session id — the forced parent.
+    :param server_client: HTTP client pointed at the Omnigent server.
+    :param conversation_id: The caller's session id �?the forced parent.
     :param agent_spec: The calling agent's spec, for os_env resolution.
     :param runner_workspace: The runner workspace, authoritative cwd.
     :returns: The parsed ``CreatedSessionResponse`` dict on success; a
@@ -2181,7 +2399,7 @@ async def _upload_config_bundle(
         return json.dumps({"error": "config_not_found", "config_path": config_path})
     try:
         bundle_bytes = await asyncio.to_thread(_bundle_local_agent_source, source)
-    except Exception as exc:  # noqa: BLE001 — disk/tar errors become a typed tool error.
+    except Exception as exc:  # noqa: BLE001 �?disk/tar errors become a typed tool error.
         return json.dumps({"error": f"sys_session_create failed to bundle config: {exc}"})
 
     metadata: dict[str, Any] = {"parent_session_id": conversation_id}
@@ -2228,11 +2446,11 @@ async def _session_create_from_config_path(
 
     :param config_path: Caller-supplied path to the agent config YAML,
         agent directory, or ``.tar.gz`` bundle, relative to the os_env
-        cwd, e.g. ``".agent_meow/agent-configs/helper.yaml"``.
+        cwd, e.g. ``".omnigent/agent-configs/helper.yaml"``.
     :param args: Parsed tool arguments; optional ``title`` /
         ``message``.
-    :param server_client: HTTP client pointed at the agent-meow server.
-    :param conversation_id: The caller's session id — the forced parent.
+    :param server_client: HTTP client pointed at the Omnigent server.
+    :param conversation_id: The caller's session id �?the forced parent.
     :param publish_event: SSE publish callback for ``session.created``.
     :param agent_spec: The calling agent's spec, for os_env resolution.
     :param runner_workspace: The runner workspace, authoritative cwd.
@@ -2253,7 +2471,7 @@ async def _session_create_from_config_path(
         return json.dumps({"error": "server did not return a child session id"})
     created_agent_id = data.get("agent_id")
     if not isinstance(created_agent_id, str) or not created_agent_id:
-        # CreatedSessionResponse.agent_id is a required field — a
+        # CreatedSessionResponse.agent_id is a required field �?a
         # missing value is a server contract violation, not a
         # recoverable state.
         return json.dumps(
@@ -2307,12 +2525,12 @@ async def _execute_web_fetch_tool(
     ``_execute_subagent_tool`` ultimately exercises via
     ``POST /v1/sessions``.
 
-    :param args: Parsed LLM arguments — ``query`` (required) and
+    :param args: Parsed LLM arguments �?``query`` (required) and
         optional ``url``.
-    :param server_client: httpx client pointed at the agent-meow server.
+    :param server_client: httpx client pointed at the Omnigent server.
     :param conversation_id: Parent session id,
         e.g. ``"conv_abc123"``.
-    :param agent_spec: Parent agent's spec — used by the inner
+    :param agent_spec: Parent agent's spec �?used by the inner
         ``_execute_subagent_tool`` to resolve the sub-agent.
     :param task_id: Calling task id; used to discriminate parallel
         ``web_fetch`` invocations from the same parent.
@@ -2396,11 +2614,11 @@ async def _execute_web_search_tool(
       ``web_search`` function call ever reached this path, ``invoke()`` raises
       (its built-in fence) and the third-party backend is never run. In normal
       operation OpenAI models never emit a ``web_search`` function call, so this
-      is defensive — but it keeps the promise rather than silently weakening it.
+      is defensive �?but it keeps the promise rather than silently weakening it.
     - **``databricks-*`` models** skip provider inference (they don't support
       ``web_search_preview``) and run in function-tool mode.
 
-    :param args: Parsed LLM arguments — ``query`` (required).
+    :param args: Parsed LLM arguments �?``query`` (required).
     :param agent_spec: Parent agent's spec; carries the web_search config + model.
     :param conversation_id: Parent session id, threaded into the context.
     :param task_id: Calling task id, threaded into the context.
@@ -2428,6 +2646,68 @@ async def _execute_web_search_tool(
     return await asyncio.to_thread(tool.invoke, json.dumps(args), ctx)
 
 
+def _hindsight_config_from_spec(agent_spec: Any | None, tool_name: str) -> dict[str, str]:
+    """
+    Return a Hindsight builtin's config dict from the parent spec.
+
+    Mirrors ``ToolManager._register_builtin_tools``: scans ``spec.tools.builtins``
+    for the entry named *tool_name* (e.g. ``"hindsight_recall"``) and returns its
+    ``config`` (api_key, bank_id, etc.). Empty dict when declared bare or absent.
+
+    :param agent_spec: Parent agent's spec, or ``None``.
+    :param tool_name: The Hindsight tool name to look up.
+    :returns: The builtin's config dict.
+    """
+    if agent_spec is None:
+        return {}
+    tools = getattr(agent_spec, "tools", None)
+    builtins = getattr(tools, "builtins", None) or []
+    for entry in builtins:
+        if getattr(entry, "name", None) == tool_name:
+            return getattr(entry, "config", None) or {}
+    return {}
+
+
+async def _execute_hindsight_tool(
+    args: dict[str, Any],
+    *,
+    tool_name: str,
+    agent_spec: Any | None,
+    conversation_id: str | None = None,
+    task_id: str | None = None,
+    agent_id: str | None = None,
+) -> str:
+    """
+    Dispatch a Hindsight memory tool call (retain / recall / reflect).
+
+    Builds the tool from the spec's builtin config and runs its synchronous
+    ``invoke`` off the event loop (it makes a blocking HTTP call to Hindsight).
+    The bank is resolved inside the tool from ``config.bank_id`` �?``ctx.agent_id``
+    �?``ctx.conversation_id``, so the real ``agent_id`` is threaded through here.
+
+    :param args: Parsed LLM arguments (``content`` for retain, ``query`` otherwise).
+    :param tool_name: The Hindsight tool name being dispatched.
+    :param agent_spec: Parent agent's spec; carries the Hindsight builtin config.
+    :param conversation_id: Parent session id, threaded into the context.
+    :param task_id: Calling task id, threaded into the context.
+    :param agent_id: Calling agent id �?the default memory bank.
+    :returns: The tool's string result, or an error string.
+    """
+    from agent_meow.tools.base import ToolContext
+    from agent_meow.tools.builtins import get_builtin_tool
+
+    config = _hindsight_config_from_spec(agent_spec, tool_name)
+    tool = get_builtin_tool(tool_name, config)
+    if tool is None:
+        return f"Hindsight tool {tool_name!r} is not available."
+    ctx = ToolContext(
+        task_id=task_id or tool_name,
+        agent_id=agent_id or tool_name,
+        conversation_id=conversation_id,
+    )
+    return await asyncio.to_thread(tool.invoke, json.dumps(args), ctx)
+
+
 def _has_subagent(
     sub_agent_name: str,
     agent_spec: Any | None,
@@ -2436,7 +2716,7 @@ def _has_subagent(
     Check whether a sub-agent name exists in the parent spec.
 
     Searches both ``sub_agents`` (AP-style spec) and ``tools``
-    dict (agent-meow inner loader) for a matching name.
+    dict (omnigent inner loader) for a matching name.
 
     :param sub_agent_name: Name of the sub-agent, e.g.
         ``"researcher"``.
@@ -2451,7 +2731,7 @@ def _has_subagent(
     for sa in sub_agents:
         if getattr(sa, "name", None) == sub_agent_name:
             return True
-    # agent-meow inner loader: tools dict with AgentTool entries
+    # Omnigent inner loader: tools dict with AgentTool entries
     tools = getattr(agent_spec, "tools", None)
     if isinstance(tools, dict) and sub_agent_name in tools:
         return True
@@ -2459,8 +2739,9 @@ def _has_subagent(
 
 
 # ── Timer dispatch (RUNNER_TIMER_DISPATCH.md) ─────────────────
-
-_MAX_TIMER_SECONDS = 1_000_000.0
+# Argument validation and the delay ceiling live in the timer builtin
+# (``validate_timer_set_args``) so this firing path and the LLM-facing
+# schema stay in lockstep.
 
 
 async def _execute_timer_set(
@@ -2481,20 +2762,10 @@ async def _execute_timer_set(
     """
     from agent_meow.runner import app as _app
 
-    seconds_raw = args.get("seconds")
-    if not isinstance(seconds_raw, (int, float)) or isinstance(seconds_raw, bool):
-        return json.dumps({"error": "seconds must be a number"})
-    seconds = float(seconds_raw)
-    if seconds < 0:
-        return json.dumps({"error": "seconds must be non-negative"})
-    if seconds > _MAX_TIMER_SECONDS:
-        return json.dumps({"error": f"seconds must be <= {_MAX_TIMER_SECONDS}"})
-    repeat = args.get("repeat", False)
-    if not isinstance(repeat, bool):
-        return json.dumps({"error": "repeat must be a boolean"})
-    note: str | None = args.get("note")
-    if note is not None and not isinstance(note, str):
-        return json.dumps({"error": "note must be a string"})
+    validated = validate_timer_set_args(args)
+    if isinstance(validated, str):
+        return json.dumps({"error": validated})
+    seconds, repeat, note = validated
     if server_client is None or conversation_id is None:
         return json.dumps({"error": "timer requires server_client and conversation_id"})
 
@@ -2550,7 +2821,7 @@ async def _timer_loop(
             if note:
                 text += f"\nnote: {note!r}"
             try:
-                await server_client.post(
+                resp = await server_client.post(
                     f"/v1/sessions/{conversation_id}/events",
                     json={
                         "type": "message",
@@ -2562,6 +2833,9 @@ async def _timer_loop(
                     },
                     timeout=30.0,
                 )
+                # httpx does not raise on 4xx/5xx by default; treat those
+                # as delivery failures so they share the warning path below.
+                resp.raise_for_status()
             except (httpx.HTTPError, asyncio.TimeoutError):
                 _logger.warning(
                     "Timer %s firing persist failed for %s",
@@ -2610,9 +2884,9 @@ async def _execute_comment_tool(
     """
     Runner-local handler for ``list_comments`` and ``update_comment``.
 
-    The runner is a separate subprocess from the agent-meow server and has no
+    The runner is a separate subprocess from the Omnigent server and has no
     in-process ``CommentStore``. This handler uses ``server_client`` to
-    call the agent-meow server's REST API (``GET/PATCH
+    call the Omnigent server's REST API (``GET/PATCH
     /v1/sessions/{id}/comments``), following the same pattern as the
     file tools.
 
@@ -2620,7 +2894,7 @@ async def _execute_comment_tool(
     :param arguments: JSON-encoded arguments string from the LLM.
     :param conversation_id: Current session id, e.g.
         ``"conv_abc123"``. Required for per-session comment scoping.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
         ``None`` if unavailable (returns an error string).
     :returns: Tool output JSON string.
     """
@@ -2680,6 +2954,66 @@ async def _execute_comment_tool(
         return json.dumps({"error": f"update_comment failed: {exc}"})
 
 
+async def _execute_browser_tool(
+    tool_name: str,
+    args: dict[str, Any],
+    *,
+    server_client: httpx.AsyncClient | None,
+    conversation_id: str | None,
+) -> str:
+    """
+    Runner-local handler for the ``browser_*`` embedded-browser tools.
+
+    Does the blocking round-trip that drives the Omnigent desktop app's
+    embedded browser: POST ``/v1/sessions/{conversation_id}/browser/
+    action_request`` with ``{action, args}`` (where ``action`` is the
+    tool name minus the ``browser_`` prefix) and return the server's JSON
+    response verbatim as the tool output. The server parks a Future,
+    publishes ``browser.action_request`` on the session stream, and
+    resolves the Future when the winning renderer POSTs the action
+    result �?so this POST stays open until the action completes or the
+    server's 30s browser-action await elapses.
+
+    Mirrors the ask-gate ``server_client.post`` pattern in
+    ``_execute_subagent_tool`` (with a much shorter read budget �?see
+    ``_BROWSER_ACTION_TIMEOUT``). On the runner-side read timeout
+    (should not fire before the server returns its own clean timeout JSON,
+    since read(60) > server await(30)), returns the same timeout-error JSON
+    so the LLM always sees a clean tool error rather than an exception.
+
+    :param tool_name: The browser tool name, e.g. ``"browser_navigate"``.
+    :param args: Parsed tool arguments from the LLM, e.g.
+        ``{"url": "https://example.com"}``.
+    :param server_client: HTTP client pointed at the Omnigent server.
+    :param conversation_id: Current session id, e.g. ``"conv_abc123"``.
+    :returns: The server action-result JSON string, or a timeout/error JSON.
+    """
+    if server_client is None:
+        return json.dumps({"error": f"{tool_name} requires server access"})
+    if conversation_id is None:
+        return json.dumps({"error": f"{tool_name} requires a session id"})
+
+    # Strip the ``browser_`` prefix so the wire ``action`` matches the
+    # frozen contract (navigate / snapshot / click / type / screenshot).
+    action = tool_name[len("browser_") :]
+    try:
+        resp = await server_client.post(
+            f"/v1/sessions/{conversation_id}/browser/action_request",
+            json={"action": action, "args": args},
+            timeout=_BROWSER_ACTION_TIMEOUT,
+        )
+    except httpx.ReadTimeout:
+        # The server should return its own clean timeout JSON well before this
+        # fires (read(60) > server await(30)); this is the belt-and-suspenders
+        # path if the server itself stalls.
+        return _BROWSER_TIMEOUT_ERROR
+    except httpx.HTTPError as exc:
+        return json.dumps({"error": f"{tool_name} failed: {type(exc).__name__}: {exc}"})
+    if resp.status_code >= 400:
+        return json.dumps({"error": f"{tool_name} returned {resp.status_code}: {resp.text[:200]}"})
+    return resp.text
+
+
 async def _execute_policy_tool(
     tool_name: str,
     arguments: str,
@@ -2694,15 +3028,15 @@ async def _execute_policy_tool(
     agent can browse available builtin policies before picking one.
 
     ``sys_add_policy`` proxies ``POST /v1/sessions/{id}/policies``.
-    Two modes: (1) CEL expression — ``expression`` + ``reason`` are
-    translated into the ``cel_policy`` builtin factory; (2) builtin —
+    Two modes: (1) CEL expression �?``expression`` + ``reason`` are
+    translated into the ``cel_policy`` builtin factory; (2) builtin �?
     ``handler`` + ``factory_params`` are forwarded as-is.
 
     :param tool_name: ``"sys_add_policy"`` or ``"sys_policy_registry"``.
     :param arguments: JSON-encoded arguments string from the LLM.
     :param conversation_id: Current session id, e.g.
         ``"conv_abc123"``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: Tool output JSON string.
     """
     if server_client is None:
@@ -2728,7 +3062,7 @@ async def _execute_list_policies(
     """
     Proxy ``GET /v1/policy-registry`` and return the list.
 
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: JSON string with the policy registry entries.
     """
     try:
@@ -2755,8 +3089,8 @@ async def _execute_add_policy(
 
     :param args: Parsed tool arguments from the LLM.
     :param conversation_id: Current session id.
-    :param server_client: HTTP client pointed at the agent-meow server.
-    :returns: JSON string — created policy or error.
+    :param server_client: HTTP client pointed at the Omnigent server.
+    :returns: JSON string �?created policy or error.
     """
     handler = args.get("handler")
     if not handler:
@@ -2799,6 +3133,100 @@ async def _execute_add_policy(
         )
     except Exception as exc:  # noqa: BLE001
         return json.dumps({"error": f"sys_add_policy failed: {exc}"})
+
+
+# Fields the create tool forwards to POST /v1/scheduled-tasks.
+_SCHEDULED_TASK_CREATE_FIELDS = (
+    "name",
+    "prompt",
+    "rrule",
+    "agent_id",
+    "timezone",
+    "model_override",
+    "reasoning_effort",
+    "workspace",
+    "host_id",
+)
+# Fields the update tool forwards to PATCH /v1/scheduled-tasks/{id}.
+_SCHEDULED_TASK_UPDATE_FIELDS = (
+    "name",
+    "prompt",
+    "rrule",
+    "timezone",
+    "model_override",
+    "reasoning_effort",
+    "workspace",
+    "host_id",
+    "state",
+)
+_SCHEDULED_TASK_ID_RE = re.compile(r"^[0-9a-fA-F]{32}$")
+
+
+def _scheduled_task_url(task_id: object) -> str | None:
+    """Return a safe scheduled-task URL path for a canonical id."""
+    if not isinstance(task_id, str) or not _SCHEDULED_TASK_ID_RE.fullmatch(task_id):
+        return None
+    return f"/v1/scheduled-tasks/{task_id.lower()}"
+
+
+async def _execute_scheduled_task_tool(
+    tool_name: str,
+    arguments: str,
+    *,
+    server_client: httpx.AsyncClient | None,
+) -> str:
+    """
+    Runner-local handler for the ``sys_scheduled_task_*`` family.
+
+    The runner has no in-process ScheduledTaskStore, so these tools proxy the
+    Omnigent server's ``/v1/scheduled-tasks`` REST endpoints over
+    ``server_client`` �?same posture as :func:`_execute_policy_tool` /
+    :func:`_execute_session_query_tool`. Ownership + RRULE validation are
+    enforced server-side.
+
+    :param tool_name: One of the ``sys_scheduled_task_*`` names.
+    :param arguments: JSON-encoded arguments string from the LLM.
+    :param server_client: HTTP client pointed at the Omnigent server; ``None``
+        returns an error string.
+    :returns: Tool output JSON string.
+    """
+    if server_client is None:
+        return json.dumps({"error": f"{tool_name} requires server access"})
+    try:
+        args: dict[str, Any] = json.loads(arguments) if arguments.strip() else {}
+    except json.JSONDecodeError:
+        return json.dumps({"error": f"{tool_name}: malformed JSON arguments"})
+
+    try:
+        if tool_name == "sys_scheduled_task_list":
+            resp = await server_client.get("/v1/scheduled-tasks", timeout=30.0)
+        elif tool_name == "sys_scheduled_task_create":
+            payload = {k: args[k] for k in _SCHEDULED_TASK_CREATE_FIELDS if k in args}
+            resp = await server_client.post("/v1/scheduled-tasks", json=payload, timeout=30.0)
+        elif tool_name in ("sys_scheduled_task_update", "sys_scheduled_task_delete"):
+            task_id = args.get("scheduled_task_id")
+            if not task_id:
+                return json.dumps({"error": f"{tool_name} requires 'scheduled_task_id'"})
+            task_url = _scheduled_task_url(task_id)
+            if task_url is None:
+                return json.dumps(
+                    {"error": f"{tool_name} requires canonical 32-character hex scheduled_task_id"}
+                )
+            if tool_name == "sys_scheduled_task_delete":
+                resp = await server_client.delete(task_url, timeout=30.0)
+            else:
+                payload = {k: args[k] for k in _SCHEDULED_TASK_UPDATE_FIELDS if k in args}
+                resp = await server_client.patch(task_url, json=payload, timeout=30.0)
+        else:  # pragma: no cover �?routing guarantees a known name
+            return json.dumps({"error": f"unknown scheduled-task tool {tool_name!r}"})
+    except Exception as exc:  # noqa: BLE001
+        return json.dumps({"error": f"{tool_name} failed: {exc}"})
+
+    if resp.status_code >= 400:
+        return json.dumps(
+            {"error": f"server returned {resp.status_code}", "details": resp.text[:500]}
+        )
+    return json.dumps(resp.json())
 
 
 @dataclass
@@ -2863,7 +3291,7 @@ def _text_from_api_content(content: Any) -> str:
     """
     Join the text blocks of an API message ``content`` array.
 
-    :param content: The ``content`` field of an API message item — a
+    :param content: The ``content`` field of an API message item �?a
         list of blocks like ``{"type": "output_text", "text": "..."}``.
     :returns: The concatenated text, or ``""`` when there is none.
     """
@@ -2881,14 +3309,14 @@ def _project_api_item(item: dict[str, Any]) -> dict[str, str | None]:
     """
     Project a REST API conversation item into the compact peek shape.
 
-    Mirrors :func:`~?agent_meow.tools.builtins.spawn._project_activity_item`
+    Mirrors :func:`agent_meow.tools.builtins.spawn._project_activity_item`
     but reads the API item JSON returned by
     ``GET /v1/sessions/{id}/items`` (``ConversationItem.to_api_dict()``)
     rather than the in-process entity, so the harness peek result reads
     the same as the in-process tool's.
 
     :param item: One API item dict from the items endpoint.
-    :returns: A compact dict — ``{type, tool, args}`` for tool calls,
+    :returns: A compact dict �?``{type, tool, args}`` for tool calls,
         ``{type, output}`` for tool results, ``{type, role, text}`` for
         messages.
     """
@@ -2924,25 +3352,25 @@ async def _execute_session_query_tool(
     Runner-local handler for ``sys_session_get_history`` / ``sys_session_list`` /
     ``sys_session_close``.
 
-    The runner is a separate subprocess from the agent-meow server and has no
+    The runner is a separate subprocess from the Omnigent server and has no
     in-process ``ConversationStore`` (same constraint as
     :func:`_execute_comment_tool`). These tools therefore dispatch to the
-    agent-meow server's existing REST endpoints over ``server_client``:
+    Omnigent server's existing REST endpoints over ``server_client``:
 
-    - ``sys_session_list`` → ``GET /v1/sessions/{caller}/child_sessions``
-    - ``sys_session_get_history`` → ``GET /v1/sessions/{target}/items``
-    - ``sys_session_get_info`` → ``GET /v1/sessions/{target}`` (plus a
+    - ``sys_session_list`` �?``GET /v1/sessions/{caller}/child_sessions``
+    - ``sys_session_get_history`` �?``GET /v1/sessions/{target}/items``
+    - ``sys_session_get_info`` �?``GET /v1/sessions/{target}`` (plus a
       best-effort ``GET /v1/runners/{id}/status`` for connectivity)
-    - ``sys_session_close`` → ``GET`` the target snapshot then ``PATCH
+    - ``sys_session_close`` �?``GET`` the target snapshot then ``PATCH
       /v1/sessions/{target}`` with a tombstoned title
-    - ``sys_session_share`` → ``PUT /v1/sessions/{target}/permissions``
+    - ``sys_session_share`` �?``PUT /v1/sessions/{target}/permissions``
       with the grantee + numeric level
 
     Output shapes mirror the in-process tools in
-    :mod:`~?agent_meow.tools.builtins.spawn` so the LLM sees identical
+    :mod:`agent_meow.tools.builtins.spawn` so the LLM sees identical
     results regardless of executor. No new identity handling is
     introduced: access control is whatever the server already enforces
-    on those endpoints for ``server_client`` — the same posture as
+    on those endpoints for ``server_client`` �?the same posture as
     :func:`_execute_subagent_tool`.
 
     :param tool_name: ``"sys_session_get_history"``, ``"sys_session_list"``,
@@ -2952,12 +3380,12 @@ async def _execute_session_query_tool(
         ``'{"conversation_id": "conv_abc123", "tail_items": 5}'``.
     :param conversation_id: The calling session id, e.g. ``"conv_root1"``;
         used as the parent for ``sys_session_list``.
-    :param server_client: HTTP client pointed at the agent-meow server; ``None``
+    :param server_client: HTTP client pointed at the Omnigent server; ``None``
         if unavailable (returns an error string).
     :param agent_spec: The session's :class:`AgentSpec`. Used only by
         ``sys_session_share`` to read the spec's
         ``agent_session_sharing:`` policy (the server can't see it, so
-        the runner is the gate). ``None`` when no spec is available —
+        the runner is the gate). ``None`` when no spec is available �?
         sharing then fails closed.
     :returns: Tool output JSON string matching the in-process tool shape.
     """
@@ -2993,7 +3421,7 @@ async def _runner_online_or_none(
     unknown" rather than erroring on a transient runner-status hiccup.
 
     :param runner_id: The session's bound runner id, or ``None``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: ``True``/``False`` from the status endpoint, or ``None``
         when unbound or the lookup is inconclusive.
     """
@@ -3019,14 +3447,14 @@ async def _session_get_info_via_rest(
 
     Resolves the target from ``args["session_id"]`` (falling back to the
     caller's own ``conversation_id`` when omitted), fetches the session
-    snapshot, and projects the metadata fields — status, title, agent
+    snapshot, and projects the metadata fields �?status, title, agent
     binding, runner binding, host, reasoning effort, effective model,
     parent linkage, workspace / git branch, and the outstanding approval
     prompts (the prompts themselves plus a count). Runner connectivity
     is resolved best-effort via
     ``GET /v1/runners/{id}/status`` (``runner_online`` is ``None`` when
     the lookup fails or no runner is bound). The full transcript is
-    intentionally omitted — that is what ``sys_session_get_history`` returns.
+    intentionally omitted �?that is what ``sys_session_get_history`` returns.
 
     Maps a 404 to ``session_not_found`` and 401/403 to ``access_denied``
     (the server denied the read, so from the caller's vantage the target
@@ -3035,7 +3463,7 @@ async def _session_get_info_via_rest(
     :param args: Parsed tool arguments; optional ``session_id``.
     :param conversation_id: The caller's own session id, used as the
         default target when ``session_id`` is omitted.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: JSON metadata object, or a JSON error object.
     """
     raw_target = args.get("session_id") or conversation_id
@@ -3080,7 +3508,7 @@ async def _session_get_info_via_rest(
             "git_branch": snap.get("git_branch"),
             # The outstanding approval prompts themselves (original
             # elicitation-request event dicts), plus a count for quick
-            # status checks. Surfacing the prompts — not just a tally —
+            # status checks. Surfacing the prompts �?not just a tally �?
             # lets the orchestrator see what each blocked session is
             # waiting on.
             "pending_elicitations": pending,
@@ -3091,11 +3519,11 @@ async def _session_get_info_via_rest(
 
 def _omnigent_error_message(resp: httpx.Response) -> str | None:
     """
-    Extract the human-readable message from an agent-meow error response.
+    Extract the human-readable message from an Omnigent error response.
 
-    The server renders :class:`~?agent_meow.errors.OmnigentError` as
+    The server renders :class:`agent_meow.errors.OmnigentError` as
     ``{"error": {"code": ..., "message": ...}}`` (see the exception
-    handler in ``agent_meow/server/app.py``). Return that ``message`` so a
+    handler in ``omnigent/server/app.py``). Return that ``message`` so a
     tool can surface the server's own explanation rather than a bare
     status code; return ``None`` when the body is not that envelope (a
     non-JSON body, or a differently-shaped payload) so the caller can
@@ -3108,7 +3536,7 @@ def _omnigent_error_message(resp: httpx.Response) -> str | None:
     try:
         body = resp.json()
     except ValueError:
-        # Non-JSON error body (e.g. an HTML proxy page) — no detail to surface.
+        # Non-JSON error body (e.g. an HTML proxy page) �?no detail to surface.
         return None
     if isinstance(body, dict):
         err = body.get("error")
@@ -3140,7 +3568,7 @@ async def _session_share_via_rest(
     runner, because the server cannot see it: an ``agent_session_sharing:
     none`` (or unknown) spec refuses every grant, and an
     ``agent_session_sharing: non-public`` spec refuses ``__public__``.
-    This is the real gate — tool *advertisement* is gated in the
+    This is the real gate �?tool *advertisement* is gated in the
     ToolManager, but an unadvertised-yet-named call must still be denied
     so a prompt-injected agent can't escalate by emitting the tool name.
 
@@ -3154,10 +3582,10 @@ async def _session_share_via_rest(
         default / ``"edit"`` / ``"manage"``) and ``session_id``.
     :param conversation_id: The caller's own session id, used as the
         default target when ``session_id`` is omitted.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :param agent_spec: The session's :class:`AgentSpec`; its
         ``agent_session_sharing`` policy gates this call. ``None`` (or
-        ``agent_session_sharing: none``) fails closed — no grant is
+        ``agent_session_sharing: none``) fails closed �?no grant is
         attempted.
     :returns: JSON ``{"shared": true, ...}`` on success, or a JSON
         error object.
@@ -3215,7 +3643,7 @@ async def _session_share_via_rest(
     if resp.status_code in (401, 403):
         return json.dumps({"error": "access_denied", "session_id": target})
     if resp.status_code >= 400:
-        # Surface the server's own message when present — e.g. the 400
+        # Surface the server's own message when present �?e.g. the 400
         # rejecting a __public__ grant above read level carries "Public
         # access is limited to read-only (level 1)", which is far more
         # actionable for the agent than a bare status code.
@@ -3228,1661 +3656,6 @@ async def _session_share_via_rest(
     return json.dumps(
         {"shared": True, "session_id": target, "user_id": user_id, "level": level_name}
     )
-
-
-# ── agent-meow Docs surface dispatch ─────────────────────────────────────────
-
-
-async def _execute_doc_tool(
-    tool_name: str,
-    args: dict[str, Any],
-    arguments: str,
-    *,
-    conversation_id: str | None,
-    server_client: httpx.AsyncClient | None,
-) -> str:
-    """
-    Runner-local handler for the ``doc_*`` tools (agent-meow Docs surface).
-
-    The runner has no in-process ``DocumentStore``, so these proxy the
-    agent-meow server's REST endpoints over ``server_client``:
-
-    - ``doc_create`` → ``POST /v1/sessions/{id}/resources/documents``
-    - ``doc_get`` → ``GET /v1/sessions/{id}/resources/documents/{doc_id}``
-    - ``doc_list`` → ``GET /v1/sessions/{id}/resources/documents``
-    - ``doc_update`` → ``PATCH /v1/sessions/{id}/resources/documents/{doc_id}``
-    - ``doc_generate`` → generates markdown from topic/outline by calling
-      the agent's own LLM loop is out of scope for the runner dispatch
-      (that requires re-entering the workflow). Instead, v1 persists a
-      structured placeholder document with the topic/outline as content
-      so the agent can iterate on it via ``doc_update``. A future version
-      can route ``doc_generate`` back into the workflow loop.
-
-    :param tool_name: One of the ``doc_*`` tool names.
-    :param args: Parsed tool arguments.
-    :param arguments: Raw JSON arguments string (unused; args is authoritative).
-    :param conversation_id: Current session id.
-    :param server_client: HTTP client pointed at the agent-meow server.
-    :returns: Tool output JSON string.
-    """
-    if server_client is None:
-        return json.dumps({"error": f"{tool_name} requires server access"})
-    if conversation_id is None:
-        return json.dumps({"error": f"{tool_name} requires a session id"})
-
-    base = f"/v1/sessions/{conversation_id}/resources/documents"
-
-    if tool_name == "doc_list":
-        try:
-            resp = await server_client.get(base, timeout=30.0)
-            if resp.status_code != 200:
-                return json.dumps({"error": f"doc_list returned {resp.status_code}"})
-            body = resp.json()
-            return json.dumps({"documents": body.get("data", [])})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_list failed: {exc}"})
-
-    if tool_name == "doc_create":
-        title = args.get("title") or "Untitled"
-        payload: dict[str, Any] = {
-            "title": title,
-            "format": args.get("format") or "markdown",
-            "content_md": args.get("content_md") or "",
-        }
-        if args.get("content_json") is not None:
-            payload["content_json"] = args["content_json"]
-        try:
-            resp = await server_client.post(base, json=payload, timeout=30.0)
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"doc_create returned {resp.status_code}"})
-            return json.dumps({"document": resp.json()})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_create failed: {exc}"})
-
-    if tool_name == "doc_generate":
-        # v1: persist a structured placeholder with the topic + outline so
-        # the agent can iterate via doc_update. The topic becomes the
-        # title; the outline + instructions become the initial content.
-        topic = args.get("topic") or "Untitled"
-        outline = args.get("outline") or ""
-        instructions = args.get("instructions") or ""
-        content_parts = [f"# {topic}\n"]
-        if outline:
-            content_parts.append(f"## Outline\n\n{outline}\n")
-        if instructions:
-            content_parts.append(f"## Instructions\n\n{instructions}\n")
-        content_parts.append(
-            "\n> This document was generated by `doc_generate`. The body is "
-            "a placeholder — use `doc_update` to fill in the full content.\n"
-        )
-        gen_payload = {
-            "title": topic,
-            "format": "markdown",
-            "content_md": "\n".join(content_parts),
-        }
-        try:
-            resp = await server_client.post(base, json=gen_payload, timeout=30.0)
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"doc_generate returned {resp.status_code}"})
-            return json.dumps({"document": resp.json(), "generated": False, "placeholder": True})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_generate failed: {exc}"})
-
-    # doc_get / doc_update require document_id
-    document_id = args.get("document_id")
-    if not isinstance(document_id, str) or not document_id:
-        return json.dumps({"error": f"{tool_name} requires a non-empty 'document_id'"})
-
-    if tool_name == "doc_get":
-        try:
-            resp = await server_client.get(f"{base}/{document_id}", timeout=30.0)
-            if resp.status_code == 404:
-                return json.dumps({"error": f"document not found: {document_id}"})
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"doc_get returned {resp.status_code}"})
-            return json.dumps({"document": resp.json()})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_get failed: {exc}"})
-
-    if tool_name == "doc_update":
-        update_payload: dict[str, Any] = {}
-        if args.get("title") is not None:
-            update_payload["title"] = args["title"]
-        if args.get("content_md") is not None:
-            update_payload["content_md"] = args["content_md"]
-        if args.get("content_json") is not None:
-            update_payload["content_json"] = args["content_json"]
-        if not update_payload:
-            return json.dumps({"error": "doc_update requires at least one of title/content_md/content_json"})
-        try:
-            resp = await server_client.patch(
-                f"{base}/{document_id}", json=update_payload, timeout=30.0
-            )
-            if resp.status_code == 404:
-                return json.dumps({"error": f"document not found: {document_id}"})
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"doc_update returned {resp.status_code}"})
-            return json.dumps({"document": resp.json()})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_update failed: {exc}"})
-
-    # ── officecli-backed Office document operations ──────────────────────────
-    if tool_name in ("doc_create_office", "doc_edit_office", "doc_export"):
-        return await _execute_office_cli_tool(
-            tool_name,
-            args,
-            base=base,
-            server_client=server_client,
-            runner_workspace=None,
-        )
-
-    if tool_name == "doc_convert":
-        return await _execute_doc_convert_tool(
-            args,
-            base=base,
-            server_client=server_client,
-        )
-
-    return json.dumps({"error": f"unknown doc tool: {tool_name}"})
-
-
-async def _resolve_officecli() -> str | None:
-    """Resolve the officecli binary path, or None if not installed."""
-    import os
-    import shutil
-
-    return os.environ.get("OFFICECLI_BIN") or shutil.which("officecli")
-
-
-async def _execute_office_cli_tool(
-    tool_name: str,
-    args: dict[str, Any],
-    *,
-    base: str,
-    server_client: httpx.AsyncClient | None,
-    runner_workspace: Path | None,
-) -> str:
-    """Handle doc_create_office / doc_edit_office / doc_export via officecli shell-out."""
-    import asyncio
-    import tempfile
-    import os
-
-    if server_client is None:
-        return json.dumps({"error": f"{tool_name} requires server access"})
-
-    officecli = await _resolve_officecli()
-    if officecli is None:
-        return json.dumps({
-            "error": (
-                "officecli binary not found. Install OfficeCLI from "
-                "https://github.com/iOfficeAI/OfficeCLI or set OFFICECLI_BIN "
-                "to the binary path."
-            ),
-        })
-
-    title = args.get("title") or "Untitled"
-
-    if tool_name == "doc_create_office":
-        fmt = args.get("format")
-        if fmt not in ("docx", "xlsx", "pptx"):
-            return json.dumps({"error": f"doc_create_office: invalid format '{fmt}' (expected docx|xlsx|pptx)"})
-        ext = f".{fmt}"
-        content_md = args.get("content_md") or ""
-
-        try:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                filename = title.replace(" ", "_") + ext
-                filepath = os.path.join(tmpdir, filename)
-                cmd = [officecli, "create", filepath]
-                proc = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60.0)
-                if proc.returncode != 0:
-                    err = stderr.decode(errors="replace").strip()[:500]
-                    return json.dumps({"error": f"officecli create failed (exit {proc.returncode}): {err}"})
-
-                # Seed content if provided
-                if content_md:
-                    lines = [ln for ln in content_md.split("\n") if ln.strip()]
-                    for i, line in enumerate(lines):
-                        if fmt == "pptx":
-                            if i == 0:
-                                add_cmd = [officecli, "add", filepath, "/", "--type", "slide", "--prop", f"title={line}"]
-                            else:
-                                add_cmd = [officecli, "add", filepath, "/", "--type", "slide", "--prop", f"title={line}"]
-                        else:
-                            add_cmd = [officecli, "add", filepath, "/body", "--type", "paragraph", "--prop", f"text={line}"]
-                        proc2 = await asyncio.create_subprocess_exec(
-                            *add_cmd,
-                            stdout=asyncio.subprocess.PIPE,
-                            stderr=asyncio.subprocess.PIPE,
-                        )
-                        await asyncio.wait_for(proc2.communicate(), timeout=30.0)
-
-                # Upload the generated file as a document resource
-                data = open(filepath, "rb").read()
-                files = {"file": (filename, data)}
-                resp = await server_client.post(base, files=files, timeout=60.0)
-                if resp.status_code >= 400:
-                    return json.dumps({"error": f"doc_create_office upload returned {resp.status_code}"})
-                return json.dumps({"document": resp.json(), "format": fmt})
-        except FileNotFoundError:
-            return json.dumps({"error": "officecli binary not found (FileNotFoundError)"})
-        except asyncio.TimeoutError:
-            return json.dumps({"error": "officecli create timed out"})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_create_office failed: {exc}"})
-
-    if tool_name == "doc_edit_office":
-        document_id = args.get("document_id")
-        if not isinstance(document_id, str) or not document_id:
-            return json.dumps({"error": "doc_edit_office requires a non-empty 'document_id'"})
-        command = args.get("command")
-        if command not in ("add", "set", "move", "remove", "query"):
-            return json.dumps({"error": f"doc_edit_office: invalid command '{command}'"})
-        path = args.get("path")
-        if not isinstance(path, str) or not path:
-            return json.dumps({"error": "doc_edit_office requires a non-empty 'path'"})
-
-        # Fetch the document metadata to find the original filename
-        try:
-            resp = await server_client.get(f"{base}/{document_id}", timeout=30.0)
-            if resp.status_code == 404:
-                return json.dumps({"error": f"document not found: {document_id}"})
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"doc_edit_office: doc fetch returned {resp.status_code}"})
-            doc = resp.json()
-            doc_title = doc.get("title") or "untitled"
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_edit_office: failed to fetch document: {exc}"})
-
-        # The doc resource is markdown/office — we need the original file.
-        # Download the binary if available; this surface stores the uploaded
-        # file. For v1, we operate on a temp copy created from the stored
-        # binary and re-upload.
-        try:
-            bin_resp = await server_client.get(f"{base}/{document_id}/file", timeout=60.0)
-            if bin_resp.status_code >= 400:
-                return json.dumps({"error": f"doc_edit_office: file fetch returned {bin_resp.status_code}"})
-            file_bytes = bin_resp.content
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_edit_office: failed to download file: {exc}"})
-
-        # Determine extension from the document title
-        _, ext = os.path.splitext(doc_title)
-        if ext not in (".docx", ".xlsx", ".pptx"):
-            return json.dumps({"error": f"doc_edit_office: document '{doc_title}' is not an Office file (expected .docx/.xlsx/.pptx)"})
-
-        try:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                filepath = os.path.join(tmpdir, doc_title)
-                with open(filepath, "wb") as f:
-                    f.write(file_bytes)
-
-                cmd = [officecli, command, filepath, path]
-                elem_type = args.get("type")
-                if isinstance(elem_type, str) and elem_type:
-                    cmd.extend(["--type", elem_type])
-                props = args.get("props")
-                if isinstance(props, dict):
-                    for k, v in props.items():
-                        cmd.extend(["--prop", f"{k}={v}"])
-                if command == "query":
-                    cmd.extend(["--json"])
-
-                proc = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60.0)
-                if proc.returncode != 0:
-                    err = stderr.decode(errors="replace").strip()[:500]
-                    return json.dumps({"error": f"officecli {command} failed (exit {proc.returncode}): {err}"})
-
-                output = stdout.decode(errors="replace").strip()
-                if command == "query":
-                    # Return the query result as JSON text
-                    try:
-                        result = json.loads(output)
-                        return json.dumps({"result": result})
-                    except json.JSONDecodeError:
-                        return json.dumps({"result": output})
-
-                # For add/set/move/remove, re-upload the modified file
-                data = open(filepath, "rb").read()
-                files = {"file": (doc_title, data)}
-                resp = await server_client.patch(f"{base}/{document_id}", files=files, timeout=60.0)
-                if resp.status_code >= 400:
-                    return json.dumps({"error": f"doc_edit_office re-upload returned {resp.status_code}"})
-                return json.dumps({"document": resp.json(), "command": command, "path": path})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_edit_office failed: {exc}"})
-
-    if tool_name == "doc_export":
-        document_id = args.get("document_id")
-        if not isinstance(document_id, str) or not document_id:
-            return json.dumps({"error": "doc_export requires a non-empty 'document_id'"})
-        mode = args.get("mode")
-        if mode not in ("html", "png", "pdf"):
-            return json.dumps({"error": f"doc_export: invalid mode '{mode}' (expected html|png|pdf)"})
-
-        # Fetch the document file
-        try:
-            meta_resp = await server_client.get(f"{base}/{document_id}", timeout=30.0)
-            if meta_resp.status_code == 404:
-                return json.dumps({"error": f"document not found: {document_id}"})
-            doc_title = meta_resp.json().get("title", "untitled")
-            bin_resp = await server_client.get(f"{base}/{document_id}/file", timeout=60.0)
-            if bin_resp.status_code >= 400:
-                return json.dumps({"error": f"doc_export: file fetch returned {bin_resp.status_code}"})
-            file_bytes = bin_resp.content
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_export: failed to fetch document: {exc}"})
-
-        _, ext = os.path.splitext(doc_title)
-        if ext not in (".docx", ".xlsx", ".pptx"):
-            return json.dumps({"error": f"doc_export: document '{doc_title}' is not an Office file"})
-
-        view_mode = "html" if mode == "html" else ("screenshot" if mode == "png" else "pdf")
-        out_ext = ".html" if mode == "html" else (".png" if mode == "png" else ".pdf")
-
-        try:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                src_path = os.path.join(tmpdir, doc_title)
-                with open(src_path, "wb") as f:
-                    f.write(file_bytes)
-                out_path = os.path.join(tmpdir, "export" + out_ext)
-                cmd = [officecli, "view", src_path, view_mode, "-o", out_path]
-                page = args.get("page")
-                if isinstance(page, int):
-                    cmd.extend(["--page", str(page)])
-
-                proc = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120.0)
-                if proc.returncode != 0:
-                    err = stderr.decode(errors="replace").strip()[:500]
-                    return json.dumps({"error": f"officecli view failed (exit {proc.returncode}): {err}"})
-                if not os.path.isfile(out_path):
-                    return json.dumps({"error": "officecli view produced no output file"})
-
-                # Upload the rendered output as an image/artifact resource
-                data = open(out_path, "rb").read()
-                export_name = f"{os.path.splitext(doc_title)[0]}{out_ext}"
-                files = {"file": (export_name, data)}
-                resp = await server_client.post(
-                    f"/v1/sessions/{args.get('session_id', '')}/resources/images",
-                    files=files,
-                    timeout=60.0,
-                )
-                if resp.status_code >= 400:
-                    return json.dumps({"error": f"doc_export upload returned {resp.status_code}"})
-                return json.dumps({"artifact": resp.json(), "mode": mode, "filename": export_name})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"doc_export failed: {exc}"})
-
-    return json.dumps({"error": f"unknown office tool: {tool_name}"})
-
-
-async def _execute_doc_convert_tool(
-    args: dict[str, Any],
-    *,
-    base: str,
-    server_client: httpx.AsyncClient | None,
-) -> str:
-    """Handle doc_convert via markitdown CLI shell-out."""
-    import asyncio
-    import os
-    import shutil
-
-    if server_client is None:
-        return json.dumps({"error": "doc_convert requires server access"})
-
-    source = args.get("source")
-    if not isinstance(source, str) or not source:
-        return json.dumps({"error": "doc_convert requires a non-empty 'source' (file path or URL)"})
-
-    markitdown_bin = os.environ.get("MARKITDOWN_BIN") or shutil.which("markitdown")
-    if markitdown_bin is None:
-        return json.dumps({
-            "error": (
-                "markitdown binary not found. Install MarkItDown via "
-                "'pip install markitdown[all]' or set MARKITDOWN_BIN to the "
-                "binary path."
-            ),
-        })
-
-    title = args.get("title") or os.path.basename(source) or "converted"
-    persist = args.get("persist")
-    if persist is None:
-        persist = True
-
-    try:
-        cmd = [markitdown_bin, source]
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=180.0)
-        if proc.returncode != 0:
-            err = stderr.decode(errors="replace").strip()[:500]
-            return json.dumps({"error": f"markitdown failed (exit {proc.returncode}): {err}"})
-
-        markdown_text = stdout.decode(errors="replace").strip()
-        if not markdown_text:
-            return json.dumps({"error": "markitdown produced empty output"})
-
-        if not persist:
-            return json.dumps({"markdown": markdown_text, "title": title, "source": source})
-
-        # Persist as a new document resource
-        payload = {
-            "title": title,
-            "format": "markdown",
-            "content_md": markdown_text,
-        }
-        resp = await server_client.post(base, json=payload, timeout=30.0)
-        if resp.status_code >= 400:
-            return json.dumps({"error": f"doc_convert persist returned {resp.status_code}"})
-        return json.dumps({"document": resp.json(), "markdown": markdown_text, "source": source})
-    except FileNotFoundError:
-        return json.dumps({"error": "markitdown binary not found (FileNotFoundError)"})
-    except asyncio.TimeoutError:
-        return json.dumps({"error": "markitdown conversion timed out (180s)"})
-    except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": f"doc_convert failed: {exc}"})
-
-
-# ── agent-meow Images surface dispatch ───────────────────────────────────────
-
-
-async def _execute_image_tool(
-    tool_name: str,
-    args: dict[str, Any],
-    *,
-    conversation_id: str | None,
-    server_client: httpx.AsyncClient | None,
-    runner_workspace: Path | None,
-) -> str:
-    """
-    Runner-local handler for the ``image_*`` tools (agent-meow Images surface).
-
-    The runner has no in-process ``ImageStore`` / ``ArtifactStore``, so
-    these proxy the agent-meow server's REST endpoints over
-    ``server_client``:
-
-    - ``image_list`` → ``GET /v1/sessions/{id}/resources/images``
-    - ``image_get`` → metadata via the list endpoint (the per-id GET
-      returns binary, so we filter the list)
-    - ``image_upload`` → reads a local file and ``POST``s it as multipart
-    - ``image_edit`` → ``PATCH .../images/{id}/edit`` with Fabric.js JSON
-    - ``image_generate`` → v1 stub (returns a not-yet-wired message)
-
-    :param tool_name: One of the ``image_*`` tool names.
-    :param args: Parsed tool arguments.
-    :param conversation_id: Current session id.
-    :param server_client: HTTP client pointed at the agent-meow server.
-    :param runner_workspace: The runner's workspace dir, for resolving
-        ``image_upload`` local file paths.
-    :returns: Tool output JSON string.
-    """
-    if server_client is None:
-        return json.dumps({"error": f"{tool_name} requires server access"})
-    if conversation_id is None:
-        return json.dumps({"error": f"{tool_name} requires a session id"})
-
-    base = f"/v1/sessions/{conversation_id}/resources/images"
-
-    if tool_name == "image_list":
-        try:
-            resp = await server_client.get(base, timeout=30.0)
-            if resp.status_code != 200:
-                return json.dumps({"error": f"image_list returned {resp.status_code}"})
-            body = resp.json()
-            return json.dumps({"images": body.get("data", [])})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"image_list failed: {exc}"})
-
-    if tool_name == "image_get":
-        image_id = args.get("image_id")
-        if not isinstance(image_id, str) or not image_id:
-            return json.dumps({"error": "image_get requires a non-empty 'image_id'"})
-        # The per-id GET returns binary; fetch the list and filter for metadata.
-        try:
-            resp = await server_client.get(base, timeout=30.0)
-            if resp.status_code != 200:
-                return json.dumps({"error": f"image_get returned {resp.status_code}"})
-            rows = resp.json().get("data", [])
-            match = next((r for r in rows if r.get("id") == image_id), None)
-            if match is None:
-                return json.dumps({"error": f"image not found: {image_id}"})
-            return json.dumps({"image": match})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"image_get failed: {exc}"})
-
-    if tool_name == "image_upload":
-        path_str = args.get("path")
-        if not isinstance(path_str, str) or not path_str:
-            return json.dumps({"error": "image_upload requires a non-empty 'path'"})
-        # Resolve the path against the runner workspace if not absolute.
-        from pathlib import Path as _Path
-
-        file_path = _Path(path_str)
-        if not file_path.is_absolute() and runner_workspace is not None:
-            file_path = runner_workspace / file_path
-        if not file_path.is_file():
-            return json.dumps({"error": f"image_upload: file not found: {file_path}"})
-        filename = args.get("filename") or file_path.name
-        try:
-            data = file_path.read_bytes()
-            files = {"file": (filename, data)}
-            resp = await server_client.post(base, files=files, timeout=60.0)
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"image_upload returned {resp.status_code}"})
-            return json.dumps({"image": resp.json()})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"image_upload failed: {exc}"})
-
-    if tool_name == "image_edit":
-        image_id = args.get("image_id")
-        if not isinstance(image_id, str) or not image_id:
-            return json.dumps({"error": "image_edit requires a non-empty 'image_id'"})
-        edit_json = args.get("edit_json")
-        if not isinstance(edit_json, str) or not edit_json:
-            return json.dumps({"error": "image_edit requires a non-empty 'edit_json' string"})
-        try:
-            resp = await server_client.patch(
-                f"{base}/{image_id}/edit",
-                json={"edit_json": edit_json},
-                timeout=30.0,
-            )
-            if resp.status_code == 404:
-                return json.dumps({"error": f"image not found: {image_id}"})
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"image_edit returned {resp.status_code}"})
-            return json.dumps({"image": resp.json()})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"image_edit failed: {exc}"})
-
-    if tool_name == "image_generate":
-        return await _execute_image_generate(args, base=base, server_client=server_client)
-
-    if tool_name == "image_remove_bg":
-        return await _execute_image_remove_bg(args, base=base, server_client=server_client)
-
-    if tool_name == "image_edit_ai":
-        return await _execute_image_edit_ai(args, base=base, server_client=server_client)
-
-    return json.dumps({"error": f"unknown image tool: {tool_name}"})
-
-
-# ── agent-meow Image generation/editing helpers ──────────────────────────────
-
-
-def _resolve_image_provider() -> str | None:
-    """Resolve the image-generation provider from env vars.
-
-    Returns one of: 'comfyui', 'hosted', 'a1111', or None.
-    Explicit ``IMAGE_GEN_PROVIDER`` wins; else auto-detect from which env
-    vars are set.
-    """
-    import os
-
-    explicit = os.environ.get("IMAGE_GEN_PROVIDER", "").strip().lower()
-    if explicit in ("comfyui", "hosted", "a1111"):
-        return explicit
-    if os.environ.get("IMAGE_GEN_API_URL"):
-        return "hosted"
-    if os.environ.get("A1111_API_URL"):
-        return "a1111"
-    # ComfyUI is detected at call time via the MCP manager — return a hint.
-    if os.environ.get("COMFYUI_MCP_SERVER"):
-        return "comfyui"
-    return None
-
-
-async def _execute_image_generate(
-    args: dict[str, Any],
-    *,
-    base: str,
-    server_client: httpx.AsyncClient | None,
-) -> str:
-    """Generate an image from a text prompt via the configured provider."""
-    import os
-    import base64 as _b64
-
-    if server_client is None:
-        return json.dumps({"error": "image_generate requires server access"})
-
-    prompt = args.get("prompt")
-    if not isinstance(prompt, str) or not prompt:
-        return json.dumps({"error": "image_generate requires a non-empty 'prompt'"})
-    width = args.get("width") or 1024
-    height = args.get("height") or 1024
-
-    provider = _resolve_image_provider()
-    if provider is None:
-        return json.dumps({
-            "error": (
-                "image_generate: no image-generation provider configured. "
-                "Set IMAGE_GEN_PROVIDER (hosted|a1111|comfyui) and the "
-                "corresponding env var (IMAGE_GEN_API_URL, A1111_API_URL, "
-                "or COMFYUI_MCP_SERVER)."
-            ),
-        })
-
-    try:
-        if provider == "hosted":
-            api_url = os.environ.get("IMAGE_GEN_API_URL", "").rstrip("/")
-            api_key = os.environ.get("IMAGE_GEN_API_KEY", "")
-            vendor = os.environ.get("IMAGE_GEN_API_VENDOR", "openai").lower()
-            headers: dict[str, str] = {}
-            if api_key:
-                headers["Authorization"] = f"Bearer {api_key}"
-            payload: dict[str, Any] = {
-                "prompt": prompt,
-                "n": 1,
-                "size": f"{width}x{height}",
-            }
-            resp = await server_client.post(
-                f"{api_url}/images/generations",
-                json=payload,
-                headers=headers,
-                timeout=120.0,
-            )
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"image_generate: hosted API returned {resp.status_code}: {resp.text[:300]}"})
-            data = resp.json()
-            # OpenAI format: {"data": [{"b64_json": "..."} or "url": "..."}]}
-            item = (data.get("data") or [{}])[0]
-            if item.get("b64_json"):
-                img_bytes = _b64.b64decode(item["b64_json"])
-            elif item.get("url"):
-                dl = await server_client.get(item["url"], timeout=60.0)
-                if dl.status_code >= 400:
-                    return json.dumps({"error": f"image_generate: download failed {dl.status_code}"})
-                img_bytes = dl.content
-            else:
-                return json.dumps({"error": "image_generate: unexpected API response format"})
-        elif provider == "a1111":
-            a1111_url = os.environ.get("A1111_API_URL", "").rstrip("/")
-            payload = {
-                "prompt": prompt,
-                "width": width,
-                "height": height,
-                "batch_size": 1,
-                "steps": 20,
-            }
-            resp = await server_client.post(
-                f"{a1111_url}/sdapi/v1/txt2img",
-                json=payload,
-                timeout=180.0,
-            )
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"image_generate: A1111 returned {resp.status_code}: {resp.text[:300]}"})
-            data = resp.json()
-            img_b64 = (data.get("images") or [""])[0]
-            if not img_b64:
-                return json.dumps({"error": "image_generate: A1111 returned no images"})
-            img_bytes = _b64.b64decode(img_b64)
-        else:
-            # comfyui via MCP — handled by the MCP manager, not here.
-            return json.dumps({
-                "error": (
-                    "image_generate: ComfyUI MCP routing requires an MCP "
-                    "server declared in tools.mcp_servers — call it directly "
-                    "as an MCP tool instead of via image_generate."
-                ),
-            })
-
-        # Upload the generated image to the session's image resources
-        files = {"file": ("generated.png", img_bytes)}
-        upload = await server_client.post(base, files=files, timeout=60.0)
-        if upload.status_code >= 400:
-            return json.dumps({"error": f"image_generate: upload returned {upload.status_code}"})
-        return json.dumps({"image": upload.json(), "prompt": prompt, "provider": provider})
-    except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": f"image_generate failed: {exc}"})
-
-
-async def _execute_image_remove_bg(
-    args: dict[str, Any],
-    *,
-    base: str,
-    server_client: httpx.AsyncClient | None,
-) -> str:
-    """Remove the background from a session image using rembg CLI."""
-    import asyncio
-    import os
-    import shutil
-    import tempfile
-
-    if server_client is None:
-        return json.dumps({"error": "image_remove_bg requires server access"})
-
-    image_id = args.get("image_id")
-    if not isinstance(image_id, str) or not image_id:
-        return json.dumps({"error": "image_remove_bg requires a non-empty 'image_id'"})
-
-    rembg_bin = os.environ.get("REMBG_BIN") or shutil.which("rembg")
-    if rembg_bin is None:
-        return json.dumps({
-            "error": (
-                "rembg binary not found. Install rembg via 'pip install "
-                "rembg[cpu,cli]' or set REMBG_BIN to the binary path."
-            ),
-        })
-
-    model = args.get("model") or "u2net"
-    only_mask = bool(args.get("only_mask"))
-    alpha_matting = bool(args.get("alpha_matting"))
-
-    # Fetch the source image binary
-    try:
-        resp = await server_client.get(f"{base}/{image_id}", timeout=30.0)
-        if resp.status_code == 404:
-            return json.dumps({"error": f"image not found: {image_id}"})
-        if resp.status_code >= 400:
-            return json.dumps({"error": f"image_remove_bg: image fetch returned {resp.status_code}"})
-        img_bytes = resp.content
-    except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": f"image_remove_bg: failed to fetch image: {exc}"})
-
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            in_path = os.path.join(tmpdir, "input.png")
-            out_path = os.path.join(tmpdir, "output.png")
-            with open(in_path, "wb") as f:
-                f.write(img_bytes)
-
-            cmd = [rembg_bin, "i"]
-            if model:
-                cmd.extend(["-m", model])
-            if only_mask:
-                cmd.append("-om")
-            if alpha_matting:
-                cmd.append("-a")
-            cmd.extend([in_path, out_path])
-
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120.0)
-            if proc.returncode != 0:
-                err = stderr.decode(errors="replace").strip()[:500]
-                return json.dumps({"error": f"rembg failed (exit {proc.returncode}): {err}"})
-            if not os.path.isfile(out_path):
-                return json.dumps({"error": "rembg produced no output file"})
-
-            result_bytes = open(out_path, "rb").read()
-            files = {"file": ("no_bg.png", result_bytes)}
-            upload = await server_client.post(base, files=files, timeout=60.0)
-            if upload.status_code >= 400:
-                return json.dumps({"error": f"image_remove_bg: upload returned {upload.status_code}"})
-            return json.dumps({"image": upload.json(), "source_image_id": image_id, "model": model})
-    except FileNotFoundError:
-        return json.dumps({"error": "rembg binary not found (FileNotFoundError)"})
-    except asyncio.TimeoutError:
-        return json.dumps({"error": "rembg timed out (120s)"})
-    except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": f"image_remove_bg failed: {exc}"})
-
-
-async def _execute_image_edit_ai(
-    args: dict[str, Any],
-    *,
-    base: str,
-    server_client: httpx.AsyncClient | None,
-) -> str:
-    """AI-edit a session image (inpaint/outpaint/upscale) via A1111 or ComfyUI."""
-    import os
-    import base64 as _b64
-    import tempfile
-
-    if server_client is None:
-        return json.dumps({"error": "image_edit_ai requires server access"})
-
-    image_id = args.get("image_id")
-    if not isinstance(image_id, str) or not image_id:
-        return json.dumps({"error": "image_edit_ai requires a non-empty 'image_id'"})
-    mode = args.get("mode")
-    if mode not in ("inpaint", "outpaint", "upscale"):
-        return json.dumps({"error": f"image_edit_ai: invalid mode '{mode}'"})
-    prompt = args.get("prompt") or ""
-    denoising = args.get("denoising_strength")
-    if denoising is None:
-        denoising = 0.75
-    upscale_factor = args.get("upscale_factor") or 2.0
-
-    # Fetch source image binary
-    try:
-        resp = await server_client.get(f"{base}/{image_id}", timeout=30.0)
-        if resp.status_code == 404:
-            return json.dumps({"error": f"image not found: {image_id}"})
-        if resp.status_code >= 400:
-            return json.dumps({"error": f"image_edit_ai: image fetch returned {resp.status_code}"})
-        img_bytes = resp.content
-    except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": f"image_edit_ai: failed to fetch image: {exc}"})
-
-    provider = _resolve_image_provider()
-    if provider is None and os.environ.get("A1111_API_URL"):
-        provider = "a1111"
-    if provider not in ("a1111", "hosted"):
-        return json.dumps({
-            "error": (
-                "image_edit_ai: requires A1111 (A1111_API_URL) or a hosted "
-                "API (IMAGE_GEN_API_URL). ComfyUI MCP editing should be "
-                "called as an MCP tool directly."
-            ),
-        })
-
-    img_b64 = _b64.b64encode(img_bytes).decode()
-
-    try:
-        if provider == "a1111":
-            a1111_url = os.environ.get("A1111_API_URL", "").rstrip("/")
-            if mode == "upscale":
-                payload = {
-                    "init_images": [img_b64],
-                    "denoising_strength": float(denoising),
-                    "steps": 20,
-                    "prompt": prompt,
-                }
-                endpoint = f"{a1111_url}/sdapi/v1/img2img"
-            else:  # inpaint or outpaint
-                payload = {
-                    "init_images": [img_b64],
-                    "denoising_strength": float(denoising),
-                    "steps": 25,
-                    "prompt": prompt,
-                    "mask_blur": 8 if mode == "inpaint" else 0,
-                }
-                endpoint = f"{a1111_url}/sdapi/v1/img2img"
-            resp = await server_client.post(endpoint, json=payload, timeout=180.0)
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"image_edit_ai: A1111 returned {resp.status_code}: {resp.text[:300]}"})
-            data = resp.json()
-            out_b64 = (data.get("images") or [""])[0]
-            if not out_b64:
-                return json.dumps({"error": "image_edit_ai: A1111 returned no images"})
-            out_bytes = _b64.b64decode(out_b64)
-        else:
-            # hosted API — use img2img if available
-            api_url = os.environ.get("IMAGE_GEN_API_URL", "").rstrip("/")
-            api_key = os.environ.get("IMAGE_GEN_API_KEY", "")
-            headers = {}
-            if api_key:
-                headers["Authorization"] = f"Bearer {api_key}"
-            payload = {
-                "image": img_b64,
-                "prompt": prompt,
-                "n": 1,
-                "size": "1024x1024",
-            }
-            resp = await server_client.post(
-                f"{api_url}/images/edits",
-                json=payload,
-                headers=headers,
-                timeout=120.0,
-            )
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"image_edit_ai: hosted API returned {resp.status_code}"})
-            data = resp.json()
-            item = (data.get("data") or [{}])[0]
-            if item.get("b64_json"):
-                out_bytes = _b64.b64decode(item["b64_json"])
-            elif item.get("url"):
-                dl = await server_client.get(item["url"], timeout=60.0)
-                out_bytes = dl.content
-            else:
-                return json.dumps({"error": "image_edit_ai: unexpected API response"})
-
-        # Upload result as a new image resource
-        files = {"file": ("edited.png", out_bytes)}
-        upload = await server_client.post(base, files=files, timeout=60.0)
-        if upload.status_code >= 400:
-            return json.dumps({"error": f"image_edit_ai: upload returned {upload.status_code}"})
-        return json.dumps({"image": upload.json(), "source_image_id": image_id, "mode": mode, "provider": provider})
-    except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": f"image_edit_ai failed: {exc}"})
-
-
-# ── agent-meow Video surface dispatch ─────────────────────────────────────────
-
-
-async def _execute_video_tool(
-    tool_name: str,
-    args: dict[str, Any],
-    *,
-    conversation_id: str | None,
-    server_client: httpx.AsyncClient | None,
-    runner_workspace: Path | None,
-) -> str:
-    """
-    Runner-local handler for the ``video_*`` tools (agent-meow Video surface).
-
-    - ``video_list`` → ``GET /v1/sessions/{id}/resources/videos``
-    - ``video_get`` → metadata via the list endpoint (the per-id GET
-      returns binary, so we filter the list)
-    - ``video_generate`` → calls the Pixelle-Video FastAPI gateway
-      (``PIXELLE_VIDEO_URL``) to generate a video, polls for completion,
-      downloads the mp4, and uploads it as a session video resource.
-
-    :param tool_name: One of the ``video_*`` tool names.
-    :param args: Parsed tool arguments.
-    :param conversation_id: Current session id.
-    :param server_client: HTTP client pointed at the agent-meow server.
-    :param runner_workspace: The runner's workspace dir (unused for videos).
-    :returns: Tool output JSON string.
-    """
-    import os
-
-    if server_client is None:
-        return json.dumps({"error": f"{tool_name} requires server access"})
-    if conversation_id is None:
-        return json.dumps({"error": f"{tool_name} requires a session id"})
-
-    base = f"/v1/sessions/{conversation_id}/resources/videos"
-
-    if tool_name == "video_list":
-        try:
-            resp = await server_client.get(base, timeout=30.0)
-            if resp.status_code != 200:
-                return json.dumps({"error": f"video_list returned {resp.status_code}"})
-            body = resp.json()
-            return json.dumps({"videos": body.get("data", [])})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"video_list failed: {exc}"})
-
-    if tool_name == "video_get":
-        video_id = args.get("video_id")
-        if not isinstance(video_id, str) or not video_id:
-            return json.dumps({"error": "video_get requires a non-empty 'video_id'"})
-        try:
-            resp = await server_client.get(base, timeout=30.0)
-            if resp.status_code != 200:
-                return json.dumps({"error": f"video_get returned {resp.status_code}"})
-            rows = resp.json().get("data", [])
-            match = next((r for r in rows if r.get("id") == video_id), None)
-            if match is None:
-                return json.dumps({"error": f"video not found: {video_id}"})
-            return json.dumps({"video": match})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"video_get failed: {exc}"})
-
-    if tool_name == "video_generate":
-        return await _execute_video_generate(args, base=base, server_client=server_client)
-
-    return json.dumps({"error": f"unknown video tool: {tool_name}"})
-
-
-def _resolve_video_provider() -> str | None:
-    """Resolve the video-generation provider from env vars.
-
-    Returns one of: 'fal', 'happy-horse', 'pixelle', 'openmontage', or None.
-    Explicit ``VIDEO_GEN_PROVIDER`` wins; else auto-detect from which env
-    vars are set. Local open-source models (Wan2.1, LTX-Video, HunyuanVideo)
-    are served via fal.ai or a local ComfyUI/Pixelle gateway — there is no
-    separate ``*_local`` branch here; configure the gateway URL instead.
-    """
-    import os
-
-    explicit = os.environ.get("VIDEO_GEN_PROVIDER", "").strip().lower()
-    if explicit in ("fal", "happy-horse", "pixelle", "openmontage"):
-        return explicit
-    if os.environ.get("HAPPY_HORSE_API_URL"):
-        return "happy-horse"
-    if os.environ.get("FAL_KEY") or os.environ.get("VIDEO_GEN_API_URL"):
-        return "fal"
-    if os.environ.get("PIXELLE_VIDEO_URL"):
-        return "pixelle"
-    return None
-
-
-async def _execute_video_generate(
-    args: dict[str, Any],
-    *,
-    base: str,
-    server_client: httpx.AsyncClient | None,
-) -> str:
-    """Generate a video via the configured provider (quality ladder).
-
-    Providers (highest quality / zero-infra first):
-    - ``fal``: fal.ai hosted — Wan2.1, HunyuanVideo, LTX-Video, Veo, Kling,
-      MiniMax, Seedance. User picks model via ``VIDEO_GEN_MODEL``.
-    - ``happy-horse``: Happy Horse 1.0 — 15B unified Transformer, native
-      joint audio-video synthesis, 8-step DMD-2, ~38s 1080p, 7-language
-      lip-sync. #1 on Artificial Analysis Video Arena.
-    - ``pixelle``: Pixelle-Video FastAPI gateway (free/local orchestration).
-    - ``openmontage``: OpenMontage external MCP (advanced multi-pipeline).
-
-    All providers download the mp4 and upload it to the session's video
-    resources, returning ``{video, provider, ...}``.
-    """
-    import os
-    import base64 as _b64
-
-    if server_client is None:
-        return json.dumps({"error": "video_generate requires server access"})
-
-    text = args.get("text")
-    if not isinstance(text, str) or not text:
-        return json.dumps({"error": "video_generate requires a non-empty 'text' (topic or script)"})
-
-    provider = _resolve_video_provider()
-    if provider is None:
-        return json.dumps({
-            "error": (
-                "video_generate: no video-generation provider configured. Set "
-                "VIDEO_GEN_PROVIDER (fal|happy-horse|pixelle|openmontage) and "
-                "the corresponding env var (FAL_KEY/VIDEO_GEN_API_URL, "
-                "HAPPY_HORSE_API_URL/HAPPY_HORSE_API_KEY, PIXELLE_VIDEO_URL)."
-            ),
-        })
-
-    mode = args.get("mode") or "generate"
-    n_scenes = args.get("n_scenes") or 5
-    title = args.get("title") or ""
-    aspect_ratio = args.get("aspect_ratio") or ""
-    frame_template = args.get("frame_template") or ""
-
-    try:
-        if provider == "fal":
-            return await _video_generate_fal(
-                args, text=text, title=title, aspect_ratio=aspect_ratio,
-                base=base, server_client=server_client,
-            )
-        if provider == "happy-horse":
-            return await _video_generate_happy_horse(
-                args, text=text, title=title, aspect_ratio=aspect_ratio,
-                base=base, server_client=server_client,
-            )
-        if provider == "pixelle":
-            return await _video_generate_pixelle(
-                args, text=text, mode=mode, n_scenes=n_scenes, title=title,
-                frame_template=frame_template, aspect_ratio=aspect_ratio,
-                base=base, server_client=server_client,
-            )
-        # openmontage is routed via MCP — declared in tools.mcp_servers.
-        return json.dumps({
-            "error": (
-                "video_generate: openmontage provider must be called as an "
-                "MCP tool (declare the OpenMontage MCP server in "
-                "tools.mcp_servers)."
-            ),
-        })
-    except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": f"video_generate failed: {exc}"})
-
-
-async def _video_upload_and_return(
-    video_bytes: bytes,
-    *,
-    title: str,
-    base: str,
-    server_client: httpx.AsyncClient,
-    provider: str,
-    extra: dict[str, Any] | None = None,
-) -> str:
-    """Upload generated video bytes to the session and return the result JSON."""
-    filename = (title or "generated") + ".mp4"
-    files = {"file": (filename, video_bytes, "video/mp4")}
-    upload = await server_client.post(base, files=files, timeout=60.0)
-    if upload.status_code >= 400:
-        return json.dumps({"error": f"video_generate: upload returned {upload.status_code}"})
-    out: dict[str, Any] = {"video": upload.json(), "provider": provider, "filename": filename}
-    if extra:
-        out.update(extra)
-    return json.dumps(out)
-
-
-async def _video_generate_fal(
-    args: dict[str, Any],
-    *,
-    text: str,
-    title: str,
-    aspect_ratio: str,
-    base: str,
-    server_client: httpx.AsyncClient,
-) -> str:
-    """Generate via fal.ai hosted API (Wan2.1/HunyuanVideo/LTX/Veo/Kling/...)."""
-    import asyncio
-    import os
-
-    fal_key = os.environ.get("FAL_KEY", "")
-    if not fal_key:
-        return json.dumps({"error": "video_generate (fal): FAL_KEY is not set. Get one at https://fal.ai/dashboard/keys"})
-    # Default to Wan2.1 (Apache-2.0, consumer-GPU-friendly, SOTA open model).
-    model = os.environ.get("VIDEO_GEN_MODEL", "fal-ai/wan-2.1-i2v").strip()
-    headers = {"Authorization": f"Key {fal_key}", "Content-Type": "application/json"}
-
-    payload: dict[str, Any] = {"prompt": text}
-    img = args.get("image_id") or args.get("image_url")
-    if img:
-        payload["image_url"] = img
-    if aspect_ratio:
-        payload["aspect_ratio"] = aspect_ratio
-
-    try:
-        # Submit to fal queue
-        submit = await server_client.post(
-            f"https://queue.fal.run/{model}",
-            json=payload,
-            headers=headers,
-            timeout=60.0,
-        )
-        if submit.status_code >= 400:
-            return json.dumps({"error": f"video_generate (fal): submit returned {submit.status_code}: {submit.text[:300]}"})
-        submit_data = submit.json()
-        request_id = submit_data.get("request_id")
-        if not request_id:
-            return json.dumps({"error": "video_generate (fal): no request_id returned"})
-        status_url = submit_data.get("status_url") or f"https://queue.fal.run/{model}/requests/{request_id}/status"
-
-        # Poll for completion
-        max_poll_seconds = 600
-        poll_interval = 8
-        elapsed = 0
-        result = None
-        while elapsed < max_poll_seconds:
-            await asyncio.sleep(poll_interval)
-            elapsed += poll_interval
-            st = await server_client.get(status_url, headers=headers, timeout=30.0)
-            if st.status_code >= 400:
-                return json.dumps({"error": f"video_generate (fal): poll returned {st.status_code}"})
-            st_data = st.json()
-            status = st_data.get("status", "")
-            if status == "COMPLETED":
-                result = st_data
-                break
-            if status in ("FAILED", "ERROR"):
-                return json.dumps({"error": f"video_generate (fal): task {status}"})
-        if result is None:
-            return json.dumps({"error": f"video_generate (fal): timed out after {max_poll_seconds}s", "request_id": request_id})
-
-        # Fetch the result
-        result_resp = await server_client.get(
-            f"https://queue.fal.run/{model}/requests/{request_id}",
-            headers=headers,
-            timeout=60.0,
-        )
-        if result_resp.status_code >= 400:
-            return json.dumps({"error": f"video_generate (fal): result fetch returned {result_resp.status_code}"})
-        result_data = result_resp.json()
-        video_url = (result_data.get("video") or {}).get("url") or result_data.get("video_url")
-        if not video_url:
-            return json.dumps({"error": "video_generate (fal): no video url in result", "result": result_data})
-        dl = await server_client.get(video_url, timeout=120.0)
-        if dl.status_code >= 400:
-            return json.dumps({"error": f"video_generate (fal): download failed {dl.status_code}"})
-        return await _video_upload_and_return(
-            dl.content, title=title, base=base, server_client=server_client,
-            provider="fal", extra={"model": model, "request_id": request_id},
-        )
-    except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": f"video_generate (fal) failed: {exc}"})
-
-
-async def _video_generate_happy_horse(
-    args: dict[str, Any],
-    *,
-    text: str,
-    title: str,
-    aspect_ratio: str,
-    base: str,
-    server_client: httpx.AsyncClient,
-) -> str:
-    """Generate via Happy Horse 1.0 — 15B unified Transformer, native audio-video."""
-    import asyncio
-    import os
-
-    api_url = os.environ.get("HAPPY_HORSE_API_URL", "").strip().rstrip("/")
-    if not api_url:
-        return json.dumps({"error": "video_generate (happy-horse): HAPPY_HORSE_API_URL is not set. See https://happy-horse.art/"})
-    api_key = os.environ.get("HAPPY_HORSE_API_KEY", "")
-    headers: dict[str, str] = {"Content-Type": "application/json"}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-
-    payload: dict[str, Any] = {
-        "prompt": text,
-        "mode": "text-to-video" if not (args.get("image_id") or args.get("image_url")) else "image-to-video",
-    }
-    if aspect_ratio:
-        payload["aspect_ratio"] = aspect_ratio
-    resolution = args.get("resolution") or os.environ.get("HAPPY_HORSE_RESOLUTION", "1080p")
-    payload["resolution"] = resolution
-    generate_audio = args.get("generate_audio")
-    if generate_audio is not None:
-        payload["generate_audio"] = bool(generate_audio)
-    language = args.get("language")
-    if language:
-        payload["language"] = language
-    img = args.get("image_id") or args.get("image_url")
-    if img:
-        payload["image"] = img
-
-    try:
-        submit = await server_client.post(
-            f"{api_url}/api/video/generate",
-            json=payload,
-            headers=headers,
-            timeout=60.0,
-        )
-        if submit.status_code >= 400:
-            return json.dumps({"error": f"video_generate (happy-horse): submit returned {submit.status_code}: {submit.text[:300]}"})
-        submit_data = submit.json()
-        task_id = submit_data.get("task_id") or submit_data.get("id")
-        if not task_id:
-            # If the API returns the video directly (synchronous), handle it.
-            video_url = submit_data.get("video_url") or submit_data.get("url")
-            if video_url:
-                dl = await server_client.get(video_url, timeout=120.0)
-                if dl.status_code >= 400:
-                    return json.dumps({"error": f"video_generate (happy-horse): download failed {dl.status_code}"})
-                return await _video_upload_and_return(
-                    dl.content, title=title, base=base, server_client=server_client,
-                    provider="happy-horse", extra={"task_id": task_id},
-                )
-            return json.dumps({"error": "video_generate (happy-horse): no task_id or video_url returned"})
-
-        # Poll
-        max_poll_seconds = 300
-        poll_interval = 5
-        elapsed = 0
-        result = None
-        while elapsed < max_poll_seconds:
-            await asyncio.sleep(poll_interval)
-            elapsed += poll_interval
-            st = await server_client.get(f"{api_url}/api/video/tasks/{task_id}", headers=headers, timeout=30.0)
-            if st.status_code >= 400:
-                return json.dumps({"error": f"video_generate (happy-horse): poll returned {st.status_code}"})
-            st_data = st.json()
-            status = st_data.get("status", "")
-            if status in ("completed", "COMPLETED", "success"):
-                result = st_data
-                break
-            if status in ("failed", "error", "FAILED"):
-                return json.dumps({"error": f"video_generate (happy-horse): task {status}"})
-        if result is None:
-            return json.dumps({"error": f"video_generate (happy-horse): timed out after {max_poll_seconds}s", "task_id": task_id})
-
-        video_url = result.get("video_url") or result.get("download_url") or (result.get("video") or {}).get("url")
-        if not video_url:
-            return json.dumps({"error": "video_generate (happy-horse): no video url in result", "result": result})
-        dl = await server_client.get(video_url, timeout=120.0)
-        if dl.status_code >= 400:
-            return json.dumps({"error": f"video_generate (happy-horse): download failed {dl.status_code}"})
-        return await _video_upload_and_return(
-            dl.content, title=title, base=base, server_client=server_client,
-            provider="happy-horse", extra={"task_id": task_id, "resolution": resolution},
-        )
-    except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": f"video_generate (happy-horse) failed: {exc}"})
-
-
-async def _video_generate_pixelle(
-    args: dict[str, Any],
-    *,
-    text: str,
-    mode: str,
-    n_scenes: int,
-    title: str,
-    frame_template: str,
-    aspect_ratio: str,
-    base: str,
-    server_client: httpx.AsyncClient,
-) -> str:
-    """Generate via the Pixelle-Video FastAPI gateway (free/local orchestration)."""
-    import asyncio
-    import os
-
-    gateway_url = os.environ.get("PIXELLE_VIDEO_URL", "").strip()
-    if not gateway_url:
-        return json.dumps({
-            "error": (
-                "PIXELLE_VIDEO_URL is not set. Deploy Pixelle-Video "
-                "(https://github.com/AIDC-AI/Pixelle-Video) and set "
-                "PIXELLE_VIDEO_URL=http://localhost:8000 (or your server URL)."
-            ),
-        })
-
-    payload: dict[str, Any] = {
-        "text": text,
-        "mode": mode,
-        "n_scenes": n_scenes,
-    }
-    if title:
-        payload["title"] = title
-    if frame_template:
-        payload["frame_template"] = frame_template
-    if aspect_ratio:
-        payload["aspect_ratio"] = aspect_ratio
-
-    gateway = gateway_url.rstrip("/")
-    try:
-        submit = await server_client.post(
-            f"{gateway}/api/video/generate/async",
-            json=payload,
-            timeout=60.0,
-        )
-        if submit.status_code >= 400:
-            return json.dumps({"error": f"video_generate (pixelle): submit returned {submit.status_code}: {submit.text[:300]}"})
-        task_data = submit.json()
-        task_id = task_data.get("task_id")
-        if not task_id:
-            return json.dumps({"error": "video_generate (pixelle): gateway did not return a task_id"})
-
-        max_poll_seconds = 600
-        poll_interval = 10
-        elapsed = 0
-        result = None
-        while elapsed < max_poll_seconds:
-            await asyncio.sleep(poll_interval)
-            elapsed += poll_interval
-            status_resp = await server_client.get(
-                f"{gateway}/api/video/tasks/{task_id}",
-                timeout=30.0,
-            )
-            if status_resp.status_code >= 400:
-                return json.dumps({"error": f"video_generate (pixelle): poll returned {status_resp.status_code}"})
-            status_data = status_resp.json()
-            status = status_data.get("status", "")
-            if status == "completed":
-                result = status_data
-                break
-            if status == "failed":
-                return json.dumps({"error": f"video_generate (pixelle): task failed: {status_data.get('error', 'unknown')}"})
-
-        if result is None:
-            return json.dumps({"error": f"video_generate (pixelle): timed out after {max_poll_seconds}s", "task_id": task_id})
-
-        video_url = result.get("video_url") or result.get("download_url")
-        if video_url:
-            dl = await server_client.get(video_url, timeout=120.0)
-        else:
-            dl = await server_client.get(f"{gateway}/api/video/download/{task_id}", timeout=120.0)
-        if dl.status_code >= 400:
-            return json.dumps({"error": f"video_generate (pixelle): download failed {dl.status_code}"})
-        video_bytes = dl.content
-        if not video_bytes:
-            return json.dumps({"error": "video_generate (pixelle): downloaded video is empty"})
-        return await _video_upload_and_return(
-            video_bytes, title=title, base=base, server_client=server_client,
-            provider="pixelle",
-            extra={"task_id": task_id, "duration_seconds": result.get("duration_seconds")},
-        )
-    except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": f"video_generate (pixelle) failed: {exc}"})
-
-
-# ── agent-meow Voice surface dispatch ─────────────────────────────────────────
-
-
-async def _execute_voice_tool(
-    tool_name: str,
-    args: dict[str, Any],
-    *,
-    conversation_id: str | None,
-    server_client: httpx.AsyncClient | None,
-    runner_workspace: Path | None,
-) -> str:
-    """
-    Runner-local handler for the ``transcribe_audio``, ``text_to_speech``,
-    ``speak``, and ``transcribe_audio_high_quality`` tools.
-
-    - ``transcribe_audio`` → shells out to ``handy --transcribe-file <path>
-      --json`` (or the CLI configured via ``HANDY_CLI_PATH``). Returns the
-      transcribed text.
-    - ``transcribe_audio_high_quality`` → calls a VibeVoice-ASR vLLM endpoint
-      (``VIBEVOICE_ASR_URL``) for diarized long-form transcription.
-    - ``text_to_speech`` / ``speak`` → calls Voicebox REST ``POST /speak``
-      (``VOICEBOX_URL`` must be set — Voicebox provides voice cloning,
-      7 TTS engines, and per-profile personalities). The audio is
-      returned as a pollable Voicebox generation URL.
-
-    Handy + Voicebox are the required STT/TTS pair for agent-meow voice
-    integration. The ``VIBEVOICE_TTS_URL`` fallback is retained only for
-    legacy compatibility — new deployments should set ``VOICEBOX_URL``.
-
-    :param tool_name: One of the voice tool names.
-    :param args: Parsed tool arguments.
-    :param conversation_id: Current session id.
-    :param server_client: HTTP client pointed at the agent-meow server.
-    :param runner_workspace: The runner's workspace dir, for resolving
-        audio file paths.
-    :returns: Tool output JSON string.
-    """
-    import os
-    import asyncio
-
-    if tool_name == "transcribe_audio":
-        path_str = args.get("path")
-        if not isinstance(path_str, str) or not path_str:
-            return json.dumps({"error": "transcribe_audio requires a non-empty 'path'"})
-        file_path = Path(path_str)
-        if not file_path.is_absolute() and runner_workspace is not None:
-            file_path = runner_workspace / file_path
-        if not file_path.is_file():
-            return json.dumps({"error": f"transcribe_audio: file not found: {file_path}"})
-
-        handy_cli = os.environ.get("HANDY_CLI_PATH", "handy")
-        cmd = [handy_cli, "--transcribe-file", str(file_path), "--json"]
-        model = args.get("model")
-        if isinstance(model, str) and model:
-            cmd.extend(["--model", model])
-        language = args.get("language")
-        if isinstance(language, str) and language:
-            cmd.extend(["--language", language])
-
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120.0)
-            if proc.returncode != 0:
-                err = stderr.decode(errors="replace").strip()[:500]
-                return json.dumps({"error": f"handy transcription failed (exit {proc.returncode}): {err}"})
-            output = stdout.decode(errors="replace").strip()
-            # Handy --json returns JSON; try to parse for the text field.
-            try:
-                result = json.loads(output)
-                text = result.get("text", output)
-            except json.JSONDecodeError:
-                text = output
-            return json.dumps({"transcription": text})
-        except FileNotFoundError:
-            return json.dumps({
-                "error": (
-                    "handy CLI not found. Install Handy from "
-                    "https://handy.computer or set HANDY_CLI_PATH."
-                ),
-            })
-        except asyncio.TimeoutError:
-            return json.dumps({"error": "handy transcription timed out (120s)"})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"transcribe_audio failed: {exc}"})
-
-    if tool_name == "transcribe_audio_high_quality":
-        asr_url = os.environ.get("VIBEVOICE_ASR_URL", "")
-        if not asr_url:
-            return json.dumps({
-                "error": (
-                    "VIBEVOICE_ASR_URL is not set. Serve VibeVoice-ASR via "
-                    "vLLM and set VIBEVOICE_ASR_URL=http://127.0.0.1:8001/v1"
-                ),
-            })
-        path_str = args.get("path")
-        if not isinstance(path_str, str) or not path_str:
-            return json.dumps({"error": "transcribe_audio_high_quality requires a non-empty 'path'"})
-        file_path = Path(path_str)
-        if not file_path.is_absolute() and runner_workspace is not None:
-            file_path = runner_workspace / file_path
-        if not file_path.is_file():
-            return json.dumps({"error": f"file not found: {file_path}"})
-
-        # Read audio as base64 and send to the vLLM endpoint.
-        import base64
-
-        try:
-            audio_bytes = file_path.read_bytes()
-            audio_b64 = base64.b64encode(audio_bytes).decode()
-            payload = {
-                "model": "vibevoice-asr",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": "Transcribe this audio."},
-                            {"type": "audio_url", "audio_url": {"url": f"data:audio/wav;base64,{audio_b64}"}},
-                        ],
-                    }
-                ],
-            }
-            if server_client is None:
-                return json.dumps({"error": "transcribe_audio_high_quality requires server access"})
-            resp = await server_client.post(
-                f"{asr_url.rstrip('/')}/chat/completions",
-                json=payload,
-                timeout=120.0,
-            )
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"VibeVoice-ASR returned {resp.status_code}"})
-            result = resp.json()
-            text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-            return json.dumps({"transcription": text, "diarized": True})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"transcribe_audio_high_quality failed: {exc}"})
-
-    if tool_name in ("text_to_speech", "speak"):
-        text = args.get("text")
-        if not isinstance(text, str) or not text:
-            return json.dumps({"error": f"{tool_name} requires a non-empty 'text'"})
-        voice = args.get("voice")
-        language = args.get("language")
-        profile = args.get("profile")
-        engine = args.get("engine")
-        personality = args.get("personality")
-
-        # Voicebox is the required TTS path for agent-meow voice integration.
-        # It provides voice cloning, 7 TTS engines, per-profile personalities,
-        # and audio effects. VibeVoice vLLM is a legacy fallback only.
-        voicebox_url = os.environ.get("VOICEBOX_URL", "")
-        tts_url = os.environ.get("VIBEVOICE_TTS_URL", "")
-        if not voicebox_url:
-            return json.dumps({
-                "error": (
-                    "VOICEBOX_URL is not set. Voicebox is the required TTS"
-                    " endpoint for agent-meow voice integration.\n"
-                    "Install Voicebox and set:\n"
-                    "  VOICEBOX_URL=http://127.0.0.1:17493\n"
-                    "Voicebox provides voice cloning, 7 TTS engines, and\n"
-                    "per-profile personalities."
-                    + ("\n\n(VIBEVOICE_TTS_URL legacy fallback is set but"
-                       " not recommended for new deployments.)"
-                       if tts_url else "")
-                ),
-            })
-
-        if server_client is None:
-            return json.dumps({"error": f"{tool_name} requires server access"})
-
-        try:
-            import base64
-
-            if voicebox_url:
-                # Route through Voicebox REST API (POST /speak).
-                # Voicebox resolves the profile (by name or id, falling back
-                # to the per-client binding, then the global default) and
-                # handles generation + playback. The response carries a
-                # generation_id we can use to poll /generate/{id}/status.
-                payload: dict[str, Any] = {"text": text}
-                if isinstance(profile, str) and profile:
-                    payload["profile"] = profile
-                if isinstance(engine, str) and engine:
-                    payload["engine"] = engine
-                if isinstance(language, str) and language:
-                    payload["language"] = language
-                if isinstance(personality, bool):
-                    payload["personality"] = personality
-                # Map the generic "voice" arg to Voicebox's "profile" if
-                # the caller used the VibeVoice-style parameter.
-                if not payload.get("profile") and isinstance(voice, str) and voice:
-                    payload["profile"] = voice
-
-                resp = await server_client.post(
-                    f"{voicebox_url.rstrip('/')}/speak",
-                    json=payload,
-                    timeout=120.0,
-                )
-                if resp.status_code >= 400:
-                    err_body = resp.text[:300] if hasattr(resp, "text") else ""
-                    return json.dumps({
-                        "error": f"Voicebox returned {resp.status_code}: {err_body}",
-                    })
-                data = resp.json()
-                gen_id = data.get("generation_id", "")
-                # The poll_url from Voicebox is a relative path (e.g.
-                # /generate/gen_123/status). Make it absolute so the web
-                # UI's AudioBlock can fetch it directly.
-                audio_url = f"{voicebox_url.rstrip('/')}/generate/{gen_id}/status" if gen_id else ""
-                result: dict[str, Any] = {
-                    "audio_url": audio_url,
-                    "format": "wav",
-                    "text": text,
-                    "source": "voicebox",
-                }
-                if data.get("profile"):
-                    result["profile"] = data["profile"]
-                if gen_id:
-                    result["generation_id"] = gen_id
-                return json.dumps(result)
-
-            # Legacy fallback: VibeVoice-TTS via vLLM gateway.
-            # Not recommended for new deployments — use Voicebox instead.
-            payload = {
-                "model": "vibevoice-tts",
-                "input": text,
-            }
-            if voice:
-                payload["voice"] = voice
-            if language:
-                payload["language"] = language
-            resp = await server_client.post(
-                f"{tts_url.rstrip('/')}/audio/speech",
-                json=payload,
-                timeout=120.0,
-            )
-            if resp.status_code >= 400:
-                return json.dumps({"error": f"VibeVoice-TTS returned {resp.status_code}"})
-            # v1 returns an inline data URL instead of persisting the audio
-            # through the images surface. Routing WAV bytes through
-            # /resources/images polluted the Images tab with broken entries.
-            audio_bytes = resp.content
-            audio_b64 = base64.b64encode(audio_bytes).decode()
-            return json.dumps({
-                "audio_url": f"data:audio/wav;base64,{audio_b64}",
-                "format": "wav",
-                "text": text,
-                "source": "vibevoice",
-            })
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"{tool_name} failed: {exc}"})
-
-    return json.dumps({"error": f"unknown voice tool: {tool_name}"})
 
 
 async def _execute_agent_tool(
@@ -4898,23 +3671,23 @@ async def _execute_agent_tool(
     Runner-local handler for ``sys_agent_get`` / ``sys_agent_download``.
 
     The runner has no in-process ``AgentStore`` / ``ArtifactStore``, so
-    these proxy the agent-meow server's REST endpoints over ``server_client``:
+    these proxy the Omnigent server's REST endpoints over ``server_client``:
 
-    - ``sys_agent_get`` → ``GET /v1/sessions/{id}/agent`` (project the
-      :class:`~?agent_meow.server.schemas.AgentObject`)
-    - ``sys_agent_download`` → ``GET /v1/sessions/{id}/agent/contents``,
+    - ``sys_agent_get`` �?``GET /v1/sessions/{id}/agent`` (project the
+      :class:`~agent_meow.server.schemas.AgentObject`)
+    - ``sys_agent_download`` �?``GET /v1/sessions/{id}/agent/contents``,
       write the ``.tar.gz`` into the agent's local os_env cwd, return the
       path
-    - ``sys_agent_list`` → ``GET /v1/agents`` + ``GET /v1/sessions`` +
+    - ``sys_agent_list`` �?``GET /v1/agents`` + ``GET /v1/sessions`` +
       local-config scan (no ``session_id``)
 
     :param tool_name: ``"sys_agent_get"``, ``"sys_agent_download"``, or
         ``"sys_agent_list"``.
     :param args: Parsed tool arguments; ``session_id`` required for
         get/download, ignored for list.
-    :param server_client: HTTP client pointed at the agent-meow server; ``None``
+    :param server_client: HTTP client pointed at the Omnigent server; ``None``
         returns an error string.
-    :param agent_spec: The running agent's spec — used (with
+    :param agent_spec: The running agent's spec �?used (with
         ``conversation_id`` / ``runner_workspace``) to resolve the
         os_env cwd that ``sys_agent_download`` writes into and
         ``sys_agent_list`` scans for local configs.
@@ -4955,14 +3728,14 @@ async def _agent_get_via_rest(
     """
     Return a session's bound-agent metadata via ``GET .../agent``.
 
-    Projects the :class:`~?agent_meow.server.schemas.AgentObject` fields
+    Projects the :class:`~agent_meow.server.schemas.AgentObject` fields
     the orchestrator cares about: agent id, name, version, description,
     harness, MCP server summaries, and guardrail policy summaries. Maps a
     404 to ``agent_not_found`` and 401/403 to ``access_denied``.
 
     :param session_id: The session whose bound agent to inspect, e.g.
         ``"conv_abc123"``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: JSON agent-metadata object, or a JSON error object.
     """
     try:
@@ -5000,7 +3773,7 @@ def _agent_bundle_filename(
 
     Uses the caller's ``dest_filename`` when given, else defaults to
     ``"<agent_name>-v<version>.tar.gz"``. The result must be a bare
-    filename — any path separator (a traversal attempt) is rejected by
+    filename �?any path separator (a traversal attempt) is rejected by
     returning ``None`` so the caller surfaces an error rather than
     writing outside the working directory.
 
@@ -5036,7 +3809,7 @@ async def _agent_download_via_rest(
     Download a session's agent bundle and write it to the agent's disk.
 
     Fetches the ``.tar.gz`` from ``GET /v1/sessions/{id}/agent/contents``
-    and writes the bytes into the agent's os_env working directory — the
+    and writes the bytes into the agent's os_env working directory �?the
     same cwd the agent's ``sys_os_*`` tools operate on (resolved via
     :func:`_effective_runner_os_env_spec`, so a ``caller_process``
     os_env's cwd is the ``runner_workspace`` or the per-conversation
@@ -5055,7 +3828,7 @@ async def _agent_download_via_rest(
 
     :param session_id: The session whose agent bundle to download.
     :param args: Parsed tool arguments; optional ``dest_filename``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :param agent_spec: The running agent's spec, for os_env resolution.
     :param conversation_id: The caller's session id, for os_env cwd.
     :param runner_workspace: The runner workspace, authoritative cwd.
@@ -5085,7 +3858,7 @@ async def _agent_download_via_rest(
     # Resolve symlinks on the realized cwd and confirm the destination
     # stays within it before writing. ``filename`` is already a bare name
     # (``_agent_bundle_filename`` rejects separators), but a symlinked cwd
-    # could still redirect the write outside the sandbox — realpath the
+    # could still redirect the write outside the sandbox �?realpath the
     # parent and check containment, matching the sys_os_write pattern.
     resolved_cwd = cwd.resolve()
     dest = (resolved_cwd / filename).resolve()
@@ -5117,7 +3890,7 @@ async def _agent_list_fetch(
 
     :param path: The list endpoint path, e.g. ``"/v1/agents"`` or
         ``"/v1/sessions"``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: The ``data`` list from the paginated response (possibly
         empty).
     """
@@ -5141,12 +3914,12 @@ def _scan_local_agent_configs(configs_dir: Path) -> list[dict[str, str | None]]:
 
     Reads each ``*.yaml`` under ``configs_dir`` (the agent-config subdir
     of the os_env cwd), extracting ``name`` and ``description`` for the
-    listing. Files that don't parse to a mapping are skipped (defensive —
+    listing. Files that don't parse to a mapping are skipped (defensive �?
     a stray non-config YAML shouldn't break the scan). Returns ``[]``
     when the directory doesn't exist yet (no configs authored).
 
     :param configs_dir: The agent-config directory to scan, e.g.
-        ``<cwd>/.agent_meow/agent-configs``.
+        ``<cwd>/.omnigent/agent-configs``.
     :returns: ``[{"name", "path", "description"}, ...]``, sorted by path.
     """
     import yaml
@@ -5181,7 +3954,7 @@ async def _agent_list_via_rest(
     """
     List launchable agents across built-ins, session-bound, and local.
 
-    Fans out three independent reads — each degrades to an empty section
+    Fans out three independent reads �?each degrades to an empty section
     on failure rather than failing the whole call:
 
     - ``builtins``: ``GET /v1/agents`` (template agents), projected to
@@ -5195,7 +3968,7 @@ async def _agent_list_via_rest(
       (YAMLs authored with ``sys_os_write`` per the agent-authoring
       skill), projected to ``{name, path, description}``.
 
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :param agent_spec: The running agent's spec, for os_env cwd
         resolution of the local-config scan.
     :param conversation_id: The caller's session id, for os_env cwd.
@@ -5219,7 +3992,7 @@ def _project_agent_list(
     Project the three raw ``sys_agent_list`` sources into the tool result.
 
     Built-in :class:`AgentObject` rows are projected to
-    ``{agent_id, name, description, harness}`` (note ``id`` → ``agent_id``
+    ``{agent_id, name, description, harness}`` (note ``id`` �?``agent_id``
     for naming consistency with the rest of the surface); session rows to
     ``{session_id, agent_id, agent_name, status}``; local configs pass
     through unchanged.
@@ -5263,16 +4036,16 @@ async def _session_list_via_rest(
     Return the two-view session list: ``sub_agents`` + global ``sessions``.
 
     ``sub_agents`` is the caller's named-sub-agent view (children, plus
-    parent/siblings when the caller is itself a child) — see
+    parent/siblings when the caller is itself a child) �?see
     :func:`_collect_sub_agents`. ``sessions`` is the **global**,
     permission-bounded list of every session the caller can access, each
     annotated with status + runner connectivity, optionally filtered by
-    ``agent_name`` — see :func:`_collect_global_sessions`. Both are
+    ``agent_name`` �?see :func:`_collect_global_sessions`. Both are
     best-effort: a failure in either view yields an empty list for it
     rather than failing the whole call.
 
     :param conversation_id: The caller session id, e.g. ``"conv_root1"``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :param agent_name: Optional agent-name filter for the global
         ``sessions`` view; ignored for ``sub_agents``.
     :returns: JSON ``{"sub_agents": [...], "sessions": [...]}``.
@@ -5280,6 +4053,49 @@ async def _session_list_via_rest(
     sub_agents = await _collect_sub_agents(conversation_id, server_client)
     sessions = await _collect_global_sessions(server_client, agent_name)
     return json.dumps({"sub_agents": sub_agents, "sessions": sessions})
+
+
+async def _rename_current_session_via_rest(
+    args: dict[str, Any],
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+) -> str:
+    """Conditionally rename the calling session through the server API.
+
+    Automatic naming is framework metadata, never a prerequisite for the
+    user's turn. Every failure therefore becomes a tool-result envelope so a
+    missing route, unavailable server, or malformed response cannot abort the
+    harness session.
+    """
+    if server_client is None:
+        return json.dumps({"error": "sys_session_rename requires server access"})
+    if conversation_id is None:
+        return json.dumps({"error": "sys_session_rename requires a session id"})
+    title = args.get("title")
+    if not isinstance(title, str):
+        return json.dumps({"error": "sys_session_rename requires a string 'title'"})
+    try:
+        response = await server_client.post(
+            f"/v1/sessions/{conversation_id}/auto-title",
+            json={"title": title},
+            timeout=30.0,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return json.dumps({"error": f"sys_session_rename failed: {exc}"})
+    if response.status_code >= 400:
+        return json.dumps(
+            {
+                "error": f"sys_session_rename returned {response.status_code}",
+                "detail": response.text[:200],
+            }
+        )
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        return json.dumps({"error": f"sys_session_rename returned invalid JSON: {exc}"})
+    if not isinstance(payload, dict):
+        return json.dumps({"error": "sys_session_rename returned a non-object response"})
+    return json.dumps(payload)
 
 
 async def _collect_sub_agents(
@@ -5293,12 +4109,12 @@ async def _collect_sub_agents(
     closed and titleless/colonless rows so they never re-surface to the
     LLM. Includes the caller's own children and, when the caller is
     itself a child (e.g. a user-added agent), its parent (surfaced as
-    ``agent="main"``) and its siblings — so an added agent can still
+    ``agent="main"``) and its siblings �?so an added agent can still
     discover ``main`` and its session-mates. Best-effort: a failed
     lookup yields ``[]`` (or own-children-only) rather than raising.
 
     :param conversation_id: The caller session id.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: The sub-agent entries.
     """
     try:
@@ -5350,8 +4166,8 @@ async def _resolve_runner_online_map(
     :func:`_runner_online_or_none`.
 
     :param rows: Session rows from ``GET /v1/sessions``.
-    :param server_client: HTTP client pointed at the agent-meow server.
-    :returns: Map of ``runner_id`` → online bool (or ``None`` if the
+    :param server_client: HTTP client pointed at the Omnigent server.
+    :returns: Map of ``runner_id`` �?online bool (or ``None`` if the
         lookup was inconclusive).
     """
     unique_ids: list[str] = []
@@ -5365,7 +4181,7 @@ async def _resolve_runner_online_map(
         *(_runner_online_or_none(rid, server_client) for rid in unique_ids)
     )
     # strict=True: results is gathered in unique_ids order, so lengths
-    # match by construction — assert it rather than silently truncating.
+    # match by construction �?assert it rather than silently truncating.
     return dict(zip(unique_ids, results, strict=True))
 
 
@@ -5384,7 +4200,7 @@ async def _collect_global_sessions(
     runner's request carries the owning user's identity). Best-effort:
     returns ``[]`` on a fetch failure.
 
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :param agent_name: Optional agent-name filter; applied only when a
         non-empty string.
     :returns: The projected global session entries.
@@ -5455,12 +4271,12 @@ async def _session_parent_id(
     """
     Return a session's ``parent_session_id`` (None if top-level/unknown).
 
-    Used to decide whether the caller is itself a child — i.e. a
+    Used to decide whether the caller is itself a child �?i.e. a
     user-added agent that should also see ``main`` + siblings. Best-
     effort: returns ``None`` on any read failure rather than raising.
 
     :param conversation_id: The session to inspect.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: The parent session id, or ``None``.
     """
     try:
@@ -5490,7 +4306,7 @@ async def _session_get_history_via_rest(
 
     :param args: Parsed tool arguments; requires ``conversation_id``,
         optional ``tail_items``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: JSON peek result, or a JSON error object.
     """
     target_id = args.get("conversation_id")
@@ -5521,9 +4337,9 @@ async def _session_get_history_via_rest(
     items: list[dict[str, Any]] = [_project_api_item(it) for it in reversed(data)]
     meta = await _fetch_peek_meta(target_id, server_client)
     # A parked elicitation never lands in the conversation store (it
-    # lives only in the agent-meow server's pending-elicitations index, replayed
+    # lives only in the Omnigent server's pending-elicitations index, replayed
     # on the snapshot), so append the snapshot's outstanding prompts
-    # after the stored tail — they are the sub-agent's most recent act.
+    # after the stored tail �?they are the sub-agent's most recent act.
     items.extend(
         pending_elicitations.project_for_peek(event) for event in meta.pending_elicitations
     )
@@ -5545,7 +4361,7 @@ async def _fetch_close_target(
     Fetch + status-classify the close target's session snapshot.
 
     :param target_id: The conversation id to close, e.g. ``"conv_abc123"``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: The parsed snapshot dict on HTTP 200; otherwise a JSON
         error string (``session_not_found`` for 404,
         ``session_out_of_tree`` for 401/403, a generic status error
@@ -5576,7 +4392,7 @@ async def _close_tree_scope_error(
     Mirrors the in-process :func:`_resolve_session_call` check: the
     target must share the caller's ``root_conversation_id`` and must be
     a sub-agent (have a parent). The caller's own root is resolved via
-    its session snapshot — a session can always read itself, so this is
+    its session snapshot �?a session can always read itself, so this is
     a 200 on the happy path; a non-200 is surfaced as an error rather
     than failing open. A ``None`` root on either side is treated as
     out-of-tree (never a match).
@@ -5588,7 +4404,7 @@ async def _close_tree_scope_error(
         ``"conv_caller"``.
     :param target_id: The target conversation id, echoed into errors,
         e.g. ``"conv_abc123"``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: ``None`` when the target is in-tree and a sub-agent;
         otherwise a JSON error string (``session_out_of_tree`` or
         ``session_not_a_sub_agent``).
@@ -5623,12 +4439,12 @@ async def _session_close_via_rest(
     """
     Close a target sub-agent via ``GET`` snapshot + ``PATCH`` metadata.
 
-    Mirrors :class:`SysSessionCloseTool` — including its tree-scoping:
+    Mirrors :class:`SysSessionCloseTool` �?including its tree-scoping:
     close is a write, so the target MUST share the caller's spawn tree
     (same ``root_conversation_id``) and MUST itself be a sub-agent (have
     a parent). Without this the REST path would let an agent tombstone
-    any session it merely has edit access to — e.g. a sub-agent in one
-    of the caller's *other*, unrelated spawn trees — which the in-process
+    any session it merely has edit access to �?e.g. a sub-agent in one
+    of the caller's *other*, unrelated spawn trees �?which the in-process
     path forbids. The gate lives in the close tool (via
     :func:`_close_tree_scope_error`), not the PATCH route, because the
     route is a general title/metadata mutator; only the close tool
@@ -5643,7 +4459,7 @@ async def _session_close_via_rest(
     :param conversation_id: The calling session's own id, e.g.
         ``"conv_caller"``. Used to resolve the caller's spawn-tree root
         for the tree-scope check.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: JSON ``{"closed": true, ...}`` on success; a JSON error
         object otherwise: ``session_not_found`` (404),
         ``session_out_of_tree`` (403/401, or the target's root differs
@@ -5701,8 +4517,8 @@ class _PeekMeta:
         ``None`` in the same case.
     :param pending_elicitations: Outstanding
         ``response.elicitation_request`` event payloads the target is
-        parked on, replayed on the snapshot from the agent-meow server's
-        :mod:`~?agent_meow.runtime.pending_elicitations` index. Empty list
+        parked on, replayed on the snapshot from the Omnigent server's
+        :mod:`agent_meow.runtime.pending_elicitations` index. Empty list
         when the target has none (or the snapshot couldn't be read).
     """
 
@@ -5725,7 +4541,7 @@ async def _fetch_peek_meta(
     failing the whole call.
 
     :param target_id: The session whose snapshot to read.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: The parsed title plus any outstanding elicitation
         payloads (all empty/``None`` on any miss).
     """
@@ -5767,7 +4583,7 @@ async def execute_tool(
     """
     Execute a tool and return the output string.
 
-    Pure execution — does NOT post the result to the harness.
+    Pure execution �?does NOT post the result to the harness.
     Used by ``dispatch_tool_locally`` (which adds the harness
     POST) and by ``_spawn_async_tool`` background tasks (which
     push to the inbox queue instead).
@@ -5784,14 +4600,16 @@ async def execute_tool(
     :param filesystem_registry: Optional registry for tracking agent
         file modifications. Forwarded to ``_execute_os_env_tool``
         so that ``sys_os_write`` and ``sys_os_edit`` calls record changed
-        paths for the ``GET …/changes`` endpoint. ``sys_os_shell`` is
-        not tracked — shell side-effects cannot be attributed to a session.
+        paths for the ``GET �?changes`` endpoint. ``sys_os_shell`` is
+        not tracked �?shell side-effects cannot be attributed to a session.
     :returns: Tool output string.
     """
-    try:
-        args = json.loads(arguments)
-    except json.JSONDecodeError:
-        args = {}
+    if not arguments.strip():
+        return json.dumps({"error": "malformed JSON arguments"})
+    args, error = parse_json_object_arguments(arguments)
+    if error is not None:
+        return json.dumps({"error": error})
+    assert args is not None
 
     try:
         if mcp_manager is not None:
@@ -5879,6 +4697,12 @@ async def execute_tool(
                 agent_spec=agent_spec,
                 runner_workspace=runner_workspace,
             )
+        elif tool_name in _SESSION_SELF_WRITE_TOOLS:
+            output = await _rename_current_session_via_rest(
+                args,
+                conversation_id,
+                server_client,
+            )
         elif tool_name in _SESSION_QUERY_TOOLS:
             output = await _execute_session_query_tool(
                 tool_name,
@@ -5900,6 +4724,15 @@ async def execute_tool(
         elif tool_name in _WEB_SEARCH_TOOLS:
             output = await _execute_web_search_tool(
                 args,
+                agent_spec=agent_spec,
+                conversation_id=conversation_id,
+                task_id=task_id,
+                agent_id=agent_id,
+            )
+        elif tool_name in _HINDSIGHT_TOOLS:
+            output = await _execute_hindsight_tool(
+                args,
+                tool_name=tool_name,
                 agent_spec=agent_spec,
                 conversation_id=conversation_id,
                 task_id=task_id,
@@ -5954,37 +4787,18 @@ async def execute_tool(
                 conversation_id=conversation_id,
                 server_client=server_client,
             )
-        elif tool_name in _DOC_TOOLS:
-            output = await _execute_doc_tool(
+        elif tool_name in _SCHEDULED_TASK_TOOLS:
+            output = await _execute_scheduled_task_tool(
                 tool_name,
-                args,
                 arguments,
-                conversation_id=conversation_id,
                 server_client=server_client,
             )
-        elif tool_name in _IMAGE_TOOLS:
-            output = await _execute_image_tool(
+        elif tool_name in _BROWSER_TOOLS:
+            output = await _execute_browser_tool(
                 tool_name,
                 args,
-                conversation_id=conversation_id,
                 server_client=server_client,
-                runner_workspace=runner_workspace,
-            )
-        elif tool_name in _VOICE_TOOLS:
-            output = await _execute_voice_tool(
-                tool_name,
-                args,
                 conversation_id=conversation_id,
-                server_client=server_client,
-                runner_workspace=runner_workspace,
-            )
-        elif tool_name in _VIDEO_TOOLS:
-            output = await _execute_video_tool(
-                tool_name,
-                args,
-                conversation_id=conversation_id,
-                server_client=server_client,
-                runner_workspace=runner_workspace,
             )
         elif _is_spec_local_python_tool(tool_name, agent_spec):
             output = await _execute_local_python_tool(
@@ -6035,7 +4849,7 @@ def _maybe_signal_changed_files(
     """Publish a throttled ``session.changed_files.invalidated`` event.
 
     Tells the web to refetch the changed-files list (a coarse "something
-    changed" signal — per-file events aren't available for git-mode
+    changed" signal �?per-file events aren't available for git-mode
     workspaces). Leading-edge throttle keyed by session collapses a
     multi-file turn to roughly one refetch trigger.
 
@@ -6094,13 +4908,13 @@ async def dispatch_tool_locally(
     :param session_inbox: Per-session asyncio queue for async tool
         completions. ``sys_call_async`` pushes results here;
         ``sys_read_inbox`` drains it.
-    :param session_async_tasks: Per-session dict of handle_id →
+    :param session_async_tasks: Per-session dict of handle_id �?
         ``(Task, cancel_event)`` tuple. Used by ``sys_cancel_async``
         to signal cancellation via the event.
     :param filesystem_registry: Optional registry for tracking agent
         file modifications. Forwarded to ``execute_tool`` so that
         ``sys_os_write`` and ``sys_os_edit`` calls record changed paths
-        for the ``GET …/changes`` endpoint.
+        for the ``GET �?changes`` endpoint.
     :param resource_registry: Optional session-resource registry used to
         observe tool-launched terminals.
     :returns: The tool output string.
@@ -6125,7 +4939,7 @@ async def dispatch_tool_locally(
         publish_event=publish_event,
     )
 
-    # A file-mutating tool just ran — nudge the web to refetch the
+    # A file-mutating tool just ran �?nudge the web to refetch the
     # changed-files list (throttled, coalesced client-side).
     if tool_name in _CHANGED_FILES_TOOLS:
         _maybe_signal_changed_files(
@@ -6137,14 +4951,14 @@ async def dispatch_tool_locally(
     # POST the result back to the harness as a ``tool_result``
     # event on the session-keyed events endpoint. ``conversation_id``
     # is required: the harness validates the URL segment against
-    # its own runner-stamped value and fails 404 on mismatch —
+    # its own runner-stamped value and fails 404 on mismatch �?
     # without an id we'd be unable to form a valid URL. Fail loud
     # per ``designs/DESIGN_PRINCIPLES.md`` rather than substituting
     # a synthetic default. ``response_id`` is unused at the URL /
     # body level (the harness has at most one in-flight turn so the
-    # ``call_id`` alone keys the parked Future) — kept on the
+    # ``call_id`` alone keys the parked Future) �?kept on the
     # function signature for symmetry with callers that track it.
-    del response_id  # see comment above — intentionally unused
+    del response_id  # see comment above �?intentionally unused
     if not conversation_id:
         raise ValueError(
             "dispatch_tool_locally requires conversation_id to POST the "
@@ -6179,10 +4993,10 @@ def _clone_os_env_spec(spec: Any) -> Any:
     carried over automatically. Mutable list fields are copied
     explicitly so the clone and the original don't alias the same
     list (which would let one caller's later mutation leak into the
-    other's view — a real hazard when the same parent spec is reused
+    other's view �?a real hazard when the same parent spec is reused
     across many runner-local sys_os_* dispatches).
 
-    Symmetric with :func:`~?agent_meow.inner.terminal._clone_sandbox_spec`;
+    Symmetric with :func:`agent_meow.inner.terminal._clone_sandbox_spec`;
     both fixes close the same class of bug where hand-enumerated
     field copies silently drop newly-added security-critical fields
     such as ``egress_rules`` and ``egress_allow_private_destinations``.
@@ -6235,7 +5049,7 @@ def _effective_runner_os_env_spec(
     Precedence (per
     designs/SESSION_WORKSPACE_SELECTION.md "How this maps onto runtime"):
 
-    - When ``runner_workspace`` is set, it ALWAYS wins — whether
+    - When ``runner_workspace`` is set, it ALWAYS wins �?whether
       the spec's cwd is relative, absolute, or unset. The runner
       workspace is the authoritative starting cwd for both
       CLI-launched sessions (CLI captures ``os.getcwd()`` and
@@ -6263,11 +5077,11 @@ def _effective_runner_os_env_spec(
     if configured is not None:
         spec = _clone_os_env_spec(configured)
         if runner_workspace is not None:
-            # Runner workspace is authoritative — overrides whatever
+            # Runner workspace is authoritative �?overrides whatever
             # the spec declared (relative or absolute).
             spec.cwd = str(runner_workspace)
         elif spec.cwd in _PLACEHOLDER_CWDS:
-            # No runner workspace; spec is relative — fall back to
+            # No runner workspace; spec is relative �?fall back to
             # the per-conversation tmpdir so multiple sessions
             # don't collide on a shared default cwd.
             spec.cwd = _runner_default_os_env_cwd(conversation_id)
@@ -6289,13 +5103,13 @@ async def _seed_os_env_snapshot(
     """Seed the diff snapshot with *path*'s current content before a write or edit.
 
     Reads the file via *os_env* and passes the content to
-    :meth:`~?agent_meow.runtime.filesystem_registry.FilesystemRegistry.seed_snapshot`
+    :meth:`~agent_meow.runtime.filesystem_registry.FilesystemRegistry.seed_snapshot`
     so the before/after diff endpoint can show the original content.
     Silently skips when the file does not yet exist (new-file creates have no
     baseline) or when any other read error occurs.
 
-    :param os_env: The :class:`~?agent_meow.inner.os_env.OSEnvironment` used for
-        the current tool dispatch — reused to avoid opening a second connection.
+    :param os_env: The :class:`~agent_meow.inner.os_env.OSEnvironment` used for
+        the current tool dispatch �?reused to avoid opening a second connection.
     :param path: Path argument forwarded from the tool call, e.g. ``"src/foo.py"``.
     :param filesystem_registry: Registry that stores the snapshot.
     :param conversation_id: Session scope for the snapshot, e.g. ``"conv_abc123"``.
@@ -6307,7 +5121,7 @@ async def _seed_os_env_snapshot(
                 path, existing["content"], session_id=conversation_id
             )
     except Exception:  # noqa: BLE001
-        pass  # file does not exist yet or unreadable — no baseline to capture
+        pass  # file does not exist yet or unreadable �?no baseline to capture
 
 
 async def _execute_os_env_tool(
@@ -6333,8 +5147,8 @@ async def _execute_os_env_tool(
     :param filesystem_registry: Optional registry for tracking agent
         file modifications. When provided, ``sys_os_write`` and
         ``sys_os_edit`` calls record changed paths so the
-        ``GET …/changes`` endpoint can surface them. ``sys_os_shell``
-        is not tracked — shell side-effects cannot be attributed to a
+        ``GET �?changes`` endpoint can surface them. ``sys_os_shell``
+        is not tracked �?shell side-effects cannot be attributed to a
         session.
     :returns: Serialized tool result string.
     """
@@ -6352,7 +5166,7 @@ async def _execute_os_env_tool(
             result = await os_env.read(
                 path=args.get("path", ""),
                 offset=args.get("offset", 1),
-                # Unspecified limit → agent-tool default (2 000 lines).
+                # Unspecified limit �?agent-tool default (2 000 lines).
                 # None is now "unlimited" in _read_impl, so we must be explicit.
                 # Use is-None check (not `or`) so that invalid values like 0 are
                 # forwarded to os_env.read for validation rather than silently
@@ -6419,7 +5233,7 @@ async def _execute_rest_tool(
     :param tool_name: The tool to execute, e.g.
         ``"sys_call_async"``.
     :param args: Tool arguments from the LLM.
-    :param server_client: httpx client pointed at the agent-meow server.
+    :param server_client: httpx client pointed at the Omnigent server.
     :param agent_id: Durable agent id, e.g. ``"ag_abc123"``.
         Required from the session context.
     :param conversation_id: Parent conversation id, e.g.
@@ -6495,22 +5309,28 @@ async def _execute_rest_tool(
                     f"Error: sys_call_async event post returned "
                     f"{event_resp.status_code}: {event_resp.text[:200]}"
                 )
-            # Return session_id as the handle (replaces task_id).
-            return json.dumps({"task_id": session_id, "status": "running"})
+            return json.dumps(
+                {
+                    "handle_id": session_id,
+                    # Compatibility alias for older clients; remove in 0.8.0.
+                    "task_id": session_id,
+                    "status": "running",
+                }
+            )
         except Exception as exc:  # noqa: BLE001
             return f"Error: sys_call_async failed: {exc}"
 
     if tool_name == SysCancelAsyncTool.name():
-        # task_id from sys_call_async is now a session_id.
-        task_id = args.get("task_id", "")
+        # ``task_id`` fallback supports older clients; remove in 0.8.0.
+        handle_id = args.get("handle_id") or args.get("task_id", "")
         try:
             resp = await server_client.post(
-                f"/v1/sessions/{task_id}/events",
+                f"/v1/sessions/{handle_id}/events",
                 json={"type": "interrupt", "data": {}},
                 timeout=30.0,
             )
             if resp.status_code in (200, 201, 202):
-                return f"Cancelled task {task_id}"
+                return f"Cancelled async handle {handle_id}"
             return f"Error: sys_cancel_async returned {resp.status_code}"
         except Exception as exc:  # noqa: BLE001
             return f"Error: sys_cancel_async failed: {exc}"
@@ -6535,7 +5355,7 @@ async def _execute_file_tool(
 
     :param tool_name: File tool name, e.g. ``"upload_file"``.
     :param args: Parsed tool arguments.
-    :param server_client: HTTP client for the agent-meow server.
+    :param server_client: HTTP client for the Omnigent server.
     :param conversation_id: Owning session/conversation id,
         e.g. ``"conv_abc123"``.
     :param agent_spec: Agent spec resolved for the current turn, used
@@ -6636,7 +5456,7 @@ async def _execute_terminal_tool(
         into ``ToolContext.workspace`` for terminal cwd resolution.
     :param session_inbox: Per-session queue drained by
         ``sys_read_inbox``. Accepted at the dispatcher boundary but
-        no longer threaded into the launch tool — kept for callers
+        no longer threaded into the launch tool �?kept for callers
         that still pass it.
     :param publish_event: Per-session SSE emitter (the runner's
         ``_publish_event``). When set, a fresh ``sys_terminal_launch``
@@ -6695,7 +5515,7 @@ async def _execute_terminal_tool(
     # tool ran in the runner process, where ``session_stream`` (the
     # AP-server pub-sub the web UI subscribes to) has no subscribers;
     # ``publish_event`` is the runner's own per-session queue, which
-    # the agent-meow server's relay republishes onto ``session_stream``.
+    # the Omnigent server's relay republishes onto ``session_stream``.
     if publish_event is not None and tool_name in (
         SysTerminalLaunchTool.name(),
         SysTerminalCloseTool.name(),
@@ -6728,12 +5548,12 @@ async def _emit_terminal_resource_event(
     SSE event onto ``publish_event`` so live subscribers (the web
     rail) see tool-launched / tool-closed terminals immediately. The
     event shapes match the REST resource path
-    (:func:`~?agent_meow.server.routes.sessions._publish_and_persist_resource_event`)
+    (:func:`agent_meow.server.routes.sessions._publish_and_persist_resource_event`)
     so the AP-server relay and the web UI handle both surfaces
     identically.
 
     Best-effort: a malformed / error envelope, an unexpected status,
-    or a registry miss is a silent no-op — the snapshot endpoint
+    or a registry miss is a silent no-op �?the snapshot endpoint
     (``GET /resources/terminals``) plus the response-end cache
     invalidation remain the source of truth for reconnecting clients.
 
@@ -6741,7 +5561,7 @@ async def _emit_terminal_resource_event(
         ``"sys_terminal_launch"`` or ``"sys_terminal_close"``.
     :param output: The tool's JSON-encoded result envelope, e.g.
         ``{"terminal": "bash", "session": "s1", "status": "launched"}``.
-    :param args: Parsed launch / close arguments — fallback source
+    :param args: Parsed launch / close arguments �?fallback source
         for ``terminal`` / ``session`` if the envelope omits them.
     :param conversation_id: Owning conversation id, e.g.
         ``"conv_abc123"``.
@@ -6931,12 +5751,12 @@ async def _execute_async_inbox_tool(
     :param tool_name: Tool name, e.g. ``"sys_read_inbox"``.
     :param args: Parsed JSON arguments from the LLM.
     :param session_inbox: Per-session completion queue.
-    :param session_async_tasks: Per-session handle_id →
+    :param session_async_tasks: Per-session handle_id �?
         ``(Task, cancel_event)`` tuple map.
     :param filesystem_registry: Optional registry for tracking file
         changes made by tools spawned via ``sys_call_async``.
         Forwarded to ``_spawn_async_tool`` so that async OS-env tool
-        calls record paths for the ``GET …/changes`` endpoint.
+        calls record paths for the ``GET �?changes`` endpoint.
     :param resource_registry: Optional session-resource registry used by
         async terminal-tool launches.
     :param harness_client: Unused; kept for caller compatibility.
@@ -7006,7 +5826,7 @@ def _format_terminal_idle_item(
         raise ValueError(
             "terminal-idle inbox payload content terminal/session must match source/session"
         )
-    return f"[System: inbox item terminal_idle — terminal {source}:{session} is idle]"
+    return f"[System: inbox item terminal_idle �?terminal {source}:{session} is idle]"
 
 
 def _truncate_inbox_output(output: object) -> str:
@@ -7039,7 +5859,7 @@ def _format_async_task_item(payload: dict[str, Any]) -> str:
     status = payload.get("status", "unknown")
     output = _truncate_inbox_output(payload.get("output", ""))
     # An empty completion (e.g. a native child that idled with no assistant
-    # text — the runner delivers "" rather than fabricating from stale
+    # text �?the runner delivers "" rather than fabricating from stale
     # history) must read as "produced no output", not a dangling
     # "…returned: " that the parent LLM mistakes for a truncated handoff.
     has_output = bool(output and output.strip())
@@ -7050,23 +5870,23 @@ def _format_async_task_item(payload: dict[str, Any]) -> str:
         if status == "completed":
             if not has_output:
                 return (
-                    f"[System: sub-agent task {handle_id} completed — {target} produced no output]"
+                    f"[System: sub-agent task {handle_id} completed �?{target} produced no output]"
                 )
-            return f"[System: sub-agent task {handle_id} completed — {target} returned: {output}]"
+            return f"[System: sub-agent task {handle_id} completed �?{target} returned: {output}]"
         if status == "failed":
-            return f"[System: sub-agent task {handle_id} failed — {target} error: {output}]"
+            return f"[System: sub-agent task {handle_id} failed �?{target} error: {output}]"
         if status == "cancelled":
-            return f"[System: sub-agent task {handle_id} cancelled — {target}]"
-        return f"[System: sub-agent task {handle_id} {status} — {target}: {output}]"
+            return f"[System: sub-agent task {handle_id} cancelled �?{target}]"
+        return f"[System: sub-agent task {handle_id} {status} �?{target}: {output}]"
     if status == "completed":
         if not has_output:
-            return f"[System: task {handle_id} completed — {tool} produced no output]"
-        return f"[System: task {handle_id} completed — {tool} returned: {output}]"
+            return f"[System: task {handle_id} completed �?{tool} produced no output]"
+        return f"[System: task {handle_id} completed �?{tool} returned: {output}]"
     if status == "failed":
-        return f"[System: task {handle_id} failed — {tool} error: {output}]"
+        return f"[System: task {handle_id} failed �?{tool} error: {output}]"
     if status == "cancelled":
         return f"[System: task {handle_id} cancelled]"
-    return f"[System: task {handle_id} {status} — {tool}: {output}]"
+    return f"[System: task {handle_id} {status} �?{tool}: {output}]"
 
 
 def _subagent_child_id(payload: dict[str, Any]) -> str | None:
@@ -7099,7 +5919,7 @@ def _subagent_tool_result_policy_request(
     output: str,
 ) -> dict[str, Any]:
     """
-    Build the agent-meow policy-evaluation request for delayed child output.
+    Build the Omnigent policy-evaluation request for delayed child output.
 
     :param payload: Completed sub-agent inbox payload.
     :param output: Raw child output text.
@@ -7130,9 +5950,9 @@ async def _post_subagent_policy_verdict(
     output: str,
 ) -> dict[str, Any] | None:
     """
-    POST delayed sub-agent output to agent-meow policy evaluation.
+    POST delayed sub-agent output to Omnigent policy evaluation.
 
-    :param server_client: HTTP client pointed at agent-meow server.
+    :param server_client: HTTP client pointed at Omnigent server.
     :param conversation_id: Parent session id, e.g.
         ``"conv_parent123"``.
     :param payload: Completed sub-agent inbox payload.
@@ -7176,10 +5996,10 @@ def _apply_subagent_policy_verdict(
     verdict: dict[str, Any],
 ) -> _SubagentInboxEvaluation:
     """
-    Apply an agent-meow policy verdict to a sub-agent inbox payload.
+    Apply an Omnigent policy verdict to a sub-agent inbox payload.
 
     :param payload: Original completed sub-agent payload.
-    :param verdict: Parsed agent-meow policy response, e.g.
+    :param verdict: Parsed Omnigent policy response, e.g.
         ``{"result": "POLICY_ACTION_ALLOW"}``.
     :returns: Evaluation result for ``sys_read_inbox`` formatting.
     """
@@ -7224,7 +6044,7 @@ async def _evaluate_subagent_inbox_output(
     Apply parent TOOL_RESULT policy to a delayed sub-agent payload.
 
     :param payload: Inbox payload for a completed sub-agent task.
-    :param server_client: HTTP client pointed at agent-meow server.
+    :param server_client: HTTP client pointed at Omnigent server.
     :param conversation_id: Parent session id, e.g.
         ``"conv_parent123"``.
     :returns: Evaluation result carrying the safe payload plus retry
@@ -7294,13 +6114,13 @@ async def _drain_inbox(
 
     :param inbox: The session's asyncio.Queue, or ``None`` if
         no queue has been created yet.
-    :param server_client: HTTP client pointed at agent-meow server.
+    :param server_client: HTTP client pointed at Omnigent server.
     :param conversation_id: Parent session id, e.g.
         ``"conv_parent123"``.
     :returns: Formatted string of completed tasks.
     """
     if inbox is None or inbox.empty():
-        return "Inbox is empty — no completed tasks."
+        return "Inbox is empty �?no completed tasks."
     items: list[str] = []
     retry_payloads: list[dict[str, Any]] = []
     while not inbox.empty():
@@ -7317,7 +6137,7 @@ async def _drain_inbox(
                     exc,
                     exc_info=True,
                 )
-                items.append(f"[System: malformed terminal_idle inbox item ignored — {exc}]")
+                items.append(f"[System: malformed terminal_idle inbox item ignored �?{exc}]")
             continue
         evaluation = await _evaluate_subagent_inbox_output(
             payload,
@@ -7331,7 +6151,7 @@ async def _drain_inbox(
             _cleanup_drained_subagent_work(evaluation.payload)
     for payload in retry_payloads:
         inbox.put_nowait(payload)
-    return "\n\n".join(items) if items else "Inbox is empty — no completed tasks."
+    return "\n\n".join(items) if items else "Inbox is empty �?no completed tasks."
 
 
 def _spawn_async_tool(
@@ -7363,11 +6183,14 @@ def _spawn_async_tool(
     :param filesystem_registry: Optional registry forwarded to
         ``execute_tool`` so that OS-env tools invoked via
         ``sys_call_async`` record file changes for the
-        ``GET …/changes`` endpoint.
+        ``GET �?changes`` endpoint.
     :param resource_registry: Optional session-resource registry used by
         async terminal-tool launches.
-    :returns: JSON handle string with ``handle_id``, ``tool_name``,
-        ``status``.
+    :returns: JSON handle string with canonical ``handle_id``,
+        plus compatibility ``task_id`` (identical value; remove in 0.8.0),
+        ``tool_name``, ``status``, and ``message``. Prefer
+        ``handle_id``; ``task_id`` exists only so older clients
+        that still parse the pre-handle_id field keep working.
     """
     target_tool = args.get("tool")
     target_args = args.get("args", "{}")
@@ -7386,7 +6209,7 @@ def _spawn_async_tool(
         Background task: dispatch the tool and push result to inbox.
 
         Uses a cancel_event to bail out immediately when
-        sys_cancel_async is called — asyncio.Task.cancel() alone
+        sys_cancel_async is called �?asyncio.Task.cancel() alone
         can't interrupt asyncio.to_thread (the thread keeps running
         until the subprocess finishes).
 
@@ -7410,7 +6233,7 @@ def _spawn_async_tool(
                 session_inbox=session_inbox if target_tool in _TERMINAL_TOOLS else None,
                 filesystem_registry=filesystem_registry,
             )
-            done, _pending = await asyncio.wait(
+            done, pending = await asyncio.wait(
                 [
                     asyncio.ensure_future(exec_coro),
                     asyncio.ensure_future(cancel_event.wait()),
@@ -7418,6 +6241,11 @@ def _spawn_async_tool(
                 return_when=asyncio.FIRST_COMPLETED,
             )
             if cancel_event.is_set():
+                # Drop the losing future (the tool coro). This cancels the
+                # task/coroutine but cannot interrupt an underlying
+                # asyncio.to_thread, so that thread may run to completion.
+                for fut in pending:
+                    fut.cancel()
                 session_inbox.put_nowait(
                     {
                         "handle_id": handle_id,
@@ -7427,6 +6255,10 @@ def _spawn_async_tool(
                     }
                 )
                 return ""
+            # Drop the losing future (cancel_event.wait()) so it doesn't
+            # linger as a pending task for the life of the session.
+            for fut in pending:
+                fut.cancel()
             result = next(iter(done)).result()
             session_inbox.put_nowait(
                 {
@@ -7466,12 +6298,15 @@ def _spawn_async_tool(
     return json.dumps(
         {
             "handle_id": handle_id,
+            # Compatibility alias for older clients; remove in 0.8.0.
+            "task_id": handle_id,
             "tool_name": target_tool,
             "status": "in_progress",
             "message": (
                 f"[System: {target_tool} dispatched as background "
                 f"task {handle_id}. Result will appear in your "
-                f"inbox — call sys_read_inbox to check.]"
+                f"inbox �?call sys_read_inbox to check. To abort, "
+                f"call sys_cancel_async with handle_id={handle_id!r}.]"
             ),
         }
     )
@@ -7486,7 +6321,7 @@ def _cancel_async_tool_result(
     Cancel an in-flight local async tool by handle id.
 
     Signals the cancel_event so the background task's
-    ``asyncio.wait`` returns immediately — the underlying
+    ``asyncio.wait`` returns immediately �?the underlying
     thread may keep running but the task won't block on it.
 
     :param args: Must contain ``"handle_id"`` (``"task_id"`` is
@@ -7506,7 +6341,7 @@ def _cancel_async_tool_result(
             try_subagent_cancel=True,
         )
     _task, cancel_event = entry
-    # Signal the event — _bg's asyncio.wait returns immediately.
+    # Signal the event �?_bg's asyncio.wait returns immediately.
     # Don't call task.cancel(): the CancelledError races with
     # the event check and can prevent the inbox push.
     cancel_event.set()
@@ -7553,7 +6388,7 @@ async def _execute_task_lifecycle_tool(
         from ``create_runner_app``.
     :param conversation_id: Parent session id, e.g.
         ``"conv_parent123"``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: JSON-encoded result string.
     """
     async_result = _cancel_async_tool_result(
@@ -7579,20 +6414,20 @@ async def _cancel_subagent_task(
     Cancel a running sub-agent worker, routing by the child's harness.
 
     Only ``claude-native`` has a runner-side hard-stop, so the cancel
-    event is chosen per harness — the child runner's ``stop_session``
+    event is chosen per harness �?the child runner's ``stop_session``
     handler 204 no-ops for every other harness, so posting it there
     would silently do nothing:
 
-    * ``claude-native`` — POST ``stop_session``. The child runner
+    * ``claude-native`` �?POST ``stop_session``. The child runner
       hard-kills the worker's tmux pane via ``_handle_claude_native_stop``
       and marks the work entry cancelled, delivering a terminal payload to
       the parent inbox and auto-waking it. A bare interrupt (Escape) only
       cancelled the current turn and left the worker process alive; a stop
       frees it.
-    * everything else (in-process harnesses, ``codex-native``) — POST
+    * everything else (in-process harnesses, ``codex-native``) �?POST
       ``interrupt``, the path those harnesses actually honor. For an
       in-process child the runner marks the turn cancelled (via
-      ``_interrupted_sessions`` → ``_on_proxy_stream_end``) and wakes the
+      ``_interrupted_sessions`` �?``_on_proxy_stream_end``) and wakes the
       parent. ``codex-native`` has no runner-side stop yet, so its cancel
       stays best-effort (see message).
 
@@ -7600,7 +6435,7 @@ async def _cancel_subagent_task(
         ``handle_id``, e.g. ``{"task_id": "conv_child456"}``.
     :param conversation_id: Parent session id, e.g.
         ``"conv_parent123"``.
-    :param server_client: HTTP client pointed at the agent-meow server.
+    :param server_client: HTTP client pointed at the Omnigent server.
     :returns: JSON cancellation result.
     """
     from agent_meow.runner import app as _runner_app
@@ -7615,7 +6450,7 @@ async def _cancel_subagent_task(
         return f"Error: no in-flight task with task_id {task_id}"
     # A dispatched child sits in ``launching`` until its runtime emits a real
     # busy edge (see ``mark_subagent_work_started``). Cancellation must still
-    # route to the child during that window — otherwise cancelling a slow-to-
+    # route to the child during that window �?otherwise cancelling a slow-to-
     # start sub-agent would silently no-op and leave it running. Only terminal
     # states (``completed`` / ``failed`` / ``cancelled``) short-circuit here.
     if entry.status not in ("launching", "running", "waiting"):
@@ -7686,14 +6521,14 @@ def _inject_orchestrator_skills(
     agent_spec: Any | None,
 ) -> list[Any]:
     """
-    Auto-inject built-in platform skills for every agent-meow agent.
+    Auto-inject built-in platform skills for every omnigent agent.
 
-    The ``build-agent-meow`` skill teaches the LLM how to author valid
+    The ``build-omnigent`` skill teaches the LLM how to author valid
     agent configs. Every agent on the platform should have access to it
-    — whether it declares ``tools.agents`` or not — so that any
-    ``agent-meow claude`` user can author and launch new agents. The
+    �?whether it declares ``tools.agents`` or not �?so that any
+    ``omnigent claude`` user can author and launch new agents. The
     skill is injected from the canonical source at
-    ``agent_meow/onboarding/agent/skills/build-agent_meow/`` when not
+    ``omnigent/onboarding/agent/skills/build-omnigent/`` when not
     already present in the bundled set.
 
     :param skills: The agent's current skill list (bundled +
@@ -7704,7 +6539,7 @@ def _inject_orchestrator_skills(
     """
     del agent_spec  # no longer gated; inject unconditionally
     existing_names = {getattr(s, "name", None) for s in skills}
-    if "build-agent-meow" in existing_names:
+    if "build-omnigent" in existing_names:
         return skills
     from agent_meow.spec.parser import _discover_skills
 
@@ -7714,7 +6549,7 @@ def _inject_orchestrator_skills(
     if not onboarding_skills_dir.is_dir():
         return skills
     for spec in _discover_skills(onboarding_skills_dir, skipped=[]):
-        if spec.name == "build-agent-meow":
+        if spec.name == "build-omnigent":
             skills.append(spec)
             break
     return skills
@@ -7746,7 +6581,7 @@ def _execute_skill_tool(
 
     bundled_skills = list(getattr(agent_spec, "skills", None) or [])
     skills_filter = getattr(agent_spec, "skills_filter", "all")
-    # Auto-inject the build-agent-meow skill for agents that opt into the
+    # Auto-inject the build-omnigent skill for agents that opt into the
     # orchestration surface (tools.agents). This teaches the LLM how to
     # author valid agent configs via sys_os_write without requiring the
     # agent's own bundle to ship a skills/ directory.

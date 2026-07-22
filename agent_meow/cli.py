@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import collections.abc
 import contextlib
 import copy
 import hashlib
 import json
+import logging
 import os
 import secrets
 import shutil
@@ -15,12 +15,11 @@ import subprocess
 import sys
 import tempfile
 import time
-import types
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
-from importlib import resources
+from importlib import import_module, resources
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, BinaryIO, Literal, TypeAlias, cast
 
 import click
 import yaml
@@ -30,9 +29,30 @@ from rich.console import Console
 from rich.table import Table
 
 from agent_meow._platform import IS_WINDOWS, resolve_repo_symlink
-from agent_meow._startup_profile import StartupProfiler
+from agent_meow.cli_common import (
+    RESUME_PICKER_SENTINEL as _RESUME_PICKER_SENTINEL,
+)
+
+# Interactive harness/credential configuration lives in agent_meow.cli_config; the
+# config/setup Click commands and the first-run plan call these entry points.
+from agent_meow.cli_config import (
+    _adopt_ambient_credentials,
+    _credential_label,
+    _isolated_databricks_cfg,
+    _print_credentials_by_harness,
+    _run_configure_databricks,
+    _run_configure_harnesses_interactive,
+    _warn_missing_harness_dependencies,
+)
+from agent_meow.cli_native import register_native_commands as _register_native_commands
 from agent_meow.cli_sandbox import lakebox as _lakebox_alias_group
 from agent_meow.cli_sandbox import sandbox as _sandbox_group
+from agent_meow.config import (
+    _merge_effective_config,
+    global_config_path,
+    load_global_config,
+    load_local_config,
+)
 from agent_meow.harness_aliases import canonicalize_harness
 from agent_meow.host.local_server import (
     _DEFAULT_LOCAL_PORT,
@@ -45,19 +65,13 @@ from agent_meow.host.local_server import (
     stop_untracked_local_server,
 )
 from agent_meow.inner import _proc, ui
+from agent_meow.integration_daemon import IntegrationDaemon
 from agent_meow.onboarding.sandboxes import available_providers as _sandbox_providers
-from agent_meow.onboarding.ucode_setup import (
-    build_ucode_configure_command,
-    find_ucode_command,
-    model_gateway_workspace_urls,
-)
+from agent_meow.process_logging import LOG_LEVEL_ENV_VAR, LOG_TO_STDERR_ENV_VAR
 
 if TYPE_CHECKING:
     import httpx
 
-    from agent_meow._runner_startup import RunnerStartupProgress
-    from agent_meow.onboarding.ambient import DetectedProvider
-    from agent_meow.onboarding.provider_config import ProviderEntry
     from agent_meow.update_check import _InstalledWheelInfo
 
 
@@ -73,41 +87,237 @@ def _load_config(path: str | None) -> dict[str, Any]:  # type: ignore[explicit-a
         return yaml.safe_load(f) or {}
 
 
-def _server_uvicorn_log_config() -> dict[str, Any]:  # type: ignore[explicit-any]
+def _parse_model_prefixes(
+    raw: Any,  # type: ignore[explicit-any]  # str | list | None from YAML
+) -> list[str]:
+    """Normalize the ``model_prefix`` config into a list of prefixes.
+
+    Accepts a single string (``"databricks-"``) or a list
+    (``["databricks-", "system.ai."]``); blanks are dropped. Returns an
+    empty list when unset, so catalog ids are sent verbatim.
+    """
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        return []
+    return [p.strip() for p in raw if isinstance(p, str) and p.strip()]
+
+
+def _build_external_routing_client(
+    routing_cfg: Any,  # type: ignore[explicit-any]  # parsed YAML block
+) -> Any | None:  # type: ignore[explicit-any]  # ExternalRoutingClient | None
+    """Build an :class:`ExternalRoutingClient` from the ``routing:`` config.
+
+    Requires ``base_url`` + ``router_name``. Auth mirrors the ``llm:`` block:
+    an explicit, provider-agnostic ``api_key`` (``${ENV}`` expanded) wins,
+    else the Databricks ``profile`` convenience, else unauthenticated.
+    Optional ``model_prefix`` (a single prefix or a list of prefixes) is
+    stripped from catalog model ids sent to the router (and restored on its
+    answer) �?e.g. ``"databricks-"`` when serving-endpoint names carry that
+    prefix but the router keys on bare ids, or ``"system.ai."`` for Unity
+    Catalog foundation-model ids.
+
+    :param routing_cfg: The parsed ``routing:`` mapping (a dict with
+        ``provider == "external"``, per the caller).
+    :returns: A configured client, or ``None`` when required config is
+        missing (a warning is logged; routing stays off rather than raising).
+    """
+    base_url = (routing_cfg.get("base_url") or "").strip()
+    router_name = (routing_cfg.get("router_name") or "").strip()
+    api_key = (routing_cfg.get("api_key") or "").strip()
+    profile = (routing_cfg.get("profile") or "").strip()
+    model_prefixes = _parse_model_prefixes(routing_cfg.get("model_prefix"))
+
+    if not base_url or not router_name:
+        click.echo(
+            "routing.provider=external requires base_url and router_name; skipping",
+            err=True,
+        )
+        return None
+
+    from agent_meow.server.smart_routing import _bearer_auth
+
+    # Auth precedence mirrors the ``llm:`` block: an explicit (provider-
+    # agnostic) api_key wins, else the Databricks ``profile`` convenience,
+    # else unauthenticated.
+    auth = None
+    if api_key:
+        from agent_meow.spec import expand_env_vars
+
+        auth = _bearer_auth(expand_env_vars({"api_key": api_key})["api_key"])
+    elif profile:
+        from agent_meow.runtime.credentials.databricks import resolve_databricks_workspace
+
+        try:
+            creds = resolve_databricks_workspace(profile)
+            auth = _bearer_auth(creds.token)
+        except OSError:
+            click.echo(
+                f"routing.profile={profile} could not be resolved; calling router unauthenticated",
+                err=True,
+            )
+
+    from agent_meow.server.smart_routing import ExternalRoutingClient
+
+    return ExternalRoutingClient(
+        base_url=base_url,
+        router_name=router_name,
+        auth=auth,
+        model_prefixes=model_prefixes,
+    )
+
+
+def _build_local_llm_routing_client(
+    server_llm: Any,  # type: ignore[explicit-any]  # LLMConfig | None
+) -> Any | None:  # type: ignore[explicit-any]  # LLMRoutingClient | None
+    """Build the built-in :class:`LLMRoutingClient` from the ``llm:`` block.
+
+    :param server_llm: The parsed server-level ``LLMConfig``.
+    :returns: A configured client, or ``None`` when there is no ``llm:``
+        block (or its policy client can't be built).
+    """
+    if server_llm is None:
+        return None
+    from agent_meow.runtime.policies.builder import (
+        _build_policy_llm_client,
+        _resolve_server_llm_connection,
+    )
+
+    conn = _resolve_server_llm_connection(server_llm)
+    policy_client = _build_policy_llm_client(server_llm, conn)
+    if policy_client is None:
+        return None
+    from agent_meow.server.smart_routing import LLMRoutingClient
+
+    return LLMRoutingClient(policy_client)
+
+
+def _server_uvicorn_log_config(
+    log_path: Path | None = None,
+    *,
+    log_to_stderr: bool | None = None,
+) -> dict[str, Any]:  # type: ignore[explicit-any]
     """
     Return Uvicorn logging config with request-duration access logs.
 
-    Uvicorn emits the FastAPI access line itself, so agent-meow swaps
-    only the access formatter while preserving Uvicorn's default
-    handlers, levels, and server-log formatting.
+    Uvicorn emits the FastAPI access line itself, so Omnigent standardizes
+    its default and access formatters while preserving handler routing and
+    request-duration enrichment.
 
+    :param log_path: Optional server process log file. When set, Uvicorn
+        default/error/access logs write there.
+    :param log_to_stderr: Optional override for terminal mirroring.
     :returns: Uvicorn ``log_config`` suitable for ``uvicorn.run``.
     """
     import uvicorn.config
 
-    log_config = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
-    log_config["formatters"]["access"]["()"] = (
-        "agent_meow.server.performance_metrics.RequestDurationAccessFormatter"
+    from agent_meow.process_logging import (
+        DEFAULT_LOG_DATEFMT,
+        DEFAULT_LOG_FORMAT,
+        DEFAULT_LOG_PREFIX_FORMAT,
+        effective_log_level,
+        should_log_to_stderr,
+        terminal_supports_color,
     )
+
+    access_log_format = (
+        DEFAULT_LOG_PREFIX_FORMAT + '%(client_addr)s - "%(request_line)s" %(status_code)s'
+    )
+    use_terminal_colors = terminal_supports_color()
+    log_config = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+    log_config["formatters"]["default"] = {
+        "()": "agent_meow.process_logging.TerminalLogFormatter",
+        "fmt": DEFAULT_LOG_FORMAT,
+        "datefmt": DEFAULT_LOG_DATEFMT,
+        "use_colors": use_terminal_colors,
+    }
+    log_config["formatters"]["access"] = {
+        "()": "agent_meow.server.performance_metrics.RequestDurationAccessFormatter",
+        "fmt": access_log_format,
+        "datefmt": DEFAULT_LOG_DATEFMT,
+        "use_colors": use_terminal_colors,
+    }
+    log_config["formatters"]["default_file"] = {
+        "()": "agent_meow.process_logging.TerminalLogFormatter",
+        "fmt": DEFAULT_LOG_FORMAT,
+        "datefmt": DEFAULT_LOG_DATEFMT,
+        "use_colors": False,
+    }
+    log_config["formatters"]["access_file"] = {
+        "()": "agent_meow.server.performance_metrics.RequestDurationAccessFormatter",
+        "fmt": access_log_format,
+        "datefmt": DEFAULT_LOG_DATEFMT,
+        "use_colors": False,
+    }
+    if log_path is not None:
+        level_name = logging.getLevelName(effective_log_level())
+        if not isinstance(level_name, str):
+            level_name = "INFO"
+        if log_to_stderr is None:
+            mirror = should_log_to_stderr() or sys.stderr.isatty()
+        else:
+            mirror = log_to_stderr
+        log_config["handlers"]["server_file"] = {
+            "class": "logging.FileHandler",
+            "formatter": "default_file",
+            "filename": str(log_path),
+            "encoding": "utf-8",
+        }
+        log_config["handlers"]["server_access_file"] = {
+            "class": "logging.FileHandler",
+            "formatter": "access_file",
+            "filename": str(log_path),
+            "encoding": "utf-8",
+        }
+        default_handlers: list[str] = []
+        access_handlers: list[str] = []
+        if mirror:
+            log_config["handlers"]["server_terminal"] = {
+                "()": "agent_meow.process_logging.terminal_stream_handler",
+                "formatter": "default",
+                "level": level_name,
+            }
+            log_config["handlers"]["server_access_terminal"] = {
+                "()": "agent_meow.process_logging.terminal_stream_handler",
+                "formatter": "access",
+                "level": level_name,
+            }
+            default_handlers.append("server_terminal")
+            access_handlers.append("server_access_terminal")
+        log_config["loggers"]["uvicorn"] = {
+            "handlers": [*default_handlers, "server_file"],
+            "level": level_name,
+            "propagate": False,
+        }
+        log_config["loggers"]["uvicorn.error"] = {
+            "handlers": [*default_handlers, "server_file"],
+            "level": level_name,
+            "propagate": False,
+        }
+        log_config["loggers"]["uvicorn.access"] = {
+            "handlers": [*access_handlers, "server_access_file"],
+            "level": level_name,
+            "propagate": False,
+        }
     return log_config
 
 
 # Path to the user-level global config file, analogous to ~/.gitconfig.
 # Tests may set ``OMNIGENT_CONFIG_HOME`` to isolate subprocesses from a
-# developer's real ``~/.agent_meow/config.yaml``.
+# developer's real ``~/.omnigent/config.yaml``.
 _CONFIG_HOME_ENV_VAR = "OMNIGENT_CONFIG_HOME"
-_GLOBAL_CONFIG_PATH: Path = Path.home() / ".agent-meow" / "config.yaml"
+_GLOBAL_CONFIG_PATH: Path = Path.home() / ".omnigent" / "config.yaml"
 
-# Per-user state directories before / after the omniagents -> agent-meow rename.
+# Per-user state directories before / after the omniagents -> omnigent rename.
 # All per-user state (config, registered agents, auth tokens, the host daemon
 # pidfile, runner identity, native session state, logs) lives under
 # :data:`_STATE_DIR`; :func:`_migrate_legacy_state_dir` relocates the old
 # directory on first run. ``OMNIGENT_DATA_DIR`` is the data-isolation override
 # a worktree / test sets; when present the user manages their own state and
 # migration is skipped.
-_STATE_DIR: Path = Path.home() / ".agent-meow"
+_STATE_DIR: Path = Path.home() / ".omnigent"
 # Pre-rename state directories, newest first. The name evolved
-# ``~/.omniagents`` -> ``~/.omnigents`` -> ``~/.agent-meow``; migrate from the
+# ``~/.omniagents`` -> ``~/.omnigents`` -> ``~/.omnigent``; migrate from the
 # newest legacy directory that still exists.
 _LEGACY_STATE_DIRS: tuple[Path, ...] = (
     Path.home() / ".omnigents",
@@ -118,14 +328,14 @@ _DATA_DIR_ENV_VAR = "OMNIGENT_DATA_DIR"
 
 def _migrate_legacy_state_dir() -> None:
     """
-    One-time relocation of a pre-rename state directory to ``~/.agent-meow``.
+    One-time relocation of a pre-rename state directory to ``~/.omnigent``.
 
     Earlier releases stored all per-user state under ``~/.omniagents`` and then
     ``~/.omnigents`` as the name evolved. To avoid silently losing that state,
-    move the newest surviving legacy directory to ``~/.agent-meow`` on first run,
+    move the newest surviving legacy directory to ``~/.omnigent`` on first run,
     but only when **all** of the following hold:
 
-    - the new ``~/.agent-meow`` does not yet exist (never clobber new state),
+    - the new ``~/.omnigent`` does not yet exist (never clobber new state),
     - at least one directory in :data:`_LEGACY_STATE_DIRS` exists,
     - neither :data:`_CONFIG_HOME_ENV_VAR` nor :data:`_DATA_DIR_ENV_VAR` is set
       (an operator who redirects state elsewhere manages it themselves), and
@@ -133,9 +343,9 @@ def _migrate_legacy_state_dir() -> None:
       pidfile / socket dir out from under a running daemon would wedge it.
 
     On failure the migration is skipped with a warning rather than crashing the
-    CLI; a fresh ``~/.agent-meow`` is then created normally and the legacy
+    CLI; a fresh ``~/.omnigent`` is then created normally and the legacy
     directory is left untouched for the user to migrate by hand. Idempotent:
-    once ``~/.agent-meow`` exists this is a no-op.
+    once ``~/.omnigent`` exists this is a no-op.
 
     :returns: ``None``.
     """
@@ -160,7 +370,7 @@ def _migrate_legacy_state_dir() -> None:
         if legacy_pid is not None and _pid_alive(legacy_pid):
             click.echo(
                 f"Note: found pre-rename state at {legacy_src} but a host daemon "
-                "is still running from it; skipping migration. Run `agent-meow stop` "
+                "is still running from it; skipping migration. Run `omnigent stop` "
                 "and re-run to migrate, or move it manually to ~/.agent_meow.",
                 err=True,
             )
@@ -170,7 +380,7 @@ def _migrate_legacy_state_dir() -> None:
         shutil.move(str(legacy_src), str(_STATE_DIR))
     except OSError as exc:
         click.echo(
-            f"Note: could not migrate {legacy_src} to ~/.agent-meow ({exc}); "
+            f"Note: could not migrate {legacy_src} to ~/.omnigent ({exc}); "
             f"starting with fresh state. Your old data is untouched at {legacy_src}.",
             err=True,
         )
@@ -180,9 +390,9 @@ def _migrate_legacy_state_dir() -> None:
 
 # Project-level config relative to cwd, analogous to .git/config.
 # Resolved at call time so tests can control cwd.
-_LOCAL_CONFIG_RELPATH: Path = Path(".agent-meow") / "config.yaml"
+_LOCAL_CONFIG_RELPATH: Path = Path(".omnigent") / "config.yaml"
 
-# Keys that ``agent-meow config`` accepts.  Mirrors the option names in
+# Keys that ``omnigent config`` accepts.  Mirrors the option names in
 # the ``run`` command so the mapping is explicit and auditable.
 _AUTO_OPEN_CONVERSATION_CONFIG_KEY = "auto_open_conversation"
 _GLOBAL_CONFIG_KEYS: frozenset[str] = frozenset(
@@ -191,7 +401,7 @@ _GLOBAL_CONFIG_KEYS: frozenset[str] = frozenset(
         "harness",
         "model",
         # OpenCode-specific default model (``provider/model``) the native
-        # ``omni opencode`` TUI launches on; set via `omni setup` → OpenCode.
+        # ``omni opencode`` TUI launches on; set via `omni setup` �?OpenCode.
         "opencode_model",
         "server",
         _AUTO_OPEN_CONVERSATION_CONFIG_KEY,
@@ -204,21 +414,12 @@ _ConfigValue: TypeAlias = (
     str | int | float | bool | None | list["_ConfigValue"] | dict[str, "_ConfigValue"]
 )
 
-_GLOBAL_AGENTS_DIR: Path = Path.home() / ".agent-meow" / "agents"
+_GLOBAL_AGENTS_DIR: Path = Path.home() / ".omnigent" / "agents"
 _INTERNAL_BETA_DEFAULT_AGENT_NAME: str = "databricks_coding_agent.yaml"
 _INTERNAL_BETA_BUNDLED_AGENTS: tuple[str, ...] = (
     "databricks_coding_agent.yaml",
     "knowledge_work_agent.yaml",
 )
-# _INTERNAL_BETA_DEFAULT_SERVER (internal Databricks Apps host) moved to
-# agent_meow.onboarding.internal_beta (excluded from the OSS build); the
-# internal-beta setup branch and the sandbox CLI import it from there.
-_CLAUDE_STARTUP_PROFILE_ENV_VAR = "OMNIGENT_CLAUDE_STARTUP_PROFILE"
-# Brand shown for an auto-configured CLI login in the credentials callout —
-# the product the login authenticates, not the CLI name (the codex CLI logs in
-# a ChatGPT subscription). Keyed by the ambient detection name; these are the
-# only two subscription CLIs ambient detection emits.
-_CLI_LOGIN_BRAND: dict[str, str] = {"claude": "Claude", "codex": "ChatGPT"}
 _HOST_DAEMON_STOP_GRACE_S = 5.0
 # How often ``omni upgrade`` re-polls the local server for in-flight
 # (connected) sessions while draining before it stops the server.
@@ -233,11 +434,14 @@ _DAEMON_RECONNECT_GRACE_S = 5.0
 _DAEMON_REUSE_MIN_AGE_S = 6.0
 
 # How long uvicorn waits for active connections (WebSocket, SSE) after
-# SIGTERM before force-closing them.  30 s gives in-flight responses time
-# to drain while still guaranteeing the port is released promptly.
+# SIGTERM before force-closing them.  SSE streams signal themselves via
+# session_stream.shutdown_all() in _ShutdownSignalingServer.shutdown(),
+# so the main remaining consumers of this window are WebSocket tunnels
+# that need a moment to drain.  5 s is enough for a clean tunnel teardown
+# while keeping Ctrl-C feeling instant.
 # Overridable via OMNIGENT_SERVER_SHUTDOWN_TIMEOUT_S for deployments that
 # need a longer drain window (e.g. large file uploads).
-_SERVER_GRACEFUL_SHUTDOWN_TIMEOUT_S_DEFAULT = 30
+_SERVER_GRACEFUL_SHUTDOWN_TIMEOUT_S_DEFAULT = 5
 _SERVER_GRACEFUL_SHUTDOWN_TIMEOUT_S = int(
     os.environ.get(
         "OMNIGENT_SERVER_SHUTDOWN_TIMEOUT_S",
@@ -252,6 +456,17 @@ _LOCAL_DAEMON_ENV_ALLOWLIST: frozenset[str] = frozenset(
         "ANTHROPIC_BASE_URL",
         "ANTHROPIC_BEDROCK_BASE_URL",
         "AWS_BEARER_TOKEN_BEDROCK",
+        # M8 (security 2026-07-15): CLAUDE_CODE_OAUTH_TOKEN is listed in
+        # HARNESS_CREDENTIAL_ENV_VARS (connect.py) for forwarding host->runner,
+        # but _build_host_daemon_env (this file) only allows _RUNNER_ENV_ALLOWLIST
+        # + _LOCAL_DAEMON_ENV_ALLOWLIST. CLAUDE_CODE_OAUTH_TOKEN is in neither,
+        # so it is STRIPPED from the daemon env at launch. The daemon starts without it,
+        # so _build_runner_env has no token to forward even though HARNESS_CREDENTIAL_ENV_VARS
+        # includes it. Net effect: `claude setup-token` subscription auth never reaches
+        # the claude subprocess under the claude-sdk harness on macOS local (non-cloud) runs.
+        # Fix: add to the daemon allowlist so it survives the cli->daemon env strip.
+        # Security: it's a credential, same class as ANTHROPIC_API_KEY which is already here.
+        "CLAUDE_CODE_OAUTH_TOKEN",
         "CLAUDE_CODE_USE_BEDROCK",
         "CLAUDE_CODE_SKIP_BEDROCK_AUTH",
         "COHERE_API_KEY",
@@ -291,14 +506,12 @@ _HostPayload: TypeAlias = dict[str, _HostJsonValue]
 
 def _effective_global_config_path() -> Path:
     """
-    Return the path to the user-level agent-meow config.
+    Return the path to the user-level Omnigent config.
 
     :returns: ``$OMNIGENT_CONFIG_HOME/config.yaml`` when the env
         override is set, otherwise :data:`_GLOBAL_CONFIG_PATH`.
     """
-    if config_home := os.environ.get(_CONFIG_HOME_ENV_VAR):
-        return Path(config_home) / "config.yaml"
-    return _GLOBAL_CONFIG_PATH
+    return global_config_path(_GLOBAL_CONFIG_PATH)
 
 
 def _display_path(path: Path) -> str:
@@ -307,14 +520,14 @@ def _display_path(path: Path) -> str:
 
     A path under the user's home directory is shown as ``~/...`` for
     readability; anything else is shown as its plain string. Unlike a
-    hardcoded ``~/.agent_meow/...`` literal, this reflects the *actual*
-    effective path — so a state dir outside ``$HOME`` (an
+    hardcoded ``~/.omnigent/...`` literal, this reflects the *actual*
+    effective path �?so a state dir outside ``$HOME`` (an
     ``OMNIGENT_CONFIG_HOME`` / ``OMNIGENT_DATA_DIR`` override) renders as
     its real location rather than a misleading ``~``.
 
     :param path: The path to display, e.g.
-        ``Path("/Users/alice/.agent_meow/logs/server/local-server-ab12.log")``.
-    :returns: ``"~/.agent_meow/..."`` when *path* is under ``$HOME``,
+        ``Path("/Users/alice/.omnigent/logs/server/server-ab12.log")``.
+    :returns: ``"~/.omnigent/..."`` when *path* is under ``$HOME``,
         otherwise ``str(path)``.
     """
     try:
@@ -332,8 +545,8 @@ def _display_config_path(path: Path) -> str:
     where the path is specifically the effective config file.
 
     :param path: The config path to display, e.g.
-        ``Path("/Users/alice/.agent_meow/config.yaml")``.
-    :returns: ``"~/.agent_meow/config.yaml"`` when *path* is under
+        ``Path("/Users/alice/.omnigent/config.yaml")``.
+    :returns: ``"~/.omnigent/config.yaml"`` when *path* is under
         ``$HOME``, otherwise ``str(path)``.
     """
     return _display_path(path)
@@ -341,57 +554,52 @@ def _display_config_path(path: Path) -> str:
 
 def _load_global_config() -> dict[str, Any]:  # type: ignore[explicit-any]
     """
-    Load the global agent-meow config from ``~/.agent_meow/config.yaml``.
+    Load the global omnigent config from ``~/.omnigent/config.yaml``.
 
     Returns an empty dict when the file does not exist or is empty.
     Top-level default keys (``default_agent``, ``server``,
     ``model``, ``harness``) hold plain string values.  The optional
     ``auto_open_conversation`` key is a boolean. The optional
-    ``auth:`` key holds a nested mapping —
+    ``auth:`` key holds a nested mapping �?
     ``{"type": "databricks", "profile": "oss"}`` or
-    ``{"type": "api_key", "api_key": "…"}`` — written by
-    ``agent-meow setup`` and used by the runtime to supply executor
+    ``{"type": "api_key", "api_key": "�?}`` �?written by
+    ``omnigent setup`` and used by the runtime to supply executor
     credentials when an agent spec does not declare ``executor.auth``.
 
     :returns: Parsed YAML as a dict, e.g.
         ``{"default_agent": "examples/hello_world.yaml",
         "auth": {"type": "databricks", "profile": "oss"}}``.
     """
-    path = _effective_global_config_path()
-    if not path.exists():
-        return {}
-    with open(path) as f:
-        raw: dict[str, Any] = yaml.safe_load(f) or {}  # type: ignore[explicit-any]
-        return raw
+    return load_global_config(_effective_global_config_path())
 
 
 def _load_local_config() -> dict[str, Any]:  # type: ignore[explicit-any]
     """
-    Load the project-level config from ``.agent_meow/config.yaml`` in cwd.
+    Load the project-level config from ``.omnigent/config.yaml`` in cwd.
 
     Returns an empty dict when the file does not exist or is empty.
 
     :returns: Parsed YAML as a dict.
     """
-    path = Path.cwd() / _LOCAL_CONFIG_RELPATH
-    if not path.exists():
-        return {}
-    with open(path) as f:
-        raw: dict[str, Any] = yaml.safe_load(f) or {}  # type: ignore[explicit-any]
-        return raw
+    return load_local_config(Path.cwd() / _LOCAL_CONFIG_RELPATH)
 
 
 def _load_effective_config() -> dict[str, Any]:  # type: ignore[explicit-any]
     """
     Merge global and project-level config.
 
-    Precedence (highest last): global (``~/.agent_meow/config.yaml``)
-    → local (``.agent_meow/config.yaml`` in cwd).  Project config
+    Precedence (highest last): global (``~/.omnigent/config.yaml``)
+    �?local (``.omnigent/config.yaml`` in cwd).  Project config
     always wins so per-repo settings override user defaults.
+
+    The ``harness`` mapping is deep-merged (per-harness sub-keys, local
+    winning per-field) via :func:`agent_meow.config._merge_effective_config`
+    so a project's per-harness overrides augment �?rather than replace �?
+    the user's global ones. Every other key is a shallow replace.
 
     :returns: Merged config dict.
     """
-    return {**_load_global_config(), **_load_local_config()}
+    return _merge_effective_config(_load_global_config(), _load_local_config())
 
 
 def _peek_default_agent_harness(target: str) -> str | None:
@@ -401,11 +609,11 @@ def _peek_default_agent_harness(target: str) -> str | None:
     Reads ``executor.harness`` / ``executor.type`` from a local YAML path so
     :func:`_resolve_default_agent_target` can compare it to an explicit
     ``--harness``. Returns ``None`` for URLs, missing/unreadable files, or
-    specs that declare no harness — the caller treats ``None`` as "cannot
+    specs that declare no harness �?the caller treats ``None`` as "cannot
     confirm a match".
 
     :param target: The configured ``default_agent`` value, e.g.
-        ``"/Users/me/.agent_meow/agents/databricks_coding_agent.yaml"``.
+        ``"/Users/me/.omnigent/agents/databricks_coding_agent.yaml"``.
     :returns: The canonical harness, e.g. ``"openai-agents-sdk"``, or ``None``.
     """
     if "://" in target:
@@ -465,11 +673,11 @@ def _bundled_example_path(name: str) -> str:
 def _pick_first_run_harness() -> _FirstRunPlan | None:
     """Pick the harness a bare first ``run`` should launch, by configured creds.
 
-    Priority Claude → Codex → Pi over the ambient-merged config (a detected env
+    Priority Claude �?Codex �?Pi over the ambient-merged config (a detected env
     key / CLI login counts as configured). Claude gets the bundled polly
     orchestrator as its default agent; Codex / Pi launch a bare harness REPL.
     Shared with ``configure harnesses`` via
-    :func:`~?agent_meow.onboarding.provider_config.default_provider_for_harness`,
+    :func:`~agent_meow.onboarding.provider_config.default_provider_for_harness`,
     so the two surfaces agree on "what's configured".
 
     :returns: A :class:`_FirstRunPlan`, or ``None`` when no harness has a usable
@@ -501,7 +709,7 @@ def _pick_first_run_harness() -> _FirstRunPlan | None:
 
 
 def _resolve_first_run_plan() -> _FirstRunPlan | None:
-    """Resolve the harness + default agent for a bare ``agent-meow run``.
+    """Resolve the harness + default agent for a bare ``omnigent run``.
 
     Adopts ambient-detected credentials, then picks a harness from what's
     configured (Claude→polly / Codex / Pi). When nothing is configured,
@@ -510,22 +718,22 @@ def _resolve_first_run_plan() -> _FirstRunPlan | None:
 
     The pick is **deliberately not persisted** as a global default: it is
     derived state, recomputed on every bare ``run`` from the *current*
-    credentials. So a user who starts with only Codex (→ a codex REPL) and
-    later adds Claude is promoted to polly on their next bare ``run`` —
-    keeping polly as the primary experience — rather than being pinned to
+    credentials. So a user who starts with only Codex (�?a codex REPL) and
+    later adds Claude is promoted to polly on their next bare ``run`` �?
+    keeping polly as the primary experience �?rather than being pinned to
     the earlier fallback. An *explicit* default (a user-set global
     ``harness`` / ``default_agent``, or ``run <agent>`` / ``--harness``)
     still short-circuits this path upstream and is always honored.
 
     :returns: The chosen :class:`_FirstRunPlan`, or ``None`` when the user still
-        has no configured harness after the configure step — the caller exits
+        has no configured harness after the configure step �?the caller exits
         cleanly rather than erroring.
     """
     # Adopt any ambient creds so a detected key/login becomes a real provider
     # default, exactly as opening `configure harnesses` does (and announce what
     # was auto-configured, so a never-set-up user sees which credentials we
     # picked up). This persists *credentials* (the provider layer), NOT the
-    # agent/harness pick — the pick stays ephemeral so it tracks whatever creds
+    # agent/harness pick �?the pick stays ephemeral so it tracks whatever creds
     # are currently available.
     _adopt_ambient_credentials()
 
@@ -544,9 +752,9 @@ def _resolve_default_agent_target(
     """
     Decide the ``run`` target when no AGENT was passed on the command line.
 
-    - No ``default_agent`` → ``None`` (the no-AGENT ``--harness`` launcher
+    - No ``default_agent`` �?``None`` (the no-AGENT ``--harness`` launcher
       builds an ad-hoc spec, or ``run`` errors when no harness either).
-    - No ``--harness`` → the ``default_agent`` (the configured default
+    - No ``--harness`` �?the ``default_agent`` (the configured default
       experience, unchanged).
     - ``--harness X`` given with a ``default_agent`` whose harness is ``Y``:
       use the ``default_agent`` when ``Y == X`` (harness matches, so the user
@@ -572,7 +780,7 @@ def _resolve_default_agent_target(
         return default_agent
     if default_harness is not None:
         click.echo(
-            f"agent-meow: default agent '{default_agent}' uses harness "
+            f"omnigent: default agent '{default_agent}' uses harness "
             f"{default_harness!r}, but you specified --harness {requested!r}; "
             f"launching a minimal built-in {requested!r} agent instead.",
             err=True,
@@ -582,7 +790,7 @@ def _resolve_default_agent_target(
 
 def _parse_config_bool(key: str, value: _ConfigValue) -> bool:
     """
-    Parse a boolean value from YAML or ``agent-meow config KEY=VALUE``.
+    Parse a boolean value from YAML or ``omnigent config KEY=VALUE``.
 
     :param key: Config key being parsed, e.g.
         ``"auto_open_conversation"``.
@@ -609,7 +817,7 @@ def _resolve_auto_open_conversation_setting(cfg: dict[str, Any]) -> bool | None:
 
     Tri-state on purpose so callers can distinguish "the user has not
     expressed a preference" (``None``) from an explicit opt-in/opt-out.
-    ``agent-meow run`` uses this to default the browser-open ON for
+    ``omnigent run`` uses this to default the browser-open ON for
     interactive launches while still honoring an explicit
     ``auto_open_conversation: false``; see :func:`run`.
 
@@ -631,7 +839,7 @@ def _resolve_auto_open_conversation_from_config(cfg: dict[str, Any]) -> bool:  #
     Resolve whether CLI launches should open conversation URLs.
 
     Defaults to ``False`` when the user has not configured the key.
-    ``agent-meow run`` does not use this resolver — it defaults the
+    ``omnigent run`` does not use this resolver �?it defaults the
     browser-open ON for interactive launches via
     :func:`_resolve_auto_open_conversation_setting`.
 
@@ -646,9 +854,38 @@ def _resolve_auto_open_conversation_from_config(cfg: dict[str, Any]) -> bool:  #
     return setting if setting is not None else False
 
 
+def _normalize_harness_scalar_on_write(
+    cfg: dict[str, Any],  # type: ignore[explicit-any]
+    path: Path,
+) -> bool:
+    """Migrate a legacy scalar ``harness:`` to the mapping form in *cfg*.
+
+    Rewrites ``cfg["harness"]`` from a plain string (``harness: claude-sdk``)
+    to ``{"default": <str>}`` in place, preserving any per-harness overrides
+    that a prior write may already have introduced under a partial mapping.
+    Returns ``True`` when a scalar was actually migrated so the caller can
+    emit the one-time notice. A no-op when ``harness`` is already a mapping,
+    absent, or not a string. Behavior is unchanged by the migration �?the
+    scalar was the default, and ``{"default": <scalar>}`` means the same.
+
+    :param cfg: The config dict about to be written (mutated in place).
+    :param path: The config file path (for the one-time notice message).
+    :returns: ``True`` iff a scalar was migrated.
+    """
+    raw = cfg.get("harness")
+    if not isinstance(raw, str):
+        return False
+    cfg["harness"] = {"default": raw}
+    click.echo(
+        f"omnigent: migrated `harness:` to the new mapping form in {path} (behavior unchanged)",
+        err=True,
+    )
+    return True
+
+
 def _save_global_config(  # type: ignore[explicit-any]
     # Any (matching the yaml-boundary helpers above): config values are
-    # heterogeneous YAML scalars and nested mappings — e.g. the providers:
+    # heterogeneous YAML scalars and nested mappings �?e.g. the providers:
     # block, whose entries come back as dict[str, object] from
     # provider_entry_settings / set_default_provider. _ConfigValue can't
     # express that interop without invariance errors against those object
@@ -658,22 +895,22 @@ def _save_global_config(  # type: ignore[explicit-any]
     deep_merge_keys: tuple[str, ...] = (),
 ) -> None:
     """
-    Merge *settings* into ``~/.agent_meow/config.yaml`` and remove any
+    Merge *settings* into ``~/.omnigent/config.yaml`` and remove any
     keys listed in *unset_keys*.
 
-    Creates the ``~/.agent_meow/`` directory if it does not exist.
+    Creates the ``~/.omnigent/`` directory if it does not exist.
     Values may be plain strings, booleans, or nested mappings (the
-    ``auth:`` block written by ``agent-meow setup``, or a ``providers:``
-    block written by ``agent-meow setup --no-internal-beta``).
+    ``auth:`` block written by ``omnigent setup``, or a ``providers:``
+    block written by ``omnigent setup --no-internal-beta``).
 
     By default every key in *settings* **replaces** the existing value
     wholesale (a shallow ``dict.update``). For keys listed in
     *deep_merge_keys*, the incoming mapping is instead merged one level
-    deep into the existing mapping for that key — so passing a single
+    deep into the existing mapping for that key �?so passing a single
     provider under ``providers:`` adds/updates that one entry without
     dropping the others. Use the default (shallow replace) when the new
     mapping must become the *entire* block (e.g. after
-    :func:`~?agent_meow.onboarding.provider_config.set_default_provider`,
+    :func:`~agent_meow.onboarding.provider_config.set_default_provider`,
     which clears sibling ``default`` flags a deep-merge could not reach).
 
     :param settings: Key/value pairs to set, e.g.
@@ -699,6 +936,7 @@ def _save_global_config(  # type: ignore[explicit-any]
     for key in unset_keys:
         cfg.pop(key, None)
     path = _effective_global_config_path()
+    _normalize_harness_scalar_on_write(cfg, path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         yaml.safe_dump(cfg, f, default_flow_style=False, sort_keys=True)
@@ -710,7 +948,7 @@ def _materialize_bundled_example(name: str) -> Path:
 
     ``uv tool install`` installs package files, not the repository checkout, so the
     top-level ``examples/<name>`` paths are not available to users. Materialize a
-    user-editable copy under ``~/.agent_meow/agents`` and never overwrite an
+    user-editable copy under ``~/.omnigent/agents`` and never overwrite an
     existing file so local edits survive reinstalls and reruns.
 
     :param name: Filename of the bundled example (e.g.
@@ -752,44 +990,59 @@ def _materialize_internal_beta_agents() -> Path:
 
 
 def _save_local_config(
-    settings: dict[str, str | bool],
+    settings: dict[str, str | bool | Mapping[str, Any]],  # type: ignore[explicit-any]
     unset_keys: tuple[str, ...] = (),
+    deep_merge_keys: tuple[str, ...] = (),
 ) -> None:
     """
-    Merge *settings* into ``.agent_meow/config.yaml`` in cwd and remove
+    Merge *settings* into ``.omnigent/config.yaml`` in cwd and remove
     any keys listed in *unset_keys*.
 
-    Creates the ``.agent_meow/`` directory if it does not exist.
+    Creates the ``.omnigent/`` directory if it does not exist. Mirrors
+    :func:`_save_global_config`: keys in *deep_merge_keys* are merged one
+    level deep into the existing mapping (used by ``config set harness=``)
+    so a per-harness default can be set without dropping existing
+    per-harness overrides; every other key is a shallow replace.
 
     :param settings: Key/value pairs to set, e.g.
         ``{"default_agent": "examples/agent.yaml",
         "auto_open_conversation": True}``.
-    :param unset_keys: Keys to remove from the config, e.g.
-        ``("server",)``.
+    :param unset_keys: Keys to remove from the config, e.g. ``("server",)``.
+    :param deep_merge_keys: Keys whose mapping value should be merged one
+        level deep into the existing mapping rather than replacing it,
+        e.g. ``("harness",)``.
     """
     path = Path.cwd() / _LOCAL_CONFIG_RELPATH
     cfg = _load_local_config()
-    cfg.update(settings)
+    for key, value in settings.items():
+        if key in deep_merge_keys and isinstance(value, Mapping):
+            existing = cfg.get(key)
+            merged = dict(existing) if isinstance(existing, Mapping) else {}
+            merged.update(value)
+            cfg[key] = merged
+        else:
+            cfg[key] = value
     for key in unset_keys:
         cfg.pop(key, None)
+    _normalize_harness_scalar_on_write(cfg, path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         yaml.safe_dump(cfg, f, default_flow_style=False, sort_keys=True)
 
 
 def _default_db_uri() -> str:
-    """Default DB URI for ``agent-meow server`` — the machine-global
+    """Default DB URI for ``omnigent server`` �?the machine-global
     ``<data_dir>/chat.db``.
 
-    Resolves to the same path the ``agent-meow run`` daemon spawns its
+    Resolves to the same path the ``omnigent run`` daemon spawns its
     local server against (``_local_data_dir()``, honoring
-    ``OMNIGENT_DATA_DIR`` → else ``~/.agent-meow``). Pinning ``server``
-    to the same DB as ``run`` means there is **one local DB — and so one
-    accounts admin — per machine**, instead of a fresh CWD-relative
+    ``OMNIGENT_DATA_DIR`` �?else ``~/.omnigent``). Pinning ``server``
+    to the same DB as ``run`` means there is **one local DB �?and so one
+    accounts admin �?per machine**, instead of a fresh CWD-relative
     ``agent_meow.db`` (and a fresh admin) for every directory you launch
     from. ``--database-uri`` / the config file still override.
 
-    :returns: e.g. ``"sqlite:////home/alice/.agent_meow/chat.db"``.
+    :returns: e.g. ``"sqlite:////home/alice/.omnigent/chat.db"``.
     """
     from agent_meow.host.local_server import _local_data_dir
 
@@ -797,15 +1050,15 @@ def _default_db_uri() -> str:
 
 
 def _default_artifact_location() -> str:
-    """Default artifact dir for ``agent-meow server`` — ``<data_dir>/artifacts``.
+    """Default artifact dir for ``omnigent server`` �?``<data_dir>/artifacts``.
 
     Kept in lock-step with :func:`_default_db_uri` so a default-config
-    ``agent-meow server`` and ``agent-meow run`` share one coherent
-    machine-global instance (same DB *and* same artifacts) — otherwise a
+    ``omnigent server`` and ``omnigent run`` share one coherent
+    machine-global instance (same DB *and* same artifacts) �?otherwise a
     conversation created by one would reference files the other can't
     resolve. ``--artifact-location`` / the config file still override.
 
-    :returns: e.g. ``"/home/alice/.agent_meow/artifacts"``.
+    :returns: e.g. ``"/home/alice/.omnigent/artifacts"``.
     """
     from agent_meow.host.local_server import _local_data_dir
 
@@ -816,18 +1069,18 @@ def _ensure_sqlite_parent_dir(db_uri: str) -> None:
     """Create the parent directory of a SQLite DB file if it's missing.
 
     SQLite creates the ``.db`` file on first connect but **not** its
-    parent directory — an absent parent raises ``sqlite3.OperationalError:
+    parent directory �?an absent parent raises ``sqlite3.OperationalError:
     unable to open database file``. The default ``server`` DB now lives at
     ``<data_dir>/chat.db`` (machine-global, honoring ``OMNIGENT_DATA_DIR``),
-    so a first-ever run — or any run after the data dir was cleared — must
+    so a first-ever run �?or any run after the data dir was cleared �?must
     create that dir before the stores connect. The daemon-spawned server
     handles this in ``ensure_local_omnigent_server``; this is the equivalent for
-    the foreground ``agent-meow server`` command.
+    the foreground ``omnigent server`` command.
 
     No-op for non-SQLite URIs (Postgres etc.) and for in-memory SQLite.
 
     :param db_uri: The resolved store DB URI, e.g.
-        ``"sqlite:////home/alice/.agent_meow/chat.db"`` or
+        ``"sqlite:////home/alice/.omnigent/chat.db"`` or
         ``"postgresql://host/db"``.
     :returns: None.
     """
@@ -837,7 +1090,7 @@ def _ensure_sqlite_parent_dir(db_uri: str) -> None:
     if url.get_backend_name() != "sqlite":
         return
     # url.database is the filesystem path for file-backed SQLite, None or
-    # ":memory:" for in-memory — neither needs a parent dir.
+    # ":memory:" for in-memory �?neither needs a parent dir.
     if not url.database or url.database == ":memory:":
         return
     Path(url.database).parent.mkdir(parents=True, exist_ok=True)
@@ -849,7 +1102,7 @@ def _maybe_prompt_first_admin(account_store: Any, auth_provider: Any, *, auto_op
     The "terminal" entry point of first-run setup. It's the FALLBACK,
     not the default: when the browser is about to auto-open the web
     Create-admin form (the default ``--open`` on a loopback server), we
-    skip the prompt and let the browser own setup — otherwise the
+    skip the prompt and let the browser own setup �?otherwise the
     terminal prompt would block before the lifespan ever opens the
     browser, so the form would never appear.
 
@@ -859,7 +1112,7 @@ def _maybe_prompt_first_admin(account_store: Any, auth_provider: Any, *, auto_op
     - no password-having account exists yet (a ``--admin-password`` /
       ``INIT_ADMIN_PASSWORD`` would already have created one, and a
       re-boot already has an admin);
-    - stdin AND stdout are a TTY — a headless / piped / agent run must
+    - stdin AND stdout are a TTY �?a headless / piped / agent run must
       NOT block on a prompt (it falls through to the web form);
     - the browser is NOT auto-opening a usable form, i.e. ``--no-open``
       was passed OR the base URL isn't loopback (remote-over-SSH, where
@@ -867,7 +1120,7 @@ def _maybe_prompt_first_admin(account_store: Any, auth_provider: Any, *, auto_op
       available).
 
     On success, creates the admin and mints the loopback CLI token so a
-    subsequent ``agent-meow run`` against this server is signed in.
+    subsequent ``omnigent run`` against this server is signed in.
 
     :param account_store: The accounts store, or ``None`` in
         header/OIDC mode (then this is a no-op).
@@ -906,7 +1159,7 @@ def _maybe_prompt_first_admin(account_store: Any, auth_provider: Any, *, auto_op
     if auto_open and base_url is not None and _is_loopback_base_url(base_url):
         return
 
-    click.echo("\n  First-run setup — create the admin account for this server.")
+    click.echo("\n  First-run setup �?create the admin account for this server.")
     username = click.prompt("  Username", default=resolve_admin_username()).strip().lower()
     while True:
         password = click.prompt("  Password", hide_input=True, confirmation_prompt=True)
@@ -918,10 +1171,10 @@ def _maybe_prompt_first_admin(account_store: Any, auth_provider: Any, *, auto_op
         account_store.create_user_with_password(username, hash_password(password), is_admin=True)
     except ValueError:
         # Raced another claimer (e.g. someone hit the web form first).
-        click.echo("  An admin was just created elsewhere — skipping.", err=True)
+        click.echo("  An admin was just created elsewhere �?skipping.", err=True)
         return
 
-    # Mint the loopback CLI token so `agent-meow run` is signed in.
+    # Mint the loopback CLI token so `omnigent run` is signed in.
     # (Reuses cfg/base_url resolved above.)
     if (
         cfg is not None
@@ -935,7 +1188,7 @@ def _maybe_prompt_first_admin(account_store: Any, auth_provider: Any, *, auto_op
             cookie_secret=cfg.cookie_secret,
             session_ttl_hours=cfg.session_ttl_hours,
         )
-    click.echo(f"  ✓ Admin '{username}' created. Sign in at the server URL.\n")
+    click.echo(f"  �?Admin '{username}' created. Sign in at the server URL.\n")
 
 
 def _create_artifact_store(location: str) -> Any:  # type: ignore[explicit-any]  # returns ArtifactStore protocol (optional deps)
@@ -974,13 +1227,13 @@ def _preregister_agent(  # type: ignore[explicit-any]  # agent_store / artifact_
     Register an agent from a directory or standalone YAML file.
 
     Materializes *agent_source* into a uniform bundle directory via
-    :func:`~?agent_meow.spec.materialize_bundle`, tars it, validates
+    :func:`agent_meow.spec.materialize_bundle`, tars it, validates
     the spec, and creates (or replaces) the agent in the store. This
     runs at server startup for each ``--agent`` flag.
 
     :param agent_source: Either an agent-image directory containing
-        ``config.yaml`` (standard agent-meow shape) or a standalone
-        agent-meow YAML file (e.g.
+        ``config.yaml`` (standard omnigent shape) or a standalone
+        omnigent YAML file (e.g.
         ``examples/coding_supervisor.yaml``). The file-vs-directory
         branch lives inside ``materialize_bundle``; this function
         operates uniformly on a directory downstream of it.
@@ -988,7 +1241,7 @@ def _preregister_agent(  # type: ignore[explicit-any]  # agent_store / artifact_
     :param artifact_store: The ArtifactStore for bundle storage.
     :param agent_cache: The AgentCache. Required so the on-disk
         extracted-bundle tier (cache_dir/<agent_id>/) is swapped
-        in lockstep with the artifact-store update — otherwise a
+        in lockstep with the artifact-store update �?otherwise a
         persistent session reuses the prior extraction and any
         newly-added local-tool files (or other bundle edits) are
         silently ignored on the next request.
@@ -1018,7 +1271,7 @@ def _preregister_agent(  # type: ignore[explicit-any]  # agent_store / artifact_
             tar.add(str(bundle_dir), arcname=".")
         bundle_bytes = buf.getvalue()
 
-        # Validate via the materialized directory directly — cheaper
+        # Validate via the materialized directory directly �?cheaper
         # than round-tripping through extract.
         spec = load(bundle_dir)
 
@@ -1027,14 +1280,14 @@ def _preregister_agent(  # type: ignore[explicit-any]  # agent_store / artifact_
         return None
 
     # Idempotent registration. Mirrors
-    # :func:`~?agent_meow.inner.cli._omnigent_register_yaml_bundle` —
+    # :func:`agent_meow.inner.cli._omnigent_register_yaml_bundle` �?
     # see designs/RUN_OMNIGENT_SESSION_RESUMPTION.md. Reusing the
     # existing ``agent_id`` (rather than delete + recreate)
     # is load-bearing for ``--continue``: deleting the old
     # row cascades through the ``tasks`` FK
     # (``ondelete=CASCADE`` in
-    # :class:`~?agent_meow.db.db_models.SqlTask`), wiping every
-    # prior task — which makes the next ``--continue``
+    # :class:`agent_meow.db.db_models.SqlTask`), wiping every
+    # prior task �?which makes the next ``--continue``
     # filter by ``agent_id`` return zero conversations and
     # exit ``"No prior conversation for agent ..."``. Update
     # the bundle in place and only refresh
@@ -1044,16 +1297,18 @@ def _preregister_agent(  # type: ignore[explicit-any]  # agent_store / artifact_
     existing = agent_store.get_by_name(spec.name)
     if existing is not None:
         new_loc = f"{existing.id}/{bundle_hash}"
-        if existing.bundle_location != new_loc:
+        # Sha-segment compare: legacy rows keep an ``ag_``-prefixed left
+        # segment (physical artifact key); only the sha encodes content.
+        if existing.bundle_location.rsplit("/", 1)[-1] != bundle_hash:
             artifact_store.put(new_loc, bundle_bytes)
             agent_store.update(existing.id, bundle_location=new_loc)
             # Swap the cache's extracted bundle in lockstep. Without
-            # this, ``AgentCache.load`` will hit Tier 2 (disk —
+            # this, ``AgentCache.load`` will hit Tier 2 (disk �?
             # ``cache_dir/<agent_id>/``) on the next request and
             # return the OLD spec, even though the artifact store
             # and the DB row both point at the new bundle.
             # Mirrors what the HTTP PUT /agents/{id} route does at
-            # ``agent_meow/server/routes/agents.py:248``.
+            # ``omnigent/server/routes/agents.py:248``.
             # ``--agent`` registers operator-authored template agents,
             # so ${VAR} may expand against the server env here.
             agent_cache.replace(existing.id, new_loc, bundle_bytes, expand_env=True)
@@ -1077,14 +1332,14 @@ def _format_version() -> str:
     """Render the version line shown by ``--version`` and ``version``.
 
     Always includes the package version. When the build hook in
-    ``setup.py`` wrote ``agent_meow/_build_info.py``, the line is
+    ``setup.py`` wrote ``omnigent/_build_info.py``, the line is
     additionally annotated with the short commit SHA and the build
     time in ISO-8601 UTC. For source checkouts that have never
-    been built, only the bare version prints — matching the
+    been built, only the bare version prints �?matching the
     behavior before this feature shipped.
 
-    :returns: Either ``"agent-meow 0.1.0"`` (no build info), or
-        ``"agent-meow 0.1.0 (010cf77c, built 2026-05-21T14:34:45Z)"``.
+    :returns: Either ``"omnigent 0.1.0"`` (no build info), or
+        ``"omnigent 0.1.0 (010cf77c, built 2026-05-21T14:34:45Z)"``.
     """
     import datetime
 
@@ -1094,17 +1349,17 @@ def _format_version() -> str:
     version_str = VERSION
     info = _read_build_info()
     if info is None:
-        return f"agent-meow {version_str}"
+        return f"omnigent {version_str}"
     epoch, sha = info
     when = datetime.datetime.fromtimestamp(epoch, tz=datetime.timezone.utc).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
     )
     if sha:
-        # Short SHA (first 8 chars) — enough to disambiguate in bug
+        # Short SHA (first 8 chars) �?enough to disambiguate in bug
         # reports without making the line unwieldy.
-        return f"agent-meow {version_str} ({sha[:8]}, built {when})"
+        return f"omnigent {version_str} ({sha[:8]}, built {when})"
     # _build_info exists but has no SHA (built without git available).
-    return f"agent-meow {version_str} (built {when})"
+    return f"omnigent {version_str} (built {when})"
 
 
 def _print_version_callback(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
@@ -1112,10 +1367,10 @@ def _print_version_callback(ctx: click.Context, _param: click.Parameter, value: 
 
     We deliberately do NOT use ``@click.version_option(version=...)``
     here: that decorator evaluates its ``version`` argument at module
-    import time, which would call ``_format_version()`` — and through
-    it ``_read_build_info()`` — during ``agent_meow.cli`` import. The
+    import time, which would call ``_format_version()`` �?and through
+    it ``_read_build_info()`` �?during ``agent_meow.cli`` import. The
     successful sub-import would then set ``agent_meow._build_info`` as
-    an attribute on the ``agent-meow`` package object. Once that
+    an attribute on the ``omnigent`` package object. Once that
     attribute exists, ``from agent_meow import _build_info`` short-
     circuits *before* consulting ``sys.modules``, defeating the
     test-suite's ``sys.modules[...] = None`` blocker and making most
@@ -1135,10 +1390,10 @@ class _OmnigentCLI(click.Group):
     """Top-level group that prints the brand lockup above its help.
 
     The Otto + wordmark lockup is drawn on stderr (decoration) and is
-    TTY-gated by :func:`~?agent_meow.inner.ui.show_banner`, so ``agent-meow
+    TTY-gated by :func:`agent_meow.inner.ui.show_banner`, so ``omnigent
     --help`` shows the banner interactively while piped/CI help stays
     clean. Only the top-level group overrides help; subcommand help
-    (``agent-meow run --help``) is untouched.
+    (``omnigent run --help``) is untouched.
     """
 
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
@@ -1147,14 +1402,70 @@ class _OmnigentCLI(click.Group):
         if ui.show_banner():
             from agent_meow.version import VERSION
 
-            epilogue = [("Get started", "agent-meow setup")]
+            epilogue = [("Get started", "omnigent setup")]
             if VERSION:
                 epilogue.insert(0, ("Version", VERSION))
             ui.print_landing(tagline="all your agents, one cli", epilogue=epilogue)
         super().format_help(ctx, formatter)
 
 
+def _set_debug_logging(
+    _ctx: click.Context,
+    _param: click.Parameter,
+    value: bool,
+) -> bool:
+    if value:
+        os.environ[LOG_LEVEL_ENV_VAR] = "DEBUG"
+    return value
+
+
+def _set_log_to_stderr(
+    _ctx: click.Context,
+    _param: click.Parameter,
+    value: bool,
+) -> bool:
+    if value:
+        os.environ[LOG_TO_STDERR_ENV_VAR] = "1"
+    return value
+
+
+def _extract_global_logging_flags(argv: list[str]) -> tuple[list[str], bool, bool]:
+    """Remove global logging flags before run-shorthand rewriting."""
+    debug_logging = False
+    log_to_stderr = False
+    remaining: list[str] = []
+    passthrough = False
+    for token in argv:
+        if token == "--":
+            passthrough = True
+            remaining.append(token)
+        elif not passthrough and token == "--debug":
+            debug_logging = True
+        elif not passthrough and token == "--log-to-stderr":
+            log_to_stderr = True
+        else:
+            remaining.append(token)
+    return remaining, debug_logging, log_to_stderr
+
+
 @click.group(cls=_OmnigentCLI)
+@click.option(
+    "--debug",
+    "debug_logging",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_set_debug_logging,
+    help="Enable verbose DEBUG logging for Omnigent processes.",
+)
+@click.option(
+    "--log-to-stderr",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_set_log_to_stderr,
+    help="Mirror process logs to the terminal when stderr is interactive.",
+)
 @click.option(
     "--version",
     is_flag=True,
@@ -1164,7 +1475,7 @@ class _OmnigentCLI(click.Group):
     help="Show the version and exit.",
 )
 def cli() -> None:
-    """agent-meow CLI."""
+    """Omnigent CLI."""
 
 
 # Names of every subcommand the click group owns. Used by
@@ -1181,9 +1492,13 @@ _CLICK_SUBCOMMANDS: frozenset[str] = frozenset(
         "cursor",
         "debby",
         "debug",
+        "doctor",
         "goose",
         "hermes",
         "host",
+        "import",
+        "integration",
+        "_internal",
         "kimi",
         "kiro",
         "lakebox",
@@ -1196,10 +1511,12 @@ _CLICK_SUBCOMMANDS: frozenset[str] = frozenset(
         "qwen",
         "resume",
         "run",
+        "session",
         "sandbox",
         "server",
         "setup",
         "stop",
+        "uninstall",
         "update",
         "upgrade",
         "version",
@@ -1234,13 +1551,37 @@ def _should_skip_update_check(argv: list[str]) -> bool:
     }
 
 
+def _warn_deprecated_harness_path_env_vars() -> None:
+    """Print a terminal-visible deprecation notice for legacy ``HARNESS_*_PATH``.
+
+    These were the documented per-harness binary override knobs; they're now
+    replaced by ``OMNIGENT_<NAME>_PATH`` (one var per binary, ``-native`` suffix
+    stripped). The legacy read still works but is slated for removal in
+    v0.8.0. Surface the replacement at CLI startup so a user with a legacy var
+    in their shell/systemd/CI sees it regardless of which harness they launch
+    or whether the run is local or remote (the runner-side log warning only
+    reaches users on local launches). Gated to interactive stderr to avoid
+    noise in pipes/CI logs.
+    """
+    if not sys.stderr.isatty():
+        return
+    from agent_meow.harness_startup_config import legacy_harness_path_env_vars_set
+
+    for legacy, canonical in legacy_harness_path_env_vars_set():
+        click.echo(
+            f"omnigent: {legacy} is deprecated; set {canonical} instead. "
+            f"{legacy} support will be removed in v0.8.0.",
+            err=True,
+        )
+
+
 def main() -> None:
     """
-    Console-script entry point for ``agent-meow``.
+    Console-script entry point for ``omnigent``.
 
     Dispatches to the click CLI for subcommands like ``run``,
     ``attach``, and ``server``. The removed top-level ad-hoc chat
-    shape (``agent-meow [--flags] [prompt]``) is rejected here so it
+    shape (``omnigent [--flags] [prompt]``) is rejected here so it
     cannot fall back to the legacy in-process runner path.
 
     Also inserts the current working directory at ``sys.path[0]``
@@ -1255,17 +1596,31 @@ def main() -> None:
     so unhandled exceptions are captured even when the user didn't
     enable ``--log`` or ``--debug-events``.
     """
+    # Friendly crash handler: replaces Python's raw traceback with a
+    # calm, branded crash screen + a one-tap path to file a GitHub issue
+    # (browser opens the repo's pre-filled bug-report template with the
+    # traceback, version, and OS in the Description field).
+    # Installed first so crashes anywhere below �?argv shorthands, Click
+    # dispatch, imports �?are all caught. See omnigent/crash_handler.py.
+    from agent_meow.crash_handler import install_crash_handler
+
+    install_crash_handler(app_name="omnigent", repo="omnigent-ai/omnigent")
+
     cwd = os.getcwd()
     if cwd not in sys.path:
         sys.path.insert(0, cwd)
 
-    # Relocate pre-rename ~/.omniagents state before anything reads ~/.agent-meow
+    # Relocate pre-rename ~/.omniagents state before anything reads ~/.omnigent
     # (update-check cache, diagnostics logs, config). No-op once migrated.
     _migrate_legacy_state_dir()
 
-    argv = sys.argv[1:]
+    argv, debug_logging, log_to_stderr = _extract_global_logging_flags(sys.argv[1:])
+    if debug_logging:
+        os.environ[LOG_LEVEL_ENV_VAR] = "DEBUG"
+    if log_to_stderr:
+        os.environ[LOG_TO_STDERR_ENV_VAR] = "1"
 
-    # Bare ``agent-meow`` with no args behaves like ``agent-meow run`` on an
+    # Bare ``omnigent`` with no args behaves like ``omnigent run`` on an
     # interactive terminal: ``run`` resolves the configured default agent /
     # first-run plan and drops into ``setup`` when nothing is configured. In
     # a non-interactive context (pipe, CI, no TTY) fall back to ``--help`` so
@@ -1273,7 +1628,7 @@ def main() -> None:
     if not argv:
         argv = ["run"] if sys.stdin.isatty() else ["--help"]
 
-    # Shorthand: ``agent-meow --harness claude [opts]`` →
+    # Shorthand: ``omnigent --harness claude [opts]`` �?
     # ``run --harness claude [opts]``. Click group-level options are
     # intentionally tiny (currently only help/version); runner flags live on
     # ``run``. Treat a leading non-top-level flag as bare-run shorthand so
@@ -1281,8 +1636,8 @@ def main() -> None:
     if argv and argv[0].startswith("-") and argv[0] not in {"--help", "-h", "--version"}:
         argv = ["run", *argv]
 
-    # Shorthand: ``agent-meow myagent.yaml [opts]`` → ``run myagent.yaml [opts]``.
-    # Allows ``agent-meow`` to act as a transparent alias for ``agent-meow run``
+    # Shorthand: ``omnigent myagent.yaml [opts]`` �?``run myagent.yaml [opts]``.
+    # Allows ``omnigent`` to act as a transparent alias for ``omnigent run``
     # when the first positional argument is an agent path.
     if _is_run_shorthand(argv):
         argv = ["run", *argv]
@@ -1290,7 +1645,7 @@ def main() -> None:
     if argv and _is_server_url(argv[0]):
         click.echo(
             "Error: server URLs must be passed with --server. "
-            f"Use `agent-meow run --server {argv[0]}`.",
+            f"Use `omnigent run --server {argv[0]}`.",
             err=True,
         )
         raise SystemExit(2)
@@ -1298,20 +1653,22 @@ def main() -> None:
     if _is_removed_ad_hoc_invocation(argv):
         click.echo(
             "Error: top-level ad-hoc chat was removed. Use "
-            "`agent-meow run <agent.yaml>` or "
-            "`agent-meow run --harness <harness>`.",
+            "`omnigent run <agent.yaml>` or "
+            "`omnigent run --harness <harness>`.",
             err=True,
         )
         raise SystemExit(2)
 
-    # Always-on diagnostics — captures exceptions, lifecycle events,
-    # and warnings to ~/.agent_meow/logs/cli-*.log even when --log
+    # Always-on diagnostics �?captures exceptions, lifecycle events,
+    # and warnings to ~/.omnigent/logs/cli/cli-*.log even when --log
     # (conversation JSON) and --debug-events (SSE tape) are off.
     # Skip for pure help/version so quick invocations don't create
     # log litter.
     if argv[0] in {"--help", "-h", "--version"}:
         cli(args=argv)
         return
+
+    _maybe_fast_backfill_install_ledger(argv)
 
     from agent_meow.cli_diagnostics import (
         log_cli_error_hint,
@@ -1322,12 +1679,14 @@ def main() -> None:
 
     setup_cli_logging(argv)
 
-    # ``agent-meow setup`` IS the setup wizard — if it fails, telling the
-    # user to "run agent-meow setup" would be circular. ``upgrade`` (and its
+    # ``omnigent setup`` IS the setup wizard �?if it fails, telling the
+    # user to "run omnigent setup" would be circular. ``upgrade`` (and its
     # ``update`` alias) is excluded too: its failures (unreachable index,
     # dev checkout, install error) are never about a missing model
-    # credential, so the setup hint would only mislead.
-    suggest_setup = argv[0] not in {"setup", "update", "upgrade"}
+    # credential, so the setup hint would only mislead. ``integration``
+    # likewise: its errors (package not installed, daemon not running) have
+    # nothing to do with model credentials.
+    suggest_setup = argv[0] not in {"setup", "update", "upgrade", "integration"}
 
     # Lightweight update notice: only on an interactive terminal and only
     # for user-facing commands. Reads a cached "latest PyPI version" and
@@ -1338,6 +1697,14 @@ def main() -> None:
 
         maybe_show_update_notice()
 
+    # Terminal-visible deprecation notice for legacy ``HARNESS_*_PATH`` env
+    # vars (now ``OMNIGENT_<NAME>_PATH``). Same gating as the update notice so
+    # help/version/upgrade invocations stay quiet. The runner-side log warning
+    # only reaches users on local launches; this reaches the terminal for every
+    # interactive invocation regardless of local-vs-remote.
+    if not _should_skip_update_check(argv):
+        _warn_deprecated_harness_path_env_vars()
+
     try:
         cli(args=argv, standalone_mode=False)
     except click.ClickException as exc:
@@ -1347,24 +1714,33 @@ def main() -> None:
             print_setup_hint()
         raise SystemExit(exc.exit_code) from exc
     except click.Abort as exc:
-        # Ctrl+C / user cancel — no hint, the user knows what they did.
+        # Ctrl+C / user cancel �?no hint, the user knows what they did.
         log_cli_exception(exc, prefix="Aborted CLI")
         click.echo("Aborted!", err=True)
         raise SystemExit(1) from exc
     except Exception as exc:
+        # Keep the diagnostics log line ("Details logged to �?) �?the
+        # always-on CLI log has more context than this single crash �?then
+        # hand off to the friendly crash handler for the calm screen,
+        # de-emphasized traceback, and the bug-filing prompt. We drop the
+        # `omnigent setup` hint here: genuine crashes are rarely auth issues,
+        # and "run setup" would contradict the crash screen's reassurance.
+        # `handle_crash` renders the UX and we exit with code 1 (SystemExit
+        # does NOT re-trigger sys.excepthook, so there's no double render).
+        from agent_meow.crash_handler import handle_crash
+
         log_cli_error_hint(exc)
-        if suggest_setup:
-            print_setup_hint()
-        raise
+        handle_crash(exc)
+        raise SystemExit(1) from exc
 
 
 def _is_run_shorthand(argv: list[str]) -> bool:
-    """Return True when *argv* looks like ``agent-meow <target> [opts]``
+    """Return True when *argv* looks like ``omnigent <target> [opts]``
     where *target* is an agent YAML/directory rather than a subcommand.
 
     Used by :func:`main` to transparently redirect
-    ``agent-meow myagent.yaml --model m`` to
-    ``agent-meow run myagent.yaml --model m``.
+    ``omnigent myagent.yaml --model m`` to
+    ``omnigent run myagent.yaml --model m``.
 
     :param argv: CLI arguments without the program name, e.g.
         ``["myagent.yaml", "--model", "m"]``.
@@ -1403,15 +1779,15 @@ def _is_removed_ad_hoc_invocation(argv: list[str]) -> bool:
     True when:
     - The first non-flag token isn't a known click subcommand and is
       a quoted multi-word prompt (e.g.
-      ``agent-meow "what does this repo do?"``) — the free-text shape
+      ``omnigent "what does this repo do?"``) �?the free-text shape
       the removed top-level ad-hoc chat accepted.
 
     False when the first non-flag token matches a known
-    subcommand (``agent-meow run ...``, ``agent-meow attach ...``),
+    subcommand (``omnigent run ...``, ``omnigent attach ...``),
     when the user asks for top-level help/version
-    (``agent-meow --help``, ``agent-meow --version``), or when the
-    token is a single command-shaped word (e.g. ``agent-meow blah``)
-    — those stay on the click path so an unknown command produces
+    (``omnigent --help``, ``omnigent --version``), or when the
+    token is a single command-shaped word (e.g. ``omnigent blah``)
+    �?those stay on the click path so an unknown command produces
     click's standard "No such command" error rather than the ad-hoc
     removal notice.
 
@@ -1427,7 +1803,7 @@ def _is_removed_ad_hoc_invocation(argv: list[str]) -> bool:
     if argv[0] in {"--help", "-h", "--version"}:
         return False
     # Skip leading flags to find the first positional. If all
-    # tokens are flags (e.g. ``agent-meow --system-prompt "..."``),
+    # tokens are flags (e.g. ``omnigent --system-prompt "..."``),
     # treat it as removed ad-hoc chat rather than handing it to click
     # as a top-level option.
     for token in argv:
@@ -1453,12 +1829,12 @@ def _runner_loopback_host(host: str) -> str:
     return "127.0.0.1" if host in {"0.0.0.0", "::", ""} else host
 
 
-_HOST_PID_PATH = Path.home() / ".agent-meow" / "host.pid"
+_HOST_PID_PATH = Path.home() / ".omnigent" / "host.pid"
 
 
 # host.pid records the daemon PID + the "target" it serves: a normalized
 # server URL for remote/explicit targets, or the literal marker ``"local"``
-# for a daemon that owns a local agent-meow server. Daemon reuse is keyed on this
+# for a daemon that owns a local Omnigent server. Daemon reuse is keyed on this
 # target (real URLs never collide with the marker).
 _LOCAL_DAEMON_MARKER = "local"
 
@@ -1476,10 +1852,10 @@ class _HostDaemonRecord:
         mode, e.g. ``"https://example.databricksapps.com"``. ``None``
         for local mode.
     :param log_path: Daemon log file path, e.g.
-        ``"/Users/me/.agent_meow/logs/host-daemon/daemon-abc.log"``.
+        ``"/Users/me/.omnigent/logs/host/host-abc.log"``.
     :param started_at: Unix epoch seconds when the daemon was spawned,
         e.g. ``1710000000``.
-    :param host_id: Local host id advertised to agent-meow servers, e.g.
+    :param host_id: Local host id advertised to Omnigent servers, e.g.
         ``"host_abc123"``. ``None`` for legacy records.
     :param resolved_server_url: Concrete local server URL discovered for
         local mode, e.g. ``"http://127.0.0.1:8123"``. ``None`` until
@@ -1506,7 +1882,7 @@ class _HostDaemonRecord:
 @dataclass(frozen=True)
 class _HostHttpResult:
     """
-    Decoded agent-meow management HTTP response.
+    Decoded Omnigent management HTTP response.
 
     :param status_code: HTTP status code, e.g. ``200``. ``0`` means no
         HTTP response was received because the request failed locally.
@@ -1541,7 +1917,7 @@ class _DaemonSessionsResult:
     """
     Sessions fetched for one daemon target.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"https://example.databricksapps.com"``. ``None`` when a
         local daemon's server cannot be discovered.
     :param sessions: Session rows owned by the daemon host id.
@@ -1590,7 +1966,7 @@ class _SpawnedDaemonProcess:
 
     :param pid: Spawned process id, e.g. ``4242``.
     :param log_path: Daemon log path, e.g.
-        ``"/Users/me/.agent_meow/logs/host-daemon/daemon-abc.log"``.
+        ``"/Users/me/.omnigent/logs/host/host-abc.log"``.
     """
 
     pid: int
@@ -1601,7 +1977,7 @@ def _normalize_daemon_target(server_url: str | None) -> str:
     """
     Normalize a daemon target key.
 
-    :param server_url: Requested agent-meow server URL, e.g.
+    :param server_url: Requested Omnigent server URL, e.g.
         ``"https://example.databricksapps.com/"``. ``None`` or empty
         string selects local mode.
     :returns: ``"local"`` for local mode, otherwise the URL without a
@@ -1615,11 +1991,11 @@ def _daemon_host_online(record: _HostDaemonRecord, *, timeout_s: float = 2.0) ->
     Probe whether a daemon's host is currently online on its server.
 
     A daemon process being alive (PID check) does not mean its WebSocket
-    tunnel to the agent-meow server is up: the server only reports the host
+    tunnel to the Omnigent server is up: the server only reports the host
     ``online`` while a daemon holds an authenticated tunnel and has
     heartbeated within ``HOST_LIVENESS_TTL_S``. After a server restart,
     an ungraceful daemon death, or a flapping tunnel, the daemon can be a
-    "zombie" — alive but not registered. This probe distinguishes the two
+    "zombie" �?alive but not registered. This probe distinguishes the two
     so reuse can heal instead of polling a zombie until timeout.
 
     :param record: Daemon record to probe.
@@ -1655,7 +2031,7 @@ def _daemon_registry_dir() -> Path:
     the pidfile's parent instead of capturing ``Path.home()`` separately.
 
     :returns: Registry directory path, e.g.
-        ``Path("~/.agent_meow/daemons")``.
+        ``Path("~/.omnigent/daemons")``.
     """
     return _HOST_PID_PATH.parent / "daemons"
 
@@ -1723,7 +2099,7 @@ def _read_daemon_record(path: Path) -> _HostDaemonRecord | None:
     Read a daemon registry record from disk.
 
     :param path: JSON file path to read, e.g.
-        ``Path("~/.agent_meow/daemons/abc.json")``.
+        ``Path("~/.omnigent/daemons/abc.json")``.
     :returns: Parsed daemon record, or ``None`` if unreadable or malformed.
     """
     try:
@@ -1752,7 +2128,7 @@ def _delete_daemon_record(record: _HostDaemonRecord) -> None:
     Delete a daemon registry record if it exists.
 
     Removes the per-target JSON record, and also clears the legacy
-    ``host.pid`` when it names the same target — otherwise a daemon tracked
+    ``host.pid`` when it names the same target �?otherwise a daemon tracked
     only by the legacy pidfile (no JSON record) leaves a phantom that
     reappears on every subsequent ``stop`` / ``host status``.
 
@@ -1826,7 +2202,7 @@ def _find_daemon_record(target: str) -> _HostDaemonRecord | None:
 
 def _update_daemon_resolved_server_url(target: str, server_url: str) -> None:
     """
-    Record the concrete agent-meow server URL served by a daemon target.
+    Record the concrete Omnigent server URL served by a daemon target.
 
     :param target: Normalized target, e.g. ``"local"``.
     :param server_url: Concrete server URL, e.g.
@@ -1901,7 +2277,7 @@ def _daemon_host_identity_changed(record: _HostDaemonRecord) -> bool:
     """
     Return whether a daemon record belongs to a different current host id.
 
-    A live daemon can outlast edits to ``~/.agent_meow/config.yaml``. Reusing
+    A live daemon can outlast edits to ``~/.omnigent/config.yaml``. Reusing
     that process leaves commands polling for the new host id while the daemon
     is still connected as the old host id, which can never succeed.
 
@@ -1917,9 +2293,9 @@ def _daemon_host_identity_changed(record: _HostDaemonRecord) -> bool:
 
 def _terminate_host_unit(record: _HostDaemonRecord, *, reason: str) -> None:
     """
-    Tear down a daemon and, in local mode, the agent-meow server it owns.
+    Tear down a daemon and, in local mode, the Omnigent server it owns.
 
-    The ``--local`` daemon spawns its agent-meow server once and never respawns
+    The ``--local`` daemon spawns its Omnigent server once and never respawns
     it, so a stale daemon and its server must be replaced as a unit:
     killing only the daemon would strand the server (and vice versa). This
     stops both so the caller can spawn a fresh, correctly-configured pair.
@@ -1931,7 +2307,7 @@ def _terminate_host_unit(record: _HostDaemonRecord, *, reason: str) -> None:
     """
     click.echo(f"Restarting host daemon for {record.target!r} ({reason}).", err=True)
     # Best-effort: a daemon that refuses to die shouldn't hard-fail the
-    # run — the fresh daemon's record overwrites this one regardless.
+    # run �?the fresh daemon's record overwrites this one regardless.
     with contextlib.suppress(click.ClickException):
         _terminate_daemon(record, force=True)
     if record.mode == "local":
@@ -1947,7 +2323,7 @@ class _DaemonReuseDecision:
     :param config_changed: ``True`` when the existing daemon was torn down
         specifically because its config signature no longer matches this
         invocation (e.g. the user flipped ``OMNIGENT_AUTH_ENABLED``).
-        Distinct from a transparent tunnel-health heal — only a config
+        Distinct from a transparent tunnel-health heal �?only a config
         change forces the caller to ask the user to re-run, because the
         server was restarted into a different auth posture mid-command.
     """
@@ -1962,19 +2338,19 @@ def _reuse_existing_daemon_record(target: str) -> _DaemonReuseDecision:
 
     Reuse requires more than a live PID: a daemon whose process is alive
     but whose server tunnel is down (server restart, ungraceful death,
-    flapping tunnel) is a zombie — the host reads ``offline`` and the
+    flapping tunnel) is a zombie �?the host reads ``offline`` and the
     caller would poll until timeout. And a daemon spawned under a
     different server config (e.g. the user flipped
     ``OMNIGENT_AUTH_ENABLED``) would silently keep its old auth
     mode. In both cases we tear the unit down here and return
-    ``reuse=False`` so the caller spawns a fresh one — flagging
+    ``reuse=False`` so the caller spawns a fresh one �?flagging
     ``config_changed`` for the auth-drift case so the caller can ask the
     user to re-run against the freshly-restarted server.
 
     Self-healing is limited to daemons this CLI spawned in the background
     (they carry a ``log_path``). Foreground ``host`` daemons
     (``log_path is None``) and legacy records (``config_sig is None``) are
-    never silently killed — we don't tear down an interactive process or
+    never silently killed �?we don't tear down an interactive process or
     one whose config we can't verify.
 
     :param target: Normalized daemon target, e.g. ``"local"``.
@@ -2002,20 +2378,20 @@ def _reuse_existing_daemon_record(target: str) -> _DaemonReuseDecision:
         return _DaemonReuseDecision(reuse=True, config_changed=False)
 
     if not background:
-        # Foreground host / legacy host.pid: keep prior behavior — a
+        # Foreground host / legacy host.pid: keep prior behavior �?a
         # live PID is reused as-is (don't kill the user's interactive
         # process or guess at an unstamped config).
         return _DaemonReuseDecision(reuse=True, config_changed=False)
 
-    # Config drift → the running server has the wrong auth source.
+    # Config drift �?the running server has the wrong auth source.
     desired_sig = server_config_signature()
     if existing.config_sig is not None and existing.config_sig != desired_sig:
         _terminate_host_unit(existing, reason="config changed (auth)")
         return _DaemonReuseDecision(reuse=False, config_changed=True)
 
-    # Tunnel health → don't reuse a zombie. Skip very young daemons (a
+    # Tunnel health �?don't reuse a zombie. Skip very young daemons (a
     # concurrent invocation may have just spawned one still connecting). This
-    # is a transparent heal, NOT a config change — the caller continues.
+    # is a transparent heal, NOT a config change �?the caller continues.
     age_s = time.time() - existing.started_at
     if age_s >= _DAEMON_REUSE_MIN_AGE_S and not _daemon_tunnel_recovers(existing):
         _terminate_host_unit(existing, reason="host tunnel is offline")
@@ -2053,23 +2429,29 @@ def _spawn_host_daemon_process(
     :param env: Allowlisted daemon environment.
     :returns: Spawned process metadata, or ``None`` if spawn fails.
     """
-    log_dir = _HOST_PID_PATH.parent / "logs" / "host-daemon"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_fd, log_path = tempfile.mkstemp(prefix="daemon-", suffix=".log", dir=log_dir)
-    log_fh = os.fdopen(log_fd, "wb")
+    from agent_meow.process_logging import (
+        PROCESS_LOG_FILE_ENV_VAR,
+        child_logging_popen_kwargs,
+        open_process_log_file,
+    )
+
+    log_path, log_fh = open_process_log_file("host")
+    env = {**env, PROCESS_LOG_FILE_ENV_VAR: str(log_path)}
     try:
-        proc = subprocess.Popen(
-            args,
-            env=env,
-            stdout=log_fh,
-            stderr=log_fh,
-            **_proc.spawn_kwargs(),
-        )
+        with child_logging_popen_kwargs(env) as logging_kwargs:
+            proc = subprocess.Popen(
+                args,
+                env=env,
+                stdout=log_fh,
+                stderr=log_fh,
+                **_proc.spawn_kwargs(),
+                **logging_kwargs,
+            )
     except OSError:
         return None
     finally:
         log_fh.close()
-    return _SpawnedDaemonProcess(pid=proc.pid, log_path=log_path)
+    return _SpawnedDaemonProcess(pid=proc.pid, log_path=str(log_path))
 
 
 def _persist_spawned_daemon(
@@ -2113,7 +2495,7 @@ def _foreground_daemon_record(
 
     :param target: Normalized daemon target, e.g.
         ``"https://example.databricksapps.com"`` or ``"local"``.
-    :param server_url: Concrete agent-meow server URL being connected to, e.g.
+    :param server_url: Concrete Omnigent server URL being connected to, e.g.
         ``"http://127.0.0.1:8123"``.
     :param host_id: Local host id, e.g. ``"host_abc123"``.
     :returns: Daemon registry record for ``os.getpid()``.
@@ -2171,8 +2553,8 @@ def _claim_foreground_daemon_record(
         raise click.ClickException(
             "A host daemon is already running for this server "
             f"(pid={conflict.pid}, target={conflict.target}). "
-            "Run `agent-meow host status` to inspect it or "
-            "`agent-meow host stop --server ...` to stop it first."
+            "Run `omnigent host status` to inspect it or "
+            "`omnigent host stop --server ...` to stop it first."
         )
     previous = _find_daemon_record(record.target)
     if previous is not None and not _pid_alive(previous.pid):
@@ -2228,11 +2610,11 @@ def _load_or_create_host_id() -> str | None:
 def _ensure_host_daemon(server_url: str | None) -> bool:
     """Start or reuse a host daemon for one target.
 
-    :param server_url: agent-meow server URL the daemon connects to, or ``None``
-        for local mode — the daemon starts (or reuses) a persistent local
-        agent-meow server and connects to that.
+    :param server_url: Omnigent server URL the daemon connects to, or ``None``
+        for local mode �?the daemon starts (or reuses) a persistent local
+        Omnigent server and connects to that.
     :returns: ``True`` when an existing daemon was torn down and respawned
-        because its config (auth source) changed — the caller
+        because its config (auth source) changed �?the caller
         should ask the user to re-run against the freshly-restarted server
         rather than continue this command mid-restart. ``False`` for a
         plain reuse, a transparent tunnel-health heal, or a first spawn.
@@ -2267,18 +2649,18 @@ def _build_host_daemon_env(
     """
     Build the environment for the background host daemon.
 
-    Remote daemons connect to an already-running agent-meow server, so they only
+    Remote daemons connect to an already-running Omnigent server, so they only
     need process essentials, TLS trust, and Databricks auth. Local daemons
-    also start the local agent-meow server; that server is the user's local runtime
-    and must inherit agent-meow config plus provider credentials such as
+    also start the local Omnigent server; that server is the user's local runtime
+    and must inherit Omnigent config plus provider credentials such as
     ``OPENAI_API_KEY`` and ``OPENAI_BASE_URL``. Both modes are allowlisted:
     local mode carries the runtime/provider vars needed by the local server,
     but unrelated shell secrets are not inherited merely because the daemon
     runs on the user's machine. Runners launched by the daemon still pass
-    through :func:`~?agent_meow.host.connect._build_runner_env`, so these
+    through :func:`agent_meow.host.connect._build_runner_env`, so these
     local-server credentials do not leak into runner subprocesses.
 
-    :param server_url: agent-meow server URL for remote mode, e.g.
+    :param server_url: Omnigent server URL for remote mode, e.g.
         ``"https://example.databricksapps.com"``, or a falsey value
         such as ``None`` / ``""`` for local daemon mode.
     :returns: Environment dict for ``subprocess.Popen``.
@@ -2341,7 +2723,7 @@ def _host_daemon_alive() -> bool:
 
 # Generous because a port-contended spawn boots TWICE: the bind-race loser
 # runs to its natural EADDRINUSE exit (completing DB migrations) before the
-# free-port respawn cold-boots — see ensure_local_omnigent_server.
+# free-port respawn cold-boots �?see ensure_local_omnigent_server.
 _LOCAL_SERVER_DISCOVER_TIMEOUT_S = 120.0
 
 
@@ -2353,7 +2735,7 @@ def _ensure_databricks_server_auth(server: str, *, non_interactive: bool = False
     (302 to the workspace OAuth page, or a DatabricksRealm 401) means
     the run would otherwise die much later with an opaque "non-JSON
     response (status=302)" traceback from the session-create call. On a
-    TTY we run the same flow ``agent-meow login`` would and continue;
+    TTY we run the same flow ``omnigent login`` would and continue;
     headless invocations get the exact command to run instead.
 
     Non-Databricks postures are deliberately left alone: local accounts
@@ -2362,13 +2744,13 @@ def _ensure_databricks_server_auth(server: str, *, non_interactive: bool = False
 
     :param server: Remote server base URL without a trailing slash,
         e.g. ``"https://myapp-123.aws.databricksapps.com"``.
-    :param non_interactive: When ``True``, never run the browser login —
+    :param non_interactive: When ``True``, never run the browser login �?
         emit the same fail-loud hint a headless invocation gets, even on a
-        TTY. Lets callers (e.g. ``agent-meow host --non-interactive``) keep
+        TTY. Lets callers (e.g. ``omnigent host --non-interactive``) keep
         their scripted, no-prompt behavior.
     :raises click.ClickException: When the server is Databricks-fronted,
         no credentials resolve, and the login flow is suppressed (stdin is
-        not a TTY or ``non_interactive`` is set) — or the login flow itself
+        not a TTY or ``non_interactive`` is set) �?or the login flow itself
         fails.
     """
     import httpx as _httpx
@@ -2390,13 +2772,13 @@ def _ensure_databricks_server_auth(server: str, *, non_interactive: bool = False
     workspace_host = _databricks_workspace_login_target(server, probe)
     if workspace_host is None:
         return
-    login_cmd = f"agent-meow login {server}"
+    login_cmd = f"omnigent login {server}"
     if non_interactive or not sys.stdin.isatty():
         raise click.ClickException(
             f"Not signed in to {server} (Databricks-fronted; /v1/me answered "
             f"HTTP {probe.status_code}). Run `{login_cmd}` and retry."
         )
-    click.echo(f"Not signed in to {server} — running `{login_cmd}` first.")
+    click.echo(f"Not signed in to {server} �?running `{login_cmd}` first.")
     # Recover the ``?o=`` selector from a prior login record so a re-login
     # still targets the right workspace.
     from agent_meow.cli_auth import load_databricks_org_id
@@ -2405,16 +2787,16 @@ def _ensure_databricks_server_auth(server: str, *, non_interactive: bool = False
 
 
 def _ensure_backend(server: str | None) -> str:
-    """Ensure the host daemon is running and return the agent-meow server URL.
+    """Ensure the host daemon is running and return the Omnigent server URL.
 
     The daemon is the single backend for ``attach`` / ``run`` / ``claude`` /
-    ``codex``: it spawns the runner and, in local mode, the agent-meow server too.
+    ``codex``: it spawns the runner and, in local mode, the Omnigent server too.
     The CLI is a pure client of the returned URL.
 
     :param server: ``--server`` value after config fallback. A non-empty
         value targets that (remote or explicit-local) server. ``None`` or
         ``""`` selects local mode: the daemon starts (or reuses) a
-        persistent local agent-meow server and this returns its discovered loopback
+        persistent local Omnigent server and this returns its discovered loopback
         URL.
     :returns: A concrete base URL, e.g. ``"http://127.0.0.1:8123"`` or the
         remote URL passed in.
@@ -2432,8 +2814,8 @@ def _ensure_backend(server: str | None) -> str:
         # Remote / explicit-server mode: the server isn't ours to restart, so
         # there's no auth-mode-flip "re-run" to surface (config_changed is
         # always False for a non-local target). Expand a bare workspace URL
-        # to its /api/2.0/agent-meow mount, then sign in first when the
-        # server is Databricks-fronted and we hold no usable credentials —
+        # to its /api/2.0/omnigent mount, then sign in first when the
+        # server is Databricks-fronted and we hold no usable credentials �?
         # otherwise the session-create call deep in the REPL bring-up
         # surfaces the edge redirect as an opaque non-JSON-response
         # traceback.
@@ -2442,11 +2824,11 @@ def _ensure_backend(server: str | None) -> str:
         with runner_startup_progress(initial_message=STARTUP_PHASE_CONNECTING_REMOTE):
             _ensure_host_daemon(server)
         return server
-    # Local mode: the daemon spawns (or reuses) a persistent local agent-meow server.
+    # Local mode: the daemon spawns (or reuses) a persistent local Omnigent server.
     # On a cold start this is the longest silent gap between the user pressing
     # Enter and any output, so render a spinner whose label tracks the step.
-    # It clears on context exit — before any auth-mode-change echo below and
-    # before the REPL/terminal the caller brings up — and falls back to plain
+    # It clears on context exit �?before any auth-mode-change echo below and
+    # before the REPL/terminal the caller brings up �?and falls back to plain
     # stderr lines off a TTY (CI, daemon logfiles).
     with runner_startup_progress(initial_message=STARTUP_PHASE_STARTING) as progress:
         config_changed = _ensure_host_daemon(None)
@@ -2461,18 +2843,18 @@ def _ensure_backend(server: str | None) -> str:
 def _exit_for_auth_mode_change(base_url: str) -> None:
     """Tell the user the server was restarted in a new mode, then exit clean.
 
-    The local agent-meow server bakes its auth posture (header vs accounts, cookie
+    The local Omnigent server bakes its auth posture (header vs accounts, cookie
     secret) at boot, so an ``OMNIGENT_AUTH_ENABLED`` flip restarts it
     via :func:`_ensure_host_daemon`. Continuing the *same* command across
-    that restart is brittle — the in-flight session/credential/terminal
+    that restart is brittle �?the in-flight session/credential/terminal
     bring-up straddles two server identities. Instead we stop here with a
-    clear, actionable message and exit 0, so the next ``agent-meow run`` is
+    clear, actionable message and exit 0, so the next ``omnigent run`` is
     a clean single-mode start. When the new mode is accounts and no admin
     exists yet, point the user at the one-time setup URL.
 
-    :param base_url: The freshly-restarted agent-meow server URL, e.g.
+    :param base_url: The freshly-restarted Omnigent server URL, e.g.
         ``"http://127.0.0.1:6767"``.
-    :returns: Never returns — raises ``SystemExit(0)``.
+    :returns: Never returns �?raises ``SystemExit(0)``.
     :raises SystemExit: Always, with code 0 (a clean, expected stop).
     """
     needs_admin_setup = False
@@ -2483,16 +2865,16 @@ def _exit_for_auth_mode_change(base_url: str) -> None:
         )
 
     click.echo("", err=True)
-    click.echo("  ✓ Auth mode changed — the local server was restarted to match.", err=True)
+    click.echo("  �?Auth mode changed �?the local server was restarted to match.", err=True)
     if needs_admin_setup:
         click.echo(
             f"  Create your one-time admin account at  {base_url.rstrip('/')}  "
             "(it may have opened automatically),",
             err=True,
         )
-        click.echo("  then re-run `agent-meow run` to start.", err=True)
+        click.echo("  then re-run `omnigent run` to start.", err=True)
     else:
-        click.echo("  Re-run `agent-meow run` to start.", err=True)
+        click.echo("  Re-run `omnigent run` to start.", err=True)
     click.echo("", err=True)
     raise SystemExit(0)
 
@@ -2500,9 +2882,9 @@ def _exit_for_auth_mode_change(base_url: str) -> None:
 def _discover_local_server_url(
     timeout: float = _LOCAL_SERVER_DISCOVER_TIMEOUT_S,
 ) -> str:
-    """Poll until the daemon-started local agent-meow server is reachable.
+    """Poll until the daemon-started local Omnigent server is reachable.
 
-    In local mode the daemon owns the agent-meow server; the CLI discovers its URL
+    In local mode the daemon owns the Omnigent server; the CLI discovers its URL
     via the local-server pidfile + ``/health`` rather than starting it
     itself.
 
@@ -2520,20 +2902,20 @@ def _discover_local_server_url(
             return url
         if not _host_daemon_alive():
             raise click.ClickException(
-                "The local daemon exited before its agent-meow server became ready. "
-                "See logs under ~/.agent_meow/logs/host-daemon/ and "
-                "~/.agent_meow/logs/server/."
+                "The local daemon exited before its Omnigent server became ready. "
+                "See logs under ~/.omnigent/logs/host/ and "
+                "~/.omnigent/logs/server/."
             )
         time.sleep(0.2)
     raise click.ClickException(
-        f"Timed out after {timeout:.0f}s waiting for the local agent-meow server to "
-        "start. See ~/.agent_meow/logs/server/ for details."
+        f"Timed out after {timeout:.0f}s waiting for the local Omnigent server to "
+        "start. See ~/.omnigent/logs/server/ for details."
     )
 
 
 @dataclass
 class _CliRunnerProcess:
-    """Runner subprocess metadata for the ``agent-meow server`` command.
+    """Runner subprocess metadata for the ``omnigent server`` command.
 
     :param proc: Runner subprocess handle.
     :param runner_id: Runner id used for the WS tunnel, e.g.
@@ -2563,13 +2945,13 @@ def _start_cli_runner_process(
     """Start the out-of-process runner used by CLI server flows.
 
     The runner always connects back over the WebSocket tunnel. Local
-    ``agent-meow server`` passes its loopback URL; ``run --server``
-    passes the remote agent-meow server URL.
+    ``omnigent server`` passes its loopback URL; ``run --server``
+    passes the remote Omnigent server URL.
 
     For remote Databricks-fronted servers, the runner subprocess
-    authenticates via the stored ``agent-meow login`` record (or
+    authenticates via the stored ``omnigent login`` record (or
     ambient Databricks SDK credentials). Tokens are refreshed
-    transparently on each WebSocket reconnect and HTTP callback —
+    transparently on each WebSocket reconnect and HTTP callback �?
     no static token is passed via environment variable.
 
     :param server_url: Server base URL, e.g.
@@ -2579,7 +2961,7 @@ def _start_cli_runner_process(
     :param runner_id: Optional runner id to advertise. ``None``
         uses a per-run token-bound id for authenticated remote
         servers, or the stable runner id from
-        :func:`~?agent_meow.runner.identity.get_stable_runner_id`
+        :func:`agent_meow.runner.identity.get_stable_runner_id`
         for unauthenticated local servers.
     :param workspace_cwd: Optional local workspace root to expose
         to runner-local filesystem tools when a spec uses the
@@ -2594,11 +2976,11 @@ def _start_cli_runner_process(
         don't paint onto the REPL terminal.
     :param log_dir: Optional base log directory to use when
         ``capture_logs`` is true. Defaults to the shared
-        ``~/.agent_meow/logs`` location; tests should pass a
+        ``~/.omnigent/logs`` location; tests should pass a
         temporary directory to avoid writing to the developer's
         real home.
-    :param prewarm_spec_path: Optional YAML path; the runner spawns
-        its MCPs during the upload window. See designs/RUNNER_MCP.md.
+    :param prewarm_spec_path: Optional YAML path; the runner registers
+        its MCP routing metadata during startup without opening transports.
     :param isolate_session: ``True`` for shared-host runners;
         enables per-session workspace isolation so each
         session gets its own subdirectory. ``False`` (default)
@@ -2610,6 +2992,11 @@ def _start_cli_runner_process(
     :returns: The spawned runner process metadata.
     :raises click.ClickException: If the runner exits immediately.
     """
+    from agent_meow.process_logging import (
+        PROCESS_LOG_FILE_ENV_VAR,
+        child_logging_popen_kwargs,
+        open_process_log_file,
+    )
     from agent_meow.runner.identity import (
         RUNNER_ID_ENV_VAR,
         RUNNER_ISOLATE_SESSION_ENV_VAR,
@@ -2630,7 +3017,7 @@ def _start_cli_runner_process(
         # The runner sends the binding token in the tunnel header;
         # the server derives expected_runner_id from it via
         # token_bound_runner_id(). The path runner_id must match,
-        # so we always derive from the binding token — not the
+        # so we always derive from the binding token �?not the
         # stable runner id, which is unrelated to the token.
         resolved_runner_id = token_bound_runner_id(binding_token)
     env = {
@@ -2651,24 +3038,18 @@ def _start_cli_runner_process(
     log_path: Path | None = None
     log_fh: BinaryIO | None = None
     if capture_logs:
-        base_log_dir = (
-            Path(log_dir).expanduser()
-            if log_dir is not None
-            else Path.home() / ".agent-meow" / "logs"
-        )
-        runner_log_dir = base_log_dir / "runner"
-        runner_log_dir.mkdir(parents=True, exist_ok=True)
-        log_fd, log_name = tempfile.mkstemp(prefix="runner-", suffix=".log", dir=runner_log_dir)
-        log_path = Path(log_name)
-        log_fh = os.fdopen(log_fd, "wb")
+        log_path, log_fh = open_process_log_file("runner", root=log_dir)
+        env[PROCESS_LOG_FILE_ENV_VAR] = str(log_path)
     try:
-        runner_proc = subprocess.Popen(
-            [sys.executable, "-m", "agent_meow.runner._entry"],
-            env=env,
-            stdout=log_fh,
-            stderr=log_fh,
-            **_proc.spawn_kwargs(),
-        )
+        with child_logging_popen_kwargs(env) as logging_kwargs:
+            runner_proc = subprocess.Popen(
+                [sys.executable, "-m", "agent_meow.runner._entry"],
+                env=env,
+                stdout=log_fh,
+                stderr=log_fh,
+                **_proc.spawn_kwargs(),
+                **logging_kwargs,
+            )
     finally:
         if log_fh is not None:
             log_fh.close()
@@ -2780,6 +3161,12 @@ def _assert_server_port_bindable(host: str, port: int) -> None:
     "machine-global so `server` and `run` share one admin]",
 )
 @click.option(
+    "--conversation-database-uri",
+    default=None,
+    help="Database URI for the Agent Platform tables (conversations, items, labels). "
+    "Defaults to --database-uri when not set (single-DB mode).",
+)
+@click.option(
     "--artifact-location",
     default=None,
     help="Path for artifact storage.  [default: <data-dir>/artifacts]",
@@ -2835,6 +3222,7 @@ def server(
     host: str,
     port: int,
     database_uri: str | None,
+    conversation_database_uri: str | None,
     artifact_location: str | None,
     config_path: str | None,
     execution_timeout: int | None,
@@ -2842,10 +3230,10 @@ def server(
     auto_open: bool,
     admin_password: str | None,
 ) -> None:
-    """Start the agent-meow server in the foreground, or manage the background server.
+    """Start the Omnigent server in the foreground, or manage the background server.
 
-    Bare ``agent-meow server`` runs the server in the FOREGROUND (Ctrl-C to
-    stop) — for deploys / Docker. Subcommands manage the detached background
+    Bare ``omnigent server`` runs the server in the FOREGROUND (Ctrl-C to
+    stop) �?for deploys / Docker. Subcommands manage the detached background
     server that ``run`` / ``claude`` / ``codex`` use: ``start`` (ensure it's
     up), ``stop`` (stop it and the local host daemon), ``status`` (is it up?).
 
@@ -2883,7 +3271,7 @@ def server(
         _assert_server_port_bindable(host, port)
 
     # --admin-password is sugar for the INIT_ADMIN_PASSWORD env var that
-    # bootstrap_admin already consumes — fold it in here so the rest of
+    # bootstrap_admin already consumes �?fold it in here so the rest of
     # the startup path has a single source. setdefault so an explicit
     # env var wins over the flag (consistent with "explicit env wins").
     # Whether it actually takes effect (vs. being ignored with a warning
@@ -2894,23 +3282,23 @@ def server(
     # Translate --no-open into the env var the lifespan hook reads.
     # We use an env var rather than threading the flag through
     # create_app so the same toggle works for callers (Docker
-    # entrypoint, future `agent-meow run`) that build the app
+    # entrypoint, future `omnigent run`) that build the app
     # outside this CLI command.
     os.environ["OMNIGENT_ACCOUNTS_AUTO_OPEN"] = "1" if auto_open else "0"
 
-    # Unified local-server lifecycle — applies ONLY to a *bare* loopback
-    # `agent-meow server` (default port + default DB + artifacts), i.e.
+    # Unified local-server lifecycle �?applies ONLY to a *bare* loopback
+    # `omnigent server` (default port + default DB + artifacts), i.e.
     # THE canonical machine-global local server recorded in
-    # ~/.agent_meow/local_server.pid:
+    # ~/.omnigent/local_server.pid:
     #   - If a healthy one is already running (started here OR spawned by
-    #     the `run`/`host` daemon), reuse it — print its URL and exit
+    #     the `run`/`host` daemon), reuse it �?print its URL and exit
     #     instead of starting a competing second server on the shared DB.
     #   - Otherwise prefer the requested port (default 6767), falling back
     #     to a free one if taken, and register ourselves in the pidfile so
     #     the daemon reuses THIS server. (See host/local_server.py.)
     #
     # An explicit --port / --database-uri / --artifact-location means "be a
-    # DEDICATED server here" — the daemon's own spawn (ensure_local_omnigent_server)
+    # DEDICATED server here" �?the daemon's own spawn (ensure_local_omnigent_server)
     # and the e2e harness both do this. Such a server must bind its requested
     # port and must NOT consult or register in the shared pidfile, or it would
     # reuse/hijack the canonical server and exit without ever binding its port.
@@ -2923,17 +3311,17 @@ def server(
         and not port_was_explicit
     )
 
-    # Single-user marker: ANY loopback-bound `agent-meow server` running
-    # the env-unset header default IS a local single-user runtime — the
-    # user's own machine, no proxy to inject identity — so it keeps the
+    # Single-user marker: ANY loopback-bound `omnigent server` running
+    # the env-unset header default IS a local single-user runtime �?the
+    # user's own machine, no proxy to inject identity �?so it keeps the
     # no-login header-mode "local" fallback (same posture as the daemon
-    # / `agent-meow run` spawn paths, which set this var themselves). The
+    # / `omnigent run` spawn paths, which set this var themselves). The
     # bind address is the discriminator, NOT the port/db-uri: a
-    # dedicated `agent-meow server --port 9001 --database-uri …` on
+    # dedicated `omnigent server --port 9001 --database-uri …` on
     # loopback (manual local runs, the e2e harness) is still single
     # user, so it must not 401 its own headerless traffic. What stays
     # fail-closed: a non-loopback bind (`--host 0.0.0.0`,
-    # a network-exposed deploy — those MUST front a proxy or use
+    # a network-exposed deploy �?those MUST front a proxy or use
     # accounts/oidc) and an explicit OMNIGENT_AUTH_PROVIDER=header
     # deploy behind an identity-injecting proxy. setdefault so an
     # operator's explicit OMNIGENT_LOCAL_SINGLE_USER=0 wins. Must run
@@ -2958,7 +3346,7 @@ def server(
         _existing = local_server_url_if_healthy()
         if _existing is not None:
             click.echo(
-                f"A local server is already running at {_existing} — reusing it.\n"
+                f"A local server is already running at {_existing} �?reusing it.\n"
                 "Stop it first if you want to start a fresh one "
                 "(or pass --server <url> to target a different server)."
             )
@@ -2966,12 +3354,13 @@ def server(
         _picked = pick_local_port(port)
         if _picked != port:
             click.echo(
-                f"  ⚠ port {port} is busy — using {_picked} instead.",
+                f"  �?port {port} is busy �?using {_picked} instead.",
                 err=True,
             )
         port = _picked
 
     import uvicorn
+    import uvicorn.server
 
     from agent_meow.runner.transports.ws_tunnel.limits import (
         RUNNER_TUNNEL_MAX_MESSAGE_BYTES,
@@ -2994,6 +3383,7 @@ def server(
     # CLI args take precedence over config file, which takes precedence
     # over defaults.
     db_uri = database_uri or cfg.get("database_uri", _default_db_uri())
+    conv_db_uri = conversation_database_uri or cfg.get("conversation_database_uri", None)
     art_loc = artifact_location or cfg.get("artifact_location", _default_artifact_location())
 
     # Resolve relative artifact location against config file's directory
@@ -3007,29 +3397,20 @@ def server(
     _ensure_sqlite_parent_dir(db_uri)
 
     from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+    from agent_meow.stores.project_store.sqlalchemy_store import SqlAlchemyProjectStore
+    from agent_meow.stores.scheduled_task_store.sqlalchemy_store import (
+        SqlAlchemyScheduledTaskStore,
+    )
 
-    agent_store = SqlAlchemyAgentStore(db_uri)
+    agent_store = SqlAlchemyAgentStore(db_uri, conv_db_uri)
     file_store = SqlAlchemyFileStore(db_uri)
-    conversation_store = SqlAlchemyConversationStore(db_uri)
+    conversation_store = SqlAlchemyConversationStore(db_uri, conv_db_uri)
     comment_store = SqlAlchemyCommentStore(db_uri)
     policy_store = SqlAlchemyPolicyStore(db_uri)
     permission_store = SqlAlchemyPermissionStore(db_uri)
+    scheduled_task_store = SqlAlchemyScheduledTaskStore(db_uri)
+    project_store = SqlAlchemyProjectStore(db_uri)
     artifact_store = _create_artifact_store(art_loc)
-
-    # Document + image stores for the docs/images surfaces.
-    from agent_meow.stores.document_store.sqlalchemy_store import (
-        SqlAlchemyDocumentStore as _SqlDocumentStore,
-    )
-    from agent_meow.stores.image_store.sqlalchemy_store import (
-        SqlAlchemyImageStore as _SqlImageStore,
-    )
-    from agent_meow.stores.video_store.sqlalchemy_store import (
-        SqlAlchemyVideoStore as _SqlVideoStore,
-    )
-
-    document_store = _SqlDocumentStore(db_uri)
-    image_store = _SqlImageStore(db_uri)
-    video_store = _SqlVideoStore(db_uri)
 
     # Initialize the runtime with store references so workflow code
     # can access them via getter functions (get_agent_cache(), etc.).
@@ -3049,23 +3430,20 @@ def server(
 
     server_llm = parse_server_llm(cfg.get("llm"))
 
-    # Build the default LLM-based routing client when BOTH the server
-    # has an ``llm:`` config AND the feature is explicitly enabled via
-    # OMNIGENT_SMART_ROUTING=1.  Hidden by default — managed deployments
-    # override RuntimeCaps.routing_client with their own implementation.
+    # Build the routing client when the feature is enabled via
+    # OMNIGENT_SMART_ROUTING=1. Two mutually-exclusive providers, chosen
+    # by ``routing.provider``:
+    #   - ``external``: call an external ``routes:select`` service.
+    #   - ``llm`` (default): the built-in judge using the ``llm:`` block.
+    # Hidden by default �?managed deployments override
+    # RuntimeCaps.routing_client with their own implementation.
     routing_client = None
-    if server_llm is not None and os.environ.get("OMNIGENT_SMART_ROUTING") == "1":
-        from agent_meow.runtime.policies.builder import (
-            _build_policy_llm_client,
-            _resolve_server_llm_connection,
-        )
-
-        _conn = _resolve_server_llm_connection(server_llm)
-        _policy_client = _build_policy_llm_client(server_llm, _conn)
-        if _policy_client is not None:
-            from agent_meow.server.smart_routing import LLMRoutingClient
-
-            routing_client = LLMRoutingClient(_policy_client)
+    if os.environ.get("OMNIGENT_SMART_ROUTING") == "1":
+        routing_cfg = cfg.get("routing")
+        if isinstance(routing_cfg, dict) and routing_cfg.get("provider") == "external":
+            routing_client = _build_external_routing_client(routing_cfg)
+        else:
+            routing_client = _build_local_llm_routing_client(server_llm)
 
     caps = RuntimeCaps(
         execution_timeout=int(effective_timeout),
@@ -3095,7 +3473,7 @@ def server(
     # caller (e.g. _start_local_server) spawns the runner externally
     # and needs the server to accept exactly that runner's tunnel.
     # When unset the server accepts any token-bound runner
-    # (runner_tunnel_tokens=None) — the standard posture for deployed
+    # (runner_tunnel_tokens=None) �?the standard posture for deployed
     # servers where runners authenticate via Databricks OAuth.
     _tunnel_token = os.environ.get("OMNIGENT_RUNNER_TUNNEL_TOKEN")
     _runner_tunnel_tokens: frozenset[str] | None = (
@@ -3132,7 +3510,7 @@ def server(
     # Both defaults respect operator overrides (setdefault, no
     # override clobber). We gate on the *resolved* selection (not
     # just "auth provider unset") so a bare header-mode local server
-    # — the env-unset default — and an OIDC deploy don't mint accounts
+    # �?the env-unset default �?and an OIDC deploy don't mint accounts
     # secrets they never read.
     #
     # COOKIE_SECRET: persist in the artifact dir so sessions survive
@@ -3165,6 +3543,13 @@ def server(
 
         account_store = SqlAlchemyAccountStore(db_uri)
 
+    from agent_meow.process_logging import configure_process_logging
+
+    server_log_path = configure_process_logging(
+        "server",
+        logger_names=("omnigent", "uvicorn", "uvicorn.error", "uvicorn.access"),
+    )
+
     app = create_app(
         agent_store=agent_store,
         file_store=file_store,
@@ -3175,37 +3560,28 @@ def server(
         agent_cache=agent_cache,
         runner_tunnel_tokens=_runner_tunnel_tokens,
         permission_store=permission_store,
+        scheduled_task_store=scheduled_task_store,
+        project_store=project_store,
         auth_provider=auth_provider,
         host_store=host_store,
         account_store=account_store,
         policy_modules=cfg.get("policy_modules"),
+        debug_router_modules=config_str_list(cfg.get("debug_router_modules")),
         admins=config_str_list(cfg.get("admins")),
         allowed_domains=config_str_list(cfg.get("allowed_domains")),
         sandbox_config=sandbox_config,
-        document_store=document_store,
-        image_store=image_store,
-        video_store=video_store,
+        server_config=cfg,
     )
 
-    click.echo(f"Starting agent-meow server on {host}:{port}")
+    click.echo(f"Starting omnigent server on {host}:{port}")
     click.echo(f"  database:  {db_uri}")
     click.echo(f"  artifacts: {art_loc}")
-    # A foreground server streams uvicorn logs to this terminal, but the
-    # always-on diagnostics (agent_meow.* loggers, captured warnings) also land
-    # in a persistent per-invocation file — point at it so there's a concrete
-    # log to grep after the terminal scrolls. None only in the detached spawn
-    # path (`-m agent_meow.cli server`, no setup_cli_logging), whose captured
-    # log `server start` already reports.
-    from agent_meow.cli_diagnostics import current_cli_log_path
-
-    _cli_log = current_cli_log_path()
-    if _cli_log is not None:
-        click.echo(f"  log:       {_display_path(_cli_log)}")
+    click.echo(f"  log:       {_display_path(server_log_path)}")
 
     # First-run terminal setup: the FALLBACK entry point. Fires only on
     # an interactive TTY when no admin exists AND the browser isn't about
     # to open the web Create-admin form (i.e. --no-open, or a non-loopback
-    # base URL). The default `agent-meow server` on loopback opens the
+    # base URL). The default `omnigent server` on loopback opens the
     # browser to the form instead, so this no-ops there. (The other entry
     # points are --admin-password and the web form.)
     _maybe_prompt_first_admin(account_store, auth_provider, auto_open=auto_open)
@@ -3219,7 +3595,7 @@ def server(
 
     if not (_WEB_UI_DIST / "index.html").is_file():
         click.echo(
-            "  ⚠ web UI not built — serving API only. "
+            "  �?web UI not built �?serving API only. "
             "Run `cd web && npm install && npm run build`, "
             "then restart (or install a release wheel/image).",
             err=True,
@@ -3238,47 +3614,84 @@ def server(
         # this foreground server instead of tearing it down on a spurious
         # sig mismatch.
         register_local_server(port)
+
+    class _ShutdownSignalingServer(uvicorn.server.Server):
+        """uvicorn.Server that signals active SSE subscribers before the
+        graceful-shutdown wait starts.
+
+        uvicorn calls ``Server.shutdown()`` in this order:
+          1. close listening sockets / call connection.shutdown()
+          2. ``asyncio.wait_for(_wait_tasks_to_complete(), timeout=�?``
+          3. force-cancel remaining tasks on timeout
+          4. run the ASGI lifespan shutdown handler
+
+        The ASGI lifespan ``finally`` block runs at step 4 �?too late. SSE
+        generators waiting on a heartbeat tick are already force-cancelled by
+        step 3, which produces spurious ``CancelledError`` tracebacks.
+        Overriding here lets us drain SSE streams before step 2 so they exit
+        cleanly within the graceful window.
+        """
+
+        async def shutdown(self, sockets=None) -> None:  # type: ignore[override]
+            import asyncio as _asyncio
+
+            from agent_meow.runtime import session_stream as _session_stream
+
+            _session_stream.shutdown_all()
+            # Yield to the event loop so generators can consume _DONE,
+            # flush their final "data: [DONE]\n\n" chunk, and exit before
+            # super().shutdown() calls connection.shutdown() / transport.close().
+            # Without this pause the generators write to an already-closing
+            # transport, leaving connections open past the graceful window.
+            await _asyncio.sleep(0)
+            await super().shutdown(sockets)
+
+    _config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_config=_server_uvicorn_log_config(server_log_path),
+        ws_max_size=RUNNER_TUNNEL_MAX_MESSAGE_BYTES,
+        # Server side of the runner/host tunnels' protocol keepalive, aligned
+        # to the 90 s app-level budget instead of uvicorn's 20 s default that
+        # drops a busy-but-healthy tunnel with 1011 �?issue #1116.
+        #
+        # uvicorn's ws_ping_* is server-global (no per-route override), so this
+        # 30 s/90 s budget also applies to the app's other WebSocket routes �?
+        # /v1/sessions/updates (browser stream) and .../terminals/{id}/attach.
+        # Deliberate and acceptable: for an IDLE such socket the protocol
+        # PING/PONG is the only half-open detector (the sessions-updates
+        # heartbeat is a server->client send, and an idle terminal has no
+        # traffic), so widening it means a dead idle browser/terminal socket is
+        # reaped at worst ~120 s (30 s interval + 90 s timeout) instead of
+        # ~40 s �?a slightly later half-open cleanup (e.g. the out-of-process
+        # terminal-attach proxy holds its runner socket + tmux child ~80 s
+        # longer), bounded and eventually reaped, not a leak or correctness
+        # change. The tunnels are the sockets that actually need the looser
+        # budget (issue #1116).
+        ws_ping_interval=TUNNEL_KEEPALIVE_PING_INTERVAL_S,
+        ws_ping_timeout=TUNNEL_KEEPALIVE_PING_TIMEOUT_S,
+        timeout_graceful_shutdown=_SERVER_GRACEFUL_SHUTDOWN_TIMEOUT_S,
+    )
     try:
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_config=_server_uvicorn_log_config(),
-            ws_max_size=RUNNER_TUNNEL_MAX_MESSAGE_BYTES,
-            # Server side of the runner/host tunnels' protocol keepalive, aligned
-            # to the 90 s app-level budget instead of uvicorn's 20 s default that
-            # drops a busy-but-healthy tunnel with 1011 — issue #1116.
-            #
-            # uvicorn's ws_ping_* is server-global (no per-route override), so this
-            # 30 s/90 s budget also applies to the app's other WebSocket routes —
-            # /v1/sessions/updates (browser stream) and .../terminals/{id}/attach.
-            # Deliberate and acceptable: for an IDLE such socket the protocol
-            # PING/PONG is the only half-open detector (the sessions-updates
-            # heartbeat is a server->client send, and an idle terminal has no
-            # traffic), so widening it means a dead idle browser/terminal socket is
-            # reaped at worst ~120 s (30 s interval + 90 s timeout) instead of
-            # ~40 s — a slightly later half-open cleanup (e.g. the out-of-process
-            # terminal-attach proxy holds its runner socket + tmux child ~80 s
-            # longer), bounded and eventually reaped, not a leak or correctness
-            # change. The tunnels are the sockets that actually need the looser
-            # budget (issue #1116).
-            ws_ping_interval=TUNNEL_KEEPALIVE_PING_INTERVAL_S,
-            ws_ping_timeout=TUNNEL_KEEPALIVE_PING_TIMEOUT_S,
-            timeout_graceful_shutdown=_SERVER_GRACEFUL_SHUTDOWN_TIMEOUT_S,
-        )
+        _ShutdownSignalingServer(_config).run()
+    except KeyboardInterrupt:
+        # uvicorn.run() swallows KeyboardInterrupt; match that behaviour so
+        # a Ctrl-C exit doesn't print Click's "Aborted!" or exit non-zero.
+        pass
     finally:
         if _is_canonical_local_server:
             clear_local_server_record()
 
 
 def _stop_local_server_and_daemon(*, force: bool) -> bool:
-    """Stop the background agent-meow server and the local host daemon that owns it.
+    """Stop the background Omnigent server and the local host daemon that owns it.
 
     Stops the local-mode host daemon first (the daemon spawns its server
     once and never respawns it, so leaving it alive would only have it
-    reconnect-flap against a dead server), then the detached agent-meow server
-    recorded in ``~/.agent_meow/local_server.pid``. Best-effort and
-    idempotent — a missing daemon or server is a no-op.
+    reconnect-flap against a dead server), then the detached Omnigent server
+    recorded in ``~/.omnigent/local_server.pid``. Best-effort and
+    idempotent �?a missing daemon or server is a no-op.
 
     :param force: SIGKILL the daemon after the grace period if it does not
         exit on SIGTERM.
@@ -3301,12 +3714,12 @@ def _stop_local_server_and_daemon(*, force: bool) -> bool:
 
 @server.command("start")
 def server_start() -> None:
-    """Ensure the managed background agent-meow server is running.
+    """Ensure the managed background Omnigent server is running.
 
     Reuses a healthy background server if one is already up (started here or
     by a prior ``run`` / ``host``); otherwise spawns a detached one on a
     free loopback port and prints its URL. The background counterpart to the
-    foreground bare ``agent-meow server``.
+    foreground bare ``omnigent server``.
 
     :returns: None.
     """
@@ -3317,10 +3730,10 @@ def server_start() -> None:
         else "Background server already running at"
     )
     click.echo(f"{verb} {startup.url}")
-    # Surface the exact log file so a detached server isn't a black box —
+    # Surface the exact log file so a detached server isn't a black box �?
     # `server start` is otherwise the only signal it ever emits. Known for a
     # spawned server and (via the log-path sidecar) for a reused one too;
-    # absent only for a foreground `agent-meow server` whose logs stream to
+    # absent only for a foreground `omnigent server` whose logs stream to
     # its own terminal.
     if startup.log_path is not None:
         click.echo(f"  log: {_display_path(startup.log_path)}")
@@ -3333,12 +3746,12 @@ def server_start() -> None:
     help="SIGKILL the local host daemon if it does not exit on SIGTERM.",
 )
 def server_stop(force: bool) -> None:
-    """Stop the background agent-meow server and the local host daemon.
+    """Stop the background Omnigent server and the local host daemon.
 
     Stops the local host daemon first, then the detached server recorded
-    in ``~/.agent_meow/local_server.pid`` — its web UI and sessions become
+    in ``~/.omnigent/local_server.pid`` �?its web UI and sessions become
     unreachable. To stop hosting but KEEP the server up, use
-    ``agent-meow host stop``; to stop everything, use ``agent-meow stop``.
+    ``omnigent host stop``; to stop everything, use ``omnigent stop``.
 
     :param force: SIGKILL the local host daemon after the grace period if it
         does not exit on SIGTERM.
@@ -3353,10 +3766,10 @@ def server_stop(force: bool) -> None:
 @server.command("status")
 @click.option("--json", "json_output", is_flag=True, help="Emit JSON.")
 def server_status(json_output: bool) -> None:
-    """Show whether the background agent-meow server is running.
+    """Show whether the background Omnigent server is running.
 
     Reports the recorded pid/port, URL, live-session count, and whether a
-    local host daemon is attached. Reads ``~/.agent_meow/local_server.pid``
+    local host daemon is attached. Reads ``~/.omnigent/local_server.pid``
     and probes ``/health``.
 
     :param json_output: Emit machine-readable JSON instead of text.
@@ -3405,12 +3818,12 @@ def server_status(json_output: bool) -> None:
     help="Continue past failures and SIGKILL daemons that do not exit on SIGTERM.",
 )
 def stop(force: bool) -> None:
-    """Stop everything agent-meow is running on this machine.
+    """Stop everything Omnigent is running on this machine.
 
     The off switch: stops every host daemon (local and remote-targeted)
     and the detached background server. Runners are reaped when their daemon
     exits. To stop only hosting while keeping the local server (web UI /
-    history) up, use ``agent-meow host stop`` instead.
+    history) up, use ``omnigent host stop`` instead.
 
     :param force: Continue past individual failures and SIGKILL daemons that
         do not exit on SIGTERM.
@@ -3421,7 +3834,7 @@ def stop(force: bool) -> None:
     for record in _list_daemon_records():
         # Terminating the daemon reaps its runners (orphan-watchdog), so the
         # off-switch doesn't need the graceful per-session HTTP stop that
-        # `host stop` does — that keeps teardown quiet and dependency-free.
+        # `host stop` does �?that keeps teardown quiet and dependency-free.
         try:
             _terminate_daemon(record, force=force)
             stopped += 1
@@ -3431,7 +3844,7 @@ def stop(force: bool) -> None:
     stop_local_omnigent_server()
     # Sweep the canonical port for an orphaned server the pidfile lost track
     # of (a torn/cleared record, or a respawn that landed elsewhere). Without
-    # this, that server survives the off-switch — the exact "I ran stop and a
+    # this, that server survives the off-switch �?the exact "I ran stop and a
     # server is still on the default port" symptom.
     orphan_pid = stop_untracked_local_server()
 
@@ -3447,13 +3860,239 @@ def stop(force: bool) -> None:
     else:
         click.echo("Nothing to stop.")
     if failures:
-        raise click.ClickException("; ".join(failures) + " — retry with --force.")
+        raise click.ClickException("; ".join(failures) + " �?retry with --force.")
+
+
+def _uninstall_script_path() -> Path:
+    """Return an executable uninstall script path for source and wheel installs."""
+    repo_script = Path(__file__).resolve().parent.parent / "scripts" / "uninstall_oss.sh"
+    if repo_script.exists():
+        return repo_script
+    try:
+        resource = resources.files("agent_meow.resources.scripts").joinpath("uninstall_oss.sh")
+    except ModuleNotFoundError as exc:
+        raise click.ClickException("uninstall script is missing from this installation") from exc
+    with resources.as_file(resource) as path:
+        if path.exists():
+            temp_dir = Path(tempfile.mkdtemp(prefix="omnigent-uninstall-"))
+            temp_path = temp_dir / "uninstall_oss.sh"
+            shutil.copy2(path, temp_path)
+            temp_path.chmod(0o700)
+            return temp_path
+    raise click.ClickException("uninstall script is missing from this installation")
+
+
+def _write_uninstall_manifest(ledger: Any) -> Path:
+    """Write the ledger fields the POSIX uninstaller needs as tab records."""
+    fd, manifest_name = tempfile.mkstemp(prefix="omnigent-uninstall-ledger-", suffix=".tsv")
+    manifest = Path(manifest_name)
+    with os.fdopen(fd, "w") as handle:
+        for profile in ledger.entries.profiles:
+            handle.write(
+                "\t".join(
+                    [
+                        "profile_block",
+                        profile.path,
+                        profile.block_sha256 or "",
+                        profile.source,
+                        profile.confidence,
+                    ]
+                )
+                + "\n"
+            )
+        for config in ledger.entries.injected_external_config:
+            handle.write(
+                "\t".join(
+                    [
+                        "external_config",
+                        config.path,
+                        config.marker,
+                        config.format,
+                        config.block_sha256 or "",
+                        config.source,
+                        config.confidence,
+                    ]
+                )
+                + "\n"
+            )
+        for launch_agent in ledger.entries.launch_agents:
+            handle.write(
+                "\t".join(
+                    [
+                        "launch_agent",
+                        launch_agent.kind,
+                        launch_agent.path,
+                        launch_agent.label,
+                        launch_agent.source,
+                        launch_agent.confidence,
+                    ]
+                )
+                + "\n"
+            )
+    manifest.chmod(0o600)
+    return manifest
+
+
+def _maybe_fast_backfill_install_ledger(argv: Sequence[str]) -> None:
+    """Create a cheap backfill ledger on first user-facing CLI run."""
+    if argv[0] in {"--help", "-h", "--version", "version", "_internal", "uninstall"}:
+        return
+    with contextlib.suppress(Exception):
+        from agent_meow.install_ledger import backfill_install_ledger
+
+        backfill_install_ledger(deep=False, apply=True)
+
+
+@cli.group("_internal", hidden=True)
+def _internal() -> None:
+    """Hidden commands used by installer scripts."""
+
+
+@_internal.command("write-ledger")
+@click.option("--from-env", "from_env", is_flag=True, required=True)
+def _internal_write_ledger(from_env: bool) -> None:
+    """Write install_ledger.json from installer-observed environment."""
+    del from_env
+    from agent_meow.install_ledger import ledger_path, write_install_ledger_from_env
+
+    ledger = write_install_ledger_from_env()
+    click.echo(json.dumps({"path": str(ledger_path()), "source": ledger.ledger_source}))
+
+
+@cli.command("doctor")
+@click.option("--migrate-ledger", is_flag=True, help="Backfill install_ledger metadata.")
+@click.option("--deep", is_flag=True, help="Use package-manager and PATH probes.")
+@click.option("--apply", "apply_changes", is_flag=True, help="Write the backfilled ledger.")
+@click.option("--json", "json_output", is_flag=True, help="Emit JSON.")
+def doctor(
+    migrate_ledger: bool,
+    deep: bool,
+    apply_changes: bool,
+    json_output: bool,
+) -> None:
+    """Run maintenance checks and one-off migrations."""
+    if not migrate_ledger:
+        raise click.UsageError("Pass --migrate-ledger to run the install ledger migration.")
+    from agent_meow.install_ledger import backfill_install_ledger, backfill_ledger_path
+
+    ledger = backfill_install_ledger(deep=deep, apply=apply_changes)
+    payload = {
+        "applied": apply_changes and ledger is not None,
+        "path": str(backfill_ledger_path()),
+        "ledger": ledger.to_dict() if ledger is not None else None,
+    }
+    if json_output:
+        click.echo(json.dumps(payload, indent=2, sort_keys=True))
+    elif ledger is None:
+        click.echo("No Omnigent install detected; no ledger written.")
+    elif apply_changes:
+        click.echo(f"Wrote backfill ledger to {backfill_ledger_path()}.")
+    else:
+        click.echo(json.dumps(ledger.to_dict(), indent=2, sort_keys=True))
+
+
+@cli.command("uninstall")
+@click.argument(
+    "targets",
+    nargs=-1,
+    type=click.Choice(["cli", "state", "desktop-data", "all"]),
+)
+@click.option("--purge", is_flag=True, help="Remove state data after writing a backup.")
+@click.option("--purge-workspace", is_flag=True, help="Also remove ~/omnigent with --purge.")
+@click.option("--dry-run", is_flag=True, help="Print planned actions only.")
+@click.option("--yes", is_flag=True, help="Run non-interactively for auto-removable artifacts.")
+@click.option("--json", "json_output", is_flag=True, help="Emit JSON.")
+@click.option("--force", is_flag=True, help="Force stubborn processes and tamper refusals.")
+@click.option("--modify-external-config", is_flag=True, help="Allow third-party config edits.")
+@click.option("--no-backup", is_flag=True, help="Skip purge backup creation.")
+@click.option("--assume-inferred", is_flag=True, help="Act on inferred entries when gated.")
+def uninstall(
+    targets: tuple[str, ...],
+    purge: bool,
+    purge_workspace: bool,
+    dry_run: bool,
+    yes: bool,
+    json_output: bool,
+    force: bool,
+    modify_external_config: bool,
+    no_backup: bool,
+    assume_inferred: bool,
+) -> None:
+    """Uninstall Omnigent while preserving user data unless --purge is set."""
+    from agent_meow.install_ledger import resolve_uninstall_ledger
+
+    ledger = resolve_uninstall_ledger()
+    destructive_flag = any(
+        (
+            purge,
+            purge_workspace,
+            yes,
+            force,
+            modify_external_config,
+            no_backup,
+            assume_inferred,
+        )
+    )
+    effective_dry_run = dry_run or not destructive_flag
+    if ledger is None:
+        if json_output:
+            click.echo(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "dry_run": effective_dry_run,
+                        "ledger_source": None,
+                        "actions": [],
+                        "backups": [],
+                        "summary": {"done": 0, "skipped": 0, "failed": 0, "reported": 0},
+                        "exit_code": 3,
+                        "error": "no Omnigent install detected",
+                    },
+                    indent=2,
+                )
+            )
+            raise SystemExit(3)
+        click.echo("No Omnigent install detected; nothing to uninstall.", err=True)
+        raise SystemExit(3)
+
+    script_path = _uninstall_script_path()
+    args = [str(script_path)]
+    args.extend(targets)
+    for enabled, flag in (
+        (purge, "--purge"),
+        (purge_workspace, "--purge-workspace"),
+        (effective_dry_run, "--dry-run"),
+        (yes, "--yes"),
+        (json_output, "--json"),
+        (force, "--force"),
+        (modify_external_config, "--modify-external-config"),
+        (no_backup, "--no-backup"),
+        (assume_inferred, "--assume-inferred"),
+    ):
+        if enabled:
+            args.append(flag)
+    env = os.environ.copy()
+    env["OMNIGENT_UNINSTALL_LEDGER_SOURCE"] = ledger.ledger_source
+    manifest = _write_uninstall_manifest(ledger)
+    env["OMNIGENT_UNINSTALL_LEDGER_MANIFEST"] = str(manifest)
+    try:
+        result = subprocess.run(args, env=env, check=False)
+    finally:
+        with contextlib.suppress(OSError):
+            manifest.unlink()
+        if (
+            script_path.name == "uninstall_oss.sh"
+            and script_path.parent.name.startswith("omnigent-uninstall-")
+            and script_path.parent.parent == Path(tempfile.gettempdir())
+        ):
+            shutil.rmtree(script_path.parent, ignore_errors=True)
+    raise SystemExit(result.returncode)
 
 
 def _count_running_sessions(base_url: str) -> int:
     """Count sessions actively running a turn on the local server.
 
-    Gates on the session-list ``status`` field (``"running"`` — a runner
+    Gates on the session-list ``status`` field (``"running"`` �?a runner
     mid-turn, or with a still-running sub-agent), NOT mere connectedness:
     an idle session keeps its host/runner connection open indefinitely, so
     counting connected sessions would make the drain wait forever for
@@ -3461,7 +4100,7 @@ def _count_running_sessions(base_url: str) -> int:
     in-flight work an upgrade should avoid interrupting.
 
     A transient HTTP failure is treated as "none running" rather than
-    blocking the upgrade — the server's own graceful shutdown still drains
+    blocking the upgrade �?the server's own graceful shutdown still drains
     any runner that happens to be mid-turn.
 
     :param base_url: Local server base URL, e.g. ``"http://127.0.0.1:6767"``.
@@ -3479,7 +4118,7 @@ def _wait_for_local_sessions_to_drain() -> None:
 
     Used by ``omni upgrade`` (without ``--force``) so an upgrade never
     yanks a running agent turn. Waits only on sessions whose status is
-    ``"running"`` (see :func:`_count_running_sessions`) — idle-but-connected
+    ``"running"`` (see :func:`_count_running_sessions`) �?idle-but-connected
     sessions do not hold it up. Polls every :data:`_UPGRADE_DRAIN_POLL_S`
     seconds and re-prints the count whenever it changes; ``Ctrl-C`` aborts
     the wait (and the upgrade) cleanly. Returns immediately when the server
@@ -3492,7 +4131,7 @@ def _wait_for_local_sessions_to_drain() -> None:
     if count == 0:
         return
     click.echo(
-        f"Waiting for {count} running session(s) to finish — press Ctrl-C to "
+        f"Waiting for {count} running session(s) to finish �?press Ctrl-C to "
         "abort, or re-run with --force to stop them now."
     )
     last = count
@@ -3505,7 +4144,7 @@ def _wait_for_local_sessions_to_drain() -> None:
         if count == 0:
             return
         if count != last:
-            click.echo(f"  {count} session(s) still running…")
+            click.echo(f"  {count} session(s) still running�?)
             last = count
 
 
@@ -3533,7 +4172,7 @@ def _upgrade_vcs_install(
 
     A git install's version string is frozen at whatever its source branch
     declares (e.g. ``0.1.0`` on an unbumped ``main``), so it cannot be
-    compared against PyPI — that comparison reports a build *ahead* of the
+    compared against PyPI �?that comparison reports a build *ahead* of the
     latest release as "behind" and never converges, because reinstalling the
     ref can't change the version string. Instead, compare the installed commit
     against the remote ref's HEAD, and after re-pulling verify the commit
@@ -3559,11 +4198,11 @@ def _upgrade_vcs_install(
     known_behind = bool(remote_sha and current_sha and remote_sha != current_sha)
 
     if remote_sha and current_sha and remote_sha == current_sha:
-        click.echo(f"agent-meow is up to date (git {cur_short}, tracking {info.vcs_url}).")
+        click.echo(f"omnigent is up to date (git {cur_short}, tracking {info.vcs_url}).")
         return
     if known_behind:
         click.echo(
-            f"A newer commit is available: {cur_short} → {remote_short} "
+            f"A newer commit is available: {cur_short} �?{remote_short} "
             f"(git install tracking {info.vcs_url})."
         )
     else:
@@ -3575,7 +4214,7 @@ def _upgrade_vcs_install(
     if check_only:
         # Exit non-zero only when we KNOW it's behind, so `--check` stays a
         # reliable CI gate; an indeterminate remote is not a failure. SystemExit
-        # (not ctx.exit) for the same reason as the PyPI path — main() runs the
+        # (not ctx.exit) for the same reason as the PyPI path �?main() runs the
         # group with standalone_mode=False, where ctx.exit's code is dropped.
         if known_behind:
             raise SystemExit(1)
@@ -3608,13 +4247,13 @@ def _upgrade_vcs_install(
     _, new_sha = _probe_installed_distribution()
     if new_sha and current_sha and new_sha != current_sha:
         click.echo(
-            f"✓ Updated to git {new_sha[:9]}. Re-run your command — the local "
+            f"�?Updated to git {new_sha[:9]}. Re-run your command �?the local "
             "server will start on the new version."
         )
         return
     if known_behind and new_sha and new_sha == current_sha:
         # We positively confirmed the ref had advanced, yet the re-pull left the
-        # install on the same commit — a silent no-op that would otherwise
+        # install on the same commit �?a silent no-op that would otherwise
         # recreate the "still behind" loop. Fail loudly, mirroring the PyPI guard.
         raise click.ClickException(
             f"The re-pull ran but the install is still at {cur_short} (the ref is at "
@@ -3622,13 +4261,13 @@ def _upgrade_vcs_install(
             f"commit; try `uv tool install --reinstall {info.vcs_url}`."
         )
     if new_sha and current_sha and new_sha == current_sha:
-        # Remote was indeterminate, so we never claimed it was behind — a
+        # Remote was indeterminate, so we never claimed it was behind �?a
         # no-change re-pull is fine here.
         click.echo(
             f"Already on the latest commit of the tracked ref ({cur_short}); nothing changed."
         )
         return
-    # Couldn't read the new commit — the re-pull ran, but don't assert a
+    # Couldn't read the new commit �?the re-pull ran, but don't assert a
     # result we can't confirm.
     click.echo("Re-pulled the git ref. Run `omni upgrade --check` to confirm.")
 
@@ -3654,10 +4293,10 @@ def _upgrade_vcs_install(
     "installer's allow-pre-releases flag. Useful for validating a TestPyPI rc.",
 )
 def upgrade(check_only: bool, force: bool, pre: bool) -> None:
-    """Upgrade the agent-meow CLI to the latest release on PyPI.
+    """Upgrade the omnigent CLI to the latest release on PyPI.
 
-    Detects how agent-meow was installed (uv / pip / pipx / poetry), checks
-    the configured index for a newer release and — unless ``--check`` —
+    Detects how omnigent was installed (uv / pip / pipx / poetry), checks
+    the configured index for a newer release and �?unless ``--check`` �?
     drains and stops the local background server and host daemon, then runs
     the matching upgrade command. The next ``omni`` invocation starts a
     fresh server on the new code automatically (via the version-aware
@@ -3665,9 +4304,9 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
 
     In-flight agent sessions are waited on by default; pass ``--force`` to
     stop them immediately. Pass ``--pre`` to consider pre-releases (rc /
-    beta) — handy for validating a TestPyPI candidate against your
+    beta) �?handy for validating a TestPyPI candidate against your
     configured index. Source checkouts / editable installs are not upgraded
-    here — update those with ``git pull``.
+    here �?update those with ``git pull``.
 
     :param check_only: Only report availability; do not upgrade. Exits
         with status 1 when a newer release exists.
@@ -3688,21 +4327,21 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
         fetch_latest_version,
     )
 
-    # Source checkout / editable install — there's no released wheel to
+    # Source checkout / editable install �?there's no released wheel to
     # swap in place; the correct update path is git, not a reinstall.
     if _find_repo_root() is not None:
         raise click.ClickException(
-            "This is a source checkout — update it with `git pull` (and reinstall "
+            "This is a source checkout �?update it with `git pull` (and reinstall "
             "dependencies), not `omni upgrade`."
         )
     info = _read_installed_wheel_info()
     if info is None:
         raise click.ClickException(
-            "Couldn't determine how agent-meow is installed; upgrade it manually."
+            "Couldn't determine how omnigent is installed; upgrade it manually."
         )
     if info.is_editable:
         raise click.ClickException(
-            "This is an editable install — update it with `git pull`, not `omni upgrade`."
+            "This is an editable install �?update it with `git pull`, not `omni upgrade`."
         )
 
     # A git/VCS install tracks a moving git ref, not a PyPI release. Its
@@ -3710,13 +4349,13 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
     # comparable to the latest PyPI release: comparing them reports a build
     # that is *ahead* of the release as "behind" and loops forever, because
     # reinstalling the ref can never change that version string. For these
-    # installs "upgrade" means re-pulling the ref — compared and verified by
+    # installs "upgrade" means re-pulling the ref �?compared and verified by
     # commit, not by PyPI version.
     if info.vcs_url:
         _upgrade_vcs_install(info, check_only=check_only, force=force, pre=pre)
         return
 
-    current = importlib.metadata.version("agent-meow")
+    current = importlib.metadata.version("omnigent")
     # User-initiated: a more forgiving timeout + one retry so a momentarily slow
     # mirror doesn't spuriously report the index as unreachable.
     latest = fetch_latest_version(
@@ -3728,15 +4367,15 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
             "connection (or OMNIGENT_INDEX_URL / your configured index) and try again."
         )
     if not _is_newer(latest, current):
-        click.echo(f"agent-meow is up to date (v{current}).")
+        click.echo(f"omnigent is up to date (v{current}).")
         return
 
-    click.echo(f"A new release is available: v{current} → v{latest}.")
+    click.echo(f"A new release is available: v{current} �?v{latest}.")
     if check_only:
         # Non-zero so scripts/CI can gate on "an upgrade is available".
         # SystemExit (not ctx.exit) because main() runs the group with
         # standalone_mode=False, where ctx.exit's code is returned and
-        # dropped rather than applied — SystemExit propagates correctly.
+        # dropped rather than applied �?SystemExit propagates correctly.
         raise SystemExit(1)
 
     suggestion = _build_upgrade_suggestion(info, allow_prerelease=pre)
@@ -3758,7 +4397,7 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
     # process still has the OLD version loaded, so re-read it in a fresh
     # subprocess. A no-op upgrade (version-pinned spec, a cooldown /
     # exclude-newer that excludes the new release, or a stale index cache)
-    # exits 0 without moving — claiming "✓ Upgraded" there is exactly the
+    # exits 0 without moving �?claiming "�?Upgraded" there is exactly the
     # "I upgraded but it still says an update is available" bug.
     new_version, _ = _probe_installed_distribution()
     if new_version is None:
@@ -3769,20 +4408,20 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
         return
     if _is_newer(new_version, current):
         click.echo(
-            f"✓ Upgraded to v{new_version}. Re-run your command — the local "
+            f"�?Upgraded to v{new_version}. Re-run your command �?the local "
             "server will start on the new version."
         )
         return
     raise click.ClickException(
-        f"The upgrade command ran but agent-meow is still v{new_version} (expected "
+        f"The upgrade command ran but omnigent is still v{new_version} (expected "
         f"v{latest}). The install is likely version-pinned, a cooldown / "
         "exclude-newer is excluding the new release, or the index cache is stale. "
-        "Reinstall it explicitly — e.g. `uv tool upgrade --reinstall agent-meow` or "
-        f"`pip install --force-reinstall 'agent-meow=={latest}'`."
+        "Reinstall it explicitly �?e.g. `uv tool upgrade --reinstall omnigent` or "
+        f"`pip install --force-reinstall 'omnigent=={latest}'`."
     )
 
 
-# ``omni update`` is an alias for ``omni upgrade`` — mistyping the latter as
+# ``omni update`` is an alias for ``omni upgrade`` �?mistyping the latter as
 # the former is common, and silently doing nothing is annoying. Registering
 # the same Command object under a second name shares the exact callback,
 # options, and semantics; there is no duplicated implementation to drift.
@@ -3792,7 +4431,7 @@ cli.add_command(upgrade, name="update")
 def _bundle(source: Path) -> bytes:
     """
     Produce a tar.gz bundle from a directory or standalone
-    agent-meow YAML file, or pass through an existing tarball.
+    Omnigent YAML file, or pass through an existing tarball.
 
     Environment variable references (``${VAR}``) in
     ``config.yaml`` and ``tools/mcp/*.yaml`` are expanded
@@ -3802,7 +4441,7 @@ def _bundle(source: Path) -> bytes:
     resolve.
 
     :param source: Path to an agent image directory,
-        standalone agent-meow YAML file, or an existing
+        standalone Omnigent YAML file, or an existing
         ``.tar.gz`` bundle file.
     :returns: The gzipped tarball bytes.
     :raises OmnigentError: If a required env var is
@@ -3851,7 +4490,7 @@ def _resolve_bundle_env_vars(source: Path) -> dict[str, str]:
     Expand ``${VAR}`` references in YAML files that contain
     secrets, using the client's environment.
 
-    Returns a mapping of ``arcname → resolved YAML text`` for
+    Returns a mapping of ``arcname �?resolved YAML text`` for
     files that were modified. Files without env var references
     are omitted (bundled as-is).
 
@@ -3965,7 +4604,7 @@ class _ExecutorDeploy(BaseModel):  # type: ignore[explicit-any]  # auth is a fre
     env var expansion.
 
     Mirrors the secret-bearing fields the server-side parser
-    expands (``agent_meow/spec/parser.py`` — ``_parse_executor`` /
+    expands (``omnigent/spec/parser.py`` �?``_parse_executor`` /
     ``_parse_executor_auth``): the ``connection`` dict and, for
     ``auth.type == "api_key"``, the ``api_key`` / ``base_url``
     values. Resolving these client-side keeps ``${VAR}`` working
@@ -4020,16 +4659,16 @@ def _expand_config_env_vars(  # type: ignore[explicit-any]  # raw is parsed YAML
     sites so operator specs resolve identically client-side now
     that the server no longer expands tenant bundles):
 
-    - ``llm.connection`` — all values
-    - ``executor.connection`` — all values
-    - ``executor.auth`` — ``api_key`` / ``base_url`` when
+    - ``llm.connection`` �?all values
+    - ``executor.connection`` �?all values
+    - ``executor.auth`` �?``api_key`` / ``base_url`` when
       ``type == "api_key"``
-    - ``tools.builtins[*]`` — dict-entry values except ``name``
+    - ``tools.builtins[*]`` �?dict-entry values except ``name``
 
     :param raw: The parsed config.yaml dict (modified in-place).
     :param expand_fn: Callable that expands env var references
         in a string-to-string dict, e.g.
-        :func:`~?agent_meow.spec.expand_env_vars`.
+        :func:`agent_meow.spec.expand_env_vars`.
     :returns: ``True`` if any values were expanded.
     """
     cfg = _DeployConfig.model_validate(raw)
@@ -4043,7 +4682,7 @@ def _expand_config_env_vars(  # type: ignore[explicit-any]  # raw is parsed YAML
         raw["executor"]["connection"] = expand_fn(cfg.executor.connection)
         changed = True
 
-    # ``executor.auth`` with ``type: api_key`` — only ``api_key`` and
+    # ``executor.auth`` with ``type: api_key`` �?only ``api_key`` and
     # ``base_url`` are secret-bearing (matches _parse_executor_auth).
     if (
         cfg.executor is not None
@@ -4108,1229 +4747,6 @@ def _expand_builtin_env_vars(  # type: ignore[explicit-any]  # entries are parse
     return changed
 
 
-# Click ``flag_value`` for bare ``--resume`` (no arg). Must exist
-# before any command's decorator evaluates.
-_RESUME_PICKER_SENTINEL = "__resume_picker__"
-
-
-def _reject_native_on_windows(harness: str) -> None:
-    """Fail a native (tmux/PTY) harness command with an actionable message.
-
-    The ``agent-meow claude`` / ``codex`` / ``cursor`` native wrappers drive a
-    private tmux server and PTY, which don't exist on Windows. Point users at
-    the SDK harnesses / web UI instead of letting them hit a tmux crash.
-
-    :param harness: The native command name, e.g. ``"claude"``.
-    :raises click.ClickException: Always, when running on Windows.
-    """
-    if IS_WINDOWS:
-        raise click.ClickException(
-            f"`agent-meow {harness}` (native tmux/PTY terminal) is not supported on "
-            "Windows. Use an SDK-based harness via `agent-meow run <agent.yaml>` "
-            "or the web UI."
-        )
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Starts a local runner, binds the session, "
-        "launches Claude in a terminal resource, and attaches this TTY. "
-        'Pass --server "" to auto-spawn a persistent local server in the '
-        "background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to claude-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.option(
-    "--host",
-    "register_host",
-    is_flag=True,
-    default=False,
-    help=(
-        "Register this machine as a host (inline equivalent of `agent-meow host`). "
-        "Requires --server."
-    ),
-)
-@click.option(
-    "--use-native-config",
-    "use_claude_config",
-    is_flag=True,
-    default=False,
-    help=(
-        "Use your existing Claude Code configuration instead of Databricks auth. "
-        "When set, any configured provider is ignored and Claude "
-        "authenticates via its own ``~/.claude/`` settings."
-    ),
-)
-@click.option(
-    "--profile-startup",
-    "profile_startup",
-    is_flag=True,
-    default=False,
-    help=(
-        "Print native Claude startup timing marks to stderr. Also enabled by "
-        f"{_CLAUDE_STARTUP_PROFILE_ENV_VAR}=1."
-    ),
-)
-@click.option(
-    "--command",
-    "claude_command",
-    default=None,
-    metavar="CMD",
-    help=(
-        "Claude Code CLI executable to run. "
-        "Defaults to ``claude``. Use this when a wrapper binary replaces the "
-        "``claude`` CLI while preserving its interface (e.g. a custom launcher "
-        "that injects auth or environment before delegating to ``claude``)."
-    ),
-)
-@click.argument("claude_args", nargs=-1, type=click.UNPROCESSED)
-def claude(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    register_host: bool,
-    use_claude_config: bool,
-    profile_startup: bool,
-    claude_command: str | None,
-    claude_args: tuple[str, ...],
-) -> None:
-    # Param docs live in comments — Click uses the docstring for --help.
-    # :param server: Remote agent-meow server URL, or None for local.
-    # :param resume: None, picker sentinel, or a conversation id.
-    # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
-    # :param use_claude_config: When True, skip ucode/Databricks auth and use
-    #     existing Claude config.
-    # :param profile_startup: When True, print startup timing marks.
-    # :param claude_args: Pass-through args for ``claude``.
-    """Launch Claude Code in an agent-meow terminal.
-
-    \b
-    Examples:
-      agent-meow claude
-      agent-meow claude --resume conv_abc123
-      agent-meow claude --resume                  # interactive picker
-      agent-meow claude --server https://<app>.databricksapps.com
-    """
-    _reject_native_on_windows("claude")
-    startup_profiler = StartupProfiler.from_env(
-        name="agent-meow claude",
-        env_var=_CLAUDE_STARTUP_PROFILE_ENV_VAR,
-        explicit=profile_startup,
-    )
-    startup_profiler.mark("cli entered")
-
-    # Apply config defaults (same as ``run`` does).
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-    startup_profiler.mark("config resolved")
-
-    # Validate option combinations BEFORE any side effects (daemon
-    # spawn, server discovery). Calling _ensure_backend first would
-    # mean a bad arg pair waits the full local-server-discover
-    # timeout (60s in CI) before surfacing the UsageError, which
-    # the test_claude_command_session_and_resume_mutually_exclusive
-    # regression caught in CI.
-    del register_host
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-    startup_profiler.mark("arguments validated")
-
-    # Ensure the host daemon (local when ``--server`` is omitted/empty,
-    # remote otherwise) and resolve the concrete agent-meow server URL. The daemon
-    # owns the runner; the CLI only connects. ``--host`` is now redundant
-    # (the daemon is always ensured) and kept only as a no-op for scripts.
-    startup_profiler.mark("ensuring backend")
-    server = _ensure_backend(server)
-    startup_profiler.mark("backend ready", detail=f"server={server}")
-
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-
-    from agent_meow.claude_native import run_claude_native
-
-    startup_profiler.mark("native module imported")
-
-    run_claude_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        claude_args=claude_args,
-        use_claude_config=use_claude_config,
-        auto_open_conversation=auto_open_conversation,
-        startup_profiler=startup_profiler,
-        **({"command": claude_command} if claude_command else {}),
-    )
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Ensures the host daemon, asks the "
-        "daemon-spawned runner to launch Codex, and attaches this TTY. "
-        'Pass --server "" to auto-spawn a persistent local server in the '
-        "background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to codex-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.option("--model", default=None, help="Codex model to use for the native thread.")
-@click.option(
-    "-p",
-    "--prompt",
-    default=None,
-    help="Send this as the first message after the Codex TUI starts.",
-)
-@click.argument("codex_args", nargs=-1, type=click.UNPROCESSED)
-def codex(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    model: str | None,
-    prompt: str | None,
-    codex_args: tuple[str, ...],
-) -> None:
-    # Param docs live in comments — Click uses the docstring for --help.
-    # :param server: Remote agent-meow server URL, or None for local.
-    # :param resume: None, picker sentinel, or a conversation id.
-    # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
-    # :param model: Codex model id.
-    # :param prompt: Optional first prompt.
-    # :param codex_args: Pass-through args for ``codex`` before ``resume``.
-    """Launch Codex TUI in an agent-meow terminal.
-
-    \b
-    Examples:
-      agent-meow codex
-      agent-meow codex --resume conv_abc123
-      agent-meow codex --resume                  # interactive picker
-      agent-meow codex --server https://<app>.databricksapps.com
-    """
-    _reject_native_on_windows("codex")
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-
-    from agent_meow.codex_native import run_codex_native
-
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    if model is None:
-        model = cfg.get("model")
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-
-    # Validate option combinations before any side effects — see
-    # the same comment in the claude command. _ensure_backend can
-    # spawn the daemon and take the full local-server-discover
-    # timeout to fail, which would make a bad arg pair look like
-    # a backend outage instead of a usage error.
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-
-    # Ensure the host daemon (local when ``--server`` is omitted/empty,
-    # remote otherwise) and resolve the concrete agent-meow server URL. Codex follows
-    # the same ownership model as attach/run/claude: the daemon-spawned runner
-    # owns the app-server and TUI; the CLI attaches to the tmux terminal.
-    server = _ensure_backend(server)
-
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-
-    run_codex_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        codex_args=codex_args,
-        model=model,
-        prompt=prompt,
-        auto_open_conversation=auto_open_conversation,
-    )
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Ensures the host daemon, asks the "
-        "daemon-spawned runner to launch OpenCode, and attaches this TTY. "
-        'Pass --server "" to auto-spawn a persistent local server in the '
-        "background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to opencode-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.option("--model", default=None, help="OpenCode model to use for the native session.")
-@click.argument("opencode_args", nargs=-1, type=click.UNPROCESSED)
-def opencode(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    model: str | None,
-    opencode_args: tuple[str, ...],
-) -> None:
-    # :param server: Remote agent-meow server URL, or None for local.
-    # :param resume: None, picker sentinel, or a conversation id.
-    # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
-    # :param model: OpenCode model id pinned on the wrapper spec.
-    # :param opencode_args: Pass-through args persisted for the ``opencode attach`` TUI.
-    """Launch OpenCode TUI in an agent-meow terminal.
-
-    \b
-    Examples:
-      agent-meow opencode
-      agent-meow opencode --resume conv_abc123
-      agent-meow opencode --resume                  # interactive picker
-      agent-meow opencode --server https://<app>.databricksapps.com
-    """
-    from agent_meow.opencode_native import run_opencode_native
-
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    if model is None:
-        # Prefer the OpenCode-specific default (set in `omni setup` → OpenCode →
-        # "Set default model"); fall back to the shared `model` key for back-compat.
-        model = cfg.get("opencode_model") or cfg.get("model")
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-
-    # Validate option combinations before any side effects (see the codex
-    # command): _ensure_backend can spawn the daemon and take the full
-    # local-server-discover timeout, which would mask a bad arg pair as an
-    # outage instead of a usage error.
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-
-    # Ensure the host daemon (local when ``--server`` is omitted/empty, remote
-    # otherwise); the daemon-spawned runner owns ``opencode serve`` + the TUI,
-    # and this CLI attaches to the tmux terminal.
-    server = _ensure_backend(server)
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-    run_opencode_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        opencode_args=opencode_args,
-        model=model,
-        auto_open_conversation=auto_open_conversation,
-    )
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Ensures the host daemon, asks the "
-        "daemon-spawned runner to launch Pi, and attaches this TTY. "
-        'Pass --server "" to auto-spawn a persistent local server in the '
-        "background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to pi-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.argument("pi_args", nargs=-1, type=click.UNPROCESSED)
-def pi(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    pi_args: tuple[str, ...],
-) -> None:
-    """Launch Pi TUI in an agent-meow terminal.
-
-    \b
-    Examples:
-      agent-meow pi
-      agent-meow pi --resume conv_abc123
-      agent-meow pi --resume                    # interactive picker
-      agent-meow pi --model local-deepseek/deepseek-v4-flash
-    """
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-
-    from agent_meow.pi_native import run_pi_native
-
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-
-    server = _ensure_backend(server)
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-
-    run_pi_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        pi_args=pi_args,
-        auto_open_conversation=auto_open_conversation,
-    )
-
-
-def _bundled_agent_brain_harness(name: str) -> str | None:
-    """Return the canonical brain harness of a bundled agent, or ``None``.
-
-    Reads the brain harness (``executor.config.harness``, falling back to
-    ``executor.harness`` / ``executor.type``) from the bundled agent's
-    ``config.yaml`` — e.g. polly's and debby's ``claude-sdk`` brain — so
-    credential fallback can target the model family the brain actually
-    runs on. Mirrors :func:`_peek_default_agent_harness`'s YAML-reading
-    style.
-
-    :param name: Bundled example directory name, e.g. ``"polly"``.
-    :returns: The canonical harness id, e.g. ``"claude-sdk"``, or ``None``
-        when the bundle is missing/unreadable or declares no brain harness.
-    """
-    config_path = Path(_bundled_example_path(name)) / "config.yaml"
-    if not config_path.is_file():
-        return None
-    try:
-        raw = yaml.safe_load(config_path.read_text()) or {}
-    except (OSError, yaml.YAMLError):
-        return None
-    if not isinstance(raw, dict):
-        return None
-    executor = raw.get("executor")
-    if not isinstance(executor, dict):
-        return None
-    declared: object = None
-    config_block = executor.get("config")
-    if isinstance(config_block, dict):
-        declared = config_block.get("harness")
-    if not isinstance(declared, str) or not declared:
-        declared = executor.get("harness") or executor.get("type")
-    if not isinstance(declared, str) or not declared:
-        return None
-    return canonicalize_harness(declared) or declared
-
-
-def _ensure_bundled_agent_brain_credential(name: str) -> None:
-    """Ensure the bundled agent's brain harness has a credential to launch with.
-
-    Polly and Debby launch with the *first available* credential for their
-    brain's model family rather than requiring a specific one to be marked
-    ``default: true`` up front — so users can start without manually
-    picking/configuring one. When no default provider is configured for the
-    agent's brain harness, pick the first available credential serving that
-    family and mark it the default so the downstream ``run`` resolves it —
-    printing a notice (to stderr) since this mutates the user's config on a
-    launch command, mirroring the confirmation ``setup`` / ``/model`` show.
-
-    No-op when a default is already configured, or when no credential is
-    available for the family (the harness raises its own launch error then).
-    Only an explicit default (or none) is touched — an existing default is
-    never overridden. Marking the first available credential the default
-    mirrors :func:`_add_provider_entry`'s "a first provider just works"
-    adoption (see :func:`~?agent_meow.setup`).
-
-    :param name: Bundled example directory name, e.g. ``"polly"``.
-    """
-    from agent_meow.errors import OmnigentError
-    from agent_meow.onboarding.configure_models import family_label
-    from agent_meow.onboarding.detected import effective_config_with_detected
-    from agent_meow.onboarding.provider_config import (
-        default_provider_for_harness,
-        harness_family,
-        load_config,
-        load_providers,
-        provider_families,
-        set_default_provider,
-    )
-
-    brain_harness = _bundled_agent_brain_harness(name)
-    if brain_harness is None:
-        return
-    family = harness_family(brain_harness)
-    if family is None:
-        return
-    # Best-effort: adopting a default must never crash a launch. Any malformed
-    # or unexpected config state (corrupt YAML, ambiguous defaults, a divergent
-    # on-disk entry) degrades to a no-op — the harness then raises its own
-    # credential error.
-    try:
-        config = effective_config_with_detected(load_config())
-        if default_provider_for_harness(config, brain_harness) is not None:
-            return
-        on_disk = _load_global_config()
-        disk_block = on_disk.get("providers") if isinstance(on_disk, dict) else None
-        if not isinstance(disk_block, dict):
-            return
-        # Skip ambient-detected entries (not on disk) — auto-defaulted upstream.
-        for entry_name, entry in load_providers(config).items():
-            if family not in provider_families(entry) or entry_name not in disk_block:
-                continue
-            _save_global_config(
-                {"providers": set_default_provider(disk_block, entry_name, family)}
-            )
-            # Announce: this mutates the user's config on a launch command.
-            click.echo(
-                f"No default {family_label(family)} credential set — "
-                f"using {_credential_label(entry_name, entry)} and saving it as "
-                f"the default (change anytime with: agent-meow /model).",
-                err=True,
-            )
-            return
-    except (OSError, yaml.YAMLError, OmnigentError):
-        return
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Ensures the host daemon, asks the "
-        "daemon-spawned runner to launch the Cursor TUI, and attaches this TTY. "
-        'Pass --server "" to auto-spawn a persistent local server in the '
-        "background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to cursor-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.option(
-    "--mode",
-    "mode",
-    default=None,
-    type=click.Choice(["plan", "ask"]),
-    help=(
-        "Start cursor-agent in the given execution mode. "
-        "``plan``: read-only/planning (analyze, propose plans, no edits). "
-        "``ask``: Q&A style for explanations and questions (read-only)."
-    ),
-)
-@click.option(
-    "--model",
-    default=None,
-    help="Cursor model to use for the native TUI (e.g. gpt-5.2, claude-4.6-sonnet-medium).",
-)
-@click.argument("cursor_args", nargs=-1, type=click.UNPROCESSED)
-def cursor(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    mode: str | None,
-    model: str | None,
-    cursor_args: tuple[str, ...],
-) -> None:
-    # Param docs live in comments — Click uses the docstring for --help.
-    # :param model: Cursor model id passed to cursor-agent as ``--model``.
-    """Launch the Cursor TUI in an agent-meow terminal.
-
-    \b
-    Examples:
-      agent-meow cursor
-      agent-meow cursor --model gpt-5.2
-      agent-meow cursor --resume conv_abc123
-      agent-meow cursor --resume                 # interactive picker
-      agent-meow cursor --mode plan              # start in plan (read-only) mode
-      agent-meow cursor --mode ask               # start in ask (Q&A) mode
-    """
-    _reject_native_on_windows("cursor")
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-
-    from agent_meow.cursor_native import run_cursor_native
-
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    # Deliberately no ``cfg.get("model")`` fallback (unlike ``codex``): the
-    # global config model is a Claude/Codex catalog id, not a cursor-agent
-    # model id, and pinning it would break the cursor TUI launch. Cursor's
-    # model is explicit-only here; persistent selection rides the web /model.
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-
-    server = _ensure_backend(server)
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-
-    run_cursor_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        cursor_args=cursor_args,
-        model=model,
-        auto_open_conversation=auto_open_conversation,
-        mode=mode,
-    )
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Ensures the host daemon, asks the "
-        "daemon-spawned runner to launch the Kiro TUI, and attaches this TTY. "
-        'Pass --server "" to auto-spawn a persistent local server in the '
-        "background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to kiro-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.option("--model", default=None, help="Kiro model to use for the native chat.")
-@click.option("--effort", default=None, help="Kiro effort level to use for the native chat.")
-@click.option("--agent", "kiro_agent", default=None, help="Kiro agent to use for the native chat.")
-@click.option(
-    "--trust-tools",
-    "trust_tools",
-    multiple=True,
-    metavar="TOOL",
-    help="Trust a specific Kiro tool. May be passed multiple times.",
-)
-@click.option(
-    "--trust-all-tools",
-    is_flag=True,
-    default=False,
-    help="Explicitly trust all Kiro tools for this local launch.",
-)
-@click.option(
-    "-p",
-    "--prompt",
-    default=None,
-    help="Send this as the initial Kiro chat input when the TUI starts.",
-)
-@click.argument("kiro_args", nargs=-1, type=click.UNPROCESSED)
-def kiro(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    model: str | None,
-    effort: str | None,
-    kiro_agent: str | None,
-    trust_tools: tuple[str, ...],
-    trust_all_tools: bool,
-    prompt: str | None,
-    kiro_args: tuple[str, ...],
-) -> None:
-    """Launch the Kiro TUI in an agent-meow terminal.
-
-    \b
-    Examples:
-      agent-meow kiro
-      agent-meow kiro --resume conv_abc123
-      agent-meow kiro --resume                  # interactive picker
-      agent-meow kiro --model auto -p "review this repo"
-    """
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-    _reject_reserved_kiro_resume_args(kiro_args)
-
-    from agent_meow.kiro_native import run_kiro_native
-
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    if model is None:
-        model = cfg.get("model")
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-    launch_args = _build_kiro_launch_args(
-        effort=effort,
-        kiro_agent=kiro_agent,
-        trust_tools=trust_tools,
-        trust_all_tools=trust_all_tools,
-        passthrough_args=kiro_args,
-    )
-
-    server = _ensure_backend(server)
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-
-    run_kiro_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        kiro_args=launch_args,
-        model=model,
-        prompt=prompt,
-        auto_open_conversation=auto_open_conversation,
-    )
-
-
-def _reject_reserved_kiro_resume_args(kiro_args: tuple[str, ...]) -> None:
-    """Reject Kiro-owned resume flags in passthrough args."""
-    reserved = {"--resume", "--resume-id", "--resume-picker"}
-    if any(arg == flag or arg.startswith(f"{flag}=") for arg in kiro_args for flag in reserved):
-        raise click.UsageError(
-            "Kiro resume flags are reserved for agent-meow resume handling; use "
-            "`agent-meow kiro --resume [CONVERSATION]` instead."
-        )
-
-
-def _build_kiro_launch_args(
-    *,
-    effort: str | None,
-    kiro_agent: str | None,
-    trust_tools: tuple[str, ...],
-    trust_all_tools: bool,
-    passthrough_args: tuple[str, ...],
-) -> tuple[str, ...]:
-    """Build mapped Kiro CLI args for the runner-owned terminal launch."""
-    args: list[str] = []
-    if effort:
-        args.extend(["--effort", effort])
-    if kiro_agent:
-        args.extend(["--agent", kiro_agent])
-    for tool in trust_tools:
-        args.extend(["--trust-tools", tool])
-    if trust_all_tools:
-        args.append("--trust-all-tools")
-    args.extend(passthrough_args)
-    return tuple(args)
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Ensures the host daemon, asks the "
-        "daemon-spawned runner to launch the Goose TUI, and attaches this TTY. "
-        'Pass --server "" to auto-spawn a persistent local server in the '
-        "background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to goose-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.argument("goose_args", nargs=-1, type=click.UNPROCESSED)
-def goose(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    goose_args: tuple[str, ...],
-) -> None:
-    """Launch the Goose TUI in an agent-meow terminal.
-
-    \b
-    Examples:
-      agent-meow goose
-      agent-meow goose --resume conv_abc123
-      agent-meow goose --resume                 # interactive picker
-    """
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-
-    from agent_meow.goose_native import run_goose_native
-
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-
-    server = _ensure_backend(server)
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-
-    run_goose_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        goose_args=goose_args,
-        auto_open_conversation=auto_open_conversation,
-    )
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Ensures the host daemon, asks the "
-        "daemon-spawned runner to launch the Hermes TUI, and attaches this TTY. "
-        'Pass --server "" to auto-spawn a persistent local server in the '
-        "background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to hermes-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.argument("hermes_args", nargs=-1, type=click.UNPROCESSED)
-def hermes(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    hermes_args: tuple[str, ...],
-) -> None:
-    """Launch the Hermes TUI in an agent-meow terminal.
-
-    \b
-    Examples:
-      agent-meow hermes
-      agent-meow hermes --resume conv_abc123
-      agent-meow hermes --resume                 # interactive picker
-    """
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-
-    from agent_meow.hermes_native import run_hermes_native
-
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-
-    server = _ensure_backend(server)
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-
-    run_hermes_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        hermes_args=hermes_args,
-        auto_open_conversation=auto_open_conversation,
-    )
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Ensures the host daemon, binds a runner, "
-        "launches Antigravity (agy) in a terminal resource, and attaches "
-        'this TTY. Pass --server "" to auto-spawn a persistent local '
-        "server in the background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to antigravity-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.option("--model", default=None, help="Antigravity (agy) model to use for the session.")
-@click.argument("antigravity_args", nargs=-1, type=click.UNPROCESSED)
-def antigravity(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    model: str | None,
-    antigravity_args: tuple[str, ...],
-) -> None:
-    """Launch the Antigravity (agy) TUI in an agent-meow terminal.
-
-    \b
-    Examples:
-      agent-meow antigravity
-      agent-meow antigravity --resume conv_abc123
-      agent-meow antigravity --resume                  # interactive picker
-      agent-meow antigravity --server https://<app>.databricksapps.com
-    """
-    # Validate option combinations BEFORE any side effects (daemon spawn,
-    # server discovery) -- see the same comment in the claude command.
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-
-    from agent_meow.antigravity_native import run_antigravity_native
-
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    if model is None:
-        model = cfg.get("model")
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-
-    server = _ensure_backend(server)
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-
-    # permission_mode is left None here (parity with the claude/codex/pi CLI
-    # launchers): the attended terminal launch lets agy's own request-review
-    # prompt govern each tool, and an unattended/headless launch auto-bypasses
-    # inside run_antigravity_native. It is plumbed through build_agy_launch so a
-    # future caller CAN set it, but this human CLI path exposes no permission
-    # flag and never needs one.
-    run_antigravity_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        antigravity_args=antigravity_args,
-        model=model,
-        auto_open_conversation=auto_open_conversation,
-    )
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Ensures the host daemon, asks the "
-        "daemon-spawned runner to launch the qwen TUI, and attaches this TTY. "
-        'Pass --server "" to auto-spawn a persistent local server in the '
-        "background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to qwen-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.argument("qwen_args", nargs=-1, type=click.UNPROCESSED)
-def qwen(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    qwen_args: tuple[str, ...],
-) -> None:
-    """Launch the qwen (Qwen Code) TUI in an agent-meow terminal.
-
-    \b
-    Examples:
-      agent-meow qwen
-      agent-meow qwen --resume conv_abc123
-      agent-meow qwen --resume                  # interactive picker
-    """
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-
-    from agent_meow.qwen_native import run_qwen_native
-
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-
-    server = _ensure_backend(server)
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-
-    run_qwen_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        qwen_args=qwen_args,
-        auto_open_conversation=auto_open_conversation,
-    )
-
-
-def _run_bundled_agent(name: str, run_args: tuple[str, ...]) -> None:
-    """Forward a bundled-agent subcommand to ``run`` on its packaged path.
-
-    Implements ``agent-meow polly`` / ``agent-meow debby``: resolves the bundled
-    example directory and re-dispatches through the ``run`` command's own
-    parser, so every ``run`` flag (``--server``, ``-p``, ``--resume``, ...)
-    works unchanged on the agent shorthands without duplicating ``run``'s
-    option declarations.
-
-    ``prog_name`` is pinned to ``"agent-meow run"`` so context-derived output —
-    usage errors and the :func:`_build_resume_parts` replay prefix — renders
-    as the canonical ``agent-meow run <path>`` form, which stays valid when
-    replayed.
-
-    :param name: Bundled example directory name, e.g. ``"polly"``.
-    :param run_args: Unparsed pass-through CLI args for ``run``,
-        e.g. ``("-p", "review the last commit")``.
-    """
-    # Polly/Debby launch with the first available credential for their
-    # brain's family when no specific one is configured up front (#334).
-    _ensure_bundled_agent_brain_credential(name)
-    # standalone_mode=False propagates ClickExceptions to main()'s handler
-    # (CLI diagnostics logging + setup hint) instead of exiting inline,
-    # matching the outer `cli(args=argv, standalone_mode=False)` dispatch.
-    run.main(
-        args=[_bundled_example_path(name), *run_args],
-        prog_name="agent-meow run",
-        standalone_mode=False,
-    )
-
-
 @cli.command(
     context_settings={
         "ignore_unknown_options": True,
@@ -5339,19 +4755,19 @@ def _run_bundled_agent(name: str, run_args: tuple[str, ...]) -> None:
 )
 @click.argument("run_args", nargs=-1, type=click.UNPROCESSED)
 def polly(run_args: tuple[str, ...]) -> None:
-    # Param docs live in comments — Click uses the docstring for --help.
+    # Param docs live in comments �?Click uses the docstring for --help.
     # :param run_args: Pass-through args for ``run``.
     """Launch polly, the bundled multi-agent coding orchestrator.
 
-    Shorthand for ``agent-meow run`` on the packaged polly agent — the same
-    agent a bare ``agent-meow`` launches when a Claude credential is
+    Shorthand for ``omnigent run`` on the packaged polly agent �?the same
+    agent a bare ``omnigent`` launches when a Claude credential is
     configured. All ``run`` options are accepted and forwarded.
 
     \b
     Examples:
-      agent-meow polly
-      agent-meow polly -p "review the last commit"
-      agent-meow polly --server https://<app>.databricksapps.com
+      omnigent polly
+      omnigent polly -p "review the last commit"
+      omnigent polly --server https://<app>.databricksapps.com
     """
     _run_bundled_agent("polly", run_args)
 
@@ -5364,110 +4780,21 @@ def polly(run_args: tuple[str, ...]) -> None:
 )
 @click.argument("run_args", nargs=-1, type=click.UNPROCESSED)
 def debby(run_args: tuple[str, ...]) -> None:
-    # Param docs live in comments — Click uses the docstring for --help.
+    # Param docs live in comments �?Click uses the docstring for --help.
     # :param run_args: Pass-through args for ``run``.
     """Launch debby, the bundled two-headed brainstorming agent.
 
-    Shorthand for ``agent-meow run`` on the packaged debby agent. Debby fans
+    Shorthand for ``omnigent run`` on the packaged debby agent. Debby fans
     every question out to both a Claude and a GPT sub-agent, so a Claude
     and an OpenAI provider must both be configured. All ``run`` options are
     accepted and forwarded.
 
     \b
     Examples:
-      agent-meow debby
-      agent-meow debby -p "name ideas for a CLI that runs agents"
+      omnigent debby
+      omnigent debby -p "name ideas for a CLI that runs agents"
     """
     _run_bundled_agent("debby", run_args)
-
-
-@cli.command(
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    }
-)
-@click.option(
-    "--server",
-    default=None,
-    help=(
-        "Remote agent-meow URL. Ensures the host daemon, asks the "
-        "daemon-spawned runner to launch the Kimi TUI, and attaches this TTY. "
-        'Pass --server "" to auto-spawn a persistent local server in the '
-        "background and use that instead of a remote one."
-    ),
-)
-@click.option(
-    "-r",
-    "--resume",
-    "resume",
-    is_flag=False,
-    flag_value=_RESUME_PICKER_SENTINEL,
-    default=None,
-    help=(
-        "Resume a prior agent-meow conversation. With a conversation id "
-        "(e.g. ``--resume conv_abc123``) attaches directly; with no value "
-        "opens an interactive picker scoped to kimi-native sessions."
-    ),
-)
-@click.option(
-    "--session",
-    "session_id",
-    metavar="SESSION_ID",
-    default=None,
-    hidden=True,
-    help="Deprecated alias for ``--resume <id>``; kept for one release.",
-)
-@click.argument("kimi_args", nargs=-1, type=click.UNPROCESSED)
-def kimi(
-    server: str | None,
-    resume: str | None,
-    session_id: str | None,
-    kimi_args: tuple[str, ...],
-) -> None:
-    """Launch the Kimi Code TUI in an agent-meow terminal.
-
-    Boots Moonshot AI's interactive ``kimi`` TUI
-    (https://github.com/MoonshotAI/Kimi-Code) in a runner-owned terminal and
-    attaches your TTY — the native experience, embedded in the agent-meow web
-    UI. No agent-meow provider config is needed: kimi authenticates against its
-    own backend (``kimi login`` for OAuth, or a Moonshot API key).
-
-    For the headless SDK harness (per-turn ``kimi -p`` behind the agent-meow
-    REPL) use ``agent-meow run --harness kimi`` instead.
-
-    \b
-    Examples:
-      agent-meow kimi
-      agent-meow kimi --resume conv_abc123
-      agent-meow kimi --resume                   # interactive picker
-    """
-    choice = _split_resume_value(resume)
-    if session_id is not None and (choice.picker or choice.conversation_id is not None):
-        raise click.UsageError(
-            "--session and --resume are mutually exclusive; "
-            "prefer --resume (--session is deprecated).",
-        )
-
-    from agent_meow.kimi_native import run_kimi_native
-
-    cfg = _load_effective_config()
-    if server is None:
-        server = cfg.get("server")
-    auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
-
-    server = _ensure_backend(server)
-    resolved_session_id = (
-        choice.conversation_id if choice.conversation_id is not None else session_id
-    )
-
-    run_kimi_native(
-        server=server,
-        session_id=resolved_session_id,
-        resume_picker=choice.picker,
-        kimi_args=kimi_args,
-        auto_open_conversation=auto_open_conversation,
-    )
 
 
 @cli.command()
@@ -5476,29 +4803,29 @@ def kimi(
     "--server",
     default=None,
     help=(
-        "Remote agent-meow URL. When set, the picker / lookup queries "
+        "Remote omnigent URL. When set, the picker / lookup queries "
         "this server instead of starting a local one. Required when "
-        "running ``agent-meow resume`` without a conversation id."
+        "running ``omnigent resume`` without a conversation id."
     ),
 )
 def resume(
     target: str | None,
     server: str | None,
 ) -> None:
-    # Click uses the docstring as --help text — keep param docs in
+    # Click uses the docstring as --help text �?keep param docs in
     # comments so they don't leak into CLI output.
     #
-    # :param target: Optional agent-meow conversation id, e.g.
+    # :param target: Optional Omnigent conversation id, e.g.
     #     ``"conv_abc123"``. None falls through to the picker.
-    # :param server: Remote agent-meow server URL (optional in id mode;
+    # :param server: Remote Omnigent server URL (optional in id mode;
     #     required in picker mode).
-    """Resume an agent-meow conversation, auto-dispatching by runtime.
+    """Resume an Omnigent conversation, auto-dispatching by runtime.
 
     \b
     With CONV_ID: looks up the conversation and dispatches to the
     matching wrapper. claude-native sessions land in
-    ``agent-meow claude``; everything else surfaces a clear hint to
-    use ``agent-meow run --resume <id> <agent.yaml>``.
+    ``omnigent claude``; everything else surfaces a clear hint to
+    use ``omnigent run --resume <id> <agent.yaml>``.
 
     \b
     Without CONV_ID: opens a cross-agent picker over your prior
@@ -5507,9 +4834,9 @@ def resume(
 
     \b
     Examples:
-      agent-meow resume conv_abc123
-      agent-meow resume conv_abc123 --server https://<app>.databricksapps.com
-      agent-meow resume --server https://<app>.databricksapps.com
+      omnigent resume conv_abc123
+      omnigent resume conv_abc123 --server https://<app>.databricksapps.com
+      omnigent resume --server https://<app>.databricksapps.com
     """
     from agent_meow.resume_dispatch import run_resume
 
@@ -5519,8 +4846,292 @@ def resume(
     )
 
 
+@cli.command("import")
+@click.option(
+    "--harness",
+    type=click.Choice(
+        ["claude", "codex", "kimi", "kiro", "opencode", "pi", "qwen"],
+        case_sensitive=False,
+    ),
+    required=True,
+    help="Local coding harness that owns the source session.",
+)
+@click.option(
+    "--session",
+    "source_session_id",
+    default=None,
+    metavar="SESSION_ID",
+    help="Harness-native session ID to import. Mutually exclusive with --last.",
+)
+@click.option(
+    "--last",
+    "recent_session_count",
+    type=click.IntRange(min=1, max=50),
+    default=None,
+    metavar="N",
+    help="Import the N most recently modified parent sessions (maximum 50).",
+)
+@click.option(
+    "--server",
+    default=None,
+    help=(
+        "Omnigent server URL. Defaults to the configured server, an existing "
+        "local server, or a newly started local server."
+    ),
+)
+def import_session_command(
+    harness: str,
+    source_session_id: str | None,
+    recent_session_count: int | None,
+    server: str | None,
+) -> None:
+    """Import chats from supported local coding harnesses.
+
+    The source transcript is converted to ordinary Omnigent items and stored
+    as a normal session. Qwen, Kiro, and Kimi currently preserve visible
+    messages but not native tool activity; OpenCode and Pi preserve exported
+    tool activity. Use --session for one chat or --last for a bounded batch. A
+    source session can only be imported once.
+
+    \b
+    Examples:
+      omnigent import --harness claude --session <session-id>
+      omnigent import --harness codex --session <session-id>
+      omnigent import --harness opencode --session <session-id>
+      omnigent import --harness qwen --session <session-id>
+      omnigent import --harness claude --last 10
+    """
+    import httpx
+
+    from agent_meow.chat import _remote_headers
+    from agent_meow.session_import import (
+        ImportSource,
+        SessionImportNotFoundError,
+    )
+    from agent_meow.session_import.local import (
+        list_recent_local_session_ids,
+        load_local_session,
+    )
+
+    if (source_session_id is None) == (recent_session_count is None):
+        raise click.UsageError("Provide exactly one of --session or --last.")
+
+    source = cast(ImportSource, harness.lower())
+    is_batch = recent_session_count is not None
+    if recent_session_count is not None:
+        try:
+            recent_ids = list_recent_local_session_ids(source, limit=recent_session_count)
+        except SessionImportNotFoundError as exc:
+            raise click.ClickException(str(exc)) from exc
+        if not recent_ids:
+            raise click.ClickException(f"No local {source} parent sessions were found")
+        source_session_ids = tuple(reversed(recent_ids))
+    else:
+        assert source_session_id is not None
+        source_session_ids = (source_session_id,)
+
+    cfg = _load_effective_config()
+    base_url = _resolve_attach_server(server, cfg.get("server"))
+    if base_url is None:
+        base_url = ensure_local_omnigent_server().url
+    base_url = base_url.rstrip("/")
+    imported_count = 0
+    already_imported_count = 0
+    failed_count = 0
+    for current_source_session_id in source_session_ids:
+        try:
+            imported = load_local_session(source, current_source_session_id)
+        except SessionImportNotFoundError as exc:
+            if not is_batch:
+                raise click.ClickException(str(exc)) from exc
+            failed_count += 1
+            click.echo(f"Failed {current_source_session_id}: {exc}", err=True)
+            continue
+        except (OSError, TypeError, ValueError) as exc:
+            if not is_batch:
+                raise
+            failed_count += 1
+            click.echo(f"Failed {current_source_session_id}: {exc}", err=True)
+            continue
+
+        payload = {
+            "source": imported.source,
+            "external_session_id": imported.external_session_id,
+            "workspace": imported.workspace,
+            "items": [
+                {
+                    "type": item.type,
+                    "response_id": item.response_id,
+                    "data": item.data.model_dump(mode="json", exclude_none=True),
+                }
+                for item in imported.items
+            ],
+        }
+        try:
+            response = httpx.post(
+                f"{base_url}/v1/imports",
+                json=payload,
+                headers=_remote_headers(server_url=base_url),
+                timeout=120.0,
+            )
+        except httpx.RequestError as exc:
+            raise click.ClickException(f"Could not reach the Omnigent server: {exc}") from exc
+
+        if response.status_code == 409 and is_batch:
+            already_imported_count += 1
+            click.echo(f"Already imported {current_source_session_id}; skipped.")
+            continue
+        if response.is_error:
+            try:
+                body = response.json()
+                detail = body.get("error", {}).get("message") or body.get("detail")
+            except (ValueError, AttributeError):
+                detail = None
+            message = f"Import failed ({response.status_code}): {detail or response.text}"
+            if not is_batch:
+                raise click.ClickException(message)
+            failed_count += 1
+            click.echo(f"Failed {current_source_session_id}: {message}", err=True)
+            continue
+
+        try:
+            result = response.json()
+            session_id = result["session_id"]
+            item_count = result["item_count"]
+        except (AttributeError, KeyError, TypeError, ValueError) as exc:
+            if not is_batch:
+                raise click.ClickException("Import returned an invalid server response") from exc
+            failed_count += 1
+            click.echo(
+                f"Failed {current_source_session_id}: import returned an invalid server response",
+                err=True,
+            )
+            continue
+        imported_count += 1
+        if is_batch:
+            click.echo(
+                f"Imported {item_count} item(s) from {current_source_session_id} "
+                f"into {session_id}."
+            )
+        else:
+            click.echo(f"Imported {item_count} item(s) into {session_id}.")
+
+    if is_batch:
+        click.echo(f"\nImported: {imported_count}")
+        click.echo(f"Already imported: {already_imported_count}")
+        click.echo(f"Failed: {failed_count}")
+        if failed_count:
+            raise click.ClickException(f"{failed_count} session(s) failed to import")
+
+
+@cli.group("session", invoke_without_command=True)
+@click.pass_context
+def session(ctx: click.Context) -> None:
+    """Manage Omnigent sessions.
+
+    \b
+    Examples:
+      omnigent session export --id conv_abc123
+      omnigent session export --id conv_abc123 --output transcript.jsonl
+      omnigent session export --id conv_abc123 --server https://myserver.com
+    """
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+
+
+@session.command("export")
+@click.option(
+    "--id",
+    "session_id",
+    required=True,
+    metavar="SESSION_ID",
+    help="Session ID to export, e.g. conv_abc123.",
+)
+@click.option(
+    "--output",
+    "-o",
+    "output",
+    default=None,
+    metavar="FILE",
+    help="Output file path.  Defaults to <SESSION_ID>.jsonl in the current directory.",
+)
+@click.option(
+    "--server",
+    default=None,
+    help=(
+        "Omnigent server URL. "
+        "Defaults to the configured server, or a local server already running."
+    ),
+)
+def session_export(session_id: str, output: str | None, server: str | None) -> None:
+    """Export a session transcript to a portable JSONL file.
+
+    Each line of the output is a JSON object.  The first line carries
+    the session metadata (``"record_type": "session_meta"``); every
+    subsequent line is one conversation item
+    (``"record_type": "item"``).  The file preserves full turn order
+    and is independent of ``omnigent import``, which reads native harness history.
+
+    \b
+    Examples:
+      omnigent session export --id conv_abc123
+      omnigent session export --id conv_abc123 --output my_session.jsonl
+      omnigent session export --id conv_abc123 --server https://myserver.com
+    """
+    import httpx
+
+    from agent_meow.chat import _remote_headers
+
+    cfg = _load_effective_config()
+    base_url = _resolve_attach_server(server, cfg.get("server"))
+    if base_url is None:
+        startup = ensure_local_omnigent_server()
+        base_url = startup.url
+
+    base_url = base_url.rstrip("/")
+    out_path = Path(output) if output else Path(f"{session_id}.jsonl")
+
+    with httpx.Client(
+        base_url=base_url, headers=_remote_headers(server_url=base_url), timeout=30.0
+    ) as client:
+        # Fetch session metadata (items fetched separately via pagination).
+        resp = client.get(
+            f"/v1/sessions/{session_id}",
+            params={"include_items": "false", "include_liveness": "false"},
+        )
+        if resp.status_code == 404:
+            raise click.ClickException(f"Session {session_id!r} not found.")
+        resp.raise_for_status()
+        session_data = resp.json()
+
+        n_items = 0
+        with out_path.open("w", encoding="utf-8") as fh:
+            # First line: session metadata.
+            meta_record = {"record_type": "session_meta", **session_data}
+            fh.write(json.dumps(meta_record) + "\n")
+
+            # Remaining lines: items in ascending order, paginated.
+            after: str | None = None
+            while True:
+                params: dict[str, str | int] = {"limit": 500, "order": "asc"}
+                if after:
+                    params["after"] = after
+                items_resp = client.get(f"/v1/sessions/{session_id}/items", params=params)
+                items_resp.raise_for_status()
+                page = items_resp.json()
+                for item in page["data"]:
+                    item_record = {"record_type": "item", **item}
+                    fh.write(json.dumps(item_record) + "\n")
+                    n_items += 1
+                if not page.get("has_more"):
+                    break
+                after = page.get("last_id")
+
+    click.echo(f"Exported {n_items} item(s) from {session_id} to {out_path}")
+
+
 # Shared option help for ``run`` and the harness commands. These are the same
-# flags the legacy argparse CLI exposed — keeping them on the unified
+# flags the legacy argparse CLI exposed �?keeping them on the unified
 # click CLI so users don't regress when a YAML declares no executor
 # block (e.g. ``examples/hello_world.yaml``) or when they want to
 # choose model/harness without editing the agent file. See
@@ -5547,38 +5158,38 @@ _CONTINUE_HELP = "Continue the most recent conversation for this agent."
 _NO_SESSION_HELP = "Use a fresh temporary local session store for this run."
 
 _FORK_HELP = "Fork an existing session by id and open the REPL on the fork."
-_LOG_HELP = "Write a JSON dump of the conversation to ~/.agent_meow/logs/ on exit."
+_LOG_HELP = "Write a JSON dump of the conversation to ~/.omnigent/logs/ on exit."
 
 
 _DEFAULT_HARNESS_PROMPTS = {
     "claude-sdk": (
-        "You are Claude Code, running through agent-meow. "
+        "You are Claude Code, running through agent_meow. "
         "Help the user with software engineering tasks."
     ),
     "codex": (
-        "You are Codex, running through agent-meow. Help the user with software engineering tasks."
+        "You are Codex, running through agent_meow. Help the user with software engineering tasks."
     ),
     "cursor": (
-        "You are Cursor, running through agent-meow. Help the user with software engineering tasks."
+        "You are Cursor, running through agent_meow. Help the user with software engineering tasks."
     ),
     "kimi": (
-        "You are Kimi Code, running through agent-meow. "
+        "You are Kimi Code, running through agent_meow. "
         "Help the user with software engineering tasks."
     ),
     "qwen": (
-        "You are Qwen Code, running through agent-meow. "
+        "You are Qwen Code, running through agent_meow. "
         "Help the user with software engineering tasks."
     ),
     "goose": (
-        "You are Goose, running through agent-meow. Help the user with software engineering tasks."
+        "You are Goose, running through agent_meow. Help the user with software engineering tasks."
     ),
 }
-_DEFAULT_HARNESS_PROMPT = "You are a helpful coding agent running through agent-meow."
+_DEFAULT_HARNESS_PROMPT = "You are a helpful coding agent running through agent_meow."
 
 # Harnesses whose auto-generated launcher YAML should include an
 # ``os_env`` block.  This triggers the workflow's ``ToolManager``
 # to inject ``sys_os_*`` tools into the request so file/shell
-# operations route through the agent-meow dispatch path (runner
+# operations route through the Omnigent dispatch path (runner
 # visibility, timeouts, error recovery) instead of the harness's
 # internal built-in tools.
 _OS_ENV_HARNESSES: frozenset[str] = frozenset(
@@ -5588,7 +5199,7 @@ _OS_ENV_HARNESSES: frozenset[str] = frozenset(
 
 def _validate_harness(harness: str) -> None:
     """
-    Fail fast when *harness* is not a supported agent-meow harness.
+    Fail fast when *harness* is not a supported Omnigent harness.
 
     :param harness: Harness id from ``--harness``, e.g.
         ``"claude-sdk"``.
@@ -5607,7 +5218,7 @@ def _default_harness_prompt(harness: str) -> str:
     Return the lightweight generated-agent instructions for *harness*.
 
     :param harness: Supported harness id.
-    :returns: Prompt text for the generated agent-meow YAML.
+    :returns: Prompt text for the generated Omnigent YAML.
     """
     return _DEFAULT_HARNESS_PROMPTS.get(harness, _DEFAULT_HARNESS_PROMPT)
 
@@ -5619,16 +5230,16 @@ def _materialize_harness_launcher_file(
     system_prompt: str | None,
 ) -> Path:
     """
-    Create a temporary standalone agent-meow YAML for no-AGENT ``run``.
+    Create a temporary standalone Omnigent YAML for no-AGENT ``run``.
 
-    The generated file uses the single-file agent-meow YAML shape
+    The generated file uses the single-file Omnigent YAML shape
     (``name`` / ``prompt`` / ``executor``), not native AP
     ``config.yaml``. Passing this file to ``run_chat`` exercises the
-    same compat adapter as ``agent-meow run examples/foo.yaml``.
+    same compat adapter as ``omnigent run examples/foo.yaml``.
 
     Harnesses listed in :data:`_OS_ENV_HARNESSES` get an ``os_env``
     block so the workflow injects ``sys_os_*`` tools into the
-    request — routing file/shell operations through the agent-meow
+    request �?routing file/shell operations through the Omnigent
     dispatch path rather than the harness's internal built-ins.
 
     :param harness: Supported harness id to launch, e.g.
@@ -5640,22 +5251,34 @@ def _materialize_harness_launcher_file(
     :raises click.ClickException: If *harness* is unsupported.
     """
     _validate_harness(harness)
-    display_name = harness
-    harness = canonicalize_harness(harness) or harness
+    canonical = canonicalize_harness(harness) or harness
+    # An acp:<slug> harness id carries a colon: it canonicalizes to the base
+    # `acp` harness, but the slug selects a user-configured ACP agent resolved
+    # at spawn and must be preserved. So the effective harness id written to
+    # executor.harness is the FULL acp:<slug> (keep the slug), or the canonical
+    # id for every other harness (so aliases still resolve, e.g. kimi ->
+    # kimi-code). The agent NAME and temp filename must be path-safe /
+    # [a-zA-Z0-9_-]+, so the colon is sanitized there only.
+    effective_harness = harness if canonical == "acp" and ":" in harness else canonical
+    # Name preserves the user's input (matching the pre-acp behavior, e.g.
+    # --harness claude -> name "claude"), sanitized for the colon so acp:<slug>
+    # yields a valid [a-zA-Z0-9_-]+ name. Filename uses the canonical/effective
+    # id (also colon-sanitized) as before.
+    display_name = harness.replace(":", "-")
 
     tmpdir = Path(tempfile.mkdtemp(prefix="omnigent-harness-launcher-"))
-    yaml_path = tmpdir / f"{harness}.yaml"
+    yaml_path = tmpdir / f"{effective_harness.replace(':', '-')}.yaml"
 
-    executor: dict[str, str] = {"harness": harness}
+    executor: dict[str, str] = {"harness": effective_harness}
     if model is not None:
         executor["model"] = model
 
     raw = {
         "name": display_name,
-        "prompt": system_prompt or _default_harness_prompt(harness),
+        "prompt": system_prompt or _default_harness_prompt(canonical),
         "executor": executor,
     }
-    if harness in _OS_ENV_HARNESSES:
+    if canonical in _OS_ENV_HARNESSES:
         raw["os_env"] = {"type": "caller_process", "sandbox": {"type": "none"}}
     yaml_path.write_text(yaml.safe_dump(raw, default_flow_style=False))
     return yaml_path
@@ -5667,10 +5290,10 @@ def _missing_run_agent_message() -> str:
         "Provide an AGENT path, pass --server to connect to a server, "
         "or pass --harness to launch a built-in "
         "harness directly:\n"
-        "  agent-meow run examples/hello_world.yaml\n"
-        "  agent-meow run --server http://localhost:6767\n"
-        "  agent-meow run --harness claude-sdk\n"
-        "  agent-meow run --harness codex"
+        "  omnigent run examples/hello_world.yaml\n"
+        "  omnigent run --server http://localhost:6767\n"
+        "  omnigent run --harness claude-sdk\n"
+        "  omnigent run --harness codex"
     )
 
 
@@ -5696,10 +5319,10 @@ def _split_resume_value(resume: str | None) -> _ResumeChoice:
     ``--resume`` is wired with ``is_flag=False`` + ``flag_value``, so
     click hands us one of three values:
 
-    - ``None`` — option absent. No resume requested.
-    - :data:`_RESUME_PICKER_SENTINEL` — ``--resume`` passed without a
+    - ``None`` �?option absent. No resume requested.
+    - :data:`_RESUME_PICKER_SENTINEL` �?``--resume`` passed without a
       value. User wants the interactive picker.
-    - any other string — ``--resume <id>``. User wants to attach to
+    - any other string �?``--resume <id>``. User wants to attach to
       that specific conversation id.
 
     The downstream dispatcher / ``run_chat`` boundary still takes the
@@ -5715,7 +5338,7 @@ def _split_resume_value(resume: str | None) -> _ResumeChoice:
     return _ResumeChoice(picker=False, conversation_id=resume)
 
 
-# Params that are one-shot or replaced on resume — excluded from the
+# Params that are one-shot or replaced on resume �?excluded from the
 # resume command hint.  Everything else Click parsed is preserved
 # automatically, so new flags don't need any resume-hint bookkeeping.
 _RESUME_SKIP_PARAMS: frozenset[str] = frozenset(
@@ -5745,7 +5368,7 @@ def _build_resume_parts() -> list[str]:
     Click command handler or a function it calls synchronously).
 
     :returns: Argument list prefix, e.g.
-        ``["agent-meow", "run", "agent.yaml", "--server",
+        ``["omnigent", "run", "agent.yaml", "--server",
         "https://example.com"]``.
     """
     ctx = click.get_current_context()
@@ -5772,11 +5395,88 @@ def _build_resume_parts() -> list[str]:
     return parts
 
 
+@dataclass(frozen=True)
+class _NativeTerminalDispatchSpec:
+    module: str
+    function: str
+    args_param: str
+    model_strategy: Literal["passthrough", "first_class", "explicit_passthrough"] = "passthrough"
+    prompt_param: str | None = None
+
+
+_NATIVE_TERMINAL_DISPATCH_SPECS: dict[str, _NativeTerminalDispatchSpec] = {
+    "claude": _NativeTerminalDispatchSpec(
+        module="agent_meow.claude_native",
+        function="run_claude_native",
+        args_param="claude_args",
+    ),
+    "codex": _NativeTerminalDispatchSpec(
+        module="agent_meow.codex_native",
+        function="run_codex_native",
+        args_param="codex_args",
+        model_strategy="first_class",
+    ),
+    "pi": _NativeTerminalDispatchSpec(
+        module="agent_meow.pi_native",
+        function="run_pi_native",
+        args_param="pi_args",
+    ),
+    "opencode": _NativeTerminalDispatchSpec(
+        module="agent_meow.opencode_native",
+        function="run_opencode_native",
+        args_param="opencode_args",
+        model_strategy="first_class",
+    ),
+    "cursor": _NativeTerminalDispatchSpec(
+        module="agent_meow.cursor_native",
+        function="run_cursor_native",
+        args_param="cursor_args",
+    ),
+    "kimi": _NativeTerminalDispatchSpec(
+        module="agent_meow.kimi_native",
+        function="run_kimi_native",
+        args_param="kimi_args",
+    ),
+    "kiro": _NativeTerminalDispatchSpec(
+        module="agent_meow.kiro_native",
+        function="run_kiro_native",
+        args_param="kiro_args",
+        model_strategy="first_class",
+        prompt_param="prompt",
+    ),
+    "goose": _NativeTerminalDispatchSpec(
+        module="agent_meow.goose_native",
+        function="run_goose_native",
+        args_param="goose_args",
+        model_strategy="explicit_passthrough",
+    ),
+    "antigravity": _NativeTerminalDispatchSpec(
+        module="agent_meow.antigravity_native",
+        function="run_antigravity_native",
+        args_param="antigravity_args",
+        model_strategy="first_class",
+    ),
+    "qwen": _NativeTerminalDispatchSpec(
+        module="agent_meow.qwen_native",
+        function="run_qwen_native",
+        args_param="qwen_args",
+        model_strategy="explicit_passthrough",
+    ),
+    "hermes": _NativeTerminalDispatchSpec(
+        module="agent_meow.hermes_native",
+        function="run_hermes_native",
+        args_param="hermes_args",
+        model_strategy="explicit_passthrough",
+    ),
+}
+
+
 def _dispatch_native_terminal_harness(
     *,
     harness: str,
     server: str | None,
     model: str | None,
+    model_from_cli: bool,
     prompt: str | None,
     system_prompt: str | None,
     tools: str | None,
@@ -5794,13 +5494,15 @@ def _dispatch_native_terminal_harness(
 
     ``run --harness cursor-native`` (and the claude/codex/pi equivalents)
     must NOT go through the materialized-launcher REPL: that drives an
-    agent-meow turn per message — which persists its own user item — *while*
+    Omnigent turn per message �?which persists its own user item �?*while*
     the harness forwarder mirrors the same message back from the TUI's
     transcript, recording every user message twice. These harnesses are
     terminal-mirror sessions whose turns originate in the TUI, so dispatch
-    straight to the native wrapper (the same code ``agent-meow cursor`` /
-    ``agent-meow claude`` / etc. run), keeping the TUI the single source of
-    turns. A top-level ``--model`` is forwarded as a passthrough CLI flag.
+    straight to the native wrapper (the same code ``omnigent cursor`` /
+    ``omnigent claude`` / etc. run), keeping the TUI the single source of
+    turns. A top-level ``--model`` is forwarded in the shape each wrapper
+    expects; wrappers with their own config receive it only when explicitly
+    provided on the command line.
 
     ``--continue`` is honored (not rejected): it resolves to this harness's
     most-recent conversation and hands that off to the wrapper, matching the
@@ -5815,16 +5517,19 @@ def _dispatch_native_terminal_harness(
     native_agent = native_coding_agent_for_harness(harness)
     if native_agent is None:
         return False
+    spec = _NATIVE_TERMINAL_DISPATCH_SPECS.get(native_agent.key)
+    if spec is None:  # pragma: no cover - new native agent added without a dispatch spec
+        raise click.ClickException(f"No native terminal launcher wired for harness {harness!r}.")
 
     # The native TUI wrappers attach to a tmux pane and own their own turn
     # loop, so REPL-only options have no analog there. Reject them loudly
     # rather than silently dropping them, and point at the dedicated
     # subcommand. (``--continue``/``--resume <id>``/``--resume`` picker ARE
-    # supported below — they map onto the wrapper's session selection.)
+    # supported below �?they map onto the wrapper's session selection.)
     unsupported = [
         flag
         for flag, active in (
-            ("-p/--prompt", prompt is not None),
+            ("-p/--prompt", prompt is not None and spec.prompt_param is None),
             ("--system-prompt", system_prompt is not None),
             ("--tools", tools is not None),
             ("--log", log),
@@ -5835,14 +5540,14 @@ def _dispatch_native_terminal_harness(
         if active
     ]
     if unsupported:
-        # These are REPL-only options with no analog in the TUI — and the
+        # These are REPL-only options with no analog in the TUI �?and the
         # dedicated subcommand doesn't accept them either (it would treat them
         # as passthrough args), so tell the user to drop them rather than
         # redirect. ``--model`` and session selection (--resume/--continue) ARE
         # honored here.
         raise click.ClickException(
             f"`run --harness {harness}` launches the {native_agent.display_name} TUI directly; "
-            f"the REPL-only option(s) {', '.join(unsupported)} have no effect there — remove them."
+            f"the REPL-only option(s) {', '.join(unsupported)} have no effect there �?remove them."
         )
 
     server = _ensure_backend(server)
@@ -5874,35 +5579,19 @@ def _dispatch_native_terminal_harness(
         "resume_picker": resume_picker,
         "auto_open_conversation": auto_open_conversation,
     }
-    if native_agent.key == "claude":
-        from agent_meow.claude_native import run_claude_native
+    launcher_kwargs = dict(common)
+    if spec.model_strategy == "first_class":
+        launcher_kwargs[spec.args_param] = ()
+        launcher_kwargs["model"] = model
+    elif spec.model_strategy == "explicit_passthrough":
+        launcher_kwargs[spec.args_param] = passthrough if model_from_cli else ()
+    else:
+        launcher_kwargs[spec.args_param] = passthrough
+    if spec.prompt_param is not None:
+        launcher_kwargs[spec.prompt_param] = prompt
 
-        run_claude_native(claude_args=passthrough, **common)
-    elif native_agent.key == "codex":
-        from agent_meow.codex_native import run_codex_native
-
-        # Codex takes its model as a first-class arg, not a passthrough flag.
-        run_codex_native(codex_args=(), model=model, **common)
-    elif native_agent.key == "pi":
-        from agent_meow.pi_native import run_pi_native
-
-        run_pi_native(pi_args=passthrough, **common)
-    elif native_agent.key == "cursor":
-        from agent_meow.cursor_native import run_cursor_native
-
-        run_cursor_native(cursor_args=passthrough, **common)
-    elif native_agent.key == "opencode":
-        from agent_meow.opencode_native import run_opencode_native
-
-        # OpenCode pins its model on the wrapper spec (like Codex), so it takes
-        # ``model`` first-class rather than via a ``--model`` passthrough arg.
-        run_opencode_native(opencode_args=(), model=model, **common)
-    elif native_agent.key == "kimi":
-        from agent_meow.kimi_native import run_kimi_native
-
-        run_kimi_native(kimi_args=passthrough, **common)
-    else:  # pragma: no cover - new native agent added without a dispatch arm
-        raise click.ClickException(f"No native terminal launcher wired for harness {harness!r}.")
+    launcher = getattr(import_module(spec.module), spec.function)
+    launcher(**launcher_kwargs)
     return True
 
 
@@ -5912,9 +5601,9 @@ def _reject_agent_with_native_terminal_harness(harness: str) -> None:
 
     A ``*-native`` harness mirrors an external CLI's own TUI; the agent spec's
     prompt/tools are never consulted, and driving it through the REPL would
-    double-record every message (agent-meow turn + forwarder mirror). So an
+    double-record every message (Omnigent turn + forwarder mirror). So an
     explicit AGENT path combined with a native terminal harness has no coherent
-    meaning — fail loud and point at the dedicated subcommand.
+    meaning �?fail loud and point at the dedicated subcommand.
 
     :param harness: The requested ``--harness`` value (canonical or alias).
     :raises click.ClickException: When *harness* is a native terminal harness.
@@ -5927,7 +5616,7 @@ def _reject_agent_with_native_terminal_harness(harness: str) -> None:
     raise click.ClickException(
         f"`--harness {harness}` launches the {native_agent.display_name} TUI and "
         f"ignores an AGENT spec; drop the AGENT path and run "
-        f"`agent-meow {native_agent.terminal_name}` (or `run --harness {harness}`)."
+        f"`omnigent {native_agent.terminal_name}` (or `run --harness {harness}`)."
     )
 
 
@@ -5950,13 +5639,14 @@ def _dispatch_run(
     resume_parts: list[str] | None = None,
     auto_open_conversation: bool = False,
     server_from_cli: bool = False,
+    model_from_cli: bool = False,
 ) -> None:
     """
-    Route ``agent-meow run`` to the right impl.
+    Route ``omnigent run`` to the right impl.
 
-    The click path always drives the agent-meow server-backed REPL. With
+    The click path always drives the Omnigent server-backed REPL. With
     ``--server <url>``, use that server URL instead of starting a
-    local server. (``agent-meow attach`` is a separate attach-only
+    local server. (``omnigent attach`` is a separate attach-only
     client and does NOT route through here.)
 
     :param target: Agent YAML/directory path, or ``None`` for
@@ -5968,7 +5658,7 @@ def _dispatch_run(
     :param prompt: ``-p`` / ``--prompt`` value.
     :param system_prompt: ``--system-prompt`` value.
     :param server: Server URL from ``--server`` or config. With a local
-        target, this is the agent-meow server used for upload/session setup; with
+        target, this is the Omnigent server used for upload/session setup; with
         no target and explicit ``--server``, this is the direct server.
     :param resume_picker: True when ``--resume`` / ``-r`` is set with
         no value (interactive picker).
@@ -5985,24 +5675,26 @@ def _dispatch_run(
         and pipeline counters in the toolbar.
     :param resume_parts: Pre-built argument list prefix for the
         resume command shown on exit, e.g.
-        ``["agent-meow", "run", "agent.yaml", "--harness", "codex"]``.
+        ``["omnigent", "run", "agent.yaml", "--harness", "codex"]``.
         ``None`` when called outside the Click command path.
     :param auto_open_conversation: When ``True``, open the
         browser conversation URL when the session id becomes known.
     :param server_from_cli: ``True`` when ``--server`` was explicitly
         provided on the command line. Used to distinguish direct-server
         mode from a configured default server.
+    :param model_from_cli: ``True`` when ``--model`` was explicitly provided
+        on the command line rather than loaded from config.
     """
     if target is not None and _is_server_url(target):
         raise click.ClickException(
             "Server URLs are no longer accepted as the AGENT argument. "
-            f"Use `agent-meow run --server {target}` instead."
+            f"Use `omnigent run --server {target}` instead."
         )
 
     if target is None:
         if server_from_cli and server is not None and harness is None:
             # Normalize like every other entry point: expand a bare workspace
-            # URL to its /api/2.0/agent-meow mount and strip any ?o= query. Else
+            # URL to its /api/2.0/omnigent mount and strip any ?o= query. Else
             # a direct ``--server`` request hits the root and bounces to /login.
             base_url = _resolve_server_url(server)
             # Direct ``--server`` (no AGENT) has no local runner to bind, so an
@@ -6010,7 +5702,7 @@ def _dispatch_run(
             # `attach` pair (`_require_live_conversation` + `run_attach`), not
             # the picker+create path that crashed at runner-bind ("requires a
             # registered runner id"). Only the *pure interactive*
-            # shape reroutes — a one-shot ``-p`` or any local-agent-only flag
+            # shape reroutes �?a one-shot ``-p`` or any local-agent-only flag
             # (--model/--system-prompt/--log/--no-session) falls through to the
             # existing remote-URL path below, which one-shots or fails loud as
             # before instead of silently no-op'ing here. Picker/`--continue`
@@ -6078,13 +5770,14 @@ def _dispatch_run(
         if harness is None:
             raise click.ClickException(_missing_run_agent_message())
         # ``*-native`` terminal harnesses launch their own TUI wrapper instead of
-        # the materialized-launcher REPL — the REPL would double-record every
-        # user message (agent-meow turn + forwarder mirror). Returns False for
+        # the materialized-launcher REPL �?the REPL would double-record every
+        # user message (Omnigent turn + forwarder mirror). Returns False for
         # non-native harnesses, which fall through to the launcher below.
         if _dispatch_native_terminal_harness(
             harness=harness,
             server=server,
             model=model,
+            model_from_cli=model_from_cli,
             prompt=prompt,
             system_prompt=system_prompt,
             tools=tools,
@@ -6115,9 +5808,9 @@ def _dispatch_run(
         system_prompt = None
     elif harness is not None:
         _validate_harness(harness)
-        # A ``*-native`` harness IS its own TUI agent — pairing it with an AGENT
+        # A ``*-native`` harness IS its own TUI agent �?pairing it with an AGENT
         # spec is meaningless, and routing it through the REPL would double-record
-        # every message (agent-meow turn + forwarder mirror, same as the no-AGENT
+        # every message (Omnigent turn + forwarder mirror, same as the no-AGENT
         # path above). Reject rather than silently launch the broken surface.
         _reject_agent_with_native_terminal_harness(harness)
 
@@ -6224,10 +5917,10 @@ def _dispatch_run(
 
 def _resolve_attach_server(server: str | None, configured_server: str | None) -> str | None:
     """
-    Resolve the agent-meow server URL ``attach`` should join.
+    Resolve the Omnigent server URL ``attach`` should join.
 
     Resolution order: an explicit ``--server`` value, then the configured
-    ``server`` default, then a local agent-meow server already running in the
+    ``server`` default, then a local Omnigent server already running in the
     background. ``attach`` never starts a server, so this returns ``None``
     when none of those is available and the caller fails loud.
 
@@ -6258,7 +5951,7 @@ def _require_live_conversation(
     ``GET /v1/sessions/{id}`` and raises on a transport failure or any
     non-200 status.
 
-    :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param base_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:6767"``.
     :param conversation_id: Conversation id to attach to, e.g.
         ``"conv_abc123"``.
     :raises click.ClickException: When the server is unreachable or the
@@ -6274,14 +5967,14 @@ def _require_live_conversation(
     if result.status_code == 0:
         raise click.ClickException(
             f"Couldn't reach a server at {base_url}: {_host_error_text(result.body)}. "
-            "`attach` never starts a server — check the URL, or start one with "
-            "`agent-meow run`."
+            "`attach` never starts a server �?check the URL, or start one with "
+            "`omnigent run`."
         )
     if result.status_code != 200:
         raise click.ClickException(
             f"No live session '{conversation_id}' on {base_url} "
-            f"(server returned {result.status_code}). Run `agent-meow host status` "
-            "to list live sessions, or `agent-meow run <agent.yaml>` to start one."
+            f"(server returned {result.status_code}). Run `omnigent host status` "
+            "to list live sessions, or `omnigent run <agent.yaml>` to start one."
         )
 
 
@@ -6307,7 +6000,7 @@ def _require_live_conversation(
     default=False,
     help=(
         "Enable the SSE-to-UI debug pipeline: Ctrl+E event tape "
-        "overlay, JSONL event log (~/.agent_meow/debug/), and "
+        "overlay, JSONL event log (~/.omnigent/debug/), and "
         "pipeline stage counters in the toolbar."
     ),
 )
@@ -6317,33 +6010,33 @@ def attach(
     tools: str | None,
     debug_events: bool,
 ) -> None:
-    """Attach the REPL to a LIVE session — never starts anything.
+    """Attach the REPL to a LIVE session �?never starts anything.
 
     ``attach`` is a thin client: it joins an already-running conversation
     on a server and streams its I/O. It never spawns a server, runner, or
     harness, applies no model/harness defaults, and errors loudly when
     there is nothing live to attach to. To START a session use
-    ``agent-meow run``; to reopen/restart a stored one use
-    ``agent-meow resume``.
+    ``omnigent run``; to reopen/restart a stored one use
+    ``omnigent resume``.
 
     \b
     Examples:
-      agent-meow attach conv_abc123
-      agent-meow attach conv_abc123 --server https://<app>.databricksapps.com
+      omnigent attach conv_abc123
+      omnigent attach conv_abc123 --server https://<app>.databricksapps.com
     """
     cfg = _load_effective_config()
     base_url = _resolve_attach_server(server, cfg.get("server"))
     if base_url is None:
         raise click.ClickException(
             "No server to attach to. `attach` joins a LIVE session on a running "
-            "server — start one with `agent-meow run`, or point at one with "
+            "server �?start one with `omnigent run`, or point at one with "
             "`--server <url>`."
         )
     if conversation is None:
         raise click.ClickException(
             "Nothing to attach to: `attach` joins a LIVE session by id. "
-            f"Run `agent-meow host status` to list sessions on {base_url}, or "
-            "`agent-meow run <agent.yaml>` to start a new one."
+            f"Run `omnigent host status` to list sessions on {base_url}, or "
+            "`omnigent run <agent.yaml>` to start a new one."
         )
     _require_live_conversation(base_url=base_url, conversation_id=conversation)
     auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
@@ -6363,10 +6056,10 @@ def attach(
     )
 
 
-# `run` absorbs the legacy ``agent-meow run`` subcommand. With an AGENT
+# `run` absorbs the legacy ``omnigent run`` subcommand. With an AGENT
 # argument it opens the interactive REPL on a freshly started session;
 # without AGENT it can launch a built-in harness directly via ``--harness``.
-# Both paths route through the same agent-meow server+REPL dispatcher.
+# Both paths route through the same Omnigent server+REPL dispatcher.
 @cli.command()
 @click.argument("target", required=False, metavar="[AGENT]")
 @click.option(
@@ -6397,7 +6090,7 @@ def attach(
     "--server",
     default=None,
     help=(
-        "Remote agent-meow URL. Uploads the local YAML as an ephemeral "
+        "Remote omnigent URL. Uploads the local YAML as an ephemeral "
         "agent, spawns a LOCAL runner that tunnels to this server (so "
         "terminals/MCPs run on your laptop), and connects the REPL to it. "
         'Pass --server "" to auto-spawn a persistent local server in the '
@@ -6411,7 +6104,7 @@ def attach(
     default=False,
     help=(
         "Enable the SSE-to-UI debug pipeline: Ctrl+E event tape "
-        "overlay, JSONL event log (~/.agent_meow/debug/), and "
+        "overlay, JSONL event log (~/.omnigent/debug/), and "
         "pipeline stage counters in the toolbar."
     ),
 )
@@ -6422,7 +6115,7 @@ def attach(
     default=False,
     help=(
         "Register this machine as a host with the remote server "
-        "(inline equivalent of `agent-meow host`). Requires --server."
+        "(inline equivalent of `omnigent host`). Requires --server."
     ),
 )
 def run(
@@ -6441,13 +6134,13 @@ def run(
     debug_events: bool,
     register_host: bool,
 ) -> None:
-    """Start a session with an agent-meow agent.
+    """Start a session with an Omnigent agent.
 
     AGENT may be an agent YAML file or an agent directory. Without AGENT,
     pass ``--server`` to connect directly to a server, or pass
     ``--harness`` to launch a built-in harness directly.
 
-    Default: agent-meow server+REPL architecture (spawns a local
+    Default: omnigent server+REPL architecture (spawns a local
     server, REPL connects as an HTTP client). With ``--server <url>`` and
     no AGENT, connect directly to that server; with AGENT, use local
     runner + remote server topology (RUNNER.md §6 Flow 1) - laptop hosts
@@ -6455,18 +6148,20 @@ def run(
 
     \b
     Examples:
-      agent-meow run --harness claude-sdk
-      agent-meow run --harness codex -p "review the last commit"
-      agent-meow run examples/hello_world.yaml
-      agent-meow run examples/hello_world.yaml --harness codex --model gpt-5.4-mini
-      agent-meow run --server http://localhost:6767
-      agent-meow run examples/databricks_coding_agent.yaml --server https://<app>.databricksapps.com
+      omnigent run --harness claude-sdk
+      omnigent run --harness codex -p "review the last commit"
+      omnigent run examples/hello_world.yaml
+      omnigent run examples/hello_world.yaml --harness codex --model gpt-5.4-mini
+      omnigent run --server http://localhost:6767
+      omnigent run examples/databricks_coding_agent.yaml --server https://<app>.databricksapps.com
     """
     # Apply config defaults for any value the user did not pass explicitly.
     # Explicit CLI args always take precedence; project-local config overrides
     # global config, which provides user-level defaults.
     server_source = click.get_current_context().get_parameter_source("server")
     server_from_cli = server_source is not None and server_source.name == "COMMANDLINE"
+    model_source = click.get_current_context().get_parameter_source("model")
+    model_from_cli = model_source is click.core.ParameterSource.COMMANDLINE
     harness_source = click.get_current_context().get_parameter_source("harness")
     harness_from_cli = harness_source is not None and harness_source.name == "COMMANDLINE"
     direct_server_cli = (
@@ -6478,7 +6173,7 @@ def run(
         # Harness-aware default-agent resolution (this branch) under main's
         # direct-`--server` guard: skip the configured default_agent when the
         # invocation is a bare `--server` (no AGENT, no --harness), else pick
-        # it — but fall back to a built-in launcher when an explicit --harness
+        # it �?but fall back to a built-in launcher when an explicit --harness
         # doesn't match the default agent's harness.
         target = _resolve_default_agent_target(_global_cfg.get("default_agent"), harness)
     if server is None:
@@ -6486,21 +6181,24 @@ def run(
     if model is None and not direct_server_cli:
         model = _global_cfg.get("model")
     if harness is None and not direct_server_cli:
-        harness = _global_cfg.get("harness")
+        from agent_meow.harness_startup_config import resolve_harness_config
+
+        harness_default, _ = resolve_harness_config(_global_cfg)
+        harness = harness_default
 
     # First-run smart defaults: a bare `run` with no AGENT, no --harness, and no
-    # explicit persisted default → derive a harness from the *current* creds
+    # explicit persisted default �?derive a harness from the *current* creds
     # (Claude→polly, else Codex, else Pi); or drop into `configure harnesses`
     # when nothing is set up. The derived pick is NOT persisted, so it tracks
-    # the credentials — adding Claude later promotes a Codex-only user to polly.
+    # the credentials �?adding Claude later promotes a Codex-only user to polly.
     if target is None and harness is None and not direct_server_cli:
         plan = _resolve_first_run_plan()
         if plan is None:
-            return  # nothing configured even after offering configure — exit cleanly
+            return  # nothing configured even after offering configure �?exit cleanly
         harness = plan.harness
         target = plan.agent  # polly path for Claude; None (bare harness) for codex/pi
 
-    # Interactive ``agent-meow run`` opens the live conversation in the
+    # Interactive ``omnigent run`` opens the live conversation in the
     # browser by default so users discover the web UI once the server is up
     # (the accounts-mode magic-redeem auto-open used to surface this, but
     # accounts is no longer the default auth). An explicit
@@ -6510,7 +6208,7 @@ def run(
     auto_open_setting = _resolve_auto_open_conversation_setting(_global_cfg)
     auto_open_conversation = auto_open_setting if auto_open_setting is not None else prompt is None
 
-    # NOTE: the host daemon + agent-meow server are ensured inside ``run_chat``'s
+    # NOTE: the host daemon + Omnigent server are ensured inside ``run_chat``'s
     # non-URL branch (a URL ``target`` connects directly). ``--host`` is now
     # redundant (the daemon is always ensured) and kept only as a no-op.
     del register_host
@@ -6537,6 +6235,7 @@ def run(
         resume_parts=resume_parts,
         auto_open_conversation=auto_open_conversation,
         server_from_cli=server_from_cli,
+        model_from_cli=model_from_cli,
     )
 
 
@@ -6544,7 +6243,7 @@ class _HostGroup(click.Group):
     """
     ``host`` group that accepts a server URL as a positional argument.
 
-    ``agent-meow host <url>`` is shorthand for ``agent-meow host
+    ``omnigent host <url>`` is shorthand for ``omnigent host
     --server <url>`` when ``<url>`` is URL-like or the empty local-mode
     marker. A leading positional token that matches a registered
     management subcommand (``status``, ``stop``, ``stop-session``)
@@ -6556,7 +6255,7 @@ class _HostGroup(click.Group):
         """
         Redirect a leading URL-like positional into ``--server``.
 
-        ``agent-meow host <url>`` is shorthand for ``agent-meow host --server
+        ``omnigent host <url>`` is shorthand for ``omnigent host --server
         <url>``. We detect a leading URL-like positional with a throwaway
         option parse and, when present, rewrite the argument list to inject
         ``--server <url>`` *before* Click parses it -- so Click sees a normal
@@ -6643,14 +6342,14 @@ class _HostGroup(click.Group):
 
 
 def _prompt_stop_local_server() -> None:
-    """Ask whether to also stop the detached local agent-meow server after exit.
+    """Ask whether to also stop the detached local Omnigent server after exit.
 
     The local-mode host daemon spawns a detached, persistent local AP
     server (:func:`ensure_local_omnigent_server`) that survives the daemon's exit
     so sessions and the Web UI stay reachable across ``host`` / ``run``.
     Users expect Ctrl-C to stop "everything", so when a healthy local server
-    is still running we prompt to stop it too. Declining — or a
-    non-interactive / aborted prompt (EOF, a second Ctrl-C) — leaves it
+    is still running we prompt to stop it too. Declining �?or a
+    non-interactive / aborted prompt (EOF, a second Ctrl-C) �?leaves it
     running. No-op when no healthy local server is found (never spawned, or
     already stopped).
 
@@ -6678,7 +6377,7 @@ def _prompt_stop_local_server() -> None:
 
 
 @cli.group("host", cls=_HostGroup, invoke_without_command=True)
-@click.option("--server", default=None, help="Remote agent-meow server URL.")
+@click.option("--server", default=None, help="Remote omnigent server URL.")
 @click.option(
     "--non-interactive",
     "non_interactive",
@@ -6686,7 +6385,7 @@ def _prompt_stop_local_server() -> None:
     default=False,
     help=(
         "Never prompt for sign-in. When the server requires auth and you "
-        "are not logged in, fail with the `agent-meow login` hint instead of "
+        "are not logged in, fail with the `omnigent login` hint instead of "
         "launching the browser login flow. Use this in scripts and CI."
     ),
 )
@@ -6697,27 +6396,27 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
 
     \b
     Examples:
-      agent-meow host https://omnigent-app.databricksapps.com
-      agent-meow host --server https://omnigent-app.databricksapps.com
-      agent-meow host ""   # spawn + connect to a local server
+      omnigent host https://omnigent-app.databricksapps.com
+      omnigent host --server https://omnigent-app.databricksapps.com
+      omnigent host ""   # spawn + connect to a local server
 
-    The server URL may be given positionally (``agent-meow host
+    The server URL may be given positionally (``omnigent host
     <url>``) or via ``--server <url>``. A leading ``status``, ``stop``,
     or ``stop-session`` token still runs that management subcommand.
 
     When the target server is Databricks-fronted and you are not signed
-    in, ``host`` runs the same flow ``agent-meow login`` would before
+    in, ``host`` runs the same flow ``omnigent login`` would before
     connecting (an interactive browser flow). Pass ``--non-interactive``
     to keep the old scripted behavior: fail with the login command to run
     instead of prompting.
 
     :param ctx: Click invocation context. ``ctx.invoked_subcommand`` is
         set when a management subcommand such as ``"status"`` is running.
-    :param server: Remote agent-meow server URL, e.g.
+    :param server: Remote Omnigent server URL, e.g.
         ``"https://example.databricksapps.com"``. ``None`` falls back
         to config; empty string selects local mode.
     :param non_interactive: When ``True``, never launch the browser login
-        for an un-authed remote server — fail with the ``agent-meow login``
+        for an un-authed remote server �?fail with the ``omnigent login``
         hint instead.
     """
     ctx.ensure_object(dict)
@@ -6730,19 +6429,19 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
     if server:
         server = _resolve_server_url(server)
     # Remote mode is decided here, before the local-mode branch reassigns
-    # ``server`` to the spawned loopback URL — only a remote target needs
+    # ``server`` to the spawned loopback URL �?only a remote target needs
     # the sign-in pre-flight.
     remote_mode = bool(server)
 
     from agent_meow.host.connect import run_host_process
 
     # ``host`` IS the daemon (foreground). With no server URL, start (or
-    # reuse) the local agent-meow server here and connect to it; otherwise connect to
+    # reuse) the local Omnigent server here and connect to it; otherwise connect to
     # the given remote/local URL. Unlike the background commands, we do not
     # spawn a second daemon via ``_ensure_host_daemon``.
     target = _normalize_daemon_target(server)
     # Only true when THIS invocation started the local server (vs reusing one
-    # already started by `agent-meow server` or a prior host/run daemon) —
+    # already started by `omnigent server` or a prior host/run daemon) �?
     # gates the Ctrl-C stop-server prompt so we never offer to stop a server
     # we didn't bring up.
     spawned_local_server = False
@@ -6762,7 +6461,7 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
     stopped_cleanly = False
     try:
         # Sign in first when the remote server is Databricks-fronted and we
-        # hold no usable credentials — otherwise the tunnel upgrade is
+        # hold no usable credentials �?otherwise the tunnel upgrade is
         # redirected to a login page and the host dies with an opaque
         # "redirected to a login page" error after several retries. On a TTY
         # this runs the browser login and continues; ``--non-interactive``
@@ -6772,14 +6471,14 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
         run_host_process(server_url=server)
         stopped_cleanly = True
     except KeyboardInterrupt:
-        # Ctrl-C is the normal way to stop the foreground daemon — swallow it
+        # Ctrl-C is the normal way to stop the foreground daemon �?swallow it
         # so we can prompt below instead of exiting with an "Aborted!" trace.
         stopped_cleanly = True
     finally:
         _restore_replaced_daemon_record(record, previous)
         # Offer to stop the local server only when WE spawned it this run.
         # Not in --server mode (someone else's server), and not when we reused
-        # a server started by `agent-meow server` or another daemon — killing
+        # a server started by `omnigent server` or another daemon �?killing
         # that would surprise the user who brought it up independently. Users
         # expect Ctrl-C to stop "everything" they started, so the server we
         # spawned is fair game.
@@ -6789,7 +6488,7 @@ def host(ctx: click.Context, server: str | None, non_interactive: bool) -> None:
 
 def _host_group_option(ctx: click.Context, key: str) -> str | None:
     """
-    Read a group-level ``agent-meow host`` option for a subcommand.
+    Read a group-level ``omnigent host`` option for a subcommand.
 
     :param ctx: Click context passed to a host subcommand.
     :param key: Group option key, e.g. ``"server"``.
@@ -6817,10 +6516,10 @@ def _resolve_host_server(server: str | None) -> str | None:
 
 def _daemon_base_url(record: _HostDaemonRecord) -> str | None:
     """
-    Resolve the agent-meow server URL for a daemon record.
+    Resolve the Omnigent server URL for a daemon record.
 
     :param record: Daemon registry record to inspect.
-    :returns: agent-meow server URL, e.g. ``"http://127.0.0.1:8123"``, or
+    :returns: Omnigent server URL, e.g. ``"http://127.0.0.1:8123"``, or
         ``None`` when a local daemon's server cannot be discovered.
     """
     if record.mode == "local":
@@ -6867,9 +6566,9 @@ def _host_http_json(
     timeout_s: float = 10.0,
 ) -> _HostHttpResult:
     """
-    Send one management request to an agent-meow server.
+    Send one management request to an Omnigent server.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param method: HTTP method, e.g. ``"GET"`` or ``"POST"``.
     :param path: Request path beginning with ``/``, e.g.
@@ -6909,7 +6608,7 @@ def _host_http_json(
 
 def _host_error_text(body: _HostJsonObject | str) -> str:
     """
-    Extract a concise error string from an agent-meow response body.
+    Extract a concise error string from an Omnigent response body.
 
     :param body: Response body decoded by :func:`_host_http_json`.
     :returns: Human-readable error text.
@@ -7009,7 +6708,7 @@ def _fetch_session_pages(
     """
     Fetch every available session page from a server.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param connected_only: When ``True``, ask the server for connected
         sessions only.
@@ -7054,7 +6753,7 @@ def _sessions_for_daemon(
         return _DaemonSessionsResult(
             base_url=None,
             sessions=[],
-            error="local agent-meow server is not reachable",
+            error="local Omnigent server is not reachable",
         )
     host_id = record.host_id or _load_existing_host_id()
     if not host_id:
@@ -7081,7 +6780,7 @@ def _runner_online_map(
     """
     Resolve live runner connectivity for sessions.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param sessions: Session rows containing ``runner_id`` values.
     :returns: Map of ``runner_id`` to ``True`` / ``False``. ``None``
@@ -7119,7 +6818,7 @@ def _annotate_sessions_with_runner_online(
     """
     Add ``runner_online`` to session rows.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param sessions: Session rows returned by ``GET /v1/sessions``.
     :returns: Copies of the session rows with ``runner_online`` added.
@@ -7167,7 +6866,7 @@ def _add_daemon_host_status(
     base_url = payload.get("server_url")
     host_id = payload.get("host_id")
     if not isinstance(base_url, str):
-        payload["error"] = "local agent-meow server is not reachable"
+        payload["error"] = "local Omnigent server is not reachable"
         return
     if not isinstance(host_id, str) or not host_id:
         payload["error"] = "host id is not available in local config"
@@ -7297,10 +6996,12 @@ def _host_shorten(text: _HostJsonValue, *, max_chars: int) -> str:
     value = _host_display_value(text)
     if len(value) <= max_chars:
         return value
-    if max_chars <= 1:
+    if max_chars <= 2:
+        # Too narrow for a head + ellipsis + tail; middle-truncation with a
+        # 1-char tail would overflow the budget, so only ever show the head.
         return value[:max_chars]
     head = max(1, (max_chars - 1) // 2)
-    tail = max(1, max_chars - head - 1)
+    tail = max_chars - head - 1
     return f"{value[:head]}…{value[-tail:]}"
 
 
@@ -7308,7 +7009,7 @@ def _host_truncate(text: _HostJsonValue, *, max_chars: int) -> str:
     """
     Truncate long text from the right for compact terminal display.
 
-    :param text: Value to truncate, e.g. an agent-meow error message.
+    :param text: Value to truncate, e.g. an Omnigent error message.
     :param max_chars: Maximum display width, e.g. ``96``.
     :returns: The original text if it fits, otherwise a right-truncated
         string ending in an ellipsis.
@@ -7318,7 +7019,7 @@ def _host_truncate(text: _HostJsonValue, *, max_chars: int) -> str:
         return value
     if max_chars <= 1:
         return value[:max_chars]
-    return f"{value[: max_chars - 1]}…"
+    return f"{value[: max_chars - 1]}�?
 
 
 def _host_markup(text: _HostJsonValue, *, missing: str = "-") -> str:
@@ -7526,12 +7227,14 @@ def _echo_daemon_payloads(payloads: list[_HostPayload]) -> None:
 @host.command("status")
 @click.option("--server", default=None, help="Inspect only this server target.")
 @click.option("--all", "all_targets", is_flag=True, help="Inspect all known daemon targets.")
+@click.option("--sessions", is_flag=True, help="Include session table.")
 @click.option("--json", "json_output", is_flag=True, help="Emit JSON.")
 @click.pass_context
 def host_status(
     ctx: click.Context,
     server: str | None,
     all_targets: bool,
+    sessions: bool,
     json_output: bool,
 ) -> None:
     """
@@ -7541,6 +7244,7 @@ def host_status(
     :param server: Optional server target to inspect, e.g.
         ``"https://example.databricksapps.com"``.
     :param all_targets: Whether to inspect every known daemon target.
+    :param sessions: Whether to include the session table.
     :param json_output: Whether to emit machine-readable JSON.
     """
     if server is None:
@@ -7549,7 +7253,7 @@ def host_status(
     payloads = [
         _daemon_status_payload(
             record,
-            include_sessions=True,
+            include_sessions=sessions,
             connected_sessions_only=True,
         )
         for record in records
@@ -7566,9 +7270,9 @@ def _stop_session_on_server(
     session_id: str,
 ) -> None:
     """
-    Stop one agent-meow session via the server lifecycle event API.
+    Stop one Omnigent session via the server lifecycle event API.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"https://example.databricksapps.com"``.
     :param session_id: Session id, e.g. ``"conv_abc123"``.
     :raises click.ClickException: If the server rejects the stop event.
@@ -7724,7 +7428,7 @@ def host_stop_session(
     :param ctx: Click context carrying group-level options.
     :param session_ids: Session ids to stop, e.g.
         ``["conv_abc123", "conv_def456"]``.
-    :param server: agent-meow server URL that owns the sessions, e.g.
+    :param server: Omnigent server URL that owns the sessions, e.g.
         ``"https://example.databricksapps.com"``. ``None`` falls back
         to config/local discovery.
     :param force: Continue after individual stop failures.
@@ -7736,7 +7440,7 @@ def host_stop_session(
         resolved_server = local_server_url_if_healthy()
         if resolved_server is None:
             raise click.ClickException(
-                "No server was supplied and no local agent-meow server is reachable."
+                "No server was supplied and no local Omnigent server is reachable."
             )
     for session_id in session_ids:
         try:
@@ -7754,7 +7458,7 @@ def host_stop_session(
 
 @cli.command(hidden=True)
 def version() -> None:
-    """Print the installed agent-meow version."""
+    """Print the installed Omnigent version."""
     print(_format_version())
 
 
@@ -7774,7 +7478,7 @@ def _parse_config_settings(
         paths to absolute so the config works regardless of working directory.
         Set for ``--global`` writes; leave ``False`` for project-local writes
         where the path is intentionally relative to the project root.
-    :returns: Validated mapping of config key → value, e.g.
+    :returns: Validated mapping of config key �?value, e.g.
         ``{"agent": "examples/hello.yaml", "model": "gpt-5.4-mini"}``.
     """
     parsed: dict[str, str | bool] = {}
@@ -7782,7 +7486,7 @@ def _parse_config_settings(
         if "=" not in item:
             raise click.ClickException(
                 f"Expected KEY=VALUE, got: {item!r}. "
-                "Example: agent-meow config set --global default_agent=myagent.yaml"
+                "Example: omnigent config set --global default_agent=myagent.yaml"
             )
         key, _, value = item.partition("=")
         if key not in _GLOBAL_CONFIG_KEYS:
@@ -7790,7 +7494,7 @@ def _parse_config_settings(
                 f"Unknown config key {key!r}. "
                 f"Supported keys: {', '.join(sorted(_GLOBAL_CONFIG_KEYS))}"
             )
-        # Resolve ``default_agent`` to an absolute path so ``agent-meow`` works from
+        # Resolve ``default_agent`` to an absolute path so ``omnigent`` works from
         # any working directory, not just the directory where config was set.
         if (
             resolve_paths
@@ -7803,6 +7507,31 @@ def _parse_config_settings(
         else:
             parsed[key] = value
     return parsed
+
+
+def _harness_deep_merge_keys(
+    parsed: dict[str, str | bool | Mapping[str, Any]],  # type: ignore[explicit-any]
+) -> tuple[str, ...]:
+    """Rewrite a ``harness=<id>`` setting for deep-merge into the harness mapping.
+
+    ``config set harness=claude-sdk`` should set the default without dropping
+    any existing per-harness overrides (``harness.codex.command``, etc.). So
+    the scalar value is rewritten to ``{"default": <id>}`` and ``("harness",)``
+    is returned so the save function deep-merges it one level into the existing
+    ``harness`` mapping. A non-scalar ``harness`` value (already a mapping from
+    a future structured setter) is left untouched.
+
+    :param parsed: The ``KEY=VALUE`` mapping from :func:`_parse_config_settings`,
+        mutated in place when it contains a scalar ``harness`` value.
+    :returns: ``("harness",)`` when *parsed* has a ``harness`` entry, else
+        ``()`` so no deep-merge is requested.
+    """
+    value = parsed.get("harness")
+    if isinstance(value, str):
+        parsed["harness"] = {"default": value}
+    if "harness" in parsed:
+        return ("harness",)
+    return ()
 
 
 def _validate_unset_keys(unset_keys: tuple[str, ...]) -> list[str]:
@@ -7826,42 +7555,104 @@ def _validate_unset_keys(unset_keys: tuple[str, ...]) -> list[str]:
     return validated
 
 
+def _format_harness_for_display(
+    value: object,  # type: ignore[explicit-any]
+) -> tuple[str, list[str]]:
+    """Render a ``harness`` config value for ``config list``.
+
+    :param value: The raw ``harness`` config value �?scalar string or mapping.
+    :returns: ``(default_display, override_ids)`` where *default_display* is
+        the string to show after ``harness=`` (``"(none)"`` when absent) and
+        *override_ids* is the sorted list of per-harness override keys.
+    """
+    from agent_meow.harness_startup_config import resolve_harness_config
+
+    if isinstance(value, str):
+        return value, []
+    if isinstance(value, dict):
+        default, overrides = resolve_harness_config({"harness": value})
+        return default or "(none)", sorted(overrides)
+    return str(value) if value is not None else "(none)", []
+
+
+def _resolve_harness_startup_args(
+    cfg: dict[str, Any],  # type: ignore[explicit-any]
+    harness: str,
+    cli_args: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Resolve the launch args for a native harness: config base + CLI args.
+
+    Config ``harness.<canonical>.args`` form the base; the CLI pass-through
+    *cli_args* append *after* so a per-invocation flag wins for last-wins CLIs.
+    Returns a tuple suitable for the ``<name>_args`` param of
+    ``run_<name>_native`` (persisted as ``terminal_launch_args``).
+
+    :param cfg: Effective config dict.
+    :param harness: A harness id (canonical or alias), e.g. ``"codex-native"``.
+    :param cli_args: Explicit CLI pass-through args (may be empty).
+    :returns: The combined arg tuple: config base + CLI pass-through.
+    """
+    from agent_meow.harness_startup_config import resolve_harness_args
+
+    return tuple(resolve_harness_args(harness, cli_args, cfg=cfg))
+
+
+def _print_config_default_rows(
+    cfg: dict[str, object],  # type: ignore[explicit-any]
+) -> None:
+    """Print one ``key=value`` row per config default, handling the ``harness`` key.
+
+    The ``harness`` key may be a scalar (legacy) or a mapping with a ``default``
+    plus per-harness overrides. Render it as ``harness=<default>`` and, when
+    per-harness overrides are present, add a note line so they're visible without
+    dumping the whole mapping. Every other key prints as ``key=value``.
+
+    :param cfg: A config dict filtered to ``_GLOBAL_CONFIG_KEYS``.
+    """
+    for k, v in sorted(cfg.items()):
+        if k == "harness":
+            default, overrides = _format_harness_for_display(v)
+            click.echo(f"  harness={default}")
+            if overrides:
+                click.echo(f"    # per-harness overrides: {', '.join(sorted(overrides))}")
+        else:
+            click.echo(f"  {k}={v}")
+
+
 def _print_config_defaults() -> None:
     """Print the effective CLI defaults (user + project-level).
 
-    The ``KEY=VALUE`` defaults from ``~/.agent_meow/config.yaml`` (user) and
-    ``.agent_meow/config.yaml`` in the cwd (project, takes precedence).
-    Used by ``agent-meow config list``.
+    The ``KEY=VALUE`` defaults from ``~/.omnigent/config.yaml`` (user) and
+    ``.omnigent/config.yaml`` in the cwd (project, takes precedence).
+    Used by ``omnigent config list``.
 
     :returns: None. Side effect: writes to stdout.
     """
     # Only the user-facing run defaults (the keys ``config set`` accepts).
-    # Internal blocks (``providers``, ``host``, ``tui``) are omitted — the
+    # Internal blocks (``providers``, ``host``, ``tui``) are omitted �?the
     # ``providers`` block is shown in the credentials-by-harness section.
     global_cfg = {k: v for k, v in _load_global_config().items() if k in _GLOBAL_CONFIG_KEYS}
     local_cfg = {k: v for k, v in _load_local_config().items() if k in _GLOBAL_CONFIG_KEYS}
     if not global_cfg and not local_cfg:
         click.echo(
-            "  (none set — `agent-meow config set key=value` for project,\n"
-            "   or `agent-meow config set --global key=value` for user-level)"
+            "  (none set �?`omnigent config set key=value` for project,\n"
+            "   or `omnigent config set --global key=value` for user-level)"
         )
         return
     global_path = _effective_global_config_path()
     local_path = Path.cwd() / _LOCAL_CONFIG_RELPATH
     # When the cwd IS the home directory, the project-level path
-    # (``cwd/.agent_meow/config.yaml``) resolves to the SAME file as the
-    # user-level path (``~/.agent_meow/config.yaml``). Dedup on the resolved
+    # (``cwd/.omnigent/config.yaml``) resolves to the SAME file as the
+    # user-level path (``~/.omnigent/config.yaml``). Dedup on the resolved
     # absolute path so the one file is shown once, not twice under two
     # spellings. ``resolve()`` collapses ``~`` and symlinks for the compare.
     local_is_global = local_cfg and local_path.resolve() == global_path.resolve()
     if global_cfg:
         click.echo(f"  # {_display_config_path(global_path)}")
-        for k, v in sorted(global_cfg.items()):
-            click.echo(f"  {k}={v}")
+        _print_config_default_rows(global_cfg)
     if local_cfg and not local_is_global:
         click.echo(f"  # {local_path}")
-        for k, v in sorted(local_cfg.items()):
-            click.echo(f"  {k}={v}")
+        _print_config_default_rows(local_cfg)
 
 
 class _ConfigGroup(click.Group):
@@ -7884,17 +7675,17 @@ class _ConfigGroup(click.Group):
         :returns: A hint string for a recognized legacy form, else ``None``.
         """
         if first == "--list":
-            return "`config --list` is now `agent-meow config list`."
+            return "`config --list` is now `omnigent config list`."
         if first == "--unset":
-            return "`config --unset KEY` is now `agent-meow config unset KEY`."
+            return "`config --unset KEY` is now `omnigent config unset KEY`."
         if first == "--global":
             return (
-                "`--global` now goes on the subcommand — "
-                "`agent-meow config set --global KEY=VALUE` or "
-                "`agent-meow config unset --global KEY`."
+                "`--global` now goes on the subcommand �?"
+                "`omnigent config set --global KEY=VALUE` or "
+                "`omnigent config unset --global KEY`."
             )
         if "=" in first and not first.startswith("-"):
-            return f"setting defaults is now `agent-meow config set {first}`."
+            return f"setting defaults is now `omnigent config set {first}`."
         return None
 
     def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
@@ -7907,7 +7698,7 @@ class _ConfigGroup(click.Group):
             a hint pointing at the new ``config set`` / ``list`` / ``unset``.
         """
         # Only the FIRST token is inspected: a known subcommand (set/list/
-        # unset) parses normally — so ``config set default_agent=x`` is not
+        # unset) parses normally �?so ``config set default_agent=x`` is not
         # mistaken for the legacy ``config default_agent=x``.
         if args and args[0] not in self.commands:
             hint = self._legacy_hint(args[0])
@@ -7916,14 +7707,199 @@ class _ConfigGroup(click.Group):
         return super().parse_args(ctx, args)
 
 
+# ── Integrations (Slack, �? ───────────────────────────────────────────
+
+# Slack socket-mode bot: a separate `omnigent-slack` package (heavy deps �?
+# slack_bolt/aiohttp �?kept out of the core CLI install). The CLI launches it
+# as a subprocess and never imports it.
+_SLACK_PACKAGE = "omnigent_slack"
+_SLACK_INSTALL_HINT = (
+    "The Slack integration (omnigent-slack) isn't installed in this "
+    "environment. Install it alongside omnigent with the `slack` extra:\n"
+    '  uv pip install "omnigent[slack]"\n'
+    "or, from a source checkout:\n"
+    "  uv sync --extra slack"
+)
+
+
+def _slack_installed() -> bool:
+    """Whether the ``omnigent_slack`` package is importable (not imported)."""
+    import importlib.util
+
+    return importlib.util.find_spec(_SLACK_PACKAGE) is not None
+
+
+def _slack_argv() -> list[str]:
+    """Argv that runs the Slack bot in the current interpreter."""
+    return [sys.executable, "-m", _SLACK_PACKAGE]
+
+
+def _slack_cwd() -> Path | None:
+    """Directory to run the Slack bot from, so its ``.env`` resolves.
+
+    The bot's ``Settings`` loads a CWD-relative ``.env``; a background daemon
+    otherwise inherits whatever directory ``omni`` was launched from and
+    silently misses config. For a source/editable install the package lives at
+    ``<integration>/src/omnigent_slack``, so the integration dir (holding the
+    ``.env``) is three parents up. Returns that dir only when it actually holds
+    a ``.env``; otherwise ``None`` (a wheel install has no such dir �?config
+    then comes from real environment variables).
+    """
+    import importlib.util
+
+    spec = importlib.util.find_spec(_SLACK_PACKAGE)
+    if spec is None or not spec.origin:
+        return None
+    origin = Path(spec.origin)
+    if len(origin.parents) < 3:
+        return None
+    integration_dir = origin.parents[2]
+    return integration_dir if (integration_dir / ".env").is_file() else None
+
+
+def _integration_state_dir() -> Path:
+    """Runtime dir for integration daemon records (honors OMNIGENT_DATA_DIR)."""
+    from agent_meow.host.local_server import _local_data_dir
+
+    return _local_data_dir()
+
+
+def _slack_daemon() -> IntegrationDaemon:
+    return IntegrationDaemon("slack", _integration_state_dir())
+
+
+@cli.group("integration", invoke_without_command=True)
+@click.pass_context
+def integration(ctx: click.Context) -> None:
+    """Run and manage Omnigent chat integrations.
+
+    \b
+    Available integrations:
+      slack   The @omnigent Slack socket-mode bot.
+
+    Run ``omni integration slack`` to start the Slack bot in the foreground,
+    or ``omni integration slack start`` to run it in the background.
+    """
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+
+
+@integration.group("slack", invoke_without_command=True)
+@click.pass_context
+def slack(ctx: click.Context) -> None:
+    """Run the @omnigent Slack socket-mode bot (foreground).
+
+    \b
+    Bare invocation runs in the FOREGROUND (Ctrl-C to stop):
+      omni integration slack
+    Manage a BACKGROUND daemon with the subcommands:
+      omni integration slack start    # spawn detached, return immediately
+      omni integration slack status   # is it running?
+      omni integration slack stop     # terminate the daemon
+      omni integration slack logs     # where the daemon logs (-f to tail)
+
+    Config (Slack tokens, OMNIGENT_SERVER_URL, �? comes from the environment
+    and the integration's .env file �?see integrations/slack/.env.example.
+    """
+    if ctx.invoked_subcommand is not None:
+        return
+    if not _slack_installed():
+        raise click.ClickException(_SLACK_INSTALL_HINT)
+    # A background daemon already holds the Slack socket; a second foreground
+    # bot would contend on the same connection. Refuse rather than double-run.
+    existing = _slack_daemon().running_record()
+    if existing is not None:
+        raise click.ClickException(
+            f"A background Slack bot is already running (pid {existing.pid}). "
+            "Stop it first with `omni integration slack stop`, or view it with "
+            "`omni integration slack status`."
+        )
+    # Foreground: inherit stdio, block until the bot exits (Ctrl-C).
+    click.echo("Starting the Omnigent Slack bot (foreground). Press Ctrl-C to stop.")
+    result = subprocess.run(_slack_argv(), env=os.environ.copy(), cwd=_slack_cwd(), check=False)
+    raise SystemExit(result.returncode)
+
+
+@slack.command("start")
+def slack_start() -> None:
+    """Start the Slack bot as a background daemon."""
+    if not _slack_installed():
+        raise click.ClickException(_SLACK_INSTALL_HINT)
+    daemon = _slack_daemon()
+    existing = daemon.running_record()
+    if existing is not None:
+        click.echo(f"Slack bot already running (pid {existing.pid}).")
+        click.echo(f"Logs: {_display_path(Path(existing.log_path))}")
+        return
+    record = daemon.start(_slack_argv(), os.environ.copy(), cwd=_slack_cwd())
+    # A detached daemon that dies on startup (missing tokens, bad server URL)
+    # leaves nothing on the terminal �?confirm it survives a short grace and
+    # surface the log tail if it didn't, instead of falsely reporting success.
+    if not daemon.confirm_alive(record, grace_seconds=2.0):
+        tail = daemon.read_log_tail()
+        message = "The Slack bot exited immediately after starting."
+        if tail:
+            message += f"\nLast log lines:\n{tail}"
+        message += f"\nFull log: {_display_path(Path(record.log_path))}"
+        raise click.ClickException(message)
+    click.echo(f"Started the Omnigent Slack bot in the background (pid {record.pid}).")
+    click.echo(f"Logs: {_display_path(Path(record.log_path))}")
+    click.echo("Stop it with: omni integration slack stop")
+
+
+@slack.command("status")
+def slack_status() -> None:
+    """Show whether the background Slack daemon is running."""
+    record = _slack_daemon().running_record()
+    if record is None:
+        click.echo("Slack bot: not running.")
+        return
+    started = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(record.started_at))
+    click.echo(f"Slack bot: running (pid {record.pid}, since {started}).")
+    click.echo(f"Logs: {_display_path(Path(record.log_path))}")
+
+
+@slack.command("stop")
+def slack_stop() -> None:
+    """Stop the background Slack daemon."""
+    record = _slack_daemon().stop()
+    if record is None:
+        click.echo("Slack bot: not running.")
+        return
+    click.echo(f"Stopped the Omnigent Slack bot (pid {record.pid}).")
+
+
+@slack.command("logs")
+@click.option("-f", "--follow", is_flag=True, help="Follow the log (like tail -f).")
+def slack_logs(follow: bool) -> None:
+    """Print the background Slack daemon's log path (or tail it)."""
+    record = _slack_daemon().read_record()
+    if record is None:
+        click.echo("No Slack daemon has been started yet.")
+        return
+    log_path = Path(record.log_path)
+    if not follow:
+        click.echo(str(log_path))
+        return
+    if not log_path.exists():
+        raise click.ClickException(f"Log file not found: {log_path}")
+    # Delegate to `tail -f` for a portable follow without reimplementing it.
+    try:
+        subprocess.run(["tail", "-f", str(log_path)], check=False)
+    except FileNotFoundError as exc:
+        raise click.ClickException(
+            f"`tail` not available to follow the log. Log file: {log_path}"
+        ) from exc
+
+
 @cli.group("config", cls=_ConfigGroup)
 def config_grp() -> None:
-    """Get, set, and view agent-meow defaults and credentials.
+    """Get, set, and view Omnigent defaults and credentials.
 
     Defaults (auto_open_conversation, default_agent, harness, model,
-    server) are used by ``agent-meow run``. Project-level config
-    (``.agent_meow/config.yaml`` in the cwd, like ``.git/config``) overrides
-    user-level config (``~/.agent_meow/config.yaml``, like ``~/.gitconfig``).
+    server) are used by ``omnigent run``. Project-level config
+    (``.omnigent/config.yaml`` in the cwd, like ``.git/config``) overrides
+    user-level config (``~/.omnigent/config.yaml``, like ``~/.gitconfig``).
 
     \b
     Subcommands:
@@ -7938,8 +7914,8 @@ def config_list() -> None:
     """List the effective defaults and configured credentials.
 
     Prints the defaults (user + project), then the configured model
-    credentials grouped by harness with each harness's default marked — the
-    merged view of everything ``agent-meow run`` will use (including
+    credentials grouped by harness with each harness's default marked �?the
+    merged view of everything ``omnigent run`` will use (including
     ambient-detected credentials).
 
     :returns: None.
@@ -7956,37 +7932,39 @@ def config_list() -> None:
     "is_global",
     is_flag=True,
     default=False,
-    help="Write to ~/.agent_meow/config.yaml (user-level) instead of the project config.",
+    help="Write to ~/.omnigent/config.yaml (user-level) instead of the project config.",
 )
 @click.argument("settings", nargs=-1, required=True, metavar="KEY=VALUE...")
 def config_set(is_global: bool, settings: tuple[str, ...]) -> None:
-    """Set one or more agent-meow defaults.
+    """Set one or more Omnigent defaults.
 
-    Without ``--global``, pairs are written to ``.agent_meow/config.yaml``
+    Without ``--global``, pairs are written to ``.omnigent/config.yaml``
     in the current directory (project-level, like ``.git/config``); with
-    ``--global`` to ``~/.agent_meow/config.yaml`` (user-level, like
+    ``--global`` to ``~/.omnigent/config.yaml`` (user-level, like
     ``~/.gitconfig``). Project values take precedence.
 
     Supported keys: auto_open_conversation, default_agent, harness,
     model, server.
 
-    :param is_global: When ``True``, write to ``~/.agent_meow/config.yaml``;
-        when ``False``, to ``.agent_meow/config.yaml`` in cwd.
+    :param is_global: When ``True``, write to ``~/.omnigent/config.yaml``;
+        when ``False``, to ``.omnigent/config.yaml`` in cwd.
     :param settings: ``KEY=VALUE`` pairs to set, e.g.
         ``("default_agent=examples/hello.yaml", "model=gpt-5.4-mini")``.
 
     \b
     Examples:
-      agent-meow config set default_agent=examples/hello_world.yaml
-      agent-meow config set --global server=https://<app>.databricksapps.com
+      omnigent config set default_agent=examples/hello_world.yaml
+      omnigent config set --global server=https://<app>.databricksapps.com
     """
     if is_global:
         parsed = _parse_config_settings(settings, resolve_paths=True)
-        _save_global_config(parsed, ())
+        deep_keys = _harness_deep_merge_keys(parsed)
+        _save_global_config(parsed, (), deep_keys)
         config_path: Path = _effective_global_config_path()
     else:
         parsed = _parse_config_settings(settings, resolve_paths=False)
-        _save_local_config(parsed, ())
+        deep_keys = _harness_deep_merge_keys(parsed)
+        _save_local_config(parsed, (), deep_keys)
         config_path = Path.cwd() / _LOCAL_CONFIG_RELPATH
     click.echo(f"Set {len(parsed)} key(s) in {config_path}")
 
@@ -7997,14 +7975,14 @@ def config_set(is_global: bool, settings: tuple[str, ...]) -> None:
     "is_global",
     is_flag=True,
     default=False,
-    help="Remove from ~/.agent_meow/config.yaml (user-level) instead of the project config.",
+    help="Remove from ~/.omnigent/config.yaml (user-level) instead of the project config.",
 )
 @click.argument("keys", nargs=-1, required=True, metavar="KEY...")
 def config_unset(is_global: bool, keys: tuple[str, ...]) -> None:
-    """Remove one or more agent-meow defaults.
+    """Remove one or more Omnigent defaults.
 
-    :param is_global: When ``True``, remove from ``~/.agent_meow/config.yaml``;
-        when ``False``, from ``.agent_meow/config.yaml`` in cwd.
+    :param is_global: When ``True``, remove from ``~/.omnigent/config.yaml``;
+        when ``False``, from ``.omnigent/config.yaml`` in cwd.
     :param keys: Keys to remove, e.g. ``("server", "model")``.
     """
     validated = _validate_unset_keys(keys)
@@ -8017,3346 +7995,6 @@ def config_unset(is_global: bool, keys: tuple[str, ...]) -> None:
     click.echo(f"Unset {len(validated)} key(s) from {config_path}")
 
 
-# Node version hint shared by the preflight problem messages and surfaced
-# to the user. The Node-based harness CLIs (Claude Code, Codex, Pi) bundle
-# a copy of ``undici`` that calls ``worker_threads.markAsUncloneable`` — a
-# Node API added in 22.10 that is absent from every 20.x release. On older
-# Node it surfaces as the opaque
-# ``TypeError: webidl.util.markAsUncloneable is not a function``.
-_NODE_MIN_VERSION_HINT = "Node.js 22 LTS or newer (a 22.10+ API is required)"
-
-
-def _node_version(node_path: str) -> str | None:
-    """
-    Return the ``node --version`` string (e.g. ``v20.12.2``) or ``None``.
-
-    Used only to make the "too old" warning concrete; a failure to read the
-    version is non-fatal — the caller still reports the underlying problem.
-
-    :param node_path: Absolute path to the ``node`` binary, as resolved by
-        :func:`shutil.which`.
-    :returns: The trimmed version string, or ``None`` if ``node`` could not
-        be invoked.
-    """
-    try:
-        result = subprocess.run(
-            [node_path, "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    return result.stdout.strip() or None
-
-
-def _node_dependency_problem() -> str | None:
-    """
-    Return a one-line problem if Node is missing or too old, else ``None``.
-
-    The Node-based harnesses (``claude-native``, ``codex``, ``pi``) shell
-    out to CLIs that bundle ``undici``; that bundle calls
-    ``worker_threads.markAsUncloneable`` (added in Node 22.10). We invoke
-    ``node`` to probe for the symbol directly rather than parse
-    ``node --version``, so the check tracks the actual capability across
-    the 22.x/23.x version split and never goes stale against a hardcoded
-    floor.
-
-    :returns: A human-readable description suitable for a warning bullet,
-        or ``None`` when Node is present and new enough. A flaky/timed-out
-        probe also yields ``None`` — setup should not block on it.
-    """
-    node = shutil.which("node")
-    if node is None:
-        return f"node not found — Claude, Codex, and Pi need {_NODE_MIN_VERSION_HINT}."
-    # Probe the exact API the bundled undici calls. Exit 0 ⇒ capability
-    # present; exit 1 ⇒ too old; we treat any other failure as inconclusive.
-    probe = (
-        "process.exit("
-        "typeof require('node:worker_threads').markAsUncloneable === 'function' ? 0 : 1)"
-    )
-    try:
-        result = subprocess.run(
-            [node, "-e", probe],
-            capture_output=True,
-            timeout=10,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    if result.returncode == 0:
-        return None
-    version = _node_version(node)
-    detected = f" (detected {version})" if version else ""
-    return f"Node.js is too old{detected} — Claude, Codex, and Pi need {_NODE_MIN_VERSION_HINT}."
-
-
-@contextlib.contextmanager
-def _isolated_databricks_cfg() -> collections.abc.Generator[None, None, None]:
-    """Run Databricks setup against a temp config containing only our three profiles.
-
-    The temp file starts with just the canonical internal-beta profile
-    sections (see ``DEFAULT_PROFILES``) seeded from the original when they
-    exist, so there is exactly one section per workspace host and
-    ``databricks auth token --host X`` never hits the "multiple profiles
-    match" ambiguity error.
-
-    The user's real config is never modified while this context is active.
-    On normal exit the three sections are merged back into the original.
-    On SIGTERM / SIGINT the temp file is removed and the original is left
-    exactly as it was.  SIGKILL cannot be caught, but the original is
-    always safe because we never touch it.
-
-    Uses ``DATABRICKS_CONFIG_FILE`` so both subprocess CLI calls *and*
-    the direct configparser writes in ``agent_meow.onboarding.setup``
-    (via ``_databrickscfg_path()``) all operate on the temp file. Also
-    strips every entry in ``CONFLICTING_ENV_VARS`` for the duration of
-    the context so a stale Databricks credential env var (see that list)
-    can't shadow ``--host`` inside ``databricks auth token``.
-    """
-    import configparser
-    import signal
-    import tempfile
-
-    from agent_meow.onboarding.internal_beta import DEFAULT_PROFILES
-    from agent_meow.onboarding.setup import CONFLICTING_ENV_VARS
-
-    original_cfg = Path.home() / ".databrickscfg"
-    saved_env: dict[str, str | None] = {
-        "DATABRICKS_CONFIG_FILE": os.environ.get("DATABRICKS_CONFIG_FILE"),
-    }
-    for var in CONFLICTING_ENV_VARS:
-        saved_env[var] = os.environ.pop(var, None)
-
-    def _restore_env() -> None:
-        for var, prev in saved_env.items():
-            if prev is None:
-                os.environ.pop(var, None)
-            else:
-                os.environ[var] = prev
-
-    # Temp file contains only the canonical internal-beta profile sections
-    # (see DEFAULT_PROFILES), seeded from the original when they already
-    # exist. Everything else is excluded so there is exactly one
-    # section per workspace host and `databricks auth token --host X`
-    # never hits the "multiple profiles match" ambiguity error.
-    orig_cfg = configparser.ConfigParser()
-    if original_cfg.exists():
-        orig_cfg.read(original_cfg)
-    cfg = configparser.ConfigParser()
-    for spec in DEFAULT_PROFILES:
-        if orig_cfg.has_section(spec.name):
-            cfg[spec.name] = dict(orig_cfg[spec.name])
-
-    omnigent_dir = Path.home() / ".agent-meow"
-    omnigent_dir.mkdir(exist_ok=True)
-    tmp_fd, tmp_name = tempfile.mkstemp(
-        prefix="databrickscfg-setup-",
-        dir=omnigent_dir,
-        suffix=".tmp",
-    )
-    try:
-        with os.fdopen(tmp_fd, "w") as f:
-            cfg.write(f)
-    except Exception:
-        os.unlink(tmp_name)
-        raise
-    tmp_path = Path(tmp_name)
-
-    os.environ["DATABRICKS_CONFIG_FILE"] = tmp_name
-
-    def _on_signal(signum: int, _frame: types.FrameType | None) -> None:
-        tmp_path.unlink(missing_ok=True)
-        _restore_env()
-        # Restore the original handler before re-raising so signal chaining
-        # (e.g. Click's Ctrl-C → Abort) is preserved rather than falling
-        # back to SIG_DFL which would kill the process through the OS.
-        signal.signal(signum, prev_sigterm if signum == signal.SIGTERM else prev_sigint)
-        signal.raise_signal(signum)
-
-    prev_sigterm = signal.signal(signal.SIGTERM, _on_signal)
-    prev_sigint = signal.signal(signal.SIGINT, _on_signal)
-
-    write_tmp: Path | None = None
-    try:
-        yield
-        # Merge canonical sections written by setup back into the real cfg.
-        tmp_cfg = configparser.ConfigParser()
-        tmp_cfg.read(tmp_path)
-        orig_cfg = configparser.ConfigParser()
-        if original_cfg.exists():
-            orig_cfg.read(original_cfg)
-        for spec in DEFAULT_PROFILES:
-            if tmp_cfg.has_section(spec.name):
-                orig_cfg[spec.name] = dict(tmp_cfg[spec.name])
-        write_tmp = original_cfg.with_suffix(".tmp")
-        with write_tmp.open("w") as f:
-            orig_cfg.write(f)
-        write_tmp.replace(original_cfg)
-        write_tmp = None
-    finally:
-        tmp_path.unlink(missing_ok=True)
-        if write_tmp is not None:
-            write_tmp.unlink(missing_ok=True)
-        signal.signal(signal.SIGTERM, prev_sigterm)
-        signal.signal(signal.SIGINT, prev_sigint)
-        _restore_env()
-
-
-def _run_configure_databricks() -> None:
-    """
-    Configure coding harnesses to use Databricks Unity AI Gateway.
-
-    Shells out to ``ucode configure`` to authenticate workspaces and set
-    up harnesses (Claude SDK, Codex, OpenAI Agents, Pi). After setup,
-    agent-meow reads ``~/.ucode/state.json`` to pick per-harness model
-    defaults and base URLs.
-
-    :returns: None.
-    :raises click.ClickException: If ucode command resolution,
-        configuration, or state verification fails.
-    """
-    ucode_command = find_ucode_command()
-    # ucode only configures the model-serving gateway, so it gets the
-    # gateway workspace(s) only — not the MCP-only profiles, which are
-    # authenticated during profile onboarding and have no ucode role.
-    workspace_urls = model_gateway_workspace_urls()
-    click.echo("Running `ucode configure --workspaces ...`...")
-
-    result = subprocess.run(
-        build_ucode_configure_command(ucode_command, workspace_urls=workspace_urls),
-        check=False,
-    )
-    if result.returncode != 0:
-        raise click.ClickException(
-            f"`ucode configure` exited with code {result.returncode}; "
-            "see the command output above for details."
-        )
-
-    click.echo("ucode configuration complete. agent-meow will use state.json for harness setup.")
-
-
-def _warn_missing_harness_dependencies() -> None:
-    """
-    Warn about external (non-Python) tools the coding harnesses need.
-
-    Surfaces every missing/outdated dependency up front (when the user
-    opens ``configure harnesses``) so a fresh machine learns about all of
-    them at once, rather than discovering each at the moment a harness or
-    wrapper needs it (Node when a harness CLI runs, tmux when ``agent-meow
-    claude`` launches). This *warns* rather than aborts on purpose: the
-    pure-Python ``openai-agents`` harness runs without either tool, so a
-    hard failure would block a valid flow — but ``agent-meow claude`` /
-    ``codex`` do need both, hence the prominent notice.
-
-    :returns: None. Side effect: writes a yellow warning block to stderr
-        via :mod:`~?agent_meow.inner.ui` when one or more dependencies are
-        missing.
-    """
-    problems: list[str] = []
-    node_problem = _node_dependency_problem()
-    if node_problem is not None:
-        problems.append(node_problem)
-    if shutil.which("tmux") is None:
-        problems.append(
-            "tmux not found — native Claude/Codex need tmux (macOS: `brew install tmux`)."
-        )
-    if not problems:
-        return
-    ui.warn("Some harnesses need external tools:")
-    for problem in problems:
-        ui.err_console.print(f"  • {problem}", style="omni.warning", markup=False)
-    ui.err_console.print(
-        "You can configure credentials now; install these before launching those harnesses.",
-        style="omni.warning",
-        markup=False,
-    )
-
-
-def _print_credentials_by_harness() -> None:
-    """Print configured model credentials grouped by harness (the ``config list`` view).
-
-    Renders the effective config **merged with ambient detections** (a
-    detected env key / CLI login shows as an ordinary credential, with no
-    separate "detected vs configured" split) grouped under each harness
-    family, with the per-family default marked — via
-    :func:`render_provider_listing_by_harness`.
-
-    :returns: None. Side effect: writes the listing to the onboarding
-        console.
-    """
-    from agent_meow.onboarding.configure_models import render_provider_listing_by_harness
-    from agent_meow.onboarding.detected import effective_config_with_detected
-    from agent_meow.onboarding.provider_config import load_providers
-
-    config = effective_config_with_detected(_load_effective_config())
-    providers = load_providers(config)
-    render_provider_listing_by_harness(config, providers)
-
-
-def _existing_key_name_for_ref(  # type: ignore[explicit-any]  # config is a yaml-boundary mapping
-    config: dict[str, Any],
-    family: str,
-    api_key_ref: str,
-) -> str | None:
-    """Return the name of a ``key`` provider on *family* using *api_key_ref*.
-
-    Two API keys are "the same key" when they read the same secret source
-    (the same ``env:`` / ``keychain:`` reference). The add flow uses this to
-    update such a key in place rather than writing a second, identical entry —
-    so re-adding a key you already have stays idempotent, while a key from a
-    genuinely different source gets its own entry (the "keep both" behavior).
-
-    :param config: The parsed global config mapping (``providers:`` block).
-    :param family: The harness family the key serves, ``"anthropic"`` or
-        ``"openai"``.
-    :param api_key_ref: The secret reference to match, e.g.
-        ``"env:ANTHROPIC_API_KEY"`` or ``"keychain:anthropic"``.
-    :returns: The provider name whose *family* block references the same
-        secret, e.g. ``"anthropic"``, or ``None`` when no such key exists.
-    """
-    from agent_meow.onboarding.provider_config import KEY_KIND, load_providers
-
-    for name, entry in load_providers(config).items():
-        if entry.kind != KEY_KIND:
-            continue
-        fam = entry.families.get(family)
-        if fam is not None and fam.api_key_ref == api_key_ref:
-            return name
-    return None
-
-
-def _unique_provider_name(  # type: ignore[explicit-any]  # config is a yaml-boundary mapping
-    config: dict[str, Any],
-    candidate: str,
-) -> str:
-    """Return *candidate*, suffixed numerically until it's a free provider name.
-
-    Provider names key the ``providers:`` mapping, so a colliding name would
-    overwrite an existing entry on deep-merge. When the add flow keeps a
-    second credential (an API key from a new source for a vendor that already
-    has one), this derives a fresh name — ``anthropic`` → ``anthropic-2`` →
-    ``anthropic-3`` — so both coexist.
-
-    :param config: The parsed global config mapping (``providers:`` block).
-    :param candidate: The preferred name, e.g. ``"anthropic"``.
-    :returns: *candidate* if unused, else the first free ``<candidate>-<n>``
-        (``n`` starting at 2), e.g. ``"anthropic-2"``.
-    """
-    from agent_meow.onboarding.provider_config import load_providers
-
-    existing = set(load_providers(config))
-    if candidate not in existing:
-        return candidate
-    n = 2
-    while f"{candidate}-{n}" in existing:
-        n += 1
-    return f"{candidate}-{n}"
-
-
-def _resolve_key_provider_name(  # type: ignore[explicit-any]  # config is a yaml-boundary mapping
-    config: dict[str, Any],
-    family: str,
-    candidate: str,
-    api_key_ref: str,
-) -> str:
-    """Pick the entry name for an API key being added — update vs keep-both.
-
-    Realizes the "allow multiple API keys, keep both if source differs"
-    behavior: a key whose secret source (*api_key_ref*) matches an existing
-    key on *family* reuses that entry's name (an in-place update of the same
-    credential); a key from a new source takes a fresh, unique name so it
-    coexists with the others.
-
-    :param config: The parsed global config mapping (``providers:`` block).
-    :param family: The harness family the key serves, ``"anthropic"`` or
-        ``"openai"``.
-    :param candidate: The preferred name (the vendor id for a preset, or the
-        user-typed name for "Other provider"), e.g. ``"anthropic"``.
-    :param api_key_ref: The key's secret reference, e.g.
-        ``"env:ANTHROPIC_API_KEY"`` or ``"keychain:anthropic"``.
-    :returns: The existing same-source entry's name (update in place), else a
-        unique name derived from *candidate* (keep both), e.g.
-        ``"anthropic-2"``.
-    """
-    same_source = _existing_key_name_for_ref(config, family, api_key_ref)
-    if same_source is not None:
-        return same_source
-    return _unique_provider_name(config, candidate)
-
-
-def _credential_source_hint(entry: ProviderEntry, family: str) -> str | None:
-    """A short, non-secret descriptor of where a key's secret comes from.
-
-    Used to disambiguate two API keys that would otherwise share a label
-    (e.g. two "Anthropic API Key" rows): an ``env:`` ref renders as
-    ``$VAR``, a ``keychain:`` ref as its stored name, an inline ``$VAR`` as
-    itself. Only meaningful for credential kinds that carry an inline family
-    block (``key`` / ``gateway`` / ``local``).
-
-    :param entry: The parsed provider entry.
-    :param family: The surface whose secret source to describe,
-        ``"anthropic"``, ``"openai"``, or ``"pi"``.
-    :returns: A display hint such as ``"$ANTHROPIC_API_KEY"`` or
-        ``"anthropic-2"``, or ``None`` when the family has no resolvable
-        source descriptor.
-    """
-    from agent_meow.onboarding.provider_config import (
-        ANTHROPIC_FAMILY,
-        OPENAI_FAMILY,
-        PI_SURFACE,
-    )
-
-    raw = entry.families.get(family)
-    if raw is None and family == PI_SURFACE:
-        # The pi surface carries no family block of its own — pi consumes
-        # the credential of whichever family it routes through (anthropic
-        # preferred), so describe that family's source instead.
-        for fam in (ANTHROPIC_FAMILY, OPENAI_FAMILY):
-            raw = entry.families.get(fam)
-            if raw is not None:
-                break
-    if raw is None:
-        return None
-    if raw.api_key_ref is not None:
-        if raw.api_key_ref.startswith("env:"):
-            return f"${raw.api_key_ref[len('env:') :]}"
-        if raw.api_key_ref.startswith("keychain:"):
-            return raw.api_key_ref[len("keychain:") :]
-    if raw.api_key is not None and raw.api_key.startswith("$"):
-        return raw.api_key
-    return None
-
-
-def _family_key_count(  # type: ignore[explicit-any]  # config is a yaml-boundary mapping
-    config: dict[str, Any],
-    family: str,
-) -> int:
-    """Count the ``key`` providers serving *family*.
-
-    The ``($VAR)`` disambiguation hint is shown only when more than one API
-    key serves a harness — a lone key needs no source qualifier.
-
-    :param config: The parsed global config mapping (``providers:`` block).
-    :param family: The harness family, ``"anthropic"`` or ``"openai"``.
-    :returns: The number of ``kind: key`` providers serving *family*.
-    """
-    from agent_meow.onboarding.provider_config import (
-        KEY_KIND,
-        load_providers,
-        provider_families,
-    )
-
-    return sum(
-        1
-        for entry in load_providers(config).values()
-        if entry.kind == KEY_KIND and family in provider_families(entry)
-    )
-
-
-def _family_credential_label(  # type: ignore[explicit-any]  # config is a yaml-boundary mapping
-    config: dict[str, Any],
-    family: str,
-    name: str,
-    entry: ProviderEntry,
-) -> str:
-    """A credential label, qualified with its source when keys would collide.
-
-    Wraps :func:`_credential_label`, appending the ``($VAR)`` source hint for
-    a ``key`` provider when more than one API key serves *family* (so two
-    "Anthropic API Key" rows read as distinct). Non-key kinds and the
-    single-key case render the plain label.
-
-    :param config: The parsed global config mapping (``providers:`` block).
-    :param family: The harness family in context, ``"anthropic"`` /
-        ``"openai"``.
-    :param name: The provider id keyed under ``providers:``, e.g.
-        ``"anthropic-2"``.
-    :param entry: The parsed provider entry.
-    :returns: A human label, e.g. ``"Anthropic API Key ($ANTHROPIC_API_KEY)"``
-        when disambiguation applies, else ``"Anthropic API Key"``.
-    """
-    from agent_meow.onboarding.provider_config import KEY_KIND
-
-    base = _credential_label(name, entry)
-    if entry.kind != KEY_KIND or _family_key_count(config, family) <= 1:
-        return base
-    hint = _credential_source_hint(entry, family)
-    return f"{base} ({hint})" if hint else base
-
-
-def _configure_harness_add(family: str | None = None) -> str | None:
-    """Run the interactive ``add a provider`` flow and persist the entry.
-
-    Prompts for the provider kind (key / subscription / gateway /
-    databricks), gathers the kind-specific fields, deep-merges the single
-    entry under ``providers:`` (an add never rewrites siblings), and makes
-    it the default for any family it serves that has **no** default yet
-    (so a first provider just works; an existing default is left for the
-    user to change by selecting it in the harness tree).
-
-    :param family: When set (``"anthropic"`` / ``"openai"`` / ``"pi"``),
-        the add menu is scoped to credentials that can drive that harness —
-        the per-harness "Add a provider" path. ``None`` shows the full menu.
-    :returns: A confirmation message for the caller to show as a transient
-        status. Side effect: writes to ``~/.agent_meow/config.yaml`` and,
-        for a pasted API key, the secret store.
-    """
-    from agent_meow.onboarding import secrets as secret_store
-    from agent_meow.onboarding.ambient import detect_providers
-    from agent_meow.onboarding.configure_models import (
-        AddOption,
-        add_menu_options,
-        add_menu_options_for_family,
-        build_bedrock_provider_entry,
-        build_cli_config_provider_entry,
-        build_databricks_provider_entry,
-        build_gateway_provider_entry,
-        build_key_provider_entry,
-        build_subscription_provider_entry,
-        default_base_url_for_family,
-        family_for_key_provider,
-        key_provider_endpoint,
-        other_key_providers,
-        provider_display_name,
-    )
-    from agent_meow.onboarding.interactive import console, prompt_text, select
-    from agent_meow.onboarding.provider_config import (
-        ANTHROPIC_FAMILY,
-        BEDROCK_KIND,
-        CHAT_WIRE_API,
-        CLI_CONFIG_KIND,
-        DATABRICKS_KIND,
-        OPENAI_FAMILY,
-        PI_SURFACE,
-        RESPONSES_WIRE_API,
-        SUBSCRIPTION_KIND,
-        load_providers,
-        provider_entry_settings,
-        set_default_provider,
-    )
-
-    # The ucode agent that backs each harness surface's model serving. When the
-    # user adds Databricks from a specific harness page, we configure ucode for
-    # ONLY that harness (not all of claude/codex/pi) so ucode touches just the
-    # one tool the user is wiring up.
-    _FAMILY_UCODE_AGENT = {ANTHROPIC_FAMILY: "claude", OPENAI_FAMILY: "codex", PI_SURFACE: "pi"}
-
-    # A flat, credential-aware menu: the user picks "OpenAI — API key" or
-    # "Claude — subscription" directly (rather than a bare kind then
-    # provider two-step). Each option carries the resolved kind and, for
-    # the common cases, a preset provider/cli. When entered from a specific
-    # harness, the menu is scoped to that harness's surface.
-    options = add_menu_options_for_family(family) if family is not None else add_menu_options()
-    # A custom provider defined by the user's own ~/.codex/config.toml
-    # (e.g. isaac's Databricks AI Gateway) that is not currently configured
-    # gets its own add option. This is the only way back after Remove —
-    # removal dismisses the detection so it stops auto-adopting, and there
-    # is nothing to type/paste here (the credential lives in that file).
-    cli_config_dets: list[DetectedProvider] = []
-    if family in (None, OPENAI_FAMILY):
-        configured_names = set(load_providers(_load_global_config()))
-        cli_config_dets = [
-            d
-            for d in detect_providers()
-            if d.kind == CLI_CONFIG_KIND and d.name not in configured_names
-        ]
-    # Base options first, then one row per detected config provider — the
-    # selection index maps back into cli_config_dets below.
-    base_option_count = len(options)
-    options = options + [
-        AddOption(
-            label=f"\N{GEAR}\N{VARIATION SELECTOR-16} {d.display_name or d.name} — "
-            "from your Codex config",
-            description=(
-                f"Use the {str(d.model_provider)!r} provider your ~/.codex/config.toml "
-                "defines and authenticates."
-            ),
-            kind=CLI_CONFIG_KIND,
-        )
-        for d in cli_config_dets
-    ]
-    choice = select(
-        "What do you want to add?",
-        [o.label for o in options],
-        descriptions=[o.description for o in options],
-        clear_on_exit=True,
-    )
-    if choice < 0:  # Esc — abort the add
-        return None
-    chosen = options[choice]
-    kind = chosen.kind
-
-    name: str
-    # Any (not object): this entry is handed to provider_entry_settings /
-    # set_default_provider, which type their config mappings as object;
-    # _ConfigValue would trip dict invariance against those. Matches the
-    # cli.py yaml-boundary convention.
-    entry: dict[str, Any]  # type: ignore[explicit-any]
-
-    if kind == CLI_CONFIG_KIND:
-        # One detected-config row was appended per cli_config_dets entry, in
-        # order, after the base options — map the selection back to its
-        # detection. Nothing to prompt for: the provider definition AND its
-        # credential live in ~/.codex/config.toml; the entry only pins it.
-        det = cli_config_dets[choice - base_option_count]
-        if det.model_provider is None:  # always set on cli-config detections
-            raise click.ClickException("internal: cli-config detection missing model_provider")
-        name = det.name
-        entry = build_cli_config_provider_entry("codex", det.model_provider, det.display_name)
-        # Re-adding is the user saying "I want this auto-detected credential
-        # after all" — drop any standing dismissal so it behaves like an
-        # ordinary detection again (e.g. re-adopts after a config self-heal).
-        _clear_detection_dismissal(name)
-
-    elif kind == "key":
-        if chosen.provider is not None:
-            provider = chosen.provider  # preset by the flat option (OpenAI/Anthropic/OpenRouter)
-            # Preset: the preferred name is the provider id — but the final name
-            # is resolved from the key's source below (update in place vs keep
-            # both), so a second key for the same vendor doesn't overwrite the
-            # first.
-            candidate = provider
-        else:
-            # "Other provider — API key": pick from the remaining catalog,
-            # shown by friendly display name. This is the one key case where a
-            # custom name is useful (e.g. two configs for the same vendor), so
-            # it's the only non-gateway path that still prompts for a name.
-            others = other_key_providers()
-            if not others:  # ponytail: every catalog key-provider is already a preset/configured
-                click.echo("No other API-key providers left to add.")
-                return None
-            _other_choice = select(
-                "Which provider?",
-                [provider_display_name(p) for p in others],
-                clear_on_exit=True,
-            )
-            if _other_choice < 0:  # Esc — abort the add
-                return None
-            provider = others[_other_choice]
-            candidate = prompt_text("Name for this provider", default=provider)
-        disp = provider_display_name(provider)
-        family = family_for_key_provider(provider)
-        # The entry name is resolved from the key's source (not just the
-        # candidate): a key whose source matches an existing one updates it in
-        # place, while a key from a new source takes a fresh name so both
-        # coexist ("allow multiple API keys"). See _resolve_key_provider_name.
-        config_now = _load_global_config()
-        # Offer to reuse a detected env var for this provider rather than
-        # forcing the user to re-paste a key they already have in the env.
-        detected = {d.name: d for d in detect_providers()}
-        api_key_ref: str
-        if (
-            provider in detected
-            and detected[provider].kind == "key"
-            and click.confirm(
-                f"Detected {detected[provider].source} in the environment — use it?",
-                default=True,
-            )
-        ):
-            env_var = detected[provider].source.lstrip("$")  # e.g. "ANTHROPIC_API_KEY"
-            api_key_ref = f"env:{env_var}"
-            name = _resolve_key_provider_name(config_now, family, candidate, api_key_ref)
-        else:
-            # A pasted key is stored at keychain:<name>; resolve the name first
-            # (an existing key in this same keychain slot is replaced in place,
-            # otherwise we pick a free name) so we store under and reference the
-            # final name.
-            name = _resolve_key_provider_name(
-                config_now, family, candidate, f"keychain:{candidate}"
-            )
-            pasted = prompt_text(f"{disp} API key", hide_input=True)
-            secret_store.store_secret(name, pasted)
-            api_key_ref = f"keychain:{name}"
-
-        # Default model — free-form text entry. The bundled catalog lags new
-        # releases (e.g. a brand-new claude-sonnet-4-6 won't be listed yet), so
-        # a fixed picker would block the user from a model they can actually
-        # use. Pre-fill the canonical default and let the user type ANY model
-        # id. Blank → the default (or no pin when unknown). Always persisting
-        # a pin keeps a later re-add from silently dropping ``models.default``.
-        from agent_meow.onboarding.providers import default_chat_model
-
-        catalog_default = default_chat_model(provider)
-        # default=catalog_default (str | None): a known provider pre-fills its
-        # default (blank-enter accepts it); an unknown provider has no default,
-        # so the user types a model id. ``.strip() or None`` keeps an
-        # all-whitespace entry from becoming a bogus pin.
-        typed = prompt_text("Default model", default=catalog_default)
-        default_model = typed.strip() or None
-
-        # A third-party OpenAI-compatible vendor (OpenRouter, Groq, …) is
-        # reached at its OWN base_url and speaks Chat Completions; openai /
-        # anthropic use the canonical family endpoint (and openai keeps the
-        # Responses default). Using the family default for a vendor sent its
-        # traffic to api.openai.com — the reason an OpenRouter key failed.
-        endpoint = key_provider_endpoint(provider)
-        if endpoint is not None:
-            base_url = endpoint.base_url
-            key_wire_api: str | None = endpoint.wire_api
-        else:
-            base_url = default_base_url_for_family(family)
-            key_wire_api = None
-        entry = build_key_provider_entry(
-            family=family,
-            base_url=base_url,
-            api_key_ref=api_key_ref,
-            default_model=default_model,
-            wire_api=key_wire_api,
-        )
-
-    elif kind == "subscription":
-        cli_name = chosen.cli  # preset by the flat option (claude / codex)
-        if cli_name is None:
-            raise click.ClickException("internal: subscription option missing a cli login")
-        from agent_meow.onboarding.harness_install import harness_install_spec, harness_login
-
-        login_family = {agent: fam for fam, agent in _FAMILY_UCODE_AGENT.items()}.get(cli_name)
-        if login_family is None:
-            raise click.ClickException(f"internal: no login family for cli {cli_name!r}")
-        spec = harness_install_spec(login_family)
-        disp = spec.display if spec is not None else cli_name
-        # A harness has at most ONE subscription — the CLI's own login. If one
-        # is already configured for this CLI (under any name, including an
-        # ambient login adopted as e.g. ``claude``), adding another just
-        # duplicates it — the ``claude`` + ``claude-subscription`` bug. Offer to
-        # replace the existing one; declining aborts before we touch the login.
-        existing_subs = [
-            n
-            for n, e in load_providers(_load_global_config()).items()
-            if e.kind == SUBSCRIPTION_KIND and e.cli == cli_name
-        ]
-        if existing_subs:
-            brand = _CLI_LOGIN_BRAND.get(cli_name, cli_name)
-            replace = select(
-                f"A {brand} subscription is already configured. Replace it?",
-                ["Replace it", "Keep the current one"],
-                default=0,
-                clear_on_exit=True,
-            )
-            if replace != 0:  # "Keep the current one" or Esc — abort the add
-                return None
-        # Configure is the single place to sign in: drive the harness's own
-        # login (a no-op if already logged in). Only record the subscription
-        # once the CLI is actually authenticated — otherwise we'd persist a
-        # phantom subscription that strands the user at the harness's own login
-        # screen at run time (the exact bug this whole flow fixes).
-        console.print(f"  [dim]Signing in to {disp} (its login will open)…[/dim]")
-        if not harness_login(login_family):
-            return f"✗ {disp} login not completed — subscription not added"
-        # Login succeeded — drop the existing subscription(s) for this CLI so the
-        # canonical entry is the only one left (clearing the old default lets the
-        # new entry re-claim the family default below). Done AFTER login so a
-        # failed login leaves the existing subscription intact.
-        if existing_subs:
-            block = _load_global_config().get("providers")
-            if isinstance(block, dict):
-                remaining = {k: v for k, v in block.items() if k not in existing_subs}
-                _save_global_config({"providers": remaining})  # wholesale replace
-        # Subscription name is derived from the CLI login — no prompt.
-        name = f"{cli_name}-subscription"
-        entry = build_subscription_provider_entry(cli_name)
-
-    elif kind == "gateway":
-        name = prompt_text("Name for this gateway", default="gateway")
-        base_url = prompt_text("Gateway base_url (OpenAI/Anthropic-compatible)")
-        pasted = prompt_text("Gateway API key", hide_input=True)
-        secret_store.store_secret(name, pasted)
-        # Which harness surfaces — one clear pick instead of two y/n prompts.
-        # (These are *harness* surfaces: Codex/OpenAI → codex + openai-agents;
-        # Claude/Anthropic → claude-sdk + native-claude.)
-        surface_choice = select(
-            "Which harnesses can this gateway drive?",
-            [
-                "Both Claude and Codex",
-                "Codex / OpenAI only (codex, openai-agents)",
-                "Claude only (claude-sdk, native-claude)",
-            ],
-            default=0,
-            clear_on_exit=True,
-        )
-        if surface_choice < 0:  # Esc — abort the add
-            return None
-        families = (
-            [OPENAI_FAMILY, ANTHROPIC_FAMILY]
-            if surface_choice == 0
-            else [OPENAI_FAMILY]
-            if surface_choice == 1
-            else [ANTHROPIC_FAMILY]
-        )
-        # Wire protocol for the OpenAI surface: OpenAI / LiteLLM speak the
-        # Responses API; OpenRouter and many OSS-model gateways are
-        # Chat-Completions-only. Picking wrong makes every turn fail (the
-        # exact "OpenRouter doesn't work but LiteLLM does" symptom), so ask —
-        # defaulting to Chat when the URL looks like OpenRouter.
-        wire_api: str | None = None
-        if OPENAI_FAMILY in families:
-            wire_choice = select(
-                "OpenAI wire protocol for this gateway?",
-                [
-                    "Responses API (OpenAI, LiteLLM)",
-                    "Chat Completions (OpenRouter, most OSS-model gateways)",
-                ],
-                default=1 if "openrouter" in base_url.lower() else 0,
-                clear_on_exit=True,
-            )
-            if wire_choice < 0:  # Esc — abort the add
-                return None
-            wire_api = RESPONSES_WIRE_API if wire_choice == 0 else CHAT_WIRE_API
-        # Default model per served surface. A gateway has NO catalog default,
-        # so without a pin routing would fall back to a vendor model the
-        # gateway can't serve. The OpenAI surface pre-fills a broadly-served
-        # OSS default (moonshotai/kimi-k2.6, via the openrouter pin); the
-        # user can type any gateway model id.
-        from agent_meow.onboarding.providers import default_chat_model
-
-        models: dict[str, str] = {}
-        if OPENAI_FAMILY in families:
-            models[OPENAI_FAMILY] = prompt_text(
-                "Default model for the Codex / OpenAI surface",
-                default=default_chat_model("openrouter"),
-            ).strip()
-        if ANTHROPIC_FAMILY in families:
-            models[ANTHROPIC_FAMILY] = prompt_text(
-                "Default model for the Claude surface (the gateway's Claude model id)"
-            ).strip()
-        entry = build_gateway_provider_entry(
-            base_url=base_url,
-            api_key_ref=f"keychain:{name}",
-            families=families,
-            wire_api=wire_api,
-            models=models,
-        )
-
-    elif kind == BEDROCK_KIND:
-        # Bedrock drives the native Claude terminal in AWS Bedrock mode. It
-        # authenticates from AWS_BEARER_TOKEN_BEDROCK in the env at launch
-        # (Claude Code ignores apiKeyHelper once Bedrock mode is on), so offer
-        # to reference an exported token, else store a pasted one in the keychain.
-        name = prompt_text("Name for this Bedrock provider", default="bedrock")
-        base_url = prompt_text(
-            "Bedrock base_url (regional runtime endpoint, or your Bedrock-compatible gateway)",
-            default="https://bedrock-runtime.us-east-1.amazonaws.com",
-        )
-        if os.environ.get("AWS_BEARER_TOKEN_BEDROCK") and click.confirm(
-            "Detected AWS_BEARER_TOKEN_BEDROCK in the environment — use it?", default=True
-        ):
-            api_key_ref = "env:AWS_BEARER_TOKEN_BEDROCK"
-        else:
-            pasted = prompt_text("Amazon Bedrock API key (bearer token)", hide_input=True)
-            secret_store.store_secret(name, pasted)
-            api_key_ref = f"keychain:{name}"
-        # Bedrock has no catalog default and Claude's own default model is
-        # usually not enabled on a Bedrock account, so pin an explicit id.
-        default_model = (
-            prompt_text(
-                "Default model (Bedrock inference-profile id, e.g. "
-                "us.anthropic.claude-opus-4-5-20251101-v1:0)"
-            ).strip()
-            or None
-        )
-        family = ANTHROPIC_FAMILY
-        entry = build_bedrock_provider_entry(
-            base_url=base_url,
-            api_key_ref=api_key_ref,
-            default_model=default_model,
-        )
-
-    else:  # databricks
-        # Gate on the `databricks` extra: a `kind: databricks` provider mints
-        # workspace OAuth tokens via databricks-sdk at runtime
-        # (agent_meow/runtime/credentials/databricks.py), and the SDK is no
-        # longer a default dependency. Abort before any side effect (the
-        # `databricks auth login` browser flow, `ucode configure`) so the
-        # user isn't signed into a workspace that routing then can't use.
-        from agent_meow.onboarding.databricks_config import (
-            DATABRICKS_EXTRA_INSTALL_HINT,
-            databricks_sdk_installed,
-        )
-
-        if not databricks_sdk_installed():
-            from rich.markup import escape as _rich_escape
-
-            # The status renders through Text.from_markup, where the literal
-            # `[databricks]` in the install command would parse as a tag.
-            return (
-                "✗ Databricks routing needs the databricks extra — "
-                f"{_rich_escape(DATABRICKS_EXTRA_INSTALL_HINT)}"
-            )
-
-        # The intro + URL prompt render inline, exactly like every other add
-        # flow (the add-menu picker already erased its own frame on exit via
-        # `clear_on_exit`) — entering the Databricks option should NOT blank the
-        # whole screen. The one clear we keep is *after* the subprocess (below):
-        # `databricks auth login` + `ucode configure` print a lot, and the
-        # in-place menu redraw we return to can only erase its own frame, so we
-        # wipe that leftover output once the login finishes.
-        # Ask only for the workspace URL — never a profile name. The flow
-        # below authenticates that one workspace and runs `ucode configure`
-        # against it, scoped to the harness the user drilled into. This is
-        # the one place agent-meow triggers a Databricks CLI / ucode login;
-        # it never happens on a bare `run`, so a user who only wants their
-        # own provider is never routed through Databricks unexpectedly.
-        from agent_meow.onboarding.configure_models import family_label
-        from agent_meow.onboarding.databricks_config import normalize_workspace_url
-        from agent_meow.onboarding.interactive import clear_screen
-        from agent_meow.onboarding.setup import login_databricks_workspace
-        from agent_meow.onboarding.ucode_setup import (
-            configure_ucode_for_workspace,
-            ucode_workspace_exists,
-        )
-
-        _routed = f"{family_label(family)}'s" if family is not None else "your harnesses'"
-        console.print(
-            f"  [dim]Routes {_routed} model calls through this workspace's "
-            "Databricks Unity AI Gateway (via ucode), so usage is governed and "
-            "billed there. This signs you into the workspace and runs "
-            "`ucode configure` for it.[/dim]"
-        )
-        workspace_url = prompt_text(
-            "Databricks workspace URL (e.g. https://example.cloud.databricks.com)"
-        ).strip()
-        if not workspace_url:  # blank — abort the add
-            return None
-        if not workspace_url.startswith(("http://", "https://")):
-            workspace_url = f"https://{workspace_url}"
-        # Reduce to scheme://host. Users paste the URL from a browser address
-        # bar, whose `/browse?o=...` path breaks both the saved profile host
-        # and `ucode configure` (the Databricks CLI keys OAuth tokens by host,
-        # so a path-laden value yields "no access token").
-        normalized_workspace_url = normalize_workspace_url(workspace_url)
-        if normalized_workspace_url != workspace_url.rstrip("/"):
-            console.print(
-                f"  [dim]Using {normalized_workspace_url} — ignored the extra "
-                "path from the pasted URL.[/dim]"
-            )
-        workspace_url = normalized_workspace_url
-
-        # 1. Authenticate the workspace (returns the ~/.databrickscfg profile
-        #    name) and 2. run `ucode configure` against it for model serving —
-        #    scoped to the harness the user drilled into (or both when added
-        #    from the un-scoped menu), so ucode configures only what's needed.
-        if family is not None:
-            ucode_agents = [_FAMILY_UCODE_AGENT[family]]
-        else:
-            ucode_agents = sorted(_FAMILY_UCODE_AGENT.values())
-        profile = login_databricks_workspace(workspace_url, console=console)
-        configure_ucode_for_workspace(workspace_url, agents=ucode_agents)
-        # Fail loud if ucode didn't actually record state for the workspace —
-        # otherwise routing would silently fall back and confuse the user.
-        if not ucode_workspace_exists(workspace_url):
-            raise click.ClickException(
-                f"`ucode configure` finished but recorded no state for {workspace_url}. "
-                "Re-run and check the ucode output above."
-            )
-        # Wipe the verbose login + ucode output so the menu we return to (with a
-        # "✓ Added databricks" status) renders on a clean screen.
-        clear_screen()
-        # Databricks name is fixed — no prompt. The provider keys on the
-        # profile; runtime resolves profile → workspace URL → ucode state.
-        name = "databricks"
-        entry = build_databricks_provider_entry(profile)
-
-    from agent_meow.onboarding.configure_models import family_label
-    from agent_meow.onboarding.provider_config import (
-        provider_families,
-        surface_default_provider,
-    )
-
-    # Persist the entry (deep-merge — doesn't disturb sibling entries).
-    _save_global_config(
-        provider_entry_settings(name, entry, make_default=False),
-        deep_merge_keys=("providers",),
-    )
-    # Become the default for any surface it serves that has NO default yet,
-    # so a first provider "just works". An existing default is left alone —
-    # the user changes defaults by selecting a provider in the harness tree
-    # (per-surface, so a shared provider can default one harness, not both).
-    # The pi surface checks its *effective* default: a family default already
-    # drives pi via the fallback, so claiming the explicit pi scope then
-    # would silently re-route pi away from it.
-    parsed = load_providers({"providers": {name: entry}})[name]
-    # Databricks routing is configured in ucode PER HARNESS (we only ran
-    # `ucode configure` for the surface the user drilled into), so it must only
-    # become the default for THAT surface — defaulting the other harnesses too
-    # would route them through a workspace ucode never configured for them.
-    # Other kinds (a gateway serving both families with one base_url + key)
-    # still default every surface they serve.
-    if entry["kind"] == DATABRICKS_KIND and family is not None:
-        default_families = [family]
-    else:
-        default_families = sorted(provider_families(parsed))
-    became_default: list[str] = []
-    for fam in default_families:
-        cfg = _load_global_config()
-        if surface_default_provider(cfg, fam) is not None:
-            continue
-        block = cfg.get("providers")
-        if isinstance(block, dict):
-            _save_global_config({"providers": set_default_provider(block, name, fam)})
-            became_default.append(fam)
-    if became_default:
-        labels = " · ".join(family_label(f) for f in became_default)
-        return f"✓ Added {name} — default for {labels}"
-    return f"✓ Added {name}"
-
-
-def _adopt_detected_providers() -> list[str]:
-    """Persist ambient-detected providers into the config, returning new names.
-
-    Opening ``configure harnesses`` adopts any detected credential (env key,
-    CLI login, local Ollama) not already in ``providers:`` as a real,
-    editable entry — so the tree shows one uniform provider list with no
-    "detected vs configured" split. Writes the merged view (explicit +
-    detected, with detected auto-defaulting per family) wholesale, and only
-    when there is something new to adopt (idempotent on re-open).
-
-    :returns: The names adopted this call, e.g. ``["anthropic", "codex"]``;
-        empty when every detection is already configured.
-    """
-    from agent_meow.onboarding.detected import (
-        effective_config_with_detected,
-        providers_to_adopt,
-    )
-
-    config = _load_global_config()
-    to_adopt = providers_to_adopt(config)
-    if not to_adopt:
-        return []
-    merged = effective_config_with_detected(config)
-    _save_global_config({"providers": merged["providers"]})  # wholesale replace
-    return list(to_adopt)
-
-
-def _promote_global_auth_to_provider() -> str | None:
-    """Backfill a databricks providers entry from an existing global ``auth:`` block.
-
-    Older ``agent-meow setup`` runs configured Databricks only via the top-level
-    ``auth: {type: databricks}`` block — which ``configure harnesses`` does not
-    read — so the readout showed no Databricks provider (and an ambient CLI
-    login as the default) even though routing used Databricks. This promotes
-    that block into a first-class ``kind: databricks`` providers entry the next
-    time ``configure harnesses`` opens, so existing configs self-heal without
-    re-running ``agent-meow setup``.
-
-    Becomes the default only for families with no existing **provider** default —
-    mirroring routing precedence (explicit provider default > ``auth:`` block),
-    so an explicitly-chosen default is left untouched while a config that only
-    ever had the ``auth:`` block gets Databricks as its default (matching what
-    routing already does at runtime). Must run BEFORE
-    :func:`_adopt_detected_providers` so Databricks claims the default ahead of
-    an ambient CLI login (``auth:`` outranks ambient detection in routing too).
-
-    :returns: ``"databricks"`` if a provider was backfilled, else ``None`` (no
-        databricks ``auth:`` block, or a databricks provider already exists).
-    """
-    from agent_meow.onboarding.configure_models import build_databricks_provider_entry
-    from agent_meow.onboarding.provider_config import (
-        load_providers,
-        provider_entry_settings,
-        provider_families,
-        set_default_provider,
-        surface_default_provider,
-    )
-
-    config = _load_global_config()
-    auth = config.get("auth")
-    if not isinstance(auth, dict) or auth.get("type") != "databricks":
-        return None
-    profile = auth.get("profile")
-    if not isinstance(profile, str) or not profile:
-        return None
-    name = "databricks"
-    if name in load_providers(config):
-        return None  # already a first-class provider — nothing to backfill
-
-    entry = build_databricks_provider_entry(profile)
-    _save_global_config(
-        provider_entry_settings(name, entry, make_default=False),
-        deep_merge_keys=("providers",),
-    )
-    parsed = load_providers({"providers": {name: entry}})[name]
-    for fam in sorted(provider_families(parsed)):
-        cfg = _load_global_config()
-        # Effective check (matters for the pi surface): a default that
-        # already drives the surface — explicitly or via pi's fallback —
-        # outranks the legacy auth: block, exactly like routing does.
-        if surface_default_provider(cfg, fam) is not None:
-            continue  # respect an existing provider default (it outranks auth:)
-        block = cfg.get("providers")
-        if isinstance(block, dict):
-            _save_global_config({"providers": set_default_provider(block, name, fam)})
-    return name
-
-
-def _compact_credential_label(det: DetectedProvider) -> str:
-    """A short, brand-qualified label for an auto-configured credential.
-
-    Unlike :func:`~?agent_meow.onboarding.configure_models.credential_label`
-    (which renders every CLI login as a bare ``"Subscription"`` because a
-    harness only ever has one), this names the *brand* behind a login —
-    ``"Claude Subscription"`` / ``"ChatGPT Subscription"`` — so a single
-    comma-joined callout listing several credentials at once stays unambiguous
-    without a per-line source. API keys and local endpoints reuse the shared
-    ``credential_label`` (``"Anthropic API Key"``, ``"Ollama"``).
-
-    :param det: A credential found by
-        :func:`~?agent_meow.onboarding.ambient.detect_providers`.
-    :returns: A short human label, e.g. ``"Anthropic API Key"``,
-        ``"Claude Subscription"``, or ``"ChatGPT Subscription"``.
-    """
-    from agent_meow.onboarding.ambient import SUBSCRIPTION_KIND
-    from agent_meow.onboarding.configure_models import credential_label
-
-    if det.kind == SUBSCRIPTION_KIND:
-        # Fallback to the raw CLI name is unreachable for today's detections
-        # (see _CLI_LOGIN_BRAND) but keeps an added CLI readable, not crashing.
-        brand = _CLI_LOGIN_BRAND.get(det.name, det.name)
-        return f"{brand} Subscription"
-    # A cli-config detection carries the provider's own display name
-    # ("Databricks AI Gateway"); other kinds ignore the keyword.
-    return credential_label(det.kind, det.name, display_name=det.display_name)
-
-
-def _announce_auto_configured_credentials(adopted: list[str]) -> None:
-    """Print the "found existing credentials → auto-configured" callout.
-
-    Re-runs ambient detection to recover each adopted credential, then prints a
-    single compact, dimmed line naming them inline (e.g. ``Anthropic API Key,
-    Claude Subscription, ChatGPT Subscription``) — so a user who never ran an
-    explicit setup sees, the first time we auto-configure, exactly which
-    credentials agent-meow picked up (rather than silently inheriting them).
-    Styled ``dim`` rather than the onboarding accent so it reads as a quiet
-    notice, not a prominent header.
-
-    :param adopted: Provider names just persisted by
-        :func:`_adopt_detected_providers`, e.g. ``["anthropic", "codex"]``.
-        A name with no matching live detection is skipped (defensive — the
-        adopt set and the detection list come from the same detection pass, so
-        in practice every name resolves).
-    :returns: None. Side effect: writes the callout to the shared onboarding
-        console (stdout). Prints nothing when no adopted name resolves to a
-        live detection.
-    """
-    from agent_meow.onboarding.ambient import detect_providers
-    from agent_meow.onboarding.interactive import console
-
-    detected = {det.name: det for det in detect_providers()}
-    labels = [_compact_credential_label(detected[name]) for name in adopted if name in detected]
-    if not labels:
-        return
-    console.print(
-        "\n[dim]Found existing credentials on your machine, "
-        f"auto-configured for agent-meow: {', '.join(labels)}[/dim]"
-    )
-
-
-def _adopt_ambient_credentials(progress: RunnerStartupProgress | None = None) -> list[str]:
-    """Self-heal config, adopt ambient credentials, and announce what was added.
-
-    The shared front half of both a bare ``agent-meow run``'s first-run path
-    (:func:`_resolve_first_run_plan`) and the ``configure harnesses`` picker
-    (:func:`_run_configure_harnesses_interactive`): it (1) backfills a legacy
-    databricks ``auth:`` block into a real provider, (2) adopts any
-    ambient-detected credential (env API key, logged-in ``claude`` / ``codex``
-    CLI, local Ollama) not already configured as an ordinary provider entry,
-    and (3) prints a callout naming exactly the credentials it just
-    auto-configured. Idempotent: a second open adopts nothing, so no callout
-    prints.
-
-    The callout is scoped to *machine* credentials — the ambient detections —
-    not the databricks ``auth:`` backfill, which promotes an existing config
-    block rather than something newly "found on your machine".
-
-    :param progress: Optional spinner handle (from
-        :func:`~?agent_meow._runner_startup.runner_startup_progress`) covering the
-        detection step — slow on macOS, where Claude detection now shells out to
-        ``claude auth status`` to read the Keychain. When supplied, it is
-        ``finish()``-ed (the spinner cleared) right before the callout prints,
-        so the "Found existing credentials…" line is not clobbered by the
-        animating spinner. ``None`` (the ``run`` first-run path) means no
-        spinner — behavior is unchanged.
-    :returns: The provider names adopted this call, e.g. ``["anthropic"]``;
-        empty when every detection was already configured.
-    """
-    _promote_global_auth_to_provider()
-    adopted = _adopt_detected_providers()
-    # Clear the search spinner (if any) before printing — the callout writes to
-    # stdout while the spinner animates on stderr, and on a shared TTY the two
-    # would otherwise overwrite each other.
-    if progress is not None:
-        progress.finish()
-    if adopted:
-        _announce_auto_configured_credentials(adopted)
-    return adopted
-
-
-@dataclass(frozen=True)
-class _HarnessMenuRow:
-    """One selectable row in a harness's provider-management menu (level 2).
-
-    :param label: Display text, e.g. ``"🔑 anthropic   ✓ default"``.
-    :param action: The action on Enter — ``"set_default"`` / ``"add"`` /
-        ``"remove"`` / ``"back"``.
-    :param provider: For ``set_default``, the provider name to default;
-        ``None`` for the other actions.
-    """
-
-    label: str
-    action: str
-    provider: str | None = None
-
-
-_SOFT_INSTALL_ABORT = "\x00soft-install-abort"
-
-
-def _credential_label(name: str, entry: ProviderEntry) -> str:
-    """A friendly, jargon-free label for a configured credential.
-
-    A logged-in CLI reads as ``"Subscription"`` (within a harness there is only
-    one, so the plan name adds no information); an API-key provider names the
-    vendor and the credential type (``"Anthropic API Key"`` / ``"OpenAI API
-    Key"``); Databricks as ``"Databricks (<profile>)"``; a gateway / local
-    endpoint as its display name — so menus and summaries avoid raw provider
-    ids and the word "provider".
-
-    :param name: The provider id keyed under ``providers:``, e.g. ``"openai"``.
-    :param entry: The parsed provider entry.
-    :returns: A human label, e.g. ``"Anthropic API Key"`` or ``"Databricks (oss)"``.
-    """
-    from agent_meow.onboarding.configure_models import credential_label
-
-    return credential_label(
-        entry.kind, name, profile=entry.profile, display_name=entry.display_name
-    )
-
-
-def _harness_credential_rows(config: dict[str, Any], family: str) -> list[_HarnessMenuRow]:  # type: ignore[explicit-any]
-    """Build the level-2 rows: each credential serving *family*, then ``+ Add``.
-
-    Each credential row drills into level 3 (make default / remove). The
-    current default is marked with a green ✓. ``+ Add a credential`` runs the
-    add flow; ``← Back`` returns to the harness picker (as do Esc / ``q``).
-
-    :param config: The parsed config mapping (``providers:`` block).
-    :param family: The harness surface being managed.
-    :returns: The ordered, all-selectable rows.
-    """
-    from agent_meow.onboarding.configure_models import kind_glyph
-    from agent_meow.onboarding.provider_config import (
-        load_providers,
-        provider_families,
-        surface_default_provider,
-    )
-
-    serving = [
-        (name, entry)
-        for name, entry in load_providers(config).items()
-        if family in provider_families(entry)
-    ]
-    # The surface's effective default (for pi: explicit scope, else fallback)
-    # so the ✓ always marks the credential the harness would actually use.
-    default = surface_default_provider(config, family)
-    rows: list[_HarnessMenuRow] = []
-    for name, entry in serving:
-        glyph = kind_glyph(entry.kind)
-        cred = _family_credential_label(config, family, name, entry)
-        # The current default renders bold-green with a ✓ so it stands out in
-        # the list; the rest are plain. Provider names are markup-safe in
-        # practice (same assumption select() already makes for every label).
-        if default is not None and name == default.name:
-            label = f"[bold green]{glyph} {cred}  ✓ default[/]"
-        else:
-            label = f"{glyph} {cred}"
-        rows.append(_HarnessMenuRow(label, action="credential", provider=name))
-    rows.append(_HarnessMenuRow("+ Add a credential", action="add"))
-    rows.append(_HarnessMenuRow("← Back", action="back"))
-    return rows
-
-
-def _prompt_install_harness(family: str) -> bool:
-    """Offer to install an uninstalled harness CLI; return whether to proceed.
-
-    Shown when the user drills into a harness whose CLI isn't on PATH. Offers
-    three choices: install it now (``npm install -g …``), go back, or print the
-    command to run manually.
-
-    :param family: The harness surface being configured (``"anthropic"`` /
-        ``"openai"`` / ``"pi"``).
-    :returns: ``True`` only when the CLI is installed afterward (user chose
-        install and it succeeded), so the caller continues to credential
-        configuration; ``False`` when the user declines, asks to run it
-        themselves, the install fails, or they Esc — the caller returns to the
-        harness picker.
-    """
-    from agent_meow.onboarding.configure_models import family_label
-    from agent_meow.onboarding.harness_install import (
-        harness_install_command,
-        install_harness_cli,
-    )
-    from agent_meow.onboarding.interactive import console, select
-
-    label = family_label(family)
-    cmd = " ".join(harness_install_command(family))
-    choice = select(
-        f"{label}'s CLI isn't installed. Install it now?",
-        [
-            f"Yes — install ({cmd})",
-            "No — back to harnesses",
-            "I'll run it myself (show the command)",
-        ],
-        descriptions=[
-            f"Runs `{cmd}` (needs npm), then continues to credential setup.",
-            "Return to the harness picker without installing.",
-            "Print the command so you can install it yourself, then return.",
-        ],
-        default=0,
-        clear_on_exit=True,
-    )
-    if choice == 0:
-        console.print(f"  [dim]Installing {label} — running `{cmd}`…[/dim]")
-        if install_harness_cli(family):
-            console.print(f"  [green]✓ {label} installed[/green]")
-            return True
-        console.print(
-            f"  [red]Install failed.[/red] Run it manually, then re-open: [bold]{cmd}[/bold]"
-        )
-        return False
-    if choice == 2:  # run it yourself
-        console.print(f"  Install {label} with:\n    [bold]{cmd}[/bold]")
-    return False
-
-
-def _manage_harness_providers(family: str) -> None:
-    """Run the level-2 loop for one harness: pick a credential or add one.
-
-    Selecting a credential opens level 3 (make default / remove); ``+ Add``
-    runs the add flow. Esc (TTY) / ``q`` (fallback) returns to the harness
-    picker. The menu re-renders (cleared in place) after each action so the
-    session stays on one tidy screen.
-
-    :param family: The harness family being managed.
-    :returns: None.
-    """
-    from agent_meow.onboarding.configure_models import family_label
-    from agent_meow.onboarding.harness_install import harness_cli_installed
-    from agent_meow.onboarding.interactive import select
-
-    # If the harness CLI isn't installed, offer to install it before showing
-    # the credential menu. Declining (or copy-the-command) returns to the
-    # harness picker — there's nothing to configure for a harness you can't run.
-    if not harness_cli_installed(family) and not _prompt_install_harness(family):
-        return
-
-    # Carry the prior action's confirmation as a transient status line so the
-    # menu shows only the latest result — not an accumulating stack of "✓ …".
-    status: str | None = None
-    while True:
-        rows = _harness_credential_rows(_load_global_config(), family)
-        idx = select(
-            f"{family_label(family)} — select or add a credential",
-            [r.label for r in rows],
-            clear_on_exit=True,
-            status=status,
-        )
-        if idx < 0:  # Esc / q — back to the harness picker
-            return
-        row = rows[idx]
-        if row.action == "back":
-            return
-        if row.action == "add":
-            status = _configure_harness_add(family=family)
-        elif row.action == "credential" and row.provider is not None:
-            status = _manage_credential(row.provider, family)
-
-
-def _prompt_install_cursor() -> str | None:
-    """Offer to install the missing ``cursor`` extra; return a status line.
-
-    Shown atop the Cursor drill-in when the optional-extra ``cursor-sdk`` is
-    absent. Three-choice ``select`` like :func:`_prompt_install_antigravity` /
-    :func:`_prompt_install_harness` (install now / set key anyway / show
-    command), but does NOT gate key management on the SDK: the ``cursor:`` key
-    is stored independently and is useful once the SDK lands, so declining falls
-    through to the key menu (whereas ``_prompt_install_harness`` returns to the
-    picker, since pi can't configure credentials without its CLI). Install is
-    portable and index-free — see
-    :func:`~?agent_meow.onboarding.cursor_auth.cursor_install_command`.
-
-    :returns: Status string for the drill-in's transient status line, or
-        ``None`` (set-key-anyway / Esc / printed-command, no actionable result).
-    """
-    from rich.markup import escape as _rich_escape
-
-    from agent_meow.onboarding.cursor_auth import CURSOR_EXTRA, install_cursor_sdk
-    from agent_meow.onboarding.extra_install import extra_install_display
-    from agent_meow.onboarding.interactive import console, select
-
-    cmd = extra_install_display(CURSOR_EXTRA)
-    # ``select`` renders text through Rich markup; escape the literal
-    # ``[cursor]`` so it renders verbatim.
-    cmd_markup = _rich_escape(cmd)
-    choice = select(
-        "Cursor's SDK (cursor-sdk) isn't installed. Install it now?",
-        [
-            f"Install it now ({cmd_markup})",
-            "Set the Cursor key anyway",
-            "I'll run it myself (show the command)",
-        ],
-        descriptions=[
-            f"Runs `{cmd_markup}`, then continues.",
-            "Skip the install — store the key now; the SDK can be added later.",
-            "Print the command so you can install it yourself, then continue.",
-        ],
-        default=0,
-        clear_on_exit=True,
-    )
-    if choice == 0:
-        console.print(f"  [dim]Installing the cursor extra — running `{cmd_markup}`…[/dim]")
-        if install_cursor_sdk():
-            console.print("  [green]✓ cursor-sdk installed[/green]")
-            return "✓ cursor-sdk installed"
-        console.print(f"  [red]Install failed.[/red] Run it manually: [bold]{cmd_markup}[/bold]")
-        return "✗ Install failed — set the key anyway, or install by hand"
-    if choice < 0:
-        return _SOFT_INSTALL_ABORT
-    if choice == 2:  # run it yourself
-        console.print(f"  Install the cursor extra with:\n    [bold]{cmd_markup}[/bold]")
-        return None
-    # choice == 1 (set key anyway): fall through to the key menu silently.
-    return None
-
-
-def _manage_cursor_harness() -> None:
-    """Run the level-2 loop for Cursor: manage its ``CURSOR_API_KEY``.
-
-    Cursor runs via the ``cursor-sdk`` package and authenticates against
-    Cursor's own backend with a ``CURSOR_API_KEY`` — the SDK requires one (a
-    ``cursor-agent login`` does not apply, and cursor has no provider/gateway
-    family). So this manages exactly that credential: set / replace / remove an
-    API key stored in the agent-meow secret store, mirroring how the other
-    harnesses persist their api keys (the secret in the store, a
-    ``keychain:``/``env:`` reference in ``~/.agent_meow/config.yaml``).
-
-    When the optional ``cursor-sdk`` is missing, the drill-in first offers to
-    install it (:func:`_prompt_install_cursor`). Unlike the CLI-backed harnesses
-    (which gate on the CLI), declining still drops into the key menu — the
-    ``cursor:`` key is independently storable. Mirrors Antigravity post-#322.
-
-    :returns: None. Side effects: may install the ``cursor`` extra, and may
-        write the ``cursor:`` block of ``~/.agent_meow/config.yaml`` and the
-        secret store.
-    """
-    from agent_meow.onboarding import secrets as secret_store
-    from agent_meow.onboarding.cursor_auth import (
-        cursor_api_key_configured,
-        cursor_api_key_ref,
-        cursor_sdk_installed,
-    )
-    from agent_meow.onboarding.interactive import select
-
-    # Offer the install once on entry (not per loop iteration) when the SDK is
-    # absent; the result seeds the menu's status line. Declining falls through
-    # to key management, since the key is SDK-independent.
-    status: str | None = None
-    if not cursor_sdk_installed():
-        status = _prompt_install_cursor()
-        if status == _SOFT_INSTALL_ABORT:
-            return
-    while True:
-        config = _load_global_config()
-        key_set = cursor_api_key_configured(config)
-
-        rows: list[_HarnessMenuRow] = [
-            _HarnessMenuRow(
-                "Replace API key (CURSOR_API_KEY)" if key_set else "Set API key (CURSOR_API_KEY)",
-                action="set_key",
-            )
-        ]
-        if key_set:
-            rows.append(_HarnessMenuRow("Remove API key", action="remove_key"))
-        rows.append(_HarnessMenuRow("← Back", action="back"))
-
-        header = "Cursor — API key configured" if key_set else "Cursor — no API key yet"
-        idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
-        if idx < 0:  # Esc / q
-            return
-        action = rows[idx].action
-        if action == "back":
-            return
-        if action == "set_key":
-            status = _set_cursor_api_key()
-        elif action == "remove_key":
-            ref = cursor_api_key_ref(config)
-            # Only a keychain-stored secret is ours to delete; an ``env:`` ref
-            # points at the user's own environment, so just drop the config.
-            if ref is not None and ref.startswith("keychain:"):
-                secret_store.delete_secret(ref[len("keychain:") :])
-            _save_global_config({}, unset_keys=("cursor",))
-            status = "✓ Removed Cursor API key"
-
-
-def _set_cursor_api_key() -> str | None:
-    """Prompt for and store a Cursor ``CURSOR_API_KEY``; return a status line.
-
-    Offers an existing ``CURSOR_API_KEY`` from the environment first (recorded
-    as an ``env:`` reference, so the secret never enters the config or the
-    secret store), else reads the key with a hidden prompt and stores it in the
-    agent-meow secret store under ``keychain:cursor``. The ``crsr_`` prefix is
-    validated with a soft warning so a wrong paste is caught without
-    hard-blocking a future key format. The key value is never echoed.
-
-    :returns: A confirmation string for the menu's transient status, or
-        ``None`` when the user aborted (empty input / declined the warning).
-    """
-    from agent_meow.onboarding import secrets as secret_store
-    from agent_meow.onboarding.cursor_auth import (
-        CURSOR_SECRET_NAME,
-        cursor_api_key_settings,
-        looks_like_cursor_api_key,
-    )
-    from agent_meow.onboarding.interactive import prompt_text
-
-    # Strip surrounding whitespace before validating/forwarding so a key
-    # exported with a trailing newline (a common ``export $(…)`` mishap)
-    # validates and resolves cleanly — matching the pasted-key branch's
-    # ``.strip()`` below and the strip in ``resolve_secret``'s ``env:`` branch.
-    raw_detected = os.environ.get("CURSOR_API_KEY")
-    detected = raw_detected.strip() if raw_detected else None
-    if detected and click.confirm(
-        "Detected CURSOR_API_KEY in the environment — use it?", default=True
-    ):
-        if not looks_like_cursor_api_key(detected) and not click.confirm(
-            "$CURSOR_API_KEY doesn't start with 'crsr_'. Use it anyway?", default=False
-        ):
-            return None
-        _save_global_config(cursor_api_key_settings("env:CURSOR_API_KEY"))
-        return "✓ Cursor API key set (from $CURSOR_API_KEY)"
-
-    pasted = prompt_text("Cursor API key (CURSOR_API_KEY)", hide_input=True).strip()
-    if not pasted:
-        return None
-    if not looks_like_cursor_api_key(pasted) and not click.confirm(
-        "That doesn't start with 'crsr_'. Store it anyway?", default=False
-    ):
-        return None
-    secret_store.store_secret(CURSOR_SECRET_NAME, pasted)
-    _save_global_config(cursor_api_key_settings(f"keychain:{CURSOR_SECRET_NAME}"))
-    return "✓ Cursor API key stored"
-
-
-def _prompt_install_antigravity() -> str | None:
-    """Offer to install the missing ``antigravity`` extra; return a status line.
-
-    Shown atop the Antigravity drill-in when the ``google-antigravity`` SDK is absent.
-    Mirrors :func:`_prompt_install_harness` — a three-choice ``select`` (install now /
-    set key anyway / print command) — but does NOT gate key management on the SDK:
-    unlike pi (which can't be configured without its CLI), the ``antigravity:`` key is
-    storable independently, so declining just falls through to the key menu. The
-    install carries no index URL (see :func:`antigravity_install_command`); on failure
-    it prints the command to run by hand.
-
-    :returns: A status string for the drill-in's transient status (install result or
-        printed-command note), or ``None`` on set-key-anyway / Esc.
-    """
-    from rich.markup import escape as _rich_escape
-
-    from agent_meow.onboarding.antigravity_auth import ANTIGRAVITY_EXTRA, install_antigravity_sdk
-    from agent_meow.onboarding.extra_install import extra_install_display
-    from agent_meow.onboarding.interactive import console, select
-
-    cmd = extra_install_display(ANTIGRAVITY_EXTRA)
-    # ``select`` renders through Rich markup, so escape the literal ``[antigravity]``.
-    cmd_markup = _rich_escape(cmd)
-    choice = select(
-        "Antigravity's SDK (google-antigravity) isn't installed. Install it now?",
-        [
-            f"Install it now ({cmd_markup})",
-            "Set the Gemini key anyway",
-            "I'll run it myself (show the command)",
-        ],
-        descriptions=[
-            f"Runs `{cmd_markup}`, then continues.",
-            "Skip the install — store the key now; the SDK can be added later.",
-            "Print the command so you can install it yourself, then continue.",
-        ],
-        default=0,
-        clear_on_exit=True,
-    )
-    if choice == 0:
-        console.print(f"  [dim]Installing the antigravity extra — running `{cmd_markup}`…[/dim]")
-        if install_antigravity_sdk():
-            console.print("  [green]✓ google-antigravity installed[/green]")
-            return "✓ google-antigravity installed"
-        console.print(f"  [red]Install failed.[/red] Run it manually: [bold]{cmd_markup}[/bold]")
-        return "✗ Install failed — set the key anyway, or install by hand"
-    if choice < 0:
-        return _SOFT_INSTALL_ABORT
-    if choice == 2:
-        console.print(f"  Install the antigravity extra with:\n    [bold]{cmd_markup}[/bold]")
-        return None
-    # choice == 1 (set key anyway): fall through to the key menu silently.
-    return None
-
-
-def _manage_antigravity_harness() -> None:
-    """Run the level-2 loop for Antigravity: set / replace / remove its Gemini key.
-
-    Antigravity is Gemini-native (no provider family), so this manages just its
-    API key — stored in the secret store, referenced from the ``antigravity:``
-    config block — mirroring how the other harnesses persist api keys.
-
-    When the optional ``google-antigravity`` SDK is missing, the drill-in first offers
-    to install it (:func:`_prompt_install_antigravity`). Unlike the CLI-backed harnesses
-    (whose drill-in *gates* on the CLI), declining here still drops into the key menu,
-    since the ``antigravity:`` key is independently storable.
-
-    :returns: None. Side effects: may install the ``antigravity`` extra, and may write
-        the ``antigravity:`` config block and the secret store.
-    """
-    from agent_meow.onboarding import secrets as secret_store
-    from agent_meow.onboarding.antigravity_auth import (
-        ANTIGRAVITY_CONFIG_KEY,
-        ANTIGRAVITY_SECRET_NAME,
-        antigravity_api_key_configured,
-        antigravity_api_key_ref,
-        antigravity_sdk_installed,
-    )
-    from agent_meow.onboarding.interactive import select
-
-    # Offer the install once on entry (not per loop iteration); the returned status
-    # seeds the menu's transient status line.
-    status: str | None = None
-    if not antigravity_sdk_installed():
-        status = _prompt_install_antigravity()
-        if status == _SOFT_INSTALL_ABORT:
-            return
-    while True:
-        config = _load_global_config()
-        key_set = antigravity_api_key_configured(config)
-
-        rows: list[_HarnessMenuRow] = [
-            _HarnessMenuRow(
-                "Replace Gemini API key" if key_set else "Set Gemini API key",
-                action="set_key",
-            )
-        ]
-        if key_set:
-            rows.append(_HarnessMenuRow("Remove API key", action="remove_key"))
-        rows.append(_HarnessMenuRow("← Back", action="back"))
-
-        header = (
-            "Antigravity — Gemini API key configured"
-            if key_set
-            else "Antigravity — no Gemini API key yet"
-        )
-        idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
-        if idx < 0:  # Esc / q
-            return
-        action = rows[idx].action
-        if action == "back":
-            return
-        if action == "set_key":
-            status = _set_antigravity_api_key()
-        elif action == "remove_key":
-            ref = antigravity_api_key_ref(config)
-            # Only the secret we own (``keychain:antigravity``) is ours to
-            # delete: a hand-edited block may point at a shared ``keychain:<other>``
-            # secret, and an ``env:`` ref names the user's own environment. In
-            # both of those cases just drop the config block and leave the secret.
-            if ref == f"keychain:{ANTIGRAVITY_SECRET_NAME}":
-                secret_store.delete_secret(ANTIGRAVITY_SECRET_NAME)
-            _save_global_config({}, unset_keys=(ANTIGRAVITY_CONFIG_KEY,))
-            status = "✓ Removed Gemini API key"
-
-
-def _set_antigravity_api_key() -> str | None:
-    """Prompt for and store a Gemini API key; return a status line.
-
-    Offers an existing ``GEMINI_API_KEY`` / ``ANTIGRAVITY_API_KEY`` first
-    (recorded as an ``env:`` ref, so the secret stays in the environment), else
-    reads it with a hidden prompt and stores it under ``keychain:antigravity``.
-    The key prefix (``AIza`` or ``AQ``) is checked softly (a wrong paste is
-    caught but can be forced). The key is never echoed.
-
-    :returns: A status string for the menu, or ``None`` if the user aborted.
-    """
-    from agent_meow.onboarding import secrets as secret_store
-    from agent_meow.onboarding.antigravity_auth import (
-        ANTIGRAVITY_API_KEY_PREFIX_HINT,
-        ANTIGRAVITY_ENV_VARS,
-        ANTIGRAVITY_SECRET_NAME,
-        antigravity_api_key_settings,
-        looks_like_gemini_api_key,
-    )
-    from agent_meow.onboarding.interactive import prompt_text
-
-    detected_var = next((v for v in ANTIGRAVITY_ENV_VARS if os.environ.get(v)), None)
-    if detected_var is not None and click.confirm(
-        f"Detected {detected_var} in the environment — use it?", default=True
-    ):
-        detected = os.environ[detected_var]
-        if not looks_like_gemini_api_key(detected) and not click.confirm(
-            f"${detected_var} doesn't start with {ANTIGRAVITY_API_KEY_PREFIX_HINT}. "
-            "Use it anyway?",
-            default=False,
-        ):
-            return None
-        _save_global_config(antigravity_api_key_settings(f"env:{detected_var}"))
-        return f"✓ Gemini API key set (from ${detected_var})"
-
-    pasted = prompt_text("Gemini API key (GEMINI_API_KEY)", hide_input=True).strip()
-    if not pasted:
-        return None
-    if not looks_like_gemini_api_key(pasted) and not click.confirm(
-        f"That doesn't start with {ANTIGRAVITY_API_KEY_PREFIX_HINT}. Store it anyway?",
-        default=False,
-    ):
-        return None
-    secret_store.store_secret(ANTIGRAVITY_SECRET_NAME, pasted)
-    _save_global_config(antigravity_api_key_settings(f"keychain:{ANTIGRAVITY_SECRET_NAME}"))
-    return "✓ Gemini API key stored"
-
-
-def _qwen_auth_configured() -> bool:
-    """Best-effort check whether Qwen Code can authenticate non-interactively.
-
-    Qwen has **no CLI login** — its ``auth`` subcommand was removed. For our
-    ``qwen --acp`` executor, auth must come from one of:
-
-    - API-key / provider env vars (the headless path): ``OPENAI_API_KEY``,
-      ``BAILIAN_CODING_PLAN_API_KEY``, or ``OPENROUTER_API_KEY``; or
-    - an auth type selected via the interactive ``/auth`` flow (API key or the
-      Alibaba Cloud Coding Plan), persisted to ``~/.qwen/settings.json``.
-
-    (Qwen OAuth was discontinued on 2026-04-15, so it is not an auth path here.)
-
-    Best-effort: the env-var check is reliable; the on-disk check keys off
-    ``settings.json`` fields whose schema is not contract-stable (see
-    docs/QWEN_FOLLOWUPS.md). Returns ``False`` for a fresh install with no auth —
-    the case that must NOT render as "signed in".
-
-    :returns: ``True`` when auth is detectable, else ``False``.
-    """
-    from pathlib import Path
-
-    if any(
-        os.environ.get(v)
-        for v in ("OPENAI_API_KEY", "BAILIAN_CODING_PLAN_API_KEY", "OPENROUTER_API_KEY")
-    ):
-        return True
-    settings = Path.home() / ".qwen" / "settings.json"
-    if settings.is_file():
-        try:
-            data = json.loads(settings.read_text())
-        except (OSError, ValueError):
-            return False
-        if isinstance(data, dict):
-            if data.get("selectedAuthType"):
-                return True
-            security = data.get("security")
-            auth = security.get("auth") if isinstance(security, dict) else None
-            if isinstance(auth, dict) and (
-                auth.get("selectedType") or auth.get("selectedAuthType")
-            ):
-                return True
-    return False
-
-
-def _print_qwen_auth_help() -> None:
-    """Print Qwen's authentication options (it has no ``qwen login``)."""
-    from agent_meow.onboarding.interactive import console
-
-    console.print(
-        "\n  [bold]Authenticate Qwen Code[/bold]:\n"
-        "    • Interactive: run [bold]qwen[/bold] and use [bold]/auth[/bold] "
-        "(API key or Alibaba Cloud Coding Plan)\n"
-        "    • Headless / ACP: set [bold]OPENAI_API_KEY[/bold] + "
-        "[bold]OPENAI_BASE_URL[/bold] + [bold]OPENAI_MODEL[/bold]\n"
-        "    • Coding Plan: [bold]BAILIAN_CODING_PLAN_API_KEY[/bold] + the "
-        "Coding Plan base URL\n"
-        "    • OpenRouter: [bold]OPENROUTER_API_KEY[/bold] + "
-        "OPENAI_BASE_URL=https://openrouter.ai/api/v1\n"
-    )
-
-
-def _launch_qwen_auth() -> str | None:
-    """Launch the interactive ``qwen`` TUI so the user can run ``/auth``.
-
-    The ``/auth`` flow (API key or Alibaba Cloud Coding Plan) is interactive, so
-    this hands the terminal to ``qwen``; when the user exits, re-check auth.
-
-    :returns: A status line for the menu reflecting the post-launch auth state.
-    """
-    from agent_meow.onboarding.harness_install import (
-        QWEN_KEY,
-        harness_cli_installed,
-        harness_install_spec,
-    )
-    from agent_meow.onboarding.interactive import console
-
-    if not harness_cli_installed(QWEN_KEY):
-        return "✗ qwen CLI not found"
-    spec = harness_install_spec(QWEN_KEY)
-    assert spec is not None
-    console.print(
-        "  [dim]Launching Qwen — type [bold]/auth[/bold] to configure authentication, "
-        "then exit (/quit) to return.[/dim]"
-    )
-    with contextlib.suppress(OSError, KeyboardInterrupt):
-        subprocess.run([spec.binary], check=False)
-    return "✓ authentication detected" if _qwen_auth_configured() else "Auth not detected yet"
-
-
-def _manage_qwen_harness() -> None:
-    """Run the level-2 loop for Qwen Code: install the CLI and guide auth setup.
-
-    Qwen has **no CLI subscription login** — its ``auth`` subcommand was removed.
-    Authentication is either OpenAI-compatible env vars (for the headless
-    ``qwen --acp`` path) or the interactive ``/auth`` command (API key or
-    Alibaba Cloud Coding Plan). So this drill-in installs the CLI when missing,
-    reports best-effort auth status (:func:`_qwen_auth_configured`), and offers
-    to launch ``qwen`` for ``/auth`` — it does **not** pretend to run a ``qwen
-    login``
-    (there isn't one). Storing/injecting an OpenAI-compatible key *through
-    agent-meow* is deferred (see docs/QWEN_FOLLOWUPS.md, Provider Injection).
-
-    Like the CLI-backed harnesses, a missing CLI gates the drill-in — there's
-    nothing to configure for a harness you can't run.
-
-    :returns: None. Side effects: may ``npm install`` the qwen CLI and launch the
-        interactive ``qwen`` TUI for ``/auth``.
-    """
-    from agent_meow.onboarding.harness_install import (
-        QWEN_KEY,
-        harness_cli_installed,
-        harness_install_command,
-        install_harness_cli,
-    )
-    from agent_meow.onboarding.interactive import console, select
-
-    # Gate on the CLI. Offer to install it; declining (or copy-the-command)
-    # returns to the harness picker.
-    if not harness_cli_installed(QWEN_KEY):
-        cmd = " ".join(harness_install_command(QWEN_KEY))
-        choice = select(
-            "Qwen Code's CLI isn't installed. Install it now?",
-            [
-                f"Yes — install ({cmd})",
-                "No — back to harnesses",
-                "I'll run it myself (show the command)",
-            ],
-            descriptions=[
-                f"Runs `{cmd}` (needs npm), then continues to auth setup.",
-                "Return to the harness picker without installing.",
-                "Print the command so you can install it yourself, then return.",
-            ],
-            default=0,
-            clear_on_exit=True,
-        )
-        if choice == 0:
-            console.print(f"  [dim]Installing Qwen Code — running `{cmd}`…[/dim]")
-            if install_harness_cli(QWEN_KEY):
-                console.print("  [green]✓ Qwen Code installed[/green]")
-            else:
-                console.print(
-                    f"  [red]Install failed.[/red] Run it manually, then re-open: "
-                    f"[bold]{cmd}[/bold]"
-                )
-                return
-        else:
-            if choice == 2:  # run it yourself
-                console.print(f"  Install Qwen Code with:\n    [bold]{cmd}[/bold]")
-            return
-
-    # Carry the prior action's confirmation as a transient status line.
-    status: str | None = None
-    while True:
-        configured = _qwen_auth_configured()
-        header = (
-            "Qwen Code — authentication detected"
-            if configured
-            else "Qwen Code — not authenticated yet"
-        )
-        rows: list[_HarnessMenuRow] = [
-            _HarnessMenuRow("Open Qwen to run /auth", action="auth"),
-            _HarnessMenuRow("Show auth options", action="help"),
-            _HarnessMenuRow("← Back", action="back"),
-        ]
-        idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
-        if idx < 0:  # Esc / q
-            return
-        action = rows[idx].action
-        if action == "back":
-            return
-        if action == "auth":
-            status = _launch_qwen_auth()
-        elif action == "help":
-            _print_qwen_auth_help()
-            status = None
-
-
-def _print_goose_auth_help() -> None:
-    """Print Goose's configuration options (agent-meow manages no Goose credential)."""
-    from agent_meow.onboarding.interactive import console
-
-    console.print(
-        "\n  [bold]Configure Goose[/bold] (agent-meow stores no Goose credential):\n"
-        "    • Interactive: run [bold]goose configure[/bold] to pick a provider "
-        "and store its key (keyring or ~/.config/goose/config.yaml)\n"
-        "    • Env override: set [bold]GOOSE_PROVIDER[/bold] + [bold]GOOSE_MODEL[/bold] "
-        "(plus the provider's key, e.g. ANTHROPIC_API_KEY / OPENAI_API_KEY)\n"
-    )
-
-
-def _launch_goose_configure() -> str | None:
-    """Launch the interactive ``goose configure`` flow; return a status line.
-
-    ``goose configure`` is interactive (pick a provider, enter its key), so this
-    hands the terminal to ``goose``; when the user exits, re-read the configured
-    provider. Mirrors :func:`_launch_qwen_auth`.
-
-    :returns: A status line reflecting the post-configure provider state.
-    """
-    from agent_meow.onboarding.goose_auth import goose_config_summary
-    from agent_meow.onboarding.harness_install import (
-        GOOSE_KEY,
-        harness_cli_installed,
-        harness_install_spec,
-    )
-    from agent_meow.onboarding.interactive import console
-
-    if not harness_cli_installed(GOOSE_KEY):
-        return "✗ goose CLI not found"
-    spec = harness_install_spec(GOOSE_KEY)
-    assert spec is not None
-    console.print(
-        "  [dim]Launching [bold]goose configure[/bold] — pick a provider and "
-        "enter its key, then return.[/dim]"
-    )
-    with contextlib.suppress(OSError, KeyboardInterrupt):
-        subprocess.run([spec.binary, "configure"], check=False)
-    summary = goose_config_summary()
-    if summary.provider:
-        model = f" ({summary.model})" if summary.model else ""
-        return f"✓ provider configured: {summary.provider}{model}"
-    return "Provider not detected yet"
-
-
-def _manage_goose_harness() -> None:
-    """Run the level-2 loop for Goose: ensure the CLI, then guide ``goose configure``.
-
-    Goose owns its own auth (keyring / ``~/.config/goose/config.yaml``) — agent-meow
-    stores no Goose credential — so, like the Qwen drill-in, this reports
-    best-effort configuration status and offers to launch ``goose configure``; it
-    does not store a key through agent-meow. A missing CLI gates the drill-in
-    (nothing to configure for a harness you can't run); Goose ships out-of-band
-    (brew / curl, no npm package), so we show its install hint rather than
-    auto-installing. Serves both ``goose-native`` (TUI) and the headless
-    ``goose`` (ACP) harness — both launch the same ``goose`` binary and read the
-    same config.
-
-    :returns: None. Side effects: may launch the interactive ``goose configure``.
-    """
-    from agent_meow.onboarding.goose_auth import goose_config_summary
-    from agent_meow.onboarding.harness_install import (
-        GOOSE_KEY,
-        harness_cli_installed,
-        harness_install_spec,
-    )
-    from agent_meow.onboarding.interactive import console, select
-
-    # Gate on the CLI. Goose installs out-of-band (no npm package), so we can't
-    # auto-install — show the hint and return.
-    if not harness_cli_installed(GOOSE_KEY):
-        spec = harness_install_spec(GOOSE_KEY)
-        hint = spec.install_hint if spec and spec.install_hint else "brew install block-goose-cli"
-        console.print(
-            f"  Goose's CLI isn't installed. Install it with:\n    [bold]{hint}[/bold]\n"
-            "  then re-open this menu."
-        )
-        return
-
-    status: str | None = None
-    while True:
-        summary = goose_config_summary()
-        if summary.provider:
-            model = f" · {summary.model}" if summary.model else ""
-            header = f"Goose — provider configured: {summary.provider}{model}"
-        else:
-            header = "Goose — no provider configured yet"
-        rows: list[_HarnessMenuRow] = [
-            _HarnessMenuRow("Run goose configure", action="configure"),
-            _HarnessMenuRow("Show configuration options", action="help"),
-            _HarnessMenuRow("← Back", action="back"),
-        ]
-        idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
-        if idx < 0:  # Esc / q
-            return
-        action = rows[idx].action
-        if action == "back":
-            return
-        if action == "configure":
-            status = _launch_goose_configure()
-        elif action == "help":
-            _print_goose_auth_help()
-            status = None
-
-
-def _manage_hermes_harness() -> None:
-    """Run the level-2 loop for Hermes: ensure the CLI is installed.
-
-    Hermes owns its own auth via ``hermes model`` (interactive provider/model
-    picker) and is installed via a curl script from Nous Research — agent-meow
-    stores no Hermes credential. A missing CLI gates the drill-in; when
-    installed, the drill-in offers to launch ``hermes model`` for provider
-    configuration.
-
-    :returns: None. Side effects: may launch ``hermes model``.
-    """
-    from agent_meow.onboarding.harness_install import (
-        HERMES_KEY,
-        harness_cli_installed,
-        harness_install_spec,
-    )
-    from agent_meow.onboarding.interactive import console, select
-
-    if not harness_cli_installed(HERMES_KEY):
-        spec = harness_install_spec(HERMES_KEY)
-        hint = (
-            spec.install_hint
-            if spec and spec.install_hint
-            else "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash"
-        )
-        console.print(
-            f"  Hermes isn't installed. Install it with:\n    [bold]{hint}[/bold]\n"
-            "  then re-open this menu."
-        )
-        return
-
-    status: str | None = None
-    while True:
-        rows: list[_HarnessMenuRow] = [
-            _HarnessMenuRow("Run hermes model (configure provider)", action="model"),
-            _HarnessMenuRow("← Back", action="back"),
-        ]
-        idx = select(
-            "Hermes Agent",
-            [r.label for r in rows],
-            clear_on_exit=True,
-            status=status,
-        )
-        if idx < 0:
-            return
-        action = rows[idx].action
-        if action == "back":
-            return
-        if action == "model":
-            import subprocess
-
-            try:
-                subprocess.run(["hermes", "model"], check=False)
-                status = "✓ hermes model completed"
-            except FileNotFoundError:
-                status = "✗ hermes binary not found"
-
-
-def _manage_kiro_harness() -> None:
-    """Run the level-2 loop for Kiro: ensure the CLI is installed and signed in.
-
-    Kiro owns its own auth via ``kiro-cli login`` (Builder ID / social login /
-    Identity Center) and is installed via Kiro's curl installer — agent-meow stores
-    no Kiro credential. A missing CLI gates the drill-in; when installed, the
-    drill-in offers to launch ``kiro-cli login`` to sign in. Mirrors
-    :func:`_manage_hermes_harness`.
-
-    :returns: None. Side effects: may launch ``kiro-cli login``.
-    """
-    from agent_meow.onboarding.harness_install import (
-        KIRO_KEY,
-        harness_cli_installed,
-        harness_install_spec,
-    )
-    from agent_meow.onboarding.interactive import console, select
-
-    if not harness_cli_installed(KIRO_KEY):
-        spec = harness_install_spec(KIRO_KEY)
-        hint = (
-            spec.install_hint
-            if spec and spec.install_hint
-            else "curl -fsSL https://cli.kiro.dev/install | bash"
-        )
-        console.print(
-            f"  Kiro isn't installed. Install it with:\n    [bold]{hint}[/bold]\n"
-            "  then re-open this menu."
-        )
-        return
-
-    status: str | None = None
-    while True:
-        rows: list[_HarnessMenuRow] = [
-            _HarnessMenuRow("Run kiro-cli login (sign in)", action="login"),
-            _HarnessMenuRow("← Back", action="back"),
-        ]
-        idx = select(
-            "Kiro",
-            [r.label for r in rows],
-            clear_on_exit=True,
-            status=status,
-        )
-        if idx < 0:
-            return
-        action = rows[idx].action
-        if action == "back":
-            return
-        if action == "login":
-            import subprocess
-
-            try:
-                subprocess.run(["kiro-cli", "login"], check=False)
-                status = "✓ kiro-cli login completed"
-            except FileNotFoundError:
-                status = "✗ kiro-cli binary not found"
-
-
-def _print_kimi_auth_help() -> None:
-    """Print Kimi Code's authentication options.
-
-    Kimi authenticates against Moonshot AI's backend rather than an agent-meow
-    credential: ``kimi login`` (OAuth or a Moonshot API key) for the default
-    provider, and ``kimi provider add`` to register any other provider (an
-    OpenAI-compatible endpoint, a Databricks gateway, …) in
-    ``~/.kimi/config.toml``. agent-meow has no per-spawn provider override for
-    upstream kimi, so all of this lives in the kimi CLI's own config —
-    agent-meow-side injection remains a deferred follow-up.
-    """
-    from agent_meow.onboarding.interactive import console
-
-    console.print(
-        "\n  [bold]Authenticate Kimi Code[/bold] (kimi manages its own config in "
-        "~/.kimi/config.toml):\n"
-        "    • Default provider: run [bold]kimi login[/bold] "
-        "(Moonshot OAuth, or paste a Moonshot API key)\n"
-        "    • Other providers: run [bold]kimi provider add[/bold] "
-        "(OpenAI-compatible endpoint, gateway, …), then pin that model id in "
-        "the agent spec\n"
-        "    • agent-meow stores no kimi credential and cannot thread one per "
-        "spawn — configure it once in the kimi CLI\n"
-    )
-
-
-def _manage_kimi_harness() -> None:
-    """Run the level-2 loop for Kimi Code: install the CLI and drive ``kimi login``.
-
-    Unlike Qwen (which has no ``login`` subcommand), Kimi ships a real
-    ``kimi login`` (Moonshot OAuth or API key) and ``kimi logout``, so this
-    drill-in offers sign-in / sign-out directly. Kimi has no first-class
-    "am I logged in?" probe (its install spec sets ``status_args=None``), so
-    :func:`~?agent_meow.onboarding.harness_install.harness_cli_logged_in` always
-    reports ``False`` for it — meaning ``harness_login`` runs ``kimi login``
-    every time it is asked (the interactive flow lets the user cancel if
-    already authenticated) and its boolean return is not a reliable success
-    signal. We therefore treat login / logout as best-effort side effects and
-    report that the flow finished rather than asserting an auth state.
-
-    Like the other CLI-backed harnesses, a missing CLI gates the drill-in —
-    there is nothing to configure for a harness you can't run.
-
-    :returns: None. Side effects: may install the kimi CLI and run
-        ``kimi login`` / ``kimi logout`` in the foreground.
-    """
-    from agent_meow.onboarding.harness_install import (
-        KIMI_KEY,
-        harness_cli_installed,
-        harness_install_spec,
-        harness_login,
-        harness_logout,
-    )
-    from agent_meow.onboarding.interactive import console, select
-
-    # Gate on the CLI. Kimi ships a single binary via a curl installer (not
-    # npm), so there's no in-process auto-install — name the command and let
-    # the user run it, then re-open. Mirrors how ``harness_setup_hint`` treats
-    # the other curl-installed CLI (cursor-agent).
-    if not harness_cli_installed(KIMI_KEY):
-        spec = harness_install_spec(KIMI_KEY)
-        hint = (spec.install_hint if spec else None) or "see Kimi Code docs"
-        console.print(
-            "  Kimi Code's CLI isn't installed. Install it with:\n"
-            f"    [bold]{hint}[/bold]\n"
-            "  then re-open this menu to sign in."
-        )
-        return
-
-    # Carry the prior action's confirmation as a transient status line.
-    status: str | None = None
-    while True:
-        rows: list[_HarnessMenuRow] = [
-            _HarnessMenuRow("Sign in (kimi login)", action="login"),
-            _HarnessMenuRow("Sign out (kimi logout)", action="logout"),
-            _HarnessMenuRow("Show auth options", action="help"),
-            _HarnessMenuRow("← Back", action="back"),
-        ]
-        idx = select(
-            "Kimi Code — authentication is managed by the kimi CLI",
-            [r.label for r in rows],
-            clear_on_exit=True,
-            status=status,
-        )
-        if idx < 0:  # Esc / q
-            return
-        action = rows[idx].action
-        if action == "back":
-            return
-        if action == "login":
-            # ``kimi login`` runs in the foreground (OAuth / API-key prompt);
-            # its boolean return is unreliable for kimi (no status probe), so
-            # don't assert success — just confirm the flow finished.
-            console.print("  [dim]Signing in to Kimi (its login will open)…[/dim]")
-            harness_login(KIMI_KEY)
-            status = "kimi login flow finished — kimi stores its own credentials"
-        elif action == "logout":
-            console.print("  [dim]Signing out of Kimi…[/dim]")
-            harness_logout(KIMI_KEY)
-            status = "kimi logout flow finished"
-        elif action == "help":
-            _print_kimi_auth_help()
-            status = None
-
-
-def _prompt_install_copilot() -> str | None:
-    """Offer to install the missing ``copilot`` extra; return a status line.
-
-    Shown atop the Copilot drill-in when the optional-extra ``github-copilot-sdk``
-    is absent. Three-choice ``select`` like :func:`_prompt_install_cursor` /
-    :func:`_prompt_install_antigravity` (install now / set token anyway / show
-    command), and like them does NOT gate token management on the SDK: the
-    ``copilot:`` token is stored independently and is useful once the SDK lands,
-    so declining falls through to the token menu. Install is portable and
-    index-free — see
-    :func:`~?agent_meow.onboarding.copilot_auth.copilot_install_command`.
-
-    :returns: Status string for the drill-in's transient status line, or
-        ``None`` (set-token-anyway / Esc / printed-command, no actionable result).
-    """
-    from rich.markup import escape as _rich_escape
-
-    from agent_meow.onboarding.copilot_auth import COPILOT_EXTRA, install_copilot_sdk
-    from agent_meow.onboarding.extra_install import extra_install_display
-    from agent_meow.onboarding.interactive import console, select
-
-    cmd = extra_install_display(COPILOT_EXTRA)
-    # ``select`` renders text through Rich markup; escape the literal
-    # ``[copilot]`` so it renders verbatim.
-    cmd_markup = _rich_escape(cmd)
-    choice = select(
-        "Copilot's SDK (github-copilot-sdk) isn't installed. Install it now?",
-        [
-            f"Install it now ({cmd_markup})",
-            "Set the GitHub token anyway",
-            "I'll run it myself (show the command)",
-        ],
-        descriptions=[
-            f"Runs `{cmd_markup}`, then continues.",
-            "Skip the install — store the token now; the SDK can be added later.",
-            "Print the command so you can install it yourself, then continue.",
-        ],
-        default=0,
-        clear_on_exit=True,
-    )
-    if choice == 0:
-        console.print(f"  [dim]Installing the copilot extra — running `{cmd_markup}`…[/dim]")
-        if install_copilot_sdk():
-            console.print("  [green]✓ github-copilot-sdk installed[/green]")
-            return "✓ github-copilot-sdk installed"
-        console.print(f"  [red]Install failed.[/red] Run it manually: [bold]{cmd_markup}[/bold]")
-        return "✗ Install failed — set the token anyway, or install by hand"
-    if choice < 0:
-        return _SOFT_INSTALL_ABORT
-    if choice == 2:  # run it yourself
-        console.print(f"  Install the copilot extra with:\n    [bold]{cmd_markup}[/bold]")
-        return None
-    # choice == 1 (set token anyway): fall through to the token menu silently.
-    return None
-
-
-def _manage_copilot_harness() -> None:
-    """Run the level-2 loop for Copilot: manage its GitHub token.
-
-    Copilot runs via the ``github-copilot-sdk`` package and authenticates against
-    GitHub's Copilot backend with a GitHub token — the SDK requires one and it
-    has no provider/gateway family. So this manages exactly that credential:
-    set / replace / remove a token stored in the agent-meow secret store, mirroring
-    how cursor / antigravity persist theirs (the secret in the store, a
-    ``keychain:``/``env:`` reference in ``~/.agent_meow/config.yaml``).
-
-    When the optional ``github-copilot-sdk`` is missing, the drill-in first
-    offers to install it (:func:`_prompt_install_copilot`). Unlike the CLI-backed
-    harnesses (which gate on the CLI), declining still drops into the token
-    menu — the ``copilot:`` token is independently storable. Mirrors cursor /
-    antigravity.
-
-    :returns: None. Side effects: may install the ``copilot`` extra, and may
-        write the ``copilot:`` block of ``~/.agent_meow/config.yaml`` and the
-        secret store.
-    """
-    from agent_meow.onboarding import secrets as secret_store
-    from agent_meow.onboarding.copilot_auth import (
-        COPILOT_CONFIG_KEY,
-        COPILOT_SECRET_NAME,
-        copilot_github_token_configured,
-        copilot_github_token_ref,
-        copilot_sdk_installed,
-    )
-    from agent_meow.onboarding.interactive import select
-
-    # Offer the install once on entry (not per loop iteration) when the SDK is
-    # absent; the result seeds the menu's status line. Declining falls through
-    # to token management, since the token is SDK-independent.
-    status: str | None = None
-    if not copilot_sdk_installed():
-        status = _prompt_install_copilot()
-        if status == _SOFT_INSTALL_ABORT:
-            return
-    while True:
-        config = _load_global_config()
-        token_set = copilot_github_token_configured(config)
-
-        rows: list[_HarnessMenuRow] = [
-            _HarnessMenuRow(
-                "Replace GitHub token" if token_set else "Set GitHub token",
-                action="set_key",
-            )
-        ]
-        if token_set:
-            rows.append(_HarnessMenuRow("Remove GitHub token", action="remove_key"))
-        rows.append(_HarnessMenuRow("← Back", action="back"))
-
-        header = (
-            "Copilot — GitHub token configured" if token_set else "Copilot — no GitHub token yet"
-        )
-        idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
-        if idx < 0:  # Esc / q
-            return
-        action = rows[idx].action
-        if action == "back":
-            return
-        if action == "set_key":
-            status = _set_copilot_github_token()
-        elif action == "remove_key":
-            ref = copilot_github_token_ref(config)
-            # Only the secret we own (``keychain:copilot``) is ours to delete: a
-            # hand-edited block may point at a shared ``keychain:<other>`` secret,
-            # and an ``env:`` ref names the user's own environment. In both of
-            # those cases just drop the config block and leave the secret.
-            if ref == f"keychain:{COPILOT_SECRET_NAME}":
-                secret_store.delete_secret(COPILOT_SECRET_NAME)
-            _save_global_config({}, unset_keys=(COPILOT_CONFIG_KEY,))
-            status = "✓ Removed Copilot GitHub token"
-
-
-def _set_copilot_github_token() -> str | None:
-    """Prompt for and store a Copilot GitHub token; return a status line.
-
-    Offers an existing ``COPILOT_GITHUB_TOKEN`` / ``GH_TOKEN`` / ``GITHUB_TOKEN``
-    first (recorded as an ``env:`` ref, so the secret stays in the environment),
-    else reads it with a hidden prompt and stores it under ``keychain:copilot``.
-    The token shape is checked softly (a classic ``ghp_`` PAT — which Copilot
-    rejects — or a wrong paste is flagged but can be forced). The token is never
-    echoed.
-
-    :returns: A status string for the menu, or ``None`` if the user aborted.
-    """
-    from agent_meow.onboarding import secrets as secret_store
-    from agent_meow.onboarding.copilot_auth import (
-        COPILOT_SECRET_NAME,
-        COPILOT_TOKEN_ENV_VARS,
-        copilot_github_token_settings,
-        looks_like_github_copilot_token,
-    )
-    from agent_meow.onboarding.interactive import prompt_text
-
-    detected_var = next((v for v in COPILOT_TOKEN_ENV_VARS if os.environ.get(v)), None)
-    if detected_var is not None and click.confirm(
-        f"Detected {detected_var} in the environment — use it?", default=True
-    ):
-        detected = os.environ[detected_var]
-        if not looks_like_github_copilot_token(detected) and not click.confirm(
-            f"${detected_var} doesn't look like a Copilot-capable GitHub token "
-            "(github_pat_/gho_). Use it anyway?",
-            default=False,
-        ):
-            return None
-        _save_global_config(copilot_github_token_settings(f"env:{detected_var}"))
-        return f"✓ Copilot GitHub token set (from ${detected_var})"
-
-    pasted = prompt_text("GitHub token with Copilot access", hide_input=True).strip()
-    if not pasted:
-        return None
-    if not looks_like_github_copilot_token(pasted) and not click.confirm(
-        "That doesn't look like a Copilot-capable GitHub token (github_pat_/gho_). "
-        "Store it anyway?",
-        default=False,
-    ):
-        return None
-    secret_store.store_secret(COPILOT_SECRET_NAME, pasted)
-    _save_global_config(copilot_github_token_settings(f"keychain:{COPILOT_SECRET_NAME}"))
-    return "✓ Copilot GitHub token stored"
-
-
-def _manage_credential(provider: str, family: str) -> str | None:
-    """Run the level-3 loop for one credential: make default / remove.
-
-    Opened by selecting a credential at level 2. Offers ``Make default`` (only
-    when it is not already this harness's default), ``Remove``, and ``← Back``.
-    Make-default / remove return to level 2 with a confirmation; ``← Back`` /
-    Esc / ``q`` return with no change.
-
-    :param provider: The provider id of the chosen credential, e.g. ``"openai"``.
-    :param family: The harness surface in context, ``"anthropic"`` /
-        ``"openai"`` / ``"pi"``.
-    :returns: A confirmation string to show as a transient status at level 2,
-        or ``None`` when nothing changed.
-    """
-    from agent_meow.onboarding.configure_models import family_label
-    from agent_meow.onboarding.interactive import select
-    from agent_meow.onboarding.provider_config import (
-        DATABRICKS_KIND,
-        SUBSCRIPTION_KIND,
-        load_providers,
-        surface_default_provider,
-    )
-
-    config = _load_global_config()
-    entry = load_providers(config).get(provider)
-    if entry is None:
-        return None
-    label = _family_credential_label(config, family, provider, entry)
-    rows: list[_HarnessMenuRow] = []
-    # "Make default" is offered unless this credential is already the
-    # surface's *effective* default (matching the ✓ on the level-2 row) —
-    # for pi that covers the fallback-driven default too, where offering
-    # "make default" would be a confusing no-op.
-    default = surface_default_provider(config, family)
-    if default is None or default.name != provider:
-        rows.append(
-            _HarnessMenuRow(
-                f"Make default for {family_label(family)}", action="set_default", provider=provider
-            )
-        )
-    rows.append(_HarnessMenuRow("Remove", action="remove", provider=provider))
-    rows.append(_HarnessMenuRow("← Back", action="back"))
-
-    idx = select(label, [r.label for r in rows], clear_on_exit=True)
-    if idx < 0:  # Esc / q — back to the credential list, no change
-        return None
-    row = rows[idx]
-    if row.action == "back":
-        return None
-    if row.action == "set_default":
-        return _set_harness_default(provider, family)
-    # A subscription's credential lives in the harness CLI's own auth file, not
-    # our config — so removing it means signing out of that CLI (otherwise the
-    # login persists and ambient detection re-adopts it on the next open).
-    if entry.kind == SUBSCRIPTION_KIND:
-        return _remove_subscription(provider, family)
-    # A databricks provider was wired by `ucode configure`, which edits
-    # harness configs outside ~/.agent_meow/config.yaml — so removing it
-    # also cleans those edits up (otherwise codex keeps routing through
-    # the workspace gateway).
-    if entry.kind == DATABRICKS_KIND:
-        return _remove_databricks_provider(provider)
-    return _remove_credential(provider)
-
-
-def _remove_subscription(provider: str, family: str) -> str | None:
-    """Sign out of the harness CLI and remove the subscription credential.
-
-    Unlike a key/gateway provider (whose credential is ours to drop), a
-    subscription is backed by the harness CLI's own login file
-    (``~/.codex/auth.json`` / ``~/.claude/.credentials.json``). Deleting only
-    our entry would leave that login in place — so it would still drive the
-    standalone CLI, and ambient detection would re-adopt the subscription on the
-    next ``configure`` open. So "remove" here runs the harness's own logout
-    (``codex logout`` / ``claude auth logout``) and then drops our entry. Guarded
-    by an explicit confirm (default No) because it signs the user out of the
-    standalone CLI too. (To merely stop *using* a subscription while staying
-    logged in, the user makes another provider the default instead.)
-
-    :param provider: The subscription provider id, e.g. ``"codex-subscription"``.
-    :param family: The harness family, ``"anthropic"`` (Claude) / ``"openai"``
-        (Codex).
-    :returns: A confirmation message for the level-2 status line, or ``None``
-        when the user declined (nothing changed). Side effects: runs the
-        harness logout command and writes ``~/.agent_meow/config.yaml``.
-    """
-    from agent_meow.onboarding.harness_install import harness_install_spec, harness_logout
-    from agent_meow.onboarding.interactive import select
-
-    spec = harness_install_spec(family)
-    disp = spec.display if spec is not None else family
-    logout_cmd = (
-        f"{spec.binary} {' '.join(spec.logout_args)}"
-        if spec is not None and spec.logout_args is not None
-        else "logout"
-    )
-    choice = select(
-        f"Remove {disp} subscription?",
-        [f"Yes — sign out of {disp} and remove", "No — keep it"],
-        descriptions=[
-            f"Runs `{logout_cmd}`, signing you out of the standalone {disp} CLI "
-            "too, then removes it here.",
-            f"Leave the subscription and your {disp} login untouched.",
-        ],
-        default=1,  # default to the non-destructive choice
-        clear_on_exit=True,
-    )
-    if choice != 0:
-        return None
-    signed_out = harness_logout(family)
-    # Drop our entry regardless — the user asked to remove it. If logout failed
-    # we say so, since the standalone login may persist (and be re-detected).
-    _remove_credential(provider)
-    if signed_out:
-        return f"✓ Signed out of {disp} and removed"
-    return (
-        f"✓ Removed {disp} subscription — note: `{logout_cmd}` did not complete, "
-        f"so you may still be signed in to the {disp} CLI"
-    )
-
-
-def _remove_databricks_provider(provider: str) -> str:
-    """Remove a databricks provider and clean up ucode's harness wiring.
-
-    A ``kind: databricks`` provider was wired by running ``ucode configure``
-    (the add flow), which writes harness configs *outside*
-    ``~/.agent_meow/config.yaml`` — most damagingly, for Codex < 0.134.0 it
-    rewrites the user's real ``~/.codex/config.toml`` (top-level
-    ``profile = "ucode"``) so even the bare ``codex`` CLI routes through the
-    workspace gateway, and ``ucode revert`` does not undo that edit. Removing
-    the provider therefore undoes that wiring as part of the removal — no
-    extra confirm, matching how a key provider's ``Remove`` acts immediately.
-    The cleanup only ever touches ucode-namespaced artifacts (the ``profile``
-    selector only when it equals ``"ucode"``; see
-    :mod:`~?agent_meow.onboarding.ucode_cleanup`), so the user's own settings
-    are never at risk. Removal applies to every harness the provider
-    serves — a databricks entry routes both Claude and Codex.
-
-    :param provider: The databricks provider id, e.g. ``"databricks"``.
-    :returns: A confirmation message for the level-2 status line reporting
-        the removal and what wiring was cleaned (nothing extra is appended
-        when no ucode wiring existed). Side effects: may edit
-        ``~/.codex/config.toml``, delete ucode sidecar files, run
-        ``claude mcp remove``, and write ``~/.agent_meow/config.yaml``.
-    """
-    from agent_meow.errors import OmnigentError
-    from agent_meow.onboarding.ucode_cleanup import remove_ucode_wiring
-
-    cleanup_note = ""
-    try:
-        removal = remove_ucode_wiring()
-    except (OmnigentError, OSError) as exc:
-        # The entry removal below still proceeds — the user asked for it —
-        # but say exactly what was left behind instead of failing silently.
-        cleanup_note = f" — ucode cleanup incomplete: {exc}"
-    else:
-        cleaned: list[str] = []
-        if removal.codex_config_stripped:
-            cleaned.append("cleaned ~/.codex/config.toml")
-        if removal.removed_sidecars:
-            cleaned.append(f"deleted {len(removal.removed_sidecars)} ucode sidecar file(s)")
-        if removal.web_search_mcp_removed:
-            cleaned.append("unregistered ucode's web_search MCP")
-        if cleaned:
-            cleanup_note = f" — {', '.join(cleaned)}"
-    removed_msg = _remove_credential(provider) or f"✓ Removed {provider}"
-    return f"{removed_msg}{cleanup_note}"
-
-
-def _set_harness_default(provider: str, family: str) -> str | None:
-    """Make *provider* the default for *family* and persist wholesale.
-
-    :param provider: The provider name to default, e.g. ``"openrouter"``.
-    :param family: The harness surface to scope the default to,
-        ``"anthropic"``, ``"openai"``, or ``"pi"`` — leaving the other
-        harnesses' defaults untouched.
-    :returns: A confirmation message for the caller to show as a transient
-        status, or ``None`` when there was nothing to do. Side effect:
-        writes ``~/.agent_meow/config.yaml``.
-    """
-    from agent_meow.onboarding.configure_models import family_label
-    from agent_meow.onboarding.provider_config import load_providers, set_default_provider
-
-    block = _load_global_config().get("providers")
-    if not isinstance(block, dict):
-        return None
-    entry = load_providers({"providers": block}).get(provider)
-    label = _credential_label(provider, entry) if entry is not None else provider
-    _save_global_config({"providers": set_default_provider(block, provider, family)})
-    return f"✓ {label} is now the {family_label(family)} default"
-
-
-def _clear_detection_dismissal(name: str) -> None:
-    """Drop *name* from the persisted ``dismissed_detections`` list, if present.
-
-    Called when the user explicitly re-adds a previously Removed (and thus
-    dismissed) ambient credential — e.g. picking the detected codex
-    config.toml provider from the add menu — so the detection behaves like
-    an ordinary one again.
-
-    :param name: The detection name to un-dismiss, e.g. ``"codex-databricks"``.
-    :returns: None. Side effect: writes ``~/.agent_meow/config.yaml`` when the
-        name was dismissed; no write otherwise.
-    """
-    from agent_meow.onboarding.detected import (
-        DISMISSED_DETECTIONS_KEY,
-        dismissed_detection_names,
-    )
-
-    dismissed = dismissed_detection_names(_load_global_config())
-    if name not in dismissed:
-        return
-    _save_global_config({DISMISSED_DETECTIONS_KEY: sorted(dismissed - {name})})
-
-
-def _remove_credential(provider: str) -> str | None:
-    """Remove the *provider* credential and persist wholesale.
-
-    The stored secret (if any) is left in place — removing a credential does
-    not assume its key is unwanted.
-
-    :param provider: The provider id to remove, e.g. ``"openrouter"``.
-    :returns: A confirmation message for the caller to show as a transient
-        status, or ``None`` when there was nothing to remove. Side effect:
-        writes ``~/.agent_meow/config.yaml`` (and, when the removed entry is
-        backed by a live ambient detection that cannot be signed out,
-        records its name under ``dismissed_detections`` so the next
-        configure open does not silently re-adopt it).
-    """
-    from agent_meow.onboarding.ambient import detect_providers
-    from agent_meow.onboarding.detected import (
-        DISMISSED_DETECTIONS_KEY,
-        dismissed_detection_names,
-    )
-    from agent_meow.onboarding.provider_config import load_providers
-
-    config = _load_global_config()
-    block = config.get("providers")
-    if not isinstance(block, dict) or provider not in block:
-        return None
-    entry = load_providers({"providers": block}).get(provider)
-    label = _credential_label(provider, entry) if entry is not None else provider
-    remaining = {k: v for k, v in block.items() if k != provider}
-    settings: dict[str, Any] = {"providers": remaining}  # type: ignore[explicit-any]  # yaml-boundary mapping
-    # If a live ambient detection backs this entry, removing the entry alone
-    # is a no-op: the next configure open re-detects and re-adopts it (the
-    # "Remove doesn't remove" bug). Subscriptions are exempt — their removal
-    # path signs out of the CLI instead, and a future re-login SHOULD
-    # re-adopt. Everything else (env API key, codex config.toml provider,
-    # local Ollama) gets a persisted dismissal that the add menu's detected
-    # option clears on re-add.
-    backing = next(
-        (d for d in detect_providers() if d.name == provider and d.kind != "subscription"),
-        None,
-    )
-    if backing is not None:
-        settings[DISMISSED_DETECTIONS_KEY] = sorted(dismissed_detection_names(config) | {provider})
-    _save_global_config(settings)  # wholesale replace per key
-    if backing is not None:
-        return f"✓ Removed {label} — it stays on your machine but won't be auto-configured again"
-    return f"✓ Removed {label}"
-
-
-def _launch_opencode_auth_login() -> str | None:
-    """Launch interactive ``opencode auth login``; return a post-login status.
-
-    ``opencode auth login`` is interactive (pick a provider, sign in), so this
-    hands the terminal to ``opencode`` and re-reads the credential state on
-    return. Mirrors :func:`_launch_goose_configure`.
-    """
-    from agent_meow.onboarding.harness_install import (
-        OPENCODE_KEY,
-        harness_cli_installed,
-        harness_install_spec,
-    )
-    from agent_meow.onboarding.interactive import console
-    from agent_meow.onboarding.opencode_auth import opencode_auth_summary
-
-    if not harness_cli_installed(OPENCODE_KEY):
-        return "✗ opencode CLI not found"
-    spec = harness_install_spec(OPENCODE_KEY)
-    assert spec is not None
-    console.print(
-        "  [dim]Launching [bold]opencode auth login[/bold] — pick a provider and "
-        "sign in, then return.[/dim]"
-    )
-    with contextlib.suppress(OSError, KeyboardInterrupt):
-        subprocess.run([spec.binary, "auth", "login"], check=False)
-    summary = opencode_auth_summary()
-    if summary.has_provider:
-        return f"✓ providers: {summary.describe()}"
-    return "No provider detected yet"
-
-
-def _run_opencode_auth_list() -> None:
-    """Show ``opencode auth list`` (stored credentials + detected env providers)."""
-    from agent_meow.onboarding.harness_install import OPENCODE_KEY, harness_install_spec
-
-    spec = harness_install_spec(OPENCODE_KEY)
-    if spec is None:
-        return
-    with contextlib.suppress(OSError, KeyboardInterrupt):
-        subprocess.run([spec.binary, "auth", "list"], check=False)
-
-
-def _list_opencode_models() -> list[str]:
-    """Return the ``provider/model`` ids OpenCode can launch (``opencode models``).
-
-    Best-effort: an absent CLI or a failed/empty invocation yields ``[]`` (the
-    caller then tells the user to sign a provider in first).
-    """
-    from agent_meow.onboarding.harness_install import OPENCODE_KEY, harness_install_spec
-
-    spec = harness_install_spec(OPENCODE_KEY)
-    if spec is None:
-        return []
-    try:
-        result = subprocess.run(
-            [spec.binary, "models"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return []
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
-
-
-def _set_opencode_default_model(current: str | None) -> str | None:
-    """Pick OpenCode's default model and persist it as ``opencode_model``.
-
-    The choice is what ``omni opencode`` launches on when no ``--model`` is
-    given — written into the per-session ``opencode.json`` at spawn so the TUI
-    starts on it instead of ``opencode/big-pickle``. Returns a status line for
-    the drill-in, or ``None`` when cancelled.
-
-    :param current: The currently-persisted default model, or ``None``.
-    """
-    from agent_meow.onboarding.interactive import console, select
-    from agent_meow.onboarding.opencode_auth import reachable_provider_ids
-
-    models = _list_opencode_models()
-    if not models:
-        return "✗ no models — sign in to a provider first (opencode auth login)"
-    # `opencode models` can list hundreds of `provider/model` ids across every
-    # provider on models.dev — too long for the picker (it overflows the
-    # viewport and flickers). Narrow to the providers the user can actually
-    # authenticate (stored auth.json + env keys); fall back to the full list
-    # only if that filter would hide everything.
-    reachable = reachable_provider_ids()
-    if reachable:
-        scoped = [m for m in models if m.split("/", 1)[0] in reachable]
-        models = scoped or models
-    options = list(models)
-    clear_index = -1
-    if current is not None:
-        clear_index = len(options)
-        options.append("Clear default (use OpenCode's own default)")
-    default = models.index(current) if current in models else 0
-    # Even filtered to reachable providers the list can exceed the screen, so
-    # bound the picker to a scrolling viewport sized to the terminal (leaving
-    # room for the title / status / footer / "N more" markers).
-    rows = shutil.get_terminal_size(fallback=(80, 24)).lines
-    idx = select(
-        "Pick OpenCode's default model",
-        options,
-        default=default,
-        clear_on_exit=True,
-        status=f"current: {current}" if current else None,
-        max_visible=max(5, rows - 8),
-    )
-    if idx < 0:
-        return None
-    if idx == clear_index:
-        _save_global_config({}, unset_keys=("opencode_model",))
-        console.print("  [green]✓ default model cleared[/green]")
-        return "✓ default model cleared"
-    chosen = models[idx]
-    _save_global_config({"opencode_model": chosen})
-    console.print(f"  [green]✓ default model set to[/green] [bold]{chosen}[/bold]")
-    return f"✓ default model: {chosen}"
-
-
-def _print_opencode_auth_help() -> None:
-    """Explain where OpenCode's model credentials come from."""
-    from agent_meow.onboarding.interactive import console
-
-    console.print(
-        "  OpenCode resolves a model from the provider its agent uses:\n"
-        "    • [bold]opencode auth login[/bold] — sign in to a provider (OpenAI, Anthropic, …);\n"
-        "      stored in ~/.local/share/opencode/auth.json.\n"
-        "    • Provider env vars (OPENAI_API_KEY / ANTHROPIC_API_KEY / …) are auto-detected.\n"
-        "    • Databricks gateway: set an agent ``profile`` (configured under Claude / Codex);\n"
-        "      agent-meow synthesizes opencode's per-session provider config from it.\n"
-        "  agent-meow stores no OpenCode credential of its own.\n"
-        "  [dim]Tip:[/dim] 'Set default model' picks which model `omni opencode` launches on\n"
-        "  (otherwise OpenCode uses its built-in default, opencode/big-pickle)."
-    )
-
-
-def _manage_opencode_harness() -> None:
-    """Run the level-2 drill-in for OpenCode: ensure the CLI, then manage providers.
-
-    OpenCode owns its own provider auth — ``opencode auth login`` (stored in
-    ``~/.local/share/opencode/auth.json``) or ambient provider env vars — so,
-    like the Goose / Qwen drill-ins, this reports which providers OpenCode can
-    reach and offers to launch its native login; it never stores a key through
-    agent-meow. (For the Databricks-gateway path the agent's ``profile`` is
-    synthesized into opencode's per-session config instead — set under
-    Claude / Codex.)
-
-    OpenCode is npm-installable, so a missing CLI gates the drill-in with an
-    install offer.
-
-    :returns: None. Side effect: may ``npm install`` the opencode CLI.
-    """
-    from agent_meow.onboarding.harness_install import (
-        OPENCODE_KEY,
-        harness_cli_installed,
-        harness_install_command,
-        install_harness_cli,
-    )
-    from agent_meow.onboarding.interactive import console, select
-
-    if not harness_cli_installed(OPENCODE_KEY):
-        cmd = " ".join(harness_install_command(OPENCODE_KEY))
-        choice = select(
-            "OpenCode's CLI isn't installed. Install it now?",
-            [
-                f"Yes — install ({cmd})",
-                "No — back to harnesses",
-                "I'll run it myself (show the command)",
-            ],
-            descriptions=[
-                f"Runs `{cmd}` (needs npm).",
-                "Return to the harness picker without installing.",
-                "Print the command so you can install it yourself, then return.",
-            ],
-            default=0,
-            clear_on_exit=True,
-        )
-        if choice == 0:
-            console.print(f"  [dim]Installing OpenCode — running `{cmd}`…[/dim]")
-            if install_harness_cli(OPENCODE_KEY):
-                console.print("  [green]✓ OpenCode installed[/green]")
-            else:
-                console.print(
-                    f"  [red]Install failed.[/red] Run it manually, then re-open: "
-                    f"[bold]{cmd}[/bold]"
-                )
-                return
-        elif choice == 2:  # run it yourself
-            console.print(f"  Install OpenCode with:\n    [bold]{cmd}[/bold]")
-            return
-        else:
-            return
-
-    # OpenCode owns its provider auth (``opencode auth login`` → auth.json) or
-    # ambient env keys; agent-meow stores nothing. Report what's reachable and
-    # offer to run its native login — like the Goose/Qwen drill-ins.
-    status: str | None = None
-    while True:
-        from agent_meow.onboarding.opencode_auth import opencode_auth_summary
-
-        summary = opencode_auth_summary()
-        default_model = _load_effective_config().get("opencode_model")
-        header = (
-            f"OpenCode — providers: {summary.describe()}"
-            if summary.has_provider
-            else "OpenCode — no provider configured yet"
-        )
-        model_label = (
-            f"Set default model (current: {default_model})"
-            if default_model
-            else "Set default model"
-        )
-        rows: list[_HarnessMenuRow] = [
-            _HarnessMenuRow("Run opencode auth login", action="login"),
-            _HarnessMenuRow(model_label, action="model"),
-            _HarnessMenuRow("List providers & credentials", action="list"),
-            _HarnessMenuRow("Show provider options", action="help"),
-            _HarnessMenuRow("← Back", action="back"),
-        ]
-        idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
-        if idx < 0:  # Esc / q
-            return
-        action = rows[idx].action
-        if action == "back":
-            return
-        if action == "login":
-            status = _launch_opencode_auth_login()
-        elif action == "model":
-            status = _set_opencode_default_model(default_model)
-        elif action == "list":
-            _run_opencode_auth_list()
-            status = None
-        elif action == "help":
-            _print_opencode_auth_help()
-            status = None
-
-
-def _run_configure_harnesses_interactive() -> None:
-    """Run the interactive model/credential three-level picker.
-
-    Invoked by ``agent-meow setup --no-internal-beta`` and the bare-``run``
-    first-run path, so both drive the identical flow.
-    Opening it backfills a legacy databricks ``auth:`` block into a real
-    provider and adopts any ambient-detected credential — announcing the
-    newly auto-configured machine credentials in a callout — then loops on
-    the level-1 harness overview. Every harness is shown on a single compact
-    row — the harness name on the left, then an aligned ``✓``/``✗`` status
-    column (the configured credential, or "Not installed" / "Not configured")
-    — in 0.3 priority order: Claude, Codex, Cursor, OpenCode,
-    Hermes, Pi, then Antigravity, Qwen Code, Goose, Copilot, Kiro, Kimi Code.
-    The actionable hint (install command / next step) renders only for the
-    highlighted row, as the selector's description line, so the overview stays
-    uncluttered.
-
-    :returns: None. Side effect: may write ``~/.agent_meow/config.yaml`` via
-        the backfill/adopt steps and any add/set-default/remove the user
-        performs while navigating.
-    """
-    from rich.cells import cell_len
-    from rich.markup import escape
-
-    from agent_meow.onboarding.antigravity_auth import (
-        ANTIGRAVITY_ENV_VARS,
-        ANTIGRAVITY_EXTRA,
-        antigravity_api_key_configured,
-        antigravity_sdk_installed,
-    )
-    from agent_meow.onboarding.configure_models import family_label
-    from agent_meow.onboarding.copilot_auth import (
-        COPILOT_EXTRA,
-        COPILOT_TOKEN_ENV_VARS,
-        copilot_github_token_configured,
-        copilot_sdk_installed,
-    )
-    from agent_meow.onboarding.cursor_auth import (
-        CURSOR_EXTRA,
-        cursor_api_key_configured,
-        cursor_sdk_installed,
-    )
-    from agent_meow.onboarding.extra_install import extra_install_display
-    from agent_meow.onboarding.goose_auth import goose_config_summary
-    from agent_meow.onboarding.harness_install import (
-        COPILOT_KEY,
-        CURSOR_KEY,
-        GOOSE_KEY,
-        HERMES_KEY,
-        KIMI_KEY,
-        KIRO_KEY,
-        OPENCODE_KEY,
-        QWEN_KEY,
-        harness_cli_installed,
-        harness_install_command,
-        harness_install_spec,
-    )
-    from agent_meow.onboarding.interactive import select
-    from agent_meow.onboarding.provider_config import (
-        ANTHROPIC_FAMILY,
-        OPENAI_FAMILY,
-        PI_SURFACE,
-        surface_default_provider,
-    )
-
-    # Surface missing external tooling (Node ≥22.10 / tmux) the harnesses need,
-    # once up front, so configuring a credential doesn't lead to a cryptic
-    # failure when the harness later can't launch.
-    _warn_missing_harness_dependencies()
-
-    # Backfill a databricks provider from a legacy global auth: block FIRST (it
-    # outranks ambient detection in routing), then adopt ambient detections.
-    # The databricks backfill is silent (it just shows up in the harness status
-    # line); newly-adopted machine credentials get a one-time callout naming
-    # what was auto-configured and from where. No progress spinner here: a
-    # transient spinner over the (fast) detection left a cleared-region gap and
-    # a residual line directly above the menu on first paint.
-    _adopt_ambient_credentials()
-
-    # Level 1: pick a harness. The cursor moves between Claude, Codex, Pi, and
-    # Quit; each harness's status renders as a non-selectable sub-line beneath
-    # it (skipped by ↑/↓). Drilling in (level 2) keeps add/manage off this
-    # overview. The menu clears in place on each choice so the session stays on
-    # one screen. Quit / Esc / q exits.
-    _QUIT = "\x00quit"  # sentinel marking the Quit row (not a family)
-    # Sentinel marking the Antigravity row — it is not a provider family (Gemini
-    # is outside the anthropic/openai machinery), so it dispatches to its own
-    # credential manager rather than ``_manage_harness_providers``.
-    _ANTIGRAVITY = "\x00antigravity"
-    # Sentinel marking the Qwen Code row — like Antigravity/Cursor it is not a
-    # provider family (its v1 auth is the CLI's own env vars / ``/auth`` flow,
-    # not an agent-meow credential), so it dispatches to its own drill-in.
-    _QWEN = "\x00qwen"
-    # Sentinel marking the OpenCode row — native-server harness with no agent-meow
-    # credential of its own (it routes through the bound agent's Databricks
-    # gateway profile or ambient provider env), so it dispatches to its own
-    # binary-install/info drill-in.
-    _OPENCODE = "\x00opencode"
-    # Sentinel marking the Goose row — like Qwen/Antigravity/Cursor it is not a
-    # provider family (Goose owns its own auth via ``goose configure``, not an
-    # agent-meow credential), so it dispatches to its own drill-in.
-    _GOOSE = "\x00goose"
-    # Sentinel marking the Hermes row — like Goose it owns its own auth via
-    # ``hermes model`` and is installed via a curl installer.
-    _HERMES = "\x00hermes"
-    # Sentinel marking the Kiro row — like Goose/Hermes it owns its own auth (via
-    # ``kiro-cli login``) and is installed via Kiro's curl installer, so it
-    # dispatches to its own drill-in rather than a provider family.
-    _KIRO = "\x00kiro"
-    # Sentinel marking the Kimi Code row — like Cursor/Antigravity/Qwen it is
-    # not a provider family. Auth lives entirely in the kimi CLI (``kimi login``
-    # / ``kimi provider add`` → ~/.kimi/config.toml), so it dispatches to its
-    # own drill-in rather than ``_manage_harness_providers``.
-    _KIMI = "\x00kimi"
-    families = [ANTHROPIC_FAMILY, OPENAI_FAMILY, PI_SURFACE]
-
-    # Status glyph + Rich color per readiness kind: "ready" is a configured,
-    # launchable harness (green ✓); "missing" is an absent CLI/SDK (red ✗);
-    # "warn" is installed-but-unconfigured (yellow ✗ — present, not usable
-    # yet). The glyph leads the status, which sits in a left-aligned column
-    # right of the names, so every ✓/✗ lines up in a single column.
-    status_styles = {"ready": ("✓", "green"), "missing": ("✗", "red"), "warn": ("✗", "yellow")}
-
-    def _install_hint(command: str) -> str:
-        # Selection-only tooltip. The command is escaped so a bracketed extra
-        # (e.g. ``pip install "agent-meow[cursor]"``) renders literally instead of
-        # parsing as Rich markup.
-        return f"Install with `{escape(command)}`"
-
-    def _truncate_cells(text: str, max_cells: int) -> str:
-        """Truncate *text* to a terminal-cell budget, adding an ellipsis if needed."""
-        if cell_len(text) <= max_cells:
-            return text
-        ellipsis = "…"
-        budget = max(0, max_cells - cell_len(ellipsis))
-        out: list[str] = []
-        used = 0
-        for ch in text:
-            width = cell_len(ch)
-            if used + width > budget:
-                break
-            out.append(ch)
-            used += width
-        return "".join(out) + ellipsis
-
-    def _family_row(fam: str) -> tuple[str, str, str, str, str]:
-        # Claude / Codex / Pi: a CLI binary plus a usable default credential.
-        # Pi's default is its *effective* one (explicit pi scope, else the
-        # cross-family fallback).
-        name = family_label(fam)
-        if not harness_cli_installed(fam):
-            return (
-                fam,
-                name,
-                "Not installed",
-                "missing",
-                _install_hint(" ".join(harness_install_command(fam))),
-            )
-        default = surface_default_provider(config, fam)
-        if default is None:
-            return (fam, name, "Not configured", "warn", "Open to add a credential.")
-        label = _family_credential_label(config, fam, default.name, default)
-        return (fam, name, label, "ready", "")
-
-    def build_harness_rows() -> list[tuple[str, str, str, str, str]]:
-        # One visible row per harness, in 0.3 priority order. No folding — every
-        # harness shows at once. Each row is (target, name, status, kind, hint),
-        # where ``hint`` is the selection-only description (install command /
-        # next step), empty for a ready harness.
-        from agent_meow.onboarding.hermes_auth import hermes_config_summary
-        from agent_meow.onboarding.opencode_auth import opencode_auth_summary
-
-        rows: list[tuple[str, str, str, str, str]] = []
-        rows.append(_family_row(ANTHROPIC_FAMILY))
-        rows.append(_family_row(OPENAI_FAMILY))
-
-        # Cursor — readiness is the CURSOR_API_KEY (the cursor-sdk extra is a
-        # soft dependency; the key is independently storable, so a missing SDK
-        # is surfaced as the install hint, not a hard block).
-        if cursor_api_key_configured(config) or bool(os.environ.get("CURSOR_API_KEY")):
-            rows.append((CURSOR_KEY, "Cursor", "API key", "ready", ""))
-        elif not cursor_sdk_installed():
-            rows.append(
-                (
-                    CURSOR_KEY,
-                    "Cursor",
-                    "Not installed",
-                    "missing",
-                    _install_hint(extra_install_display(CURSOR_EXTRA)),
-                ),
-            )
-        else:
-            rows.append(
-                (
-                    CURSOR_KEY,
-                    "Cursor",
-                    "Not configured",
-                    "warn",
-                    "Open to add the Cursor API key.",
-                ),
-            )
-
-        # OpenCode — its own provider auth (login or env keys); the status is
-        # what it can reach (e.g. "1 stored").
-        opencode = opencode_auth_summary()
-        if not opencode.installed:
-            rows.append(
-                (
-                    _OPENCODE,
-                    "OpenCode",
-                    "Not installed",
-                    "missing",
-                    _install_hint(" ".join(harness_install_command(OPENCODE_KEY))),
-                ),
-            )
-        elif opencode.ready:
-            rows.append((_OPENCODE, "OpenCode", opencode.describe(), "ready", ""))
-        else:
-            rows.append(
-                (
-                    _OPENCODE,
-                    "OpenCode",
-                    "Not configured",
-                    "warn",
-                    "Open to sign in (opencode auth login).",
-                ),
-            )
-
-        # Hermes — curl-installed; its provider/model live in
-        # ``~/.hermes/config.yaml`` (written by `hermes model`). Read that so a
-        # configured Hermes shows the picked model as ready, instead of always
-        # reading "not configured" on an installed binary. A fresh install
-        # ships ``provider: auto`` (nothing picked), so it still reads
-        # "not configured" until `hermes model` selects a concrete provider.
-        hermes = hermes_config_summary()
-        if not hermes.installed:
-            hermes_spec = harness_install_spec(HERMES_KEY)
-            hermes_hint = (
-                hermes_spec.install_hint
-                if hermes_spec and hermes_spec.install_hint
-                else "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash"
-            )
-            rows.append(
-                (_HERMES, "Hermes", "Not installed", "missing", _install_hint(hermes_hint)),
-            )
-        elif hermes.ready:
-            rows.append((_HERMES, "Hermes", hermes.describe(), "ready", ""))
-        else:
-            rows.append(
-                (
-                    _HERMES,
-                    "Hermes",
-                    "Not configured",
-                    "warn",
-                    "Open to configure with `hermes model`.",
-                ),
-            )
-
-        rows.append(_family_row(PI_SURFACE))
-
-        # Antigravity — Gemini key (antigravity-sdk extra is soft, like Cursor).
-        if antigravity_api_key_configured(config) or any(
-            os.environ.get(v) for v in ANTIGRAVITY_ENV_VARS
-        ):
-            rows.append((_ANTIGRAVITY, "Antigravity", "Gemini API key", "ready", ""))
-        elif not antigravity_sdk_installed():
-            rows.append(
-                (
-                    _ANTIGRAVITY,
-                    "Antigravity",
-                    "Not installed",
-                    "missing",
-                    _install_hint(extra_install_display(ANTIGRAVITY_EXTRA)),
-                ),
-            )
-        else:
-            rows.append(
-                (
-                    _ANTIGRAVITY,
-                    "Antigravity",
-                    "Not configured",
-                    "warn",
-                    "Open to add the Gemini API key.",
-                ),
-            )
-
-        # Qwen Code — no CLI login; auth via OpenAI-compatible env vars or the
-        # interactive /auth flow.
-        if not harness_cli_installed(QWEN_KEY):
-            rows.append(
-                (
-                    _QWEN,
-                    "Qwen Code",
-                    "Not installed",
-                    "missing",
-                    _install_hint(" ".join(harness_install_command(QWEN_KEY))),
-                ),
-            )
-        elif _qwen_auth_configured():
-            rows.append((_QWEN, "Qwen Code", "Authenticated", "ready", ""))
-        else:
-            rows.append(
-                (
-                    _QWEN,
-                    "Qwen Code",
-                    "Not configured",
-                    "warn",
-                    "Open to set up auth (/auth or env vars).",
-                ),
-            )
-
-        # Goose — its own provider config via `goose configure`.
-        if not harness_cli_installed(GOOSE_KEY):
-            goose_spec = harness_install_spec(GOOSE_KEY)
-            goose_hint = (
-                goose_spec.install_hint
-                if goose_spec and goose_spec.install_hint
-                else "brew install block-goose-cli"
-            )
-            rows.append((_GOOSE, "Goose", "Not installed", "missing", _install_hint(goose_hint)))
-        else:
-            goose_summary = goose_config_summary()
-            if goose_summary.provider:
-                rows.append((_GOOSE, "Goose", goose_summary.provider, "ready", ""))
-            else:
-                rows.append(
-                    (_GOOSE, "Goose", "Not configured", "warn", "Open to run `goose configure`."),
-                )
-
-        # Copilot — GitHub token (github-copilot-sdk extra is soft).
-        if copilot_github_token_configured(config) or any(
-            os.environ.get(v) for v in COPILOT_TOKEN_ENV_VARS
-        ):
-            rows.append((COPILOT_KEY, "Copilot", "GitHub token", "ready", ""))
-        elif not copilot_sdk_installed():
-            rows.append(
-                (
-                    COPILOT_KEY,
-                    "Copilot",
-                    "Not installed",
-                    "missing",
-                    _install_hint(extra_install_display(COPILOT_EXTRA)),
-                ),
-            )
-        else:
-            rows.append(
-                (
-                    COPILOT_KEY,
-                    "Copilot",
-                    "Not configured",
-                    "warn",
-                    "Open to add the GitHub token.",
-                ),
-            )
-
-        # Kiro — native CLI, own auth via `kiro-cli login`; there is no
-        # reliable local status probe, so an installed binary is still only
-        # "not configured" until the user signs in.
-        if harness_cli_installed(KIRO_KEY):
-            rows.append(
-                (_KIRO, "Kiro", "Not configured", "warn", "Sign in with `kiro-cli login`.")
-            )
-        else:
-            kiro_spec = harness_install_spec(KIRO_KEY)
-            kiro_hint = (
-                kiro_spec.install_hint
-                if kiro_spec and kiro_spec.install_hint
-                else "curl -fsSL https://cli.kiro.dev/install | bash"
-            )
-            rows.append((_KIRO, "Kiro", "Not installed", "missing", _install_hint(kiro_hint)))
-
-        # Kimi Code — native CLI, own auth via `kimi login`; there is no local
-        # login status probe yet. Curl-installed (no npm package), so use its
-        # install_hint when absent and show "not configured" when present.
-        if harness_cli_installed(KIMI_KEY):
-            rows.append(
-                (_KIMI, "Kimi Code", "Not configured", "warn", "Sign in with `kimi login`.")
-            )
-        else:
-            kimi_spec = harness_install_spec(KIMI_KEY)
-            kimi_hint = (kimi_spec.install_hint if kimi_spec else None) or "see Kimi Code docs"
-            rows.append((_KIMI, "Kimi Code", "Not installed", "missing", _install_hint(kimi_hint)))
-        return rows
-
-    while True:
-        config = _load_global_config()
-        harness_rows = build_harness_rows()
-        # Place the status in a single column a fixed gutter right of the names,
-        # so every ✓/✗ glyph lines up vertically (the earlier right-aligned
-        # status scattered the glyphs and read as messy). The name column is the
-        # widest harness name + a 4-space gutter; the status is escaped when
-        # interpolated into markup so a credential label containing a ``[`` can't
-        # parse as a Rich tag (descriptions are escaped the same way).
-        name_col = max(len(name) for _t, name, *_rest in harness_rows) + 4
-        term_width = max(40, shutil.get_terminal_size(fallback=(80, 24)).columns)
-        # _render_menu prefixes selected rows with ``"    ❯  "`` (7 cells).
-        # Cap the status text from the actual terminal width so verbose status
-        # rows (e.g. OpenCode's provider summary) do not wrap in the compact
-        # single-line overview.
-        max_status_width = max(8, min(30, term_width - 7 - name_col - len("✓ ")))
-        options: list[str] = []
-        selectable: list[bool] = []
-        row_target: list[str | None] = []
-        descriptions: list[str] = []
-        for target, name, status_text, kind, desc in harness_rows:
-            status_text = _truncate_cells(status_text, max_status_width)
-            glyph, color = status_styles[kind]
-            options.append(f"{name.ljust(name_col)}[{color}]{glyph} {escape(status_text)}[/]")
-            selectable.append(True)
-            row_target.append(target)
-            descriptions.append(desc)
-        options.append("Quit")
-        selectable.append(True)
-        row_target.append(_QUIT)
-        descriptions.append("")
-        idx = select(
-            "Configure harnesses",
-            options,
-            descriptions=descriptions,
-            selectable=selectable,
-            clear_on_exit=True,
-            compact=True,
-        )
-        if idx < 0:  # Esc / q — exit
-            return
-        target = row_target[idx]
-        if target == CURSOR_KEY:
-            _manage_cursor_harness()
-        elif target == COPILOT_KEY:
-            _manage_copilot_harness()
-        elif target in families:
-            _manage_harness_providers(target)
-        elif target == _ANTIGRAVITY:
-            _manage_antigravity_harness()
-        elif target == _QWEN:
-            _manage_qwen_harness()
-        elif target == _OPENCODE:
-            _manage_opencode_harness()
-        elif target == _GOOSE:
-            _manage_goose_harness()
-        elif target == _HERMES:
-            _manage_hermes_harness()
-        elif target == _KIRO:
-            _manage_kiro_harness()
-        elif target == _KIMI:
-            _manage_kimi_harness()
-        else:  # Quit row (or, defensively, a non-family row)
-            return
-
-
 @cli.command("setup")
 @click.option(
     "--internal-beta/--no-internal-beta",
@@ -11367,12 +8005,12 @@ def _run_configure_harnesses_interactive() -> None:
 )
 def setup(internal_beta: bool) -> None:
     """
-    Launch the agent-meow first-time setup flow.
+    Launch the Omnigent first-time setup flow.
 
-    By default this runs the standard model/credential picker — choose a
+    By default this runs the standard model/credential picker �?choose a
     provider for each harness and set your defaults, then start a session
-    with ``agent-meow run``. (List configured credentials with
-    ``agent-meow config list``.) Pass ``--internal-beta`` to configure
+    with ``omnigent run``. (List configured credentials with
+    ``omnigent config list``.) Pass ``--internal-beta`` to configure
     Databricks internal-beta defaults and authentication instead.
     """
     from agent_meow.inner import ui
@@ -11395,7 +8033,7 @@ def setup(internal_beta: bool) -> None:
         except ImportError:
             raise click.ClickException(
                 "Databricks internal-beta setup is not available in this build. "
-                "Run `agent-meow setup` for the standard model/credential setup."
+                "Run `omnigent setup` for the standard model/credential setup."
             ) from None
         # Internal-beta routing mints workspace OAuth tokens via
         # databricks-sdk at runtime, and the SDK ships in the `databricks`
@@ -11419,7 +8057,7 @@ def setup(internal_beta: bool) -> None:
         from agent_meow.onboarding.setup import run_onboarding
 
         # Install the demo `databricks` CLI (with the `lakebox`
-        # subcommand) BEFORE profile onboarding — `run_onboarding`
+        # subcommand) BEFORE profile onboarding �?`run_onboarding`
         # shells out to `databricks auth login`, and a fresh machine
         # might not have the binary on PATH at all. Idempotent: skips
         # the installer when the demo CLI is already present, but
@@ -11441,20 +8079,20 @@ def setup(internal_beta: bool) -> None:
             }
         )
         click.echo(f"Set default_agent={agent_path} in {_GLOBAL_CONFIG_PATH}")
-        click.echo("Type `agent-meow claude` to get started with Claude Code on agent_meow.")
+        click.echo("Type `omnigent claude` to get started with Claude Code on agent_meow.")
         return
 
     # --no-internal-beta: the standard model/credential picker. It warns
     # about missing Node/tmux itself, configures providers/defaults, and
-    # returns; the user then starts a session with ``agent-meow run``.
+    # returns; the user then starts a session with ``omnigent run``.
     _run_configure_harnesses_interactive()
 
 
 # ─── sandbox group ────────────────────────────────────────────────
-# The provider-agnostic sandbox CLI lives in agent_meow/cli_sandbox.py.
+# The provider-agnostic sandbox CLI lives in omnigent/cli_sandbox.py.
 # Provider launcher modules are optional and may be absent from a given
 # distribution; hide the group when none are available.
-# `agent-meow lakebox` is kept as an alias for `agent-meow sandbox …
+# `omnigent lakebox` is kept as an alias for `omnigent sandbox �?
 # --provider lakebox`, registered only when the lakebox provider ships.
 if _sandbox_providers():
     cli.add_command(_sandbox_group)
@@ -11463,10 +8101,10 @@ if _sandbox_providers():
 
 # ─── debug group ──────────────────────────────────────────────────
 #
-# Operator-only maintenance commands, grouped under ``agent-meow debug``
+# Operator-only maintenance commands, grouped under ``omnigent debug``
 # so they stay out of the everyday surface.
 #
-# ``db-upgrade`` runs manual schema operations on an agent-meow tracking
+# ``db-upgrade`` runs manual schema operations on an Omnigent tracking
 # database. Mirrors ``mlflow db upgrade`` (``mlflow/db.py``) so the
 # workflow is familiar to anyone who's bumped an MLflow database before.
 # The server initializes a fresh database on first boot and attempts to
@@ -11480,7 +8118,7 @@ if _sandbox_providers():
 
 @cli.group("debug")
 def debug() -> None:
-    """Internal maintenance commands (advanced — not needed for normal use).
+    """Internal maintenance commands (advanced �?not needed for normal use).
 
     Houses operator-only database and accounts maintenance: tracking-DB
     schema upgrades (``db-upgrade``) and the accounts→OIDC identity remap
@@ -11492,7 +8130,7 @@ def debug() -> None:
 @click.argument("url")
 def debug_db_upgrade(url: str) -> None:
     """
-    Upgrade the schema of an agent-meow tracking database to the
+    Upgrade the schema of an Omnigent tracking database to the
     latest supported version.
 
     URL is a SQLAlchemy database URL, e.g.
@@ -11501,7 +8139,7 @@ def debug_db_upgrade(url: str) -> None:
 
     \b
     IMPORTANT: schema migrations can be slow and are not guaranteed
-    to be transactional — always take a backup of your database
+    to be transactional �?always take a backup of your database
     before running migrations.
     """
     from sqlalchemy import create_engine
@@ -11572,11 +8210,11 @@ def debug_migrate_accounts_to_oidc(
     \b
     Examples:
       # Dry run: append the org domain to every username
-      agent-meow debug migrate-accounts-to-oidc sqlite:///chat.db --domain example.com
+      omnigent debug migrate-accounts-to-oidc sqlite:///chat.db --domain example.com
       # Apply it
-      agent-meow debug migrate-accounts-to-oidc sqlite:///chat.db --domain example.com --commit
+      omnigent debug migrate-accounts-to-oidc sqlite:///chat.db --domain example.com --commit
       # Explicit per-user mapping (add --commit to apply)
-      agent-meow debug migrate-accounts-to-oidc sqlite:///chat.db --map alice=alice@corp.com
+      omnigent debug migrate-accounts-to-oidc sqlite:///chat.db --map alice=alice@corp.com
 
     \b
     IMPORTANT: always back up your database before running with
@@ -11609,7 +8247,7 @@ def debug_migrate_accounts_to_oidc(
         engine.dispose()
 
     mode = "COMMITTED" if report.committed else "DRY RUN (no changes written)"
-    click.echo(f"\nIdentity remap — {mode}")
+    click.echo(f"\nIdentity remap �?{mode}")
     click.echo(f"  database: {url}")
     click.echo(f"  mappings ({len(report.mapping)}):")
     for old, new in report.mapping.items():
@@ -11620,8 +8258,8 @@ def debug_migrate_accounts_to_oidc(
     # This is the #1 footgun with --domain when the IdP email isn't
     # <username>@<domain> (e.g. GitHub returning a @gmail.com address).
     click.echo(
-        "\n  ⚠ Each NEW id must match the email your IdP returns for that user.\n"
-        "    If it doesn't, that user logs in as a new principal — re-add them to\n"
+        "\n  �?Each NEW id must match the email your IdP returns for that user.\n"
+        "    If it doesn't, that user logs in as a new principal �?re-add them to\n"
         "    the admin list, or re-run with --map OLD=<exact-idp-email>."
     )
     bare = sorted({new for new in report.mapping.values() if "@" not in new})
@@ -11641,7 +8279,7 @@ def debug_migrate_accounts_to_oidc(
         click.echo(f"  skipped (no user row): {', '.join(report.skipped_missing)}")
     if report.refused:
         click.echo(
-            "  REFUSED (NEW id already exists — re-run with --force to merge): "
+            "  REFUSED (NEW id already exists �?re-run with --force to merge): "
             + ", ".join(report.refused)
         )
 
@@ -11651,13 +8289,206 @@ def debug_migrate_accounts_to_oidc(
         click.echo("\nDone. Flip OMNIGENT_AUTH_PROVIDER=oidc and restart.\n")
 
 
+@debug.command("logs")
+@click.option(
+    "--type",
+    "log_type",
+    type=click.Choice(
+        ["runner", "host", "server", "cli", "host-runner", "host-daemon"],
+        case_sensitive=False,
+    ),
+    default="runner",
+    show_default=True,
+    help="Log category: runner, host, server, or cli. "
+    "Legacy aliases host-runner and host-daemon are still accepted.",
+)
+@click.option(
+    "--session",
+    "session_id",
+    default=None,
+    metavar="SESSION_ID",
+    help="Filter runner logs by session id, e.g. conv_abc123. "
+    "Only applies to --type runner/host-runner. Shows all log files for the "
+    "session, oldest first.",
+)
+@click.option(
+    "--list",
+    "list_only",
+    is_flag=True,
+    default=False,
+    help="List available log files with size and timestamp instead of showing content.",
+)
+@click.option(
+    "--lines",
+    "-n",
+    default=50,
+    show_default=True,
+    metavar="N",
+    type=click.IntRange(min=0),
+    help="Lines to show from the end of the log (0 = entire file). "
+    "With --session, applied per file.",
+)
+@click.option(
+    "--follow",
+    "-f",
+    is_flag=True,
+    default=False,
+    help="Follow the latest log file in real-time (like tail -f). "
+    "With --session, follows the most recent file for the session. "
+    "Not supported on Windows.",
+)
+def debug_logs(
+    log_type: str, session_id: str | None, list_only: bool, lines: int, follow: bool
+) -> None:
+    """Show runner, server, or CLI diagnostic logs.
+
+    Prints the tail of the most recent log file for the chosen category.
+    Use ``--list`` to see all available files, or ``--follow`` to stream
+    new output as it is written.
+
+    Pass ``--session SESSION_ID`` (``--type runner`` only) to scope
+    output to all log files produced for a specific session across relaunches.
+
+    \b
+    Log locations (relative to ~/.omnigent or $OMNIGENT_DATA_DIR):
+      runner       logs/runner/runner-*.log
+      host         logs/host/host-*.log
+      server       logs/server/server-*.log
+      cli          logs/cli/cli-*.log
+
+    \b
+    Examples:
+      # Tail the most recent local runner log (default)
+      omnigent debug logs
+      # List all local runner log files with sizes
+      omnigent debug logs --list
+      # Show runner logs for a specific session (across relaunches)
+      omnigent debug logs --type runner --session conv_abc123
+      # List runner log files for a session
+      omnigent debug logs --type runner --session conv_abc123 --list
+      # Follow the latest server log in real-time
+      omnigent debug logs --type server --follow
+      # Show the full latest CLI diagnostics log
+      omnigent debug logs --type cli -n 0
+    """
+    import re
+    import subprocess
+
+    from agent_meow.host.local_server import _local_data_dir
+
+    log_type = log_type.lower()
+    alias_map = {"host-runner": "runner", "host-daemon": "host"}
+    requested_log_type = log_type
+    log_type = alias_map.get(log_type, log_type)
+
+    if session_id is not None and log_type != "runner":
+        raise click.UsageError("--session is only supported with --type runner")
+
+    if follow and IS_WINDOWS:
+        raise click.UsageError("--follow is not supported on Windows")
+
+    data_dir = _local_data_dir()
+
+    _log_configs: dict[str, list[tuple[Path, str]]] = {
+        # Include the legacy host-runner dir so old session logs remain visible.
+        "runner": [
+            (data_dir / "logs" / "runner", "runner-*.log"),
+            (data_dir / "logs" / "host-runner", "runner-*.log"),
+        ],
+        "host": [
+            (data_dir / "logs" / "host", "host-*.log"),
+            (data_dir / "logs" / "host-daemon", "daemon-*.log"),
+        ],
+        # Covers both server-*.log and legacy local-server-*.log.
+        "server": [(data_dir / "logs" / "server", "*server*.log")],
+        "cli": [
+            (data_dir / "logs" / "cli", "cli-*.log"),
+            (data_dir / "logs", "cli-*.log"),
+        ],
+    }
+
+    if session_id is not None:
+        # Sanitize the same way connect.py does so the glob matches.
+        slug = re.sub(r"[^\w-]", "", session_id)[:32]
+        pattern = f"runner-{slug}-*.log"
+        configs = [(directory, pattern) for directory, _pattern in _log_configs[log_type]]
+    else:
+        configs = _log_configs[log_type]
+
+    existing_dirs = [directory for directory, _pattern in configs if directory.exists()]
+    if not existing_dirs:
+        dirs = ", ".join(str(directory) for directory, _pattern in configs)
+        raise click.ClickException(f"No {requested_log_type} logs found �?none of {dirs} exist.")
+
+    # Exclude symlinks (e.g. latest-cli.log), sort newest first.
+    log_files = sorted(
+        (
+            f
+            for directory, pattern in configs
+            if directory.exists()
+            for f in directory.glob(pattern)
+            if not f.is_symlink()
+        ),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+    if not log_files:
+        if session_id is not None:
+            raise click.ClickException(
+                f"No runner logs found for session {session_id!r}. "
+                "Session ids appear in filenames only for runners launched "
+                "after this feature was added."
+            )
+        dirs = ", ".join(str(directory) for directory, _pattern in configs)
+        raise click.ClickException(f"No {requested_log_type} log files found in {dirs}.")
+
+    if list_only:
+        header = (
+            f"runner logs for session {session_id!r}:"
+            if session_id
+            else f"{requested_log_type} logs:"
+        )
+        click.echo(header)
+        for f in log_files:
+            stat = f.stat()
+            size_kb = stat.st_size / 1024
+            mtime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(stat.st_mtime))
+            click.echo(f"  {mtime}  {size_kb:6.1f} KB  {f.name}")
+        return
+
+    if follow:
+        # Follow the most recent file only (tail -f can only track one file).
+        latest = log_files[0]
+        click.echo(f"# {latest}", err=True)
+        subprocess.run(["tail", "-f", str(latest)])
+        return
+
+    if session_id is not None:
+        # Show all files for the session, oldest first, with separators.
+        for f in reversed(log_files):
+            click.echo(f"# {f}", err=True)
+            content = f.read_text(errors="replace")
+            if lines > 0:
+                content = "\n".join(content.splitlines()[-lines:])
+            click.echo(content)
+            click.echo()
+    else:
+        latest = log_files[0]
+        click.echo(f"# {latest}", err=True)
+        content = latest.read_text(errors="replace")
+        if lines > 0:
+            content = "\n".join(content.splitlines()[-lines:])
+        click.echo(content)
+
+
 def _workspace_mount_probe_matches(candidate: str, probe: httpx.Response) -> bool:
-    """Whether a ``/api/2.0/agent-meow`` mount probe answered like agent_meow.
+    """Whether a ``/api/2.0/omnigent`` mount probe answered like agent_meow.
 
     :param candidate: The probed mount base URL, e.g.
-        ``"https://example.databricks.com/api/2.0/agent-meow"``.
+        ``"https://example.databricks.com/api/2.0/omnigent"``.
     :param probe: The ``GET <candidate>/v1/me`` response.
-    :returns: ``True`` when the mount answered 200 (agent-meow itself) or
+    :returns: ``True`` when the mount answered 200 (omnigent itself) or
         with a Databricks-fronted shape (302 to ``/oidc/`` or 401 with
         the ``DatabricksRealm`` challenge).
     """
@@ -11670,7 +8501,7 @@ def _cached_workspace_bearer(workspace_host: str) -> str | None:
     """Best-effort bearer for *workspace_host* from the OAuth cache.
 
     Unlike :func:`_databricks_workspace_token`, a missing ``databricks``
-    extra is not an error here — probe callers simply fall back to
+    extra is not an error here �?probe callers simply fall back to
     unauthenticated behavior.
 
     :param workspace_host: The workspace host, e.g.
@@ -11692,17 +8523,17 @@ def _with_default_scheme(server_url: str) -> str:
     """Prepend a scheme to a schemeless server URL, defaulting to https.
 
     The internal user guide hands out workspace URLs without a scheme
-    (e.g. ``example.cloud.databricks.com/agent-meow``), so a missing
+    (e.g. ``example.cloud.databricks.com/omnigent``), so a missing
     scheme defaults to ``https`` to let that URL be pasted verbatim.
     Loopback hosts (``localhost``, ``127.0.0.1``, ``::1``) default to
-    ``http`` instead — local dev servers are plain http (the examples
+    ``http`` instead �?local dev servers are plain http (the examples
     use ``http://localhost:6767``). A URL that already carries a scheme
     is returned unchanged.
 
     :param server_url: The user-supplied server URL, possibly
-        schemeless, e.g. ``"example.cloud.databricks.com/agent-meow"``.
+        schemeless, e.g. ``"example.cloud.databricks.com/omnigent"``.
     :returns: The URL with a scheme, e.g.
-        ``"https://example.cloud.databricks.com/agent-meow"``.
+        ``"https://example.cloud.databricks.com/omnigent"``.
     """
     from urllib.parse import urlsplit
 
@@ -11715,24 +8546,24 @@ def _with_default_scheme(server_url: str) -> str:
 
 
 def _workspace_api_server_url(server: str) -> str:
-    """Expand a bare Databricks workspace URL to its agent-meow API base.
+    """Expand a bare Databricks workspace URL to its omnigent API base.
 
     ``https://<workspace>`` hosts serve the workspace web app at the
-    root; workspace-hosted agent-meow lives at ``/api/2.0/agent-meow``.
+    root; workspace-hosted omnigent lives at ``/api/2.0/omnigent``.
     Users naturally paste the bare host, so when a path-less server URL
-    answers like a Databricks workspace web app (a non-agent-meow reply
+    answers like a Databricks workspace web app (a non-omnigent reply
     carrying the ``server: databricks`` header) AND the
-    ``/api/2.0/agent-meow`` mount answers like the API proxy, the
-    expanded URL is adopted. Detection is behavioral — no hostname
-    patterns — and URLs that already carry a path are returned
+    ``/api/2.0/omnigent`` mount answers like the API proxy, the
+    expanded URL is adopted. Detection is behavioral �?no hostname
+    patterns �?and URLs that already carry a path are returned
     untouched without any probe, the one exception being the
-    guide-issued web-UI URL (``https://<ws>/agent-meow``): its bare root
+    guide-issued web-UI URL (``https://<ws>/omnigent``): its bare root
     is probed so the pasted web URL logs in just like the bare host
     (a root that is not a workspace leaves the URL untouched).
 
     Some workspace edges (Azure) answer the anonymous mount probe with
-    a plain 404 — not the AWS proxy's 401-with-``DatabricksRealm``
-    challenge — so a mount that works for authenticated callers is
+    a plain 404 �?not the AWS proxy's 401-with-``DatabricksRealm``
+    challenge �?so a mount that works for authenticated callers is
     invisible to the anonymous probe. When the host-keyed Databricks
     OAuth cache holds a grant for the workspace (the user ran
     ``databricks auth login``), the mount probe is retried with that
@@ -11741,7 +8572,7 @@ def _workspace_api_server_url(server: str) -> str:
     :param server: The user-supplied server URL, e.g.
         ``"https://example.databricks.com"``.
     :returns: The normalized base URL without a trailing slash, e.g.
-        ``"https://example.databricks.com/api/2.0/agent-meow"`` — or the
+        ``"https://example.databricks.com/api/2.0/omnigent"`` �?or the
         input (normalized) when expansion does not apply.
     """
     from urllib.parse import urlsplit, urlunsplit
@@ -11758,17 +8589,17 @@ def _workspace_api_server_url(server: str) -> str:
     parsed = urlsplit(server)
     # Strip any ?o= selector / query / fragment before probing: callers append
     # a path (``f"{base}/v1/..."``), so a query-bearing base would push that
-    # path into the query (``…/?o=123/v1/me``) and break the probe + expansion.
+    # path into the query (``�??o=123/v1/me``) and break the probe + expansion.
     # The selector is carried separately (recorded at login, replayed as the
     # X-Databricks-Org-Id header), never on the base URL.
     if parsed.query or parsed.fragment:
         server = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", "")).rstrip("/")
         parsed = urlsplit(server)
     # The internal user guide hands out the workspace web-UI URL
-    # (``https://<ws>/agent-meow``) for browser access; accept it for login
+    # (``https://<ws>/omnigent``) for browser access; accept it for login
     # too by expanding its bare root to the API mount. A root that does
     # not answer as a Databricks workspace leaves the pasted URL
-    # untouched, so a non-workspace server served under ``/agent-meow``
+    # untouched, so a non-workspace server served under ``/omnigent``
     # still works.
     if parsed.scheme == "https" and parsed.path == WORKSPACE_UI_PATH:
         root = urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
@@ -11780,7 +8611,7 @@ def _workspace_api_server_url(server: str) -> str:
         probe = _httpx.get(f"{server}/v1/me", timeout=10.0)
     except _httpx.HTTPError:
         return server
-    # Already something we understand at the root: an agent-meow server
+    # Already something we understand at the root: an omnigent server
     # (200 / 401-with-login_url JSON) or a Databricks Apps edge /
     # API proxy (the login-target detector recognizes both).
     if probe.status_code == 200:
@@ -11797,12 +8628,12 @@ def _workspace_api_server_url(server: str) -> str:
         return server
     if _workspace_mount_probe_matches(candidate, api_probe):
         click.echo(
-            f"Using {display_server_url(candidate)} (Databricks workspace-hosted agent-meow)."
+            f"Using {display_server_url(candidate)} (Databricks workspace-hosted omnigent)."
         )
         return candidate
     # The anonymous probe came back inconclusive (404 on Azure even
     # when the mount exists). Retry it with a cached workspace bearer;
-    # either way, say what was decided — this branch is only reached
+    # either way, say what was decided �?this branch is only reached
     # for genuine workspace web hosts, where a silent decline strands
     # the user on a bare URL that can only 404.
     token = _cached_workspace_bearer(server)
@@ -11817,14 +8648,14 @@ def _workspace_api_server_url(server: str) -> str:
             authed_probe = None
         if authed_probe is not None and _workspace_mount_probe_matches(candidate, authed_probe):
             click.echo(
-                f"Using {display_server_url(candidate)} (Databricks workspace-hosted agent-meow)."
+                f"Using {display_server_url(candidate)} (Databricks workspace-hosted omnigent)."
             )
             return candidate
         click.echo(
             f"Note: {server} answers like a Databricks workspace, but "
-            f"{candidate} did not answer as an agent-meow server even with "
+            f"{candidate} did not answer as an omnigent server even with "
             f"the cached workspace credentials. Connecting to {server} as "
-            "given; if agent-meow is hosted on this workspace, refresh the "
+            "given; if omnigent is hosted on this workspace, refresh the "
             f"login with `databricks auth login --host {server}` or pass "
             "the full mount URL."
         )
@@ -11833,7 +8664,7 @@ def _workspace_api_server_url(server: str) -> str:
         f"Note: {server} answers like a Databricks workspace, but "
         f"{candidate} did not answer the anonymous probe "
         f"(HTTP {api_probe.status_code}). Some edges hide the mount from "
-        "unauthenticated requests — if agent-meow is hosted on this "
+        "unauthenticated requests �?if omnigent is hosted on this "
         f"workspace, run `databricks auth login --host {server}` and "
         "retry, or pass the full mount URL."
     )
@@ -11842,19 +8673,19 @@ def _workspace_api_server_url(server: str) -> str:
 
 def _resolve_server_url(server: str) -> str:
     """
-    Normalize a user-supplied ``--server`` value to the agent-meow API base.
+    Normalize a user-supplied ``--server`` value to the Omnigent API base.
 
     Every ``--server`` entry point (and ``login``) needs the same
     normalization, so they all route through here: strip a trailing slash,
     default a schemeless URL to ``https`` (``http`` for loopback hosts),
-    then expand a bare Databricks workspace URL — or the ``/agent-meow``
-    web-UI URL the internal user guide hands out — to the
-    ``/api/2.0/agent-meow`` mount.
+    then expand a bare Databricks workspace URL �?or the ``/omnigent``
+    web-UI URL the internal user guide hands out �?to the
+    ``/api/2.0/omnigent`` mount.
 
     :param server: A non-empty ``--server`` value, e.g.
-        ``"example.cloud.databricks.com/agent-meow"``.
+        ``"example.cloud.databricks.com/omnigent"``.
     :returns: The normalized API base URL without a trailing slash, e.g.
-        ``"https://example.cloud.databricks.com/api/2.0/agent-meow"``.
+        ``"https://example.cloud.databricks.com/api/2.0/omnigent"``.
     """
     return _workspace_api_server_url(_with_default_scheme(server.rstrip("/")))
 
@@ -11863,15 +8694,15 @@ def _databricks_workspace_login_target(server: str, probe: httpx.Response) -> st
     """Return the workspace host when *server* sits behind Databricks auth.
 
     Recognizes the two Databricks-fronted deployment shapes from the
-    unauthenticated probe alone — no hostname pattern matching, so
+    unauthenticated probe alone �?no hostname pattern matching, so
     custom domains work too:
 
     - **Databricks Apps**: the Apps edge answers with a 302 to the
       fronting workspace's OIDC authorize endpoint
       (``https://<workspace>/oidc/oauth2/v2.0/authorize?...``); the
       redirect names the workspace to authenticate against.
-    - **Workspace-hosted agent-meow** (e.g.
-      ``https://<workspace>/api/2.0/agent-meow``): the workspace API
+    - **Workspace-hosted omnigent** (e.g.
+      ``https://<workspace>/api/2.0/omnigent``): the workspace API
       proxy answers 401 with ``WWW-Authenticate: Bearer
       realm="DatabricksRealm"``; the workspace is the URL's own host.
 
@@ -11952,10 +8783,10 @@ def _host_with_org(workspace_host: str, org_id: str | None) -> str:
 
 
 def _databricks_login(server: str, workspace_host: str, org_id: str | None = None) -> None:
-    """Log in to a Databricks-fronted agent-meow server.
+    """Log in to a Databricks-fronted Omnigent server.
 
     Covers both Databricks Apps deployments and workspace-hosted
-    agent-meow (``https://<workspace>/api/2.0/agent-meow``). Reuses an
+    omnigent (``https://<workspace>/api/2.0/omnigent``). Reuses an
     existing host-keyed Databricks CLI OAuth grant when one resolves;
     otherwise runs ``databricks auth login --host <workspace>``
     (browser flow). The minted token is verified against the server
@@ -11963,7 +8794,7 @@ def _databricks_login(server: str, workspace_host: str, org_id: str | None = Non
     verification (e.g. a stale token-cache entry minted for a
     different workspace) triggers one fresh browser login and a
     re-verify before failing loud. On success, a pointer record is
-    stored in ``~/.agent_meow/auth_tokens.json`` — no profile name is
+    stored in ``~/.omnigent/auth_tokens.json`` �?no profile name is
     created or consulted anywhere.
 
     :param server: The server URL, e.g.
@@ -11972,7 +8803,7 @@ def _databricks_login(server: str, workspace_host: str, org_id: str | None = Non
         against, e.g. ``"https://example.databricks.com"``.
     :param org_id: The ``?o=`` workspace selector from the login URL
         (see :func:`_org_id_from_url`). When set, the login binds the
-        grant to this workspace and the verify request routes to it —
+        grant to this workspace and the verify request routes to it �?
         needed where the bare host is the account, not a workspace.
     :raises click.ClickException: When the ``databricks`` extra or CLI
         binary is missing, the workspace login fails, or the server
@@ -11988,7 +8819,7 @@ def _databricks_login(server: str, workspace_host: str, org_id: str | None = Non
     if not databricks_sdk_installed():
         raise click.ClickException(
             "Logging in to a Databricks-fronted server (a Databricks App or "
-            "workspace-hosted agent-meow) requires the `databricks` extra "
+            "workspace-hosted omnigent) requires the `databricks` extra "
             f"(databricks-sdk is not installed). Reinstall with:\n  "
             f"{DATABRICKS_EXTRA_INSTALL_HINT}"
         )
@@ -12010,7 +8841,7 @@ def _databricks_login(server: str, workspace_host: str, org_id: str | None = Non
         # replaces the bad cache entry; then re-verify.
         click.echo(
             f"The cached Databricks credentials were rejected by {server} "
-            f"(HTTP {verify.status_code}) — refreshing the workspace login."
+            f"(HTTP {verify.status_code}) �?refreshing the workspace login."
         )
         token = _login_and_mint_workspace_token(workspace_host, org_id)
         verify = _verify_databricks_server_token(server, token, org_id)
@@ -12152,11 +8983,11 @@ def _remember_default_server(server: str) -> None:
     """
     Persist *server* as the user-level default after a successful login.
 
-    A bare ``agent-meow`` (and ``agent-meow host``) fall back to the
+    A bare ``omnigent`` (and ``omnigent host``) fall back to the
     configured ``server`` key when no ``--server`` is passed (see
     :func:`run` and :func:`host`). Without this, a user who runs
-    ``agent-meow login <server>`` and then bare ``agent-meow`` is still routed
-    at whatever default ``setup`` baked in — the confusing "I just logged
+    ``omnigent login <server>`` and then bare ``omnigent`` is still routed
+    at whatever default ``setup`` baked in �?the confusing "I just logged
     in, yet I'm asked to log in again to a different server" path.
     Recording the just-logged-in server as the default closes that gap.
 
@@ -12165,7 +8996,7 @@ def _remember_default_server(server: str) -> None:
     available signal of intent.
 
     :param server: Normalized server URL the login succeeded against, e.g.
-        ``"https://example.databricks.com/api/2.0/agent-meow"``.
+        ``"https://example.databricks.com/api/2.0/omnigent"``.
     """
     _save_global_config({"server": server})
     click.echo(f"Set {server} as your default server.")
@@ -12174,42 +9005,42 @@ def _remember_default_server(server: str) -> None:
 @cli.command("login")
 @click.argument("server_url")
 def login(server_url: str) -> None:
-    """Authenticate with a remote agent-meow server.
+    """Authenticate with a remote Omnigent server.
 
     Probes the server's auth mode and runs the matching flow:
 
     \b
     - accounts mode: prompts for username + password (no browser
       needed), POSTs ``/auth/login``, stores the session JWT in
-      ``~/.agent_meow/auth_tokens.json`` keyed by server URL.
+      ``~/.omnigent/auth_tokens.json`` keyed by server URL.
     - OIDC mode: opens the browser, polls the CLI ticket endpoint,
       stores the session JWT when the browser flow completes.
     - header mode: no login needed (proxy injects identity); we
       print a hint and exit successfully.
-    - Databricks-fronted (a Databricks App, or agent-meow hosted on
-      a workspace API path): detected from the probe response — we
+    - Databricks-fronted (a Databricks App, or omnigent hosted on
+      a workspace API path): detected from the probe response �?we
       log in to the workspace via ``databricks auth login --host
       <workspace>`` (browser) and store a pointer record so later
       commands mint fresh workspace tokens automatically. Requires
       the ``databricks`` extra.
 
-    Subsequent ``agent-meow run --server <url>`` commands then
+    Subsequent ``omnigent run --server <url>`` commands then
     use the stored token via the runner / host-tunnel auth chain. A
     successful login also records the server as the user-level default
-    (the ``server`` key in ``~/.agent_meow/config.yaml``), so a bare
-    ``agent-meow`` afterwards targets it instead of whatever default
+    (the ``server`` key in ``~/.omnigent/config.yaml``), so a bare
+    ``omnigent`` afterwards targets it instead of whatever default
     ``setup`` baked in.
 
     \b
     Example:
-      agent-meow login http://localhost:6767
-      agent-meow login example.cloud.databricks.com/agent-meow  # https:// assumed
-      agent-meow          # connects to the server just logged in to
+      omnigent login http://localhost:6767
+      omnigent login example.cloud.databricks.com/omnigent  # https:// assumed
+      omnigent          # connects to the server just logged in to
 
     :param server_url: The remote server URL, e.g.
         ``"http://localhost:6767"``. A missing scheme defaults to
         ``https://`` (``http://`` for loopback hosts), and the workspace
-        web-UI URL (``<ws>/agent-meow``) is accepted alongside the bare
+        web-UI URL (``<ws>/omnigent``) is accepted alongside the bare
         workspace root.
     """
     import httpx as _httpx
@@ -12220,11 +9051,11 @@ def login(server_url: str) -> None:
     org_id = _org_id_from_url(server_url)
 
     # ── Step 0: Probe the server's auth mode. ──────────────────
-    # /v1/me returns a JSON ``login_url`` on 401 — "/login" for
+    # /v1/me returns a JSON ``login_url`` on 401 �?"/login" for
     # accounts, "/auth/login" for OIDC, and no login_url at all
     # for header mode. A 302 to a workspace OAuth page (Databricks
     # Apps) or a 401 with a DatabricksRealm challenge (workspace-
-    # hosted agent-meow) means Databricks fronts the server. This
+    # hosted omnigent) means Databricks fronts the server. This
     # lets one CLI command handle every posture without a flag.
     try:
         probe = _httpx.get(f"{server}/v1/me", timeout=10.0)
@@ -12243,7 +9074,7 @@ def login(server_url: str) -> None:
     if probe.status_code == 401:
         import contextlib as _contextlib
 
-        # 401 with non-JSON body — probably not an agent-meow server.
+        # 401 with non-JSON body �?probably not an Omnigent server.
         # Suppress: we fall through to the OIDC path below which has
         # its own clearer error message.
         with _contextlib.suppress(ValueError):
@@ -12252,7 +9083,7 @@ def login(server_url: str) -> None:
         # Header mode (or already authenticated). Tell the user
         # they don't need to log in and exit cleanly.
         click.echo(
-            f"{server} is in header-auth mode — no login needed. "
+            f"{server} is in header-auth mode �?no login needed. "
             "The proxy in front of it injects your identity on every "
             "request."
         )
@@ -12264,7 +9095,7 @@ def login(server_url: str) -> None:
         _remember_default_server(server)
         return
 
-    # Fall through: OIDC mode (or unknown — let the ticket endpoint's
+    # Fall through: OIDC mode (or unknown �?let the ticket endpoint's
     # error message guide the user).
     import webbrowser
 
@@ -12318,11 +9149,11 @@ def login(server_url: str) -> None:
             click.echo(f"Logged in as {user_id}")
             _remember_default_server(server)
             return
-        # 410 or other error — ticket expired.
+        # 410 or other error �?ticket expired.
         raise click.ClickException("Login ticket expired or was rejected. Please try again.")
 
     raise click.ClickException(
-        "Login timed out — the browser flow was not completed "
+        "Login timed out �?the browser flow was not completed "
         f"within {_CLI_LOGIN_TIMEOUT_SECONDS} seconds."
     )
 
@@ -12333,23 +9164,23 @@ _CLI_LOGIN_TIMEOUT_SECONDS = 300  # 5 minutes
 def _accounts_login(server: str) -> None:
     """Run the accounts-mode login flow: prompt + POST /auth/login.
 
-    No browser, no polling — accounts auth is username + password,
+    No browser, no polling �?accounts auth is username + password,
     we just collect them, send them, and store the returned JWT.
 
     Three failure paths surface as ClickExceptions so the click
     error formatter renders them consistently with the rest of
     the CLI:
 
-    - Network failure on /auth/login → connection error.
-    - 401 from /auth/login → "invalid username or password"
-      (the server's generic message — we don't reveal whether
+    - Network failure on /auth/login �?connection error.
+    - 401 from /auth/login �?"invalid username or password"
+      (the server's generic message �?we don't reveal whether
       the username was unknown or the password was wrong).
-    - 5xx → "server error".
+    - 5xx �?"server error".
 
     On success, the session JWT goes to
-    ``~/.agent_meow/auth_tokens.json`` via the existing
-    :func:`~?agent_meow.cli_auth.store_token`. From there both
-    ``agent-meow run`` and ``agent-meow host`` pick it up
+    ``~/.omnigent/auth_tokens.json`` via the existing
+    :func:`agent_meow.cli_auth.store_token`. From there both
+    ``omnigent run`` and ``omnigent host`` pick it up
     automatically when they call ``--server <url>``.
     """
     import httpx as _httpx
@@ -12372,7 +9203,7 @@ def _accounts_login(server: str) -> None:
         raise click.ClickException(f"Could not reach {server}/auth/login: {exc}") from exc
 
     if resp.status_code == 401:
-        # Generic message — matches what the server returns and
+        # Generic message �?matches what the server returns and
         # what the web form shows. Don't echo the username back
         # in case the terminal is being recorded / shared.
         raise click.ClickException("Invalid username or password.")
@@ -12418,23 +9249,23 @@ _PANE_SPLIT_DIRECTIONS = ("v", "h", "w")
     "--parent-pane",
     "parent_pane",
     required=True,
-    help="Tmux pane id of the parent agent-meow pane (e.g. '%0'). "
+    help="Tmux pane id of the parent omnigent pane (e.g. '%0'). "
     "Forwarded by the wrapped key-binding via #{pane_id}.",
 )
 def pane_split(direction: str | None, parent_pane: str) -> None:
     """
-    Split the parent agent-meow pane and run the chooser in the new pane.
+    Split the parent omnigent pane and run the chooser in the new pane.
 
     Internal subcommand invoked by the tmux key-binding wrappers
     installed by ``agent_meow.repl._tmux_pane``. The wrapper fires
-    ``run-shell 'agent-meow pane-split -<v|h|w> -p #{pane_id}'`` when
-    the user presses their split key while focused on an agent-meow
+    ``run-shell 'omnigent pane-split -<v|h|w> -p #{pane_id}'`` when
+    the user presses their split key while focused on an omnigent
     pane; tmux substitutes ``#{pane_id}`` to the focused pane's id
     and we exec the right ``tmux split-window`` / ``new-window``
-    invocation pointing at ``agent-meow pane-picker``.
+    invocation pointing at ``omnigent pane-picker``.
 
     :param direction: One of ``v`` / ``h`` / ``w``. Required.
-    :param parent_pane: The agent-meow pane id, e.g. ``%0``. Required.
+    :param parent_pane: The omnigent pane id, e.g. ``%0``. Required.
     """
     import shlex
 
@@ -12442,15 +9273,15 @@ def pane_split(direction: str | None, parent_pane: str) -> None:
 
     if direction not in _PANE_SPLIT_DIRECTIONS:
         raise click.ClickException("pane-split requires exactly one of -v, -h, or -w")
-    # The new pane runs ``agent-meow pane-picker`` which reads the
+    # The new pane runs ``omnigent pane-picker`` which reads the
     # parent's pane options and exec's into the chosen agent run.
     # We pass the parent pane id explicitly because the new pane's
     # ``$TMUX_PANE`` will be the new pane, not the parent.
     #
     # tmux's ``split-window`` / ``new-window`` spawns the new
     # pane's initial command via ``/bin/sh -c``, and that shell
-    # inherits the tmux server's PATH — which typically does NOT
-    # include the venv ``bin/`` where ``agent-meow`` lives.
+    # inherits the tmux server's PATH �?which typically does NOT
+    # include the venv ``bin/`` where ``omnigent`` lives.
     # ``_resolve_omnigent_argv`` returns either an absolute
     # path to the binary (preferred) or ``[python, "-m",
     # "agent_meow.cli"]`` as a fallback that always works.
@@ -12490,7 +9321,7 @@ def pane_split(direction: str | None, parent_pane: str) -> None:
     "--parent-pane",
     "parent_pane",
     required=True,
-    help="Tmux pane id of the parent agent-meow pane (e.g. '%0'). "
+    help="Tmux pane id of the parent omnigent pane (e.g. '%0'). "
     "Used to read launch context (agent name, launch argv, server URL) "
     "from custom pane options the parent set via "
     "``agent_meow.repl._tmux_pane.register_pane``.",
@@ -12500,20 +9331,20 @@ def pane_picker(parent_pane: str) -> None:
     Launch a fresh REPL conversation in the current new pane.
 
     Internal subcommand. The new tmux pane (created by
-    ``agent-meow pane-split``) execs this command, which:
+    ``omnigent pane-split``) execs this command, which:
 
-    1. Reads the parent agent-meow pane's ``@omnigent-launch-argv``
+    1. Reads the parent omnigent pane's ``@omnigent-launch-argv``
        and friends.
     2. ``os.execvp``\\s the parent's launch argv to spawn a new
        REPL against the same agent in this pane.
 
     v1 has exactly one path: "new conversation with the same
     agent". A chooser dialog (sub-agent listing, "continue
-    sub-agent X", etc.) lands in Phase 2 — see
+    sub-agent X", etc.) lands in Phase 2 �?see
     ``designs/REPL_TMUX_PANE_SPLIT.md``. With only one option,
     a chooser is friction; we just exec.
 
-    :param parent_pane: The parent agent-meow pane id, e.g. ``%0``.
+    :param parent_pane: The parent omnigent pane id, e.g. ``%0``.
     """
     import json
 
@@ -12525,7 +9356,7 @@ def pane_picker(parent_pane: str) -> None:
     launch_argv_json = read_pane_option(parent_pane, OPT_LAUNCH_ARGV)
     if not launch_argv_json:
         click.echo(
-            f"error: parent pane {parent_pane} has no agent-meow context "
+            f"error: parent pane {parent_pane} has no omnigent context "
             f"(missing {OPT_LAUNCH_ARGV} option). Cannot launch sibling REPL.",
             err=True,
         )
@@ -12542,7 +9373,7 @@ def pane_picker(parent_pane: str) -> None:
     if not isinstance(launch_argv, list) or not launch_argv:
         click.echo(
             f"error: parent pane {parent_pane}'s launch argv is empty or "
-            f"not a list — cannot reconstruct a launch command.",
+            f"not a list �?cannot reconstruct a launch command.",
             err=True,
         )
         sys.exit(1)
@@ -12573,7 +9404,7 @@ _RESUME_BOOLEAN_FLAGS = frozenset({"--continue", "-c"})
 # (``--resume conv_abc``). We peek at the next token to decide
 # whether to drop one or two tokens. Legacy ``--session`` / ``-s``
 # remain here so an argv saved by a pre-consolidation client can
-# still be sanitized cleanly — newly-saved argvs won't contain them.
+# still be sanitized cleanly �?newly-saved argvs won't contain them.
 _RESUME_OPTIONAL_VALUE_FLAGS = frozenset({"--resume", "-r", "--session", "-s"})
 
 # One-shot flags whose value is bound to a specific conversation
@@ -12649,6 +9480,198 @@ def _strip_one_shot_flags(argv: list[str]) -> list[str]:
                 continue
         out.append(token)
     return out
+
+
+def _bundled_agent_brain_harness(name: str) -> str | None:
+    """Return the canonical brain harness of a bundled agent, or ``None``.
+
+    Reads the brain harness (``executor.config.harness``, falling back to
+    ``executor.harness`` / ``executor.type``) from the bundled agent's
+    ``config.yaml`` �?e.g. polly's and debby's ``claude-sdk`` brain �?so
+    credential fallback can target the model family the brain actually
+    runs on. Mirrors :func:`_peek_default_agent_harness`'s YAML-reading
+    style.
+
+    :param name: Bundled example directory name, e.g. ``"polly"``.
+    :returns: The canonical harness id, e.g. ``"claude-sdk"``, or ``None``
+        when the bundle is missing/unreadable or declares no brain harness.
+    """
+    config_path = Path(_bundled_example_path(name)) / "config.yaml"
+    if not config_path.is_file():
+        return None
+    try:
+        raw = yaml.safe_load(config_path.read_text()) or {}
+    except (OSError, yaml.YAMLError):
+        return None
+    if not isinstance(raw, dict):
+        return None
+    executor = raw.get("executor")
+    if not isinstance(executor, dict):
+        return None
+    declared: object = None
+    config_block = executor.get("config")
+    if isinstance(config_block, dict):
+        declared = config_block.get("harness")
+    if not isinstance(declared, str) or not declared:
+        declared = executor.get("harness") or executor.get("type")
+    if not isinstance(declared, str) or not declared:
+        return None
+    return canonicalize_harness(declared) or declared
+
+
+def _ensure_bundled_agent_brain_credential(name: str) -> None:
+    """Ensure the bundled agent's brain harness has a credential to launch with.
+
+    Polly and Debby launch with the *first available* credential for their
+    brain's model family rather than requiring a specific one to be marked
+    ``default: true`` up front �?so users can start without manually
+    picking/configuring one. When no default provider is configured for the
+    agent's brain harness, pick the first available credential serving that
+    family and mark it the default so the downstream ``run`` resolves it �?
+    printing a notice (to stderr) since this mutates the user's config on a
+    launch command, mirroring the confirmation ``setup`` / ``/model`` show.
+
+    No-op when a default is already configured, or when no credential is
+    available for the family (the harness raises its own launch error then).
+    Only an explicit default (or none) is touched �?an existing default is
+    never overridden. Marking the first available credential the default
+    mirrors :func:`_add_provider_entry`'s "a first provider just works"
+    adoption (see :func:`agent_meow.setup`).
+
+    :param name: Bundled example directory name, e.g. ``"polly"``.
+    """
+    from agent_meow.errors import OmnigentError
+    from agent_meow.onboarding.configure_models import family_label
+    from agent_meow.onboarding.detected import effective_config_with_detected
+    from agent_meow.onboarding.provider_config import (
+        default_provider_for_harness,
+        harness_family,
+        load_config,
+        load_providers,
+        provider_families,
+        set_default_provider,
+    )
+
+    brain_harness = _bundled_agent_brain_harness(name)
+    if brain_harness is None:
+        return
+    family = harness_family(brain_harness)
+    if family is None:
+        return
+    # Best-effort: adopting a default must never crash a launch. Any malformed
+    # or unexpected config state (corrupt YAML, ambiguous defaults, a divergent
+    # on-disk entry) degrades to a no-op �?the harness then raises its own
+    # credential error.
+    try:
+        config = effective_config_with_detected(load_config())
+        if default_provider_for_harness(config, brain_harness) is not None:
+            return
+        on_disk = _load_global_config()
+        disk_block = on_disk.get("providers") if isinstance(on_disk, dict) else None
+        if not isinstance(disk_block, dict):
+            return
+        # Skip ambient-detected entries (not on disk) �?auto-defaulted upstream.
+        candidates = [
+            (entry_name, entry)
+            for entry_name, entry in load_providers(config).items()
+            if family in provider_families(entry) and entry_name in disk_block
+        ]
+        if not candidates:
+            return
+        entry_name, entry = candidates[0]
+        _save_global_config({"providers": set_default_provider(disk_block, entry_name, family)})
+        family_name = family_label(family)
+        credential_name = _credential_label(entry_name, entry)
+        # Announce: this mutates the user's config on a launch command.
+        if len(candidates) > 1:
+            message = (
+                f"No default {family_name} credential set �?"
+                f"using {credential_name} "
+                f"({len(candidates)} {family_name} credentials found; "
+                "pick another with: omnigent /model) and saving it as the default."
+            )
+        else:
+            message = (
+                f"No default {family_name} credential set �?"
+                f"using {credential_name} and saving it as the default "
+                "(change anytime with: omnigent /model)."
+            )
+        click.echo(
+            message,
+            err=True,
+        )
+        return
+    except (OSError, yaml.YAMLError, OmnigentError):
+        return
+
+
+def _reject_reserved_kiro_resume_args(kiro_args: tuple[str, ...]) -> None:
+    """Reject Kiro-owned resume flags in passthrough args."""
+    reserved = {"--resume", "--resume-id", "--resume-picker"}
+    if any(arg == flag or arg.startswith(f"{flag}=") for arg in kiro_args for flag in reserved):
+        raise click.UsageError(
+            "Kiro resume flags are reserved for Omnigent resume handling; use "
+            "`omnigent kiro --resume [CONVERSATION]` instead."
+        )
+
+
+def _build_kiro_launch_args(
+    *,
+    effort: str | None,
+    kiro_agent: str | None,
+    trust_tools: tuple[str, ...],
+    trust_all_tools: bool,
+    passthrough_args: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Build mapped Kiro CLI args for the runner-owned terminal launch."""
+    args: list[str] = []
+    if effort:
+        args.extend(["--effort", effort])
+    if kiro_agent:
+        args.extend(["--agent", kiro_agent])
+    for tool in trust_tools:
+        args.extend(["--trust-tools", tool])
+    if trust_all_tools:
+        args.append("--trust-all-tools")
+    args.extend(passthrough_args)
+    return tuple(args)
+
+
+def _run_bundled_agent(name: str, run_args: tuple[str, ...]) -> None:
+    """Forward a bundled-agent subcommand to ``run`` on its packaged path.
+
+    Implements ``omnigent polly`` / ``omnigent debby``: resolves the bundled
+    example directory and re-dispatches through the ``run`` command's own
+    parser, so every ``run`` flag (``--server``, ``-p``, ``--resume``, ...)
+    works unchanged on the agent shorthands without duplicating ``run``'s
+    option declarations.
+
+    ``prog_name`` is pinned to ``"omnigent run"`` so context-derived output �?
+    usage errors and the :func:`_build_resume_parts` replay prefix �?renders
+    as the canonical ``omnigent run <path>`` form, which stays valid when
+    replayed.
+
+    :param name: Bundled example directory name, e.g. ``"polly"``.
+    :param run_args: Unparsed pass-through CLI args for ``run``,
+        e.g. ``("-p", "review the last commit")``.
+    """
+    # Polly/Debby launch with the first available credential for their
+    # brain's family when no specific one is configured up front.
+    _ensure_bundled_agent_brain_credential(name)
+    # standalone_mode=False propagates ClickExceptions to main()'s handler
+    # (CLI diagnostics logging + setup hint) instead of exiting inline,
+    # matching the outer `cli(args=argv, standalone_mode=False)` dispatch.
+    run.main(
+        args=[_bundled_example_path(name), *run_args],
+        prog_name="omnigent run",
+        standalone_mode=False,
+    )
+
+
+# Native coding-agent (TUI) subcommands (claude/codex/pi/�? live in
+# agent_meow.cli_native; register them on the group here, at module bottom, so the
+# shared launch helpers their bodies close over are already defined.
+_register_native_commands(cli)
 
 
 if __name__ == "__main__":

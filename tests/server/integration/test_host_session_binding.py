@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import pytest_asyncio
@@ -25,7 +27,12 @@ from agent_meow.runtime.agent_cache import AgentCache
 from agent_meow.server.app import create_app
 from agent_meow.server.auth import RESERVED_USER_LOCAL
 from agent_meow.server.host_registry import HostRegistry
-from agent_meow.server.managed_hosts import parse_sandbox_config
+from agent_meow.server.managed_hosts import (
+    ManagedHostLaunch,
+    ManagedLaunchTracker,
+    ManagedSandboxConfig,
+    parse_sandbox_config,
+)
 from agent_meow.server.routes.host_tunnel import create_host_tunnel_router
 from agent_meow.server.routes.hosts import create_hosts_router
 from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
@@ -45,7 +52,7 @@ from tests.server.helpers import (
 
 pytestmark = pytest.mark.asyncio
 
-_HOST_ID = "host_binding_test"
+_HOST_ID = "3f866cafac81246fb60ae6ceb1a738da"
 
 
 def _websocket_scope(path: str) -> dict[str, object]:
@@ -214,7 +221,7 @@ async def test_host_id_in_session_response(
     # workspace is required when host_id is set (DB constraint
     # ck_conversations_workspace_required_for_host); the route layer
     # derives it from the user pick + agent.cwd boundary at session
-    # create â€” this lower-level test passes a ready-made path.
+    # create â€?this lower-level test passes a ready-made path.
     conv = conv_store.create_conversation(
         agent_id=None,
         host_id=_HOST_ID,
@@ -225,132 +232,6 @@ async def test_host_id_in_session_response(
     fetched = conv_store.get_conversation(conv.id)
     assert fetched is not None
     assert fetched.host_id == _HOST_ID
-
-
-async def test_reconnect_with_dead_runner_triggers_relaunch(
-    binding_app: tuple[FastAPI, HostRegistry, HostStore, SqlAlchemyConversationStore],
-) -> None:
-    """
-    Verify that when a host reconnects with an empty runners list,
-    and there's a session expecting a runner from that host, the
-    server re-sends host.launch_runner.
-
-    This is the core reconnect reconciliation flow from the design
-    doc's Failure Handling section. If the launch frame is never
-    sent, sessions orphaned by server restarts would stay stuck.
-    """
-    # This test builds its own ``app2`` with the reconciliation
-    # callback below, so the fixture's ``app`` is unused here.
-    _app, registry, host_store, conv_store = binding_app
-
-    # The conversation is created with host_id BEFORE the host
-    # reconnects below, so the host row (FK target) must already
-    # exist â€” register it the same way the tunnel endpoint would.
-    host_store.upsert_on_connect(_HOST_ID, "test-laptop", RESERVED_USER_LOCAL)
-
-    # Simulate a session that was bound to a runner on this host,
-    # but the runner died (not in the reconnecting host's runners
-    # list, not in the TunnelRegistry).
-    conv = conv_store.create_conversation(
-        agent_id=None,
-        runner_id="runner_token_dead",
-        host_id=_HOST_ID,
-        # See test above for the workspace requirement.
-        workspace="/Users/corey/projects/myapp",
-    )
-
-    on_connect_called = asyncio.Event()
-
-    async def _on_host_connect(host_id: str) -> None:
-        """Reconciliation callback for this test.
-
-        Finds sessions with dead runners and re-sends launch.
-
-        :param host_id: Reconnecting host ID.
-        """
-        import secrets
-
-        from agent_meow.host.frames import HostLaunchRunnerFrame, encode_host_frame
-        from agent_meow.runner.identity import token_bound_runner_id
-
-        conn = registry.get(host_id)
-        if conn is None:
-            return
-        live_runners = set(conn.hello.runners)
-        sessions = conv_store.list_conversations_by_host_id(host_id)
-        for sess in sessions:
-            if sess.runner_id is None:
-                continue
-            if sess.runner_id in live_runners:
-                continue
-            binding_token = secrets.token_urlsafe(32)
-            new_runner_id = token_bound_runner_id(binding_token)
-            conv_store.replace_runner_id(sess.id, new_runner_id)
-            request_id = secrets.token_hex(8)
-            launch_frame = encode_host_frame(
-                HostLaunchRunnerFrame(
-                    request_id=request_id,
-                    binding_token=binding_token,
-                    workspace="/tmp",
-                )
-            )
-            registry.send_text(conn, launch_frame)
-        on_connect_called.set()
-
-    # Rebuild app with the reconciliation callback.
-    app2 = FastAPI()
-    app2.include_router(
-        create_host_tunnel_router(
-            registry,
-            host_store,
-            on_host_connect=_on_host_connect,
-        ),
-        prefix="/v1",
-    )
-
-    # Host reconnects with empty runners list (runner died).
-    comm = await _connect_host(app2, registry, runners=[])
-
-    # Wait for the on_connect callback to fire.
-    await asyncio.wait_for(on_connect_called.wait(), timeout=5.0)
-
-    # The host should receive a launch_runner frame.
-    received_launch = False
-    for _ in range(20):
-        try:
-            output = await asyncio.wait_for(
-                comm.receive_output(),
-                timeout=1.0,
-            )
-        except asyncio.TimeoutError:
-            break
-        if output["type"] != "websocket.send":
-            continue
-        try:
-            frame = decode_host_frame(output["text"])
-        except ValueError:
-            continue
-        if isinstance(frame, HostLaunchRunnerFrame):
-            received_launch = True
-            break
-
-    assert received_launch, (
-        "Host should receive a host.launch_runner frame for the "
-        "orphaned session during reconnect reconciliation. "
-        "The on_host_connect callback either didn't fire or "
-        "didn't find the session."
-    )
-
-    # The session's runner_id should have been updated to a new
-    # token-bound id (not the dead one).
-    updated = conv_store.get_conversation(conv.id)
-    assert updated is not None
-    assert updated.runner_id != "runner_token_dead", (
-        "runner_id should be replaced with a new token-bound id for the relaunched runner"
-    )
-    assert updated.runner_id.startswith("runner_token_"), (
-        "New runner_id should be a token-bound id"
-    )
 
 
 # â”€â”€ Managed (server-launched sandbox) host sessions â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -395,7 +276,7 @@ async def managed_session_env(
             {
                 "provider": "modal",
                 "server_url": "https://managed-test.example.com",
-                "modal": {"image": "docker.io/test/agent-meow-host:latest"},
+                "modal": {"image": "docker.io/test/omnigent-host:latest"},
             }
         ),
     )
@@ -438,21 +319,21 @@ async def _fake_sandbox_host(
     the server-injected host name (the real host reads it from
     ``OMNIGENT_HOST_NAME``; the name must match the pre-registered
     row's ``(owner, name)`` key), then answers the launch frame with a
-    launched result â€” the full protocol a real managed host performs.
+    launched result â€?the full protocol a real managed host performs.
 
     :param app: The app whose tunnel to dial.
     :param host_id: Server-chosen host identity from the launch env.
     :param host_name: Server-chosen host name from the launch env.
     :param token: Raw launch token from the launch env.
     :returns: The live tunnel communicator. The CALLER must keep it
-        referenced for as long as the host should stay online â€”
+        referenced for as long as the host should stay online â€?
         dropping it garbage-collects the ASGI task, which tears the
         tunnel down and flips the host offline.
     """
     from agent_meow.runner.identity import token_bound_runner_id
 
     scope = _websocket_scope(f"/v1/hosts/{host_id}/tunnel")
-    scope["headers"] = [(b"x-agent-meow-host-token", token.encode("ascii"))]
+    scope["headers"] = [(b"x-omnigent-host-token", token.encode("ascii"))]
     comm = ApplicationCommunicator(app, scope)
     await comm.send_input({"type": "websocket.connect"})
     accepted = await comm.receive_output(timeout=5.0)
@@ -527,7 +408,7 @@ async def test_managed_session_create_end_to_end(
     immediately and provisions in the background: a sandbox is
     provisioned, the sandbox host registers over the REAL tunnel with
     the minted token, and the session ends up bound to that host with
-    a runner launched on it â€” everything but the sandbox is production
+    a runner launched on it â€?everything but the sandbox is production
     code.
     """
     env = managed_session_env
@@ -550,7 +431,7 @@ async def test_managed_session_create_end_to_end(
         Runs on a worker thread (the launcher executes under
         ``asyncio.to_thread``), so the coroutine is handed back to the
         app's event loop. The resolved communicators are awaited (and
-        thereby kept referenced â€” see ``_fake_sandbox_host``) by the
+        thereby kept referenced â€?see ``_fake_sandbox_host``) by the
         test body.
         """
         future = asyncio.run_coroutine_threadsafe(
@@ -571,7 +452,7 @@ async def test_managed_session_create_end_to_end(
     )
     assert resp.status_code == 201, resp.text
     # The non-blocking contract: the create response carries no host
-    # binding â€” provisioning is still running in the background.
+    # binding â€?provisioning is still running in the background.
     assert resp.json()["host_id"] is None
     session_id = resp.json()["id"]
 
@@ -579,7 +460,7 @@ async def test_managed_session_create_end_to_end(
     # sandbox workspace, and a token-bound runner.
     conv = await _wait_for_managed_binding(env, session_id)
     # Keep the fake hosts' tunnels alive (referenced) for the rest of
-    # the test â€” the host store flips them offline if they drop.
+    # the test â€?the host store flips them offline if they drop.
     tunnels = [await future for future in host_futures]
     assert len(tunnels) == 1
     assert conv.host_id is not None
@@ -588,17 +469,17 @@ async def test_managed_session_create_end_to_end(
     assert conv.runner_id.startswith("runner_token_")
 
     # The hosts row carries the sandbox backing and is owned by the
-    # caller â€” no auth provider on this app â†’ the reserved local user,
+    # caller â€?no auth provider on this app â†?the reserved local user,
     # same as a directly-connected host would be.
     host = env.host_store.get_host(conv.host_id)
     assert host is not None
-    assert host.owner == RESERVED_USER_LOCAL
+    assert host.user_id == RESERVED_USER_LOCAL
     assert host.status == "online"
     assert host.sandbox_provider == "modal"
     assert host.sandbox_id == "sb-fake-1"
 
     # Deleting the managed session tears the sandbox down: the
-    # provider terminate fires and the host row is deleted â€” which
+    # provider terminate fires and the host row is deleted â€?which
     # both revokes the launch token and removes the dead host from
     # the picker (no offline ghost lingering after the session).
     delete_resp = await env.client.delete(f"/v1/sessions/{session_id}")
@@ -618,8 +499,8 @@ async def test_managed_session_create_with_repo_workspace_binds_cloned_dir(
     """
     ``POST /v1/sessions`` with ``host_type="managed"`` and a
     ``<repo>#<branch>`` workspace clones the repository inside the
-    sandbox and binds the session to the CLONED directory â€” the full
-    route threading (schema â†’ parse â†’ launch â†’ conversation row), not
+    sandbox and binds the session to the CLONED directory â€?the full
+    route threading (schema â†?parse â†?launch â†?conversation row), not
     just the launch helper.
     """
     env = managed_session_env
@@ -661,7 +542,7 @@ async def test_managed_session_create_with_repo_workspace_binds_cloned_dir(
     tunnels = [await future for future in host_futures]
     assert len(tunnels) == 1
 
-    # The clone ran in the sandbox with the requested branch pinnedâ€¦
+    # The clone ran in the sandbox with the requested branch pinnedâ€?
     assert (
         "git clone --branch main --single-branch "
         "-- https://github.com/org/myrepo.git /root/workspace/myrepo"
@@ -682,14 +563,18 @@ async def test_managed_session_create_validator_errors_serialize_as_422(
     """
     A model_validator rejection (here: a path workspace on a managed
     create) reaches the client as a REAL 422 whose ``detail[0].msg``
-    carries the message â€” the shape the web UI's describeCreateError
+    carries the message â€?the shape the web UI's describeCreateError
     renders. Regression guard: ``exc.errors()`` used to embed the raw
     ``ValueError`` in ``ctx``, which JSONResponse cannot serialize, so
     every validator 422 on this route 500'd as ``internal_error``.
     """
     resp = await managed_session_env.client.post(
         "/v1/sessions",
-        json={"agent_id": "ag_x", "host_type": "managed", "workspace": "/tmp/w"},
+        json={
+            "agent_id": "d7a89f58205a70539a16fa4b7bd06270",
+            "host_type": "managed",
+            "workspace": "/tmp/w",
+        },
     )
     assert resp.status_code == 422, resp.text
     detail = resp.json()["detail"]
@@ -706,7 +591,7 @@ async def test_managed_session_create_without_config_fails_clearly(
 ) -> None:
     """
     ``host_type="managed"`` on a server with no ``sandbox:`` config
-    must fail with a clear actionable error â€” not a 500 from a missing
+    must fail with a clear actionable error â€?not a 500 from a missing
     attribute deep in the launch path.
     """
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
@@ -749,7 +634,7 @@ async def test_managed_create_returns_during_provision_and_message_rendezvouses(
     - The create POST has ALREADY returned (with the old synchronous
       create, the POST itself would block on the gate and this test
       would hang at the first await).
-    - A message POST does not resolve â€” pre-fix it returned 503
+    - A message POST does not resolve â€?pre-fix it returned 503
       "No runner bound for session" immediately, desyncing the Web
       UI's auto-sent first prompt from the provisioning sandbox.
 
@@ -769,7 +654,7 @@ async def test_managed_create_returns_during_provision_and_message_rendezvouses(
         "/v1/sessions",
         json={"agent_id": agent["id"], "host_type": "managed"},
     )
-    # The create returned while provision is still gate-held â€” the
+    # The create returned while provision is still gate-held â€?the
     # non-blocking contract. (The pre-fix synchronous create could not
     # produce this response until the gate was released.)
     assert resp.status_code == 201, resp.text
@@ -777,7 +662,7 @@ async def test_managed_create_returns_during_provision_and_message_rendezvouses(
     session_id = resp.json()["id"]
 
     # The seeded progress stage is on the snapshot from the moment the
-    # create returns â€” what the navigating Web UI cold-loads.
+    # create returns â€?what the navigating Web UI cold-loads.
     snapshot = await env.client.get(f"/v1/sessions/{session_id}")
     assert snapshot.status_code == 200, snapshot.text
     assert snapshot.json()["sandbox_status"] == {"stage": "provisioning", "error": None}
@@ -796,7 +681,7 @@ async def test_managed_create_returns_during_provision_and_message_rendezvouses(
     )
     # The message parks on the launch rendezvous while provision is
     # held. Pre-fix this resolved immediately with 503 "No runner
-    # bound for session" â€” well inside the 0.3s window, so a regression
+    # bound for session" â€?well inside the 0.3s window, so a regression
     # turns this wait into a completed task and fails the assert.
     done, _ = await asyncio.wait({message_task}, timeout=0.3)
     assert not done, (
@@ -849,8 +734,8 @@ async def test_managed_launch_progress_surfaces_on_snapshot_and_stream(
     seeded ``provisioning`` stage from the moment the create returns
     (the Web UI navigates to the session page immediately and
     cold-loads the snapshot), the live stream then sees every later
-    stage in pipeline order â€” cloning â†’ starting â†’ connecting â†’
-    ready â€” and a settled launch clears the snapshot field.
+    stage in pipeline order â€?cloning â†?starting â†?connecting â†?
+    ready â€?and a settled launch clears the snapshot field.
 
     The fake launcher holds ``provision`` on a gate so the stream
     subscription registers deterministically before any
@@ -864,9 +749,13 @@ async def test_managed_launch_progress_surfaces_on_snapshot_and_stream(
 
     env = managed_session_env
     monkeypatch.setattr("agent_meow.server.managed_hosts.MANAGED_HOST_ONLINE_TIMEOUT_S", 10)
-    # No real runner connects; settle the background task quickly.
+    # This test asserts the happy-path "ready" progress edge; fake the
+    # runner tunnel connect so settlement is driven by progress ordering,
+    # not by the runner WebSocket harness.
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions._HOST_RELAUNCH_RUNNER_CONNECT_TIMEOUT_S", 0.2
+        env.app.state.tunnel_registry,
+        "wait_for_runner",
+        lambda _runner_id, *, timeout_s: asyncio.sleep(0, result=object()),
     )
     loop = asyncio.get_running_loop()
     gate = threading.Event()
@@ -907,7 +796,7 @@ async def test_managed_launch_progress_surfaces_on_snapshot_and_stream(
 
     # Tail live progress at the layer the SSE endpoint reads it from.
     # (The endpoint itself never terminates under the in-process ASGI
-    # transport â€” see the stream test in test_sessions_permissions.)
+    # transport â€?see the stream test in test_sessions_permissions.)
     stages: list[str] = []
     subscribed = asyncio.Event()
     settled = asyncio.Event()
@@ -947,7 +836,7 @@ async def test_managed_launch_progress_surfaces_on_snapshot_and_stream(
     # bound; "failed" here means the launch itself broke.
     assert stages == ["cloning", "starting", "connecting", "ready"]
 
-    # A settled launch clears the snapshot field â€” from here the
+    # A settled launch clears the snapshot field â€?from here the
     # session looks like any host-bound session and a reloading
     # client sees no provisioning indicator.
     snapshot_after = await env.client.get(f"/v1/sessions/{session_id}")
@@ -965,8 +854,8 @@ async def test_subagent_session_reuses_managed_sandbox_runner(
 
     Sub-agent spawns (the ``sys_session_create`` / spawn tools POST
     ``/v1/sessions`` with ``parent_session_id`` set, from inside the
-    runner) must inherit the parent's runner â€” the process living in
-    the managed sandbox â€” and must NOT provision a second sandbox or
+    runner) must inherit the parent's runner â€?the process living in
+    the managed sandbox â€?and must NOT provision a second sandbox or
     bind a host of their own. A second provision here would mean every
     sub-agent costs a sandbox; a missing runner inheritance would mean
     the sub-agent runs nowhere.
@@ -1015,13 +904,13 @@ async def test_subagent_session_reuses_managed_sandbox_runner(
     child = env.conv_store.get_conversation(child_id)
     assert child is not None
 
-    # Sandbox reuse: the child rides the parent's runner â€” the process
+    # Sandbox reuse: the child rides the parent's runner â€?the process
     # inside the managed sandbox. A None here means the sub-agent has
     # no executor; a different id means it ran outside the sandbox.
     assert child.runner_id == parent.runner_id
     # No second sandbox was provisioned for the child, and the child
     # carries no host binding of its own (deleting the child must not
-    # tear the parent's sandbox down â€” that cleanup keys on host_id).
+    # tear the parent's sandbox down â€?that cleanup keys on host_id).
     assert len(fake.provisioned_names) == 1
     assert child.host_id is None
     del tunnels
@@ -1035,9 +924,9 @@ async def test_message_relaunches_dead_managed_sandbox(
     A message to a session whose managed sandbox died provisions a new
     sandbox GENERATION under the same host identity.
 
-    Golden create â†’ fake host registers â†’ drop its tunnel (clean
-    close, marking the row offline â€” the shape a dying sandbox leaves
-    behind) â†’ post a message. The message-dispatch relaunch path must
+    Golden create â†?fake host registers â†?drop its tunnel (clean
+    close, marking the row offline â€?the shape a dying sandbox leaves
+    behind) â†?post a message. The message-dispatch relaunch path must
     detect the dead managed sandbox and run the relaunch pipeline:
     terminate the old generation, provision a fresh sandbox, re-arm
     the SAME host row with a new token + sandbox id, and re-bind the
@@ -1046,8 +935,14 @@ async def test_message_relaunches_dead_managed_sandbox(
     """
     env = managed_session_env
     monkeypatch.setattr("agent_meow.server.managed_hosts.MANAGED_HOST_ONLINE_TIMEOUT_S", 10)
-    # No real runner connects in this harness; shrink both runner
-    # waits so the message POST and the background task settle fast.
+    # Let the initial create settle successfully; after that this test switches
+    # the relaunch generation back to a runner-connect timeout.
+    monkeypatch.setattr(
+        env.app.state.tunnel_registry,
+        "wait_for_runner",
+        lambda _runner_id, *, timeout_s: asyncio.sleep(0, result=object()),
+    )
+    # Shrink relaunch waits so the message POST and background task settle fast.
     monkeypatch.setattr(
         "agent_meow.server.routes.sessions._HOST_RELAUNCH_RUNNER_CONNECT_TIMEOUT_S", 0.2
     )
@@ -1090,8 +985,14 @@ async def test_message_relaunches_dead_managed_sandbox(
         await asyncio.sleep(0.05)
     assert tracker.get(session_id) is None, "create launch never settled"
 
+    monkeypatch.setattr(
+        env.app.state.tunnel_registry,
+        "wait_for_runner",
+        lambda _runner_id, *, timeout_s: asyncio.sleep(0, result=None),
+    )
+
     # Kill generation 1: a clean tunnel close marks the host row
-    # offline â€” the state a dead sandbox leaves. Wait until both the
+    # offline â€?the state a dead sandbox leaves. Wait until both the
     # live registry and the row agree the host is gone, so the message
     # below deterministically takes the dead-host branch.
     await first_tunnel.send_input({"type": "websocket.disconnect", "code": 1000})
@@ -1118,7 +1019,7 @@ async def test_message_relaunches_dead_managed_sandbox(
         timeout=30.0,
     )
     # No real runner ever connects in this harness, so the POST itself
-    # ends 503 after the relaunch settles â€” the relaunch EFFECTS below
+    # ends 503 after the relaunch settles â€?the relaunch EFFECTS below
     # are the assertions that matter (with a real sandbox the runner
     # connects and the message forwards; covered by live verification).
     assert message_resp.status_code == 503, message_resp.text
@@ -1126,7 +1027,7 @@ async def test_message_relaunches_dead_managed_sandbox(
     # Generation 2 was provisioned and the old generation terminated.
     assert len(fake.provisioned_names) == 2, (
         f"expected a second provision for the relaunch, got "
-        f"{fake.provisioned_names} â€” the dead managed sandbox was not relaunched"
+        f"{fake.provisioned_names} â€?the dead managed sandbox was not relaunched"
     )
     assert fake.terminated == ["sb-fake-1"]
     # The SAME host row carries the new generation: identity stable,
@@ -1155,6 +1056,281 @@ async def test_message_relaunches_dead_managed_sandbox(
     del first_tunnel, second_tunnel
 
 
+async def test_resumable_managed_wake_ignores_stale_db_liveness(
+    db_uri: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A paused Islo host wakes even while its DB liveness row is still fresh."""
+    from agent_meow.server.routes import sessions as sessions_module
+
+    host_store = HostStore(db_uri)
+    conv_store = SqlAlchemyConversationStore(db_uri)
+    host_store.register_managed_host(
+        host_id="40bb7200abc8ed27d5b2fcbfad8e89d2",
+        name="managed-stale-live-islo",
+        user_id=RESERVED_USER_LOCAL,
+        token="tok-stale-live-islo",
+        provider="islo",
+        sandbox_id="sb-stale-live-islo",
+        token_expires_at=9_999_999_999,
+    )
+    host_store.upsert_on_connect(
+        host_id="40bb7200abc8ed27d5b2fcbfad8e89d2",
+        name="managed-stale-live-islo",
+        user_id=RESERVED_USER_LOCAL,
+    )
+    conv = conv_store.create_conversation(
+        agent_id=None,
+        host_id="40bb7200abc8ed27d5b2fcbfad8e89d2",
+        workspace="/root/workspace",
+    )
+    fake = FakeSandboxLauncher(can_resume=True)
+    fake.provider = "islo"  # type: ignore[misc]
+    config = ManagedSandboxConfig(
+        server_url="https://managed-test.example.com",
+        launcher_factory=lambda: fake,
+        token_ttl_s=3600,
+        provider="islo",
+    )
+    tracker = ManagedLaunchTracker()
+    calls: list[str] = []
+
+    def _finish_wake(**kwargs: object) -> None:
+        del kwargs
+        calls.append("wake")
+        tracker.begin(conv.id)
+        tracker.finish(conv.id)
+
+    monkeypatch.setattr(sessions_module, "_kick_managed_wake", _finish_wake)
+    app_state = SimpleNamespace(
+        host_store=host_store,
+        sandbox_config=config,
+        managed_launches=tracker,
+        host_registry=SimpleNamespace(get=lambda _host_id: None),
+    )
+
+    assert host_store.is_online("40bb7200abc8ed27d5b2fcbfad8e89d2") is True
+    assert (
+        await sessions_module._maybe_relaunch_managed_sandbox(
+            session_id=conv.id,
+            conv=conv,
+            app_state=app_state,
+            conversation_store=conv_store,
+        )
+        is True
+    )
+    assert calls == ["wake"]
+
+
+async def test_resumable_managed_wake_drops_fresh_local_tunnels_when_provider_paused(
+    db_uri: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A paused Islo host can wake before local tunnel liveness notices."""
+    from agent_meow.server.routes import sessions as sessions_module
+
+    host_store = HostStore(db_uri)
+    conv_store = SqlAlchemyConversationStore(db_uri)
+    host_store.register_managed_host(
+        host_id="055e31f38d07908f171ebad4ff5cbe9c",
+        name="managed-stale-tunnel-islo",
+        user_id=RESERVED_USER_LOCAL,
+        token="tok-stale-tunnel-islo",
+        provider="islo",
+        sandbox_id="sb-stale-tunnel-islo",
+        token_expires_at=9_999_999_999,
+    )
+    host_store.upsert_on_connect(
+        host_id="055e31f38d07908f171ebad4ff5cbe9c",
+        name="managed-stale-tunnel-islo",
+        user_id=RESERVED_USER_LOCAL,
+    )
+    conv = conv_store.create_conversation(
+        agent_id=None,
+        host_id="055e31f38d07908f171ebad4ff5cbe9c",
+        workspace="/root/workspace",
+    )
+    conv_store.set_runner_id(conv.id, "runner_stale_tunnel")
+    conv = conv_store.get_conversation(conv.id)
+    assert conv is not None
+    assert host_store.is_online("055e31f38d07908f171ebad4ff5cbe9c") is True
+
+    fake = FakeSandboxLauncher(can_resume=True)
+    fake.provider = "islo"  # type: ignore[misc]
+    fake.is_running = lambda _sandbox_id: False  # type: ignore[method-assign]
+    config = ManagedSandboxConfig(
+        server_url="https://managed-test.example.com",
+        launcher_factory=lambda: fake,
+        token_ttl_s=3600,
+        provider="islo",
+    )
+    tracker = ManagedLaunchTracker()
+    calls: list[str] = []
+    host_deregistered: list[str] = []
+    runner_deregistered: list[str] = []
+    fresh_host_conn = SimpleNamespace(last_frame_at=time.time())
+    fresh_runner_session = object()
+    host_registry_state: dict[str, object | None] = {"conn": fresh_host_conn}
+
+    def _finish_wake(**kwargs: object) -> None:
+        del kwargs
+        calls.append("wake")
+        tracker.begin(conv.id)
+        tracker.finish(conv.id)
+
+    def _deregister_host(host_id: str) -> None:
+        host_deregistered.append(host_id)
+        host_registry_state["conn"] = None
+
+    monkeypatch.setattr(sessions_module, "_kick_managed_wake", _finish_wake)
+    app_state = SimpleNamespace(
+        host_store=host_store,
+        sandbox_config=config,
+        managed_launches=tracker,
+        host_registry=SimpleNamespace(
+            get=lambda _host_id: host_registry_state["conn"],
+            deregister=_deregister_host,
+        ),
+        tunnel_registry=SimpleNamespace(
+            get=lambda _runner_id: fresh_runner_session,
+            seconds_since_last_frame=lambda _session: 0.0,
+            deregister=lambda runner_id: runner_deregistered.append(runner_id),
+        ),
+    )
+
+    assert (
+        await sessions_module._maybe_wake_stale_resumable_managed_sandbox(
+            session_id=conv.id,
+            conv=conv,
+            app_state=app_state,
+            conversation_store=conv_store,
+        )
+        is True
+    )
+    assert calls == ["wake"]
+    assert host_deregistered == ["055e31f38d07908f171ebad4ff5cbe9c"]
+    assert runner_deregistered == ["runner_stale_tunnel"]
+
+
+async def test_managed_wake_fails_when_runner_never_reconnects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A wake cannot publish ready if the launched runner tunnel times out."""
+    from agent_meow.server.routes import sessions as sessions_module
+
+    session_id = "1a9de2e74d453be7cd665c5290b481b9"
+    conv = SimpleNamespace(
+        id=session_id,
+        host_id="cae8b33eab0bd659c87b00dd29946ade",
+        workspace="/root/workspace",
+        agent_id=None,
+        sub_agent_name=None,
+    )
+    tracker = ManagedLaunchTracker()
+    tracker.begin(session_id)
+    stages: list[tuple[str, str | None]] = []
+
+    async def _resume_noop(*_args: object, **_kwargs: object) -> None:
+        pass
+
+    async def _launch_runner(*_args: object, **_kwargs: object) -> object:
+        return sessions_module._HostLaunchAttempt(runner_id="runner_never_connects")
+
+    class _HostRegistry:
+        def get(self, _host_id: str) -> object:
+            return object()
+
+    class _TunnelRegistry:
+        async def wait_for_runner(self, _runner_id: str, *, timeout_s: float) -> None:
+            del timeout_s
+
+    monkeypatch.setattr("agent_meow.server.managed_hosts.resume_managed_host", _resume_noop)
+    monkeypatch.setattr(sessions_module, "_launch_runner_on_host", _launch_runner)
+    monkeypatch.setattr(
+        sessions_module,
+        "_publish_sandbox_status",
+        lambda _sid, stage, error=None: stages.append((stage, error)),
+    )
+
+    await sessions_module._run_managed_wake(
+        session_id=session_id,
+        conv=conv,  # type: ignore[arg-type]
+        sandbox_config=ManagedSandboxConfig(
+            server_url="https://managed-test.example.com",
+            launcher_factory=lambda: FakeSandboxLauncher(),
+            token_ttl_s=3600,
+        ),
+        tracker=tracker,
+        conversation_store=SimpleNamespace(get_conversation=lambda _sid: conv),
+        host_store=SimpleNamespace(),
+        host_registry=_HostRegistry(),  # type: ignore[arg-type]
+        tunnel_registry=_TunnelRegistry(),  # type: ignore[arg-type]
+    )
+
+    launch = tracker.get(session_id)
+    assert launch is not None
+    assert launch.settled.is_set()
+    assert launch.error == "managed runner did not connect after launch"
+    assert stages[-1] == ("failed", "managed runner did not connect after launch")
+
+
+async def test_managed_launch_fails_when_runner_never_connects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Initial managed launch settlement also depends on the runner tunnel."""
+    from agent_meow.server.routes import sessions as sessions_module
+
+    session_id = "1a41e11887aca4570e42c0be40f24833"
+    conv = SimpleNamespace(id=session_id)
+    tracker = ManagedLaunchTracker()
+    tracker.begin(session_id)
+    stages: list[tuple[str, str | None]] = []
+
+    async def _launch_runner(*_args: object, **_kwargs: object) -> object:
+        return sessions_module._HostLaunchAttempt(runner_id="runner_never_connects")
+
+    class _HostRegistry:
+        def get(self, _host_id: str) -> object:
+            return object()
+
+    class _TunnelRegistry:
+        async def wait_for_runner(self, _runner_id: str, *, timeout_s: float) -> None:
+            del timeout_s
+
+    monkeypatch.setattr(sessions_module, "_launch_runner_on_host", _launch_runner)
+    monkeypatch.setattr(
+        sessions_module,
+        "_publish_sandbox_status",
+        lambda _sid, stage, error=None: stages.append((stage, error)),
+    )
+
+    await sessions_module._bind_and_launch_managed_runner(
+        session_id=session_id,
+        managed=ManagedHostLaunch(
+            host_id="3c8cdcdb61903904849174c864620a5c",
+            workspace="/root/workspace",
+        ),
+        sandbox_config=ManagedSandboxConfig(
+            server_url="https://managed-test.example.com",
+            launcher_factory=lambda: FakeSandboxLauncher(),
+            token_ttl_s=3600,
+        ),
+        tracker=tracker,
+        conversation_store=SimpleNamespace(
+            set_host_id=lambda _sid, _host_id, _workspace: conv,
+        ),
+        host_store=SimpleNamespace(),
+        host_registry=_HostRegistry(),  # type: ignore[arg-type]
+        tunnel_registry=_TunnelRegistry(),  # type: ignore[arg-type]
+    )
+
+    launch = tracker.get(session_id)
+    assert launch is not None
+    assert launch.settled.is_set()
+    assert launch.error == "managed runner did not connect after launch"
+    assert stages[-1] == ("failed", "managed runner did not connect after launch")
+
+
 async def test_cancel_managed_launch_tasks_returns_while_provision_parked(
     managed_session_env: ManagedSessionEnv,
     monkeypatch: pytest.MonkeyPatch,
@@ -1165,7 +1341,7 @@ async def test_cancel_managed_launch_tasks_returns_while_provision_parked(
     The lifespan teardown calls ``cancel_managed_launch_tasks`` to
     stop background launches; with a provision parked on the fake's
     gate (a slow provider call), the cancel must settle the task and
-    return promptly rather than waiting the provision out â€” a rolling
+    return promptly rather than waiting the provision out â€?a rolling
     deploy must not block on Modal. Without the cancellation hook,
     this test fails at the ``wait_for`` (nothing settles the task).
     """
@@ -1187,7 +1363,7 @@ async def test_cancel_managed_launch_tasks_returns_while_provision_parked(
 
     # The launch is gate-held mid-provision. The teardown hook must
     # return well inside the provision's duration (the gate would hold
-    # it 30s) â€” 5s is the generosity bound, not an expectation.
+    # it 30s) â€?5s is the generosity bound, not an expectation.
     await asyncio.wait_for(cancel_managed_launch_tasks(), timeout=5.0)
 
     # Release the gate so the provision worker thread exits cleanly.
@@ -1202,7 +1378,7 @@ async def test_managed_session_deleted_during_provision_terminates_sandbox(
     Deleting a managed session mid-provision tears the sandbox down.
 
     The delete route's managed cleanup keys off ``conv.host_id``,
-    which the background launch has not bound yet â€” so the background
+    which the background launch has not bound yet â€?so the background
     task itself must detect the vanished session at the bind step and
     terminate the sandbox it just provisioned (deleting the host row,
     which also revokes the armed launch token).
@@ -1248,7 +1424,7 @@ async def test_managed_session_deleted_during_provision_terminates_sandbox(
     deadline = loop.time() + 15.0
     while loop.time() < deadline and not fake.terminated:
         await asyncio.sleep(0.05)
-    # Terminated exactly the sandbox it provisioned â€” a regression here
+    # Terminated exactly the sandbox it provisioned â€?a regression here
     # leaks a running sandbox (and a live launch token) for a session
     # that no longer exists.
     assert fake.terminated == ["sb-fake-1"]
@@ -1256,7 +1432,7 @@ async def test_managed_session_deleted_during_provision_terminates_sandbox(
     # token no longer resolves.
     assert env.host_store.list_hosts(RESERVED_USER_LOCAL) == []
     # The fake host coroutines wait for a launch frame that never comes
-    # (the session is gone) â€” cancel them so their receive timeouts
+    # (the session is gone) â€?cancel them so their receive timeouts
     # don't surface as unretrieved-exception noise after the test.
     for future in host_futures:
         future.cancel()

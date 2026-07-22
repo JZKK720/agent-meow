@@ -1,4 +1,4 @@
-"""Native Kiro TUI wrapper for the agent-meow CLI."""
+"""Native Kiro TUI wrapper for the Omnigent CLI."""
 
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ from agent_meow.host.daemon_launch import (
     wait_for_host_online,
     wait_for_runner_online,
 )
+from agent_meow.native_coding_agents import native_shell_terminal_spec
 from agent_meow.native_terminal import (
     DAEMON_HOST_ONLINE_TIMEOUT_S as _DAEMON_HOST_ONLINE_TIMEOUT_S,
 )
@@ -66,7 +67,7 @@ _KIRO_BASE_MODELS: list[dict[str, Any]] = [
 def kiro_base_model_options() -> list[dict[str, Any]]:
     """Return the curated kiro base-model options for the Web UI picker.
 
-    Mirrors :func:`~?agent_meow.cursor_native.cursor_base_model_options`: each option
+    Mirrors :func:`agent_meow.cursor_native.cursor_base_model_options`: each option
     carries ``id`` (the value ``kiro-cli --model`` accepts), ``displayName``, and
     ``isDefault``/``isCurrent`` flags. kiro applies the model only at launch, so
     the picked id is persisted as ``model_override`` and consumed by the runner.
@@ -116,7 +117,7 @@ class NativeKiroLaunch:
 
 @dataclass(frozen=True)
 class LaunchedKiroTerminal:
-    """Terminal resource returned by the agent-meow runner launch path."""
+    """Terminal resource returned by the Omnigent runner launch path."""
 
     terminal_id: str
     tmux_socket: Path | None
@@ -191,11 +192,11 @@ def run_kiro_native(
     prompt: str | None = None,
     auto_open_conversation: bool = False,
 ) -> None:
-    """Launch the Kiro TUI in an agent-meow terminal."""
+    """Launch the Kiro TUI in an Omnigent terminal."""
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Kiro requires a resolved agent-meow server URL. The CLI should call "
+            "Kiro requires a resolved Omnigent server URL. The CLI should call "
             "_ensure_backend before run_kiro_native."
         )
     with TemporaryDirectory(prefix="omnigent-kiro-native-") as tmpdir:
@@ -213,7 +214,7 @@ def run_kiro_native(
 
 
 def _materialize_kiro_agent_spec(tmpdir: Path, *, model: str | None = None) -> Path:
-    """Write the terminal-first agent spec used by ``agent-meow kiro``."""
+    """Write the terminal-first agent spec used by ``omnigent kiro``."""
     yaml_path = tmpdir / "kiro-native-ui.yaml"
     executor: dict[str, str] = {"harness": "kiro-native"}
     if model:
@@ -230,17 +231,9 @@ def _materialize_kiro_agent_spec(tmpdir: Path, *, model: str | None = None) -> P
             "cwd": ".",
             "sandbox": {"type": "none"},
         },
-        "terminals": {
-            "shell": {
-                "command": "bash",
-                "allow_cwd_override": True,
-                "os_env": {
-                    "type": "caller_process",
-                    "cwd": ".",
-                    "sandbox": {"type": "none"},
-                },
-            },
-        },
+        # Default shell terminal for the web-UI "+ New shell" affordance;
+        # its command follows the user's ``$SHELL`` (zsh/fish/bash).
+        "terminals": native_shell_terminal_spec(),
     }
     yaml_path.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
     return yaml_path
@@ -257,7 +250,7 @@ def _run_with_remote_server(
     prompt: str | None = None,
     auto_open_conversation: bool = False,
 ) -> None:
-    """Launch Kiro on an agent-meow server via a daemon-spawned runner."""
+    """Launch Kiro on an Omnigent server via a daemon-spawned runner."""
     from agent_meow.chat import _bundle_agent, _remote_headers
     from agent_meow.cli import _ensure_host_daemon
     from agent_meow.host.identity import load_or_create_host_identity
@@ -311,7 +304,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the agent-meow server at {base_url}. "
+            f"Could not reach the omnigent server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc
@@ -446,7 +439,7 @@ async def _create_kiro_session(
 
 
 async def _fetch_kiro_session(client: httpx.AsyncClient, session_id: str) -> dict[str, Any]:
-    """Fetch an existing agent-meow session."""
+    """Fetch an existing Omnigent session."""
     resp = await client.get(f"/v1/sessions/{url_component(session_id)}")
     if resp.status_code == 404:
         raise click.ClickException(f"Conversation {session_id!r} not found on the server.")

@@ -22,6 +22,7 @@ import databricks.sdk.config as _sdk_config_mod
 from agent_meow.inner.executor import (
     ExecutorConfig,
     ExecutorError,
+    ReasoningChunk,
     TextChunk,
     ToolCallComplete,
     ToolCallRequest,
@@ -81,6 +82,12 @@ class _FakeToolOutputItem:
 class _FakeRawTextDelta:
     delta: str
     type: str = "response.output_text.delta"
+
+
+@dataclass
+class _FakeRawReasoningDelta:
+    delta: str
+    type: str = "response.reasoning_summary_text.delta"
 
 
 @dataclass
@@ -501,6 +508,40 @@ class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
             self.assertIsNone(
                 _FakeRunner.last_calls[0]["agent"].model_settings.parallel_tool_calls
             )
+
+        _run(_t())
+
+    def test_streams_reasoning_deltas(self):
+        async def _t():
+            _FakeRunner.last_calls = []
+            _FakeRunner.next_result = _FakeResult(
+                events=[
+                    _FakeRawEvent(_FakeRawReasoningDelta("thinking...")),
+                    _FakeRawEvent(_FakeRawReasoningDelta("")),
+                    _FakeRawEvent(_FakeRawTextDelta("Hello")),
+                ],
+                final_output="Hello",
+            )
+            executor = OpenAIAgentsSDKExecutor(client=object())
+            with patch(
+                "agent_meow.inner.openai_agents_sdk_executor._ensure_agents_sdk",
+                return_value=_fake_agents_sdk(),
+            ):
+                events = [
+                    e
+                    async for e in executor.run_turn(
+                        [{"role": "user", "content": "hi", "session_id": "s1"}],
+                        [],
+                        "Be helpful.",
+                    )
+                ]
+
+            reasoning = [e for e in events if isinstance(e, ReasoningChunk)]
+            self.assertEqual(len(reasoning), 1)
+            self.assertEqual(reasoning[0].delta, "thinking...")
+            self.assertEqual(reasoning[0].event_type, "reasoning_text")
+            text = [e for e in events if isinstance(e, TextChunk)]
+            self.assertEqual([t.text for t in text], ["Hello"])
 
         _run(_t())
 
@@ -1084,11 +1125,11 @@ class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
         ``stream_consumer_task`` so the cancel lands inside
         the SDK's ``await self._event_queue.get()`` (the SDK's
         own ``except CancelledError`` then closes the httpx
-        stream â€” the load-bearing fix).
+        stream â€?the load-bearing fix).
 
         Previously the executor called
         ``result.cancel(mode="immediate")``, which only sets a
-        flag and does not close the network â€” events kept
+        flag and does not close the network â€?events kept
         streaming for 15+ seconds. The new contract: cancel
         the pump task so cancellation reaches the SDK's
         documented escape hatch.
@@ -1103,7 +1144,7 @@ class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
             # just two uninitialized zeros being equal.
             state.run_item_count_before = 42
 
-            # Real task we can observe â€” assert it gets
+            # Real task we can observe â€?assert it gets
             # cancelled. A bare coroutine wrapped in
             # ``asyncio.create_task`` is the right shape; we
             # never await its result, just inspect cancellation.
@@ -1123,14 +1164,14 @@ class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
             self.assertTrue(interrupted)
             # Sets interrupt_requested so the consumer side
             # also drains the queue without emitting (defense
-            # in depth â€” the cancellation should already have
+            # in depth â€?the cancellation should already have
             # propagated, but we want the consumer loop to
             # also short-circuit if we're racing it).
             self.assertTrue(state.interrupt_requested)
-            # Load-bearing assertion â€” cancelling the pump
+            # Load-bearing assertion â€?cancelling the pump
             # task is what makes the SDK actually halt its
             # network stream. ``.cancelled()`` (not just
-            # ``.done()``) â€” the regression we're guarding
+            # ``.done()``) â€?the regression we're guarding
             # against is "interrupt_session stops calling
             # consumer.cancel()". A normal-completed task
             # (``.done()`` but not cancelled) would mask
@@ -1313,7 +1354,7 @@ class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
         total_tokens carries the sum, the context ring spikes to an
         inflated value during tool-call turns (because each sub-turn
         repeats the full conversation history as input), then drops back
-        on the next plain turn â€” giving a spurious "compaction" impression.
+        on the next plain turn â€?giving a spurious "compaction" impression.
 
         What breaks if this fails: either billing totals are wrong
         (total_tokens not summed) or the context ring shows the inflated
@@ -1377,7 +1418,7 @@ class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
                 5700,
                 "context_tokens must equal the LAST call's total (5700) for correct "
                 "context ring display. If 10800, context_tokens is being set to the "
-                "billing sum â€” that inflates the ring during tool-call turns.",
+                "billing sum â€?that inflates the ring during tool-call turns.",
             )
 
         _run(_t())
@@ -1441,7 +1482,7 @@ class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
 # Function-based tests for the profile-precedence fix. When a
 # user passes ``--profile X``, the resolved Databricks credentials
 # must win over any ``OPENAI_API_KEY`` / ``OPENAI_BASE_URL`` the
-# shell happens to have set â€” otherwise an old export silently
+# shell happens to have set â€?otherwise an old export silently
 # redirects the call to ``api.openai.com`` and the user's
 # requested workspace is ignored.
 
@@ -1569,7 +1610,7 @@ def test_get_openai_client_api_key_falls_back_to_env_base_url(monkeypatch):
     Regression for the residual gateway 401 (continuation-turn daemon
     spawns): the api_key is frequently a gateway credential (e.g. a
     Databricks AI Gateway PAT detected from ``OPENAI_API_KEY``), and the
-    companion base_url can be dropped on the daemon â†’ runner â†’ harness
+    companion base_url can be dropped on the daemon â†?runner â†?harness
     propagation chain (the spec-auth bake omits it when ``OPENAI_BASE_URL``
     is absent at materialization time; a reused local daemon may predate the
     env var). Without the ambient fallback, the gateway PAT is sent to
@@ -1635,7 +1676,7 @@ def test_get_openai_client_api_key_no_env_defaults_to_openai(monkeypatch):
     """A genuine OpenAI key with no gateway anywhere still defaults to OpenAI.
 
     With no override and no ambient ``OPENAI_BASE_URL``, ``base_url`` stays
-    ``None`` so the AsyncOpenAI client targets ``api.openai.com`` â€” the
+    ``None`` so the AsyncOpenAI client targets ``api.openai.com`` â€?the
     correct behavior for a real ``sk-...`` key.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -1743,7 +1784,7 @@ def test_get_openai_client_invalid_profile_with_env_fallback_warns(monkeypatch, 
     with caplog.at_level(logging.WARNING):
         client = _get_openai_async_client(profile="dogfood")
 
-    # Should not raise â€” fell through to OPENAI_BASE_URL.
+    # Should not raise â€?fell through to OPENAI_BASE_URL.
     # A warning must be emitted so the fallback is not silent.
     assert any(
         "dogfood" in record.message and "OPENAI_BASE_URL" in record.message
@@ -1766,7 +1807,7 @@ def test_get_openai_client_missing_databricks_sdk_raises_actionable_error(monkey
     When a Databricks-hosted model is requested, ``databricks-sdk`` is not
     installed, and no ``OPENAI_API_KEY``/``OPENAI_BASE_URL`` fallback is
     available, the function must raise ``ImportError`` with install
-    instructions â€” not crash with an opaque traceback.
+    instructions â€?not crash with an opaque traceback.
 
     Regression test: the SDK-missing path must fail loudly, not silently.
 
@@ -1794,7 +1835,7 @@ def test_get_openai_client_missing_databricks_sdk_with_env_falls_through(monkeyp
 
     When ``databricks-sdk`` is absent but env-var credentials are available,
     the function should log a warning and return a client configured from the
-    env vars â€” not crash.
+    env vars â€?not crash.
 
     Regression test: a missing ``databricks-sdk`` must degrade to the
     env-var client with a warning, not crash.
@@ -1832,7 +1873,7 @@ def test_run_turn_auth_error_yields_actionable_message(monkeypatch):
     When the agents SDK raises a ``DatabricksAuthError`` (e.g. from
     ``_DatabricksBearerAuth.auth_flow`` when the OAuth refresh token has
     expired), the ``ExecutorError.message`` must be the high-level
-    "Run: databricks auth login -p X" guidance â€” not the underlying SDK
+    "Run: databricks auth login -p X" guidance â€?not the underlying SDK
     exception text like "token expired".
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -1889,7 +1930,7 @@ def test_run_turn_auth_error_yields_actionable_message(monkeypatch):
 
 # ---------------------------------------------------------------------------
 # Tests for _normalize_content_blocks_for_chat and
-# _normalize_responses_items_for_chat â€” input_file â†’ input_text conversion
+# _normalize_responses_items_for_chat â€?input_file â†?input_text conversion
 # ---------------------------------------------------------------------------
 
 
@@ -1917,7 +1958,7 @@ def test_normalize_content_blocks_non_file_blocks_pass_through_unchanged() -> No
 
     result = _normalize_content_blocks_for_chat(blocks)
 
-    # No input_file or metadata present â†’ original list object returned.
+    # No input_file or metadata present â†?original list object returned.
     assert result is blocks, (
         "Expected the original list object when no input_file blocks or metadata are present"
     )
@@ -1991,7 +2032,7 @@ def test_normalize_content_blocks_malformed_base64_dropped() -> None:
         [{"type": "input_file", "file_data": "data:text/plain;base64,!!!bad!!!"}]
     )
 
-    # Decode failure â†’ empty string â†’ dropped, not raised.
+    # Decode failure â†?empty string â†?dropped, not raised.
     assert result == [], f"Expected empty list, got: {result!r}"
 
 
@@ -2008,7 +2049,7 @@ def test_normalize_content_blocks_binary_file_dropped() -> None:
         [{"type": "input_file", "file_data": f"data:application/pdf;base64,{b64}"}]
     )
 
-    # Binary MIME type â†’ dropped, not inlined as garbage text.
+    # Binary MIME type â†?dropped, not inlined as garbage text.
     assert result == [], f"Expected binary block to be dropped, got: {result!r}"
 
 
@@ -2072,7 +2113,7 @@ def test_normalize_responses_items_non_message_items_pass_through() -> None:
 
     result = _normalize_responses_items_for_chat(items)
 
-    # Non-message items returned untouched â€” no normalization applied.
+    # Non-message items returned untouched â€?no normalization applied.
     assert result == items
 
 
@@ -2191,7 +2232,7 @@ def test_context_length_exceeded_re_raises() -> None:
 def test_policy_evaluator_deny_yields_executor_error() -> None:
     """
     When ``_policy_evaluator`` returns ``POLICY_ACTION_DENY``, the
-    executor yields ``ExecutorError`` and returns immediately â€”
+    executor yields ``ExecutorError`` and returns immediately â€?
     ``Runner.run_streamed`` is never called.
 
     What breaks if this fails: policy denials on the
@@ -2251,7 +2292,7 @@ def test_policy_evaluator_deny_yields_executor_error() -> None:
 def test_policy_evaluator_allow_proceeds_to_run() -> None:
     """
     When ``_policy_evaluator`` returns ``POLICY_ACTION_ALLOW``, the
-    executor proceeds normally â€” ``Runner.run_streamed`` is called
+    executor proceeds normally â€?``Runner.run_streamed`` is called
     and events stream through.
 
     What breaks if this fails: ALLOW verdicts are mistakenly
@@ -2304,7 +2345,7 @@ def test_policy_evaluator_allow_proceeds_to_run() -> None:
         ):
             events = await _collect(executor.run_turn(messages, [], "Be helpful."))
 
-        # Should contain text events and a TurnComplete â€” not an ExecutorError.
+        # Should contain text events and a TurnComplete â€?not an ExecutorError.
         error_events = [e for e in events if isinstance(e, ExecutorError)]
         assert not error_events, f"Unexpected ExecutorError: {error_events}"
         text_events = [e for e in events if isinstance(e, TextChunk)]
@@ -2381,7 +2422,7 @@ def test_turn_usage_subtracts_cached_tokens_from_input() -> None:
 def test_turn_usage_no_cached_tokens_omits_cache_key() -> None:
     """
     When no ``prompt_tokens_details`` is present, the usage dict
-    must NOT contain ``cache_read_input_tokens`` â€” the executor
+    must NOT contain ``cache_read_input_tokens`` â€?the executor
     degrades gracefully to the pre-cache behavior.
     """
 
@@ -2641,7 +2682,7 @@ def test_empty_turn_retry_exhausted_yields_retryable_error() -> None:
 
 def test_tool_call_without_text_is_not_retried() -> None:
     """
-    A turn that called a tool but produced no final text is NOT empty â€”
+    A turn that called a tool but produced no final text is NOT empty â€?
     tool activity is legitimate output, so it runs once and completes.
 
     What breaks if this fails: tool-only turns (e.g. parallel sub-agent
@@ -2774,7 +2815,7 @@ def test_empty_turn_with_output_tokens_is_not_errored() -> None:
                 )
             )
 
-        # Retried once (both empty), then completed silently â€” the
+        # Retried once (both empty), then completed silently â€?the
         # output-token gate suppresses the fail-loud error.
         assert not any(isinstance(e, ExecutorError) for e in events), (
             f"Empty-but-billed turn should NOT error, got {events!r}"

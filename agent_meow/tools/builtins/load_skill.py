@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from agent_meow.spec.types import SkillSpec
 from agent_meow.tools.base import Tool, ToolContext
+from agent_meow.tools.builtins._arguments import parse_json_object_arguments
 
 
 class LoadSkillTool(Tool):
@@ -45,7 +45,7 @@ class LoadSkillTool(Tool):
         """
         all_skills = list(skills)
         # Discover host-scope skills. Use agent_root when provided,
-        # but fall back to cwd â€” in production the server process
+        # but fall back to cwd â€?in production the server process
         # runs from the user's project, so cwd finds .claude/skills/
         # even when agent_root is a cache dir.
         discovery_root = agent_root or Path.cwd()
@@ -123,10 +123,16 @@ class LoadSkillTool(Tool):
         :returns: The skill content string, or an error
             message if the skill is not found.
         """
-        args: dict[str, str] = json.loads(arguments)
+        args, error = parse_json_object_arguments(arguments)
+        if error is not None:
+            return f"Error: {error}"
+        assert args is not None
+
         skill_name = args.get("name")
-        if skill_name is None:
+        if skill_name is None or skill_name == "":
             return "Error: missing required 'name' argument"
+        if not isinstance(skill_name, str):
+            return "Error: 'name' must be a string"
         skill = self._skills_by_name.get(skill_name)
         if skill is None:
             available = list(self._skills_by_name.keys())
@@ -218,7 +224,7 @@ def format_skill_meta_text(skill: SkillSpec, arguments: str) -> str:
 
     The embedded ``<path>`` and the resource listing are resolved
     against ``skill.skill_dir``, so this MUST run on the host where the
-    harness executes (the runner) â€” the paths are read at runtime by
+    harness executes (the runner) â€?the paths are read at runtime by
     the ``read_skill_file`` tool, which resolves relative to the same
     ``skill_dir``.
 

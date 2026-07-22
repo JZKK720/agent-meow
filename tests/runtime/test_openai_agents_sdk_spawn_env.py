@@ -7,8 +7,8 @@ The spawn-env builder maps ``spec.executor`` fields to
 wrap reads at first-turn time. Mirrors the
 the spawn-env pattern used by the other SDK-style harness tests.
 
-This is a unit test â€” no subprocess spawn, no real httpx. End-to-end
-verification of the spawn-env â†’ wrap â†’ runtime executor â†’ gateway
+This is a unit test â€?no subprocess spawn, no real httpx. End-to-end
+verification of the spawn-env â†?wrap â†?runtime executor â†?gateway
 path lives in the harness e2e tests.
 """
 
@@ -38,7 +38,7 @@ def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     not affected by the developer's real ``~/.agent_meow/config.yaml``.
 
     Tests that need a specific global config write their own config.yaml
-    into a separate temp dir and set OMNIGENT_CONFIG_HOME themselves â€”
+    into a separate temp dir and set OMNIGENT_CONFIG_HOME themselves â€?
     that setenv call wins because monkeypatch applies in call order.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
@@ -48,7 +48,7 @@ def _make_spec(
     *,
     model: str | None = "databricks-gpt-5-4-mini",
     profile: str | None = None,
-    use_responses: bool | None = None,
+    use_responses: object | None = None,
     auth: ApiKeyAuth | DatabricksAuth | None = None,
 ) -> AgentSpec:
     """
@@ -60,7 +60,8 @@ def _make_spec(
     :param profile: ``spec.executor.config["profile"]``; ``None``
         omits it (no profile declared in YAML).
     :param use_responses: ``spec.executor.config["use_responses"]``;
-        ``None`` omits it (executor default applies).
+        ``None`` omits it (executor default applies). The parser normally
+        supplies this as a string, while direct callers may provide a bool.
     :param auth: Typed auth object placed on ``spec.executor.auth``;
         ``None`` omits it (harness falls back to legacy/env-var paths).
     :returns: A populated :class:`AgentSpec`.
@@ -85,6 +86,29 @@ def test_model_threads_into_env_var() -> None:
     """``executor.config["model"]`` is encoded into ``HARNESS_OPENAI_AGENTS_MODEL``."""
     env = _build_openai_agents_sdk_spawn_env(_make_spec(model="databricks-gpt-5-4-mini"))
     assert env["HARNESS_OPENAI_AGENTS_MODEL"] == "databricks-gpt-5-4-mini"
+
+
+@pytest.mark.parametrize(
+    ("use_responses", "expected"),
+    [
+        ("False", "false"),
+        ("True", "true"),
+        (False, "false"),
+        (True, "true"),
+    ],
+)
+def test_use_responses_config_value_is_interpreted_as_boolean(
+    monkeypatch: pytest.MonkeyPatch, use_responses: object, expected: str
+) -> None:
+    """Stringified YAML booleans must not be evaluated by Python truthiness."""
+    monkeypatch.setattr(
+        "agent_meow.runtime.workflow._resolve_provider_for_build",
+        lambda *args, **kwargs: None,
+    )
+    env = _build_openai_agents_sdk_spawn_env(
+        _make_spec(model="gpt-4o", use_responses=use_responses)
+    )
+    assert env["HARNESS_OPENAI_AGENTS_USE_RESPONSES"] == expected
 
 
 def test_explicit_profile_threads_into_env_var() -> None:
@@ -137,7 +161,7 @@ def test_databricks_model_ignores_env_profile(
 ) -> None:
     """
     Ambient ``DATABRICKS_CONFIG_PROFILE`` does NOT steer the auto-Databricks
-    routing â€” credentials are controlled by the spec or by ``agent-meow
+    routing â€?credentials are controlled by the spec or by ``agent-meow
     setup`` provider config, never by shell environment. A databricks-*
     model with no spec profile routes via the SDK ``DEFAULT`` profile.
     """
@@ -372,12 +396,12 @@ def test_global_config_auth_not_applied_when_spec_has_legacy_profile(
 
     Failure means a YAML like ``executor.profile: oss`` silently has its
     Databricks profile overridden by an api_key in the user's global
-    config â€” the agent then hits ``api.openai.com`` instead of the
+    config â€?the agent then hits ``api.openai.com`` instead of the
     Databricks gateway and gets an auth error.
     """
     with tempfile.TemporaryDirectory() as td:
         cfg_path = Path(td) / "config.yaml"
-        # Global config has api_key auth â€” should NOT apply when spec has a profile.
+        # Global config has api_key auth â€?should NOT apply when spec has a profile.
         cfg_path.write_text(_yaml.dump({"auth": {"type": "api_key", "api_key": "sk-global"}}))
         monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
         monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)

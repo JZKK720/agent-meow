@@ -1,7 +1,7 @@
 import type { AvailableAgent } from "@/hooks/useAvailableAgents";
 
-export const WRAPPER_LABEL_KEY = "agent_meow.wrapper";
-export const UI_MODE_LABEL_KEY = "agent_meow.ui";
+export const WRAPPER_LABEL_KEY = "omnigent.wrapper";
+export const UI_MODE_LABEL_KEY = "omnigent.ui";
 export const UI_MODE_TERMINAL_VALUE = "terminal";
 
 export type NativeCodingAgentIconKind =
@@ -15,8 +15,7 @@ export type NativeCodingAgentIconKind =
   | "qwen"
   | "antigravity"
   | "kimi"
-  | "hermes"
-  | "ironclaw";
+  | "hermes";
 export type NativeCodingAgentCapability = "permissionMode" | "approvalMode" | "cursorMode";
 
 export interface NativeCodingAgentSpec {
@@ -64,7 +63,7 @@ export const NATIVE_CODING_AGENTS = [
     // (allow-by-default) and `plan` primary agents, switched at runtime via Tab
     // inside the TUI — and `opencode attach` (how the runner launches it) has
     // no `--agent` flag to preset one anyway. The runner already forces
-    // `permission: "ask"` so tools route through the agent-meow policy engine, so
+    // `permission: "ask"` so tools route through the Omnigent policy engine, so
     // a launch-time picker would mirror nothing. (Previously declared Codex's
     // `approvalMode`, whose `--sandbox`/`--ask-for-approval` presets aren't
     // understood by `opencode attach` and crashed the TUI on any non-default
@@ -156,18 +155,6 @@ export const NATIVE_CODING_AGENTS = [
     iconKind: "hermes",
     sortRank: 80,
   },
-  {
-    // ironclaw has no brand glyph yet, so it falls back to the generic bot
-    // icon (see AgentCard.iconForAgent / SubagentsPanel) — the
-    // `iconKind: "ironclaw"` intentionally matches no icon branch.
-    key: "ironclaw",
-    agentName: "ironclaw-native-ui",
-    harness: "ironclaw-native",
-    wrapperLabel: "ironclaw-native-ui",
-    displayName: "IronClaw",
-    iconKind: "ironclaw",
-    sortRank: 85,
-  },
 ] as const satisfies readonly NativeCodingAgentSpec[];
 
 const BY_AGENT_NAME: Map<string, NativeCodingAgentSpec> = new Map(
@@ -181,7 +168,7 @@ const BY_WRAPPER: Map<string, NativeCodingAgentSpec> = new Map(
 );
 
 // Reversed harness spellings that fold to a canonical native `harness`.
-// Mirrors agent_meow.harness_aliases.NATIVE_HARNESSES on the server, which
+// Mirrors omnigent.harness_aliases.NATIVE_HARNESSES on the server, which
 // accepts both the canonical and reversed native spellings (claude/codex
 // only use the canonical form, so they need no reversed entry here).
 const HARNESS_ALIASES: Record<string, string> = {
@@ -193,7 +180,7 @@ const HARNESS_ALIASES: Record<string, string> = {
   "native-qwen": "qwen-native",
   "native-kimi": "kimi-native",
   "native-hermes": "hermes-native",
-  "native-ironclaw": "ironclaw-native",
+  "native-opencode": "opencode-native",
 };
 
 export function nativeCodingAgentForAgentName(

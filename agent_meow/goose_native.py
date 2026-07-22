@@ -1,16 +1,16 @@
-"""Native Goose TUI wrapper for the agent-meow CLI.
+"""Native Goose TUI wrapper for the Omnigent CLI.
 
-``agent-meow goose`` launches Block's Goose CLI interactive TUI (``goose session``)
-inside an agent-meow-runner-owned tmux terminal and attaches the local TTY â€” the
-goose analog of ``agent-meow cursor`` / ``agent-meow codex`` / ``agent-meow pi``. The
+``omnigent goose`` launches Block's Goose CLI interactive TUI (``goose session``)
+inside an Omnigent-runner-owned tmux terminal and attaches the local TTY â€?the
+goose analog of ``omnigent cursor`` / ``omnigent codex`` / ``omnigent pi``. The
 runner spawns the process (see
-:func:`~?agent_meow.runner.app._auto_create_goose_terminal`); this module owns the
+:func:`agent_meow.runner.app._auto_create_goose_terminal`); this module owns the
 CLI-side orchestration: session create/resume, daemon runner bind, terminal-ready
 poll, and the direct tmux attach.
 
-Auth is Goose's own configuration (``goose configure`` â†’
-``~/.config/goose/config.yaml`` + keyring); no agent-meow-managed key is required.
-Like cursor there is no extension bridge â€” the runner sets up the terminal
+Auth is Goose's own configuration (``goose configure`` â†?
+``~/.config/goose/config.yaml`` + keyring); no Omnigent-managed key is required.
+Like cursor there is no extension bridge â€?the runner sets up the terminal
 environment directly (forcing ``GOOSE_CLI_THEME=ansi`` so the pane scrapes
 cleanly).
 """
@@ -43,6 +43,7 @@ from agent_meow.host.daemon_launch import (
     wait_for_host_online,
     wait_for_runner_online,
 )
+from agent_meow.native_coding_agents import native_shell_terminal_spec
 from agent_meow.native_terminal import (
     DAEMON_HOST_ONLINE_TIMEOUT_S as _DAEMON_HOST_ONLINE_TIMEOUT_S,
 )
@@ -76,7 +77,7 @@ class NativeGooseLaunch:
 
 @dataclass(frozen=True)
 class LaunchedGooseTerminal:
-    """Terminal resource returned by the agent-meow runner launch path."""
+    """Terminal resource returned by the Omnigent runner launch path."""
 
     terminal_id: str
     tmux_socket: Path | None
@@ -89,7 +90,7 @@ class PreparedGooseTerminal:
 
     :param reattached: ``True`` when an existing, still-running session terminal
         was reused (the live-reattach path: prior session intact).
-    :param cold_resumed: ``True`` when resuming an existing agent-meow session whose
+    :param cold_resumed: ``True`` when resuming an existing Omnigent session whose
         terminal had already exited, so a *fresh* ``goose session`` TUI was
         launched. Mirrors cursor-native: ``cold_resumed`` and ``reattached`` are
         mutually exclusive (the cold-resume path leaves ``reattached`` False).
@@ -157,10 +158,10 @@ def run_goose_native(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch the Goose TUI in an agent-meow terminal.
+    Launch the Goose TUI in an Omnigent terminal.
 
-    :param server: Resolved agent-meow server URL.
-    :param session_id: Optional existing agent-meow conversation id.
+    :param server: Resolved Omnigent server URL.
+    :param session_id: Optional existing Omnigent conversation id.
     :param goose_args: Raw goose CLI args to persist for the runner-owned TUI.
     :param resume_picker: ``True`` runs the goose-native picker.
     :param auto_open_conversation: When ``True``, open the browser conversation
@@ -170,7 +171,7 @@ def run_goose_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Goose requires a resolved agent-meow server URL. The CLI should call "
+            "Goose requires a resolved Omnigent server URL. The CLI should call "
             "_ensure_backend before run_goose_native."
         )
     with TemporaryDirectory(prefix="omnigent-goose-native-") as tmpdir:
@@ -187,7 +188,7 @@ def run_goose_native(
 
 def _materialize_goose_agent_spec(tmpdir: Path) -> Path:
     """
-    Write the terminal-first agent spec used by ``agent-meow goose``.
+    Write the terminal-first agent spec used by ``omnigent goose``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :returns: Path to the generated YAML spec.
@@ -206,17 +207,9 @@ def _materialize_goose_agent_spec(tmpdir: Path) -> Path:
             "cwd": ".",
             "sandbox": {"type": "none"},
         },
-        "terminals": {
-            "shell": {
-                "command": "bash",
-                "allow_cwd_override": True,
-                "os_env": {
-                    "type": "caller_process",
-                    "cwd": ".",
-                    "sandbox": {"type": "none"},
-                },
-            },
-        },
+        # Default shell terminal for the web-UI "+ New shell" affordance;
+        # its command follows the user's ``$SHELL`` (zsh/fish/bash).
+        "terminals": native_shell_terminal_spec(),
     }
     yaml_path.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
     return yaml_path
@@ -232,11 +225,11 @@ def _run_with_remote_server(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch Goose on an agent-meow server via a daemon-spawned runner.
+    Launch Goose on an Omnigent server via a daemon-spawned runner.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param spec_path: Generated Goose wrapper agent spec.
-    :param session_id: Optional existing agent-meow session id.
+    :param session_id: Optional existing Omnigent session id.
     :param resume_picker: When ``True``, run the goose-native picker.
     :param goose_args: Raw goose CLI args.
     :param auto_open_conversation: Whether to open the web conversation URL.
@@ -292,7 +285,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the agent-meow server at {base_url}. "
+            f"Could not reach the omnigent server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc
@@ -426,7 +419,7 @@ async def _create_goose_session(
 
 
 async def _fetch_goose_session(client: httpx.AsyncClient, session_id: str) -> dict[str, Any]:
-    """Fetch an existing agent-meow session."""
+    """Fetch an existing Omnigent session."""
     resp = await client.get(f"/v1/sessions/{url_component(session_id)}")
     if resp.status_code == 404:
         raise click.ClickException(f"Conversation {session_id!r} not found on the server.")

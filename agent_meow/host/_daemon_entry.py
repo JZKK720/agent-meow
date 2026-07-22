@@ -7,7 +7,7 @@ Spawned by ``_ensure_host_daemon`` in ``cli.py`` when ``run`` /
 Two modes:
 
 - ``--server <url>``: connect to an existing (remote or local) agent-meow server.
-- ``--local``: this daemon owns a local agent-meow server â€” start (or reuse) a
+- ``--local``: this daemon owns a local agent-meow server â€?start (or reuse) a
   persistent background ``agent-meow server`` on loopback and connect to
   it. The CLI discovers the resulting URL via the local-server pidfile.
 """
@@ -15,7 +15,6 @@ Two modes:
 from __future__ import annotations
 
 import argparse
-import logging
 
 
 def main() -> None:
@@ -44,13 +43,12 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(name)s] %(message)s",
-    )
+    from agent_meow.process_logging import configure_process_logging
+
+    configure_process_logging("host", force=True)
 
     if args.local == bool(args.server):
-        # Both or neither â€” the CLI always passes exactly one; fail loud.
+        # Both or neither â€?the CLI always passes exactly one; fail loud.
         parser.error("exactly one of --server <url> or --local is required")
 
     if args.local:

@@ -26,6 +26,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 
+from agent_meow._platform import IS_WINDOWS
+
 console = Console()
 
 # ANSI helpers - used in arrow-menu labels (rendered via sys.stdout.write,
@@ -33,7 +35,7 @@ console = Console()
 _GREEN = "\033[32m"
 _DIM = "\033[90m"
 _BOLD = "\033[1m"
-# Brand accent — Otto's magenta-pink (#F43BA6), matching agent_meow.inner.ui so
+# Brand accent �?Otto's magenta-pink (#F43BA6), matching agent_meow.inner.ui so
 # the setup picker's selection pointer reads as the same brand as the banner.
 _ACCENT = "\033[38;2;244;59;166m"
 _RESET = "\033[0m"
@@ -75,7 +77,22 @@ def _arrow_menu(
 
     # Fall back to number input if not a real terminal.
     if not sys.stdin.isatty():
-        return _arrow_menu_fallback(options, default=default, disabled=disabled, multi=multi)
+        return _arrow_menu_fallback(
+            options,
+            default=default,
+            disabled=disabled,
+            multi=multi,
+            allow_back=allow_back,
+        )
+
+    if IS_WINDOWS:
+        return _arrow_menu_fallback(
+            options,
+            default=default,
+            disabled=disabled,
+            multi=multi,
+            allow_back=allow_back,
+        )
 
     import select as _select
     import termios
@@ -222,18 +239,23 @@ def _arrow_menu_fallback(
     default: int = 0,
     disabled: set[int] | None = None,
     multi: bool = False,
+    allow_back: bool = True,
 ) -> int | list[int]:
     """Non-interactive fallback when stdin is not a tty."""
     disabled = disabled or set()
     for i, label in enumerate(options):
         marker = " [unavailable]" if i in disabled else ""
         console.print(f"  {i + 1}. {label}{marker}")
+    if allow_back:
+        console.print("  q. Go back")
     console.print()
 
     if multi:
         while True:
             available = ",".join(str(i + 1) for i in range(len(options)) if i not in disabled)
             raw = str(click.prompt("Select (comma-separated)", default=available))
+            if allow_back and raw.strip().lower() == "q":
+                raise _GoBack
             try:
                 indices = [int(x.strip()) - 1 for x in raw.split(",")]
                 if all(0 <= i < len(options) and i not in disabled for i in indices) and indices:
@@ -244,6 +266,8 @@ def _arrow_menu_fallback(
     else:
         while True:
             raw = str(click.prompt("Choice", default=str(default + 1)))
+            if allow_back and raw.strip().lower() == "q":
+                raise _GoBack
             try:
                 idx = int(raw) - 1
                 if 0 <= idx < len(options) and idx not in disabled:
@@ -281,6 +305,19 @@ def _text_prompt(
     """
     # Non-tty fallback -- just use click.prompt.
     if not sys.stdin.isatty():
+        raw = str(
+            click.prompt(
+                label,
+                default=default or "",
+                show_default=bool(default),
+                hide_input=hide_input,
+            )
+        )
+        if not raw.strip() and not default:
+            raise _GoBack
+        return raw.strip() or default or ""
+
+    if IS_WINDOWS:
         raw = str(
             click.prompt(
                 label,
@@ -501,10 +538,10 @@ def _prompt_global_auth() -> tuple[dict[str, str], None] | tuple[None, None]:
 
     Shows two auth types:
 
-    - ``api_key`` — direct OpenAI-compatible bearer token. Prompts for
+    - ``api_key`` �?direct OpenAI-compatible bearer token. Prompts for
       the actual key value (not an env-var reference) and an optional
       custom endpoint URL.
-    - ``databricks`` — Databricks profile from ``~/.databrickscfg``.
+    - ``databricks`` �?Databricks profile from ``~/.databrickscfg``.
       Detected profiles are shown as a hint; the user can type any name.
 
     Internal sub-steps with Esc-to-go-back:
@@ -545,7 +582,7 @@ def _prompt_global_auth() -> tuple[dict[str, str], None] | tuple[None, None]:
                 else:
                     db_label = (
                         f"Databricks\n"
-                        f"        {_DIM}no profiles in ~/.databrickscfg — "
+                        f"        {_DIM}no profiles in ~/.databrickscfg �?"
                         f"you can still type a profile name{_RESET}"
                     )
                 choice = _arrow_menu([direct_auth_label, db_label])
@@ -676,7 +713,7 @@ def _prompt_existing_or_new(configs: list[Path]) -> Path | None:
             console.print("[bold]Pick an existing agent:[/bold]")
             console.print()
             labels = [p.stem for p in configs]
-            labels.append("Type a path…")
+            labels.append("Type a path�?)
             picked = _arrow_menu(labels)
             if picked == len(configs):
                 return _prompt_agent_config_path()
@@ -1332,7 +1369,7 @@ def _store_default_config(yaml_path: Path, supervisor: _SupervisorConfig | None 
         elif supervisor.api_key:
             settings["auth"] = {"type": "api_key", "api_key": "$OPENAI_API_KEY"}
     _save_global_config(settings)
-    console.print(f"  [green]✓ stored default_agent in {_GLOBAL_CONFIG_PATH}[/green]")
+    console.print(f"  [green]�?stored default_agent in {_GLOBAL_CONFIG_PATH}[/green]")
     console.print("  [dim]Type `agent-meow` to start a new session.[/dim]\n")
 
 
@@ -1388,13 +1425,13 @@ def run_wizard_and_launch() -> None:
     Asks for three things in order, then writes them to
     ``~/.agent_meow/config.yaml``:
 
-    1. **Server URL** — the agent-meow server to connect to (optional;
+    1. **Server URL** �?the agent-meow server to connect to (optional;
        blank means run locally).
-    2. **Auth** — ``api_key`` (bearer token + optional base URL) or
+    2. **Auth** �?``api_key`` (bearer token + optional base URL) or
        ``databricks`` (profile name). When ``type: databricks``, the
        same profile is reused automatically for agent-meow server OAuth so no
        separate ``profile:`` key is needed.
-    3. **Agent YAML** — path to the agent spec file that becomes
+    3. **Agent YAML** �?path to the agent spec file that becomes
        ``default_agent`` so ``agent-meow run`` uses it without an
        argument.
 
@@ -1415,7 +1452,7 @@ def run_wizard_and_launch() -> None:
 
     # ── Step 1: Server URL ────────────────────────────────────────────
     _section()
-    console.print("  [bold]Step 1 / 3 — Server URL[/bold]")
+    console.print("  [bold]Step 1 / 3 �?Server URL[/bold]")
     server_url = _prompt_server_url(existing_server)
     if server_url:
         save_settings["server"] = server_url
@@ -1425,7 +1462,7 @@ def run_wizard_and_launch() -> None:
     # authenticate with the agent-meow server, so no separate ``profile:`` key
     # is needed in the global config.
     _section()
-    console.print("  [bold]Step 2 / 3 — LLM auth[/bold]")
+    console.print("  [bold]Step 2 / 3 �?LLM auth[/bold]")
     if existing_auth and isinstance(existing_auth, dict):
         auth_type = existing_auth.get("type", "?")
         console.print()
@@ -1446,7 +1483,7 @@ def run_wizard_and_launch() -> None:
 
     # ── Step 3: Default agent YAML ───────────────────────────────────
     _section()
-    console.print("  [bold]Step 3 / 3 — Default agent YAML[/bold]")
+    console.print("  [bold]Step 3 / 3 �?Default agent YAML[/bold]")
     console.print()
     if existing_agent:
         console.print(f"  [dim]Default agent already set: {existing_agent}[/dim]")
@@ -1457,7 +1494,7 @@ def run_wizard_and_launch() -> None:
             "  [dim]Path to your agent YAML file (e.g. examples/hello_world.yaml).[/dim]"
         )
         console.print(
-            "  [dim]Leave blank to skip — run ``agent-meow run <yaml>`` directly later.[/dim]"
+            "  [dim]Leave blank to skip �?run ``agent-meow run <yaml>`` directly later.[/dim]"
         )
         console.print()
     try:
@@ -1474,9 +1511,9 @@ def run_wizard_and_launch() -> None:
     console.print()
     if save_settings:
         _save_global_config(save_settings)
-        console.print(f"  [green]✓ Config saved to {_GLOBAL_CONFIG_PATH}[/green]")
+        console.print(f"  [green]�?Config saved to {_GLOBAL_CONFIG_PATH}[/green]")
     else:
-        console.print("  [dim]No changes — config unchanged.[/dim]")
+        console.print("  [dim]No changes �?config unchanged.[/dim]")
     console.print()
     if save_settings.get("default_agent"):
         console.print(

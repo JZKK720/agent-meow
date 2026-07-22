@@ -25,7 +25,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
-from agent_meow.cost_plan import COST_CONTROL_PLAN_LABEL, parse_verdict
 from agent_meow.errors import OmnigentError
 from agent_meow.runner.identity import (
     OMNIGENT_INTERNAL_WS_ORIGIN,
@@ -46,11 +45,16 @@ from agent_meow.stores.permission_store.sqlalchemy_store import (
 ALICE = "alice@example.com"
 BOB = "bob@example.com"
 
+# Label key used as a concrete test target for the cost_control.* namespace
+# guard. The full parse/serialize logic was removed with the cost_advisor;
+# the namespace protection in sessions.py still applies to this key.
+COST_CONTROL_PLAN_LABEL = "cost_control.plan"
+
 # The binding token the test runner presents; its token-bound id is what
 # the session's runner_id must equal for the write to be authorized.
 _RUNNER_TOKEN = "test-binding-token-abc123"
 
-# A forged v3 verdict body — content is irrelevant to the gate (it rejects
+# A forged v3 verdict body �?content is irrelevant to the gate (it rejects
 # on the key, before any parsing), but keep it realistic.
 _FORGED_PLAN = (
     '{"version":3,"tier":"expensive","model":"databricks-claude-opus-4-8",'
@@ -75,7 +79,7 @@ def stores(
 
 
 def _install_error_handler(app: FastAPI) -> None:
-    """Mirror ``create_app()``'s OmnigentError → HTTP translation.
+    """Mirror ``create_app()``'s OmnigentError �?HTTP translation.
 
     :param app: The bare test app mounting only the sessions router.
     """
@@ -162,13 +166,15 @@ def _seed_session(
     :returns: The new session/conversation id.
     """
     conversation_store, agent_store, permission_store = stores
-    if agent_store.get("ag_test") is None:
+    if agent_store.get("087b7cb7ac30abf4debfaa578d052ec6") is None:
         agent_store.create(
-            agent_id="ag_test",
+            agent_id="087b7cb7ac30abf4debfaa578d052ec6",
             name="test-agent",
-            bundle_location="ag_test/bundle",
+            bundle_location="087b7cb7ac30abf4debfaa578d052ec6/bundle",
         )
-    conv = conversation_store.create_conversation(title="advised session", agent_id="ag_test")
+    conv = conversation_store.create_conversation(
+        title="advised session", agent_id="087b7cb7ac30abf4debfaa578d052ec6"
+    )
     if owner is not None:
         permission_store.ensure_user(owner)
         permission_store.grant(owner, conv.id, LEVEL_OWNER)
@@ -187,7 +193,7 @@ def test_editor_cannot_patch_cost_control_plan(
     stores: tuple[SqlAlchemyConversationStore, SqlAlchemyAgentStore, SqlAlchemyPermissionStore],
 ) -> None:
     """Bob (edit access, no runner token) cannot overwrite the plan
-    label — the exact attack from the swarm finding: an editor forging
+    label �?the exact attack from the swarm finding: an editor forging
     ``cost_control.plan`` to steer later enforcement/telemetry."""
     conversation_store = stores[0]
     app = _multi_user_app(stores)
@@ -206,7 +212,6 @@ def test_editor_cannot_patch_cost_control_plan(
     conv = conversation_store.get_conversation(conv_id)
     assert conv is not None
     assert COST_CONTROL_PLAN_LABEL not in conv.labels
-    assert parse_verdict(conv.labels) is None
 
 
 def test_owner_without_runner_proof_cannot_patch_cost_control_plan(
@@ -214,7 +219,7 @@ def test_owner_without_runner_proof_cannot_patch_cost_control_plan(
 ) -> None:
     """Even the session OWNER cannot write the namespace from an
     ordinary client: the plan is policy state owned by the runner-side
-    advisor, not user preference — an owner forging a permissive plan
+    advisor, not user preference �?an owner forging a permissive plan
     would spoof their cost telemetry."""
     conversation_store = stores[0]
     app = _multi_user_app(stores)
@@ -235,7 +240,7 @@ def test_rejected_reserved_write_leaves_other_fields_untouched(
     stores: tuple[SqlAlchemyConversationStore, SqlAlchemyAgentStore, SqlAlchemyPermissionStore],
 ) -> None:
     """The gate runs BEFORE any store mutation: a mixed PATCH (title +
-    reserved label) must not half-apply — a changed title alongside a
+    reserved label) must not half-apply �?a changed title alongside a
     403 would mean the route mutated state before authorizing."""
     conversation_store = stores[0]
     app = _multi_user_app(stores)
@@ -252,7 +257,7 @@ def test_rejected_reserved_write_leaves_other_fields_untouched(
     assert resp.status_code == 403
     conv = conversation_store.get_conversation(conv_id)
     assert conv is not None
-    # Title kept its seeded value — nothing was applied pre-rejection.
+    # Title kept its seeded value �?nothing was applied pre-rejection.
     assert conv.title == "advised session"
     assert COST_CONTROL_PLAN_LABEL not in conv.labels
 
@@ -261,7 +266,7 @@ def test_wrong_runner_token_is_rejected(
     stores: tuple[SqlAlchemyConversationStore, SqlAlchemyAgentStore, SqlAlchemyPermissionStore],
 ) -> None:
     """A token bound to a DIFFERENT runner than the session's must not
-    authorize the write — otherwise any runner-holding user could forge
+    authorize the write �?otherwise any runner-holding user could forge
     plans on someone else's sessions."""
     conversation_store = stores[0]
     app = _multi_user_app(stores)
@@ -285,7 +290,7 @@ def test_editor_can_still_patch_ordinary_labels(
     stores: tuple[SqlAlchemyConversationStore, SqlAlchemyAgentStore, SqlAlchemyPermissionStore],
 ) -> None:
     """The gate is namespace-scoped: an editor's write of ordinary
-    labels still succeeds — over-blocking would regress every existing
+    labels still succeeds �?over-blocking would regress every existing
     labels client."""
     conversation_store = stores[0]
     app = _multi_user_app(stores)
@@ -311,7 +316,7 @@ def test_bound_runner_token_authorizes_plan_write(
     """The advisor's own persist path: a PATCH carrying the binding
     token whose token-bound id IS the session's runner id succeeds and
     lands the verdict in the store, where readers parse it back. If this
-    403'd, the naive-deny trap would be sprung — the feature breaks on
+    403'd, the naive-deny trap would be sprung �?the feature breaks on
     every multi-user server."""
     conversation_store = stores[0]
     app = _multi_user_app(stores)
@@ -321,7 +326,7 @@ def test_bound_runner_token_authorizes_plan_write(
         f"/v1/sessions/{conv_id}",
         json={"labels": {COST_CONTROL_PLAN_LABEL: _FORGED_PLAN}},
         headers={
-            # The runner authenticates as the session's user (Alice) —
+            # The runner authenticates as the session's user (Alice) �?
             # the token is what proves it's the runner, not the email.
             "X-Forwarded-Email": ALICE,
             RUNNER_TUNNEL_TOKEN_HEADER: _RUNNER_TOKEN,
@@ -330,11 +335,8 @@ def test_bound_runner_token_authorizes_plan_write(
     assert resp.status_code == 200
     conv = conversation_store.get_conversation(conv_id)
     assert conv is not None
-    # The persisted value round-trips through parse_verdict — the full
-    # write→read chain is intact.
-    verdict = parse_verdict(conv.labels)
-    assert verdict is not None
-    assert verdict.tier == "expensive"
+    # The write landed in the store.
+    assert conv.labels.get(COST_CONTROL_PLAN_LABEL) == _FORGED_PLAN
 
 
 def test_allowlisted_pool_token_authorizes_plan_write(
@@ -359,7 +361,7 @@ def test_allowlisted_pool_token_authorizes_plan_write(
     assert resp.status_code == 200
     conv = conversation_store.get_conversation(conv_id)
     assert conv is not None
-    assert parse_verdict(conv.labels) is not None
+    assert COST_CONTROL_PLAN_LABEL in conv.labels
 
 
 def test_single_user_server_skips_the_gate(
@@ -380,7 +382,7 @@ def test_single_user_server_skips_the_gate(
     assert resp.status_code == 200
     conv = conversation_store.get_conversation(conv_id)
     assert conv is not None
-    assert parse_verdict(conv.labels) is not None
+    assert COST_CONTROL_PLAN_LABEL in conv.labels
 
 
 # ── Create: no client may seed the namespace ─────────────────────────────────
@@ -391,7 +393,7 @@ def test_create_session_rejects_cost_control_label_seed(
 ) -> None:
     """``POST /v1/sessions`` with a ``cost_control.*`` label seed fails
     400: no runner can be bound at create time, so there is no
-    legitimate writer — a seeded forged verdict would spoof the cost telemetry
+    legitimate writer �?a seeded forged verdict would spoof the cost telemetry
     from turn one."""
     _seed_session(stores)  # ensures ag_test exists
     app = _multi_user_app(stores)
@@ -399,7 +401,7 @@ def test_create_session_rejects_cost_control_label_seed(
     resp = TestClient(app).post(
         "/v1/sessions",
         json={
-            "agent_id": "ag_test",
+            "agent_id": "087b7cb7ac30abf4debfaa578d052ec6",
             "labels": {COST_CONTROL_PLAN_LABEL: _FORGED_PLAN},
         },
         # Sentinel Origin: first-party client past the require_trusted_origin guard.
@@ -415,7 +417,7 @@ def test_bundled_create_rejects_cost_control_label_seed(
 ) -> None:
     """The multipart bundled-create shape is gated too: its metadata
     carries the same client-supplied ``labels`` and persists them via
-    ``create_session_with_agent`` — an ungated second door for the same
+    ``create_session_with_agent`` �?an ungated second door for the same
     forgery."""
     import json as _json
 
@@ -447,7 +449,7 @@ def test_create_session_with_ordinary_labels_succeeds(
 
     resp = TestClient(app).post(
         "/v1/sessions",
-        json={"agent_id": "ag_test", "labels": {"team": "ml"}},
+        json={"agent_id": "087b7cb7ac30abf4debfaa578d052ec6", "labels": {"team": "ml"}},
         # Sentinel Origin: first-party client past the require_trusted_origin guard.
         headers={"X-Forwarded-Email": ALICE, "Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
     )

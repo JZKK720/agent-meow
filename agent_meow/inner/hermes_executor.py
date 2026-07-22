@@ -4,42 +4,41 @@ HermesExecutor: run agent turns through the Hermes Agent CLI.
 Spawns ``hermes chat -q`` as a subprocess for each turn.  Hermes manages its
 own session state via a persistent session store (SQLite under
 ``~/.hermes/``), so the executor uses ``--resume <session_id>`` on subsequent
-turns to maintain conversational context across the agent-meow session without
+turns to maintain conversational context across the Omnigent session without
 re-serialising the full history.
 
 Each turn yields text output as ``TextChunk`` / ``TurnComplete`` events.
-agent-meow policies are enforced on Hermes' native tool calls via Hermes'
+Omnigent policies are enforced on Hermes' native tool calls via Hermes'
 ``pre_tool_call`` shell hook mechanism: a per-session ``HERMES_HOME``
 directory is created with a ``config.yaml`` that registers a policy hook
 script, matching how Codex uses a per-session ``CODEX_HOME``.
 
 Requirements:
     The ``hermes`` CLI must be installed and on PATH (or set via
-    ``HARNESS_HERMES_PATH``).
+    ``OMNIGENT_HERMES_PATH``; legacy ``HARNESS_HERMES_PATH`` still honored).
 
 Env vars read at construction:
 
-- ``HARNESS_HERMES_MODEL`` â€” model identifier, e.g. ``"deepseek/deepseek-chat"``
+- ``HARNESS_HERMES_MODEL`` â€?model identifier, e.g. ``"deepseek/deepseek-chat"``
   or ``"anthropic/claude-sonnet-4"``.  ``None`` falls back to Hermes' own
   configured default model.
-- ``HARNESS_HERMES_CWD`` â€” working directory the subprocess runs in.
+- ``HARNESS_HERMES_CWD`` â€?working directory the subprocess runs in.
   ``None`` falls back to ``os.getcwd()``.
-- ``HARNESS_HERMES_PATH`` â€” absolute path to the ``hermes`` CLI binary.
-  ``None`` searches ``PATH``.
-- ``HARNESS_HERMES_OS_ENV`` â€” JSON-encoded :class:`OSEnvSpec`.  When unset,
+- ``OMNIGENT_HERMES_PATH`` â€?absolute path to the ``hermes`` CLI binary.
+  ``None`` searches ``PATH``. (Legacy ``HARNESS_HERMES_PATH`` still honored.)
+- ``HARNESS_HERMES_OS_ENV`` â€?JSON-encoded :class:`OSEnvSpec`.  When unset,
   defaults to ``caller_process + sandbox=none``.
-- ``HARNESS_HERMES_SKILLS_FILTER`` â€” JSON-encoded ``str | list[str]``
+- ``HARNESS_HERMES_SKILLS_FILTER`` â€?JSON-encoded ``str | list[str]``
   carrying the agent spec's ``skills_filter``.  When unset, falls back to
   ``"all"``.
-- ``HARNESS_HERMES_BUNDLE_DIR`` â€” absolute path to the agent bundle's
+- ``HARNESS_HERMES_BUNDLE_DIR`` â€?absolute path to the agent bundle's
   extracted root.  Unset for agents without a bundled-skills directory.
-- ``HARNESS_HERMES_AGENT_NAME`` â€” agent display name (reserved for future use).
+- ``HARNESS_HERMES_AGENT_NAME`` â€?agent display name (reserved for future use).
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import re
@@ -72,15 +71,15 @@ _HERMES_TURN_TIMEOUT_S = 600.0
 _RE_SESSION_ID = re.compile(r"^session_id:\s+(\S+)")
 
 # Regex to detect the resume notice line emitted by ``--resume``.
-# Matches lines like ``â†» Resumed session 20260620_142506_c51451 ...``.
+# Matches lines like ``â†?Resumed session 20260620_142506_c51451 ...``.
 _RE_RESUME_NOTICE = re.compile(r"^â†»\s+Resumed\s+session\s+\S+")
 
 # Regex to detect the "continue" notice line.
-# Matches lines like ``â†» Resumed session NAME ...``.
+# Matches lines like ``â†?Resumed session NAME ...``.
 _RE_CONTINUE_NOTICE = re.compile(r"^â†»\s+Resumed\s+session")
 
 # Prefixes for Hermes warning/notice messages that should be stripped.
-_WARNING_PREFIXES = ("Warning:", "âš ")
+_WARNING_PREFIXES = ("Warning:", "âš?)
 
 
 def _strip_hermes_metadata(output: str) -> str:
@@ -92,7 +91,7 @@ def _strip_hermes_metadata(output: str) -> str:
     alongside the actual response:
 
     - ``session_id: <id>``
-    - ``â†» Resumed session <id> ...``
+    - ``â†?Resumed session <id> ...``
     - ``Warning: ...``
 
     :param output: Raw stdout from ``hermes chat -q``.
@@ -134,7 +133,7 @@ def _parse_session_id(output: str) -> str | None:
 def _extract_last_user_message(messages: list[Message]) -> str:
     """
     Extract the text of the most recent user message from the
-    agent-meow message list.
+    Omnigent message list.
 
     :param messages: The conversation message list passed to
         ``run_turn``.
@@ -168,125 +167,6 @@ def _get_conversation_id() -> str | None:
         if arg == "--conversation-id" and i + 1 < len(argv):
             return argv[i + 1]
     return None
-
-
-# Keys from the user's ``~/.hermes/config.yaml`` that the per-session
-# HERMES_HOME needs in order to authenticate with the inference provider.
-# Everything else (secrets, security, agent tuning, terminal, etc.) is
-# either irrelevant to a headless agent-meow turn or actively harmful
-# (e.g. ``secrets.bitwarden`` referencing an unset ``BWS_ACCESS_TOKEN``).
-_USER_CONFIG_KEYS = frozenset(
-    {
-        "model",
-        "providers",
-        "fallback_providers",
-        "credential_pool_strategies",
-    }
-)
-
-
-def _load_user_hermes_config() -> dict:
-    """Load inference-relevant keys from the user's ``~/.hermes/config.yaml``.
-
-    Returns a dict containing only the keys Hermes needs to resolve a
-    model and authenticate (see :data:`_USER_CONFIG_KEYS`), or ``{}``
-    when the file is missing or malformed.
-    """
-    user_config = Path.home() / ".hermes" / "config.yaml"
-    if not user_config.is_file():
-        return {}
-    try:
-        import yaml
-
-        full = yaml.safe_load(user_config.read_text()) or {}
-        return {k: v for k, v in full.items() if k in _USER_CONFIG_KEYS}
-    except Exception:  # noqa: BLE001 â€” catch YAML parse errors, permission errors, etc.
-        _logger.debug("Failed to load user Hermes config at %s", user_config, exc_info=True)
-        return {}
-
-
-def _populate_hermes_home(
-    hermes_home: Path,
-    hook_script_path: str,
-    server_url: str,
-    session_id: str,
-) -> None:
-    """Populate a per-session ``HERMES_HOME`` with policy hook config.
-
-    Creates a ``config.yaml`` that registers the agent-meow policy hook
-    as a ``pre_tool_call`` shell hook, and writes a wrapper script
-    that exports the server env vars before exec-ing the Python hook.
-
-    The user's ``~/.hermes/config.yaml`` model/provider settings are
-    merged into the per-session config so Hermes can authenticate with
-    the inference provider the user configured via ``hermes model``.
-
-    This mirrors how Codex creates a per-session ``CODEX_HOME`` with
-    its own ``config.toml`` â€” Hermes scopes all state (config, sessions,
-    hooks, allowlist) to ``HERMES_HOME``.
-
-    :param hermes_home: The per-session HERMES_HOME directory.
-    :param hook_script_path: Absolute path to ``hermes_policy_hook.py``.
-    :param server_url: agent-meow server URL.
-    :param session_id: Conversation / session ID for policy evaluation.
-    """
-    hermes_home.mkdir(parents=True, exist_ok=True)
-
-    # Write the wrapper shell script that sets env vars and execs the hook. It
-    # bakes a one-shot auth token + workspace-routing header, so it is
-    # owner-only (0o700) â€” the secret is never world-readable.
-    from agent_meow.native_policy_hook import policy_hook_wrapper_script
-
-    wrapper = hermes_home / "omnigent-policy-hook.sh"
-    wrapper.write_text(policy_hook_wrapper_script(server_url, session_id, hook_script_path))
-    wrapper.chmod(0o700)
-
-    # Start from the user's config so model/provider/auth settings carry over.
-    # Hermes scopes everything to HERMES_HOME, so without this merge it won't
-    # find the inference provider the user configured via ``hermes model``.
-    user_cfg = _load_user_hermes_config()
-    config: dict = {**user_cfg}
-
-    # Layer agent-meow's policy hook config on top.
-    config["hooks_auto_accept"] = True
-    config["hooks"] = {
-        **config.get("hooks", {}),
-        "pre_tool_call": [
-            {
-                "command": str(wrapper),
-                # One day: must match the server's ``ask_timeout`` so
-                # the hook stays alive while the human responds to the
-                # web-UI approval card (ASK policy).
-                "timeout": 86400,
-            },
-        ],
-    }
-
-    config_path = hermes_home / "config.yaml"
-    # Use JSON for YAML-compatible output (JSON is valid YAML).
-    config_path.write_text(json.dumps(config, indent=2) + "\n")
-
-    # Copy the user's .env file if present (carries API keys like
-    # OPENROUTER_API_KEY, OPENAI_API_KEY, etc.).
-    user_env = Path.home() / ".hermes" / ".env"
-    if user_env.is_file():
-        shutil.copy2(user_env, hermes_home / ".env")
-
-    # Copy the user's auth.json if present (carries provider credentials
-    # stored by ``hermes auth`` / ``hermes model``).
-    user_auth = Path.home() / ".hermes" / "auth.json"
-    if user_auth.is_file():
-        shutil.copy2(user_auth, hermes_home / "auth.json")
-
-    # Pre-populate the allowlist so Hermes never prompts for consent.
-    # Hermes' allowlist format is {"approvals": [{"event": ..., "command": ...}]}.
-    allowlist_path = hermes_home / "shell-hooks-allowlist.json"
-    allowlist_data = {
-        "approvals": [
-            {"event": "pre_tool_call", "command": str(wrapper)},
-        ],
-    }
-    allowlist_path.write_text(json.dumps(allowlist_data, indent=2) + "\n")
 
 
 def _build_hermes_args(
@@ -336,7 +216,7 @@ class HermesExecutor(Executor):
     Hermes manages its own session persistence (SQLite).  The executor
     captures the ``session_id`` from the first turn and passes
     ``--resume <session_id>`` on subsequent turns so conversational
-    history is maintained without agent-meow re-serializing the full
+    history is maintained without Omnigent re-serializing the full
     message list.
 
     Each turn runs ``hermes chat -q "<message>" -Q --source tool`` as an
@@ -344,7 +224,7 @@ class HermesExecutor(Executor):
     and yields ``TextChunk`` / ``TurnComplete`` events.
 
     A per-session ``HERMES_HOME`` directory is created with a
-    ``config.yaml`` that registers an agent-meow policy hook as a
+    ``config.yaml`` that registers an Omnigent policy hook as a
     Hermes ``pre_tool_call`` shell hook, enforcing ``PHASE_TOOL_CALL``
     policies on all native Hermes tool calls.
     """
@@ -390,15 +270,19 @@ class HermesExecutor(Executor):
         self._setup_hermes_home()
 
     def _setup_hermes_home(self) -> None:
-        """Create a per-session ``HERMES_HOME`` with agent-meow policy hooks.
+        """Create a per-session ``HERMES_HOME`` with policy hooks and MCP config.
 
-        When the agent-meow server URL and conversation ID are available,
-        creates a temp directory with a ``config.yaml`` that registers the
-        agent-meow policy hook as a Hermes ``pre_tool_call`` shell hook.
+        When the Omnigent server URL and conversation ID are available,
+        writes a ``config.yaml`` that registers the Omnigent policy hook as a
+        Hermes ``pre_tool_call`` shell hook and an ``mcp_servers.omnigent``
+        entry (``serve-mcp``) exposing Omnigent builtin tools to the model.
         The ``HERMES_HOME`` env var is passed to the subprocess so Hermes
         reads this config instead of the user's ``~/.hermes/``.
 
-        Mirrors how Codex creates a per-session ``CODEX_HOME``.
+        The home stays a private ``mkdtemp`` (0700) so the copied ``.env`` /
+        ``auth.json`` credentials are never on a predictable path. Only the
+        runner<->serve-mcp coordination files live in the deterministic bridge
+        dir, which ``config.yaml`` points ``serve-mcp`` at.
         """
         server_url = os.environ.get("RUNNER_SERVER_URL", "")
         conv_id = _get_conversation_id()
@@ -409,27 +293,36 @@ class HermesExecutor(Executor):
                 conv_id or "(unset)",
             )
             return
+        from agent_meow.hermes_native_bridge import (
+            bridge_dir_for_session_id,
+            write_policy_hook_config,
+        )
+
         self._hermes_home = Path(tempfile.mkdtemp(prefix="hermes_home_"))
-        hook_script = str(Path(__file__).with_name("hermes_policy_hook.py"))
-        _populate_hermes_home(self._hermes_home, hook_script, server_url, conv_id)
+        write_policy_hook_config(
+            bridge_dir_for_session_id(conv_id),
+            server_url,
+            conv_id,
+            hermes_home=self._hermes_home,
+        )
         _logger.debug("Hermes per-session home: %s", self._hermes_home)
 
     def _hermes_session_id(self, session_key: str) -> str | None:
-        """Return the stored Hermes session ID for an agent-meow session key."""
+        """Return the stored Hermes session ID for an Omnigent session key."""
         return self._session_map.get(session_key)
 
     def supports_streaming(self) -> bool:
-        """Return True â€” Hermes streams text output."""
+        """Return True â€?Hermes streams text output."""
         return True
 
     def handles_tools_internally(self) -> bool:
-        """Return True â€” Hermes executes tools inside its own agent loop.
+        """Return True â€?Hermes executes tools inside its own agent loop.
 
         The Hermes Agent CLI manages its own tool-calling loop internally.
         Tool-call requests/results are handled by Hermes, not bridged
-        through agent-meow's tool dispatch.  agent-meow policies are enforced
+        through Omnigent's tool dispatch.  Omnigent policies are enforced
         via Hermes' native ``pre_tool_call`` shell hook that evaluates
-        ``PHASE_TOOL_CALL`` against the agent-meow server before each tool
+        ``PHASE_TOOL_CALL`` against the Omnigent server before each tool
         execution.
         """
         return True
@@ -444,7 +337,7 @@ class HermesExecutor(Executor):
         """
         Run one agent turn by spawning ``hermes chat -q``.
 
-        :param messages: Conversation history from agent-meow.
+        :param messages: Conversation history from agent_meow.
         :param tools: Tool schemas (Hermes uses its own tools internally).
         :param system_prompt: System prompt (used by Hermes internally).
         :param config: Per-turn config (model override, etc.).
@@ -461,7 +354,7 @@ class HermesExecutor(Executor):
         # Extract the latest user message
         user_text = _extract_last_user_message(messages)
         if not user_text:
-            # Nothing to respond to â€” short-circuit
+            # Nothing to respond to â€?short-circuit
             yield TurnComplete(response=None)
             return
 
@@ -560,7 +453,7 @@ class HermesExecutor(Executor):
 
     def _session_key(self, messages: list[Message]) -> str:
         """
-        Derive a stable agent-meow session key from the message list.
+        Derive a stable Omnigent session key from the message list.
 
         Uses the ``session_id`` stamped on the first message if available,
         otherwise falls back to a hash of the conversation content.
@@ -578,9 +471,9 @@ class HermesExecutor(Executor):
         """
         Release resources for a specific session.
 
-        Removes the Hermes session mapping â€” the Hermes session
+        Removes the Hermes session mapping â€?the Hermes session
         persists in its own SQLite store and can be resumed later
-        via `hermes --resume` outside agent-meow.
+        via `hermes --resume` outside agent_meow.
         """
         self._session_map.pop(session_key, None)
         await super().close_session(session_key)
@@ -588,7 +481,9 @@ class HermesExecutor(Executor):
     async def close(self) -> None:
         """Release executor-wide resources."""
         self._session_map.clear()
-        # Best-effort cleanup of the per-session HERMES_HOME.
+        # Best-effort cleanup of the HERMES_HOME subdir only; the parent bridge
+        # dir (tool_relay.json, bridge.json) belongs to the runner-hosted relay
+        # and is cleaned up on session delete.
         if self._hermes_home is not None:
             shutil.rmtree(self._hermes_home, ignore_errors=True)
             self._hermes_home = None

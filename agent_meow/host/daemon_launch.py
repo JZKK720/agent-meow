@@ -1,11 +1,11 @@
 """Client-side helpers for launching runners through the connect daemon.
 
 These are the CLI-side counterpart to the host-runner protocol: the CLI
-(``run`` / ``claude`` / ``codex``) asks the agent-meow server to launch
+(``run`` / ``claude`` / ``codex``) asks the Omnigent server to launch
 a runner on this machine's daemon via
 ``POST /v1/hosts/{host_id}/runners``; the server forwards a launch frame to
 the daemon, which spawns the runner subprocess and binds it to the session.
-The daemon owns the runner lifecycle â€” the CLI only connects.
+The daemon owns the runner lifecycle â€?the CLI only connects.
 
 Harness-agnostic on purpose: the same launch path serves headless
 ``run`` agents and the ``claude``/``codex`` terminal wrappers.
@@ -69,7 +69,7 @@ async def wait_for_host_online(
     as "not online yet" and polled through; only the deadline fails the
     wait, with the last transport error included in the message.
 
-    :param client: HTTP client pointed at the agent-meow server.
+    :param client: HTTP client pointed at the Omnigent server.
     :param host_id: This machine's host id, e.g. ``"host_abc123"``.
     :param timeout_s: Max seconds to wait, e.g. ``30.0``.
     :returns: None once the host reports ``status == "online"``.
@@ -99,7 +99,7 @@ async def runner_is_online(client: httpx.AsyncClient, runner_id: str) -> bool:
     """
     Return whether a runner currently has an open tunnel to the server.
 
-    :param client: HTTP client pointed at the agent-meow server.
+    :param client: HTTP client pointed at the Omnigent server.
     :param runner_id: Runner id, e.g. ``"runner_abc123"``.
     :returns: ``True`` when the status endpoint reports ``online``.
     """
@@ -118,7 +118,7 @@ async def wait_for_runner_online(
 
     Fails fast when the status endpoint reports the runner process
     died (the host daemon watches its spawned runners and reports
-    ``host.runner_exited`` with the exit code and log tail) â€” a dead
+    ``host.runner_exited`` with the exit code and log tail) â€?a dead
     process can never connect, so waiting out the full timeout would
     only hide the cause.
 
@@ -127,7 +127,7 @@ async def wait_for_runner_online(
     only the deadline fails the wait, with the last transport error
     included in the message.
 
-    :param client: HTTP client pointed at the agent-meow server.
+    :param client: HTTP client pointed at the Omnigent server.
     :param runner_id: Runner id the host was asked to spawn, e.g.
         ``"runner_abc123"``.
     :param timeout_s: Max seconds to wait, e.g. ``60.0``.
@@ -149,7 +149,7 @@ async def wait_for_runner_online(
                     return
                 exit_error = body.get("error")
                 if isinstance(exit_error, str) and exit_error:
-                    # The runner process is dead â€” it can never come
+                    # The runner process is dead â€?it can never come
                     # online. Surface the daemon-composed cause (exit
                     # code + log tail) instead of polling to a timeout.
                     raise click.ClickException(
@@ -159,7 +159,7 @@ async def wait_for_runner_online(
     message = f"Runner {runner_id!r} did not connect within {timeout_s:.0f}s."
     if last_error is not None:
         message += f" Last connection error: {last_error!r}."
-    message += " Check the host-runner logs under ~/.agent_meow/logs/host-runner/."
+    message += " Check the runner logs under ~/.omnigent/logs/runner/."
     raise click.ClickException(message)
 
 
@@ -178,7 +178,7 @@ async def launch_or_reuse_daemon_runner(
     asks the server to launch a fresh runner on the host via
     ``POST /v1/hosts/{host_id}/runners`` (which atomically binds it).
 
-    :param client: HTTP client pointed at the agent-meow server.
+    :param client: HTTP client pointed at the Omnigent server.
     :param host_id: This machine's host id, e.g. ``"host_abc123"``.
     :param session_id: Session to bind, e.g. ``"conv_abc123"``.
     :param workspace: Absolute host path for the runner cwd, e.g.
@@ -199,7 +199,7 @@ async def launch_or_reuse_daemon_runner(
             json={"runner_id": ""},
         )
     # The host tunnel can be briefly absent from the server's in-memory
-    # registry while it (re)connects â€” e.g. just after `agent-meow host`
+    # registry while it (re)connects â€?e.g. just after `omnigent host`
     # restarts, after a server restart/redeploy, or under a flapping tunnel.
     # During that window the launch 409s "host is offline" even though the
     # host is online per the cross-replica DB, and the whole session start

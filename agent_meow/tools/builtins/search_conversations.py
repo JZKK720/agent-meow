@@ -6,6 +6,9 @@ import json
 from typing import Any
 
 from agent_meow.tools.base import Tool, ToolContext
+from agent_meow.tools.builtins._arguments import parse_json_object_arguments
+
+_MAX_SEARCH_RESULTS = 100
 
 
 class SearchConversationsTool(Tool):
@@ -32,7 +35,7 @@ class SearchConversationsTool(Tool):
         """
         return (
             "Search past conversations for relevant information. "
-            "Use this to recall details from prior interactions â€” "
+            "Use this to recall details from prior interactions â€?"
             "e.g. decisions made, code reviewed, files created, "
             "or facts discussed. Returns matching messages ranked "
             "by relevance with surrounding context."
@@ -50,7 +53,7 @@ class SearchConversationsTool(Tool):
                 "name": "search_conversations",
                 "description": (
                     "Search past conversations for relevant information. "
-                    "Use this to recall details from prior interactions â€” "
+                    "Use this to recall details from prior interactions â€?"
                     "e.g. decisions made, code reviewed, files created, "
                     "or facts discussed. Returns matching messages ranked "
                     "by relevance with surrounding context."
@@ -86,11 +89,18 @@ class SearchConversationsTool(Tool):
         :param ctx: Server-side execution context (unused).
         :returns: JSON string with search results.
         """
-        args: dict[str, Any] = json.loads(arguments)
+        args, error = parse_json_object_arguments(arguments)
+        if error is not None:
+            return json.dumps({"error": error})
+        assert args is not None
         query = args.get("query")
-        if not query:
+        if not isinstance(query, str) or not query.strip():
             return json.dumps({"error": "missing required 'query' argument"})
+        query = query.strip()
         limit = args.get("limit", 10)
+        if not isinstance(limit, int) or isinstance(limit, bool) or limit <= 0:
+            return json.dumps({"error": "limit must be a positive integer"})
+        limit = min(limit, _MAX_SEARCH_RESULTS)
 
         from agent_meow.runtime import get_conversation_store
 

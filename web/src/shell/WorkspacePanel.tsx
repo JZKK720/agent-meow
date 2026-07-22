@@ -1,19 +1,15 @@
-import { BotIcon, FileIcon, FileTextIcon, ImageIcon, ListTodoIcon, TerminalIcon, XIcon } from "lucide-react";
+import { BotIcon, FileIcon, GlobeIcon, ListTodoIcon, TerminalIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DocEditor } from "./DocEditor";
-import { DocsPanel } from "./DocsPanel";
+import { BrowserPane } from "@/components/BrowserPane/BrowserPane";
 import { FilesPanel } from "./FilesPanel";
 import { FileViewer } from "./FileViewer";
-import { ImageEditor } from "./ImageEditor";
-import { ImagesPanel } from "./ImagesPanel";
 import type { ChangedSort } from "./FlatFileList";
 import { InlineTerminalsSection } from "./InlineTerminalsSection";
 import { SubagentsPanel } from "./SubagentsPanel";
 import { TodoPanel } from "./TodoPanel";
 import { type RightRailTab, TAB_BADGE_BASE } from "./railTabs";
-import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // FileTabsStrip — open file tabs rendered in the top rail tab strip, as peers
@@ -147,6 +143,9 @@ interface WorkspacePanelProps {
   onRightRailTabChange: (next: RightRailTab) => void;
   /** Whether the Files tab is available (agent spec exposes an os_env). */
   showFilesPanel: boolean;
+  /** Whether the Browser tab is available — Electron shell only (hidden in a
+   *  plain web build, which has no embedded WebContentsView). */
+  showBrowserTab: boolean;
   /** Count of changed files, shown as the Files tab badge. */
   changedCount: number;
   /**
@@ -165,8 +164,8 @@ interface WorkspacePanelProps {
    * badge denominator) — starts at 1 for a lone agent.
    */
   agentCount: number;
-  /** Whether this is a claude-native session (gates the Tasks tab). */
-  isClaudeNative: boolean;
+  /** Whether the session publishes a todo list (gates the Tasks tab). */
+  todosSupported: boolean;
   /** Number of completed todos (Tasks tab badge numerator). */
   todosCompleted: number;
   /** Total todo count (Tasks tab badge denominator + visibility gate). */
@@ -206,18 +205,6 @@ interface WorkspacePanelProps {
   filesPanelShowHidden: boolean;
   /** Toggle hidden-file visibility in the Files panel. */
   onShowHiddenChange: (show: boolean) => void;
-  /** Active document id in the Docs tab, or null. */
-  selectedDocId: string | null;
-  /** Open a document in the Docs tab editor. */
-  onDocSelect: (docId: string) => void;
-  /** Close the active document (return to Docs list). */
-  onDocClose: () => void;
-  /** Active image id in the Images tab, or null. */
-  selectedImageId: string | null;
-  /** Open an image in the Images tab editor. */
-  onImageSelect: (imageId: string) => void;
-  /** Close the active image (return to Images gallery). */
-  onImageClose: () => void;
 }
 
 /**
@@ -243,12 +230,13 @@ export function WorkspacePanel({
   rightRailTab,
   onRightRailTabChange,
   showFilesPanel,
+  showBrowserTab,
   changedCount,
   showShellsTab,
   terminalsLength,
   subagentsWorking,
   agentCount,
-  isClaudeNative,
+  todosSupported,
   todosCompleted,
   todosTotal,
   rootSessionId,
@@ -266,14 +254,7 @@ export function WorkspacePanel({
   onFlatViewChange,
   filesPanelShowHidden,
   onShowHiddenChange,
-  selectedDocId,
-  onDocSelect,
-  onDocClose,
-  selectedImageId,
-  onImageSelect,
-  onImageClose,
 }: WorkspacePanelProps) {
-  const { t } = useTranslation();
   // Memoized so FileViewer's Escape-to-close effect doesn't re-subscribe its
   // window keydown listener on every render — an inline arrow would change
   // identity each render and thrash the effect's add/remove cycle.
@@ -340,7 +321,7 @@ export function WorkspacePanel({
                 className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
               >
                 <FileIcon className="size-4" />
-                {t("workspace.files")}
+                Files
                 {changedCount > 0 && (
                   <span className={cn(TAB_BADGE_BASE, "ml-0.5 bg-muted text-muted-foreground")}>
                     {changedCount}
@@ -349,25 +330,11 @@ export function WorkspacePanel({
               </TabsTrigger>
             )}
             <TabsTrigger
-              value="docs"
-              className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
-            >
-              <FileTextIcon className="size-4" />
-              {t("workspace.docs")}
-            </TabsTrigger>
-            <TabsTrigger
-              value="images"
-              className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
-            >
-              <ImageIcon className="size-4" />
-              {t("workspace.images")}
-            </TabsTrigger>
-            <TabsTrigger
               value="subagents"
               className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
             >
               <BotIcon className="size-4" />
-              {t("workspace.agents")}
+              Agents
               <span
                 className={cn(
                   TAB_BADGE_BASE,
@@ -386,7 +353,7 @@ export function WorkspacePanel({
                 className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
               >
                 <TerminalIcon className="size-4" />
-                {t("workspace.shells")}
+                Shells
                 {/* No badge before the first shell — a "0" next to a
                     default-visible tab reads as an error state. */}
                 {terminalsLength > 0 && (
@@ -396,16 +363,25 @@ export function WorkspacePanel({
                 )}
               </TabsTrigger>
             )}
-            {isClaudeNative && todosTotal > 0 && (
+            {todosSupported && todosTotal > 0 && (
               <TabsTrigger
                 value="todos"
                 className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
               >
                 <ListTodoIcon className="size-4" />
-                {t("workspace.tasks")}
+                Tasks
                 <span className={cn(TAB_BADGE_BASE, "ml-0.5 bg-muted text-muted-foreground")}>
                   {todosCompleted}/{todosTotal}
                 </span>
+              </TabsTrigger>
+            )}
+            {showBrowserTab && (
+              <TabsTrigger
+                value="browser"
+                className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
+              >
+                <GlobeIcon className="size-4" />
+                Browser
               </TabsTrigger>
             )}
           </TabsList>
@@ -447,7 +423,7 @@ export function WorkspacePanel({
           The Shells branch is unreachable when its tab is hidden —
           native wrappers, claude-native sub-agents, or no shell
           attached. */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div data-workspace-panel-content className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {selectedFilePath !== null ? (
           <FileViewer
             frameless
@@ -461,37 +437,13 @@ export function WorkspacePanel({
             onCommentsOpenChange={onCommentsOpenChange}
             sort={filesPanelSort}
           />
-        ) : rightRailTab === "docs" ? (
-          selectedDocId !== null ? (
-            <DocEditor
-              conversationId={conversationId}
-              documentId={selectedDocId}
-              onClose={onDocClose}
-            />
-          ) : (
-            <DocsPanel
-              frameless
-              onDocSelect={onDocSelect}
-              selectedDocId={selectedDocId}
-            />
-          )
-        ) : rightRailTab === "images" ? (
-          selectedImageId !== null ? (
-            <ImageEditor
-              conversationId={conversationId}
-              imageId={selectedImageId}
-              onClose={onImageClose}
-            />
-          ) : (
-            <ImagesPanel
-              frameless
-              onImageSelect={onImageSelect}
-              selectedImageId={selectedImageId}
-            />
-          )
+        ) : rightRailTab === "browser" && showBrowserTab ? (
+          // Embedded browser (Electron only) — BrowserPane self-gates and
+          // measures this rail slot to position the native view over it.
+          <BrowserPane conversationId={conversationId} className="min-h-0 flex-1" />
         ) : rightRailTab === "subagents" && rootSessionId ? (
           <SubagentsPanel conversationId={conversationId} rootSessionId={rootSessionId} />
-        ) : rightRailTab === "todos" && isClaudeNative ? (
+        ) : rightRailTab === "todos" && todosSupported ? (
           <TodoPanel frameless />
         ) : rightRailTab === "terminals" && showShellsTab ? (
           <InlineTerminalsSection conversationId={conversationId} onExpand={openTerminalsPanel} />

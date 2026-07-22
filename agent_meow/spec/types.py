@@ -21,17 +21,17 @@ if TYPE_CHECKING:
 # agent loop for every evaluated phase. The agent-level LLM
 # default (300 s) is tuned for generation; using it for a
 # blocking classifier stalls the loop for minutes on each tool
-# call â€” see POLICIES.md Â§9.2. Overrideable via
+# call â€?see POLICIES.md Â§9.2. Overrideable via
 # ``policy.llm.request_timeout`` on individual policies.
 DEFAULT_POLICY_CLASSIFIER_TIMEOUT = 30
 
 # Default timeout (seconds) for user approval on an ASK policy.
-# One day â€” an ASK is a human-in-the-loop gate and should outlive a
+# One day â€?an ASK is a human-in-the-loop gate and should outlive a
 # user stepping away, matching every other wait-for-a-human budget in
 # the native path (the PermissionRequest / evaluate-policy hook
 # long-polls and their server-side mirrors are all 86400). A shorter
 # default fails closed (DENY) without any user input, flipping the web
-# card to a neutral "Resolved elsewhere" â€” surprising for an
+# card to a neutral "Resolved elsewhere" â€?surprising for an
 # interactive session. Headless/unattended agents that want a fast
 # fail-closed should override this per-policy via ``PolicySpec.ask_timeout``
 # or spec-wide via ``GuardrailsSpec.ask_timeout`` (see polly's config).
@@ -75,12 +75,12 @@ class RetryPolicy:
         to spread retries from many concurrent clients. SDKs handle
         their own jitter at L0.
     :param timeout_per_request_s: Per-HTTP-request timeout. ``None``
-        lets the SDK use its default. Used at L0 only â€” bounds an
+        lets the SDK use its default. Used at L0 only â€?bounds an
         individual attempt's wall-clock.
     :param retryable_status_codes: HTTP status codes the in-process
         LLM path's ``classify_llm_error`` treats as retryable.
         Used only by the in-process LLM path and the tool-retry
-        classifier â€” L0 SDKs ignore this and L2 receives
+        classifier â€?L0 SDKs ignore this and L2 receives
         already-classified errors.
     """
 
@@ -93,7 +93,7 @@ class RetryPolicy:
 
     def __post_init__(self) -> None:
         """
-        Validate bounds â€” extreme values produce weird behavior
+        Validate bounds â€?extreme values produce weird behavior
         (overflow, infinite loops, zero-delay hammering). Fail
         loud per ``designs/DESIGN_PRINCIPLES.md``.
 
@@ -147,7 +147,7 @@ class RetryPolicy:
         Unknown keys are filtered out so older harness wraps stay
         compatible with newer specs that add fields. Malformed
         JSON, non-dict payloads, or values that fail
-        :meth:`__post_init__` validation all raise â€” the caller
+        :meth:`__post_init__` validation all raise â€?the caller
         decides whether to fall back to ``RetryPolicy()`` or
         propagate.
 
@@ -232,12 +232,12 @@ class RetryPolicy:
         Delay before retry attempt at L2 or in the in-process LLM
         path's retry loop.
 
-        :param retry_index: 1-indexed retry number â€” ``1`` is the
+        :param retry_index: 1-indexed retry number â€?``1`` is the
             delay before the first retry.
         :param retry_after_s: Server-requested retry hint. When
             provided, the returned delay is at least
             ``retry_after_s``, capped by ``backoff_max_s``. ``None``
-            means no server hint â€” pure exponential backoff applies.
+            means no server hint â€?pure exponential backoff applies.
         :returns: Delay in seconds.
         """
         import random
@@ -488,7 +488,7 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
     """
     Top-level executor configuration.
 
-    ``type`` is the discriminator for the entire spec's validity â€”
+    ``type`` is the discriminator for the entire spec's validity â€?
     it determines which other top-level sections and fields are
     valid. Invalid fields are rejected by the validator.
 
@@ -511,24 +511,24 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
     :param config: Executor-type-specific configuration. For
         ``type == "agent-meow"`` this carries ``"harness"`` (e.g.
         ``"claude-sdk"`` or ``"codex"``), optional ``"profile"``
-        (e.g. ``"<your-profile>"``), and optional ``"os_env"`` â€” the
+        (e.g. ``"<your-profile>"``), and optional ``"os_env"`` â€?the
         latter is a nested mapping mirroring the agent-meow
         ``OSEnvSpec`` shape (``{type, cwd, sandbox: {...}}``) or
         the literal string ``"inherit"`` on inline-AgentTool
         sub-specs. Empty dict for other executor types.
 
-        ðŸš¨ **TECH DEBT â€” REMOVE WHEN agent-meow COMPAT ENDS.**
+        ðŸš¨ **TECH DEBT â€?REMOVE WHEN agent-meow COMPAT ENDS.**
         This field exists *solely* to carry harness / profile /
         os_env data for the agent-meow integration (see
         ``designs/OMNIGENT_INTEGRATION.md``). A free-form
         ``dict[str, Any]`` on a spec dataclass is the kind of
         bag-of-values escape hatch we'd otherwise reject in
-        review â€” acceptable here only because the agent-meow
+        review â€?acceptable here only because the agent-meow
         executor is a temporary bridge with explicit sunset
         criteria. Once agent-meow is consolidated (phase 6 of the
         integration design), this field and every reader of it
         must go away. Do NOT use ``config`` as a general-purpose
-        extension point for new executor types â€” add concrete
+        extension point for new executor types â€?add concrete
         fields instead.
 
         The value type widened from ``dict[str, str]`` to
@@ -537,7 +537,7 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
         string values without losing fidelity.
     :param model: The provider-prefixed model identifier, e.g.
         ``"databricks-gpt-5-5"`` or ``"openai/gpt-5.4"``. Primary
-        source of truth for the model across all executor types â€”
+        source of truth for the model across all executor types â€?
         populated by the parser from either the ``executor.model``
         YAML key or (for backward compatibility) the ``llm.model``
         key. Used by harness spawn-env builders, context-window
@@ -546,7 +546,7 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
     :param connection: Per-provider connection overrides (credentials,
         endpoint URLs), e.g.
         ``{"api_key": "sk-...", "base_url": "https://..."}``.
-        Primary source of truth for connection configuration â€”
+        Primary source of truth for connection configuration â€?
         populated by the parser from either the ``executor.connection``
         YAML key or (for backward compatibility) the ``llm.connection``
         key. Keys are provider-specific: ``api_key`` + ``base_url``
@@ -578,7 +578,7 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
     # via env vars / DEFAULT section. See class docstring.
     # DEPRECATED: use executor.auth: {type: databricks, profile: <name>} instead.
     profile: str | None = None
-    # TECH DEBT (agent-meow compat only â€” see class docstring).
+    # TECH DEBT (agent-meow compat only â€?see class docstring).
     # Remove when agent-meow consolidation lands; do NOT extend.
     # Any: opaque per-type executor config passed through to adapters.
     config: dict[str, Any] = field(default_factory=dict)  # type: ignore[explicit-any]
@@ -610,7 +610,7 @@ class ExecutorSpec:  # type: ignore[explicit-any]  # config: dict[str, Any] fiel
         Codex from Claude agents without matching on the name slug.
 
         :returns: The harness identifier, e.g. ``"codex"`` or
-            ``"claude_sdk"``. Never empty â€” falls back to
+            ``"claude_sdk"``. Never empty â€?falls back to
             :attr:`type`.
         """
         return self.config.get("harness") or self.type
@@ -632,7 +632,7 @@ class CompactionConfig:
         means fire at 80% of the window.
     :param recent_window: Number of recent LLM iterations to protect
         from compaction. Items within this window are never cleared or
-        summarized â€” the agent always has verbatim access to its most
+        summarized â€?the agent always has verbatim access to its most
         recent work, e.g. ``5``.
     """
 
@@ -667,13 +667,26 @@ class LLMConfig:  # type: ignore[explicit-any]  # extra: dict[str, Any] field (s
         ``~/.databrickscfg``, e.g. ``"my-workspace"``. When set,
         the profile is resolved to workspace credentials at build
         time and used as the connection. ``None`` means no profile
-        â€” use ``connection`` or environment defaults. ``connection``
+        â€?use ``connection`` or environment defaults. ``connection``
         wins when both are present.
     :param request_timeout: Per-LLM-call timeout in seconds (both
         streaming and non-streaming), e.g. ``300``. Named
         ``request_timeout`` to distinguish from the task-level
         ``executor.timeout``.
     :param retry: Retry policy for transient LLM failures.
+    :param fallback_models: Ordered backup models tried, in order,
+        when a call to ``model`` fails. Same provider-prefixed
+        format as ``model``, e.g.
+        ``["databricks/claude-3-5-haiku", "databricks/gpt-4o-mini"]``.
+        Consumed today by the policy LLM client
+        (:class:`~agent_meow.policies.types.PolicyLLMClient`): a call
+        advances to the next model on any failure and only surfaces
+        an error once every candidate is exhausted. Empty (the
+        default) preserves single-model behaviour. The resolved
+        ``connection`` (or ``profile``) is shared across the primary
+        and every fallback, so prefer same-provider fallbacks; a
+        fallback on a different provider only works when credentials
+        come from environment defaults (no ``connection``/``profile``).
     """
 
     model: str
@@ -690,6 +703,9 @@ class LLMConfig:  # type: ignore[explicit-any]  # extra: dict[str, Any] field (s
     profile: str | None = None
     request_timeout: int = 300
     retry: RetryPolicy = field(default_factory=RetryPolicy)
+    # Ordered backup models tried when a call to ``model`` fails.
+    # Empty preserves single-model behaviour.
+    fallback_models: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -748,7 +764,7 @@ class SandboxConfig:
 
     Only contains settings the agent author controls (what
     execution environment their tools need). Whether sandboxing
-    is enabled/enforced is a runtime decision â€” see
+    is enabled/enforced is a runtime decision â€?see
     ``RuntimeCaps.sandbox_enabled``.
 
     :param container_image: When set, tools run inside this
@@ -848,16 +864,16 @@ class MCPServerConfig:
 
     Two transports are supported:
 
-    - ``"http"`` â€” HTTP (SSE) endpoint, reached via
+    - ``"http"`` â€?HTTP (SSE) endpoint, reached via
       :func:`mcp.client.sse.sse_client`. ``url`` (and optionally
       ``headers``) describe the endpoint. Traditional "deployed MCP"
       shape: the server runs elsewhere; this process is just a
       client.
-    - ``"stdio"`` â€” local subprocess, spawned via
+    - ``"stdio"`` â€?local subprocess, spawned via
       :func:`mcp.client.stdio.stdio_client`. ``command`` and
       ``args`` describe the program to run; ``env`` supplies
       per-process environment variables on top of the parent's
-      environment. The subprocess runs unsandboxed â€” same as the
+      environment. The subprocess runs unsandboxed â€?same as the
       legacy inner stack at ``agent_meow/inner/mcp_tools.py``
       (which has never sandboxed stdio MCPs). The previous
       AP-only ``sandbox: bool`` field that wrapped the spawn
@@ -916,7 +932,7 @@ class MCPServerConfig:
     # HTTP-only fields.
     url: str | None = None
     headers: dict[str, str] = field(default_factory=dict, repr=False)
-    # Databricks profile auth â€” resolves a bearer token at connection
+    # Databricks profile auth â€?resolves a bearer token at connection
     # time from ``~/.databrickscfg`` and injects it as the
     # ``Authorization`` header. Mutually usable with ``headers``:
     # explicit headers win if both set ``Authorization``.
@@ -941,7 +957,7 @@ class MCPServerConfig:
         """
         String representation that redacts secret-bearing fields.
 
-        Header and env values are replaced with ``"[REDACTED]"`` â€”
+        Header and env values are replaced with ``"[REDACTED]"`` â€?
         credentials commonly travel through these fields and we
         don't want them in exception tracebacks / log scrapes.
         Keys are preserved so operators can still tell which
@@ -981,15 +997,15 @@ class SharePolicy(str, Enum):
     """How much session-sharing authority ``sys_session_share`` grants.
 
     Maps the top-level ``agent_session_sharing:`` YAML flag. The flag is
-    the *only* thing that enables the ``sys_session_share`` tool â€” it is
+    the *only* thing that enables the ``sys_session_share`` tool â€?it is
     independent of ``spawn`` / ``tools.agents`` (which gate the
     spawn-lifecycle tools). Sharing mutates access control, so it is
     off by default and the public tier is a deliberate extra opt-in.
 
-    - :attr:`NONE`: sharing disabled â€” ``sys_session_share`` is not
+    - :attr:`NONE`: sharing disabled â€?``sys_session_share`` is not
       registered at all (default).
     - :attr:`NON_PUBLIC`: the agent may grant access to named users
-      (emails), but NOT to ``__public__`` â€” no anonymous-read exposure.
+      (emails), but NOT to ``__public__`` â€?no anonymous-read exposure.
     - :attr:`PUBLIC`: the agent may additionally grant ``__public__``
       (anonymous read of the full transcript).
     """
@@ -1010,7 +1026,7 @@ class LocalToolInfo:  # type: ignore[explicit-any]  # parameters: dict[str, Any]
         the agent image, e.g.
         ``"examples._shared.tool_functions.search_web"`` or
         ``"tools/python/arxiv_search.py"``. ``None`` only when
-        :attr:`runtime` is :attr:`ToolRuntime.CLIENT` â€” client-runtime
+        :attr:`runtime` is :attr:`ToolRuntime.CLIENT` â€?client-runtime
         tools have no server-side implementation, so they have no
         path. The validator enforces the runtimeâ†”path invariant
         (server requires a path; client forbids one).
@@ -1035,7 +1051,7 @@ class LocalToolInfo:  # type: ignore[explicit-any]  # parameters: dict[str, Any]
     :param catalog_path: Three-level Unity Catalog function name,
         e.g. ``"my_catalog.my_schema.classify_sentiment"``.
         ``None`` for non-UC tools. Mutually exclusive with
-        :attr:`path` â€” UC tools have no server-side callable.
+        :attr:`path` â€?UC tools have no server-side callable.
         Set only when :attr:`runtime` is
         :attr:`ToolRuntime.UC_FUNCTION`.
     :param warehouse_id: Databricks SQL warehouse ID for UC
@@ -1065,7 +1081,7 @@ class LocalToolInfo:  # type: ignore[explicit-any]  # parameters: dict[str, Any]
 # â”€â”€ Guardrails / Policies (POLICIES.md Â§3, Â§4) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # Spec-level types for the policy system. These are pure data
-# containers â€” no runtime behavior here. Runtime policy classes
+# containers â€?no runtime behavior here. Runtime policy classes
 # (FunctionPolicy, PromptPolicy) and the
 # PolicyEngine live under agent_meow.runtime.policies in later
 # phases.
@@ -1097,7 +1113,7 @@ class Phase(str, Enum):
     - ``LLM_REQUEST``: before each LLM call, with the full
       prompt (system instructions + conversation history +
       tool schemas). A single turn with tool calls fires
-      this multiple times â€” once per round-trip, not once
+      this multiple times â€?once per round-trip, not once
       per turn. Does NOT fire on retries of the same call.
     - ``LLM_RESPONSE``: after each LLM call returns, with
       the raw model output before tool-call extraction or
@@ -1118,8 +1134,8 @@ class PolicyAction(str, Enum):
     The three decisions a policy can emit.
 
     - ``ALLOW``: the phase proceeds normally.
-    - ``ASK``: park for user approval; on approve â†’ ALLOW, on
-      refuse/timeout â†’ DENY.
+    - ``ASK``: park for user approval; on approve â†?ALLOW, on
+      refuse/timeout â†?DENY.
     - ``DENY``: short-circuit the phase; replace content with a
       sentinel so downstream steps cannot act on it.
     """
@@ -1179,15 +1195,15 @@ class PhaseSelector:
 
     YAML shapes:
 
-    - ``"tool_call"`` â†’
+    - ``"tool_call"`` â†?
       ``PhaseSelector(phase=Phase.TOOL_CALL, tool_name=None)``
-      (wildcard â€” matches every tool call).
-    - ``"tool_call:code_sandbox"`` â†’
+      (wildcard â€?matches every tool call).
+    - ``"tool_call:code_sandbox"`` â†?
       ``PhaseSelector(Phase.TOOL_CALL, "code_sandbox")``
       (narrows to one tool by name).
 
     Tool-name narrowing is only valid on ``TOOL_CALL`` and
-    ``TOOL_RESULT`` phases â€” the parser rejects it on
+    ``TOOL_RESULT`` phases â€?the parser rejects it on
     ``REQUEST``, ``RESPONSE``, ``LLM_REQUEST``, and
     ``LLM_RESPONSE``.
 
@@ -1232,7 +1248,7 @@ class LabelDef:
         ``None`` means the label is unset until a policy
         writes it for the first time, e.g. ``"0"``.
     :param values: Ordered list of allowed values. ``None``
-        means schemaless â€” writes are unconstrained, e.g.
+        means schemaless â€?writes are unconstrained, e.g.
         ``["0", "1"]`` or
         ``["public", "internal", "confidential"]``.
     """
@@ -1249,12 +1265,12 @@ class FunctionRef:  # type: ignore[explicit-any]  # arguments: dict[str, Any] fi
 
     Two YAML shapes parse into this:
 
-    - Bare string: ``function: myorg.policies.simple_check`` â†’
+    - Bare string: ``function: myorg.policies.simple_check`` â†?
       ``FunctionRef(path="myorg.policies.simple_check",
       arguments=None)``. The resolved callable is the
       evaluator itself.
     - Dict: ``function: {path: myorg.policies.rate_limit,
-      arguments: {limit: 10}}`` â†’
+      arguments: {limit: 10}}`` â†?
       ``FunctionRef(path="...", arguments={"limit": 10})``.
       The resolved callable is a factory called once at
       workflow start; its return value is the evaluator.
@@ -1280,20 +1296,20 @@ class PolicySpec:
     Concrete subtypes (``FunctionPolicySpec``,
     ``PromptPolicySpec``) carry
     type-specific fields. The class itself *is* the
-    discriminator â€” no separate ``type`` field at runtime.
+    discriminator â€?no separate ``type`` field at runtime.
 
     ``condition`` is a label-gate: if declared, the engine
     checks current label values against it BEFORE dispatching
     to the policy's ``evaluate()``. Non-matching policies are
     skipped entirely (no action emitted, no LLM call, no
-    Python call) â€” cheap way to gate expensive policies on
+    Python call) â€?cheap way to gate expensive policies on
     session state (POLICIES.md Â§4, Â§10).
 
     :param name: YAML key this policy was declared under,
         e.g. ``"block_canada_input"``.
     :param on: Phases this policy fires on, e.g.
         ``[PhaseSelector(Phase.TOOL_CALL, "web_search")]``.
-        ``None`` for :class:`FunctionPolicySpec` â€” the callable
+        ``None`` for :class:`FunctionPolicySpec` â€?the callable
         self-selects by returning ``None`` to abstain.
     :param condition: Label-gate. Empty / absent =
         always-match; values coerced to strings at spec load,
@@ -1347,7 +1363,7 @@ class GuardrailsSpec:
     ASK timeout default (POLICIES.md Â§3.2).
 
     :param labels: Per-key ``LabelDef`` schemas. ``None``
-        means no labels declared â€” all label writes go
+        means no labels declared â€?all label writes go
         through the schemaless-set-freely path.
     :param policies: Policies in YAML declaration order (the
         engine iterates in this order).
@@ -1399,7 +1415,7 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
         iterations).
     :param guardrails: Guardrails configuration (labels + policies
         + ASK timeout). ``None`` means the agent declared no
-        ``guardrails:`` block â€” runtime builds a no-op engine
+        ``guardrails:`` block â€?runtime builds a no-op engine
         with zero policies and an empty label cache. See
         POLICIES.md Â§3, Â§4.
     :param async_enabled: Whether the LLM-callable async-dispatch
@@ -1409,7 +1425,7 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
         keyword. **Defaults to ``True``** to match the legacy
         inner-stack default at
         ``agent_meow/inner/datamodel.py::AgentDef.async_enabled``
-        â€” the same YAML must produce the same tool surface
+        â€?the same YAML must produce the same tool surface
         whether the user opts into agent-meow mode or runs the legacy
         path. Agents that want to suppress the async surface
         declare ``async: false`` explicitly. See
@@ -1423,7 +1439,7 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
         seccomp hardening; see
         :mod:`~?agent_meow.inner.bwrap_sandbox`), selected when the
         ``bwrap`` binary is on ``PATH``. ``None`` means the agent declares no
-        ``os_env:`` block â€” the runtime skips registering
+        ``os_env:`` block â€?the runtime skips registering
         ``sys_os_*`` tools and the ``claude-sdk`` harness wrap
         falls back to its enable-natives-by-default rule.
         Native agent-meow YAML accepts this as a top-level ``os_env:``
@@ -1435,19 +1451,19 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
         ``AgentSpec``.
     :param terminals: Declared interactive tmux terminals
         the agent can launch via ``sys_terminal_launch``.
-        Map of ``terminal_name`` â†’ :class:`TerminalEnvSpec`
+        Map of ``terminal_name`` â†?:class:`TerminalEnvSpec`
         (the inner-datamodel dataclass: ``command``, ``args``,
         ``env``, per-terminal ``os_env``, ``scrollback``, etc.).
         ``None`` means the agent declares no ``terminals:``
         block; ``sys_terminal_*`` tools are not registered.
         Populated by the omnigent-compat translator from
         ``AgentDef.terminals``. Native agent-meow YAML support is
-        deferred â€” see ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` Â§3.
+        deferred â€?see ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` Â§3.
     :param timers: Whether the LLM-callable timer builtins
         (``sys_timer_set``, ``sys_timer_cancel``) are
         registered. YAML key is ``timers:``. **Defaults to
         ``False``** to match the legacy inner-stack default at
-        ``agent_meow/inner/datamodel.py::AgentDef.timers`` â€”
+        ``agent_meow/inner/datamodel.py::AgentDef.timers`` â€?
         agents opt into the timer surface explicitly. Step 10
         of the harness contract migration adds the AP-side
         port; firings durable across server restarts via the
@@ -1474,10 +1490,10 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
     :param agent_session_sharing: Authority for the agent to share the
         session it is running in, via ``sys_session_share``. YAML key is
         ``agent_session_sharing:`` (top-level, like ``spawn:``). This
-        flag is the SOLE enabler of that tool â€” it is independent of
+        flag is the SOLE enabler of that tool â€?it is independent of
         ``spawn`` / ``tools.agents``, and has no bearing on sharing the
         session through the server API or CLI. One of
-        :class:`SharePolicy`: ``none`` (default â€” tool not registered),
+        :class:`SharePolicy`: ``none`` (default â€?tool not registered),
         ``non-public`` (grant named users only), or ``public`` (also
         allow ``__public__`` anonymous read). **Defaults to
         ``SharePolicy.NONE``.**
@@ -1496,8 +1512,8 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
     instructions: str | None = None  # contents of AGENTS.md
     skills: list[SkillSpec] = field(default_factory=list)
     # Filter for host-scope skill loading (skills the harness picks up
-    # from the user's machine â€” ``~/.claude/skills/`` and any
-    # ``.claude/skills/`` along the cwd ancestry â€” separate from
+    # from the user's machine â€?``~/.claude/skills/`` and any
+    # ``.claude/skills/`` along the cwd ancestry â€?separate from
     # bundled skills declared above). Maps from the top-level YAML
     # ``skills:`` key. Three forms:
     #
@@ -1508,11 +1524,11 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
     # - ``list[str]``: only the named skills are exposed.
     #
     # The Claude SDK harness consumes this directly as its ``skills``
-    # option (``"all"`` â†” ``"all"``, ``"none"`` â†” ``[]``,
+    # option (``"all"`` â†?``"all"``, ``"none"`` â†?``[]``,
     # list-of-names passes through). Other harnesses ignore the
     # field. Bundled skills (the ``skills`` field above) are loaded
     # via a separate plugin-dir mechanism and aren't subject to this
-    # filter â€” agents that want to suppress bundled skills do so by
+    # filter â€?agents that want to suppress bundled skills do so by
     # not shipping them, not by setting this filter to ``"none"``.
     skills_filter: str | list[str] = "all"
     mcp_servers: list[MCPServerConfig] = field(default_factory=list)

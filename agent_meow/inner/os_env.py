@@ -48,7 +48,7 @@ from .sandbox import (
     run_launcher as _run_launcher,
 )
 
-# Any JSON-shaped leaf â€” used for the encode/decode serializer helpers that
+# Any JSON-shaped leaf â€?used for the encode/decode serializer helpers that
 # mirror the pattern in ``agent_meow/sandbox.py`` and ``agent_meow/uc_tools.py``.
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
@@ -67,7 +67,7 @@ OpResult: TypeAlias = dict[str, Any]  # type: ignore[explicit-any]
 # ``_handle_helper_request``.
 OpRequest: TypeAlias = dict[str, Any]  # type: ignore[explicit-any]
 
-# A single ``edit`` list entry â€” an {oldText, newText} pair of strings.
+# A single ``edit`` list entry â€?an {oldText, newText} pair of strings.
 EditEntry: TypeAlias = dict[str, str]
 
 
@@ -78,18 +78,18 @@ EditEntry: TypeAlias = dict[str, str]
 # break tools the agent runs via ``sys_os_shell``.
 #
 # Deliberately EXCLUDED from this default and from the prefix list below
-# (the omissions are the security work this list is doing â€” see also
+# (the omissions are the security work this list is doing â€?see also
 # :data:`_DEFAULT_ENV_PASSTHROUGH_PREFIXES`):
 #
 # - ``LD_PRELOAD`` / ``LD_LIBRARY_PATH``: arbitrary library injection
 #   into every binary the helper execs.
 # - ``PYTHONSTARTUP``: arbitrary Python file evaluated at interpreter
-#   startup â€” a code-execution vector for any sandboxed Python helper.
+#   startup â€?a code-execution vector for any sandboxed Python helper.
 # - ``BASH_ENV`` / ``ENV``: arbitrary file sourced by bash / sh on
 #   non-interactive startup.
 # - ``PROMPT_COMMAND``: arbitrary command run by bash before each prompt.
 # - ``CDPATH``: changes the resolution of relative paths in shell ``cd``.
-# - ``SSH_AUTH_SOCK``: the user's running ssh-agent socket â€” a
+# - ``SSH_AUTH_SOCK``: the user's running ssh-agent socket â€?a
 #   credential surface masquerading as a path.
 # - ``DBUS_SESSION_BUS_ADDRESS``: lets the helper talk to the user's
 #   D-Bus session.
@@ -103,7 +103,7 @@ EditEntry: TypeAlias = dict[str, str]
 # - All credential families: ``AWS_*``, ``GITHUB_TOKEN``,
 #   ``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, ``DATABRICKS_TOKEN``,
 #   ``GOOGLE_APPLICATION_CREDENTIALS``, ``VAULT_TOKEN``, ``KUBECONFIG``,
-#   ``OP_SERVICE_ACCOUNT_TOKEN``, â€¦ User opts in per-spec via
+#   ``OP_SERVICE_ACCOUNT_TOKEN``, â€?User opts in per-spec via
 #   ``OSEnvSandboxSpec.env_passthrough``.
 _DEFAULT_ENV_PASSTHROUGH: tuple[str, ...] = (
     # Shell + binary discovery.
@@ -138,7 +138,7 @@ _DEFAULT_ENV_PASSTHROUGH: tuple[str, ...] = (
 
 
 # Prefix-matched names that join the default passthrough. ``LC_*`` is
-# open-ended (LC_ALL, LC_MESSAGES, LC_TIME, LC_NUMERIC, LC_COLLATE, â€¦)
+# open-ended (LC_ALL, LC_MESSAGES, LC_TIME, LC_NUMERIC, LC_COLLATE, â€?
 # and locale categories are routinely set per-distribution, so we accept
 # the whole family rather than enumerating every variant.
 _DEFAULT_ENV_PASSTHROUGH_PREFIXES: tuple[str, ...] = ("LC_",)
@@ -146,7 +146,7 @@ _DEFAULT_ENV_PASSTHROUGH_PREFIXES: tuple[str, ...] = ("LC_",)
 # Maximum characters returned per field in a single tool output. Large outputs
 # (e.g. ``cat`` on a multi-MB log file) saturate the context window and cause
 # the LLM to fail with a context-length-exceeded error. The limit applies
-# independently to stdout and stderr â€” each may be up to this size.
+# independently to stdout and stderr â€?each may be up to this size.
 _MAX_TOOL_OUTPUT_CHARS = 100_000
 
 # Default line limit for sys_os_read when the caller does not specify one.
@@ -167,18 +167,18 @@ def build_helper_env(
     typically carries credentials in well-known names (``AWS_*``,
     ``GITHUB_TOKEN``, ``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``,
     ``DATABRICKS_TOKEN``, ``KUBECONFIG``, ``GOOGLE_APPLICATION_CREDENTIALS``,
-    ``VAULT_TOKEN``, ``SSH_AUTH_SOCK``, â€¦). Passing all of that to a
+    ``VAULT_TOKEN``, ``SSH_AUTH_SOCK``, â€?. Passing all of that to a
     sandboxed helper undoes the filesystem masking that hides
-    ``~/.aws/credentials`` and friends â€” the helper would just call
+    ``~/.aws/credentials`` and friends â€?the helper would just call
     ``sys_os_shell("env")`` to enumerate every secret and ``curl`` it
     out over the (default-shared) network namespace.
 
     The strategy is deny-by-default with two narrow allowances:
 
-    1. :data:`_DEFAULT_ENV_PASSTHROUGH` â€” names every Python helper or
+    1. :data:`_DEFAULT_ENV_PASSTHROUGH` â€?names every Python helper or
        POSIX shell reasonably expects (``PATH``, ``HOME``, locale,
        ``TERM``, etc.). These pass through always.
-    2. ``sandbox.env_passthrough`` â€” names the spec author explicitly
+    2. ``sandbox.env_passthrough`` â€?names the spec author explicitly
        declared the helper needs. Use this to grant specific secrets
        the agent legitimately uses, e.g. ``["AWS_PROFILE",
        "GITHUB_TOKEN"]``.
@@ -194,7 +194,7 @@ def build_helper_env(
     binding token.
 
     :param parent_env: The parent process's environment (typically
-        ``os.environ``). Read-only â€” the function does not mutate it.
+        ``os.environ``). Read-only â€?the function does not mutate it.
     :param sandbox: The resolved :class:`SandboxPolicy` for this helper.
         ``policy.env_passthrough`` is the per-spec extra allowlist on top
         of the default. When ``policy.active`` is ``False`` (e.g.
@@ -208,7 +208,7 @@ def build_helper_env(
     """
     if not sandbox.active:
         # Opted out of sandboxing (incl. env filtering): mirror parent
-        # env, but still drop the runner-auth secret â€” opting out of the
+        # env, but still drop the runner-auth secret â€?opting out of the
         # sandbox must not also hand the agent the binding token.
         return strip_runner_auth_secrets(parent_env)
 
@@ -299,7 +299,7 @@ class OSEnvironment(ABC):
     ) -> OpResult:
         raise NotImplementedError
 
-    def close(self) -> None:  # noqa: B027 â€” optional override hook; default is a no-op
+    def close(self) -> None:  # noqa: B027 â€?optional override hook; default is a no-op
         """Release any process or file resources held by the environment.
 
         Subclasses override this when they hold state (subprocesses, file
@@ -331,10 +331,10 @@ class _HelperProcessClient:
         # generated in :meth:`_start_egress_proxy_locked` and read by
         # the config-FD writer in :meth:`_start_locked`. ``None``
         # before the proxy is started (and when ``egress_rules`` is
-        # empty â€” there's no proxy to authenticate against). Never
+        # empty â€?there's no proxy to authenticate against). Never
         # exposed on the policy, never put on ``Popen(env=...)``.
         self._egress_auth_token: str | None = None
-        # S4 (security): introspection hook â€” the random relay port
+        # S4 (security): introspection hook â€?the random relay port
         # this client gave its helper. Stored ONLY for in-process
         # callers (tests, debug tools) that need to assert against
         # the live listener; the policy already carries it for the
@@ -392,7 +392,7 @@ class _HelperProcessClient:
             if isinstance(result, dict):
                 return result
             return {"error": f"Helper returned non-object response: {result!r}"}
-        except Exception as exc:  # noqa: BLE001 â€” helper IO failures are retried or surfaced via error dict
+        except Exception as exc:  # noqa: BLE001 â€?helper IO failures are retried or surfaced via error dict
             self._stop_locked()
             if allow_retry and not self._closed:
                 self._ensure_started_locked()
@@ -466,7 +466,7 @@ class _HelperProcessClient:
         # via env (visible to ``ps -E``). The helper picks it up in
         # :func:`_run_helper` and injects it into its own
         # ``HTTP_PROXY`` / ``HTTPS_PROXY`` via in-process
-        # ``os.environ`` mutation â€” that mutation is invisible to
+        # ``os.environ`` mutation â€?that mutation is invisible to
         # ``ps -E`` because the kernel only snapshots envp at
         # execve time, not on later libc mutations.
         if self._egress_auth_token is not None:
@@ -478,21 +478,21 @@ class _HelperProcessClient:
         # ``/proc/<pid>/cmdline`` or ``ps -ww``. That's irrelevant
         # for current fields (paths/booleans), but it would have
         # leaked the per-helper egress auth token while it existed
-        # â€” and it's a footgun for any future field that carries a
+        # â€?and it's a footgun for any future field that carries a
         # secret. Argv is a global side-channel; an inherited fd
         # is private to the parent/child pair.
         config_bytes = json.dumps(config, separators=(",", ":"), sort_keys=True).encode("utf-8")
-        # Deliver the config off-band â€” not on argv (readable via
+        # Deliver the config off-band â€?not on argv (readable via
         # ``/proc/<pid>/cmdline`` / ``ps -ww``) and not in env (readable via
-        # ``ps -E``) â€” because it may carry the per-helper egress auth token.
+        # ``ps -E``) â€?because it may carry the per-helper egress auth token.
         #
         # POSIX uses an inherited pipe fd (never touches disk). Windows has no
         # ``pass_fds`` / fd inheritance in ``subprocess`` (CPython rejects
         # ``pass_fds`` outright there), so fall back to a short-lived file in the
         # helper's own private tmpdir, which the helper reads and unlinks
         # immediately. Egress is POSIX-only (its proxy binds a Unix socket), so
-        # the Windows config carries no secret â€” only non-sensitive
-        # paths/booleans â€” but we still keep the file private and ephemeral.
+        # the Windows config carries no secret â€?only non-sensitive
+        # paths/booleans â€?but we still keep the file private and ephemeral.
         r_fd: int | None = None
         if IS_WINDOWS:
             assert self._tmpdir is not None
@@ -505,7 +505,7 @@ class _HelperProcessClient:
             # The pipe buffer is typically 64 KiB on macOS/Linux; the
             # config is well under that (paths + booleans). If a future
             # change inflates the config past one pipe buffer we'd
-            # deadlock here â€” replace with a writer thread at that point.
+            # deadlock here â€?replace with a writer thread at that point.
             try:
                 os.write(w_fd, config_bytes)
             finally:
@@ -560,7 +560,7 @@ class _HelperProcessClient:
             self._tmpdir = None
             raise
         finally:
-            # Close the parent's copy of the read end either way â€”
+            # Close the parent's copy of the read end either way â€?
             # the child has its own copy (via pass_fds) and the data
             # has already been written. Leaving the parent's copy
             # open would prevent the child from seeing EOF on the
@@ -585,7 +585,7 @@ class _HelperProcessClient:
         if self._proc.stderr is not None:
             try:
                 stderr = self._proc.stderr.read().strip()
-            except Exception:  # noqa: BLE001 â€” stderr read is best-effort for error detail
+            except Exception:  # noqa: BLE001 â€?stderr read is best-effort for error detail
                 stderr = ""
         returncode = self._proc.poll()
         if stderr:
@@ -601,23 +601,23 @@ class _HelperProcessClient:
             try:
                 if proc.stdin is not None:
                     proc.stdin.close()
-            except Exception:  # noqa: BLE001 â€” best-effort cleanup of helper subprocess pipes
+            except Exception:  # noqa: BLE001 â€?best-effort cleanup of helper subprocess pipes
                 pass
             try:
                 if proc.stdout is not None:
                     proc.stdout.close()
-            except Exception:  # noqa: BLE001 â€” best-effort cleanup of helper subprocess pipes
+            except Exception:  # noqa: BLE001 â€?best-effort cleanup of helper subprocess pipes
                 pass
             try:
                 if proc.stderr is not None:
                     proc.stderr.close()
-            except Exception:  # noqa: BLE001 â€” best-effort cleanup of helper subprocess pipes
+            except Exception:  # noqa: BLE001 â€?best-effort cleanup of helper subprocess pipes
                 pass
             if proc.poll() is None:
                 try:
                     proc.terminate()
                     proc.wait(timeout=1)
-                except Exception:  # noqa: BLE001 â€” terminate may fail on already-exited process; escalate to kill
+                except Exception:  # noqa: BLE001 â€?terminate may fail on already-exited process; escalate to kill
                     with contextlib.suppress(Exception):
                         proc.kill()
         finally:
@@ -690,14 +690,14 @@ class _HelperProcessClient:
 
         :param sandbox: The current sandbox policy (may be mutated via
             replacement for egress fields).
-        :param env: The helper environment dict â€” proxy/CA env vars
+        :param env: The helper environment dict â€?proxy/CA env vars
             are added in-place.
         :param credential_rewrites: Optional synthetic-to-real credential
             rewrites the proxy applies (secretless ``credential_proxy``).
         :returns: Updated :class:`SandboxPolicy` with egress relay
             port and socket path set. The egress auth token is NOT
             stored on the policy (which serialises to JSON and
-            would land in any debugging dump) â€” it's plumbed out
+            would land in any debugging dump) â€?it's plumbed out
             of band via :attr:`_egress_auth_token` for the helper
             config FD to pick up.
         """
@@ -709,7 +709,7 @@ class _HelperProcessClient:
         # Delegate the proxy lifecycle / socket bridge / auth token
         # bootstrap to the shared controller. The helper path uses
         # ``require_auth=True`` because we have an inherited config
-        # FD to deliver the token out of band â€” see the in-process
+        # FD to deliver the token out of band â€?see the in-process
         # token injection in :func:`_run_helper`.
         handle = start_egress_proxy(
             rules=self._egress_rules or [],
@@ -723,7 +723,7 @@ class _HelperProcessClient:
         # ``_stop_egress_proxy_locked`` can drive the lifecycle and
         # the auth token can be picked up by the config-FD writer
         # in :meth:`_start_locked`. The token is NEVER put on
-        # ``env`` here â€” `apply_egress_env` below is called with
+        # ``env`` here â€?`apply_egress_env` below is called with
         # ``auth_token=None`` so the helper picks it up via the
         # FD and injects it into HTTP_PROXY in-process after exec.
         self._egress_proxy = handle._proxy
@@ -736,7 +736,7 @@ class _HelperProcessClient:
         # Set HTTP_PROXY / CA env vars on the spawn env with NO
         # token. The helper reads the token off the inherited FD
         # in :func:`_run_helper` and overwrites HTTP_PROXY in
-        # ``os.environ`` post-exec â€” the no-token version is what
+        # ``os.environ`` post-exec â€?the no-token version is what
         # appears in the execve ``/proc/<pid>/environ`` snapshot
         # any same-UID process can read.
         apply_egress_env(
@@ -948,7 +948,7 @@ def _handle_helper_request(
             return {"error": "path must be a non-empty string"}
         path = _resolve_path(cwd, raw_path)
         try:
-            _assert_within_cwd(cwd, path)
+            _assert_within_reach(cwd, sandbox, path, need_write=False)
             _assert_read_allowed(sandbox, path)
         except PermissionError as exc:
             return {"error": str(exc)}
@@ -969,11 +969,11 @@ def _handle_helper_request(
             return {"error": "path must be a non-empty string"}
         path = _resolve_path(cwd, raw_path)
         try:
-            _assert_within_cwd(cwd, path)
+            _assert_within_reach(cwd, sandbox, path, need_write=True)
             _assert_write_allowed(sandbox, path)
         except PermissionError as exc:
             return {"error": str(exc)}
-        # ``content`` is optional â€” JSON ``null`` or missing maps to an
+        # ``content`` is optional â€?JSON ``null`` or missing maps to an
         # empty-file write. Non-string values are rejected.
         raw_content = request.get("content")
         if raw_content is None:
@@ -990,7 +990,7 @@ def _handle_helper_request(
             return {"error": "path must be a non-empty string"}
         path = _resolve_path(cwd, raw_path)
         try:
-            _assert_within_cwd(cwd, path)
+            _assert_within_reach(cwd, sandbox, path, need_write=True)
             _assert_read_allowed(sandbox, path)
             _assert_write_allowed(sandbox, path)
         except PermissionError as exc:
@@ -1040,8 +1040,8 @@ def _resolve_path(cwd: Path, path: str) -> Path:
 def _assert_within_cwd(cwd: Path, resolved: Path) -> None:
     """Block access to paths outside the environment root.
 
-    Runs **unconditionally** â€” even when the sandbox policy is
-    inactive (``type: "none"``) â€” so symlink escapes are caught
+    Runs **unconditionally** â€?even when the sandbox policy is
+    inactive (``type: "none"``) â€?so symlink escapes are caught
     regardless of sandbox configuration.
 
     :param cwd: The environment's root working directory (already
@@ -1059,6 +1059,82 @@ def _assert_within_cwd(cwd: Path, resolved: Path) -> None:
             f"Access to '{resolved}' is blocked: path is outside "
             f"the environment root '{resolved_cwd}'"
         ) from exc
+
+
+def _assert_within_reach(
+    cwd: Path,
+    policy: SandboxPolicy,
+    resolved: Path,
+    *,
+    need_write: bool,
+) -> None:
+    """Confine a file-tool op to *cwd*, extended by declared sandbox grants.
+
+    Replaces the historical cwd-only guard at the read / write / edit sites.
+    *resolved* is already canonicalised by :func:`_resolve_path` (symlinks
+    followed, ``..`` collapsed) and every grant root is canonicalised at
+    resolve time, so a symlink or ``..`` chain whose real target leaves both
+    *cwd* and every grant is rejected -- the confinement boundary cannot be
+    escaped by traversal.
+
+    Precedence and grant semantics:
+
+    - A path inside *cwd* is always permitted here (the active-sandbox
+      allow-list narrowing in :func:`_assert_read_allowed` /
+      :func:`_assert_write_allowed` still runs afterwards, unchanged).
+    - A path OUTSIDE *cwd* is permitted only when an explicitly declared
+      grant of the right kind covers it. These reuse the SAME grant shapes the
+      active backends already populate -- ``read_paths`` / ``write_paths`` are
+      directory roots (containment match against ``read_roots`` /
+      ``write_roots``) and ``write_files`` is the single-file grant (exact
+      resolved-path match); no new grant vocabulary is introduced. A **write**
+      grant (``write_paths`` / ``write_files``) admits both reads and writes of
+      that subtree (a writable path is readable); a **read** grant
+      (``read_paths``) admits reads only -- so a read grant never confers
+      write. Read grants are directory roots; a single readable file is
+      expressed by rooting a ``read_paths`` entry at that file (an exact-path
+      match still succeeds, but there is no ``read_files`` shape).
+    - With NO grants declared, ``write_roots`` / ``write_files`` are empty and
+      ``read_roots`` is ``None``: nothing outside *cwd* is permitted, byte for
+      byte the previous cwd-confinement behaviour. This default-unchanged
+      property is the security invariant.
+
+    The target is resolved ONCE (by :func:`_resolve_path`) before comparison,
+    so this guard shares the prior cwd-guard's TOCTOU posture: a symlink
+    swapped between this check and the later open could redirect the op. That
+    is unchanged by this diff -- for an ACTIVE sandbox the backend's OS-level
+    mount mask stays the hard boundary, and under ``type: none`` the file tools
+    were never a containment boundary anyway (the co-resident ``sys_os_shell``
+    is unconfined). Widening reach to declared grants does not alter that
+    posture.
+
+    :param cwd: The environment root (resolved inside).
+    :param policy: Resolved sandbox policy carrying the declared grants.
+    :param resolved: Fully-resolved target path (post ``_resolve_path``).
+    :param need_write: ``True`` for write / edit ops (only write grants admit
+        an out-of-cwd path); ``False`` for read ops (read OR write grants
+        admit).
+    :raises PermissionError: If *resolved* is outside *cwd* and no grant of
+        the required kind covers it.
+    """
+    resolved_cwd = cwd.resolve()
+    if _is_within(resolved, resolved_cwd):
+        return
+    # Write grants (directories + single files) admit both reads and writes.
+    if any(_is_within(resolved, root) for root in policy.write_roots):
+        return
+    if any(resolved == grant for grant in policy.write_files):
+        return
+    # Read grants admit reads only.
+    if not need_write and policy.read_roots is not None:
+        if any(_is_within(resolved, root) for root in policy.read_roots):
+            return
+    kind = "write" if need_write else "read"
+    raise PermissionError(
+        f"Access to '{resolved}' is blocked: path is outside the "
+        f"environment root '{resolved_cwd}' and no sandbox {kind} grant "
+        f"covers it"
+    )
 
 
 def _assert_read_allowed(policy: SandboxPolicy, path: Path) -> None:
@@ -1127,14 +1203,14 @@ def _read_binary_impl(path: Path, max_binary_bytes: int | None) -> OpResult:
     """
     total = path.stat().st_size
     if max_binary_bytes is None:
-        # Agent tool path: return a descriptor only â€” inlining base64 the
+        # Agent tool path: return a descriptor only â€?inlining base64 the
         # model cannot use would waste (and risk saturating) the context.
         return {
             "path": str(path),
             "encoding": "base64",
             "content": "",
             "total_bytes": total,
-            # Not truncated â€” the content was deliberately not inlined.
+            # Not truncated â€?the content was deliberately not inlined.
             "truncated": False,
             "note": (
                 f"Binary file not inlined ({total} bytes). "
@@ -1165,17 +1241,17 @@ def _read_impl(
     The file's first chunk is sniffed for UTF-8 validity (see
     :func:`_is_binary_file`). Files that look like text are read and returned
     with the usual line-oriented ``offset``/``limit`` windowing. Files that do
-    *not* (images, archives, fonts, â€¦) cannot be line-windowed, so they are
+    *not* (images, archives, fonts, â€? cannot be line-windowed, so they are
     capped by *bytes* instead, reading at most ``max_binary_bytes`` from disk.
 
     For binary files the behaviour depends on ``max_binary_bytes``:
 
-    * ``None`` (the default, used by the agent ``sys_os_read`` tool) â€” the
+    * ``None`` (the default, used by the agent ``sys_os_read`` tool) â€?the
       base64 payload is **not** inlined. A model cannot decode base64, and a
       multi-MB blob would saturate the context window, so only a descriptor
       (``total_bytes`` + a ``note``) is returned.
     * a positive int (used by the filesystem service that feeds the web
-      viewer / downloads) â€” up to that many raw bytes are base64-encoded and
+      viewer / downloads) â€?up to that many raw bytes are base64-encoded and
       returned, with ``truncated`` set when the file was larger.
 
     :param path: Absolute path of the file to read.
@@ -1333,6 +1409,7 @@ def _shell_impl(
         completed = subprocess.run(
             argv,
             cwd=str(cwd),
+            env=_child_shell_env(),
             text=True,
             capture_output=True,
             timeout=timeout,
@@ -1347,6 +1424,7 @@ def _shell_impl(
         return {
             "stdout": _truncate_output(stdout, "stdout", max_output),
             "stderr": _truncate_output(stderr, "stderr", max_output),
+            "exit_code": None,
             "timed_out": True,
             "error": f"Command timed out after {timeout} seconds",
             "shell": shell_path,
@@ -1424,6 +1502,40 @@ def _project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _same_path(entry: str, root: Path) -> bool:
+    """True when ``entry`` names the same directory as ``root``."""
+    try:
+        return Path(entry).resolve() == root
+    except OSError:
+        return os.path.normpath(entry) == os.path.normpath(str(root))
+
+
+def _child_shell_env() -> dict[str, str]:
+    """
+    Environment for agent shell commands, minus omnigent's own package root.
+
+    The helper prepends its project root to ``PYTHONPATH`` at spawn (see
+    ``_HelperProcessClient._start_locked``) purely so ``python -m
+    agent_meow.inner.os_env`` can import agent_meow. That entry has no business in
+    the commands the agent runs: under a tool install it points at omnigent's
+    ``site-packages`` and shadows the project venv's own packages on
+    ``sys.path`` (e.g. a 3.12 ``pydantic_core`` failing to load under a 3.13
+    project). Strip only omnigent's entry â€?any other ``PYTHONPATH`` the caller
+    set is preserved, in order.
+    """
+    env = os.environ.copy()
+    raw = env.get("PYTHONPATH")
+    if not raw:
+        return env
+    root = _project_root()
+    kept = [entry for entry in raw.split(os.pathsep) if not (entry and _same_path(entry, root))]
+    if kept:
+        env["PYTHONPATH"] = os.pathsep.join(kept)
+    else:
+        env.pop("PYTHONPATH", None)
+    return env
+
+
 def _read_config_from_fd(fd: int) -> JsonValue:
     """Read and JSON-decode the helper config from an inherited fd.
 
@@ -1431,7 +1543,7 @@ def _read_config_from_fd(fd: int) -> JsonValue:
     parent-side code in
     :meth:`_HelperProcessClient._start_locked` for the rationale.
     The fd is fully drained (read until EOF) so the caller can close
-    it immediately after â€” there is exactly one config payload per
+    it immediately after â€?there is exactly one config payload per
     helper invocation.
 
     :param fd: The inherited read end of the parent-created pipe.
@@ -1462,7 +1574,7 @@ def _read_config_from_file(path: str) -> JsonValue:
     The parent writes the config to a file in the helper's private tmpdir when
     inherited-fd delivery is unavailable (Windows has no ``pass_fds``). Unlink
     it immediately after reading so a secret-bearing config (none on Windows
-    today â€” egress is POSIX-only) lives on disk only momentarily.
+    today â€?egress is POSIX-only) lives on disk only momentarily.
 
     :param path: Absolute path to the JSON config file.
     :returns: Decoded JSON value (always a dict in practice).
@@ -1496,7 +1608,7 @@ def _run_helper(config: JsonValue) -> int:
 
     # S4 (security): if the parent shipped a Proxy-Authorization
     # token via the config FD, splice it into HTTP_PROXY / HTTPS_PROXY
-    # NOW â€” before any HTTP client in the helper (or any subprocess
+    # NOW â€?before any HTTP client in the helper (or any subprocess
     # we later spawn) reads those env vars. The token MUST NOT be
     # passed to us via env (the parent puts the token-less URL there
     # specifically so a same-UID ``ps -E`` reader gets nothing). The
@@ -1541,7 +1653,7 @@ def _run_helper(config: JsonValue) -> int:
                 shell_path=shell_path_value,
                 sandbox=sandbox,
             )
-        except Exception as exc:  # noqa: BLE001 â€” helper loop surfaces any error through the JSON response envelope
+        except Exception as exc:  # noqa: BLE001 â€?helper loop surfaces any error through the JSON response envelope
             response = {"error": f"os_env helper exception: {exc}"}
         sys.stdout.write(json.dumps(response) + "\n")
         sys.stdout.flush()

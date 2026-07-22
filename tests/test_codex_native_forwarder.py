@@ -7,7 +7,7 @@ of truth (it is what an in-TUI ``/model`` writes). At subscription and at
 each ``turn/started`` the forwarder reads it (``_refresh_model_from_config``,
 which delegates to the shared ``read_codex_config_model`` in the bridge
 module) onto ``_CodexForwarderState.model`` and mirrors it to the agent-meow server
-as an ``external_model_change`` event (→ persisted ``conv.model_override``)
+as an ``external_model_change`` event (�?persisted ``conv.model_override``)
 so the cost-budget policy resolves the selected model. The startup/spawn
 model IS mirrored (so agent-meow learns the session's model even when unchanged);
 only an already-mirrored value is not re-posted.
@@ -74,7 +74,7 @@ def _state(model: str | None, posted_model: str | None) -> fwd._CodexForwarderSt
 async def test_sync_model_change_posts_on_change() -> None:
     """A model differing from the baseline posts external_model_change.
 
-    The in-TUI ``/model`` switch (gpt-5.5 → gpt-5.4) must mirror to agent-meow as
+    The in-TUI ``/model`` switch (gpt-5.5 �?gpt-5.4) must mirror to agent-meow as
     an ``external_model_change`` and advance the baseline so it isn't
     re-posted. A missing post here is exactly the bug a user hit: the
     terminal model changed but the cost policy kept seeing gpt-5.5.
@@ -91,7 +91,7 @@ async def test_sync_model_change_posts_on_change() -> None:
             {"type": "external_model_change", "data": {"model": "gpt-5.4"}},
         )
     ]
-    # Baseline advanced → the same model won't re-post on the next update.
+    # Baseline advanced �?the same model won't re-post on the next update.
     assert state.posted_model == "gpt-5.4"
 
 
@@ -112,7 +112,7 @@ async def test_sync_model_change_no_post_when_unchanged() -> None:
 
 @pytest.mark.asyncio
 async def test_sync_model_change_no_post_when_model_unknown() -> None:
-    """No model observed yet (``None``) → nothing to mirror."""
+    """No model observed yet (``None``) �?nothing to mirror."""
     client = _RecordingClient()
     state = _state(model=None, posted_model="gpt-5.5")
 
@@ -142,7 +142,7 @@ def test_refresh_model_from_config_updates_state(tmp_path: Path) -> None:
 
     This is the exact path the subscription and ``turn/started`` handlers use
     to learn the user's ``/model`` selection: read config.toml (via the
-    shared ``read_codex_config_model``) → set ``forwarder_state.model`` →
+    shared ``read_codex_config_model``) �?set ``forwarder_state.model`` �?
     ``_sync_model_change`` mirrors it to AP. The config.toml parsing itself
     is covered in ``tests/test_codex_native_bridge.py``; this asserts the
     forwarder wires the read into its state.
@@ -159,7 +159,7 @@ def test_refresh_model_from_config_updates_state(tmp_path: Path) -> None:
 def test_note_resume_response_records_model_without_seeding_baseline() -> None:
     """The startup/resume model is recorded but the baseline stays unset.
 
-    agent-meow must learn the session's ACTUAL model — including the spawn default —
+    agent-meow must learn the session's ACTUAL model �?including the spawn default �?
     because the cost gate resolves ``conv.model_override or spec.llm.model``
     and for codex the spawn model is frequently NOT ``spec.llm.model``. So
     ``note_resume_response`` records ``model`` but leaves ``posted_model``
@@ -172,7 +172,7 @@ def test_note_resume_response_records_model_without_seeding_baseline() -> None:
     state.note_resume_response({"result": {"model": "gpt-5.4-mini"}})
 
     assert state.model == "gpt-5.4-mini"
-    # Baseline NOT seeded → the spawn model will be mirrored on the next sync.
+    # Baseline NOT seeded �?the spawn model will be mirrored on the next sync.
     assert state.posted_model is None
 
 
@@ -361,7 +361,7 @@ def test_user_message_has_file_content(content: object, expected: bool) -> None:
     Drives the gate that decides whether a text-less ``userMessage`` is a
     real image-bearing message that must be persisted. ``True`` for any
     block whose ``type`` is not ``"text"``, else ``False``. A wrong result
-    re-opens the image-only regression (text-less image skipped → dropped
+    re-opens the image-only regression (text-less image skipped �?dropped
     bubble + pending-FIFO bleed) or makes text-only messages post twice.
     """
     assert fwd._user_message_has_file_content({"content": content}) is expected
@@ -375,7 +375,7 @@ async def test_post_user_message_image_only_posts_empty_content() -> None:
     Regression guard for the image-only bleed/ordering bug: the forwarder
     must post the user item (so the server drains the pending-input FIFO
     entry and folds the image in by file_id). The posted content is empty
-    — the base64 ``data:`` URL Codex echoes must NOT be written into text.
+    �?the base64 ``data:`` URL Codex echoes must NOT be written into text.
     A bail here would drop the user bubble and leak the pending entry into
     the next message.
     """
@@ -434,10 +434,10 @@ async def test_usage_coalescer_seeded_model_rides_along_so_child_usage_prices() 
 
     Codex sub-agent (child-thread) usage is recorded on a coalescer created on
     the child-event path, where ``forwarder_state`` (the usual model source) is
-    intentionally ``None`` — so ``record()`` receives no model. Without the
+    intentionally ``None`` �?so ``record()`` receives no model. Without the
     constructor seed the token post carries no ``model``, the server leaves the
     child's ``total_cost_usd`` unpriced (``None``), and the sub-agent's spend
-    drops out of the parent's subtree cost — letting it run past the budget.
+    drops out of the parent's subtree cost �?letting it run past the budget.
     The seeded model must ride along on every token post so the server can
     price the cumulative tokens.
     """
@@ -452,7 +452,7 @@ async def test_usage_coalescer_seeded_model_rides_along_so_child_usage_prices() 
     assert url == "/v1/sessions/conv_child/events"
     assert body["type"] == "external_session_usage"
     data = body["data"]
-    # The seeded model rides along — this is what lets the server price the
+    # The seeded model rides along �?this is what lets the server price the
     # tokens into the child's total_cost_usd (the whole point of the fix).
     assert data["model"] == "gpt-5.5"
     # The cumulative token counts the server prices from are present.
@@ -554,7 +554,7 @@ async def test_elicitation_post_reposts_after_transport_cut_with_same_envelope(
 
     This is the invisible-stuck bug for codex sub-agents: one transport
     error used to abandon the prompt to the native-TUI path nobody is
-    watching. The envelope must be byte-identical on the retry — the
+    watching. The envelope must be byte-identical on the retry �?the
     server derives the deterministic elicitation id from (session,
     method, rpc id), so an identical re-POST re-parks the SAME prompt
     and keeps the approval card alive.
@@ -611,7 +611,7 @@ async def test_elicitation_post_4xx_is_final(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A 4xx is a deliberate server rejection — returned without retry.
+    A 4xx is a deliberate server rejection �?returned without retry.
 
     Retrying a rejection would hammer the server with a request it
     already refused; the caller logs it and leaves the native request
@@ -659,7 +659,7 @@ async def test_elicitation_post_returns_none_when_budget_exhausted(
     An exhausted retry budget returns ``None`` (caller leaves the
     native request unanswered, matching the old single-attempt outcome).
     """
-    # Budget smaller than the first backoff → exactly one attempt.
+    # Budget smaller than the first backoff �?exactly one attempt.
     monkeypatch.setattr(fwd, "_CODEX_ELICITATION_REQUEST_TIMEOUT_SECONDS", 0.5)
     monkeypatch.setattr(fwd, "_elicitation_retry_sleep", _instant_retry_sleep)
     client = _FlakyElicitationClient(transport_failures=100)
@@ -710,7 +710,7 @@ def test_forward_failures_escalate_to_degraded_once() -> None:
     assert fwd._forward_health.degraded_logged is True
     assert fwd._forward_health.consecutive_failures == fwd._FORWARD_DEGRADED_THRESHOLD
 
-    # The latch holds — further failures keep counting but don't re-escalate.
+    # The latch holds �?further failures keep counting but don't re-escalate.
     fwd._note_forward_failure("external_output_text_delta")
     assert fwd._forward_health.degraded_logged is True
     assert fwd._forward_health.consecutive_failures == fwd._FORWARD_DEGRADED_THRESHOLD + 1
@@ -756,7 +756,7 @@ async def test_post_session_event_tracks_success_and_failure() -> None:
     assert fwd._forward_health.consecutive_failures == 0
 
 
-# ── #1108: turn-error "silent success" → surfaced failed ──────────────
+# ── #1108: turn-error "silent success" �?surfaced failed ──────────────
 #
 # A failed Codex turn arrives as ``turn/completed`` (a clean success boundary)
 # with ``turn.status == "failed"`` and a ``turn.error`` object. These tests pin
@@ -973,7 +973,7 @@ def test_terminal_turn_status_edge_failed_status_without_error(tmp_path: Path) -
     """A ``turn.status == "failed"`` with no ``error`` object still fails.
 
     Defends against an app-server version that records the failed status but
-    omits the populated ``turn.error`` — the edge must not fall back to ``idle``.
+    omits the populated ``turn.error`` �?the edge must not fall back to ``idle``.
     """
     _seed_active_turn(tmp_path, "turn_123")
     params = {"turn": {"id": "turn_123", "status": "failed"}}
@@ -989,7 +989,7 @@ def test_terminal_turn_status_edge_failed_status_without_error(tmp_path: Path) -
 def test_terminal_turn_status_edge_clean_turn_still_idle(tmp_path: Path) -> None:
     """A genuinely clean ``turn/completed`` still maps to ``idle`` (regression).
 
-    The turn-error check must not break the happy path: no error → the edge
+    The turn-error check must not break the happy path: no error �?the edge
     stays ``idle`` with no attached error.
     """
     _seed_active_turn(tmp_path, "turn_123")
@@ -1034,10 +1034,10 @@ def test_terminal_turn_status_edge_empty_turn_idle_and_warns(
 
 
 def test_omnigent_status_from_resume_turn_error_parity() -> None:
-    """Resume parity: a completed resume turn carrying ``turn.error`` → ``failed``.
+    """Resume parity: a completed resume turn carrying ``turn.error`` �?``failed``.
 
     Without this, a reconnect that backfills from ``thread/resume`` would close
-    the session as ``idle`` even though the turn had errored — the resume-path
+    the session as ``idle`` even though the turn had errored �?the resume-path
     half of the silent-success bug.
     """
     turn_with_error = {
@@ -1146,7 +1146,7 @@ async def test_post_turn_status_edge_auth_error_includes_reauth_hint() -> None:
 
 @pytest.mark.asyncio
 async def test_post_turn_status_edge_clean_idle_has_no_output() -> None:
-    """A normal idle edge (no error) posts status only — the success path."""
+    """A normal idle edge (no error) posts status only �?the success path."""
     client = _RecordingClient()
     edge = fwd._CodexTurnStatusEdge(status="idle", turn_id="turn_123", source="turn/completed")
 
@@ -1221,8 +1221,8 @@ async def test_reasoning_delta_opens_block_then_continues() -> None:
     Codex reasoning deltas mirror as external_output_reasoning_delta (#1254).
 
     The first delta of a reasoning item opens the block (``started=True``
-    → ``response.reasoning.started``); subsequent deltas for the same item
-    continue it (``started=False``). Reasoning was previously dropped — only
+    �?``response.reasoning.started``); subsequent deltas for the same item
+    continue it (``started=False``). Reasoning was previously dropped �?only
     the effort *level* synced, never the thinking text.
     """
     client = _RecordingClient()
@@ -1264,7 +1264,7 @@ async def test_reasoning_delta_new_item_reopens_block() -> None:
     """
     A reasoning delta for a new item id opens a fresh block.
 
-    Multi-step turns (reason → tool → reason) emit a second reasoning item;
+    Multi-step turns (reason �?tool �?reason) emit a second reasoning item;
     its first delta must re-open the block so the web UI starts a new
     "thinking" section rather than appending to the prior one.
     """
@@ -1570,7 +1570,7 @@ async def test_post_session_event_inner_classifies_ambiguous_skip() -> None:
     assert result.response is None
     assert result.delivered_ambiguous is True
     assert result.transport_error == "ReadTimeout"
-    # Ambiguous items are abandoned immediately — no retries.
+    # Ambiguous items are abandoned immediately �?no retries.
     assert client.calls == 1
 
 
@@ -1722,7 +1722,7 @@ async def test_replay_dead_letters_on_startup_reposts_proven_undelivered(
     # or a hung server cannot stall startup.
     assert posted[0]["max_attempts"] == 1
     assert posted[0]["timeout"] == fwd._REPLAY_POST_TIMEOUT_SECONDS
-    # Delivered → record removed.
+    # Delivered �?record removed.
     assert not (tmp_path / "dead_letter.jsonl").exists()
 
 
@@ -1840,3 +1840,397 @@ async def test_post_session_event_records_connectivity_failure_for_watchdog(
         assert "No route to host" in detail
     finally:
         health.clear()
+
+
+# ── MCP startup status mirroring (issue #2058) ─────────────────────────
+
+
+def _mcp_startup_event(
+    name: str,
+    status: str,
+    *,
+    error: str | None = None,
+    thread_id: str | None = None,
+) -> dict:
+    """
+    Build a Codex ``mcpServer/startupStatus/updated`` envelope.
+
+    :param name: MCP server name, e.g. ``"safe"``.
+    :param status: Startup state, e.g. ``"starting"``.
+    :param error: Optional failure detail.
+    :param thread_id: Optional ``threadId`` param.
+    :returns: Notification envelope dict.
+    """
+    params: dict = {"name": name, "status": status}
+    if error is not None:
+        params["error"] = error
+    if thread_id is not None:
+        params["threadId"] = thread_id
+    return {"method": "mcpServer/startupStatus/updated", "params": params}
+
+
+@pytest.mark.asyncio
+async def test_mcp_startup_event_records_and_posts(tmp_path: Path) -> None:
+    """
+    An MCP startup notification updates the bridge map and mirrors it to AP.
+
+    The bridge write is what unblocks the executor's first-turn gate; the
+    ``external_mcp_startup`` post is what makes the web session show
+    per-server startup state instead of appearing hung.
+    """
+    client = _RecordingClient()
+
+    await fwd._handle_event(
+        client,  # type: ignore[arg-type]
+        session_id="conv_x",
+        bridge_dir=tmp_path,
+        event=_mcp_startup_event("safe", "starting", thread_id="thread_1"),
+        usage_coalescer=fwd._SessionUsageCoalescer(client, "conv_x"),  # type: ignore[arg-type]
+        elicitation_tracker=fwd._CodexElicitationTaskTracker(),
+        expected_thread_id="thread_1",
+    )
+
+    from agent_meow.codex_native_bridge import read_mcp_startup
+
+    assert read_mcp_startup(tmp_path) == {"safe": {"status": "starting", "error": None}}
+    assert client.posts == [
+        (
+            "/v1/sessions/conv_x/events",
+            {
+                "type": "external_mcp_startup",
+                "data": {"servers": {"safe": {"status": "starting", "error": None}}},
+            },
+        )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_mcp_startup_event_carries_failure_error(tmp_path: Path) -> None:
+    """
+    A ``failed`` update retains the error detail through bridge and post.
+
+    The error text is what the web UI (and the executor's timeout text)
+    surface for a server that never came up.
+    """
+    client = _RecordingClient()
+
+    await fwd._handle_event(
+        client,  # type: ignore[arg-type]
+        session_id="conv_x",
+        bridge_dir=tmp_path,
+        event=_mcp_startup_event("safe", "failed", error="handshake failed"),
+        usage_coalescer=fwd._SessionUsageCoalescer(client, "conv_x"),  # type: ignore[arg-type]
+        elicitation_tracker=fwd._CodexElicitationTaskTracker(),
+        expected_thread_id="thread_1",
+    )
+
+    from agent_meow.codex_native_bridge import read_mcp_startup
+
+    assert read_mcp_startup(tmp_path) == {
+        "safe": {"status": "failed", "error": "handshake failed"}
+    }
+    assert client.posts[0][1]["data"]["servers"]["safe"]["error"] == "handshake failed"
+
+
+@pytest.mark.asyncio
+async def test_mcp_startup_event_for_other_thread_is_ignored(tmp_path: Path) -> None:
+    """
+    An MCP startup update naming a different thread is dropped.
+
+    A child thread's (or stale thread's) startup must not overwrite the
+    parent bridge map or flash the parent session's startup band.
+    """
+    client = _RecordingClient()
+
+    await fwd._handle_event(
+        client,  # type: ignore[arg-type]
+        session_id="conv_x",
+        bridge_dir=tmp_path,
+        event=_mcp_startup_event("safe", "starting", thread_id="thread_other"),
+        usage_coalescer=fwd._SessionUsageCoalescer(client, "conv_x"),  # type: ignore[arg-type]
+        elicitation_tracker=fwd._CodexElicitationTaskTracker(),
+        expected_thread_id="thread_1",
+    )
+
+    from agent_meow.codex_native_bridge import read_mcp_startup
+
+    assert read_mcp_startup(tmp_path) == {}
+    assert client.posts == []
+
+
+@pytest.mark.asyncio
+async def test_mcp_startup_event_with_unknown_status_is_ignored(tmp_path: Path) -> None:
+    """
+    An unknown status value neither records nor posts.
+
+    Guards against a future Codex enum change feeding a bogus status into
+    the executor gate or the web UI.
+    """
+    client = _RecordingClient()
+
+    await fwd._handle_event(
+        client,  # type: ignore[arg-type]
+        session_id="conv_x",
+        bridge_dir=tmp_path,
+        event=_mcp_startup_event("safe", "exploded"),
+        usage_coalescer=fwd._SessionUsageCoalescer(client, "conv_x"),  # type: ignore[arg-type]
+        elicitation_tracker=fwd._CodexElicitationTaskTracker(),
+        expected_thread_id="thread_1",
+    )
+
+    from agent_meow.codex_native_bridge import read_mcp_startup
+
+    assert read_mcp_startup(tmp_path) == {}
+    assert client.posts == []
+
+
+def _write_session_config(tmp_path: Path, body: str) -> None:
+    """
+    Write the session's private ``config.toml`` under the bridge dir.
+
+    :param tmp_path: Bridge directory.
+    :param body: Raw TOML body, e.g. ``"[mcp_servers.safe]\ncommand='x'"``.
+    """
+    home = codex_home_for_bridge_dir(tmp_path)
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "config.toml").write_text(body)
+
+
+@pytest.mark.asyncio
+async def test_seed_mcp_startup_round_posts_config_servers(tmp_path: Path) -> None:
+    """
+    Seeding records the enabled config servers as ``starting`` and posts them.
+
+    Codex delivers per-server startup edges only to the thread-owning
+    connection, so this synthesized round is the only way the web session
+    learns startup is in flight (issue #2058). Disabled servers must be
+    excluded �?codex does not boot them, and a permanently-"starting"
+    band entry would never resolve.
+    """
+    from agent_meow.codex_native_bridge import read_mcp_startup
+
+    client = _RecordingClient()
+    _write_session_config(
+        tmp_path,
+        '[mcp_servers.safe]\ncommand = "x"\n'
+        '[mcp_servers.off]\ncommand = "y"\nenabled = false\n'
+        '[mcp_servers.omnigent]\ncommand = "z"\n',
+    )
+
+    timer = await fwd._seed_mcp_startup_round(
+        client,  # type: ignore[arg-type]
+        session_id="conv_x",
+        bridge_dir=tmp_path,
+    )
+
+    try:
+        assert read_mcp_startup(tmp_path) == {
+            "safe": {"status": "starting", "error": None},
+            "omnigent": {"status": "starting", "error": None},
+        }
+        assert client.posts == [
+            (
+                "/v1/sessions/conv_x/events",
+                {
+                    "type": "external_mcp_startup",
+                    "data": {
+                        "servers": {
+                            "safe": {"status": "starting", "error": None},
+                            "omnigent": {"status": "starting", "error": None},
+                        }
+                    },
+                },
+            )
+        ]
+        assert timer is not None
+    finally:
+        if timer is not None:
+            timer.cancel()
+
+
+@pytest.mark.asyncio
+async def test_seed_mcp_startup_round_skips_when_state_exists(tmp_path: Path) -> None:
+    """
+    A bridge dir that already carries round state is not reseeded.
+
+    ``supervise_forwarder`` restarts on reconnect mid-session; reseeding
+    then would flash a false "starting" band for servers that finished
+    booting long ago. Only ``clear_bridge_state`` (each app-server
+    launch) resets the map.
+    """
+    from agent_meow.codex_native_bridge import read_mcp_startup, update_mcp_server_startup
+
+    client = _RecordingClient()
+    _write_session_config(tmp_path, '[mcp_servers.safe]\ncommand = "x"\n')
+    update_mcp_server_startup(tmp_path, "safe", "cancelled")
+
+    timer = await fwd._seed_mcp_startup_round(
+        client,  # type: ignore[arg-type]
+        session_id="conv_x",
+        bridge_dir=tmp_path,
+    )
+
+    assert timer is None
+    assert client.posts == []
+    assert read_mcp_startup(tmp_path) == {"safe": {"status": "cancelled", "error": None}}
+
+
+@pytest.mark.asyncio
+async def test_seed_rearms_settle_timer_when_round_still_pending(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    A reconnect that finds the round still pending re-arms the settle window.
+
+    The previous forwarder's settle timer dies with its connection; if the
+    reconnect only skipped reseeding, a missed idle edge would leave the
+    band stuck on "starting" for the rest of the session. The re-armed
+    timer must actually resolve the round: once it fires, the pending
+    entries are dropped and the settled map is posted.
+    """
+    from agent_meow.codex_native_bridge import read_mcp_startup, update_mcp_server_startup
+
+    client = _RecordingClient()
+    update_mcp_server_startup(tmp_path, "safe", "starting")
+    update_mcp_server_startup(tmp_path, "storage-console", "cancelled")
+
+    async def _no_sleep(_seconds: float) -> None:
+        """Collapse the settle window so the test observes the timer firing."""
+
+    monkeypatch.setattr(fwd, "_sleep", _no_sleep)
+
+    timer = await fwd._seed_mcp_startup_round(
+        client,  # type: ignore[arg-type]
+        session_id="conv_x",
+        bridge_dir=tmp_path,
+    )
+
+    # No reseed/repost on reconnect �?the recorded map is left intact...
+    assert timer is not None
+    assert client.posts == []
+    assert read_mcp_startup(tmp_path)["safe"]["status"] == "starting"
+
+    # ...but the re-armed timer settles the round when the window elapses.
+    await timer
+    assert read_mcp_startup(tmp_path) == {
+        "storage-console": {"status": "cancelled", "error": None}
+    }
+    assert client.posts == [
+        (
+            "/v1/sessions/conv_x/events",
+            {
+                "type": "external_mcp_startup",
+                "data": {"servers": {"storage-console": {"status": "cancelled", "error": None}}},
+            },
+        )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_thread_idle_settles_synthesized_round(tmp_path: Path) -> None:
+    """
+    An idle ``thread/status/changed`` resolves the synthesized round.
+
+    Codex defers turn execution until MCP startup settles, so a thread
+    going idle after a turn proves the round ended. Unresolved
+    ``starting`` entries are dropped (their real outcomes are only
+    delivered to the thread owner) while locally-recorded ``cancelled``
+    states survive, and the settled map is posted so the band clears.
+    """
+    from agent_meow.codex_native_bridge import read_mcp_startup, update_mcp_server_startup
+
+    client = _RecordingClient()
+    update_mcp_server_startup(tmp_path, "safe", "starting")
+    update_mcp_server_startup(tmp_path, "storage-console", "cancelled")
+
+    await fwd._handle_event(
+        client,  # type: ignore[arg-type]
+        session_id="conv_x",
+        bridge_dir=tmp_path,
+        event={
+            "method": "thread/status/changed",
+            "params": {"threadId": "thread_1", "status": {"type": "idle"}},
+        },
+        usage_coalescer=fwd._SessionUsageCoalescer(client, "conv_x"),  # type: ignore[arg-type]
+        elicitation_tracker=fwd._CodexElicitationTaskTracker(),
+        expected_thread_id="thread_1",
+    )
+
+    assert read_mcp_startup(tmp_path) == {
+        "storage-console": {"status": "cancelled", "error": None}
+    }
+    assert client.posts == [
+        (
+            "/v1/sessions/conv_x/events",
+            {
+                "type": "external_mcp_startup",
+                "data": {"servers": {"storage-console": {"status": "cancelled", "error": None}}},
+            },
+        )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_thread_active_status_does_not_settle_round(tmp_path: Path) -> None:
+    """
+    An ``active`` status edge must not settle the round.
+
+    Codex flips the thread active the moment a turn is ACCEPTED �?which
+    happens mid-startup, before the round ends �?so settling there would
+    clear the band exactly when it matters most.
+    """
+    from agent_meow.codex_native_bridge import read_mcp_startup, update_mcp_server_startup
+
+    client = _RecordingClient()
+    update_mcp_server_startup(tmp_path, "safe", "starting")
+
+    await fwd._handle_event(
+        client,  # type: ignore[arg-type]
+        session_id="conv_x",
+        bridge_dir=tmp_path,
+        event={
+            "method": "thread/status/changed",
+            "params": {"threadId": "thread_1", "status": {"type": "active", "activeFlags": []}},
+        },
+        usage_coalescer=fwd._SessionUsageCoalescer(client, "conv_x"),  # type: ignore[arg-type]
+        elicitation_tracker=fwd._CodexElicitationTaskTracker(),
+        expected_thread_id="thread_1",
+    )
+
+    assert read_mcp_startup(tmp_path) == {"safe": {"status": "starting", "error": None}}
+    assert client.posts == []
+
+
+def test_settle_timeout_tracks_slowest_configured_server(tmp_path: Path) -> None:
+    """
+    The settle window follows the slowest ``startup_timeout_sec`` in config.
+
+    Codex bounds each server's spawn+handshake by that budget, so the
+    round cannot outlive it; a config without budgets falls back to the
+    codex default, and an absurd budget is capped.
+    """
+    _write_session_config(
+        tmp_path,
+        '[mcp_servers.fast]\ncommand = "x"\n'
+        '[mcp_servers.slow]\ncommand = "y"\nstartup_timeout_sec = 120\n',
+    )
+    assert fwd._mcp_startup_settle_timeout_seconds(tmp_path) == 135.0
+
+    _write_session_config(tmp_path, '[mcp_servers.fast]\ncommand = "x"\n')
+    assert fwd._mcp_startup_settle_timeout_seconds(tmp_path) == 25.0
+
+    _write_session_config(
+        tmp_path,
+        '[mcp_servers.slow]\ncommand = "y"\nstartup_timeout_sec = 100000\n',
+    )
+    assert fwd._mcp_startup_settle_timeout_seconds(tmp_path) == 240.0
+
+    # A disabled server's budget must not stretch the window: codex never
+    # boots it, and the seed excludes it from the synthesized round.
+    _write_session_config(
+        tmp_path,
+        '[mcp_servers.fast]\ncommand = "x"\n'
+        '[mcp_servers.off]\ncommand = "y"\nenabled = false\nstartup_timeout_sec = 120\n',
+    )
+    assert fwd._mcp_startup_settle_timeout_seconds(tmp_path) == 25.0

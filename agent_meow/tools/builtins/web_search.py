@@ -2,25 +2,25 @@
 
 Backend selection is fully determined by the agent spec:
 
-- **OpenAI model** â†’ passthrough to OpenAI's native
+- **OpenAI model** â†?passthrough to OpenAI's native
   ``web_search_preview`` (server-side, uses the LLM API key).
-- **Other models** â†’ use the ``search_provider`` named in the spec. Both
+- **Other models** â†?use the ``search_provider`` named in the spec. Both
   keyless backends (no ``api_key``) and keyed ones (credentials for a
   sturdier / higher-rate backend) are supported; the ``_BACKENDS`` registry
   at the bottom of this module is the single source of truth for which
-  engines exist. ``web_search`` never picks an engine for you â€” with no
+  engines exist. ``web_search`` never picks an engine for you â€?with no
   ``search_provider`` set it returns an error naming the options, so it is
-  always explicit which engine ran. No env var fallbacks â€” the spec is
+  always explicit which engine ran. No env var fallbacks â€?the spec is
   self-contained.
 
 Usage in config.yaml::
 
-    # OpenAI model â€” web search is built-in, no config needed:
+    # OpenAI model â€?web search is built-in, no config needed:
     tools:
       builtins:
         - web_search
 
-    # Non-OpenAI model â€” name a search_provider (there is no default):
+    # Non-OpenAI model â€?name a search_provider (there is no default):
     tools:
       builtins:
         - name: web_search
@@ -30,13 +30,13 @@ Usage in config.yaml::
 
 from __future__ import annotations
 
-import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 from agent_meow.tools.base import Tool, ToolContext
+from agent_meow.tools.builtins._arguments import parse_json_object_arguments
 
 _logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class WebSearchTool(Tool):
     When the agent uses an OpenAI model, this emits the native
     ``web_search_preview`` passthrough schema. For other models, the
     spec must set ``search_provider`` to one of the engines in the
-    ``_BACKENDS`` registry (some keyless, some needing credentials) â€”
+    ``_BACKENDS`` registry (some keyless, some needing credentials) â€?
     there is no default and no env var fallback, so the spec is
     self-contained and the engine used is explicit.
 
@@ -101,7 +101,7 @@ class WebSearchTool(Tool):
         :returns: Human-readable description of the tool.
         """
         return (
-            "Quick web search â€” returns a comprehensive "
+            "Quick web search â€?returns a comprehensive "
             "list of result links and snippets from a "
             "search engine. Good for broad discovery and "
             "finding URLs, but results may be slightly "
@@ -127,7 +127,7 @@ class WebSearchTool(Tool):
             "function": {
                 "name": "web_search",
                 "description": (
-                    "Quick web search â€” returns a comprehensive "
+                    "Quick web search â€?returns a comprehensive "
                     "list of result links and snippets from a "
                     "search engine. Good for broad discovery and "
                     "finding URLs, but results may be slightly "
@@ -152,9 +152,9 @@ class WebSearchTool(Tool):
         """
         Run web_search synchronously in the parent's tool loop.
 
-        :param arguments: Ignored â€” async-ness is a property of
+        :param arguments: Ignored â€?async-ness is a property of
             this tool, not the per-call arguments.
-        :returns: ``False`` â€” web_search always runs synchronously.
+        :returns: ``False`` â€?web_search always runs synchronously.
         """
         del arguments
         return False
@@ -173,15 +173,19 @@ class WebSearchTool(Tool):
         """
         if self._is_openai:
             raise RuntimeError(
-                "web_search in OpenAI mode is a passthrough â€” "
+                "web_search in OpenAI mode is a passthrough â€?"
                 "the provider handles execution server-side. "
                 "invoke() should never be called."
             )
 
-        parsed: dict[str, Any] = json.loads(arguments)
+        parsed, error = parse_json_object_arguments(arguments)
+        if error is not None:
+            return f"Error: {error}"
+        assert parsed is not None
         query = parsed.get("query")
-        if not query:
+        if not isinstance(query, str) or not query.strip():
             return "Error: 'query' parameter is required."
+        query = query.strip()
 
         return _search(query, self._config)
 
@@ -191,7 +195,7 @@ def _search(query: str, config: dict[str, str]) -> str:
     Run a web search using the backend specified in config.
 
     The ``search_provider`` key in config determines which backend
-    to use. No env var fallbacks â€” the spec must be self-contained.
+    to use. No env var fallbacks â€?the spec must be self-contained.
 
     :param query: The search query string.
     :param config: Spec-level config. Required keys:
@@ -299,8 +303,8 @@ def _run_duckduckgo(query: str, config: dict[str, str]) -> str:
     """
     Run a keyless DuckDuckGo HTML search.
 
-    An opt-in, zero-credential backend â€” set ``search_provider: duckduckgo``
-    to use it. Best-effort (the public HTML endpoint can rate-limit) â€” for
+    An opt-in, zero-credential backend â€?set ``search_provider: duckduckgo``
+    to use it. Best-effort (the public HTML endpoint can rate-limit) â€?for
     robust/high-volume search, configure a keyed backend instead.
 
     :param query: The search query.
@@ -334,7 +338,7 @@ def _run_keenable(query: str, config: dict[str, str]) -> str:
 
 
 # Single source of truth for the selectable backends. To add an engine, write
-# its ``_run_*`` above and add one row here â€” the dispatch in ``_search`` and
+# its ``_run_*`` above and add one row here â€?the dispatch in ``_search`` and
 # the error hint below both derive from this map, so nothing else needs editing.
 # ``keyless`` drives only the hint wording (which engines need no ``api_key``).
 _BACKENDS: dict[str, _Backend] = {
@@ -360,5 +364,5 @@ def _backend_hint() -> str:
     return (
         f"Set search_provider to one of: {', '.join(keyless)} (keyless, no API "
         f"key), or {', '.join(keyed)} with credentials for a sturdier, "
-        "higher-rate backend. No env var fallbacks â€” the spec is self-contained."
+        "higher-rate backend. No env var fallbacks â€?the spec is self-contained."
     )

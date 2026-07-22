@@ -1,56 +1,75 @@
 """Server-launched sandbox hosts for ``host_type="managed"`` sessions.
 
-The external host flow has a human run ``agent-meow host`` on their own
+The external host flow has a human run ``omnigent host`` on their own
 machine. The managed flow replaces the human: when a session is created
 with ``host_type="managed"``, the server provisions a cloud sandbox,
-starts ``agent-meow host`` inside it, and waits for that host to
-register â€” after which the session rides the exact same host-launch
+starts ``omnigent host`` inside it, and waits for that host to
+register â€?after which the session rides the exact same host-launch
 machinery an external host uses (binding token, ``host.launch_runner``
 frame, runner tunnel).
 
 The host's identity is DURABLE while its sandbox is not: the ``hosts``
 row carries the managed columns (launch-token digest + expiry,
-provider, sandbox id), and a relaunch overwrites them in place â€” a new
+provider, sandbox id), and a relaunch overwrites them in place â€?a new
 sandbox generation under the same ``host_id``, so session bindings
 survive a sandbox dying at the provider's lifetime cap.
 
 The sandbox host authenticates back with a dedicated launch token the
 server mints per launch (see
-:meth:`~?agent_meow.stores.host_store.HostStore.register_managed_host` and
+:meth:`agent_meow.stores.host_store.HostStore.register_managed_host` and
 the managed-token branch in
-:mod:`~?agent_meow.server.routes.host_tunnel`) â€” the user's own
+:mod:`agent_meow.server.routes.host_tunnel`) â€?the user's own
 credentials never enter the sandbox.
 
-How a deployment supplies the sandbox backend (two paths, one seam â€”
+How a deployment supplies the sandbox backend (two paths, one seam â€?
 :class:`ManagedSandboxConfig` carries a launcher FACTORY, so embedding
 deployments inject custom launchers the same way they inject custom
 stores into ``create_app``):
 
 1. **Server YAML** (OSS / self-hosted): :func:`parse_sandbox_config`
    builds the config from the ``sandbox:`` section
-   (``agent-meow server -c`` / ``OMNIGENT_CONFIG`` /
+   (``omnigent server -c`` / ``OMNIGENT_CONFIG`` /
    ``<data_dir>/config.yaml``)::
 
        sandbox:
          provider: modal          # lakebox|modal|daytona|boxlite|cwsandbox|islo|e2b|openshell
          server_url: https://agent_meow.example.com
+         host_config:             # optional; provider-agnostic. Verbatim
+                                  # in-sandbox ~/.omnigent/config.yaml content,
+                                  # installed before `omnigent host` starts
+                                  # (e.g. route the `pi` harness through a
+                                  # self-hosted gateway). Server-managed:
+                                  # entries injected earlier are replaced or
+                                  # removed on the next launch/resume; user
+                                  # config in the sandbox survives. Keep
+                                  # secrets out via api_key_ref: env: â€?
+                                  # resolved in the SANDBOX env (harness
+                                  # Secret / provider env lane).
+           providers:
+             litellm:
+               kind: gateway
+               default: [pi]
+               openai:
+                 base_url: http://litellm.litellm.svc.cluster.local/v1
+                 api_key_ref: env:LITELLM_API_KEY
+                 wire_api: chat
          modal:                   # optional block
-           image: docker.io/me/agent-meow-host:latest  # default: official image
+           image: docker.io/me/omnigent-host:latest  # default: official image
            secrets: [omnigent-llm]  # Modal secrets injected as sandbox env
                                      # (harness LLM keys, gateway URLs)
          boxlite:                 # optional block (provider: boxlite)
-           image: docker.io/me/agent-meow-host:latest    # shared; default: official
+           image: docker.io/me/omnigent-host:latest    # shared; default: official
            env: [OPENAI_API_KEY, GIT_TOKEN]            # shared; SERVER env var NAMES
            # exactly one mode (mutually exclusive):
            cloud: {endpoint: https://boxlite.example.com:8100}  # CLOUD; key: BOXLITE_API_KEY env
            # local: {home_dir: /data/boxlite, registry: {...}}  # LOCAL (default if omitted)
          daytona:                 # optional block (provider: daytona)
-           image: docker.io/me/agent-meow-host:latest  # default: official image
+           image: docker.io/me/omnigent-host:latest  # default: official image
            env: [OPENAI_API_KEY, GIT_TOKEN]  # SERVER env var NAMES whose
                                              # values are injected as
                                              # sandbox env
          islo:                    # optional block (provider: islo)
-           image: docker.io/me/agent-meow-host:latest  # default: official image
+           image: docker.io/me/omnigent-host:latest  # default: official image
            env: [OPENAI_API_KEY, GIT_TOKEN]  # SERVER env var NAMES injected
                                              # as sandbox env
            base_url: https://api.islo.dev    # optional API override
@@ -60,15 +79,16 @@ stores into ``create_app``):
            vcpus: 2
            memory_mb: 4096
            disk_gb: 20
+          idle_pause_after_s: 900           # optional; null disables idle pause
          openshell:               # optional block (provider: openshell)
-           image: docker.io/me/agent-meow-host:latest  # default: official image
+           image: docker.io/me/omnigent-host:latest  # default: official image
            env: [OPENAI_API_KEY, GIT_TOKEN]  # SERVER env var NAMES injected
                                              # as sandbox env
            cluster: my-gateway              # optional OpenShell gateway name
 
    The image defaults to the official prebaked host image
-   (``ghcr.io/JZKK720/agent-meow-host:latest``; see
-   :data:`~?agent_meow.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE` and
+   (``ghcr.io/omnigent-ai/omnigent-host:latest``; see
+   :data:`agent_meow.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE` and
    the per-provider env overrides), so ``provider`` + ``server_url``
    is a complete config. Provider credentials are NOT in this file
    (12-factor): the Modal launcher reads ``MODAL_TOKEN_ID`` /
@@ -86,8 +106,8 @@ stores into ``create_app``):
 
 2. **Direct construction** (embedding deployments): build
    :class:`ManagedSandboxConfig` with a custom
-   :class:`~?agent_meow.onboarding.sandboxes.base.SandboxLauncher`
-   factory and pass it to ``create_app(sandbox_config=â€¦)``::
+   :class:`~agent_meow.onboarding.sandboxes.base.SandboxLauncher`
+   factory and pass it to ``create_app(sandbox_config=â€?``::
 
        ManagedSandboxConfig(
            server_url=public_url,
@@ -127,7 +147,7 @@ _logger = logging.getLogger(__name__)
 # known providers so a deployment can stage config ahead of support
 # landing, but only PROVIDERS_WITH_MANAGED_LAUNCH can actually serve a
 # managed session today. (Deployments that construct
-# ManagedSandboxConfig directly are not constrained by either set â€”
+# ManagedSandboxConfig directly are not constrained by either set â€?
 # their launcher factory IS the support.)
 SUPPORTED_SANDBOX_PROVIDERS: frozenset[str] = frozenset(
     {
@@ -173,7 +193,7 @@ DAYTONA_MANAGED_TOKEN_TTL_S = 7 * 24 * 3600
 
 # Launch-token lifetime for the YAML boxlite path. Boxlite boxes have no
 # platform lifetime cap and persist across restarts, so the bound is policy,
-# not platform: 7 days mirrors Daytona â€” long enough for a live box to
+# not platform: 7 days mirrors Daytona â€?long enough for a live box to
 # re-authenticate its tunnel across reconnects while still expiring tokens of
 # boxes nobody removed. A relaunch mints a fresh token.
 BOXLITE_MANAGED_TOKEN_TTL_S = 7 * 24 * 3600
@@ -201,12 +221,12 @@ KUBERNETES_MANAGED_TOKEN_TTL_S = 7 * 24 * 3600
 # The cwsandbox launch-token TTL is NOT a constant: CW Sandbox's lifetime is
 # operator-overridable (OMNIGENT_CWSANDBOX_MAX_LIFETIME_S), so the TTL is
 # derived from the resolved lifetime at parse time via
-# cwsandbox.managed_token_ttl_s() â€” always above the cap, so a live sandbox
+# cwsandbox.managed_token_ttl_s() â€?always above the cap, so a live sandbox
 # can re-authenticate its tunnel across reconnects while a leaked token can't.
 
-# Where the in-sandbox host process logs â€” named in launch-failure
+# Where the in-sandbox host process logs â€?named in launch-failure
 # errors so an operator knows where to look inside the sandbox.
-_HOST_LOG_PATH = "/tmp/agent-meow-host.log"
+_HOST_LOG_PATH = "/tmp/omnigent-host.log"
 
 # How long a message POST waits for an in-flight managed launch to
 # settle before giving up (see ManagedLaunchTracker). Covers the full
@@ -215,7 +235,7 @@ _HOST_LOG_PATH = "/tmp/agent-meow-host.log"
 # (StartSandbox has no fixed upper bound), the host-tunnel reconnect on
 # this replica, and the runner spawn/connect. The 120s slack must cover
 # all of those so a slow cold launch/wake doesn't time the parked message
-# out before the background launch settles â€” otherwise the first
+# out before the background launch settles â€?otherwise the first
 # post-dormancy turn is lost even though the wake later succeeds. The wait
 # resolves as soon as the launch settles, so this bound only bites a
 # genuinely slow launch.
@@ -239,11 +259,11 @@ class ManagedLaunch:
     by the background task via :meth:`ManagedLaunchTracker.finish` /
     :meth:`ManagedLaunchTracker.fail`.
 
-    :param settled: Set once the launch reaches a terminal state â€”
+    :param settled: Set once the launch reaches a terminal state â€?
         either success (host bound, runner launched) or failure.
         Waiters (a message POST racing the provision) block on this.
     :param error: Failure detail once settled unsuccessfully, e.g.
-        ``"managed sandbox launch failed: â€¦"``. ``None`` while
+        ``"managed sandbox launch failed: â€?``. ``None`` while
         in flight and on success.
     """
 
@@ -262,7 +282,7 @@ class ManagedLaunchTracker:
     with "no runner bound"; a launch failure is recorded here so the
     waiting POST (and any later one) reports the real reason.
 
-    Successful launches are removed on settle â€” from then on the
+    Successful launches are removed on settle â€?from then on the
     session looks like any host-bound session. Failed launches are
     retained (the session row never got a host, so the recorded error
     is the only trace of why) until the process restarts or a new
@@ -270,7 +290,7 @@ class ManagedLaunchTracker:
     """
 
     def __init__(self) -> None:
-        """Initialize the empty session-id â†’ launch index."""
+        """Initialize the empty session-id â†?launch index."""
         self._by_session: dict[str, ManagedLaunch] = {}
 
     def begin(self, session_id: str) -> None:
@@ -335,14 +355,14 @@ class ManagedSandboxConfig:
 
     :param server_url: Public URL of THIS server that the sandboxed
         host dials back to, e.g. ``"https://agent_meow.example.com"``
-        (no trailing slash). Explicit â€” the server cannot reliably
+        (no trailing slash). Explicit â€?the server cannot reliably
         infer its own public URL behind proxies.
     :param launcher_factory: Zero-argument factory producing the
-        :class:`~?agent_meow.onboarding.sandboxes.base.SandboxLauncher`
+        :class:`~agent_meow.onboarding.sandboxes.base.SandboxLauncher`
         each launch uses, e.g.
-        ``lambda: ModalSandboxLauncher(image=â€¦)``. Called per launch
+        ``lambda: ModalSandboxLauncher(image=â€?``. Called per launch
         (launchers may cache provider handles internally). May raise
-        ``HTTPException`` to report an unusable backend â€” the YAML
+        ``HTTPException`` to report an unusable backend â€?the YAML
         path uses this for providers without managed support.
     :param token_ttl_s: Launch-token lifetime in seconds, e.g.
         ``90000`` (25h) for Modal. Must comfortably exceed the
@@ -350,7 +370,7 @@ class ManagedSandboxConfig:
         always re-authenticate its tunnel across reconnects.
     :param managed_launch_supported: Whether ``launcher_factory`` can
         actually serve a managed launch. The YAML path sets this from
-        :data:`PROVIDERS_WITH_MANAGED_LAUNCH` â€” staged providers
+        :data:`PROVIDERS_WITH_MANAGED_LAUNCH` â€?staged providers
         (``lakebox``) parse but get ``False``, since their factory
         rejects at launch. Defaults to ``True`` for
         directly-constructed configs (an embedding deployment's
@@ -359,13 +379,24 @@ class ManagedSandboxConfig:
         ``GET /v1/info``, which gates the web UI's sandbox option.
     :param provider: Short provider name surfaced to the web UI so the
         new-session sandbox option can be labeled per provider (e.g.
-        ``"modal"`` â†’ "Modal Sandbox", ``"lakebox"`` â†’ "Databricks
+        ``"modal"`` â†?"Modal Sandbox", ``"lakebox"`` â†?"Databricks
         Sandbox"). The YAML path sets it from the parsed
         ``sandbox.provider``. ``None`` for directly-constructed
-        embedding configs that don't name a provider â€” the UI then
+        embedding configs that don't name a provider â€?the UI then
         falls back to the generic "New Sandbox" label. Exposed (when
         managed launch is supported) on the unauthenticated
         ``GET /v1/info`` as ``sandbox_provider``.
+    :param host_config: Verbatim in-sandbox ``~/.omnigent/config.yaml``
+        content (e.g. a ``providers:`` block routing a harness through
+        a self-hosted gateway) installed into the sandbox's config before
+        ``omnigent host`` starts, or ``None``. Server-managed: previously
+        injected entries are replaced or removed on each launch/resume so
+        the sandbox always reflects the current block. Provider-agnostic:
+        forwarded to every launcher's ``start_host`` â€?see
+        :func:`agent_meow.onboarding.sandboxes.base.render_host_config_write_command`.
+        Non-secret by design: credentials stay behind
+        ``api_key_ref: env:VAR`` indirection, resolved inside the
+        sandbox against its own environment.
     """
 
     server_url: str
@@ -373,6 +404,7 @@ class ManagedSandboxConfig:
     token_ttl_s: int
     managed_launch_supported: bool = True
     provider: str | None = None
+    host_config: dict[str, object] | None = None
 
 
 @dataclass
@@ -381,10 +413,10 @@ class ManagedHostLaunch:
     Result of a successful managed host launch.
 
     :param host_id: The registered host's identifier, e.g.
-        ``"host_a1b2c3d4..."`` â€” feed this to the same launch-runner
+        ``"host_a1b2c3d4..."`` â€?feed this to the same launch-runner
         path an external ``host_id`` takes.
     :param workspace: Absolute workspace path created inside the
-        sandbox, e.g. ``"/root/workspace"`` â€” or the cloned repository
+        sandbox, e.g. ``"/root/workspace"`` â€?or the cloned repository
         directory (e.g. ``"/root/workspace/myrepo"``) when the session
         requested a repository-URL workspace.
     """
@@ -401,13 +433,13 @@ class RepoWorkspace:
     A managed create's ``workspace`` is a git repository URL with an
     optional ``#<branch>`` fragment (Docker build-context style): the
     URL fully describes what the server materializes inside the
-    sandbox. Built by :func:`parse_repo_workspace` â€” construct via the
+    sandbox. Built by :func:`parse_repo_workspace` â€?construct via the
     parser, not directly, so every field has been validated.
 
     :param url: The clone URL with any fragment stripped, e.g.
         ``"https://github.com/org/repo.git"`` or
         ``"git@github.com:org/repo.git"``.
-    :param branch: Branch to clone (``--branch â€¦ --single-branch``),
+    :param branch: Branch to clone (``--branch â€?--single-branch``),
         e.g. ``"release-1.2"``, or ``None`` for the default branch.
     :param repo_name: Directory name the clone lands in under the
         sandbox workspace, derived from the URL's last path segment
@@ -419,7 +451,7 @@ class RepoWorkspace:
     repo_name: str
 
 
-# A full 40-hex object id â€” rejected as a clone fragment: cloning a
+# A full 40-hex object id â€?rejected as a clone fragment: cloning a
 # commit lands the agent on a detached HEAD it cannot push from.
 _COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -428,7 +460,7 @@ _COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 _REPO_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 # Characters git forbids in ref names (plus ``#``, which can never
-# reach the fragment since the workspace splits on its FIRST ``#`` â€”
+# reach the fragment since the workspace splits on its FIRST ``#`` â€?
 # a second ``#`` means the branch itself contains one, which the
 # fragment form does not support).
 _BRANCH_FORBIDDEN_CHARS = set(" \t~^:?*[\\#")
@@ -457,14 +489,14 @@ def _validate_clone_branch(fragment: str) -> str:
         ``"release-1.2"``.
     :returns: The validated branch name, unchanged.
     :raises ValueError: When the fragment is empty, is a commit SHA
-        (detached HEAD â€” pin commits via git worktree options
+        (detached HEAD â€?pin commits via git worktree options
         instead), or violates git ref-name rules.
     """
     if not fragment:
         raise ValueError("the '#' fragment must name a branch, e.g. '#main'")
     if _COMMIT_SHA_RE.fullmatch(fragment):
         raise ValueError(
-            "the '#' fragment must be a branch, not a commit SHA â€” a commit "
+            "the '#' fragment must be a branch, not a commit SHA â€?a commit "
             "checkout would leave the agent on a detached HEAD it cannot push"
         )
     if (
@@ -491,13 +523,13 @@ def _derive_repo_name(url: str) -> str:
     """
     last = url.rstrip("/").split("/")[-1]
     # scp-style URLs with a single-segment path ("git@host:repo.git")
-    # have no "/" after the colon â€” take what follows it.
+    # have no "/" after the colon â€?take what follows it.
     if ":" in last:
         last = last.rsplit(":", 1)[-1]
     name = last[: -len(".git")] if last.endswith(".git") else last
     if not name or name in (".", "..") or not _REPO_NAME_RE.fullmatch(name):
         raise ValueError(
-            f"could not derive a repository directory name from '{url}' â€” "
+            f"could not derive a repository directory name from '{url}' â€?"
             "the URL must end in the repository name, e.g. "
             "'https://github.com/org/repo'"
         )
@@ -530,18 +562,18 @@ def parse_repo_workspace(workspace: str) -> RepoWorkspace:
         host, slash, path = url[len("https://") :].partition("/")
         if not host or not slash or not path.strip("/"):
             raise ValueError(
-                f"'{url}' is not a usable https repository URL â€” expected "
+                f"'{url}' is not a usable https repository URL â€?expected "
                 "'https://<host>/<org>/<repo>'"
             )
     elif url.startswith("git@"):
         host, colon, path = url[len("git@") :].partition(":")
         if not host or not colon or not path.strip("/"):
             raise ValueError(
-                f"'{url}' is not a usable ssh repository URL â€” expected 'git@<host>:<org>/<repo>'"
+                f"'{url}' is not a usable ssh repository URL â€?expected 'git@<host>:<org>/<repo>'"
             )
     else:
         raise ValueError(
-            f"'{url}' is not a supported repository URL â€” use "
+            f"'{url}' is not a supported repository URL â€?use "
             "'https://<host>/<org>/<repo>' or 'git@<host>:<org>/<repo>'"
         )
     branch = _validate_clone_branch(fragment) if sep else None
@@ -555,10 +587,10 @@ def _modal_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: modal`` path.
 
-    :param image: Registry image reference with agent-meow pre-installed,
-        e.g. ``"docker.io/me/agent-meow-host:latest"``, or ``None`` to
+    :param image: Registry image reference with omnigent pre-installed,
+        e.g. ``"docker.io/me/omnigent-host:latest"``, or ``None`` to
         use the official prebaked host image (env-overridable; see
-        :func:`~?agent_meow.onboarding.sandboxes.modal._build_sandbox_image`).
+        :func:`agent_meow.onboarding.sandboxes.modal._build_sandbox_image`).
     :param secrets: Modal secret names whose env vars (harness LLM
         credentials, gateway URLs) are injected into every sandbox,
         e.g. ``["omnigent-llm"]``, or ``None`` to resolve from the
@@ -593,12 +625,101 @@ def _unsupported_launcher_factory(provider: str) -> Callable[[], SandboxLauncher
             status_code=400,
             detail=(
                 f"managed hosts are not yet supported for the "
-                f"'{provider}' sandbox provider â€” only "
+                f"'{provider}' sandbox provider â€?only "
                 f"{', '.join(sorted(PROVIDERS_WITH_MANAGED_LAUNCH))} is implemented"
             ),
         )
 
     return _reject
+
+
+def _parse_host_config(raw: dict[str, object]) -> dict[str, object] | None:
+    """
+    Extract and validate the top-level ``sandbox.host_config`` block.
+
+    Verbatim in-sandbox ``~/.omnigent/config.yaml`` content forwarded at
+    managed launch (see :class:`ManagedSandboxConfig`). When a
+    ``providers`` key is present, its SHAPE is validated through the same
+    parser ``omnigent`` itself uses â€?structurally only: secret
+    references (``api_key_ref: env:VAR``) name variables in the
+    SANDBOX's environment, not the server's, so they are deliberately
+    never resolved here. Validating at parse time matters doubly for
+    this block: inside the sandbox a malformed ``providers`` entry
+    degrades silently (the harness falls back to its own login), so
+    server startup is the only place a typo can fail loud.
+
+    :param raw: The raw ``sandbox`` mapping.
+    :returns: The validated ``host_config`` mapping, or ``None`` when
+        the key is absent.
+    :raises ValueError: When present but not a mapping, or when its
+        ``providers`` block fails shape validation.
+    """
+    host_config = raw.get("host_config")
+    if host_config is None:
+        return None
+    if not isinstance(host_config, dict):
+        raise ValueError(
+            "server config 'sandbox.host_config' must be a mapping â€?verbatim "
+            "in-sandbox ~/.omnigent/config.yaml content merged in before "
+            "'omnigent host' starts"
+        )
+    # Key presence, not get(): an explicit `providers: null` would skip
+    # validation here yet still ride to the sandbox, where the merge writes
+    # `providers: null` over any existing block â€?the silent degradation this
+    # parse exists to prevent.
+    if "providers" in host_config:
+        providers = host_config["providers"]
+        # load_providers silently ignores a non-mapping providers value, so
+        # the mapping check must happen here to fail loud.
+        if not isinstance(providers, dict):
+            raise ValueError("server config 'sandbox.host_config.providers' must be a mapping")
+        # Lazy imports, matching the provider branches below: the parse path
+        # must not pull the onboarding layer in at module import time.
+        from agent_meow.errors import OmnigentError
+        from agent_meow.onboarding.provider_config import get_default_provider, load_providers
+
+        try:
+            parsed_providers = load_providers(host_config)
+            default_scopes = {
+                scope
+                for provider in parsed_providers.values()
+                for scope in provider.default_families
+            }
+            for scope in sorted(default_scopes):
+                get_default_provider(host_config, scope)
+        except OmnigentError as exc:
+            raise ValueError(
+                f"server config 'sandbox.host_config.providers' is invalid: {exc}"
+            ) from exc
+        for provider in parsed_providers.values():
+            for family_name, family in provider.families.items():
+                if family.api_key is not None:
+                    raise ValueError(
+                        "server config "
+                        f"'sandbox.host_config.providers.{provider.name}."
+                        f"{family_name}.api_key' must not contain an inline API key â€?"
+                        "use api_key_ref: env:VAR instead"
+                    )
+    # The block rides json.dumps to the sandbox on every launch, and
+    # yaml.safe_load produces values json can't take (an unquoted date
+    # becomes datetime.date) â€?round-trip now so that fails startup, not
+    # every launch.
+    import json
+
+    try:
+        serialized = json.dumps(host_config)
+        round_tripped = json.loads(serialized)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"server config 'sandbox.host_config' must be JSON-serializable "
+            f"(quote YAML scalars like dates): {exc}"
+        ) from exc
+    if round_tripped != host_config:
+        raise ValueError(
+            "server config 'sandbox.host_config' must be JSON-serializable without loss "
+            "(mapping keys must be strings and values must preserve their JSON types)"
+        )
+    return host_config
 
 
 def parse_sandbox_config(raw: object) -> ManagedSandboxConfig | None:
@@ -609,8 +730,8 @@ def parse_sandbox_config(raw: object) -> ManagedSandboxConfig | None:
     startup, not surface as a runtime 502 on the first managed session).
 
     :param raw: The raw ``sandbox`` value from the server config YAML,
-        e.g. ``{"provider": "modal", "server_url": "https://â€¦",
-        "modal": {"image": "docker.io/me/agent-meow-host:latest"}}``.
+        e.g. ``{"provider": "modal", "server_url": "https://â€?,
+        "modal": {"image": "docker.io/me/omnigent-host:latest"}}``.
         ``None`` when the section is absent.
     :returns: The parsed config, or ``None`` when *raw* is ``None``
         (managed hosts not configured).
@@ -629,9 +750,12 @@ def parse_sandbox_config(raw: object) -> ManagedSandboxConfig | None:
     server_url = raw.get("server_url")
     if not isinstance(server_url, str) or not server_url.strip():
         raise ValueError(
-            "server config 'sandbox.server_url' is required â€” the public URL "
+            "server config 'sandbox.server_url' is required â€?the public URL "
             "of this server that sandboxed hosts connect back to"
         )
+    # Validated regardless of provider (like server_url): a malformed
+    # host_config should stop startup even for staged/unsupported providers.
+    host_config = _parse_host_config(raw)
     if provider == "modal":
         launcher_factory = _modal_launcher_factory(
             _parse_modal_image(raw), _parse_modal_secrets(raw)
@@ -676,6 +800,7 @@ def parse_sandbox_config(raw: object) -> ManagedSandboxConfig | None:
             vcpus=_parse_provider_positive_int(raw, "islo", "vcpus"),
             memory_mb=_parse_provider_positive_int(raw, "islo", "memory_mb"),
             disk_gb=_parse_provider_positive_int(raw, "islo", "disk_gb"),
+            idle_pause_after_s=_parse_islo_idle_pause_after_s(raw),
         )
         token_ttl_s = ISLO_MANAGED_TOKEN_TTL_S
     elif provider == "e2b":
@@ -685,7 +810,7 @@ def parse_sandbox_config(raw: object) -> ManagedSandboxConfig | None:
             _parse_e2b_template(raw), _parse_provider_env(raw, "e2b")
         )
         # Derived from OMNIGENT_E2B_MAX_LIFETIME_S so the token always
-        # outlives the (operator-overridable) sandbox lifetime â€” mirrors
+        # outlives the (operator-overridable) sandbox lifetime â€?mirrors
         # the cwsandbox path.
         token_ttl_s = managed_token_ttl_s()
     elif provider == "openshell":
@@ -719,6 +844,7 @@ def parse_sandbox_config(raw: object) -> ManagedSandboxConfig | None:
         token_ttl_s=token_ttl_s,
         managed_launch_supported=provider in PROVIDERS_WITH_MANAGED_LAUNCH,
         provider=provider,
+        host_config=host_config,
     )
 
 
@@ -726,10 +852,10 @@ def _parse_modal_image(raw: dict[str, object]) -> str | None:
     """
     Extract and validate the modal image from the raw ``sandbox`` dict.
 
-    The ``modal`` section and its ``image`` field are OPTIONAL â€” when
+    The ``modal`` section and its ``image`` field are OPTIONAL â€?when
     absent, sandboxes boot from the official prebaked host image
     (env-overridable; see
-    :func:`~?agent_meow.onboarding.sandboxes.modal._build_sandbox_image`).
+    :func:`agent_meow.onboarding.sandboxes.modal._build_sandbox_image`).
     A present-but-malformed value still fails loud.
 
     :param raw: The raw ``sandbox`` mapping (provider already known to
@@ -751,8 +877,8 @@ def _parse_modal_image(raw: dict[str, object]) -> str | None:
     if not isinstance(image, str) or not image.strip():
         raise ValueError(
             "server config 'sandbox.modal.image' must be a registry image "
-            "reference with agent-meow pre-installed, e.g. "
-            "'docker.io/me/agent-meow-host:latest' (omit it to use the "
+            "reference with omnigent pre-installed, e.g. "
+            "'docker.io/me/omnigent-host:latest' (omit it to use the "
             "official image)"
         )
     return image.strip()
@@ -764,7 +890,7 @@ def _parse_modal_secrets(raw: dict[str, object]) -> list[str] | None:
 
     ``sandbox.modal.secrets`` names the Modal secrets whose env vars
     (harness LLM credentials, gateway base URLs) are injected into
-    every managed sandbox. OPTIONAL â€” absent means the launcher's
+    every managed sandbox. OPTIONAL â€?absent means the launcher's
     env-var fallback applies (or nothing is injected). A
     present-but-malformed value fails loud.
 
@@ -801,10 +927,10 @@ def _daytona_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: daytona`` path.
 
-    :param image: Registry image reference with agent-meow pre-installed,
-        e.g. ``"docker.io/me/agent-meow-host:latest"``, or ``None`` to
+    :param image: Registry image reference with omnigent pre-installed,
+        e.g. ``"docker.io/me/omnigent-host:latest"``, or ``None`` to
         use the official prebaked host image (env-overridable; see
-        :class:`~?agent_meow.onboarding.sandboxes.daytona.DaytonaSandboxLauncher`).
+        :class:`agent_meow.onboarding.sandboxes.daytona.DaytonaSandboxLauncher`).
     :param env: Names of server-process environment variables (harness
         LLM credentials, gateway URLs, ``GIT_TOKEN``) injected into
         every sandbox, e.g. ``["OPENAI_API_KEY", "GIT_TOKEN"]``, or
@@ -826,10 +952,10 @@ def _parse_daytona_image(raw: dict[str, object]) -> str | None:
     """
     Extract and validate the daytona image from the ``sandbox`` dict.
 
-    The ``daytona`` section and its ``image`` field are OPTIONAL â€”
+    The ``daytona`` section and its ``image`` field are OPTIONAL â€?
     when absent, sandboxes boot from the official prebaked host image
     (env-overridable; see
-    :mod:`~?agent_meow.onboarding.sandboxes.daytona`). A
+    :mod:`agent_meow.onboarding.sandboxes.daytona`). A
     present-but-malformed value still fails loud.
 
     :param raw: The raw ``sandbox`` mapping (provider already known to
@@ -851,8 +977,8 @@ def _parse_daytona_image(raw: dict[str, object]) -> str | None:
     if not isinstance(image, str) or not image.strip():
         raise ValueError(
             "server config 'sandbox.daytona.image' must be a registry image "
-            "reference with agent-meow pre-installed, e.g. "
-            "'docker.io/me/agent-meow-host:latest' (omit it to use the "
+            "reference with omnigent pre-installed, e.g. "
+            "'docker.io/me/omnigent-host:latest' (omit it to use the "
             "official image)"
         )
     return image.strip()
@@ -864,9 +990,9 @@ def _parse_daytona_env(raw: dict[str, object]) -> list[str] | None:
 
     ``sandbox.daytona.env`` names the SERVER-process environment
     variables whose values (harness LLM credentials, gateway base
-    URLs, ``GIT_TOKEN``) are injected into every managed sandbox â€”
+    URLs, ``GIT_TOKEN``) are injected into every managed sandbox â€?
     names only, so secret values never live in the config file.
-    OPTIONAL â€” absent means the launcher's env-var fallback applies
+    OPTIONAL â€?absent means the launcher's env-var fallback applies
     (or nothing is injected). A present-but-malformed value fails
     loud.
 
@@ -909,11 +1035,11 @@ def _boxlite_launcher_factory(
     Build the launcher factory for the YAML ``provider: boxlite`` path.
 
     :param endpoint: Remote ``boxlite serve`` URL (cloud mode), or ``None`` for
-        LOCAL mode â€” boxes run on the agent-meow-server host as embedded micro-VMs
+        LOCAL mode â€?boxes run on the omnigent-server host as embedded micro-VMs
         (no daemon, no ``boxlite serve``).
-    :param image: Registry image reference with agent-meow pre-installed, or
+    :param image: Registry image reference with omnigent pre-installed, or
         ``None`` to use the official prebaked host image (env-overridable; see
-        :class:`~?agent_meow.onboarding.sandboxes.boxlite.BoxliteSandboxLauncher`).
+        :class:`agent_meow.onboarding.sandboxes.boxlite.BoxliteSandboxLauncher`).
     :param env: Names of server-process environment variables (harness LLM
         credentials, gateway URLs, ``GIT_TOKEN``) injected into every box, e.g.
         ``["OPENAI_API_KEY", "GIT_TOKEN"]``, or ``None``.
@@ -952,7 +1078,7 @@ def _boxlite_section(raw: dict[str, object]) -> dict[str, object]:
 
 def _reject_unknown_boxlite_keys(mapping: dict[str, object], allowed: set[str], path: str) -> None:
     """
-    Fail loud on any key outside *allowed* â€” catches typos and misplaced keys
+    Fail loud on any key outside *allowed* â€?catches typos and misplaced keys
     (e.g. ``endpoint`` at the section level instead of under ``cloud:``, or a
     misspelled ``passwrod_env``) that would otherwise be silently ignored and
     surface much later as a confusing runtime failure.
@@ -973,21 +1099,21 @@ def _parse_boxlite_mode(
     ``cloud`` sub-blocks and return the launcher's ``(endpoint, home_dir,
     registry)``.
 
-    - ``cloud:`` present â†’ CLOUD mode (a remote ``boxlite serve``).
+    - ``cloud:`` present â†?CLOUD mode (a remote ``boxlite serve``).
       ``cloud.endpoint`` is required; the API key is read from
       ``BOXLITE_API_KEY`` in the server env (12-factor, not config).
-    - else â†’ LOCAL mode (embedded micro-VMs on the server host). The optional
+    - else â†?LOCAL mode (embedded micro-VMs on the server host). The optional
       ``local:`` block carries ``home_dir`` / ``registry``.
 
-    Setting both ``local`` and ``cloud`` is rejected â€” they are two different
+    Setting both ``local`` and ``cloud`` is rejected â€?they are two different
     configurations and a session runs in exactly one mode.
 
-    :returns: ``(endpoint, home_dir, registry)`` â€” only *endpoint* (cloud) or
+    :returns: ``(endpoint, home_dir, registry)`` â€?only *endpoint* (cloud) or
         the *home_dir*/*registry* pair (local) is ever populated.
     :raises ValueError: On a malformed or ambiguous mode config.
     """
     # Test for KEY PRESENCE, not value: a bare `cloud:`/`local:` YAML key
-    # parses to None, which must be rejected as malformed â€” not silently
+    # parses to None, which must be rejected as malformed â€?not silently
     # fall through to LOCAL mode (a `cloud:` typo would then run locally).
     local_present = "local" in section
     cloud_present = "cloud" in section
@@ -996,7 +1122,7 @@ def _parse_boxlite_mode(
     if local_present and cloud_present:
         raise ValueError(
             "server config 'sandbox.boxlite' must set at most one of 'local' or "
-            "'cloud' â€” the two modes are mutually exclusive"
+            "'cloud' â€?the two modes are mutually exclusive"
         )
     if cloud_present:
         if not isinstance(cloud_block, dict):
@@ -1005,7 +1131,7 @@ def _parse_boxlite_mode(
         endpoint = cloud_block.get("endpoint")
         if not isinstance(endpoint, str) or not endpoint.strip():
             raise ValueError(
-                "server config 'sandbox.boxlite.cloud.endpoint' is required â€” the "
+                "server config 'sandbox.boxlite.cloud.endpoint' is required â€?the "
                 "boxlite REST URL, e.g. 'https://boxlite.example.com:8100'"
             )
         return endpoint.strip(), None, None
@@ -1032,15 +1158,15 @@ def _parse_boxlite_image(section: dict[str, object]) -> str | None:
     if not isinstance(image, str) or not image.strip():
         raise ValueError(
             "server config 'sandbox.boxlite.image' must be a registry image "
-            "reference with agent-meow pre-installed, e.g. "
-            "'docker.io/me/agent-meow-host:latest' (omit it to use the official image)"
+            "reference with omnigent pre-installed, e.g. "
+            "'docker.io/me/omnigent-host:latest' (omit it to use the official image)"
         )
     return image.strip()
 
 
 def _parse_boxlite_env(section: dict[str, object]) -> list[str] | None:
     """
-    Extract the optional shared ``sandbox.boxlite.env`` â€” SERVER-process
+    Extract the optional shared ``sandbox.boxlite.env`` â€?SERVER-process
     environment variable NAMES whose values are injected into every box (names
     only, so secret values never live in the config file). Shared by both modes.
 
@@ -1079,12 +1205,12 @@ def _parse_boxlite_home_dir(local: dict[str, object]) -> str | None:
 
 def _parse_boxlite_registry(local: dict[str, object]) -> dict[str, object] | None:
     """
-    Extract the optional ``sandbox.boxlite.local.registry`` block â€” private-
+    Extract the optional ``sandbox.boxlite.local.registry`` block â€?private-
     registry config for pulling the host image in LOCAL mode.
 
     Shape: ``host`` (required) plus optional ``transport`` / ``skip_verify`` and
     the credential-NAME keys ``username_env`` / ``password_env`` / ``token_env``
-    (which name server env vars holding the values â€” 12-factor, so secrets never
+    (which name server env vars holding the values â€?12-factor, so secrets never
     live in the config file).
 
     :returns: The validated registry mapping, or ``None`` when not configured.
@@ -1103,7 +1229,7 @@ def _parse_boxlite_registry(local: dict[str, object]) -> dict[str, object] | Non
     host = registry.get("host")
     if not isinstance(host, str) or not host.strip():
         raise ValueError(
-            "server config 'sandbox.boxlite.local.registry.host' is required â€” the "
+            "server config 'sandbox.boxlite.local.registry.host' is required â€?the "
             "registry hostname, e.g. 'ghcr.io'"
         )
     out: dict[str, object] = {"host": host.strip()}
@@ -1126,7 +1252,7 @@ def _parse_boxlite_registry(local: dict[str, object]) -> dict[str, object] | Non
     if "token_env" in out and ("username_env" in out or "password_env" in out):
         raise ValueError(
             "server config 'sandbox.boxlite.local.registry': token_env is mutually "
-            "exclusive with username_env/password_env â€” boxlite uses the bearer token "
+            "exclusive with username_env/password_env â€?boxlite uses the bearer token "
             "and silently ignores basic auth, so set exactly one auth method"
         )
     return out
@@ -1159,13 +1285,13 @@ def _parse_cwsandbox_image(raw: dict[str, object]) -> str | None:
     if not isinstance(image, str) or not image.strip():
         raise ValueError(
             "server config 'sandbox.cwsandbox.image' must be a registry image "
-            "reference with agent-meow pre-installed (omit it to use the official image)"
+            "reference with omnigent pre-installed (omit it to use the official image)"
         )
     return image.strip()
 
 
 def _parse_cwsandbox_env(raw: dict[str, object]) -> list[str] | None:
-    """Extract and validate ``sandbox.cwsandbox.env`` â€” server env var NAMES (optional)."""
+    """Extract and validate ``sandbox.cwsandbox.env`` â€?server env var NAMES (optional)."""
     section = raw.get("cwsandbox")
     if section is None:
         return None
@@ -1191,12 +1317,12 @@ def _e2b_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: e2b`` path.
 
-    :param template: E2B template NAME the agent-meow host image was built
+    :param template: E2B template NAME the Omnigent host image was built
         into (``e2b template build``), or ``None`` to use the launcher's
         env-var fallback / the default template. Unlike the other
-        providers' ``image`` field this is NOT a registry reference â€”
+        providers' ``image`` field this is NOT a registry reference â€?
         E2B boots from templates (see
-        :class:`~?agent_meow.onboarding.sandboxes.e2b.E2BSandboxLauncher`).
+        :class:`agent_meow.onboarding.sandboxes.e2b.E2BSandboxLauncher`).
     :param env: Names of server-process environment variables (harness
         LLM credentials, gateway URLs, ``GIT_TOKEN``) injected into
         every sandbox, e.g. ``["OPENAI_API_KEY", "GIT_TOKEN"]``, or
@@ -1219,10 +1345,10 @@ def _parse_e2b_template(raw: dict[str, object]) -> str | None:
     Extract and validate the e2b template from the ``sandbox`` dict.
 
     ``sandbox.e2b.template`` names the pre-built E2B template the
-    agent-meow host image was built into â€” NOT a registry image reference
+    Omnigent host image was built into â€?NOT a registry image reference
     (the wording every other provider's ``image`` field uses), because
-    E2B cannot boot an arbitrary registry image. OPTIONAL â€” when absent,
-    the launcher resolves :data:`~?agent_meow.onboarding.sandboxes.e2b.TEMPLATE_ENV_VAR`
+    E2B cannot boot an arbitrary registry image. OPTIONAL â€?when absent,
+    the launcher resolves :data:`~agent_meow.onboarding.sandboxes.e2b.TEMPLATE_ENV_VAR`
     then the default template. A present-but-malformed value fails loud.
 
     :param raw: The raw ``sandbox`` mapping (provider already known to
@@ -1242,11 +1368,34 @@ def _parse_e2b_template(raw: dict[str, object]) -> str | None:
     if not isinstance(template, str) or not template.strip():
         raise ValueError(
             "server config 'sandbox.e2b.template' must be the NAME of a pre-built "
-            "E2B template the agent-meow host image was built into (e.g. "
-            "'agent-meow-host'; see deploy/e2b/README.md) â€” NOT a registry image "
+            "E2B template the omnigent host image was built into (e.g. "
+            "'omnigent-host'; see deploy/e2b/README.md) â€?NOT a registry image "
             "reference (omit it to use the default template)"
         )
     return template.strip()
+
+
+def _parse_islo_idle_pause_after_s(raw: dict[str, object]) -> int | None:
+    """
+    Extract Islo's managed idle-pause policy.
+
+    Omitted keeps the Islo launcher's default. Explicit YAML ``null``
+    disables provider-managed idle pause for operators who want manual
+    lifecycle control.
+    """
+    from agent_meow.onboarding.sandboxes.islo import DEFAULT_IDLE_PAUSE_AFTER_S
+
+    section = _parse_provider_section(raw, "islo")
+    if section is None or "idle_pause_after_s" not in section:
+        return DEFAULT_IDLE_PAUSE_AFTER_S
+    value = section["idle_pause_after_s"]
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError(
+            "server config 'sandbox.islo.idle_pause_after_s' must be a positive integer or null"
+        )
+    return value
 
 
 def _islo_launcher_factory(
@@ -1260,14 +1409,15 @@ def _islo_launcher_factory(
     vcpus: int | None,
     memory_mb: int | None,
     disk_gb: int | None,
+    idle_pause_after_s: int | None,
 ) -> Callable[[], SandboxLauncher]:
     """
     Build the launcher factory for the YAML ``provider: islo`` path.
 
-    :param image: Registry image reference with agent-meow pre-installed,
-        e.g. ``"docker.io/me/agent-meow-host:latest"``, or ``None`` to
+    :param image: Registry image reference with omnigent pre-installed,
+        e.g. ``"docker.io/me/omnigent-host:latest"``, or ``None`` to
         use the official prebaked host image (env-overridable; see
-        :class:`~?agent_meow.onboarding.sandboxes.islo.IsloSandboxLauncher`).
+        :class:`agent_meow.onboarding.sandboxes.islo.IsloSandboxLauncher`).
     :param env: Names of server-process environment variables injected
         into every sandbox, e.g. ``["OPENAI_API_KEY", "GIT_TOKEN"]``,
         or ``None`` to resolve from the launcher's env-var fallback /
@@ -1279,6 +1429,8 @@ def _islo_launcher_factory(
     :param vcpus: Optional vCPU count.
     :param memory_mb: Optional memory allocation in MiB.
     :param disk_gb: Optional disk allocation in GiB.
+    :param idle_pause_after_s: Idle seconds before Islo pauses the sandbox,
+        or ``None`` to disable provider-managed idle pause.
     :returns: A factory producing parameterized Islo launchers.
     """
 
@@ -1296,6 +1448,7 @@ def _islo_launcher_factory(
             vcpus=vcpus,
             memory_mb=memory_mb,
             disk_gb=disk_gb,
+            idle_pause_after_s=idle_pause_after_s,
         )
 
     return _build
@@ -1310,8 +1463,8 @@ def _openshell_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: openshell`` path.
 
-    :param image: Registry image reference with agent-meow pre-installed,
-        e.g. ``"docker.io/me/agent-meow-host:latest"``, or ``None`` to use
+    :param image: Registry image reference with omnigent pre-installed,
+        e.g. ``"docker.io/me/omnigent-host:latest"``, or ``None`` to use
         the official prebaked host image (env-overridable).
     :param env: Names of server-process environment variables injected
         into every sandbox, e.g. ``["OPENAI_API_KEY", "GIT_TOKEN"]``, or
@@ -1368,8 +1521,8 @@ def _parse_provider_image(raw: dict[str, object], provider: str) -> str | None:
     if not isinstance(image, str) or not image.strip():
         raise ValueError(
             f"server config 'sandbox.{provider}.image' must be a registry image "
-            "reference with agent-meow pre-installed, e.g. "
-            "'docker.io/me/agent-meow-host:latest' (omit it to use the "
+            "reference with omnigent pre-installed, e.g. "
+            "'docker.io/me/omnigent-host:latest' (omit it to use the "
             "official image)"
         )
     return image.strip()
@@ -1456,7 +1609,7 @@ def _parse_provider_bool(raw: dict[str, object], provider: str, key: str) -> boo
     :param key: Field name under the provider block, e.g. ``"in_cluster"``.
     :returns: The boolean, or ``None`` when omitted.
     :raises ValueError: When the field is present but is not a real boolean (a
-        YAML ``"true"`` string or an int are rejected â€” a silently-coerced flag
+        YAML ``"true"`` string or an int are rejected â€?a silently-coerced flag
         would change the cluster-config source).
     """
     section = _parse_provider_section(raw, provider)
@@ -1503,13 +1656,13 @@ def _parse_provider_str_mapping(
 
 # RFC 1123 / Kubernetes identifier forms for parse-time validation of
 # ``sandbox.kubernetes`` names (mirrored, fixed-by-spec, in the launcher for its
-# env-var overrides â€” see agent_meow.onboarding.sandboxes.kubernetes).
+# env-var overrides â€?see agent_meow.onboarding.sandboxes.kubernetes).
 _DNS1123_LABEL_RE = re.compile(r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
 _DNS1123_SUBDOMAIN_RE = re.compile(
     r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
 )
 _K8S_LABEL_SEGMENT_RE = re.compile(r"^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$")
-# Kubernetes resource quantity, e.g. "500m", "2", "1Gi", "1.5" â€” a number with
+# Kubernetes resource quantity, e.g. "500m", "2", "1Gi", "1.5" â€?a number with
 # an optional binary/decimal suffix.
 _K8S_QUANTITY_RE = re.compile(r"^\d+(\.\d+)?([eE][-+]?\d+)?[a-zA-Z]{0,2}i?$")
 
@@ -1576,7 +1729,7 @@ def _parse_kubernetes_resources(raw: dict[str, object]) -> dict[str, object] | N
     """
     Extract and validate the optional ``sandbox.kubernetes.resources`` block.
 
-    Shape: ``{requests?: {cpu?, memory?}, limits?: {cpu?, memory?}}`` â€” every
+    Shape: ``{requests?: {cpu?, memory?}, limits?: {cpu?, memory?}}`` â€?every
     level optional, each ``cpu`` / ``memory`` a non-empty Kubernetes quantity
     string. Validated at parse time so an operator typo fails server startup
     instead of the first managed launch; an omitted field keeps the default.
@@ -1647,7 +1800,7 @@ def _kubernetes_launcher_factory(
     """
     Build the launcher factory for the YAML ``provider: kubernetes`` path.
 
-    :param image: Registry image with agent-meow pre-installed, or ``None`` for
+    :param image: Registry image with omnigent pre-installed, or ``None`` for
         the official prebaked host image (env-overridable).
     :param env: Names of server-process environment variables injected into
         every Pod as literal ``env``, or ``None``. Prefer *secret_name* for
@@ -1656,8 +1809,9 @@ def _kubernetes_launcher_factory(
     :param secret_name: Pre-created Secret projected into every Pod via
         ``envFrom`` (harness credentials), or ``None``.
     :param service_account: ServiceAccount the Pods run as, or ``None``.
-    :param node_selector: Extra node selector labels merged with the mandatory
-        amd64 constraint, or ``None``.
+    :param node_selector: Extra node selector labels merged with a default
+        ``kubernetes.io/arch: amd64`` (an entry for that key overrides it),
+        or ``None``.
     :param kubeconfig: Explicit kubeconfig path for the out-of-cluster fallback,
         or ``None``.
     :param in_cluster: Force the cluster-config source, or ``None`` to try
@@ -1698,28 +1852,28 @@ async def launch_managed_host(
     """
     Provision a sandbox, start a host in it, and wait until it registers.
 
-    Sequence: provision sandbox â†’ pre-register the host row with its
+    Sequence: provision sandbox â†?pre-register the host row with its
     launch-token digest (so the credential resolves by the time the
-    host dials the tunnel) â†’ optionally clone the requested repository
-    â†’ start ``agent-meow host`` inside the sandbox with the token +
-    identity in its environment â†’ poll the hosts table until the host
+    host dials the tunnel) â†?optionally clone the requested repository
+    â†?start ``omnigent host`` inside the sandbox with the token +
+    identity in its environment â†?poll the hosts table until the host
     is online. Any failure after provisioning terminates the sandbox
     and deletes the host row (which revokes the token) before
     re-raising.
 
     :param config: The deployment's sandbox config (YAML-parsed or
         directly constructed with a custom launcher factory).
-    :param owner: User the managed host acts for â€” the session
+    :param owner: User the managed host acts for â€?the session
         creator, e.g. ``"alice@example.com"`` (or the reserved local
         user on single-user servers).
-    :param host_store: Persistent host registrations â€” receives the
+    :param host_store: Persistent host registrations â€?receives the
         pre-registered host row and is polled for the sandbox host
         coming online.
     :param repo: Parsed repository-URL workspace to clone into the
         sandbox as the session's working directory, or ``None`` for
         an empty workspace. Private repositories authenticate via the
         host image's git credential helper when the sandbox env
-        carries ``GIT_TOKEN`` (injected through Modal secrets â€” see
+        carries ``GIT_TOKEN`` (injected through Modal secrets â€?see
         deploy/modal/README.md "Git credentials").
     :param on_stage: Progress observer invoked as the launch pipeline
         advances, with the stage just entered: ``"cloning"`` (when
@@ -1734,11 +1888,11 @@ async def launch_managed_host(
         startup, or registration fails.
     """
     launcher = config.launcher_factory()
-    host_id = f"host_{uuid.uuid4().hex}"
+    host_id = uuid.uuid4().hex
     # Visible label in the host picker; (owner, name) is the hosts
     # table PK, so embed the host_id's leading hex for uniqueness
     # across a user's managed sandboxes.
-    host_name = f"managed-{host_id[len('host_') : len('host_') + 8]}"
+    host_name = f"managed-{host_id[:8]}"
     try:
         await asyncio.to_thread(launcher.prepare)
         sandbox_id = await asyncio.to_thread(launcher.provision, host_name)
@@ -1775,12 +1929,12 @@ async def relaunch_managed_host(
     The host identity is durable while its sandbox is not: when the
     sandbox dies (the provider's lifetime cap, a crash, a manual
     terminate), the host row and the sessions bound to it remain.
-    This relaunch keeps that identity â€” terminate the old sandbox
+    This relaunch keeps that identity â€?terminate the old sandbox
     (best-effort; it is usually already gone), provision a fresh one,
     and re-arm the SAME host row with a new token + sandbox id (which
     atomically revokes the previous generation's token).
 
-    The new sandbox starts from the image â€” workspace contents of the
+    The new sandbox starts from the image â€?workspace contents of the
     dead generation are gone. Passing *repo* re-clones the session's
     repository so the workspace is restored to its create-time state.
 
@@ -1829,7 +1983,7 @@ async def relaunch_managed_host(
         host_store=host_store,
         host_id=host.host_id,
         host_name=host.name,
-        owner=host.owner,
+        owner=host.user_id,
         sandbox_id=sandbox_id,
         repo=repo,
         on_stage=on_stage,
@@ -1853,12 +2007,12 @@ async def _arm_and_start_host(
 ) -> str:
     """
     Arm the credential, start the in-sandbox host, and await its
-    registration â€” tearing the sandbox down on any failure.
+    registration â€?tearing the sandbox down on any failure.
 
     The credential is registered BEFORE the host process starts, so
     the token is resolvable by the time the host first dials the
     tunnel. A failure in any later step terminates the sandbox and
-    revokes the armed token before re-raising â€” by deleting the host
+    revokes the armed token before re-raising â€?by deleting the host
     row (first launch: the row would otherwise be an unusable picker
     ghost) or, on a relaunch, by clearing the credential columns only
     (the durable row keeps the session binding alive for a retry).
@@ -1878,7 +2032,7 @@ async def _arm_and_start_host(
     :param on_stage: Progress observer forwarded to the launcher's
         ``start_host``; see :func:`launch_managed_host`. ``None``
         disables progress reporting.
-    :param keep_host_on_failure: ``True`` on a relaunch â€” failure
+    :param keep_host_on_failure: ``True`` on a relaunch â€?failure
         cleanup terminates the new sandbox and revokes the token but
         keeps the host row. ``False`` (first launch) deletes the row.
     :returns: The absolute in-sandbox workspace path.
@@ -1890,7 +2044,7 @@ async def _arm_and_start_host(
         host_store.register_managed_host,
         host_id=host_id,
         name=host_name,
-        owner=owner,
+        user_id=owner,
         token=token,
         provider=launcher.provider,
         sandbox_id=sandbox_id,
@@ -1901,7 +2055,7 @@ async def _arm_and_start_host(
         # token was armed against it above, so start_host starts the host with
         # a token that already resolves. The exec-model default execs in; the
         # entrypoint model (k8s) creates the Pod that boots the host. *repo* is
-        # unpacked into primitives â€” the launcher API takes no RepoWorkspace.
+        # unpacked into primitives â€?the launcher API takes no RepoWorkspace.
         workspace = await asyncio.to_thread(
             launcher.start_host,
             sandbox_id,
@@ -1913,13 +2067,16 @@ async def _arm_and_start_host(
             repo_branch=repo.branch if repo is not None else None,
             repo_name=repo.repo_name if repo is not None else None,
             on_stage=on_stage,
+            # Omitted entirely when unset: a deployment-injected launcher
+            # predating the host_config parameter must keep launching.
+            **({"host_config": config.host_config} if config.host_config is not None else {}),
         )
         await _wait_for_host_online(host_store, host_id)
     except Exception as exc:
-        # Broad on purpose: any post-provision failure â€” launcher CLI
+        # Broad on purpose: any post-provision failure â€?launcher CLI
         # errors, provider SDK exceptions (e.g. Modal's
         # SandboxTerminated), raw network errors from the in-sandbox
-        # exec â€” must tear down the sandbox and revoke the armed token,
+        # exec â€?must tear down the sandbox and revoke the armed token,
         # or the sandbox leaks running until the provider's lifetime
         # cap. Cleanup-then-reraise at a system boundary, not a
         # swallow: every path below re-raises as an HTTPException.
@@ -1956,7 +2113,7 @@ async def _wait_for_host_online(host_store: HostStore, host_id: str) -> None:
         status_code=502,
         detail=(
             f"managed host did not come online within "
-            f"{MANAGED_HOST_ONLINE_TIMEOUT_S}s â€” check {_HOST_LOG_PATH} "
+            f"{MANAGED_HOST_ONLINE_TIMEOUT_S}s â€?check {_HOST_LOG_PATH} "
             "inside the sandbox"
         ),
     )
@@ -1970,7 +2127,7 @@ def _launcher_for_teardown(
     Resolve the launcher that can terminate a managed host's sandbox.
 
     The deployment's CURRENT launcher factory is only usable when its
-    provider matches the provider recorded on the host row at launch â€”
+    provider matches the provider recorded on the host row at launch â€?
     a config change between launch and teardown must not aim a
     different provider's terminate at a stale sandbox id.
 
@@ -2020,11 +2177,28 @@ def host_resume_supported(
     return launcher is not None and launcher.can_resume and host.sandbox_id is not None
 
 
+def host_sandbox_is_running(
+    host: Host,
+    config: ManagedSandboxConfig | None,
+) -> bool | None:
+    """
+    Ask the matched provider whether this managed host's sandbox is running.
+
+    ``None`` means the provider has no cheap status hook or the deployment no
+    longer matches the host's provider. Callers should treat that as unknown
+    and fall back to Omnigent liveness checks.
+    """
+    launcher = _launcher_for_teardown(host, config)
+    if launcher is None or host.sandbox_id is None:
+        return None
+    return launcher.is_running(host.sandbox_id)
+
+
 # â”€â”€ Managed-host wake (resume a dormant host on demand) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 # Per-host resume single-flight: one in-flight resume per host_id on this
 # replica, else two host processes flap the tunnel registration. Reused across a
-# host's many idle-stop/resume cycles, so not reaped â€” a .pop() could also race
+# host's many idle-stop/resume cycles, so not reaped â€?a .pop() could also race
 # a resume still holding it; one idle Lock per host woken is negligible.
 _resume_locks: dict[str, asyncio.Lock] = {}
 
@@ -2033,38 +2207,44 @@ async def resume_managed_host(
     host_id: str,
     host_store: HostStore,
     config: ManagedSandboxConfig | None,
+    *,
+    force: bool = False,
 ) -> None:
     """
     Wake a dormant managed host so a session bound to it can run again.
 
     The send-message relaunch path calls this when a host-bound session has no
-    live runner. If the host is a *resumable* managed host â€” a provider whose
+    live runner. If the host is a *resumable* managed host â€?a provider whose
     sandbox idle-stops but retains its persistent volume
-    (:attr:`SandboxLauncher.can_resume`) â€” and is currently offline, this
+    (:attr:`SandboxLauncher.can_resume`) â€?and is currently offline, this
     resumes the sandbox under the SAME sandbox id, re-arms its launch token,
-    re-execs ``agent-meow host``, and waits for it to re-register. The caller's
+    re-execs ``omnigent host``, and waits for it to re-register. The caller's
     existing relaunch then spawns a fresh runner.
 
     No-op when the host is already online, is unknown, or its provider cannot
-    resume (e.g. Modal â€” the caller falls through to its normal host-offline
-    behavior, i.e. the user starts a new session). Single-flight and
-    idempotent: concurrent callers serialize on a per-host lock and re-check
-    liveness under it, so only the first wakes the host.
+    resume (e.g. Modal â€?the caller falls through to its normal host-offline
+    behavior, i.e. the user starts a new session). ``force=True`` is reserved
+    for the route path that has already proven this server process has no live
+    host tunnel even though the cross-replica DB row is still fresh.
+    Single-flight and idempotent: concurrent callers serialize on a per-host
+    lock and re-check liveness under it, so only the first wakes the host.
 
-    Unlike a launch, a failed wake does NOT tear the sandbox down â€” the volume
+    Unlike a launch, a failed wake does NOT tear the sandbox down â€?the volume
     + workspace are the user's and must survive for a retry.
 
     :param host_id: The session's bound host id, e.g. ``"host_a1b2c3d4..."``.
     :param host_store: Persistent host registrations (cross-replica liveness).
     :param config: The deployment's managed-sandbox config, or ``None`` when
         the ``sandbox:`` section has been removed since launch.
+    :param force: Skip the DB-liveness no-op gate when the caller has local
+        evidence that the tunnel is gone.
     :raises HTTPException: 502 when the resume or host restart fails.
     """
     if config is None:
         return
     # Cross-replica DB liveness (freshness-gated): never trust the per-replica
     # registry alone. Cheap gate before taking the lock.
-    if await asyncio.to_thread(host_store.is_online, host_id):
+    if not force and await asyncio.to_thread(host_store.is_online, host_id):
         return
     host = await asyncio.to_thread(host_store.get_host, host_id)
     if host is None:
@@ -2081,7 +2261,7 @@ async def resume_managed_host(
     async with resume_lock:
         # Re-check under the lock: a concurrent waker may have brought the host
         # online while we waited.
-        if await asyncio.to_thread(host_store.is_online, host_id):
+        if not force and await asyncio.to_thread(host_store.is_online, host_id):
             return
         _logger.info(
             "Waking dormant managed host %s (sandbox %s, provider %s)",
@@ -2099,7 +2279,7 @@ async def resume_managed_host(
                 host_store.register_managed_host,
                 host_id=host.host_id,
                 name=host.name,
-                owner=host.owner,
+                user_id=host.user_id,
                 token=token,
                 provider=launcher.provider,
                 sandbox_id=sandbox_id,
@@ -2113,6 +2293,13 @@ async def resume_managed_host(
                 host_name=host.name,
                 server_url=config.server_url,
                 repo_url=None,  # the persistent volume already holds the workspace
+                # Re-materialized on every wake, so an operator's host_config
+                # change lands on the next resume without a new sandbox.
+                # Omitted entirely when unset: a deployment-injected launcher
+                # predating the host_config parameter must keep resuming.
+                # (Base start_host still cleans up previously injected entries
+                # on resumable launchers when the block is removed.)
+                **({"host_config": config.host_config} if config.host_config is not None else {}),
             )
             await _wait_for_host_online(host_store, host.host_id)
         except Exception as exc:
@@ -2138,7 +2325,7 @@ async def terminate_managed_host(
     the host disappears from the picker AND its launch token stops
     resolving. Best-effort on the sandbox side: termination failures
     (or a missing/mismatched launcher after a config change) are
-    logged, not raised â€” the provider's lifetime cap reaps stragglers,
+    logged, not raised â€?the provider's lifetime cap reaps stragglers,
     and the caller (session delete / launch-failure cleanup) must not
     be blocked by provider hiccups.
 
@@ -2163,7 +2350,7 @@ async def _terminate_sandbox_best_effort(
 
     Best-effort by design: termination failures (or a
     missing/mismatched launcher after a config change) are logged, not
-    raised â€” the provider's lifetime cap reaps stragglers, and callers
+    raised â€?the provider's lifetime cap reaps stragglers, and callers
     (session delete, launch-failure cleanup, relaunch) must not be
     blocked by provider hiccups.
 
@@ -2175,7 +2362,7 @@ async def _terminate_sandbox_best_effort(
     if launcher is not None and host.sandbox_id is not None:
         try:
             await asyncio.to_thread(launcher.terminate, host.sandbox_id)
-        except Exception:  # noqa: BLE001 â€” deliberate broad catch: this is a
+        except Exception:  # noqa: BLE001 â€?deliberate broad catch: this is a
             # provider-API boundary on a cleanup path. The provider SDK can
             # fail here in many shapes (auth/config ClickException, network
             # errors, SDK-internal exceptions), the sandbox may already be

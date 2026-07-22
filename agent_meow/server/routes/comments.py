@@ -13,6 +13,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, model_validator
 
+from agent_meow.db.enum_codecs import COMMENT_STATUS
 from agent_meow.entities import Comment
 from agent_meow.errors import ErrorCode, OmnigentError
 from agent_meow.server.auth import LEVEL_EDIT, LEVEL_READ, AuthProvider
@@ -21,6 +22,7 @@ from agent_meow.server.routes._auth_helpers import (
     get_user_id,
     require_access,
 )
+from agent_meow.server.routes._errors import session_not_found
 from agent_meow.stores import ConversationStore
 from agent_meow.stores.comment_store import CommentStore
 from agent_meow.stores.permission_store import PermissionStore
@@ -48,7 +50,7 @@ def _format_message(comments: list[Comment]) -> str:
         lines.append(f"File: {path}")
         for c in sorted(by_path[path], key=lambda c: c.start_index):
             anchor = f'"{c.anchor_content.strip()}" ' if c.anchor_content else ""
-            lines.append(f"â€¢ {anchor}(offset {c.start_index}â€“{c.end_index}): {c.body}")
+            lines.append(f"â€?{anchor}(offset {c.start_index}â€“{c.end_index}): {c.body}")
 
     return "\n".join(lines)
 
@@ -164,21 +166,21 @@ def create_comments_router(
         if conversation_store is not None:
             conversation = await asyncio.to_thread(conversation_store.get_conversation, session_id)
             if conversation is None:
-                raise OmnigentError("Session not found", code=ErrorCode.NOT_FOUND)
+                raise session_not_found()
 
     async def _require_comment_author(
         user_id: str | None, comment_id: str, session_id: str
     ) -> None:
         """Enforce that the caller authored the comment they are mutating.
 
-        Used to gate the author-only operations â€” editing a comment's
-        ``body`` and deleting a comment â€” on top of the session-level
+        Used to gate the author-only operations â€?editing a comment's
+        ``body`` and deleting a comment â€?on top of the session-level
         ``LEVEL_EDIT`` gate, which callers MUST run first. A session
         collaborator with edit access can still mark *anyone's* comment
         addressed (a shared review-workflow action), but cannot rewrite or
         delete another user's comment.
 
-        Comments with no recorded author (``created_by is None`` â€” legacy
+        Comments with no recorded author (``created_by is None`` â€?legacy
         comments created before per-user attribution, or single-user mode)
         remain editable/deletable by any editor, since there is no author to
         protect. This helper is only invoked when permission enforcement is
@@ -231,7 +233,7 @@ def create_comments_router(
             anchor_content=body.anchor_content,
             # Map the single-user "local" sentinel to None (matching the
             # sessions/messages write paths) so single-user comments record
-            # no author and stay editable/deletable by any editor â€” both the
+            # no author and stay editable/deletable by any editor â€?both the
             # author-only server gate (``_require_comment_author``) and the
             # client's Edit/Delete affordances key off ``created_by is None``.
             created_by=attribution_user(user_id),
@@ -292,6 +294,18 @@ def create_comments_router(
             # update_comment tool) may perform.
             if body.body is not None:
                 await _require_comment_author(user_id, comment_id, session_id)
+        # Validate the status only after existence/ownership checks, so a
+        # request targeting a comment the caller can't see still returns 404
+        # (not a 400 that would leak the comment's existence). The check keeps
+        # an unknown status out of the store, where the enum codec would raise
+        # into an opaque 500; the column is a closed enum (draft/addressed).
+        if body.status is not None and body.status not in COMMENT_STATUS:
+            if store.get(comment_id, session_id) is None:
+                raise OmnigentError("Comment not found", code=ErrorCode.NOT_FOUND)
+            raise OmnigentError(
+                f"invalid status {body.status!r}; must be one of {sorted(COMMENT_STATUS)}",
+                code=ErrorCode.INVALID_INPUT,
+            )
         comment = store.update_comment(comment_id, session_id, status=body.status, body=body.body)
         if comment is None:
             raise OmnigentError("Comment not found", code=ErrorCode.NOT_FOUND)
@@ -306,7 +320,7 @@ def create_comments_router(
         """Delete a comment.
 
         Requires ``LEVEL_EDIT`` on the session in multi-user mode, and
-        additionally that the caller is the comment's author â€” one
+        additionally that the caller is the comment's author â€?one
         collaborator may not delete another user's comment.
 
         :param request: The incoming request, used to extract the user identity.

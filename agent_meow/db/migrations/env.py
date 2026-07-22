@@ -8,7 +8,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import Connection, engine_from_config, pool
 
-from agent_meow.db import Base
+from agent_meow.db import ConversationBase, OmnigentBase
 
 config = context.config
 
@@ -20,18 +20,20 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
     # alembic.ini sets ``[logger_alembic] level = INFO`` for verbose
     # debugging during migration authoring. End-user runs of
-    # ``agent-meow run -p`` would otherwise dump 3 INFO lines
+    # ``omnigent run -p`` would otherwise dump 3 INFO lines
     # per fresh DB to stderr. Honor the CLI's ``--verbose`` toggle
     # by checking the root logger: when the root is not at DEBUG
     # (i.e. ``--verbose`` was NOT passed), pull alembic back to
     # WARNING so migrations are silent on the success path. Errors
     # still surface.
-    import logging as _logging  # local â€” env.py runs in alembic context
+    import logging as _logging  # local â€?env.py runs in alembic context
 
     if not _logging.getLogger().isEnabledFor(_logging.DEBUG):
         _logging.getLogger("alembic").setLevel(_logging.WARNING)
 
-target_metadata = Base.metadata
+# Both bases share one physical DB and one migration lineage; autogenerate
+# diffs the union of their metadata so neither side's tables look "extra".
+target_metadata = [OmnigentBase.metadata, ConversationBase.metadata]
 
 # Allow overriding the DB URL via environment variable.
 db_url = os.environ.get("OMNIGENT_DB_URL")
@@ -41,7 +43,7 @@ if db_url:
 
 def run_migrations_offline() -> None:
     """
-    Run migrations in 'offline' mode â€” emit SQL to stdout
+    Run migrations in 'offline' mode â€?emit SQL to stdout
     without connecting to the database.
     """
     url = config.get_main_option("sqlalchemy.url")
@@ -57,7 +59,7 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """
-    Run migrations in 'online' mode â€” connect to the database
+    Run migrations in 'online' mode â€?connect to the database
     and apply migrations directly.
 
     If a shared connection was passed via config.attributes (e.g.

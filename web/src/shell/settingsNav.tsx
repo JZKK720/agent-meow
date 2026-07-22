@@ -10,13 +10,13 @@ import { useEffect } from "react";
 import {
   ArchiveIcon,
   ArrowLeftIcon,
+  DownloadIcon,
+  GitBranchIcon,
   KeyboardIcon,
-  LanguagesIcon,
   PaletteIcon,
   PanelRightOpenIcon,
-  PlugIcon,
+  Share2Icon,
   ShieldCheckIcon,
-  SparklesIcon,
   TerminalIcon,
   UserCogIcon,
   UsersIcon,
@@ -25,37 +25,34 @@ import { Link, useLocation } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useServerInfo } from "@/lib/CapabilitiesContext";
+import { isSingleUserMode } from "@/lib/capabilities";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { isElectronShell } from "@/lib/nativeBridge";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "react-i18next";
-import i18n from "@/lib/i18n";
 
 export type SettingsSectionId =
   | "appearance"
+  | "git"
   | "shortcuts"
-  | "language"
   | "account"
   | "members"
   | "policies"
-  | "harnesses"
-  | "skills"
-  | "mcpServers"
+  | "sharing"
   | "archived"
-  | "cli";
+  | "cli"
+  | "updates";
 
 const SECTION_IDS: readonly SettingsSectionId[] = [
   "appearance",
+  "git",
   "shortcuts",
-  "language",
   "account",
   "members",
   "policies",
-  "harnesses",
-  "skills",
-  "mcpServers",
+  "sharing",
   "archived",
   "cli",
+  "updates",
 ];
 
 interface SettingsNavItem {
@@ -84,28 +81,31 @@ export function settingsNavGroups(
   hasAuthSession: boolean,
   isDesktop: boolean,
   isAdmin = false,
+  isSingleUser = false,
 ): SettingsNavGroup[] {
-  const t = i18n.t.bind(i18n);
   const general: SettingsNavItem[] = [
-    { id: "appearance", label: t("settings.appearance"), icon: PaletteIcon },
-    { id: "shortcuts", label: t("settings.shortcuts"), icon: KeyboardIcon, hideOnMobile: true },
-    { id: "language", label: t("settings.language"), icon: LanguagesIcon },
+    { id: "appearance", label: "Appearance", icon: PaletteIcon },
+    { id: "git", label: "Git", icon: GitBranchIcon },
+    { id: "shortcuts", label: "Keyboard shortcuts", icon: KeyboardIcon, hideOnMobile: true },
   ];
   if (hasAuthSession) {
     // Account leads the group when present — it's the most-visited section
     // on a deploy with sign-in.
-    general.unshift({ id: "account", label: t("settings.account"), icon: UserCogIcon });
+    general.unshift({ id: "account", label: "Account", icon: UserCogIcon });
   }
   const groups: SettingsNavGroup[] = [];
   // Desktop (Local CLI) leads when present — it's the shell-specific section a
   // desktop user is most likely here to change.
   if (isDesktop) {
     groups.push({
-      title: t("settings.desktop"),
-      items: [{ id: "cli", label: t("settings.localCli"), icon: TerminalIcon }],
+      title: "Desktop",
+      items: [
+        { id: "cli", label: "Local CLI", icon: TerminalIcon },
+        { id: "updates", label: "Updates", icon: DownloadIcon },
+      ],
     });
   }
-  groups.push({ title: t("settings.general"), items: general });
+  groups.push({ title: "General", items: general });
   // Admin: server-wide management, admin-only. Nested here as sub-categories
   // (rather than links out of the Account section) so entering them stays
   // inside /settings — the sidebar keeps the settings nav instead of snapping
@@ -114,20 +114,19 @@ export function settingsNavGroups(
   // mode where there's otherwise no admin chrome at all. Members runs
   // read-only under OIDC (no password actions); Policies is identical.
   if (isAdmin) {
-    groups.push({
-      title: t("settings.admin"),
-      items: [
-        { id: "members", label: t("settings.members"), icon: UsersIcon },
-        { id: "policies", label: t("settings.policies"), icon: ShieldCheckIcon },
-        { id: "harnesses", label: t("settings.harnesses"), icon: TerminalIcon },
-        { id: "skills", label: t("settings.skills"), icon: SparklesIcon },
-        { id: "mcpServers", label: t("settings.mcpServers"), icon: PlugIcon },
-      ],
-    });
+    // Members (manage other accounts) and Sharing (grant sessions to other
+    // users) have no meaning in single-user mode — there are no other users —
+    // so drop both from the nav there. Policies stays: global policies apply
+    // to a solo user's own sessions too.
+    const adminItems: SettingsNavItem[] = [];
+    if (!isSingleUser) adminItems.push({ id: "members", label: "Members", icon: UsersIcon });
+    adminItems.push({ id: "policies", label: "Policies", icon: ShieldCheckIcon });
+    if (!isSingleUser) adminItems.push({ id: "sharing", label: "Sharing", icon: Share2Icon });
+    groups.push({ title: "Admin", items: adminItems });
   }
   groups.push({
-    title: t("settings.archived"),
-    items: [{ id: "archived", label: t("settings.archived"), icon: ArchiveIcon }],
+    title: "Archived",
+    items: [{ id: "archived", label: "Archived sessions", icon: ArchiveIcon }],
   });
   return groups;
 }
@@ -153,16 +152,21 @@ export function useSettingsRoute(): { inSettings: boolean; section: SettingsSect
   const idx = segments.lastIndexOf("settings");
   if (idx === -1) return { inSettings: false, section: defaultSection };
   const next = segments[idx + 1];
-  // Members / Policies are admin sections valid in ANY multi-user mode
-  // (accounts AND OIDC). They're gated in the nav on `is_admin` and the
+  // Members / Policies / Sharing are admin sections valid in ANY multi-user
+  // mode (accounts AND OIDC). They're gated in the nav on `is_admin` and the
   // pages self-gate + the server 403s, so no accounts-mode carve-out here.
-  const isValidSection = (SECTION_IDS as readonly string[]).includes(next);
+  // Members and Sharing are the exception: single-user mode has no other
+  // users, so a direct hit to either falls back to the default section.
+  const singleUser = isSingleUserMode(info);
+  const isValidSection =
+    (SECTION_IDS as readonly string[]).includes(next) &&
+    !(singleUser && (next === "members" || next === "sharing"));
   const section = isValidSection ? (next as SettingsSectionId) : defaultSection;
   return { inSettings: true, section };
 }
 
 // Last location the user was on before entering /settings — path + search so
-// the conversation (and its ?file= etc.) is preserved. "Back to agent-meow"
+// the conversation (and its ?file= etc.) is preserved. "Back to Omnigent"
 // returns here instead of the home page. Module-scoped: the sidebar stays
 // mounted across the settings transition, so the value captured on the last
 // non-settings render survives into settings.
@@ -185,7 +189,7 @@ export function useTrackSettingsReturn(): void {
 /**
  * Settings nav rendered INSIDE the sidebar card (replacing the conversation
  * list on /settings). Keeps the card chrome — a top row with "Back to
- * agent-meow" and the same collapse control the conversations view uses.
+ * Omnigent" and the same collapse control the conversations view uses.
  */
 export function SettingsSidebarBody({
   onNavClick,
@@ -201,9 +205,13 @@ export function SettingsSidebarBody({
   // `/v1/me` (mode-agnostic) so the group appears for admins under OIDC too,
   // not just accounts deploys. Non-admins never see it.
   const isAdmin = useIsAdmin();
-  const { t: _t } = useTranslation(); // re-render on language change
   const { section } = useSettingsRoute();
-  const groups = settingsNavGroups(hasAuthSession, isElectronShell(), isAdmin);
+  const groups = settingsNavGroups(
+    hasAuthSession,
+    isElectronShell(),
+    isAdmin,
+    isSingleUserMode(info),
+  );
 
   return (
     <>
@@ -218,7 +226,7 @@ export function SettingsSidebarBody({
           (persistent card), so dropping it changes nothing there. */}
           <Link to={settingsReturnPath}>
             <ArrowLeftIcon className="size-4" />
-            {i18n.t("app.backToApp")}
+            Back to Omnigent
           </Link>
         </Button>
         <Tooltip>
@@ -227,7 +235,7 @@ export function SettingsSidebarBody({
               type="button"
               variant="ghost"
               size="icon"
-              aria-label={i18n.t("sidebar.closeSidebar")}
+              aria-label="Close sidebar"
               onClick={onClose}
               className="rounded-full"
             >

@@ -4,10 +4,10 @@ name: Draft release notes
 # the draft), prepare everything the release coordinator needs before they hit
 # Publish:
 #
-#   1. Open a PR to agent_meow/main updating the granular CHANGELOG.md (harvested
+#   1. Open a PR to omnigent/main updating the granular CHANGELOG.md (harvested
 #      from each merged PR's "## Changelog" section), so the draft's
 #      "Full Changelog" link resolves before the release goes public.
-#   2. Synthesize concise, curated release notes (an agent-meow agent collapses the
+#   2. Synthesize concise, curated release notes (an Omnigent agent collapses the
 #      merged PRs into ~4-5 themed highlights per section) and drop them into the
 #      GitHub Release DRAFT body for the coordinator to edit.
 #
@@ -57,7 +57,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SOURCE_REPO: JZKK720/agent-meow
+  SOURCE_REPO: omnigent-ai/omnigent
   OMNIGENT_SKIP_WEB_UI: "true"
   UV_INDEX_URL: https://pypi.org/simple
   PIP_INDEX_URL: https://pypi.org/simple
@@ -66,7 +66,7 @@ jobs:
   draft:
     name: Harvest CHANGELOG and draft release notes
     if: >-
-      github.repository == 'JZKK720/agent-meow' &&
+      github.repository == 'omnigent-ai/omnigent' &&
       (github.event_name == 'workflow_dispatch' ||
        github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
@@ -131,7 +131,7 @@ jobs:
             | tee -a "$GITHUB_STEP_SUMMARY"
 
       # Trusted default branch, full history + tags for the range computation.
-      - name: Checkout agent-meow (main)
+      - name: Checkout omnigent (main)
         if: steps.guard.outputs.proceed == 'true'
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -199,52 +199,6 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Set up uv
-        if: steps.guard.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
-        with:
-          enable-cache: true
-
-      - name: Cache virtualenv
-        if: steps.guard.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('.python-version') }}-${{ hashFiles('uv.lock') }}
-
-      - name: Install dependencies
-        if: steps.guard.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
-        run: uv sync --extra all --extra dev
-
-      - name: Install Claude Code CLI
-        if: steps.guard.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
-        env:
-          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
-        run: |
-          mkdir -p "${GITHUB_WORKSPACE}/.cc-cli" && cd "${GITHUB_WORKSPACE}/.cc-cli"
-          npm install --ignore-scripts --no-audit --no-fund @anthropic-ai/claude-code@2.1.170
-          node node_modules/@anthropic-ai/claude-code/install.cjs
-          echo "${GITHUB_WORKSPACE}/.cc-cli/node_modules/.bin" >> "$GITHUB_PATH"
-
-      - name: Write agent-meow provider config
-        if: steps.guard.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
-        env:
-          GATEWAY_BASE_URL: ${{ secrets.GATEWAY_BASE_URL }}
-        run: |
-          mkdir -p "$HOME/.agent-meow"
-          python3 -c "
-          import pathlib, os, json
-          gw = os.environ['GATEWAY_BASE_URL']
-          cfg = {'providers': {'databricks-gateway': {
-              'kind': 'gateway', 'default': ['anthropic'],
-              'anthropic': {
-                  'base_url': gw + '/anthropic',
-                  'api_key_ref': 'env:LLM_API_KEY',
-                  'models': {'default': 'databricks-claude-opus-4-8'},
-              }}}}
-          pathlib.Path.home().joinpath('.agent-meow', 'config.yaml').write_text(json.dumps(cfg, indent=2))
-          "
-
       - name: Build drafter prompt
         if: steps.guard.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
         env:
@@ -254,7 +208,7 @@ jobs:
           python3 -u <<'PYEOF'
           import os, pathlib
           tag = os.environ["TAG"]
-          # The agent is tools-less, so its input must be inline — but `meow run
+          # The agent is tools-less, so its input must be inline — but `omnigent run
           # -p` passes the whole prompt as one argv string, capped at ~128 KiB on
           # Linux (MAX_ARG_STRLEN). Cap the PR list well under that; the mechanical
           # scaffold already covers everything, so a partial list still drafts.
@@ -277,30 +231,20 @@ jobs:
           pathlib.Path("/tmp/draft_prompt.txt").write_text(prompt)
           PYEOF
 
+      # Runs the tools-less drafter and secret-scans its output; the mechanical
+      # scaffold (already in /tmp/release_notes.md) is the fallback if it can't run.
+      # Checked out at the workspace root, so the action's workdir is the default.
       - name: Run release-notes drafter
         id: draft
         if: steps.guard.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-        run: |
-          set -euo pipefail
-          prompt="$(cat /tmp/draft_prompt.txt)"
-          uv run --project "${GITHUB_WORKSPACE}" meow run \
-            "${GITHUB_WORKSPACE}/.github/agents/release-notes-drafter" \
-            -p "$prompt" --no-session \
-            2>draft-stderr.log | tee /tmp/draft_out.txt \
-            || { echo "::warning::drafter exited non-zero — keeping mechanical draft"; cat draft-stderr.log; }
-
-      - name: Scan drafter output for secrets
-        if: steps.draft.outcome == 'success'
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -n "${LLM_API_KEY:-}" ] && grep -qF "$LLM_API_KEY" /tmp/draft_out.txt 2>/dev/null; then
-            echo "::error::Drafter output contains LLM_API_KEY — aborting."
-            exit 1
-          fi
+        uses: ./.github/actions/run-omnigent-agent
+        with:
+          agent: release-notes-drafter
+          prompt-file: /tmp/draft_prompt.txt
+          output-file: /tmp/draft_out.txt
+          stderr-file: /tmp/draft-stderr.log
+          gateway-base-url: ${{ secrets.GATEWAY_BASE_URL }}
+          llm-api-key: ${{ secrets.LLM_API_KEY }}
 
       - name: Extract synthesized notes (fall back to mechanical)
         if: steps.guard.outputs.proceed == 'true' && steps.creds.outputs.available == 'true'
@@ -320,7 +264,7 @@ jobs:
           PYEOF
 
       # --- 3) Mint the write-token — ONLY now, after the agent has run ---
-      - name: Mint App token (agent-meow)
+      - name: Mint App token (omnigent)
         id: app-token
         if: steps.guard.outputs.proceed == 'true' && steps.guard.outputs.dry_run != 'true' && vars.OMNIGENT_BOT_APP_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
@@ -328,7 +272,7 @@ jobs:
           app-id: ${{ vars.OMNIGENT_BOT_APP_ID }}
           private-key: ${{ secrets.OMNIGENT_BOT_APP_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: agent-meow
+          repositories: omnigent
 
       # Find the DRAFT release for this tag using the App token (push access) — a
       # read-only token can't see drafts. Match by tag_name over the release list:
@@ -378,8 +322,8 @@ jobs:
             exit 0
           fi
           BRANCH="auto/changelog/${TAG}"
-          git config user.name "agent-meow-ci[bot]"
-          git config user.email "294685417+agent-meow-ci[bot]@users.noreply.github.com"
+          git config user.name "omnigent-ci[bot]"
+          git config user.email "294685417+omnigent-ci[bot]@users.noreply.github.com"
           # No credentials persisted in .git/config (the unsandboxed agent ran
           # earlier); push via the token URL, which GitHub masks in logs.
           PUSH_URL="https://x-access-token:${SITE_TOKEN}@github.com/${SOURCE_REPO}.git"
@@ -409,13 +353,38 @@ jobs:
           RELEASE_ID: ${{ steps.release.outputs.release_id }}
         run: |
           set -euo pipefail
+          # Always end the notes with the community thanks. The AI drafter curates
+          # freely (and can drop a hand-added line), so this is appended here rather
+          # than via the prompt — every release, AI-drafted or mechanical fallback,
+          # gets it. Idempotent, and placed just before the trailing "Full Changelog:"
+          # link to match the layout of prior releases.
+          python3 - <<'PYEOF'
+          import pathlib
+          NOTE = (
+              "### 💜 Thanks to our community\n\n"
+              "This release was shaped by the people who filed issues, opened PRs, and "
+              "talked through feature requests with us on our Discord! Thank you for "
+              "building omnigent with us, keep the bug reports, ideas and contributions "
+              "coming :)"
+          )
+          path = pathlib.Path("/tmp/release_notes.md")
+          text = path.read_text(encoding="utf-8").rstrip("\n")
+          if "Thanks to our community" not in text:
+              idx = text.find("\nFull Changelog:")
+              if idx != -1:
+                  head, tail = text[:idx].rstrip("\n"), text[idx:].lstrip("\n")
+                  text = f"{head}\n\n{NOTE}\n\n{tail}"
+              else:
+                  text = f"{text}\n\n{NOTE}"
+              path.write_text(text + "\n", encoding="utf-8")
+          PYEOF
           # github-release.yml seeds only a short placeholder body (no
           # auto-generated notes), so replace it wholesale with the curated notes.
           # Edit by release ID: a draft release can't be addressed by tag (the
           # get/edit-by-tag REST endpoint 404s until the release is published).
           gh api --method PATCH "repos/${SOURCE_REPO}/releases/${RELEASE_ID}" \
             --field body=@/tmp/release_notes.md > /dev/null
-          echo "Enriched the ${TAG} release draft with curated notes." \
+          echo "Enriched the ${TAG} release draft with curated notes + community note." \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
       # ::add-mask:: redacts rendered logs, not artifact files — scrub the key
@@ -430,7 +399,7 @@ jobs:
           python3 - <<'PYEOF'
           import os, pathlib
           key = os.environ.get("LLM_API_KEY", "")
-          for f in ["draft-stderr.log", "/tmp/draft_out.txt", "/tmp/draft_prompt.txt",
+          for f in ["/tmp/draft-stderr.log", "/tmp/draft_out.txt", "/tmp/draft_prompt.txt",
                     "/tmp/release_notes.md"]:
               p = pathlib.Path(f)
               if not p.is_file() or not key:
@@ -447,7 +416,7 @@ jobs:
         with:
           name: draft-release-notes-${{ steps.guard.outputs.tag }}-${{ github.run_id }}
           path: |
-            draft-stderr.log
+            /tmp/draft-stderr.log
             /tmp/draft_out.txt
             /tmp/release_notes.md
             /tmp/mechanical_notes.md
