@@ -29,6 +29,12 @@ PROVIDER_CONFIGS: dict[str, str | None] = {
     "openrouter": "https://openrouter.ai/api/v1",
     "ollama": "http://localhost:11434/v1",
     "moonshot": "https://api.moonshot.cn/v1",
+    # agent-meow BYOK providers for ColorFire deployment (OpenAI-compatible).
+    # Z.ai (GLM/Zhipu) — confirmed via docs.z.ai/api-reference.
+    "zai": "https://api.z.ai/api/paas/v4",
+    # Qwen via Aliyun Bailian (百炼) — confirmed via help.aliyun.com compatible-mode.
+    # Also serves DeepSeek, Kimi, GLM, MiniMax via the same endpoint (model field selects).
+    "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
 }
 
 _DEFAULT_PROVIDER = "openai"

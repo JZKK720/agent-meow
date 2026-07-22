@@ -57,6 +57,9 @@ def _create_adapter(provider: str, **kwargs: Any) -> BaseAdapter:
         "openrouter": "https://openrouter.ai/api/v1",
         "ollama": "http://localhost:11434/v1",
         "moonshot": "https://api.moonshot.cn/v1",
+        # agent-meow BYOK providers for ColorFire (OpenAI-compatible).
+        "zai": "https://api.z.ai/api/paas/v4",
+        "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     }
 
     if provider in openai_compat_providers:
