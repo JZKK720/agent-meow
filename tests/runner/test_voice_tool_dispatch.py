@@ -2,8 +2,8 @@
 
 Covers the three TTS/STT paths:
 - transcribe_audio → shells out to handy --transcribe-file --json
-- text_to_speech / speak → routes to Voicebox REST (VOICEBOX_URL) or
-  VibeVoice vLLM (VIBEVOICE_TTS_URL)
+- text_to_speech / speak → routes to Voicebox REST (VOICEBOX_URL, required).
+  VibeVoice vLLM (VIBEVOICE_TTS_URL) is a legacy fallback only.
 - transcribe_audio_high_quality → routes to VibeVoice-ASR (VIBEVOICE_ASR_URL)
 """
 
@@ -218,35 +218,12 @@ async def test_tts_voicebox_error_response() -> None:
 
 
 # ---------------------------------------------------------------------------
-# text_to_speech / speak — VibeVoice fallback path
+# text_to_speech / speak — VibeVoice legacy path (now unreachable)
 # ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_tts_vibevoice_fallback() -> None:
-    """text_to_speech falls back to VibeVoice vLLM when VOICEBOX_URL is unset."""
-    from agent_meow.runner.tool_dispatch import _execute_voice_tool
-
-    mock_resp = _mock_httpx_response(
-        content=b"fake_audio_bytes",
-    )
-    mock_client = _MockAsyncClient(post_response=mock_resp)
-
-    env = {k: v for k, v in os.environ.items() if k != "VOICEBOX_URL"}
-    env["VIBEVOICE_TTS_URL"] = "http://127.0.0.1:8000/v1"
-    with patch.dict(os.environ, env, clear=True):
-        result = await _execute_voice_tool(
-            "text_to_speech",
-            {"text": "Hello from VibeVoice"},
-            conversation_id=None,
-            server_client=mock_client,
-            runner_workspace=None,
-        )
-
-    parsed = json.loads(result)
-    assert parsed["source"] == "vibevoice"
-    assert parsed["audio_url"].startswith("data:audio/wav;base64,")
-    assert parsed["text"] == "Hello from VibeVoice"
+# Voicebox is the required TTS endpoint. When VOICEBOX_URL is not set,
+# the tool returns an error regardless of whether VIBEVOICE_TTS_URL is set.
+# The VibeVoice code path remains in tool_dispatch.py for reference but is
+# effectively dead code — new deployments must use Voicebox.
 
 
 # ---------------------------------------------------------------------------
@@ -255,8 +232,11 @@ async def test_tts_vibevoice_fallback() -> None:
 
 
 @pytest.mark.asyncio
-async def test_tts_no_endpoint_configured() -> None:
-    """text_to_speech returns a helpful error when no TTS endpoint is set."""
+async def test_tts_no_voicebox_url_returns_error() -> None:
+    """text_to_speech returns a helpful error when VOICEBOX_URL is not set.
+
+    Voicebox is the required TTS endpoint for agent-meow voice integration.
+    """
     from agent_meow.runner.tool_dispatch import _execute_voice_tool
 
     env = {
@@ -276,7 +256,39 @@ async def test_tts_no_endpoint_configured() -> None:
     parsed = json.loads(result)
     assert "error" in parsed
     assert "VOICEBOX_URL" in parsed["error"]
-    assert "VIBEVOICE_TTS_URL" in parsed["error"]
+    assert "required" in parsed["error"]
+
+
+@pytest.mark.asyncio
+async def test_tts_vibevoice_only_still_errors_without_voicebox() -> None:
+    """When only VIBEVOICE_TTS_URL is set (no VOICEBOX_URL), still error.
+
+    Voicebox is required. Having only the legacy VibeVoice fallback is not
+    enough — the error should guide the user to install Voicebox.
+    """
+    from agent_meow.runner.tool_dispatch import _execute_voice_tool
+
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in ("VOICEBOX_URL", "VIBEVOICE_TTS_URL")
+    }
+    env["VIBEVOICE_TTS_URL"] = "http://127.0.0.1:8000/v1"
+    with patch.dict(os.environ, env, clear=True):
+        result = await _execute_voice_tool(
+            "text_to_speech",
+            {"text": "Hello"},
+            conversation_id=None,
+            server_client=None,
+            runner_workspace=None,
+        )
+
+    parsed = json.loads(result)
+    assert "error" in parsed
+    assert "VOICEBOX_URL" in parsed["error"]
+    assert "required" in parsed["error"]
+    # Should mention that VIBEVOICE_TTS_URL is not recommended
+    assert "not recommended" in parsed["error"]
 
 
 @pytest.mark.asyncio
