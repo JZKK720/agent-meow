@@ -188,6 +188,38 @@ describe("ToolCard rendering", () => {
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText("/etc/hosts")).toBeInTheDocument();
   });
+
+  it("renders an AudioBlock when the output contains an audio_url", () => {
+    // WHY: TTS tools (text_to_speech / speak) return JSON with an
+    // audio_url field — the ToolCard must detect this and render an
+    // inline audio player above the raw JSON output.
+    const ttsOutput = JSON.stringify({
+      audio_url: "https://voicebox.local/gen/abc123.wav",
+      text: "你好世界",
+      source: "voicebox",
+    });
+    const { container } = renderCard({
+      name: "text_to_speech",
+      arguments: { text: "你好世界" },
+      output: ttsOutput,
+      state: "output-available",
+    });
+    fireEvent.click(container.querySelector<HTMLElement>('[data-slot="collapsible-trigger"]')!);
+    expect(screen.getByTestId("audio-block")).toBeInTheDocument();
+  });
+
+  it("does not render an AudioBlock for non-audio tool output", () => {
+    // WHY: regular tools return plain text or JSON without audio_url —
+    // no audio player should appear.
+    const { container } = renderCard({
+      name: "shell",
+      arguments: { command: "echo hello" },
+      output: "hello",
+      state: "output-available",
+    });
+    fireEvent.click(container.querySelector<HTMLElement>('[data-slot="collapsible-trigger"]')!);
+    expect(screen.queryByTestId("audio-block")).toBeNull();
+  });
 });
 
 describe("ToolGroupSummary", () => {
