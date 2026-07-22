@@ -1,3 +1,20 @@
+spec_version: "1.0"
+name: ollama-agent
+description: Local Ollama-powered coding agent
+
+executor:
+  type: omnigent
+  harness: openai-agents
+  model: ollama/qwen3.5:2b-q8_0
+  connection:
+    base_url: http://localhost:11434/v1
+    api_key: ollama
+
 llm:
-  model: databricks-claude-haiku-4-5
-  profile: oss
+  model: ollama/qwen3.5:2b-q8_0
+  connection:
+    base_url: http://localhost:11434/v1
+    api_key: ollama
+
+instructions: |
+  You are a helpful assistant. Keep responses short.

@@ -831,10 +831,17 @@ def create_hosts_router(
             504 (timeout), 502 (host I/O).
         """
         # FastAPI's :path converter strips the leading slash from
-        # the URL match. Re-add it unless the path is tilde-prefixed
-        # (~/foo stays tilde-prefixed; /Users/x becomes Users/x → /Users/x).
+        # the URL match. Re-add it for Unix absolute paths, but NOT
+        # for Windows drive-letter paths (e.g. "C:/Users/...") —
+        # prepending "/" would produce "/C:/Users/..." which
+        # os.scandir rejects on Windows. Tilde-prefixed paths are
+        # left as-is (~/foo stays ~/foo).
         if not path.startswith("~"):
-            path = "/" + path
+            # Windows drive-letter path: e.g. "C:/Users/foo" — leave as-is.
+            if len(path) >= 2 and path[1] == ":" and path[0].isalpha():
+                pass
+            else:
+                path = "/" + path
         return await _list_host_filesystem(
             request=request,
             host_id=host_id,

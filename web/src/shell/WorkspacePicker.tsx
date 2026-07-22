@@ -48,11 +48,15 @@ export function joinPath(dir: string, name: string): string {
  * @returns Parent path, or ``null`` if there is no further parent.
  */
 export function parentOf(absolutePath: string): string | null {
-  if (absolutePath === "" || absolutePath === "/") {
+  if (absolutePath === "" || absolutePath === "/" || absolutePath === "\\") {
     return null;
   }
-  const stripped = absolutePath.endsWith("/") ? absolutePath.slice(0, -1) : absolutePath;
-  const idx = stripped.lastIndexOf("/");
+  const stripped = absolutePath.endsWith("/") || absolutePath.endsWith("\\")
+    ? absolutePath.slice(0, -1) : absolutePath;
+  // Handle both forward (Unix) and backslash (Windows) separators.
+  const idxFwd = stripped.lastIndexOf("/");
+  const idxBwd = stripped.lastIndexOf("\\");
+  const idx = Math.max(idxFwd, idxBwd);
   if (idx <= 0) {
     return "/";
   }
@@ -145,7 +149,8 @@ export function basename(absolutePath: string): string {
  */
 export function isNavigablePath(path: string): boolean {
   const trimmed = path.trim();
-  return trimmed.startsWith("/") || trimmed === "~" || trimmed.startsWith("~/");
+  return trimmed.startsWith("/") || trimmed === "~" || trimmed.startsWith("~/")
+    || (trimmed.length >= 3 && trimmed[1] === ":" && (trimmed[2] === "/" || trimmed[2] === "\\"));
 }
 
 /**
@@ -171,7 +176,10 @@ export function listingFilter(
 ): string | null {
   const trimmed = pathInput.trim();
   if (trimmed === "") return null;
-  const slash = trimmed.lastIndexOf("/");
+  // Handle both forward (Unix) and backslash (Windows) separators.
+  const slashFwd = trimmed.lastIndexOf("/");
+  const slashBwd = trimmed.lastIndexOf("\\");
+  const slash = Math.max(slashFwd, slashBwd);
   if (slash === -1) {
     // Bare fragment, no directory part → filter the current dir by it.
     return trimmed;
@@ -328,13 +336,18 @@ export function WorkspacePicker({
   // as-is; "" (home) or a "~"-relative path uses the absolute the host
   // resolved it to, falling back to the raw path until the listing
   // arrives (so the breadcrumb stays put rather than flashing empty).
-  const currentAbsolute = path.startsWith("/") ? path : (listedAbsolute ?? path);
+  // On Windows, absolute paths start with a drive letter (e.g. "C:\...").
+  const isAbsolute = path.startsWith("/") || path.startsWith("~")
+    || (path.length >= 3 && path[1] === ":" && (path[2] === "/" || path[2] === "\\"));
+  const currentAbsolute = isAbsolute ? path : (listedAbsolute ?? path);
 
   // Other live agents working in the directory currently shown. Only a
   // resolved absolute path can match a stored workspace; the home view ("")
   // and unresolved paths report no conflict.
+  const absForOccupancy = currentAbsolute.startsWith("/")
+    || (currentAbsolute.length >= 3 && currentAbsolute[1] === ":");
   const occupiedCount =
-    occupancyForPath && currentAbsolute.startsWith("/") ? occupancyForPath(currentAbsolute) : 0;
+    occupancyForPath && absForOccupancy ? occupancyForPath(currentAbsolute) : 0;
 
   // Mirror navigation into the path input so it reflects where the
   // listing came from (the user can still overwrite it). Skip while
@@ -351,7 +364,9 @@ export function WorkspacePicker({
   const onNavigateRef = useRef(onNavigate);
   onNavigateRef.current = onNavigate;
   useEffect(() => {
-    if (currentAbsolute.startsWith("/")) {
+    // Unix paths start with "/", Windows drive-letter paths start with "C:/".
+    // Skip empty string (home dir not yet resolved) but don't block Windows.
+    if (currentAbsolute !== "") {
       onNavigateRef.current?.(currentAbsolute);
     }
   }, [currentAbsolute]);

@@ -385,7 +385,9 @@ export function ConnectHostInstructions({
  * @returns true when ``workspace.trim()`` starts with ``/``.
  */
 export function isValidWorkspace(workspace: string): boolean {
-  return workspace.trim().startsWith("/");
+  const trimmed = workspace.trim();
+  return trimmed.startsWith("/")
+    || (trimmed.length >= 3 && trimmed[1] === ":" && (trimmed[2] === "/" || trimmed[2] === "\\"));
 }
 
 /**

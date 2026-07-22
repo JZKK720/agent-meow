@@ -55,8 +55,10 @@ export function buildHostFilesystemUrl(hostId: string, absolutePath: string): st
   if (absolutePath === "") {
     return base;
   }
+  // Normalize backslashes to forward slashes (Windows → Unix-style for URL).
+  const normalized = absolutePath.replace(/\\/g, "/");
   // Strip the single leading slash; the route handler re-adds it.
-  const stripped = absolutePath.startsWith("/") ? absolutePath.slice(1) : absolutePath;
+  const stripped = normalized.startsWith("/") ? normalized.slice(1) : normalized;
   if (stripped === "") {
     // The user navigated to "/" exactly. Keep a trailing slash so
     // the route still matches /filesystem/{path:path}.

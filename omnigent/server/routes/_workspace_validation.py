@@ -214,7 +214,14 @@ async def validate_workspace(
         The exception message is suitable for surfacing to the
         API caller verbatim.
     """
-    if not workspace.startswith("/"):
+    # Accept Unix absolute paths ("/...") and Windows drive-letter paths
+    # ("C:\..." or "C:/..."). The host's os.scandir handles both.
+    is_windows_abs = (
+        len(workspace) >= 3
+        and workspace[1] == ":"
+        and (workspace[2] == "/" or workspace[2] == "\\")
+    )
+    if not workspace.startswith("/") and not is_windows_abs:
         # Belt-and-suspenders. The Pydantic schema layer also
         # rejects this; pin it here so direct callers (tests,
         # other server-internal paths) can't bypass.
