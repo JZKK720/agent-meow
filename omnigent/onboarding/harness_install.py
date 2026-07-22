@@ -94,6 +94,13 @@ HERMES_KEY = "hermes"
 
 _HERMES_INSTALL_HINT = "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash"
 
+# IronClaw is a Rust-based Agent OS from nearai/ironclaw, installed via a curl
+# installer and authenticated through its own ``ironclaw config`` flow (no
+# Omnigent-managed credentials). The ``ironclaw`` binary must be on PATH.
+IRONCLAW_KEY = "ironclaw"
+
+_IRONCLAW_INSTALL_HINT = "curl -fsSL https://ironclaw.com/install | bash"
+
 
 # Keyed by harness family (Claude=anthropic, Codex=openai) plus the pi
 # fallback. Binaries/packages mirror ucode's ``TOOL_SPECS`` so the two tools
@@ -202,6 +209,13 @@ _HARNESS_INSTALL: dict[str, HarnessInstallSpec] = {
         install_hint=_HERMES_INSTALL_HINT,
         install_command=("bash", "-c", _HERMES_INSTALL_HINT),
     ),
+    IRONCLAW_KEY: HarnessInstallSpec(
+        "IronClaw",
+        "ironclaw",
+        package=None,
+        install_hint=_IRONCLAW_INSTALL_HINT,
+        install_command=("bash", "-c", _IRONCLAW_INSTALL_HINT),
+    ),
 }
 
 
@@ -266,6 +280,11 @@ _HARNESS_NAME_TO_KEY: dict[str, str] = {
     # gates on the same binary.
     "hermes-native": HERMES_KEY,
     "native-hermes": HERMES_KEY,
+    # Native IronClaw TUI (``ironclaw-native``, via ``omni ironclaw``) wraps the
+    # ``ironclaw`` CLI; ``native-ironclaw`` reversed spelling gates on the same
+    # binary.
+    "ironclaw-native": IRONCLAW_KEY,
+    "native-ironclaw": IRONCLAW_KEY,
 }
 
 

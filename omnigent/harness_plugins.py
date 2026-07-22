@@ -359,6 +359,17 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         interrupt=True,
         streaming=True,
     ),
+    "ironclaw-native": _C(
+        _IM.NATIVE_TUI,
+        _EL.APPROVAL_MIRROR,
+        _RS.WARM_REATTACH,
+        _EF.NONE,
+        _MF.MULTI,
+        _AU.OWN_AUTH,
+        subagents=False,
+        interrupt=True,
+        streaming=True,
+    ),
     # SDK / subprocess harnesses (run the vendor model directly). The first four
     # are bench-verified interrupt=streaming=True.
     "claude-sdk": _C(
@@ -533,6 +544,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
             "goose-native",
             "hermes",
             "hermes-native",
+            "ironclaw-native",
             "kimi",
             "kimi-native",
             "kiro-native",
@@ -560,6 +572,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
         "goose-native": "omnigent.inner.goose_native_harness",
         "hermes": "omnigent.inner.hermes_harness",
         "hermes-native": "omnigent.inner.hermes_native_harness",
+        "ironclaw-native": "omnigent.inner.ironclaw_native_harness",
         "kimi": "omnigent.inner.kimi_harness",
         "kimi-native": "omnigent.inner.kimi_native_harness",
         "kiro-native": "omnigent.inner.kiro_native_harness",
@@ -579,6 +592,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
         "native-antigravity": "antigravity-native",
         "native-goose": "goose-native",
         "native-hermes": "hermes-native",
+        "native-ironclaw": "ironclaw-native",
         "native-kimi": "kimi-native",
         "native-kiro": "kiro-native",
         "native-opencode": "opencode-native",
