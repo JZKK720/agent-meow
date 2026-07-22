@@ -285,6 +285,40 @@ _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
     "browser_click": None,
     "browser_type": None,
     "browser_screenshot": None,
+    # agent-meow Docs/Images/Video/Voice surface tools — runner-dispatched, schema-only.
+    # Reserved here so user specs cannot shadow them; the runner's tool
+    # dispatch intercepts the calls by name.
+    "doc_create": None,
+    "doc_get": None,
+    "doc_list": None,
+    "doc_update": None,
+    "doc_generate": None,
+    # Office document create/edit/export (officecli) + convert (markitdown).
+    "doc_create_office": None,
+    "doc_edit_office": None,
+    "doc_export": None,
+    "doc_convert": None,
+    "image_list": None,
+    "image_get": None,
+    "image_upload": None,
+    "image_edit": None,
+    "image_generate": None,
+    # AI image editing — background removal (rembg) + inpaint/outpaint/upscale
+    # (A1111 HTTP or ComfyUI MCP). Runner-dispatched, schema-only.
+    "image_remove_bg": None,
+    "image_edit_ai": None,
+    # Video generation tools — runner-dispatched, schema-only.
+    "video_list": None,
+    "video_get": None,
+    "video_generate": None,
+    # agent-meow voice surface tools — runner-dispatched, schema-only.
+    # transcribe_audio shells out to Handy CLI; text_to_speech / speak
+    # call a VibeVoice TTS gateway; transcribe_audio_high_quality calls
+    # a VibeVoice-ASR gateway.
+    "transcribe_audio": None,
+    "transcribe_audio_high_quality": None,
+    "text_to_speech": None,
+    "speak": None,
 }
 
 # Hindsight long-term memory (optional ``hindsight`` extra). Registered only
