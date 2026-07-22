@@ -1,13 +1,13 @@
 """Speech-to-text transcription tools (``transcribe_audio``).
 
-These tools are **runner-dispatched**: the runner shells out to a local
-transcription CLI (Handy by default) to transcribe audio files. They ship
-as schema-only :class:`~?omnigent.tools.base.Tool` subclasses.
+These tools are **runner-dispatched**: the runner shells out to Handy CLI
+(offline STT) or calls a VibeVoice-ASR vLLM endpoint (high-quality). They
+ship as schema-only :class:`~?omnigent.tools.base.Tool` subclasses.
 
 - ``transcribe_audio`` â†’ calls ``handy --transcribe-file <path> --json``
-  (or a configurable alternative CLI) and returns the transcription text.
+  (offline, cross-platform, Whisper/Parakeet) and returns the transcription text.
 - ``transcribe_audio_high_quality`` â†’ calls a VibeVoice-ASR vLLM endpoint
-  for long-form transcription with diarization + timestamps.
+  (``VIBEVOICE_ASR_URL``) for diarized long-form transcription with timestamps.
 
 The runner's tool dispatch intercepts these calls by name and executes
 them locally (see ``omnigent/runner/tool_dispatch.py``).

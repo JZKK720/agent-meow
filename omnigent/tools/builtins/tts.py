@@ -1,10 +1,13 @@
 """Text-to-speech tools (``text_to_speech`` / ``speak``).
 
 These tools are **runner-dispatched**: the runner calls a TTS gateway
-(VibeVoice via vLLM by default) to synthesize speech from text. They
-ship as schema-only :class:`~?omnigent.tools.base.Tool` subclasses.
+to synthesize speech from text. When ``VOICEBOX_URL`` is set, the runner
+dispatches to Voicebox REST POST /speak (voice cloning, 7 TTS engines,
+per-profile personalities). When only ``VIBEVOICE_TTS_URL`` is set, the
+runner falls back to VibeVoice-TTS via vLLM. They ship as schema-only
+:class:`~?omnigent.tools.base.Tool` subclasses.
 
-- ``text_to_speech`` â†’ calls a VibeVoice TTS vLLM endpoint to generate
+- ``text_to_speech`` â†’ calls the configured TTS gateway to generate
     audio from text. In v1 it returns an inline audio data URL the UI can play.
 - ``speak`` â†’ alias for ``text_to_speech`` with a shorter name for
     conversational agents.
@@ -21,12 +24,13 @@ from omnigent.tools.base import Tool
 
 
 class TextToSpeechTool(Tool):
-    """Synthesize speech from text using a TTS gateway (VibeVoice by default).
+    """Synthesize speech from text using Voicebox (preferred) or VibeVoice (fallback).
 
-    Runner-dispatched: the runner calls a VibeVoice TTS vLLM endpoint
-    (configured via ``VIBEVOICE_TTS_URL`` env var) to generate audio
-    from the provided text. In v1 the generated audio is returned as
-    an inline data URL the UI can play directly.
+    Runner-dispatched: when ``VOICEBOX_URL`` is set, the runner calls
+    Voicebox REST POST /speak (voice cloning, 7 TTS engines, per-profile
+    personalities). When only ``VIBEVOICE_TTS_URL`` is set, the runner
+    falls back to VibeVoice-TTS via vLLM. In v1 the generated audio is
+    returned as an inline data URL the UI can play directly.
 
     Requires ``text`` to synthesize. Optionally accepts a ``voice`` /
     ``speaker`` id and ``language`` code.
@@ -39,10 +43,11 @@ class TextToSpeechTool(Tool):
     @classmethod
     def description(cls) -> str:
         return (
-            "Synthesize speech from text using a text-to-speech engine "
-            "(VibeVoice by default). Returns an inline audio URL that "
-            "can be played in the UI. Requires text to synthesize. "
-            "Optionally specify a voice/speaker id and language."
+            "Synthesize speech from text using Voicebox (preferred, when "
+            "VOICEBOX_URL is set) or VibeVoice vLLM (fallback). Returns "
+            "an inline audio URL that can be played in the UI. Requires "
+            "text to synthesize. Optionally specify a voice/speaker id "
+            "and language."
         )
 
     def get_schema(self) -> dict[str, Any]:
