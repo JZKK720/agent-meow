@@ -196,6 +196,10 @@ class ToolManager:
         # can drive the desktop app's browser without the spec opting in
         # (framework-owned).
         self._register_browser_tools()
+        # Surface tools (docs, images, videos, voice) are always
+        # auto-registered so any agent can use the resource surface
+        # without the spec opting in (framework-owned).
+        self._register_surface_tools()
 
     def _register_policy_tools(self) -> None:
         """
@@ -585,6 +589,81 @@ class ToolManager:
             BrowserClickTool,
             BrowserTypeTool,
             BrowserScreenshotTool,
+        ):
+            self._tools[_cls.name()] = _cls()
+
+    def _register_surface_tools(self) -> None:
+        """
+        Auto-register the surface tools (``doc_*`` / ``image_*`` /
+        ``video_*`` / ``transcribe_audio`` / ``text_to_speech`` /
+        ``speak``).
+
+        Framework-owned and always available so any agent can use the
+        resource surface without the spec opting in. The classes here
+        are schema-only (``name`` / ``description`` / ``get_schema``);
+        execution lives in the runner's dispatch branches
+        (``omnigent/runner/tool_dispatch.py``), which proxy to the
+        server's REST endpoints.
+        """
+        from omnigent.tools.builtins.docs import (
+            DocConvertTool,
+            DocCreateOfficeTool,
+            DocCreateTool,
+            DocEditOfficeTool,
+            DocExportTool,
+            DocGenerateTool,
+            DocGetTool,
+            DocListTool,
+            DocUpdateTool,
+        )
+        from omnigent.tools.builtins.images import (
+            ImageEditAiTool,
+            ImageEditTool,
+            ImageGenerateTool,
+            ImageGetTool,
+            ImageListTool,
+            ImageRemoveBgTool,
+            ImageUploadTool,
+        )
+        from omnigent.tools.builtins.transcribe import (
+            TranscribeAudioHighQualityTool,
+            TranscribeAudioTool,
+        )
+        from omnigent.tools.builtins.tts import SpeakTool, TextToSpeechTool
+        from omnigent.tools.builtins.videos import (
+            VideoGenerateTool,
+            VideoGetTool,
+            VideoListTool,
+        )
+
+        for _cls in (
+            # Doc tools
+            DocCreateTool,
+            DocGetTool,
+            DocListTool,
+            DocUpdateTool,
+            DocGenerateTool,
+            DocCreateOfficeTool,
+            DocEditOfficeTool,
+            DocExportTool,
+            DocConvertTool,
+            # Image tools
+            ImageListTool,
+            ImageGetTool,
+            ImageUploadTool,
+            ImageEditTool,
+            ImageGenerateTool,
+            ImageRemoveBgTool,
+            ImageEditAiTool,
+            # Video tools
+            VideoListTool,
+            VideoGetTool,
+            VideoGenerateTool,
+            # Voice tools
+            TranscribeAudioTool,
+            TranscribeAudioHighQualityTool,
+            TextToSpeechTool,
+            SpeakTool,
         ):
             self._tools[_cls.name()] = _cls()
 
