@@ -1,15 +1,15 @@
 """
-Tests for :mod:`~?agent_meow.inner._seccomp`.
+Tests for :mod:`~?omnigent.inner._seccomp`.
 
 The module owns two responsibilities and these tests cover both:
 
-1. The libseccomp ctypes plumbing — that
+1. The libseccomp ctypes plumbing â€” that
    :func:`apply_seccomp_filter` actually loads a BPF program into the
    kernel and that argument-filtered rules (``SCMP_CMP_EQ``,
    ``SCMP_CMP_MASKED_EQ``) behave as expected against real syscalls.
 
 2. The shared syscall denylist
-   :data:`BASELINE_DENYLIST_SYSCALLS` — that the list stays aligned
+   :data:`BASELINE_DENYLIST_SYSCALLS` â€” that the list stays aligned
    with the upstream Kubernetes / containerd ``RuntimeDefault``
    profile we derive it from, and that
    :func:`apply_baseline_denylist` actually engages the kernel.
@@ -27,7 +27,7 @@ import sys
 
 import pytest
 
-from agent_meow.inner._seccomp import (
+from omnigent.inner._seccomp import (
     BASELINE_DENYLIST_SYSCALLS,
     _compat_arches_for_native,
 )
@@ -48,7 +48,7 @@ from agent_meow.inner._seccomp import (
 #
 # Test failure here means a maintainer dropped one of these entries
 # from :data:`BASELINE_DENYLIST_SYSCALLS`. Don't loosen this list to
-# pass the test — re-read the upstream source first and only relax
+# pass the test â€” re-read the upstream source first and only relax
 # after a real audit.
 _KUBERNETES_DEFAULT_HIGH_RISK = frozenset(
     {
@@ -218,7 +218,7 @@ def _run_in_child(probe: str) -> int:
 
     Forking-then-exec'ing isolates the seccomp filter to the child so
     the parent (pytest) keeps its full syscall surface. Communicating
-    via exit code keeps the harness minimal — probes return 0 on
+    via exit code keeps the harness minimal â€” probes return 0 on
     success and non-zero with a recognizable code on failure.
 
     :param probe: Python source to run in the child.
@@ -253,7 +253,7 @@ def test_apply_baseline_denylist_blocks_ptrace_in_child() -> None:
     """
     probe = (
         "import ctypes, errno, sys\n"
-        "from agent_meow.inner._seccomp import apply_baseline_denylist\n"
+        "from omnigent.inner._seccomp import apply_baseline_denylist\n"
         "libc = ctypes.CDLL(None, use_errno=True)\n"
         # PR_SET_NO_NEW_PRIVS is required before seccomp_load for
         # unprivileged processes.
@@ -279,7 +279,7 @@ def test_apply_baseline_denylist_blocks_ptrace_in_child() -> None:
 def test_apply_baseline_denylist_does_not_break_subprocess_basics() -> None:
     """
     A child that loads the baseline can still ``read``, ``write``,
-    ``open``, ``execve`` — i.e. the baseline is genuinely a narrow
+    ``open``, ``execve`` â€” i.e. the baseline is genuinely a narrow
     denylist of administrative syscalls, not an over-zealous filter
     that breaks everyday I/O.
 
@@ -289,7 +289,7 @@ def test_apply_baseline_denylist_does_not_break_subprocess_basics() -> None:
     """
     probe = (
         "import ctypes, os, sys, tempfile\n"
-        "from agent_meow.inner._seccomp import apply_baseline_denylist\n"
+        "from omnigent.inner._seccomp import apply_baseline_denylist\n"
         "ctypes.CDLL(None, use_errno=True).prctl(38, 1, 0, 0, 0)\n"
         "apply_baseline_denylist()\n"
         "fd, path = tempfile.mkstemp()\n"
@@ -321,7 +321,7 @@ def test_arg_filter_blocks_socket_family_only() -> None:
 
     Exercises :func:`apply_seccomp_filter`'s argument-filter path
     end-to-end against the kernel. The library itself doesn't ship
-    any backend-specific socket policy — this test pins the rule
+    any backend-specific socket policy â€” this test pins the rule
     *mechanics*; backend-specific allow/deny lists live in the
     backend modules and are tested there.
     """
@@ -329,7 +329,7 @@ def test_arg_filter_blocks_socket_family_only() -> None:
 
     probe = (
         "import errno, json, socket, sys\n"
-        "from agent_meow.inner._seccomp import (\n"
+        "from omnigent.inner._seccomp import (\n"
         "    SCMP_CMP_EQ, SeccompArgFilter, SeccompRule,\n"
         "    apply_seccomp_filter, scmp_act_errno,\n"
         ")\n"
@@ -373,7 +373,7 @@ def test_masked_eq_filter_blocks_clone_with_namespace_bit() -> None:
     """
     probe = (
         "import ctypes, errno, os, sys\n"
-        "from agent_meow.inner._seccomp import (\n"
+        "from omnigent.inner._seccomp import (\n"
         "    SCMP_CMP_MASKED_EQ, SeccompArgFilter, SeccompRule,\n"
         "    apply_seccomp_filter, scmp_act_errno,\n"
         ")\n"
@@ -405,7 +405,7 @@ def test_masked_eq_filter_blocks_clone_with_namespace_bit() -> None:
 def test_unknown_syscall_silently_skipped() -> None:
     """
     A rule referencing a syscall name libseccomp can't resolve on
-    this kernel must be silently dropped — that's how the helper
+    this kernel must be silently dropped â€” that's how the helper
     accepts forward-compatible declarations like ``clone3`` on
     pre-5.3 kernels without erroring at filter-load time.
 
@@ -415,7 +415,7 @@ def test_unknown_syscall_silently_skipped() -> None:
     """
     probe = (
         "import ctypes, errno, sys\n"
-        "from agent_meow.inner._seccomp import (\n"
+        "from omnigent.inner._seccomp import (\n"
         "    SeccompRule, apply_seccomp_filter, scmp_act_errno,\n"
         ")\n"
         "libc = ctypes.CDLL(None, use_errno=True)\n"
@@ -452,7 +452,7 @@ def test_unknown_syscall_silently_skipped() -> None:
         ("aarch64", (b"arm",)),
         ("arm64", (b"arm",)),
         # Native i386 / native armv7 / etc. have no narrower compat
-        # ABI worth registering — the native init alone covers the
+        # ABI worth registering â€” the native init alone covers the
         # surface, so we return empty rather than asking libseccomp
         # to register an arch that doesn't exist.
         ("i686", ()),
@@ -502,13 +502,13 @@ def test_seccomp_filter_applies_to_i386_compat_abi_on_x86_64() -> None:
     Failure modes encoded in the child exit code:
 
     - 0: filter applied to i386 ABI (``-EPERM`` returned).
-    - 2: bypass present — i386 ``getpid`` returned the real PID.
+    - 2: bypass present â€” i386 ``getpid`` returned the real PID.
     - 3: kernel/system can't reach the shellcode (no IA32_EMULATION,
-      W^X policy denied PROT_EXEC mmap, etc.) — skip rather than fail.
+      W^X policy denied PROT_EXEC mmap, etc.) â€” skip rather than fail.
     """
     probe = (
         "import ctypes, errno, mmap, sys\n"
-        "from agent_meow.inner._seccomp import (\n"
+        "from omnigent.inner._seccomp import (\n"
         "    SeccompRule, apply_seccomp_filter, scmp_act_errno,\n"
         ")\n"
         "ctypes.CDLL(None, use_errno=True).prctl(38, 1, 0, 0, 0)\n"
@@ -558,6 +558,6 @@ def test_seccomp_filter_applies_to_i386_compat_abi_on_x86_64() -> None:
         "syscall ran and returned the real PID; the seccomp filter "
         "was silently bypassed on the 32-bit ABI. This is the "
         "multi-arch footgun _compat_arches_for_native is meant to "
-        "close — verify seccomp_arch_add is being called for both "
+        "close â€” verify seccomp_arch_add is being called for both "
         "'x86' and 'x32'."
     )

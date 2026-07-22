@@ -3,13 +3,13 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agent-meow"
-# Keep in sync with agent_meow/version.py's VERSION constant.
-# The PyPI distribution name is "agent-meow" (was "omnigent" pre-rebrand).
-# SDK packages (agent-meow-client / agent-meow-ui-sdk) pin agent-meow==X.
+name = "omnigent"
+# Keep in sync with omnigent/version.py's VERSION constant.
+# The PyPI distribution name is "omnigent".
+# SDK packages (omnigent-client / omnigent-ui-sdk) pin omnigent==X.
 # The user-facing brand is "agent-meow" — see README.md and web/index.html.
 version = "0.5.0.dev0"
-description = "agent-meow: agent workspace surface for ColorFire and Meow series AIPC and Laptops, with Docs, Images, and Voice surfaces"
+description = "omnigent: agent workspace surface for ColorFire and Meow series AIPC and Laptops, with Docs, Images, and Voice surfaces"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
@@ -250,10 +250,8 @@ dev = [
 # the same entry point. `meow` and `agent-meow` are the Cubecloud
 # brand aliases for ColorFire and Meow series products — all four
 # resolve to the same entry point.
-omnigent = "agent_meow.cli:main"
-omni = "agent_meow.cli:main"
-meow = "agent_meow.cli:main"
-agent-meow = "agent_meow.cli:main"
+omnigent = "omnigent.cli:main"
+omni = "omnigent.cli:main"
 
 # uv path-deps for the sibling SDK packages (renamed in Stage 3).
 [tool.uv.sources]
@@ -265,20 +263,20 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-# Discovers the `agent_meow` package (including `agent_meow.inner.*` and
+# Discovers the `omnigent` package (including `omnigent.inner.*` and
 # all subpackages absorbed during unification). Also includes the thin
-# `omnigent` compat shim that redirects legacy `import omnigent` to
-# `import agent_meow`.
-include = ["agent_meow*", "omnigent"]
+# `agent_meow` compat shim that redirects legacy `import agent_meow` to
+# `import omnigent`.
+include = ["omnigent*"]
 
 [tool.setuptools.package-data]
-"agent_meow.db" = ["alembic.ini"]
-"agent_meow.db.migrations" = ["script.py.mako"]
-"agent_meow.resources.examples" = ["*.yaml", "*.sh", "debby/**/*", "polly/**/*"]
-"agent_meow.resources.pi_native" = ["*.js"]
+"omnigent.db" = ["alembic.ini"]
+"omnigent.db.migrations" = ["script.py.mako"]
+"omnigent.resources.examples" = ["*.yaml", "*.sh", "debby/**/*", "polly/**/*"]
+"omnigent.resources.pi_native" = ["*.js"]
 # include UI assets in build, plus the static API-only landing page served
 # at "/" when no web UI bundle is present
-"agent_meow.server" = ["static/web-ui/**/*", "static/api_only_landing.html"]
+"omnigent.server" = ["static/web-ui/**/*", "static/api_only_landing.html"]
 
 [tool.pytest.ini_options]
 # auto mode: async tests without @pytest.mark.asyncio() are auto-
@@ -339,7 +337,7 @@ playwright_visual_snapshot_failures_path = "tests/e2e_ui/visual/snapshot_failure
 
 [tool.coverage.run]
 # Measure the shipped package only; tests live under tests/.
-source = ["agent_meow"]
+source = ["omnigent"]
 # Each CI shard sets COVERAGE_FILE=artifacts/.coverage.<group> and writes
 # one data file (pytest-cov already combines the xdist workers within a
 # shard). `relative_files` stores paths relative to the repo root so the
@@ -369,7 +367,7 @@ target-version = "py310"
 #  - ``assistant-ui/``: assistant-ui.com React/Python suite imported as a
 #    vendored snapshot; tracked upstream, no in-tree edits.
 extend-exclude = [
-    "agent_meow/inner/databricks_mcps/google",
+    "omnigent/inner/databricks_mcps/google",
     "assistant-ui",
 ]
 

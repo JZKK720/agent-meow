@@ -9,12 +9,12 @@ from typing import Any
 
 import pytest
 
-from agent_meow.entities.comment import Comment, CommentsFingerprint
-from agent_meow.stores.comment_store import CommentStore
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins.update_comment import UpdateCommentTool
+from omnigent.entities.comment import Comment, CommentsFingerprint
+from omnigent.stores.comment_store import CommentStore
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins.update_comment import UpdateCommentTool
 
-# ── In-memory store stub ──────────────────────────────────────────────────────
+# â”€â”€ In-memory store stub â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _InMemoryCommentStore(CommentStore):
@@ -185,7 +185,7 @@ class _InMemoryCommentStore(CommentStore):
             del self._comments[cid]
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _ctx(conversation_id: str | None = "conv-123") -> ToolContext:
@@ -214,7 +214,7 @@ def _invoke(
     return json.loads(tool.invoke(json.dumps(args), _ctx(conversation_id)))
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -232,7 +232,7 @@ def tool(store: _InMemoryCommentStore, monkeypatch: pytest.MonkeyPatch) -> Updat
     """
     :class:`UpdateCommentTool` wired to an in-memory comment store.
 
-    Patches ``agent_meow.runtime.get_comment_store`` so the tool uses
+    Patches ``omnigent.runtime.get_comment_store`` so the tool uses
     *store* without needing the real runtime initialised.
     The import is lazy (inside ``invoke``), so we patch the source module.
 
@@ -240,13 +240,13 @@ def tool(store: _InMemoryCommentStore, monkeypatch: pytest.MonkeyPatch) -> Updat
     :param monkeypatch: pytest monkeypatching fixture.
     :returns: Configured :class:`UpdateCommentTool` instance.
     """
-    import agent_meow.runtime as _runtime
+    import omnigent.runtime as _runtime
 
     monkeypatch.setattr(_runtime, "get_comment_store", lambda: store)
     return UpdateCommentTool()
 
 
-# ── Identity tests ─────────────────────────────────────────────────────────────
+# â”€â”€ Identity tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_name() -> None:
@@ -259,14 +259,14 @@ def test_description_non_empty() -> None:
     assert UpdateCommentTool.description()
 
 
-# ── Schema tests ───────────────────────────────────────────────────────────────
+# â”€â”€ Schema tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_schema_shape() -> None:
     """
     ``get_schema()`` must return a valid OpenAI function-calling schema.
 
-    ``comment_id`` and ``status`` are required — the LLM must supply both
+    ``comment_id`` and ``status`` are required â€” the LLM must supply both
     for the tool to do anything useful. If either is absent from
     ``"required"`` the LLM may omit it and the tool silently errors.
     """
@@ -282,7 +282,7 @@ def test_schema_shape() -> None:
     assert set(params["properties"]["status"]["enum"]) == {"draft", "addressed"}
 
 
-# ── Error-path tests ───────────────────────────────────────────────────────────
+# â”€â”€ Error-path tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_no_conversation_id(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -292,7 +292,7 @@ def test_no_conversation_id(monkeypatch: pytest.MonkeyPatch) -> None:
     Without a session id the tool cannot verify ownership; an error is
     returned rather than allowing a cross-session update.
     """
-    import agent_meow.runtime as _runtime
+    import omnigent.runtime as _runtime
 
     monkeypatch.setattr(_runtime, "get_comment_store", lambda: _InMemoryCommentStore())
     t = UpdateCommentTool()
@@ -311,7 +311,7 @@ def test_no_store_configured(monkeypatch: pytest.MonkeyPatch) -> None:
     the tool must surface a clear message rather than raising on
     ``None.get(...)``.
     """
-    import agent_meow.runtime as _runtime
+    import omnigent.runtime as _runtime
 
     monkeypatch.setattr(_runtime, "get_comment_store", lambda: None)
     t = UpdateCommentTool()
@@ -392,12 +392,12 @@ def test_cross_session_comment_rejected(
     # Comment belongs to a DIFFERENT session.
     other = store.add("conv-OTHER", "app.py", "Other session comment", 0, 5)
 
-    # Invoke from session "conv-123" — should be rejected.
+    # Invoke from session "conv-123" â€” should be rejected.
     result = _invoke(tool, {"comment_id": other.id, "status": "addressed"})
     assert "error" in result
     assert "not found" in result["error"], (
         f"Expected 'not found' error for cross-session comment, got: {result!r}. "
-        "If missing, session isolation is broken — any session can update any comment."
+        "If missing, session isolation is broken â€” any session can update any comment."
     )
     # The comment status must be unchanged after the rejected call.
     unchanged = store.get(other.id, "conv-OTHER")
@@ -405,7 +405,7 @@ def test_cross_session_comment_rejected(
     assert unchanged.status == "draft"
 
 
-# ── Happy-path tests ───────────────────────────────────────────────────────────
+# â”€â”€ Happy-path tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_updates_status_to_addressed(
@@ -431,7 +431,7 @@ def test_updates_status_to_addressed(
         f"Returned status is {returned['status']!r}; expected 'addressed'. "
         "If still 'draft', update_comment did not persist the change."
     )
-    # Store must also reflect the update — not just the return value.
+    # Store must also reflect the update â€” not just the return value.
     stored = store.get(c.id, "conv-123")
     assert stored is not None
     assert stored.status == "addressed", (

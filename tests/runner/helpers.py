@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from agent_meow.inner.os_env import OSEnvironment
-from agent_meow.inner.terminal import TerminalInstance
+from omnigent.inner.os_env import OSEnvironment
+from omnigent.inner.terminal import TerminalInstance
 
 
 class NullServerClient:

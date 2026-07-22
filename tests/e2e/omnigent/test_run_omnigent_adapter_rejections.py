@@ -2,19 +2,19 @@
 End-to-end: agent-meow example YAMLs that declare unsupported
 concepts MUST fail loud at spec-load time under agent-meow mode.
 
-The adapter in :mod:`~?agent_meow.spec.agent-meow` rejects several
+The adapter in :mod:`~?omnigent.spec.agent-meow` rejects several
 concepts it cannot faithfully translate into an agent-meow
 :class:`AgentSpec` (see
 :func:`_reject_unsupported_concepts_def`):
 
-- ``policies`` — label-based + function-type policies have no
+- ``policies`` â€” label-based + function-type policies have no
   agent-meow parity yet.
-- MCP-type tools — agent-meow' subprocess MCP transport has no
+- MCP-type tools â€” agent-meow' subprocess MCP transport has no
   agent-meow equivalent (agent-meow uses HTTP/SSE MCP only).
 
 Silent translation of these would give the user an agent that
 LOOKS configured (no error at boot) but lacks the policies /
-tools the YAML promised — a foot-gun. The right behavior is
+tools the YAML promised â€” a foot-gun. The right behavior is
 ``agent-meow run <yaml>`` exits non-zero with an error
 message naming the specific field.
 
@@ -28,7 +28,7 @@ least one rejection, and asserts:
 **What breaks if this test fails:**
 
 - :func:`_reject_unsupported_concepts_def` silently drops one
-  of these concepts — a YAML author declares a policy, gets an
+  of these concepts â€” a YAML author declares a policy, gets an
   unpoliced agent, security-relevant behavior is silently
   missing.
 - The CLI's error-propagation path swallows the adapter's
@@ -68,7 +68,7 @@ _TIMEOUT_SEC = 30
 #   tests; this e2e file is a no-op until a YAML lands that
 #   exercises the surviving rejection path.
 #
-# Empty parametrize → pytest collects zero test instances. The
+# Empty parametrize â†’ pytest collects zero test instances. The
 # scaffolding stays so a future case (when a new "still
 # unsupported" concept lands) can be added without re-deriving
 # the subprocess invocation pattern.
@@ -89,7 +89,7 @@ def test_run_omnigent_rejects_unsupported_yaml(
     rejection.
 
     The one-shot ``-p`` form is used so the subprocess exits
-    immediately after the rejection — no need to drive a REPL
+    immediately after the rejection â€” no need to drive a REPL
     to hit the adapter. We don't pass a real LLM prompt because
     the rejection fires before any LLM request.
 
@@ -99,7 +99,7 @@ def test_run_omnigent_rejects_unsupported_yaml(
     :param yaml_rel: Path under *omnigent_repo_root* to the
         example YAML to load.
     :param expected_error: Substring the adapter's
-        :class:`OmnigentError` message MUST contain — the
+        :class:`OmnigentError` message MUST contain â€” the
         specific field name that tripped the rejection.
     """
     yaml_path = omnigent_repo_root / yaml_rel
@@ -113,7 +113,7 @@ def test_run_omnigent_rejects_unsupported_yaml(
             "run",
             str(yaml_path),
             "-p",
-            # Arbitrary prompt — the adapter rejects before any
+            # Arbitrary prompt â€” the adapter rejects before any
             # LLM roundtrip so the text doesn't matter.
             "hello",
         ],
@@ -126,7 +126,7 @@ def test_run_omnigent_rejects_unsupported_yaml(
 
     # Non-zero exit proves the adapter's error propagated.
     # Silent success (exit 0) would mean the concept was
-    # translated incorrectly — exactly the foot-gun this test
+    # translated incorrectly â€” exactly the foot-gun this test
     # exists to catch.
     assert result.returncode != 0, (
         f"--agent-meow on {yaml_rel} exited 0 but should have rejected the "

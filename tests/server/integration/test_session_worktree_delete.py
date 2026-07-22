@@ -16,16 +16,16 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from agent_meow.host.frames import (
+from omnigent.host.frames import (
     HostHelloFrame,
     HostRemoveWorktreeFrame,
     decode_host_frame,
 )
-from agent_meow.server.auth import RESERVED_USER_LOCAL
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.server.auth import RESERVED_USER_LOCAL
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.host_store import HostStore
+from omnigent.stores.host_store import HostStore
 
 pytestmark = pytest.mark.asyncio
 

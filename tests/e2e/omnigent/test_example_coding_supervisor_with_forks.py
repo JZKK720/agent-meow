@@ -23,13 +23,13 @@ from shutil import which
 import pytest
 
 from tests.e2e._harness_probes import HARNESS_HARNESS_MODELS, HARNESS_IDS
-from tests.e2e.agent_meow._example_helpers import (
+from tests.e2e.omnigent._example_helpers import (
     assert_completed_one_shot,
     require_claude_sdk,
     require_codex_cli,
     run_one_shot,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
 
 
 @pytest.mark.parametrize("harness,model", HARNESS_HARNESS_MODELS, ids=HARNESS_IDS)
@@ -50,7 +50,7 @@ def test_coding_supervisor_with_forks_one_shot(
     supervisor and its forked workers.
 
     Harnesses that require a CLI binary (``claude-sdk``, ``codex``,
-    ``pi``) skip loudly when their binary is absent from PATH — the
+    ``pi``) skip loudly when their binary is absent from PATH â€” the
     mock LLM intercepts the API calls but the harness binary itself
     must be present to launch.  ``openai-agents`` is pure-Python and
     never skips.
@@ -64,7 +64,7 @@ def test_coding_supervisor_with_forks_one_shot(
         response queues.
     :param harness: The harness identifier from
         :data:`HARNESS_HARNESS_MODELS`.
-    :param model: Unused — replaced by a per-harness mock key below.
+    :param model: Unused â€” replaced by a per-harness mock key below.
         The real model from :data:`HARNESS_HARNESS_MODELS` would put
         the ``pi`` harness into gateway mode (pi inspects the
         ``databricks-*`` model name and switches to real-gateway auth,

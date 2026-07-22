@@ -25,21 +25,21 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
-from agent_meow.cost_plan import COST_CONTROL_PLAN_LABEL, parse_verdict
-from agent_meow.errors import OmnigentError
-from agent_meow.runner.identity import (
+from omnigent.cost_plan import COST_CONTROL_PLAN_LABEL, parse_verdict
+from omnigent.errors import OmnigentError
+from omnigent.runner.identity import (
     OMNIGENT_INTERNAL_WS_ORIGIN,
     RUNNER_TUNNEL_TOKEN_HEADER,
     token_bound_runner_id,
 )
-from agent_meow.server.auth import LEVEL_EDIT, LEVEL_OWNER, UnifiedAuthProvider
-from agent_meow.server.routes.sessions import create_sessions_router
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.server.auth import LEVEL_EDIT, LEVEL_OWNER, UnifiedAuthProvider
+from omnigent.server.routes.sessions import create_sessions_router
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.permission_store.sqlalchemy_store import (
+from omnigent.stores.permission_store.sqlalchemy_store import (
     SqlAlchemyPermissionStore,
 )
 

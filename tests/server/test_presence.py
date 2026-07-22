@@ -1,7 +1,7 @@
-"""Tests for the session presence registry (``agent_meow/server/presence.py``).
+"""Tests for the session presence registry (``omnigent/server/presence.py``).
 
 Broadcasts are observed through a real ``session_stream.subscribe``
-collector — the same pub/sub path the SSE route consumes — so every
+collector â€” the same pub/sub path the SSE route consumes â€” so every
 test exercises the actual publish pipeline, not a mock. Each
 ``session.presence`` event carries the FULL viewer list (the
 protocol's self-healing contract), so assertions compare whole
@@ -27,7 +27,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.server import presence
+from omnigent.server import presence
 from tests.server.helpers import start_session_stream_collector
 
 pytestmark = pytest.mark.asyncio
@@ -60,13 +60,13 @@ def _viewer_ids(event: dict[str, Any]) -> list[str]:
 
 
 async def test_connect_broadcasts_full_state_join() -> None:
-    """The 0→1 connection edge broadcasts the complete viewer list."""
+    """The 0â†’1 connection edge broadcasts the complete viewer list."""
     collector = await start_session_stream_collector(CONV)
     try:
         presence.connect(CONV, CONV, ALICE, idle=False)
         event = await collector.next_event()
         # Full-state contract: type, conversation, and the complete
-        # viewer payload — a delta-shaped or empty event here means
+        # viewer payload â€” a delta-shaped or empty event here means
         # clients can no longer replace state wholesale.
         assert event["type"] == "session.presence"
         assert event["conversation_id"] == CONV
@@ -75,14 +75,14 @@ async def test_connect_broadcasts_full_state_join() -> None:
         # joined_at is a concrete ISO-Z timestamp, not a placeholder.
         assert event["viewers"][0]["joined_at"].endswith("Z")
         # snapshot() (the snapshot-on-connect payload) must agree with
-        # the broadcast — same builder, same self-healing contract.
+        # the broadcast â€” same builder, same self-healing contract.
         assert presence.snapshot(CONV, CONV)["viewers"] == event["viewers"]
     finally:
         await collector.stop()
 
 
 async def test_second_tab_same_user_is_silent() -> None:
-    """A 1→2 connection edge neither broadcasts nor duplicates the viewer."""
+    """A 1â†’2 connection edge neither broadcasts nor duplicates the viewer."""
     collector = await start_session_stream_collector(CONV)
     try:
         presence.connect(CONV, CONV, ALICE, idle=False)
@@ -107,8 +107,8 @@ async def test_idle_aggregate_flips_when_only_active_tab_closes() -> None:
         presence.connect(CONV, CONV, ALICE, idle=True)
         await collector.assert_no_event(within=0.2)
         assert presence.snapshot(CONV, CONV)["viewers"][0]["idle"] is False
-        # Close the active tab: only the idle tab remains → aggregate
-        # flips → broadcast. Silence here means a user who minimizes
+        # Close the active tab: only the idle tab remains â†’ aggregate
+        # flips â†’ broadcast. Silence here means a user who minimizes
         # their last visible window never greys out.
         presence.disconnect(CONV, ALICE, active_token)
         flipped = await collector.next_event()
@@ -154,7 +154,7 @@ async def test_reconnect_within_grace_cancels_leave(
         presence.connect(CONV, CONV, ALICE, idle=False)
         # Past the grace deadline: neither a leave nor a rejoin frame.
         # A leave event here means the reconnect failed to cancel the
-        # timer — every ~5-min ingress reconnect would flicker avatars.
+        # timer â€” every ~5-min ingress reconnect would flicker avatars.
         await collector.assert_no_event(within=0.6)
         snapshot = presence.snapshot(CONV, CONV)
         assert _viewer_ids(snapshot) == [ALICE]
@@ -177,7 +177,7 @@ async def test_reconnect_with_changed_idle_broadcasts(
         presence.disconnect(CONV, ALICE, token)
         presence.connect(CONV, CONV, ALICE, idle=True)
         # The reconnect changed the idle aggregate, so it must
-        # broadcast — this is the wire path for "went idle" (there is
+        # broadcast â€” this is the wire path for "went idle" (there is
         # no separate set-idle endpoint). Silence means co-viewers
         # never see anyone grey out.
         flipped = await collector.next_event()
@@ -240,7 +240,7 @@ async def test_root_and_subagent_viewers_share_one_list() -> None:
         assert _viewer_ids(root_event) == [ALICE, BOB]
         child_event = await child_collector.next_event()
         # Bob (on the sub-agent page) gets the SAME tree-wide list,
-        # stamped with the child conversation his client guards on — a
+        # stamped with the child conversation his client guards on â€” a
         # root-stamped event here would be dropped by the web client.
         assert child_event["conversation_id"] == CHILD
         assert _viewer_ids(child_event) == [ALICE, BOB]
@@ -264,7 +264,7 @@ async def test_subagent_leave_reaches_remaining_streams(
         token = presence.connect(ROOT, CHILD, BOB, idle=False)
         await root_collector.next_event()
         presence.disconnect(ROOT, BOB, token)
-        # After the grace window, Alice's root stream gets the leave —
+        # After the grace window, Alice's root stream gets the leave â€”
         # no event here means a sub-agent viewer's avatar would linger
         # on the root page forever after they close the tab.
         leave = await root_collector.next_event()
@@ -277,7 +277,7 @@ async def test_subagent_leave_reaches_remaining_streams(
 async def test_navigation_between_tree_conversations_is_silent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Moving root → sub-agent within one tree never flickers presence."""
+    """Moving root â†’ sub-agent within one tree never flickers presence."""
     monkeypatch.setattr(presence, "_LEAVE_GRACE_S", 0.3)
     root_collector = await start_session_stream_collector(ROOT)
     try:
@@ -288,7 +288,7 @@ async def test_navigation_between_tree_conversations_is_silent(
         original_joined_at = join["viewers"][1]["joined_at"]
         # Bob navigates from the root page to a sub-agent page: the
         # client tears down the root stream and opens the child's
-        # inside the grace window — exactly a same-tree reconnect.
+        # inside the grace window â€” exactly a same-tree reconnect.
         presence.disconnect(ROOT, BOB, root_token)
         presence.connect(ROOT, CHILD, BOB, idle=False)
         # Past the grace deadline: neither a leave nor a rejoin frame.
@@ -315,7 +315,7 @@ async def test_reset_cancels_pending_leave_timer(
         await collector.next_event()
         presence.disconnect(CONV, ALICE, token)
         presence.reset_for_tests()
-        # A broadcast after reset means a cancelled timer still fired —
+        # A broadcast after reset means a cancelled timer still fired â€”
         # exactly the cross-test leak the conftest reset must prevent.
         await collector.assert_no_event(within=0.2)
         assert presence.snapshot(CONV, CONV)["viewers"] == []

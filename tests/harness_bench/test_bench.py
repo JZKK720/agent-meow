@@ -17,7 +17,7 @@ import json
 
 import pytest
 
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
+from omnigent.runtime.harnesses import _HARNESS_MODULES
 from tests.harness_bench.bench import run_bench, run_harness
 from tests.harness_bench.driver import SdkInprocDriver
 from tests.harness_bench.manifest import OFFICIAL_PROFILES

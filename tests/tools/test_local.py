@@ -1,4 +1,4 @@
-"""Tests for agent_meow.tools.local (LocalPythonTool subprocess execution)."""
+"""Tests for omnigent.tools.local (LocalPythonTool subprocess execution)."""
 
 from __future__ import annotations
 
@@ -12,16 +12,16 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
-from agent_meow.spec.types import LocalToolInfo, SandboxConfig
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.local import (
+from omnigent.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
+from omnigent.spec.types import LocalToolInfo, SandboxConfig
+from omnigent.tools.base import ToolContext
+from omnigent.tools.local import (
     LocalPythonTool,
     LocalToolLoadError,
     load_local_python_tools,
 )
 
-# ─── Helpers ────────────────────────────────────────────────────────
+# â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _write_decorated_tool(
@@ -49,7 +49,7 @@ def _write_decorated_tool(
         and load-error scenarios).
     """
     tools_dir.mkdir(parents=True, exist_ok=True)
-    # Write the source verbatim with explicit indentation — no
+    # Write the source verbatim with explicit indentation â€” no
     # textwrap.dedent gymnastics. The body parameter is inserted
     # with a 4-space prefix to land inside the function.
     body_lines = body.split("\n")
@@ -102,7 +102,7 @@ def tool_ctx() -> ToolContext:
     return ToolContext(task_id="task_test", agent_id="ag_test", workspace=None)
 
 
-# ─── Subprocess invocation ──────────────────────────────────────────
+# â”€â”€â”€ Subprocess invocation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_invoke_subprocess_success(tmp_path: Path, tool_ctx: ToolContext) -> None:
@@ -169,7 +169,7 @@ def test_invoke_subprocess_crash_isolation(tmp_path: Path, tool_ctx: ToolContext
     info = LocalToolInfo(name="pid_tool", path="tools/python/pid_tool.py", language="python")
     tools = load_local_python_tools([info], tmp_path)
     pid_str = tools[0].invoke(json.dumps({"value": "ignored"}), tool_ctx)
-    # Pid should be a valid number — and not the current process's pid.
+    # Pid should be a valid number â€” and not the current process's pid.
     child_pid = int(pid_str.strip())
     assert child_pid != os.getpid(), (
         f"Tool ran in-process (pid {child_pid} == server pid {os.getpid()}). "
@@ -252,11 +252,11 @@ def test_cancel_kills_subprocess(tmp_path: Path, tool_ctx: ToolContext) -> None:
     tool.cancel()
     thread.join(timeout=5.0)
     assert not thread.is_alive(), "invoke() did not return after cancel()"
-    # Result should be an error (subprocess killed → no response).
+    # Result should be an error (subprocess killed â†’ no response).
     assert "Error" in result_holder["result"]
 
 
-# ─── Loader ─────────────────────────────────────────────────────────
+# â”€â”€â”€ Loader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_load_single_decorated_tool(tmp_path: Path) -> None:
@@ -270,7 +270,7 @@ def test_load_single_decorated_tool(tmp_path: Path) -> None:
 
 
 def test_load_multiple_tools_in_one_file(tmp_path: Path) -> None:
-    """G16: Multiple ``@tool``-decorated functions in one file → multiple tools."""
+    """G16: Multiple ``@tool``-decorated functions in one file â†’ multiple tools."""
     py_dir = tmp_path / "tools" / "python"
     py_dir.mkdir(parents=True)
     multi = textwrap.dedent(
@@ -298,14 +298,14 @@ def test_load_multiple_tools_in_one_file(tmp_path: Path) -> None:
     (py_dir / "multi.py").write_text(multi)
     info = LocalToolInfo(name="multi", path="tools/python/multi.py", language="python")
     tools = load_local_python_tools([info], tmp_path)
-    # Exactly two tools — `not_a_tool` is undecorated and must be ignored.
+    # Exactly two tools â€” `not_a_tool` is undecorated and must be ignored.
     assert len(tools) == 2
     names = sorted(tool.name() for tool in tools)
     assert names == ["first", "second"]
 
 
 def test_load_multiple_files(tmp_path: Path) -> None:
-    """Multiple files each with one tool → list of N tools."""
+    """Multiple files each with one tool â†’ list of N tools."""
     py_dir = tmp_path / "tools" / "python"
     _write_decorated_tool(py_dir, "a.py", func_name="alpha")
     _write_decorated_tool(py_dir, "b.py", func_name="beta")
@@ -407,7 +407,7 @@ def test_load_collision_with_builtin_fails_loud(tmp_path: Path) -> None:
     assert "builtin" in msg.lower() or "built-in" in msg.lower()
 
 
-# ─── Command building ───────────────────────────────────────────────
+# â”€â”€â”€ Command building â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_tool(
@@ -449,7 +449,7 @@ def _make_tool(
 
 
 def test_build_command_plain(tmp_path: Path) -> None:
-    """No srt, no uv → ``[python, _runner.py]``."""
+    """No srt, no uv â†’ ``[python, _runner.py]``."""
     tool = _make_tool(tmp_path)
     cmd = tool._build_command(state_root=None)
     assert cmd[0] == sys.executable
@@ -457,7 +457,7 @@ def test_build_command_plain(tmp_path: Path) -> None:
 
 
 def test_build_command_with_uv(tmp_path: Path) -> None:
-    """PEP 723 deps + uv → ``uv run --with <dep> -- python _runner.py``."""
+    """PEP 723 deps + uv â†’ ``uv run --with <dep> -- python _runner.py``."""
     tool = _make_tool(
         tmp_path,
         has_inline_deps=True,
@@ -473,7 +473,7 @@ def test_build_command_with_uv(tmp_path: Path) -> None:
 
 
 def test_build_command_with_srt(tmp_path: Path) -> None:
-    """srt available + sandbox → ``srt -c '<command>'``."""
+    """srt available + sandbox â†’ ``srt -c '<command>'``."""
     tool = _make_tool(tmp_path, srt_available=True, sandbox_enabled=True)
     cmd = tool._build_command(state_root=None)
     assert cmd[0] == "srt"
@@ -481,14 +481,14 @@ def test_build_command_with_srt(tmp_path: Path) -> None:
 
 
 def test_build_command_srt_disabled(tmp_path: Path) -> None:
-    """srt available but sandbox disabled → no srt prefix."""
+    """srt available but sandbox disabled â†’ no srt prefix."""
     tool = _make_tool(tmp_path, srt_available=True, sandbox_enabled=False)
     cmd = tool._build_command(state_root=None)
     assert cmd[0] == sys.executable
 
 
 def test_build_command_container(tmp_path: Path) -> None:
-    """container_image set → docker run command (default runtime)."""
+    """container_image set â†’ docker run command (default runtime)."""
     tool = _make_tool(tmp_path, container_image="python:3.11")
     cmd = tool._build_command(state_root=None)
     assert cmd[0] == "docker"
@@ -505,7 +505,7 @@ def test_build_command_docker_image_alias(tmp_path: Path) -> None:
 
 
 def test_build_command_podman(tmp_path: Path) -> None:
-    """container_runtime='podman' → podman run command with network isolation."""
+    """container_runtime='podman' â†’ podman run command with network isolation."""
     tool = _make_tool(tmp_path, container_image="python:3.11", container_runtime="podman")
     cmd = tool._build_command(state_root=None)
     assert cmd[0] == "podman"
@@ -532,7 +532,7 @@ def test_sandbox_config_rejects_invalid_runtime() -> None:
         SandboxConfig(container_runtime="rkt")  # type: ignore[arg-type]
 
 
-# ─── Schema + name plumbing ─────────────────────────────────────────
+# â”€â”€â”€ Schema + name plumbing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_tool_get_schema_uses_metadata_name_and_description(
@@ -569,7 +569,7 @@ def test_tool_get_schema_uses_metadata_name_and_description(
     assert "count" in params["properties"]
 
 
-# ─── PEP 723 ────────────────────────────────────────────────────────
+# â”€â”€â”€ PEP 723 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_pep723_scanning_at_load_time(tmp_path: Path) -> None:
@@ -601,7 +601,7 @@ def test_pep723_scanning_at_load_time(tmp_path: Path) -> None:
     assert len(tools) == 1
 
 
-# ─── Runner integration (subprocess execution end-to-end) ───────────
+# â”€â”€â”€ Runner integration (subprocess execution end-to-end) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _run_runner_with_request(tool_path: Path, tool_name: str, arguments: dict) -> dict:
@@ -802,7 +802,7 @@ def test_concurrent_invoke_does_not_race_on_instance_state(
     * All N concurrent invocations return a non-error result
       string (so no ``AttributeError`` bubbled through).
     * No call returns the "Error:" sentinel prefix that
-      ``_invoke_subprocess`` emits on subprocess failure — the
+      ``_invoke_subprocess`` emits on subprocess failure â€” the
       race produced exactly that failure mode in practice.
     * After all calls complete, ``_live_procs`` is empty (cleanup
       ran on every path).
@@ -812,7 +812,7 @@ def test_concurrent_invoke_does_not_race_on_instance_state(
     would flake. 16 makes the regression unmissable on CI.
 
     The testing skill's "concurrency test requirements" (blocked
-    LLM call + release) don't apply here — this is not a workflow
+    LLM call + release) don't apply here â€” this is not a workflow
     test. The blocked-call pattern exists to freeze an LLM
     response at a known point; we're instead testing the
     Python-level race inside ``LocalPythonTool.invoke``, and the
@@ -831,7 +831,7 @@ def test_concurrent_invoke_does_not_race_on_instance_state(
     # ``srt_available=False`` skips srt sandbox wrapping. srt has its
     # own concurrency bug ("Shell 'bash' not found in PATH",
     # "ripgrep (rg) not found") that surfaces under heavy parallel
-    # invocation and would corrupt this test's race-detection — we
+    # invocation and would corrupt this test's race-detection â€” we
     # want the assertions to fail on the ``self._proc`` race we're
     # actually testing, not on srt's flake.
     tools = load_local_python_tools([info], tmp_path, srt_available=False)
@@ -860,7 +860,7 @@ def test_concurrent_invoke_does_not_race_on_instance_state(
         t.join(timeout=30.0)
         assert not t.is_alive(), "worker did not complete"
 
-    # No thread raised — the NoneType bug would surface here.
+    # No thread raised â€” the NoneType bug would surface here.
     for i, err in enumerate(errors):
         assert err is None, f"worker {i} raised {err!r}"
 
@@ -877,7 +877,7 @@ def test_concurrent_invoke_does_not_race_on_instance_state(
             f"is still being shared improperly."
         )
 
-    # Cleanup ran on every finally — no live procs leaked.
+    # Cleanup ran on every finally â€” no live procs leaked.
     with tool._procs_lock:
         leaked = list(tool._live_procs)
     assert leaked == [], (

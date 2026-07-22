@@ -25,7 +25,7 @@ os.environ.setdefault("OMNIGENT_DISABLE_CATALOG_LOOKUP", "1")
 # Pin header mode for the whole suite. Header is the env-unset default,
 # but a developer's shell often has OMNIGENT_AUTH_ENABLED=1 set (the
 # multi-user opt-in they use to test the login flow locally; the
-# pre-rename OMNIGENT_ACCOUNTS_ENABLED is still honored too) — and that
+# pre-rename OMNIGENT_ACCOUNTS_ENABLED is still honored too) â€” and that
 # enable switch would flip the env-unset default to accounts (or oidc, if
 # the shell also exports OMNIGENT_OIDC_ISSUER), booting every server in
 # multi-user mode and failing loud with "Missing required environment
@@ -47,14 +47,14 @@ os.environ.setdefault("OMNIGENT_AUTH_PROVIDER", "header")
 # (runner-status polls, REPL turns, session CRUD), so they need the
 # single-user fallback that the managed local-server spawn paths set in
 # production. Pinned here (not per-fixture) so every spawned server
-# inherits it via os.environ — the same chokepoint as the header pin
+# inherits it via os.environ â€” the same chokepoint as the header pin
 # above. Tests that specifically verify the strict (deployed
 # multi-user) posture opt OUT by constructing
 # UnifiedAuthProvider(source="header", local_single_user=False) or by
 # monkeypatch.delenv-ing this var.
 os.environ.setdefault("OMNIGENT_LOCAL_SINGLE_USER", "1")
 
-from agent_meow.db.utils import _engine_cache, _engine_lock, get_or_create_engine
+from omnigent.db.utils import _engine_cache, _engine_lock, get_or_create_engine
 from tests import _model_pools
 
 pytest_plugins = ["tests._token_usage"]
@@ -112,7 +112,7 @@ def _run_test_environment_guardrails(config: pytest.Config) -> None:
     or port. Set ``OMNIGENT_DISABLE_TEST_GUARDRAILS=1`` to temporarily
     downgrade violations to warn-only for deliberate integration runs.
     """
-    from agent_meow.testing.guardrails import check_test_environment
+    from omnigent.testing.guardrails import check_test_environment
 
     db_uri = os.environ.get("OMNIGENT_DATABASE_URI", "")
     base_url = config.getoption("--agent-meow-server-url", default=None)
@@ -259,7 +259,7 @@ def pytest_addoption(parser):
         action="store",
         default=None,
         help=(
-            "Base URL of an externally-managed `agent_meow.cli server` to run "
+            "Base URL of an externally-managed `omnigent.cli server` to run "
             "e2e tests against, e.g. `http://localhost:8080`. When set, "
             "server-fixtures skip the spawn step and yield this URL. Useful "
             "for iterating on tests against a long-running dev server "
@@ -281,7 +281,7 @@ def _isolate_claude_native_state(
 
     The ``agent-meow claude`` wrapper writes per-conversation
     launch state (the cwd a session was created in) under
-    ``~/.agent_meow/claude-native/<hash>/launch.json``. Any test
+    ``~/.omnigent/claude-native/<hash>/launch.json``. Any test
     that drives the wrapper -- directly or indirectly via test
     fakes that invoke its helpers -- would otherwise write to the
     developer's real ``~/.agent-meow`` directory and pollute it
@@ -317,7 +317,7 @@ def _isolate_codex_native_state(
     Redirect codex-native client-side persistent state to a tmp dir.
 
     The ``agent-meow codex`` wrapper writes per-conversation launch
-    state under ``~/.agent_meow/codex-native/<hash>/launch.json``.
+    state under ``~/.omnigent/codex-native/<hash>/launch.json``.
     Tests that drive the wrapper should never write to or read from
     the developer's real persistent resume state.
 
@@ -341,12 +341,12 @@ def db_uri(tmp_path: Path) -> str:
     Return a test database URI backed by a file in tmp_path.
 
     Uses get_or_create_engine() which runs Alembic migrations on first
-    engine creation — same path as production. File-based (not in-memory)
+    engine creation â€” same path as production. File-based (not in-memory)
     because DBOS needs a real file to create its system tables. Cleaned
     up after each test.
 
     :param tmp_path: pytest tmp_path fixture (per-test temp dir).
-    :returns: a ``sqlite:///…`` URI string.
+    :returns: a ``sqlite:///â€¦`` URI string.
     """
     db_path = tmp_path / "test.db"
     uri = f"sqlite:///{db_path}"
@@ -369,7 +369,7 @@ def lowered_idle_thresholds(monkeypatch: pytest.MonkeyPatch) -> None:
     Mirrors :class:`tests.inner.test_terminal.TestTerminalIdleNotifications.setUp`
     from the legacy class-based suite. Defaults marker substrings
     to empty so tests that don't exercise the marker track see
-    pure diff semantics regardless of the production list — tests
+    pure diff semantics regardless of the production list â€” tests
     that DO exercise markers can override locally with another
     ``monkeypatch.setattr``.
 
@@ -378,12 +378,12 @@ def lowered_idle_thresholds(monkeypatch: pytest.MonkeyPatch) -> None:
     ``tests/tools/builtins/test_sys_terminal.py`` (AP-side
     ``notify_when_idle`` end-to-end). Promoted to root conftest
     rather than duplicated per file so the threshold values stay
-    in lockstep — a future tuning change touches one location.
+    in lockstep â€” a future tuning change touches one location.
 
     :param monkeypatch: Pytest's monkeypatch fixture; auto-restores
         the original constants at teardown.
     """
-    from agent_meow.inner import terminal as terminal_module
+    from omnigent.inner import terminal as terminal_module
 
     monkeypatch.setattr(terminal_module, "_IDLE_THRESHOLD_SECONDS", 0.4)
     monkeypatch.setattr(terminal_module, "_IDLE_POLL_INTERVAL_SECONDS", 0.1)

@@ -1,4 +1,4 @@
-"""Phase 0 characterization test — YAML-driven agent with tools (mock LLM).
+"""Phase 0 characterization test â€” YAML-driven agent with tools (mock LLM).
 
 Migrated to mock LLM: uses the session-scoped mock server instead of
 a real Databricks gateway.  Parametrized across every wrapped harness
@@ -13,17 +13,17 @@ still picks up openai-agents without needing the ``claude`` / ``codex``
 - The wrapped harness loses its MCP tool bridging or its
   prompt-construction path.
 - Per-YAML defaults fail to pick up the ``callable:`` dotted
-  paths via ``importlib.import_module`` — the tool never gets
+  paths via ``importlib.import_module`` â€” the tool never gets
   registered and the agent can't invoke it.
-- The YAML→tools round-trip breaks: the forced ``calculate``
+- The YAMLâ†’tools round-trip breaks: the forced ``calculate``
   tool_call never executes / its result never returns, so the
   mock's final response (carrying the sentinel) is never reached.
-  (Headless ``-p`` does not stream ``◦/• <tool>`` lifecycle lines
-  to stdout — see #783 — so the tool is verified via the sentinel,
+  (Headless ``-p`` does not stream ``â—¦/â€¢ <tool>`` lifecycle lines
+  to stdout â€” see #783 â€” so the tool is verified via the sentinel,
   not those markers.)
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
-YAML→agent characterization.
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
+YAMLâ†’agent characterization.
 """
 
 from __future__ import annotations
@@ -40,12 +40,12 @@ from tests.e2e._harness_probes import (
     skip_if_harness_cli_missing,
 )
 from tests.e2e.conftest import configure_mock_llm, reset_mock_llm
-from tests.e2e.agent_meow._snapshot import compare_snapshot
+from tests.e2e.omnigent._snapshot import compare_snapshot
 
 _PROMPT = "What is 3 + 4? Use the calculate tool."
 
-# Headless ``-p`` mode no longer streams ``◦/• <tool>`` tool-lifecycle
-# markers to stdout — since #783 it accumulates assistant text across
+# Headless ``-p`` mode no longer streams ``â—¦/â€¢ <tool>`` tool-lifecycle
+# markers to stdout â€” since #783 it accumulates assistant text across
 # auto-triggered turns until the session is idle, then prints that. So
 # we cannot assert the tool name appears in stdout anymore.
 #
@@ -53,7 +53,7 @@ _PROMPT = "What is 3 + 4? Use the calculate tool."
 # The mock serves that second response only after the harness has
 # executed the forced ``calculate`` tool_call and sent its result back
 # (the second LLM request), so the sentinel reaching stdout proves the
-# whole YAML→tools round-trip happened — you cannot get the final answer
+# whole YAMLâ†’tools round-trip happened â€” you cannot get the final answer
 # without going through the tool.
 _TOOL_ROUNDTRIP_SENTINEL = "TOOL_ROUNDTRIP_OK_7"
 
@@ -124,7 +124,7 @@ def test_yaml_agent_with_tools(
     ``calculate`` tool appears in stdout.
 
     Parametrized across every wrapped harness (claude-sdk, codex,
-    pi, openai-agents) so the YAML→tools pipeline is verified
+    pi, openai-agents) so the YAMLâ†’tools pipeline is verified
     end-to-end once per harness.  Rows whose CLI binary is absent
     are skipped via :func:`skip_if_harness_cli_missing`.
 
@@ -134,7 +134,7 @@ def test_yaml_agent_with_tools(
 
     :param omnigent_python: Interpreter with agent-meow +
         the harness's SDK installed.
-    :param omnigent_repo_root: Cwd for the subprocess — the
+    :param omnigent_repo_root: Cwd for the subprocess â€” the
         YAML's ``callable:`` entries
         (``tests.resources.examples._shared.tool_functions.calculate``)
         only import if the repo root is on sys.path, which
@@ -144,7 +144,7 @@ def test_yaml_agent_with_tools(
     :param mock_llm_server_url: Base URL of the mock LLM server.
     :param harness: The harness identifier from
         :data:`HARNESS_HARNESS_MODELS`.
-    :param model: Unused in mock mode — the real model name from
+    :param model: Unused in mock mode â€” the real model name from
         :data:`HARNESS_HARNESS_MODELS` is replaced by a
         per-harness mock key so each row gets an isolated response
         queue on the mock server.
@@ -201,7 +201,7 @@ def test_yaml_agent_with_tools(
 
     observed: dict[str, Any] = {
         "exit_code": result.returncode,
-        # Headless ``-p`` does NOT stream ``◦/• <tool>`` lifecycle markers
+        # Headless ``-p`` does NOT stream ``â—¦/â€¢ <tool>`` lifecycle markers
         # (#783). The snapshot checks the final-answer sentinel instead;
         # because the mock only serves that final text after the forced
         # ``calculate`` tool_call round-trips, the sentinel in stdout is
@@ -226,12 +226,12 @@ def test_yaml_agent_with_tools(
         f"chars after stripping tool lifecycle lines; got "
         f"{stripped!r} (full stdout: {result.stdout!r})"
     )
-    # Belt-and-braces — the snapshot's ``contains`` comparator already
+    # Belt-and-braces â€” the snapshot's ``contains`` comparator already
     # covers this, but naming the assertion explicitly makes the failure
     # message self-explanatory if the snapshot file is ever deleted. The
     # sentinel lives only in the mock's SECOND response, which is served
     # only after the forced ``calculate`` tool_call executes and its
-    # result is sent back — so its presence proves the tool round-trip.
+    # result is sent back â€” so its presence proves the tool round-trip.
     assert _TOOL_ROUNDTRIP_SENTINEL in result.stdout, (
         f"Final-answer sentinel {_TOOL_ROUNDTRIP_SENTINEL!r} not found in "
         f"stdout; the {harness} harness did not complete the calculate "
@@ -244,8 +244,8 @@ def _strip_tool_chatter(stdout: str) -> str:
     """
     Remove known tool-lifecycle marker lines from stdout.
 
-    The agent-meow CLI prints ``◦ <tool>`` (queued) and
-    ``• <tool> (NNms)`` (done) lines around tool calls regardless
+    The agent-meow CLI prints ``â—¦ <tool>`` (queued) and
+    ``â€¢ <tool> (NNms)`` (done) lines around tool calls regardless
     of which harness fired them. For the assistant-length
     assertion we want to measure only the natural-language reply,
     not those markers.

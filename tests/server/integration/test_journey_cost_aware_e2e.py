@@ -28,8 +28,8 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.runtime import session_stream
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runtime import session_stream
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 from tests.server.helpers import create_test_agent
@@ -37,7 +37,7 @@ from tests.server.helpers import create_test_agent
 pytestmark = pytest.mark.asyncio
 
 
-# ── Helpers ────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def _create_session(
@@ -147,25 +147,25 @@ async def _drain_elicitation_id(
     raise AssertionError("subscribe loop ended without an elicitation event")
 
 
-# ── Tests ──────────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_cost_budget_ask_then_deny_lifecycle(
     client: httpx.AsyncClient,
     db_uri: str,
 ) -> None:
-    """Full budget lifecycle: ALLOW → ASK (approve) → DENY at hard limit.
+    """Full budget lifecycle: ALLOW â†’ ASK (approve) â†’ DENY at hard limit.
 
     Creates a session with a cost_budget policy configured with low
     thresholds (ask at $0.01, deny at $0.05). Seeds the session's
     cumulative spend at increasing levels and evaluates the policy,
     verifying:
 
-    1. Below the soft threshold → ALLOW (no gate fires).
-    2. At the soft threshold → ASK (the server-side gate parks for
+    1. Below the soft threshold â†’ ALLOW (no gate fires).
+    2. At the soft threshold â†’ ASK (the server-side gate parks for
        approval; the test accepts via the elicitation resolve endpoint,
        collapsing to ALLOW).
-    3. Above the hard limit on an expensive model → DENY (the
+    3. Above the hard limit on an expensive model â†’ DENY (the
        downgrade gate blocks the tool call).
     """
     store = SqlAlchemyConversationStore(db_uri)
@@ -178,7 +178,7 @@ async def test_cost_budget_ask_then_deny_lifecycle(
                 "session_cost_guard": {
                     "type": "function",
                     "function": {
-                        "path": "agent_meow.policies.builtins.cost.cost_budget",
+                        "path": "omnigent.policies.builtins.cost.cost_budget",
                         "arguments": {
                             "max_cost_usd": 0.05,
                             "ask_thresholds_usd": [0.01],
@@ -194,17 +194,17 @@ async def test_cost_budget_ask_then_deny_lifecycle(
     )
     session_id = await _create_session(client, agent["id"])
 
-    # ── Step 1: below soft threshold → ALLOW ──────────────────────
+    # â”€â”€ Step 1: below soft threshold â†’ ALLOW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     store.set_session_usage(session_id, {"total_cost_usd": 0.005})
     result = await _evaluate(client, session_id)
     assert result["result"] == "POLICY_ACTION_ALLOW", (
         f"Spend $0.005 (below $0.01 ask threshold) should ALLOW, got {result['result']}"
     )
 
-    # ── Step 2: at soft threshold → ASK → approve → ALLOW ────────
+    # â”€â”€ Step 2: at soft threshold â†’ ASK â†’ approve â†’ ALLOW â”€â”€â”€â”€â”€â”€â”€â”€
     store.set_session_usage(session_id, {"total_cost_usd": 0.013})
 
-    # The evaluate POST parks until the verdict arrives — run it
+    # The evaluate POST parks until the verdict arrives â€” run it
     # concurrently and learn the elicitation id from the stream.
     # Use an asyncio.Event so the drain task can signal when its
     # subscriber slot is registered, replacing the old sleep(0.05).
@@ -234,7 +234,7 @@ async def test_cost_budget_ask_then_deny_lifecycle(
         f"Accepted ASK at $0.013 should collapse to ALLOW, got {ask_body['result']}"
     )
 
-    # ── Step 3: above hard limit on expensive model → DENY ────────
+    # â”€â”€ Step 3: above hard limit on expensive model â†’ DENY â”€â”€â”€â”€â”€â”€â”€â”€
     store.set_session_usage(session_id, {"total_cost_usd": 0.06})
     result = await _evaluate(client, session_id)
     assert result["result"] == "POLICY_ACTION_DENY", (
@@ -245,7 +245,7 @@ async def test_cost_budget_ask_then_deny_lifecycle(
         f"DENY reason should mention the current cost $0.06, got: {result['reason']}"
     )
 
-    # ── Verify session is still accessible ──────────────────────────
+    # â”€â”€ Verify session is still accessible â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     get_resp = await client.get(f"/v1/sessions/{session_id}")
     assert get_resp.status_code == 200
 
@@ -262,8 +262,8 @@ async def test_cost_control_toggle_independent_of_policy_evaluation(
     verifies:
 
     1. Create session with a cost_budget policy and seed spend above
-       the hard limit → evaluate returns DENY.
-    2. Toggle cost_control_mode_override to "off" via PATCH →
+       the hard limit â†’ evaluate returns DENY.
+    2. Toggle cost_control_mode_override to "off" via PATCH â†’
        policy evaluation **still** returns DENY (the toggle does not
        suppress the policy engine).
     3. Verify the session snapshot reflects the toggle value.
@@ -278,7 +278,7 @@ async def test_cost_control_toggle_independent_of_policy_evaluation(
                 "session_cost_guard": {
                     "type": "function",
                     "function": {
-                        "path": "agent_meow.policies.builtins.cost.cost_budget",
+                        "path": "omnigent.policies.builtins.cost.cost_budget",
                         "arguments": {
                             "max_cost_usd": 0.05,
                             "ask_thresholds_usd": [0.01],
@@ -293,14 +293,14 @@ async def test_cost_control_toggle_independent_of_policy_evaluation(
     )
     session_id = await _create_session(client, agent["id"])
 
-    # ── Step 1: seed over-budget spend → DENY ─────────────────────
+    # â”€â”€ Step 1: seed over-budget spend â†’ DENY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     store.set_session_usage(session_id, {"total_cost_usd": 0.06})
     result = await _evaluate(client, session_id)
     assert result["result"] == "POLICY_ACTION_DENY", (
         f"Over-budget spend should DENY before toggle, got {result['result']}"
     )
 
-    # ── Step 2: toggle cost control OFF ───────────────────────────
+    # â”€â”€ Step 2: toggle cost control OFF â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     patch_resp = await client.patch(
         f"/v1/sessions/{session_id}",
         json={"cost_control_mode_override": "off"},
@@ -308,14 +308,14 @@ async def test_cost_control_toggle_independent_of_policy_evaluation(
     assert patch_resp.status_code == 200, patch_resp.text
     assert patch_resp.json()["cost_control_mode_override"] == "off"
 
-    # ── Step 3: verify the snapshot reflects the toggle ───────────
+    # â”€â”€ Step 3: verify the snapshot reflects the toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     get_resp = await client.get(f"/v1/sessions/{session_id}")
     assert get_resp.status_code == 200
     assert get_resp.json()["cost_control_mode_override"] == "off", (
         "Session snapshot should reflect cost_control_mode_override = 'off'"
     )
 
-    # The policy evaluate endpoint still runs spec-declared policies —
+    # The policy evaluate endpoint still runs spec-declared policies â€”
     # the cost_budget policy fires based on accumulated spend and model,
     # not the toggle. The toggle gates the runner-side cost advisor.
     result_after_toggle = await _evaluate(client, session_id)
@@ -324,7 +324,7 @@ async def test_cost_control_toggle_independent_of_policy_evaluation(
         f"(still over budget), got {result_after_toggle['result']}"
     )
 
-    # ── Step 4: toggle back to ON and verify round-trip ───────────
+    # â”€â”€ Step 4: toggle back to ON and verify round-trip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     patch_on = await client.patch(
         f"/v1/sessions/{session_id}",
         json={"cost_control_mode_override": "on"},

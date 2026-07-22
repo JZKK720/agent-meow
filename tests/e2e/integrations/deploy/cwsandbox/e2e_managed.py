@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
 End-to-end test: create a managed session against an agent-meow server, and have
-the agent run a REAL workload — an LLM turn against the CoreWeave / W&B inference
-endpoint — from inside the managed CHILD sandbox the server provisions.
+the agent run a REAL workload â€” an LLM turn against the CoreWeave / W&B inference
+endpoint â€” from inside the managed CHILD sandbox the server provisions.
 
 Two modes:
 
   1. --server <url>: use an EXISTING agent-meow server (already configured with
-     sandbox.provider=cwsandbox). No public-IP sandbox required — good for W&B
+     sandbox.provider=cwsandbox). No public-IP sandbox required â€” good for W&B
      serverless users who can't expose a public service.
 
          python tests/e2e/integrations/deploy/cwsandbox/e2e_managed.py \
@@ -43,7 +43,7 @@ PROMPT = "What is 2+2? Reply with ONLY the number, nothing else."
 
 
 def _child_env(wandb_key: str) -> dict[str, str]:
-    """Env injected into every managed CHILD sandbox — the single source of truth.
+    """Env injected into every managed CHILD sandbox â€” the single source of truth.
 
     The launcher forwards these by NAME from the server process env. OPENAI_*
     reach the harness automatically; the HARNESS_* knobs ride
@@ -118,7 +118,7 @@ def configure_and_start_server(sb: Sandbox, server_url: str, wandb_key: str) -> 
     )
     # Agent bound to the openai-agents harness + the W&B model. executor.auth
     # (ApiKeyAuth) is what the runner's gateway routing reads for base_url +
-    # api_key — the bare OPENAI_BASE_URL env is ignored, so this is required
+    # api_key â€” the bare OPENAI_BASE_URL env is ignored, so this is required
     # to target W&B instead of defaulting to api.openai.com.
     _write(
         sb,
@@ -199,13 +199,13 @@ def create_managed_session(base: str, agent_id: str) -> str:
 
 def _dump_server_logs(sb: Sandbox | None) -> None:
     if sb is None:
-        log("      (external server — check its own logs)")
+        log("      (external server â€” check its own logs)")
         return
     out = sb.exec(
         [
             "bash",
             "-lc",
-            "tail -50 ~/.agent_meow/logs/cli-*.log 2>/dev/null; "
+            "tail -50 ~/.omnigent/logs/cli-*.log 2>/dev/null; "
             "echo '--- stdout ---'; tail -15 /tmp/agent-meow-server.log",
         ]
     ).result()
@@ -223,7 +223,7 @@ def _omnigent_children() -> list:
 
 def dump_child_logs(exclude: set[str]) -> None:
     """Dump runner/harness logs from a CHILD this run created (not in *exclude*)."""
-    # Scope to children NOT present before this run — never touch sandboxes
+    # Scope to children NOT present before this run â€” never touch sandboxes
     # belonging to other runs / deployments that share the 'agent-meow' tag.
     children = [c for c in _omnigent_children() if c.sandbox_id not in exclude]
     running = [c for c in children if "RUNNING" in str(getattr(c, "status", "")).upper()]
@@ -237,7 +237,7 @@ def dump_child_logs(exclude: set[str]) -> None:
             [
                 "bash",
                 "-lc",
-                "tail -60 ~/.agent_meow/logs/*.log 2>/dev/null; echo '--- host log ---'; "
+                "tail -60 ~/.omnigent/logs/*.log 2>/dev/null; echo '--- host log ---'; "
                 "tail -40 /tmp/agent-meow-host.log 2>/dev/null",
             ]
         ).result()
@@ -255,7 +255,7 @@ def wait_host_online(
         try:
             d = httpx.get(f"{base}/v1/sessions/{conv_id}", timeout=5.0).json()
             if d.get("host_online"):
-                log(f"      ✓ host online: host_id={d.get('host_id')}")
+                log(f"      âœ“ host online: host_id={d.get('host_id')}")
                 log(f"        runner_id={d.get('runner_id')}")
                 return True
             if d.get("last_task_error"):
@@ -299,7 +299,7 @@ def wait_for_reply(
     while time.monotonic() < deadline:
         try:
             d = httpx.get(f"{base}/v1/sessions/{conv_id}", timeout=5.0).json()
-            # Check for a failure FIRST — an error that arrives after partial
+            # Check for a failure FIRST â€” an error that arrives after partial
             # assistant text must not be masked by returning that text.
             if d.get("last_task_error"):
                 log(f"      task error: {d['last_task_error']}")
@@ -370,7 +370,7 @@ def main() -> int:
         base = f"http://{ip}:{SERVER_PORT}"
 
     # Children carry the shared "agent-meow" tag, so snapshot which ones already
-    # existed before this run — we only ever touch the ones WE cause to appear,
+    # existed before this run â€” we only ever touch the ones WE cause to appear,
     # never another run's / deployment's managed hosts.
     pre_children = {c.sandbox_id for c in _omnigent_children()} if sb is not None else set()
 
@@ -393,7 +393,7 @@ def main() -> int:
             except Exception as exc:
                 log(f"  warning: server cleanup failed: {exc}")
             # Stop only children that appeared during this run (id not in the
-            # pre-run snapshot) — never another run's sandboxes.
+            # pre-run snapshot) â€” never another run's sandboxes.
             for child in _omnigent_children():
                 if child.sandbox_id in pre_children:
                     continue
@@ -405,11 +405,11 @@ def main() -> int:
 
     print("\n" + "=" * 60)
     if reply:
-        print("E2E PASSED — agent ran a real LLM workload in the sandbox.")
+        print("E2E PASSED â€” agent ran a real LLM workload in the sandbox.")
         print(f"Prompt: {PROMPT}")
         print(f"Reply:  {reply!r}")
         return 0
-    print("E2E FAILED — see logs above.")
+    print("E2E FAILED â€” see logs above.")
     return 1
 
 

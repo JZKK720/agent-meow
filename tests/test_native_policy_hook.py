@@ -5,8 +5,8 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from agent_meow import native_policy_hook
-from agent_meow.native_policy_hook import (
+from omnigent import native_policy_hook
+from omnigent.native_policy_hook import (
     _is_login_redirect_or_unauthorized,
     evaluation_response_to_hook_output,
     fail_closed_hook_output,
@@ -70,9 +70,9 @@ def test_omnigent_mcp_tools_are_skipped(hook_event: str) -> None:
     agent-meow MCP tools return None and are never sent to /policies/evaluate.
 
     agent-meow MCP tool calls are already policy-checked by the relay path
-    (ProxyMcpManager → agent-meow /mcp endpoint → _evaluate_tool_call_policy).
+    (ProxyMcpManager â†’ agent-meow /mcp endpoint â†’ _evaluate_tool_call_policy).
     If this guard regressed, every MCP tool call would be evaluated
-    twice — once via the relay, once via this hook.
+    twice â€” once via the relay, once via this hook.
     """
     result = hook_payload_to_evaluation_request(
         hook_event,
@@ -141,12 +141,12 @@ def test_pre_tool_use_response_maps_action_to_permission_decision(
     """
     A constraining proto action maps to the matching permissionDecision.
 
-    DENY→deny. ASK→deny too: ASK is resolved server-side now (URL-based
-    elicitation — ``POST /policies/evaluate`` holds the gate and returns
+    DENYâ†’deny. ASKâ†’deny too: ASK is resolved server-side now (URL-based
+    elicitation â€” ``POST /policies/evaluate`` holds the gate and returns
     a hard ALLOW/DENY), so the hook should never see ASK; if it does, it
     must fail closed with ``deny`` rather than the old ``defer`` (which
     handed control to a possibly-permissive harness permission_mode,
-    re-opening the bypass). ALLOW is deliberately NOT here — it returns
+    re-opening the bypass). ALLOW is deliberately NOT here â€” it returns
     None (see test_pre_tool_use_allow_returns_none). A wrong mapping here
     would, e.g., let a DENY verdict run the tool, defeating enforcement.
     """
@@ -164,7 +164,7 @@ def test_pre_tool_use_allow_returns_none() -> None:
     ALLOW is the policy engine's default verdict when no policy matches a
     tool call. Emitting ``permissionDecision: "allow"`` would auto-approve
     the tool in the native harness, suppressing its own permission prompt
-    — and, for Claude Code, the ``PermissionRequest`` hook that routes
+    â€” and, for Claude Code, the ``PermissionRequest`` hook that routes
     that prompt to the web UI. Returning None keeps the policy gate and
     the user's own consent gate independent: the policy layer may block
     (DENY) or demand approval (ASK), but must never silence the harness's
@@ -197,7 +197,7 @@ def test_pre_tool_use_unknown_action_returns_none() -> None:
     An unrecognized/unspecified action yields no opinion (None).
 
     POLICY_ACTION_UNSPECIFIED (e.g. no agent / no policies) must not be
-    coerced into allow or deny — returning None lets the harness apply
+    coerced into allow or deny â€” returning None lets the harness apply
     its own default. A failure would fabricate a verdict from no policy.
     """
     output = evaluation_response_to_hook_output(
@@ -210,7 +210,7 @@ def test_post_tool_use_deny_maps_to_additional_context() -> None:
     """
     A PostToolUse DENY becomes an additionalContext warning, not a block.
 
-    PostToolUse fires after the tool ran, so it cannot block — the
+    PostToolUse fires after the tool ran, so it cannot block â€” the
     verdict is surfaced to the model as context. A failure would either
     drop the warning or wrongly attempt to block an already-run tool.
     """
@@ -276,7 +276,7 @@ def test_user_prompt_submit_blocking_actions_emit_decision_block(action: str) ->
     DENY (and a stray ASK) block the prompt via top-level ``decision``.
 
     UserPromptSubmit uses the top-level ``decision`` / ``reason`` contract
-    (NOT ``permissionDecision``) — both harnesses parse ``decision: "block"``
+    (NOT ``permissionDecision``) â€” both harnesses parse ``decision: "block"``
     to drop the prompt before the model sees it. ASK is meant to be resolved
     server-side (``_hold_native_ask_gate``), so if the hook ever sees it, it
     must fail closed by blocking rather than letting the prompt through.
@@ -321,9 +321,9 @@ def test_fail_closed_pre_tool_use_denies() -> None:
     """
     An unobtainable verdict on PreToolUse fails CLOSED with ``deny``.
 
-    PreToolUse is the authoritative pre-execution gate for native tools —
+    PreToolUse is the authoritative pre-execution gate for native tools â€”
     the sole enforcement point for connector-native ``mcp__*`` tools and
-    native Bash/Write/Edit — so a verdict that cannot be fetched must deny
+    native Bash/Write/Edit â€” so a verdict that cannot be fetched must deny
     rather than silently let the call through (issue #536).
     """
     output = fail_closed_hook_output("PreToolUse")
@@ -341,7 +341,7 @@ def test_fail_closed_user_prompt_submit_fails_closed() -> None:
     ``UserPromptSubmit`` (``PHASE_REQUEST``) fails CLOSED on an unobtainable verdict.
 
     The request gate is the sole pre-turn enforcement point for native
-    sessions — a server hiccup must not let an over-budget or otherwise-
+    sessions â€” a server hiccup must not let an over-budget or otherwise-
     blocked request proceed. The output must be a top-level
     ``decision: "block"`` with a non-empty reason (both Claude Code and
     Codex drop a block with an empty reason).
@@ -369,7 +369,7 @@ def test_fail_closed_unknown_event_fails_open() -> None:
 
     Only the exact ``PreToolUse`` event denies; any novel event name added
     by a future harness must fall through to "no opinion" rather than
-    accidentally blocking — the conservative default for an unknown gate.
+    accidentally blocking â€” the conservative default for an unknown gate.
     """
     assert fail_closed_hook_output("SomeNewEvent") is None
 
@@ -400,7 +400,7 @@ def test_is_login_redirect_or_unauthorized_classifies_reauth_signals(
     401 and an Apps OAuth-login 302 are re-auth signals; nothing else is.
 
     The Databricks Apps front door bounces an *expired* bearer with a
-    ``302 → /oidc/`` (or ``/.auth/``), NOT a ``401`` — so a hook that only
+    ``302 â†’ /oidc/`` (or ``/.auth/``), NOT a ``401`` â€” so a hook that only
     checked ``401`` silently failed closed once the one-shot token lapsed.
     This is the classifier that lets the hook re-mint instead.
     """
@@ -438,12 +438,12 @@ def test_post_evaluate_with_retry_reauths_on_login_redirect(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A 302→/oidc/ re-mints the bearer and retries, returning the real verdict.
+    A 302â†’/oidc/ re-mints the bearer and retries, returning the real verdict.
 
     Regression guard for the production bug where an "old" native session
     (token past the ~1h Databricks OAuth lifetime) failed CLOSED on every tool
     call. The first attempt carries the lapsed token (302), the retry carries
-    the fresh token and gets the ALLOW verdict — exactly as the runner's
+    the fresh token and gets the ALLOW verdict â€” exactly as the runner's
     refresh-capable ``_RunnerDatabricksAuth`` does for its own callbacks.
     """
     seen_headers: list[dict[str, str]] = []
@@ -517,8 +517,8 @@ def test_post_evaluate_with_retry_reauth_unavailable_fails_closed(
     When re-mint yields no token, the helper returns ``None`` (caller fails closed).
 
     Re-auth is best-effort: a ``reauth`` that returns ``None`` (no creds /
-    transient mint failure) must not loop — it falls through to
-    ``raise_for_status`` (302 → non-retryable) so the caller keeps the
+    transient mint failure) must not loop â€” it falls through to
+    ``raise_for_status`` (302 â†’ non-retryable) so the caller keeps the
     fail-closed safety net.
     """
     seen_headers: list[dict[str, str]] = []
@@ -544,7 +544,7 @@ def test_post_evaluate_with_retry_reauth_unavailable_fails_closed(
     assert len(seen_headers) == 1  # one attempt only; no retry loop
 
 
-# ── shared policy-hook header plumbing (writer + reader) ─────────────
+# â”€â”€ shared policy-hook header plumbing (writer + reader) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_policy_hook_request_headers_merges_baked_auth(
@@ -571,9 +571,9 @@ def test_policy_hook_request_headers_merges_baked_auth(
 def test_policy_hook_request_headers_tolerates_missing_or_bad_env(
     monkeypatch: pytest.MonkeyPatch, raw: str
 ) -> None:
-    """Absent / malformed env → just ``Content-Type`` (local-unauth path).
+    """Absent / malformed env â†’ just ``Content-Type`` (local-unauth path).
 
-    A bad value must not crash the hook nor inject garbage headers — the
+    A bad value must not crash the hook nor inject garbage headers â€” the
     server simply decides without auth (a local unauthenticated server needs
     none).
     """
@@ -590,11 +590,11 @@ def test_policy_hook_wrapper_script_bakes_auth_and_routing(
     """The writer bakes bearer + routing into the wrapper via the one builder.
 
     A new harness wiring up its hook through this helper gets auth AND
-    workspace routing for free — the gap that left the cursor/hermes hooks
+    workspace routing for free â€” the gap that left the cursor/hermes hooks
     posting unauthenticated and unrouted.
     """
-    import agent_meow.cli_auth as cli_auth
-    import agent_meow.runner._entry as entry
+    import omnigent.cli_auth as cli_auth
+    import omnigent.runner._entry as entry
 
     monkeypatch.setattr(
         entry, "_make_auth_token_factory", lambda *, server_url=None: lambda: "tok"
@@ -602,11 +602,11 @@ def test_policy_hook_wrapper_script_bakes_auth_and_routing(
     monkeypatch.setattr(cli_auth, "load_databricks_org_id", lambda _url: "org123")
 
     script = native_policy_hook.policy_hook_wrapper_script(
-        "https://acme.databricks.com/api/2.0/agent_meow", "conv_x", "/path/hook.py"
+        "https://acme.databricks.com/api/2.0/omnigent", "conv_x", "/path/hook.py"
     )
 
     assert script.startswith("#!/bin/sh\n")
-    assert "_OMNIGENT_SERVER_URL=https://acme.databricks.com/api/2.0/agent_meow" in script
+    assert "_OMNIGENT_SERVER_URL=https://acme.databricks.com/api/2.0/omnigent" in script
     assert "_OMNIGENT_SESSION_ID=conv_x" in script
     # The baked headers carry BOTH the bearer and the routing header.
     line = next(
@@ -619,13 +619,13 @@ def test_policy_hook_wrapper_script_bakes_auth_and_routing(
 def test_policy_hook_wrapper_script_omits_auth_when_unauthenticated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No token + no recorded selector → empty auth dict (local-unauth runs).
+    """No token + no recorded selector â†’ empty auth dict (local-unauth runs).
 
     The wrapper still exports the (empty) header dict, so the reader yields
-    just ``Content-Type`` — non-workspace callers are unaffected.
+    just ``Content-Type`` â€” non-workspace callers are unaffected.
     """
-    import agent_meow.cli_auth as cli_auth
-    import agent_meow.runner._entry as entry
+    import omnigent.cli_auth as cli_auth
+    import omnigent.runner._entry as entry
 
     monkeypatch.setattr(entry, "_make_auth_token_factory", lambda *, server_url=None: None)
     monkeypatch.setattr(cli_auth, "load_databricks_org_id", lambda _url: None)
@@ -647,15 +647,15 @@ def test_policy_hook_reauth_remints_and_preserves_routing_header(
 
     When a baked one-shot token lapses, the four hooks (codex/kimi/cursor/
     hermes) that wire this builder must mint a fresh bearer through the same
-    factory the refresh-capable runtime auth uses — without dropping the
+    factory the refresh-capable runtime auth uses â€” without dropping the
     workspace-routing header that travels alongside it.
     """
     monkeypatch.setattr(
-        "agent_meow.runner._entry._make_auth_token_factory",
+        "omnigent.runner._entry._make_auth_token_factory",
         lambda _server_url: lambda: "fresh-token",
     )
     reauth = native_policy_hook.policy_hook_reauth(
-        "https://acme.databricks.com/api/2.0/agent_meow",
+        "https://acme.databricks.com/api/2.0/omnigent",
         {"Authorization": "Bearer stale", "X-Databricks-Org-Id": "o9"},
     )
     assert reauth() == {"Authorization": "Bearer fresh-token", "X-Databricks-Org-Id": "o9"}
@@ -664,9 +664,9 @@ def test_policy_hook_reauth_remints_and_preserves_routing_header(
 def test_policy_hook_reauth_returns_none_without_factory(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No refresh mechanism (local/unauth) → ``None`` so the caller fails closed."""
+    """No refresh mechanism (local/unauth) â†’ ``None`` so the caller fails closed."""
     monkeypatch.setattr(
-        "agent_meow.runner._entry._make_auth_token_factory",
+        "omnigent.runner._entry._make_auth_token_factory",
         lambda _server_url: None,
     )
     reauth = native_policy_hook.policy_hook_reauth(

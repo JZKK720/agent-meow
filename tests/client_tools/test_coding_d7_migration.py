@@ -1,5 +1,5 @@
 """
-Unit tests for the D7 migration of ``agent_meow.client_tools.coding``
+Unit tests for the D7 migration of ``omnigent.client_tools.coding``
 from raw ``TOOLS`` dict + ``execute_tool`` dispatcher to
 ``@tool``-decorated functions.
 
@@ -9,15 +9,15 @@ The migration's contract:
    module-level ``_TOOL_FNS`` list (so ``agent-meow chat`` /
    ``build_tool_handler`` consumers can pick them up).
 2. The legacy ``TOOLS`` list still exposes OpenAI-format
-   schemas — derived from the ``@tool`` metadata, not
-   hand-rolled — so ``examples/frontends/terminal.py`` (which
+   schemas â€” derived from the ``@tool`` metadata, not
+   hand-rolled â€” so ``examples/frontends/terminal.py`` (which
    reads ``tool_set.TOOLS`` directly) keeps working.
 3. The legacy ``execute_tool(name, args)`` sync dispatcher
-   still works — same source of truth as the @tool functions
+   still works â€” same source of truth as the @tool functions
    so a tool's behavior is identical whether invoked through
    ``execute_tool`` or via ``build_tool_handler``.
 4. Schemas preserve optional-vs-required semantics (``T |
-   None = None`` parameters are NOT in ``required``) — this
+   None = None`` parameters are NOT in ``required``) â€” this
    is why the migration uses ``@tool(strict=False)``; strict
    mode would force every property into ``required``.
 """
@@ -27,7 +27,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from agent_meow.client_tools.coding import (
+from omnigent.client_tools.coding import (
     _TOOL_FNS,
     LSP,
     TOOLS,
@@ -57,7 +57,7 @@ def test_tool_fns_lists_all_eight_tools() -> None:
     """
     ``_TOOL_FNS`` must list every tool the module exports as a
     function. Catches a regression where a new tool is added
-    but not appended to the list — its schema would silently
+    but not appended to the list â€” its schema would silently
     not appear in ``TOOLS`` and ``agent-meow chat`` consumers would
     miss it.
     """
@@ -77,7 +77,7 @@ def test_tool_fns_lists_all_eight_tools() -> None:
 def test_tools_schema_count_matches_tool_fns() -> None:
     """
     ``TOOLS`` is derived from ``_TOOL_FNS`` via
-    ``build_tool_handler``. Lengths must match — a mismatch
+    ``build_tool_handler``. Lengths must match â€” a mismatch
     means the SDK's handler-build silently dropped one.
     """
     assert len(TOOLS) == len(_TOOL_FNS), (
@@ -92,7 +92,7 @@ def test_required_params_match_signatures() -> None:
     None``) out of ``required``. If the migration accidentally
     used ``strict=True``, every param ends up in ``required``
     and the LLM is forced to send values for every optional
-    arg — broken UX (e.g., calling Read would force offset+limit).
+    arg â€” broken UX (e.g., calling Read would force offset+limit).
     """
     cases: dict[str, list[str]] = {
         "Read": ["file_path"],
@@ -139,7 +139,7 @@ def test_execute_tool_dispatches_to_function() -> None:
 def test_execute_tool_unknown_returns_error_string() -> None:
     """
     Unknown tool names return a string error rather than
-    raising — preserves the legacy behavior so terminal.py's
+    raising â€” preserves the legacy behavior so terminal.py's
     error handling doesn't need to change.
     """
     assert execute_tool("nonexistent", {}) == "Unknown tool: nonexistent"
@@ -147,7 +147,7 @@ def test_execute_tool_unknown_returns_error_string() -> None:
 
 def test_read_handles_offset_and_limit() -> None:
     """
-    ``Read`` slices at offset/limit when provided — proves
+    ``Read`` slices at offset/limit when provided â€” proves
     optional args are honored when passed but defaulted when
     not. Catches a regression where the migration's None
     handling was wrong (e.g., treating ``offset=None`` as 0
@@ -215,7 +215,7 @@ def test_bash_returns_command_output() -> None:
 
 
 def test_lsp_stub_does_not_raise() -> None:
-    """``LSP`` is a stub — must return a string, not raise."""
+    """``LSP`` is a stub â€” must return a string, not raise."""
     out = LSP(action="hover", file_path="/tmp/foo.py", line=1, character=0)
     assert "not implemented" in out.lower()
 

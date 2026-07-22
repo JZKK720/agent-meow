@@ -6,9 +6,9 @@ runner is where the harness executes and may read a skill's local
 resource files. These tests exercise the two runner endpoints the AP
 server delegates to:
 
-* ``GET /v1/sessions/{id}/skills`` — the merged (bundled + host) skill
+* ``GET /v1/sessions/{id}/skills`` â€” the merged (bundled + host) skill
   list for the web composer's slash-command menu.
-* ``POST /v1/sessions/{id}/skills/resolve`` — a skill invocation's
+* ``POST /v1/sessions/{id}/skills/resolve`` â€” a skill invocation's
   hidden ``<skill>`` meta text, with the ``<path>`` resolved against the
   runner's filesystem.
 """
@@ -23,9 +23,9 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.runner import create_runner_app
-from agent_meow.runner.app import ResolvedSpec
-from agent_meow.spec.types import SkillSpec
+from omnigent.runner import create_runner_app
+from omnigent.runner.app import ResolvedSpec
+from omnigent.spec.types import SkillSpec
 
 
 def _skill_md(name: str, description: str) -> str:
@@ -137,7 +137,7 @@ def _make_app(
         resolved spec entry; no longer the host-skill discovery root).
     :param bundled: Bundled skills the stub spec exposes.
     :param skills_filter: Host-skill filter for the stub spec.
-    :param workspace: Session workspace the fake server reports — the
+    :param workspace: Session workspace the fake server reports â€” the
         host-skill discovery root. ``None`` omits it.
     :param resolver_calls: Optional list appended to on each
         ``spec_resolver`` invocation, for asserting cache behavior.
@@ -177,7 +177,7 @@ async def test_get_session_skills_returns_bundled_skills(tmp_path: Path) -> None
     """
     ``GET /skills`` returns the bundled skills (name + description).
     ``skills_filter="none"`` suppresses host discovery so the result is
-    exactly the bundled set — hermetic, independent of the dev's real
+    exactly the bundled set â€” hermetic, independent of the dev's real
     ``~/.claude/skills/``.
     """
     bundle = tmp_path / "bundle"
@@ -252,7 +252,7 @@ async def test_get_session_skills_native_shape_finds_workspace_skill(
     """
     The claude-native shape: the agent ships no bundled skills and its
     bundle root is a throwaway temp dir, but the session workspace has a
-    project-local skill. Discovery must still surface it — the bug this
+    project-local skill. Discovery must still surface it â€” the bug this
     fixes was rooting at the empty bundle temp dir, which found nothing.
     """
     home = tmp_path / "home"
@@ -390,7 +390,7 @@ async def test_resolve_session_skill_invalid_json_body_returns_400(tmp_path: Pat
 @pytest.mark.asyncio
 async def test_resolve_session_skill_non_string_arguments_returns_400(tmp_path: Path) -> None:
     """
-    ``arguments`` that isn't a string is a structured 400 — otherwise it
+    ``arguments`` that isn't a string is a structured 400 â€” otherwise it
     would blow up later in ``format_skill_meta_text``'s string join.
     """
     bundle = tmp_path / "bundle"
@@ -445,7 +445,7 @@ async def test_session_skills_cache_ttl_expiry_rediscovers(
     re-walks the filesystem and picks up a skill installed mid-session.
 
     With the TTL pinned to 0 every cached entry is immediately stale, so a
-    host skill created AFTER the first request must appear in the second —
+    host skill created AFTER the first request must appear in the second â€”
     proof the walk reran rather than serving the stale cache (the converse of
     ``test_session_skills_cached_per_session``, which proves the cache holds
     within the window).
@@ -453,7 +453,7 @@ async def test_session_skills_cache_ttl_expiry_rediscovers(
     home = tmp_path / "home"
     (home / ".claude" / "skills").mkdir(parents=True)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
-    monkeypatch.setattr("agent_meow.runner.app._SESSION_SKILLS_CACHE_TTL_SECONDS", 0.0)
+    monkeypatch.setattr("omnigent.runner.app._SESSION_SKILLS_CACHE_TTL_SECONDS", 0.0)
 
     workspace = tmp_path / "workspace"
     first_skill = workspace / ".claude" / "skills" / "first"
@@ -475,7 +475,7 @@ async def test_session_skills_cache_ttl_expiry_rediscovers(
     assert first.status_code == 200
     assert second.status_code == 200
     assert {s["name"] for s in first.json()["skills"]} == {"first"}
-    # TTL=0 ⇒ the second request re-walked and discovered the new skill.
+    # TTL=0 â‡’ the second request re-walked and discovered the new skill.
     assert {s["name"] for s in second.json()["skills"]} == {"first", "second"}
 
 
@@ -606,7 +606,7 @@ async def test_non_invocable_bundled_skill_does_not_unshadow_host_skill(
 ) -> None:
     """
     A bundled skill marked user-invocable:false stays hidden AND keeps a
-    same-named host skill hidden — the non-invocable name still shadows.
+    same-named host skill hidden â€” the non-invocable name still shadows.
     """
     home = tmp_path / "home"
     # Host skill that shares the bundled skill's name.

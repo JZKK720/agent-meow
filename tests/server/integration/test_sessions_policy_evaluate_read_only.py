@@ -24,27 +24,27 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.runtime import get_caps
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.runtime.caps import RuntimeCaps
-from agent_meow.server.app import create_app
-from agent_meow.server.auth import LEVEL_EDIT, LEVEL_READ
-from agent_meow.spec.types import FunctionPolicySpec, FunctionRef, Phase
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runtime import get_caps
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.runtime.caps import RuntimeCaps
+from omnigent.server.app import create_app
+from omnigent.server.auth import LEVEL_EDIT, LEVEL_READ
+from omnigent.spec.types import FunctionPolicySpec, FunctionRef, Phase
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 from tests.server.conftest import ControllableMockClient
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
 
 
-# ── Policy callable ──────────────────────────────────────────────
+# â”€â”€ Policy callable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _allow_and_label(event: dict[str, Any]) -> dict[str, Any]:
@@ -68,7 +68,7 @@ def _ask_on_request(event: dict[str, Any]) -> dict[str, Any]:
     Policy that demands approval (ASK) for every event.
 
     Used to exercise the endpoint's server-side ASK park on the REQUEST
-    phase — the phase a native session's ``UserPromptSubmit`` hook hits.
+    phase â€” the phase a native session's ``UserPromptSubmit`` hook hits.
 
     :param event: V0 event dict.
     :returns: ASK with a reason.
@@ -79,7 +79,7 @@ def _ask_on_request(event: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-# ── Helpers ──────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 OWNER = "owner@example.com"
 READER = "reader@example.com"
@@ -120,7 +120,7 @@ def _request_request(text: str = "do the thing") -> dict[str, Any]:
     }
 
 
-# ── Fixtures ─────────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -137,7 +137,7 @@ def auth_app(
     :param tmp_path: Pytest temp dir for artifacts.
     :returns: A :class:`FastAPI` instance with auth and policy routes active.
     """
-    from agent_meow.server.auth import UnifiedAuthProvider
+    from omnigent.server.auth import UnifiedAuthProvider
 
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     return create_app(
@@ -169,8 +169,8 @@ async def auth_client(
     :param tmp_path: Pytest temp dir for the harness process manager.
     :yields: A ready-to-use :class:`httpx.AsyncClient`.
     """
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()
@@ -235,7 +235,7 @@ def _get_labels(db_uri: str, session_id: str) -> dict[str, str]:
     return dict(conv.labels)
 
 
-# ── Tests ────────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_read_only_caller_gets_verdict_but_no_label_mutation(
@@ -263,7 +263,7 @@ async def test_read_only_caller_gets_verdict_but_no_label_mutation(
         default_policies=[labeling_policy],
     )
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions.get_caps",
+        "omnigent.server.routes.sessions.get_caps",
         lambda: patched_caps,
     )
 
@@ -278,7 +278,7 @@ async def test_read_only_caller_gets_verdict_but_no_label_mutation(
     labels_before = _get_labels(db_uri, session_id)
     assert labels_before.get("evaluated") is None, "label should not exist before evaluation"
 
-    # Reader evaluates — should get ALLOW but no persistence.
+    # Reader evaluates â€” should get ALLOW but no persistence.
     resp = await auth_client.post(
         f"/v1/sessions/{session_id}/policies/evaluate",
         json=_tool_call_request("Read"),
@@ -317,7 +317,7 @@ async def test_edit_caller_persists_labels_as_before(
         default_policies=[labeling_policy],
     )
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions.get_caps",
+        "omnigent.server.routes.sessions.get_caps",
         lambda: patched_caps,
     )
 
@@ -328,7 +328,7 @@ async def test_edit_caller_persists_labels_as_before(
     # Grant LEVEL_EDIT to editor.
     _grant_access(db_uri, EDITOR, session_id, LEVEL_EDIT)
 
-    # Editor evaluates — should persist labels.
+    # Editor evaluates â€” should persist labels.
     resp = await auth_client.post(
         f"/v1/sessions/{session_id}/policies/evaluate",
         json=_tool_call_request("Read"),
@@ -355,7 +355,7 @@ async def test_request_phase_ask_parks_server_side_and_collapses_to_allow(
 
     This is the path a native session's ``UserPromptSubmit`` hook takes: it
     POSTs a PHASE_REQUEST event and must NEVER see raw ASK (the hook has no
-    ASK primitive — it can only block or allow). The endpoint holds the gate
+    ASK primitive â€” it can only block or allow). The endpoint holds the gate
     via ``_hold_native_ask_gate`` and returns ALLOW on approve / DENY on
     decline. Before REQUEST was added to the endpoint's ASK-park phases, this
     returned a raw ``POLICY_ACTION_ASK`` the hook couldn't act on safely.
@@ -367,7 +367,7 @@ async def test_request_phase_ask_parks_server_side_and_collapses_to_allow(
         return True  # human approved
 
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions._hold_native_ask_gate",
+        "omnigent.server.routes.sessions._hold_native_ask_gate",
         _fake_hold,
     )
     ask_policy = FunctionPolicySpec(
@@ -377,7 +377,7 @@ async def test_request_phase_ask_parks_server_side_and_collapses_to_allow(
     )
     original_caps = get_caps()
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions.get_caps",
+        "omnigent.server.routes.sessions.get_caps",
         lambda: RuntimeCaps(
             execution_timeout=original_caps.execution_timeout,
             default_policies=[ask_policy],
@@ -395,7 +395,7 @@ async def test_request_phase_ask_parks_server_side_and_collapses_to_allow(
     assert resp.status_code == 200, resp.text
     # The gate was entered AT the REQUEST phase (not skipped as a raw ASK).
     assert held.get("phase") == Phase.REQUEST
-    # Approval collapses the ASK to a hard ALLOW — the hook never sees ASK.
+    # Approval collapses the ASK to a hard ALLOW â€” the hook never sees ASK.
     assert resp.json()["result"] == "POLICY_ACTION_ALLOW"
 
 
@@ -416,7 +416,7 @@ async def test_request_phase_ask_decline_collapses_to_deny(
         return False  # declined / timeout
 
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions._hold_native_ask_gate",
+        "omnigent.server.routes.sessions._hold_native_ask_gate",
         _fake_hold,
     )
     ask_policy = FunctionPolicySpec(
@@ -426,7 +426,7 @@ async def test_request_phase_ask_decline_collapses_to_deny(
     )
     original_caps = get_caps()
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions.get_caps",
+        "omnigent.server.routes.sessions.get_caps",
         lambda: RuntimeCaps(
             execution_timeout=original_caps.execution_timeout,
             default_policies=[ask_policy],
@@ -461,7 +461,7 @@ async def test_request_phase_skips_gate_when_web_prompt_pending(
     the human). If the dedup regressed, the ASK policy below would enter the
     gate instead of returning a clean ALLOW.
     """
-    from agent_meow.runtime import pending_inputs
+    from omnigent.runtime import pending_inputs
 
     # If the dedup is bypassed and the gate runs, this records the failure.
     gate_ran = {"called": False}
@@ -471,7 +471,7 @@ async def test_request_phase_skips_gate_when_web_prompt_pending(
         return True
 
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions._hold_native_ask_gate",
+        "omnigent.server.routes.sessions._hold_native_ask_gate",
         _fail_hold,
     )
     ask_policy = FunctionPolicySpec(
@@ -481,7 +481,7 @@ async def test_request_phase_skips_gate_when_web_prompt_pending(
     )
     original_caps = get_caps()
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions.get_caps",
+        "omnigent.server.routes.sessions.get_caps",
         lambda: RuntimeCaps(
             execution_timeout=original_caps.execution_timeout,
             default_policies=[ask_policy],
@@ -504,6 +504,6 @@ async def test_request_phase_skips_gate_when_web_prompt_pending(
         pending_inputs.reset_for_tests()
 
     assert resp.status_code == 200, resp.text
-    # Skipped → clean ALLOW, and the ASK gate was never entered.
+    # Skipped â†’ clean ALLOW, and the ASK gate was never entered.
     assert resp.json()["result"] == "POLICY_ACTION_ALLOW"
     assert gate_ran["called"] is False, "dedup must skip the gate when a web prompt is pending"

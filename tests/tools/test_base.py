@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.tools.base`.
+"""Unit tests for :mod:`~?omnigent.tools.base`.
 
 Covers ``ToolContext`` construction, ``Tool`` ABC contract, and the
 ``is_valid_tool_name`` validator.
@@ -11,9 +11,9 @@ from typing import Any
 
 import pytest
 
-from agent_meow.tools.base import Tool, ToolContext, is_valid_tool_name
+from omnigent.tools.base import Tool, ToolContext, is_valid_tool_name
 
-# ── is_valid_tool_name ───────────────────────────────────
+# â”€â”€ is_valid_tool_name â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -47,7 +47,7 @@ def test_invalid_names(name: str) -> None:
     assert is_valid_tool_name(name) is False
 
 
-# ── ToolContext ──────────────────────────────────────────
+# â”€â”€ ToolContext â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_tool_context_minimal() -> None:
@@ -79,7 +79,7 @@ def test_tool_context_is_frozen() -> None:
         ctx.task_id = "new"  # type: ignore[misc]
 
 
-# ── Tool ABC ─────────────────────────────────────────────
+# â”€â”€ Tool ABC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_tool_abc_cannot_instantiate() -> None:

@@ -17,9 +17,9 @@ don't close:
   - ``tests/frontends/sdk/test_terminal_host.py`` ::
     ``test_output_wraps_urls_in_osc_8_hyperlink`` covers the
     wiring inside ``TerminalHost.output`` (capsys-captured).
-  - Neither exercises the full path: tool dispatch → tool
-    result panel construction → ``host.output(Panel(...))`` →
-    Rich render → linkify → real PTY write → terminal
+  - Neither exercises the full path: tool dispatch â†’ tool
+    result panel construction â†’ ``host.output(Panel(...))`` â†’
+    Rich render â†’ linkify â†’ real PTY write â†’ terminal
     receives bytes. This test pins that whole chain.
 
 What can break this without breaking the lower layers:
@@ -29,7 +29,7 @@ What can break this without breaking the lower layers:
     direct ``console.print`` somewhere in the SDK that
     skips the linkify hook).
   - The PTY layer (prompt-toolkit's stdout proxy) eats the
-    OSC 8 bytes before they reach the wire — possible if
+    OSC 8 bytes before they reach the wire â€” possible if
     someone adds an ANSI sanitizer for "safety."
   - The agent-meow mode SSE bridge translates tool-result events into
     a renderable shape that bypasses Rich Panel entirely.
@@ -47,14 +47,14 @@ import shutil
 import uuid
 from pathlib import Path
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     submit_prompt,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
-# A deliberately distinctive URL the agent will echo — picked
+# A deliberately distinctive URL the agent will echo â€” picked
 # so the OSC 8 byte sequence containing it can be unambiguously
 # located in the captured PTY stream. Real-looking enough that
 # the URL regex in ``_linkify`` accepts it (``https://`` prefix +
@@ -62,14 +62,14 @@ from tests.e2e.agent_meow.conftest import configure_mock_llm
 # match doesn't false-positive on something else in the buffer.
 _TEST_URL = "https://omni-linkify-e2e-test.example.com/path"
 
-# OSC 8 envelope components — pinned here so the test fails
+# OSC 8 envelope components â€” pinned here so the test fails
 # loudly if the wire format drifts.
 _OSC_OPEN = "\x1b]8;;"
 _OSC_CLOSE = "\x1b\\"
 
 # Agent that echoes the test URL through bash. Tool-output
 # path is more deterministic than asking the LLM to print the
-# URL verbatim in its assistant text — bash's stdout is
+# URL verbatim in its assistant text â€” bash's stdout is
 # byte-exact and lands in the tool result panel via
 # ``host.output(Panel(...))``.
 _YAML_BODY = f"""\
@@ -97,7 +97,7 @@ os_env:
 _MODEL = "mock-model"
 _HARNESS = "openai-agents"
 
-# Whole run usually takes 15–25 s (one tool call + one
+# Whole run usually takes 15â€“25 s (one tool call + one
 # assistant response). 90 s is generous.
 _SPAWN_TIMEOUT = 60.0
 _BOOT_TIMEOUT = 60.0
@@ -136,7 +136,7 @@ def test_run_omnigent_url_linkify_emits_osc_8_in_pty(
     place but not another").
 
     Path-length note: same workaround as the rate-limit-approval
-    e2e test — pytest's ``tmp_path`` is too deeply nested for
+    e2e test â€” pytest's ``tmp_path`` is too deeply nested for
     macOS Unix-socket paths, so we put the per-test workdir
     under ``/tmp/`` directly.
 
@@ -194,14 +194,14 @@ def test_run_omnigent_url_linkify_emits_osc_8_in_pty(
             timeout=_SPAWN_TIMEOUT,
         )
         # logfile_read mirrors every PTY byte into ``captured``,
-        # including OSC 8 escapes — the assertion target.
+        # including OSC 8 escapes â€” the assertion target.
         child.logfile_read = captured
 
         try:
-            # Boot signal — same workaround as the other
+            # Boot signal â€” same workaround as the other
             # e2e tests: bottom-toolbar status doesn't always
-            # paint under pexpect, so we anchor on ``❯``.
-            child.expect(r"❯ ", timeout=_BOOT_TIMEOUT)
+            # paint under pexpect, so we anchor on ``â¯``.
+            child.expect(r"â¯ ", timeout=_BOOT_TIMEOUT)
             submit_prompt(child, "go")
             child.expect("DONE", timeout=_RUN_COMPLETE_TIMEOUT)
             clean_exit(child, timeout=_EXIT_TIMEOUT)
@@ -230,7 +230,7 @@ def _assert_url_was_linkified(captured: str) -> None:
        least once. Pins the wire format. If linkify ever
        changed how it builds the envelope, this fails.
     2. Every occurrence of the URL in the buffer is preceded
-       by ``\\x1b]8;;``. Pins coverage — every render site
+       by ``\\x1b]8;;``. Pins coverage â€” every render site
        that emits the URL must have run through linkify.
 
     :param captured: The full PTY byte stream from ``pexpect``'s
@@ -252,17 +252,17 @@ def _assert_url_was_linkified(captured: str) -> None:
         f"new render path was added that bypasses ``output()``. "
         f"The unit + integration tests in "
         f"tests/frontends/sdk/test_linkify.py and "
-        f"test_terminal_host.py may still pass — they don't "
+        f"test_terminal_host.py may still pass â€” they don't "
         f"exercise the full PTY chain.\n\n"
         f"Captured tail (last 4000 chars):\n{captured[-4000:]}"
     )
 
     # Assertion 2: no BARE (un-enveloped) occurrences of the
     # URL anywhere in the PTY output. Each OSC 8 envelope
-    # contains the URL TWICE — once as the link target inside
+    # contains the URL TWICE â€” once as the link target inside
     # the opener (``\x1b]8;;<URL>\x1b\\``) and once as the
     # visible display text immediately after the opener's ST.
-    # So total URL occurrences = 2 × envelope_count + bare,
+    # So total URL occurrences = 2 Ã— envelope_count + bare,
     # and we want bare == 0.
     envelope_pattern = re.compile(re.escape(expected_envelope))
     envelope_count = len(envelope_pattern.findall(captured))

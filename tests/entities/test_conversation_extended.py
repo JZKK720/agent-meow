@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agent_meow.entities.conversation import (
+from omnigent.entities.conversation import (
     ITEM_TYPE_TO_DATA_CLS,
     NON_CONTENT_ITEM_TYPES,
     CompactionData,

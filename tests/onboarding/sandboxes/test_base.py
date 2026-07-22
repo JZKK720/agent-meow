@@ -11,7 +11,7 @@ from __future__ import annotations
 import subprocess
 from typing import ClassVar
 
-from agent_meow.onboarding.sandboxes.base import RemoteCommandResult, SandboxLauncher
+from omnigent.onboarding.sandboxes.base import RemoteCommandResult, SandboxLauncher
 
 
 class _RecordingLauncher(SandboxLauncher):

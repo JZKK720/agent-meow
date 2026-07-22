@@ -1,18 +1,18 @@
 """
-Unit tests for the REPL's sub-agent tree plumbing in ``agent_meow.repl._repl``.
+Unit tests for the REPL's sub-agent tree plumbing in ``omnigent.repl._repl``.
 
-Covers the two testable seams of the ``↓`` sub-agents feature:
+Covers the two testable seams of the ``â†“`` sub-agents feature:
 
-* :func:`_apply_child_session_event` — maps ``session.created`` /
+* :func:`_apply_child_session_event` â€” maps ``session.created`` /
   ``session.child_session.updated`` SSE events onto the host registry,
   filtered by the active conversation id.
-* :func:`_refresh_subagent_tree` — fetches the tree via the shared SDK
+* :func:`_refresh_subagent_tree` â€” fetches the tree via the shared SDK
   recursion (``client.sessions.child_sessions_tree``) and seeds the host
   registry (the deeper-level poll).
 
 The live triggers live in the ``_render_session_event`` closure inside
 ``run_repl`` (not callable in isolation), so a source-inspection guard
-catches the wiring being dropped — mirroring
+catches the wiring being dropped â€” mirroring
 ``tests/repl/test_agent_switch_refresh.py``.
 """
 
@@ -25,9 +25,9 @@ import pytest
 from omnigent_client._sessions import SessionsNamespace
 from omnigent_ui_sdk.terminal._host import TerminalHost
 
-from agent_meow.repl import _repl
-from agent_meow.repl._repl import _apply_child_session_event, _refresh_subagent_tree
-from agent_meow.server.schemas import (
+from omnigent.repl import _repl
+from omnigent.repl._repl import _apply_child_session_event, _refresh_subagent_tree
+from omnigent.server.schemas import (
     SessionChildSessionUpdatedEvent,
     SessionCreatedEvent,
 )
@@ -80,7 +80,7 @@ def test_child_updated_merges_summary_with_parent() -> None:
 
 def test_child_event_for_other_parent_is_ignored() -> None:
     """An event whose carrier conversation_id isn't the active session is
-    consumed (handled) but must NOT mutate the registry — a relayed
+    consumed (handled) but must NOT mutate the registry â€” a relayed
     grandchild event riding an ancestor stream can't pollute the tree."""
     host = _host()
     event = SessionChildSessionUpdatedEvent(
@@ -139,7 +139,7 @@ class _FakeSessions:
 
     The recursion + parent tagging now live in the SDK's
     :meth:`SessionsNamespace.child_sessions_tree`, so the fake reuses that real
-    implementation (bound to this fake's ``child_sessions``) — the REPL→SDK
+    implementation (bound to this fake's ``child_sessions``) â€” the REPLâ†’SDK
     path is exercised end-to-end and ``calls`` still records each level fetched.
     """
 
@@ -154,8 +154,8 @@ class _FakeSessions:
     async def child_sessions_tree(
         self, session_id: str, *, max_depth: int = 3, limit: int = 100
     ) -> list[dict[str, Any]]:
-        # Delegate to the real SDK recursion — it only depends on
-        # ``self.child_sessions`` — so we test the actual shared helper.
+        # Delegate to the real SDK recursion â€” it only depends on
+        # ``self.child_sessions`` â€” so we test the actual shared helper.
         return await SessionsNamespace.child_sessions_tree(
             self, session_id, max_depth=max_depth, limit=limit
         )
@@ -168,7 +168,7 @@ class _FakeClient:
 
 @pytest.mark.asyncio
 async def test_refresh_subagent_tree_recurses_to_grandchildren() -> None:
-    """The recursive fetch assembles a 2-level tree with correct parents —
+    """The recursive fetch assembles a 2-level tree with correct parents â€”
     the mechanism that keeps grandchildren live (the SSE stream only carries
     the active session's direct children)."""
     client = _FakeClient(
@@ -232,40 +232,40 @@ def test_run_repl_wires_subagent_plumbing() -> None:
     """
     src = inspect.getsource(_repl.run_repl)
     assert "_apply_child_session_event(" in src, (
-        "run_repl no longer applies child-session events — the state badge "
-        "and ↓ menu will never populate."
+        "run_repl no longer applies child-session events â€” the state badge "
+        "and â†“ menu will never populate."
     )
     assert "host.on_subagent_select = _open_subagent_by_id" in src, (
-        "the inline ↓ menu select callback was dropped — Enter would no "
+        "the inline â†“ menu select callback was dropped â€” Enter would no "
         "longer switch into the chosen sub-agent."
     )
     assert "host.active_session_id_getter" in src, (
-        "the active-session getter is no longer wired — Left-arrow can't "
+        "the active-session getter is no longer wired â€” Left-arrow can't "
         "tell when the user is inside a sub-agent, so back-to-top breaks."
     )
     assert "session.view_session(" in src, (
         "the select callback must use view_session (read-only re-point), NOT "
-        "switch_to_session — moving the runner binding into a sub-agent "
+        "switch_to_session â€” moving the runner binding into a sub-agent "
         "orphans the parent and the sub-agent's result is never delivered."
     )
     assert "interactive=interactive" in src and "is_subagent_chattable" in src, (
-        "the select callback dropped interactive-child mode — Enter on a "
+        "the select callback dropped interactive-child mode â€” Enter on a "
         "chattable child can no longer co-drive (chat with) it."
     )
     assert "_subagent_poll_loop" in src, (
         "the background tree poll (deeper levels) is no longer started"
     )
     assert "_sync_subagent_root" in src and "_readonly_view" in src, (
-        "the root-tracking dropped its read-only-view source of truth — the "
-        "root could go stale vs the live main session, making '← back' show "
+        "the root-tracking dropped its read-only-view source of truth â€” the "
+        "root could go stale vs the live main session, making 'â† back' show "
         "on the top-level session."
     )
     assert "_interactive_child" in src, (
-        "the root-tracking no longer guards on _interactive_child — co-driving "
+        "the root-tracking no longer guards on _interactive_child â€” co-driving "
         "a child could re-root the selector onto it, breaking Left-arrow back."
     )
     assert "polled_root" in src and "has_active_subagents" in src, (
-        "the discovery poll regressed — a resumed / switched session with "
+        "the discovery poll regressed â€” a resumed / switched session with "
         "existing children won't repopulate the selector without fresh SSE, "
         "or the poll no longer gates on active work and spins forever idle."
     )

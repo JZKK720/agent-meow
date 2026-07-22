@@ -1516,7 +1516,7 @@ class TerminalHost:
         # calls don't paint into the prompt-toolkit screen.
         # Restored in __aexit__.
         try:
-            from agent_meow.cli_diagnostics import redirect_stderr_to_log
+            from omnigent.cli_diagnostics import redirect_stderr_to_log
 
             redirect_stderr_to_log()
         except Exception as err:
@@ -1561,7 +1561,7 @@ class TerminalHost:
         # may log or raise, and those should go to the real terminal
         # now that the TUI is tearing down.
         try:
-            from agent_meow.cli_diagnostics import restore_stderr
+            from omnigent.cli_diagnostics import restore_stderr
 
             restore_stderr()
         except Exception as err:
@@ -3151,7 +3151,7 @@ class TerminalHost:
         # session 409s). Imported lazily to keep this UI SDK importable without
         # the ``omnigent`` server package on the path.
         if not node.closed:
-            from agent_meow.session_lifecycle import is_session_closed
+            from omnigent.session_lifecycle import is_session_closed
 
             if is_session_closed(child.get("labels"), child.get("title")):
                 node.closed = True

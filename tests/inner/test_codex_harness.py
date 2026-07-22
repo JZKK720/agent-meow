@@ -1,7 +1,7 @@
 """
 Tests for the ``harness: codex`` wrap shape.
 
-Mirror of ``tests/inner/test_claude_sdk_harness.py`` — verifies
+Mirror of ``tests/inner/test_claude_sdk_harness.py`` â€” verifies
 the wrap module has the same shape (registry entry, FastAPI app
 routes, env-var-driven lazy executor construction). Does NOT
 exercise the real Codex CLI; the inner ``CodexExecutor.__init__``
@@ -18,8 +18,8 @@ from unittest.mock import patch
 
 import pytest
 
-from agent_meow.inner import codex_harness
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
+from omnigent.inner import codex_harness
+from omnigent.runtime.harnesses import _HARNESS_MODULES
 
 
 def test_harness_module_registered_in_module_registry() -> None:
@@ -28,7 +28,7 @@ def test_harness_module_registered_in_module_registry() -> None:
     Without this entry, the runner subprocess can't find the wrap
     when AP-side tries to spawn it for a ``harness: codex`` spec.
     """
-    assert _HARNESS_MODULES.get("codex") == "agent_meow.inner.codex_harness"
+    assert _HARNESS_MODULES.get("codex") == "omnigent.inner.codex_harness"
 
 
 def test_create_app_returns_fastapi_with_required_routes() -> None:
@@ -46,7 +46,7 @@ def test_create_app_returns_fastapi_with_required_routes() -> None:
     app = codex_harness.create_app()
     paths = {route.path for route in app.routes}  # type: ignore[attr-defined]
     # Session-keyed harness API: liveness probe + single
-    # discriminated-event endpoint per §The Harness API Subset.
+    # discriminated-event endpoint per Â§The Harness API Subset.
     assert "/health" in paths
     assert "/v1/sessions/{conversation_id}/events" in paths
 
@@ -110,7 +110,7 @@ def test_executor_factory_reads_env_vars(
         captured["disable_native_tools"] = disable_native_tools
 
     with patch(
-        "agent_meow.inner.codex_harness.CodexExecutor.__init__",
+        "omnigent.inner.codex_harness.CodexExecutor.__init__",
         _fake_init,
     ):
         codex_harness._build_codex_executor()
@@ -128,8 +128,8 @@ def test_executor_factory_reads_env_vars(
     assert captured["codex_path"] == "/usr/local/bin/codex"
     # Inverted defaults verify the truthy parser is consulted
     # for both directions: enable_web_search default is True,
-    # we set "false" → expect False; disable_native_tools
-    # default is False, we set "true" → expect True.
+    # we set "false" â†’ expect False; disable_native_tools
+    # default is False, we set "true" â†’ expect True.
     assert captured["enable_web_search"] is False
     assert captured["disable_native_tools"] is True
     # Default os_env when no HARNESS_CODEX_OS_ENV is set: the
@@ -151,7 +151,7 @@ def test_executor_factory_decodes_os_env_json(
     :class:`OSEnvSpec` (with nested sandbox spec) so
     :class:`CodexExecutor` sees the same config a non-AP mode
     invocation would. Verifies the round-trip on a non-default
-    payload — type, cwd, sandbox.type, and a sandbox boolean
+    payload â€” type, cwd, sandbox.type, and a sandbox boolean
     field all flow through.
     """
     import json
@@ -180,7 +180,7 @@ def test_executor_factory_decodes_os_env_json(
         captured["os_env"] = kwargs["os_env"]
 
     with patch(
-        "agent_meow.inner.codex_harness.CodexExecutor.__init__",
+        "omnigent.inner.codex_harness.CodexExecutor.__init__",
         _fake_init,
     ):
         codex_harness._build_codex_executor()
@@ -205,7 +205,7 @@ def test_executor_factory_falls_back_on_malformed_os_env_json(
 ) -> None:
     """Malformed ``HARNESS_CODEX_OS_ENV`` falls back to default.
 
-    A malformed payload should NOT crash the wrap — that would
+    A malformed payload should NOT crash the wrap â€” that would
     bring the whole subprocess down on first turn. The wrap
     instead logs a warning and defaults to the parity-preserving
     ``caller_process + sandbox=none`` so the agent still starts.
@@ -217,7 +217,7 @@ def test_executor_factory_falls_back_on_malformed_os_env_json(
         captured["os_env"] = kwargs["os_env"]
 
     with patch(
-        "agent_meow.inner.codex_harness.CodexExecutor.__init__",
+        "omnigent.inner.codex_harness.CodexExecutor.__init__",
         _fake_init,
     ):
         codex_harness._build_codex_executor()
@@ -260,7 +260,7 @@ def test_databricks_env_var_truthy_parsing(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.codex_harness.CodexExecutor.__init__",
+        "omnigent.inner.codex_harness.CodexExecutor.__init__",
         _fake_init,
     ):
         codex_harness._build_codex_executor()
@@ -276,7 +276,7 @@ def test_databricks_env_var_truthy_parsing(
         ("yes", True),
         ("0", False),
         ("false", False),
-        # Unset means ENABLED — Codex's web_search is on by
+        # Unset means ENABLED â€” Codex's web_search is on by
         # default in the legacy non-AP path; the wrap
         # preserves that.
         ("", True),
@@ -304,7 +304,7 @@ def test_enable_web_search_default_is_true(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.codex_harness.CodexExecutor.__init__",
+        "omnigent.inner.codex_harness.CodexExecutor.__init__",
         _fake_init,
     ):
         codex_harness._build_codex_executor()
@@ -319,7 +319,7 @@ def test_enable_web_search_default_is_true(
         ("true", True),
         ("0", False),
         ("false", False),
-        # Unset means NOT disabled — Codex's native tools stay
+        # Unset means NOT disabled â€” Codex's native tools stay
         # enabled by default.
         ("", False),
     ],
@@ -344,7 +344,7 @@ def test_disable_native_tools_default_is_false(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.codex_harness.CodexExecutor.__init__",
+        "omnigent.inner.codex_harness.CodexExecutor.__init__",
         _fake_init,
     ):
         codex_harness._build_codex_executor()
@@ -383,7 +383,7 @@ def test_skills_filter_env_var_decodes(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.codex_harness.CodexExecutor.__init__",
+        "omnigent.inner.codex_harness.CodexExecutor.__init__",
         _fake_init,
     ):
         codex_harness._build_codex_executor()
@@ -402,7 +402,7 @@ def test_skills_filter_env_var_missing_falls_back_to_all(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.codex_harness.CodexExecutor.__init__",
+        "omnigent.inner.codex_harness.CodexExecutor.__init__",
         _fake_init,
     ):
         codex_harness._build_codex_executor()
@@ -430,7 +430,7 @@ def test_bundle_dir_and_agent_name_env_vars_thread_through(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.codex_harness.CodexExecutor.__init__",
+        "omnigent.inner.codex_harness.CodexExecutor.__init__",
         _fake_init,
     ):
         codex_harness._build_codex_executor()
@@ -451,7 +451,7 @@ def test_bundle_dir_unset_passes_none(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.codex_harness.CodexExecutor.__init__",
+        "omnigent.inner.codex_harness.CodexExecutor.__init__",
         _fake_init,
     ):
         codex_harness._build_codex_executor()

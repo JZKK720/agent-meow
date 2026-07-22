@@ -1,4 +1,4 @@
-"""Unit tests for agent_meow.onboarding.databricks_config."""
+"""Unit tests for omnigent.onboarding.databricks_config."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agent_meow.onboarding.databricks_config import (
+from omnigent.onboarding.databricks_config import (
     databricks_sdk_installed,
     get_workspace_url_for_profile,
     normalize_workspace_url,
@@ -25,7 +25,7 @@ def test_get_workspace_url_for_profile_reads_databrickscfg(tmp_path: Path) -> No
     with open(cfg_path, "w") as f:
         cfg.write(f)
 
-    with patch("agent_meow.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
+    with patch("omnigent.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
         url = get_workspace_url_for_profile("test-profile")
 
     assert url == _WORKSPACE_URL
@@ -39,7 +39,7 @@ def test_get_workspace_url_for_profile_strips_trailing_slash(tmp_path: Path) -> 
     with open(cfg_path, "w") as f:
         cfg.write(f)
 
-    with patch("agent_meow.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
+    with patch("omnigent.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
         url = get_workspace_url_for_profile("test-profile")
 
     assert url == _WORKSPACE_URL
@@ -50,7 +50,7 @@ def test_get_workspace_url_for_profile_returns_none_when_file_absent(
 ) -> None:
     """Returns None when ~/.databrickscfg does not exist."""
     with patch(
-        "agent_meow.onboarding.databricks_config._DATABRICKSCFG_PATH",
+        "omnigent.onboarding.databricks_config._DATABRICKSCFG_PATH",
         tmp_path / "nonexistent",
     ):
         assert get_workspace_url_for_profile("test-profile") is None
@@ -66,7 +66,7 @@ def test_get_workspace_url_for_profile_returns_none_for_missing_profile(
     with open(cfg_path, "w") as f:
         cfg.write(f)
 
-    with patch("agent_meow.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
+    with patch("omnigent.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
         assert get_workspace_url_for_profile("test-profile") is None
 
 
@@ -81,7 +81,7 @@ def test_get_workspace_url_for_profile_does_not_use_default_for_missing_profile(
     with open(cfg_path, "w") as f:
         cfg.write(f)
 
-    with patch("agent_meow.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
+    with patch("omnigent.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
         assert get_workspace_url_for_profile("test-profile") is None
 
 
@@ -95,7 +95,7 @@ def test_get_workspace_url_for_profile_reads_explicit_default_profile(
     with open(cfg_path, "w") as f:
         cfg.write(f)
 
-    with patch("agent_meow.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
+    with patch("omnigent.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
         url = get_workspace_url_for_profile("DEFAULT")
 
     assert url == _WORKSPACE_URL
@@ -111,7 +111,7 @@ def test_get_workspace_url_for_profile_reads_lowercase_default_profile(
     with open(cfg_path, "w") as f:
         cfg.write(f)
 
-    with patch("agent_meow.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
+    with patch("omnigent.onboarding.databricks_config._DATABRICKSCFG_PATH", cfg_path):
         url = get_workspace_url_for_profile("default")
 
     assert url == _WORKSPACE_URL
@@ -154,7 +154,7 @@ def test_databricks_sdk_installed_true_in_dev_env() -> None:
         ),
         # Pre-existing trailing-slash case still collapses.
         ("https://my-ws.cloud.databricks.com/", "https://my-ws.cloud.databricks.com"),
-        # Already an origin — returned unchanged.
+        # Already an origin â€” returned unchanged.
         ("https://my-ws.cloud.databricks.com", "https://my-ws.cloud.databricks.com"),
     ],
 )
@@ -165,6 +165,6 @@ def test_normalize_workspace_url_reduces_to_origin(raw: str, expected: str) -> N
 
 def test_normalize_workspace_url_scheme_less_input_only_strips_trailing_slash() -> None:
     """Without a scheme there is no netloc to isolate, so the result matches the
-    prior ``rstrip("/")`` behavior — the wizard pre-adds ``https://`` before
+    prior ``rstrip("/")`` behavior â€” the wizard pre-adds ``https://`` before
     calling, so a scheme is present in practice."""
     assert normalize_workspace_url("my-ws.cloud.databricks.com/") == "my-ws.cloud.databricks.com"

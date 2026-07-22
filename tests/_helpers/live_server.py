@@ -1,5 +1,5 @@
 """
-Shared fixtures for tests that need a live ``agent_meow.cli server`` subprocess.
+Shared fixtures for tests that need a live ``omnigent.cli server`` subprocess.
 
 Lifted out of ``tests/e2e/conftest.py`` so the inner test suite
 (``tests/inner/test_integration.py`` running with agent-meow mode) can
@@ -8,12 +8,12 @@ re-exports from here.
 
 Provides three primitives:
 
-- :func:`find_free_port` — pick a free TCP port for the server.
-- :func:`make_live_server_fixture` — factory that builds a
+- :func:`find_free_port` â€” pick a free TCP port for the server.
+- :func:`make_live_server_fixture` â€” factory that builds a
   session-scoped pytest fixture starting a real
-  ``agent_meow.cli server`` subprocess. The subprocess inherits
+  ``omnigent.cli server`` subprocess. The subprocess inherits
   per-harness env vars per the harness/profile selection.
-- :func:`upload_agent` — tar+gzip an agent directory and upload
+- :func:`upload_agent` â€” tar+gzip an agent directory and upload
   via multipart ``POST /v1/sessions``.
 
 Per-harness env-var routing
@@ -21,15 +21,15 @@ Per-harness env-var routing
 
 The server inherits credentials by harness:
 
-- ``--harness=open-responses`` / ``--harness=openai-agents`` →
+- ``--harness=open-responses`` / ``--harness=openai-agents`` â†’
   ``OPENAI_API_KEY=<--llm-api-key>``.
-- ``--harness=claude-sdk`` → ``ANTHROPIC_API_KEY=<--llm-api-key>``,
+- ``--harness=claude-sdk`` â†’ ``ANTHROPIC_API_KEY=<--llm-api-key>``,
   OR Databricks-routed via ``HARNESS_CLAUDE_SDK_GATEWAY=true`` +
   ``HARNESS_CLAUDE_SDK_DATABRICKS_PROFILE=<--profile>`` when
   ``--profile`` is set.
-- ``--harness=codex`` → ``CODEX_API_KEY=<--llm-api-key>`` (or its
+- ``--harness=codex`` â†’ ``CODEX_API_KEY=<--llm-api-key>`` (or its
   Databricks variant when ``--profile`` is set).
-- ``--harness=databricks`` → server reads from the Databricks CLI
+- ``--harness=databricks`` â†’ server reads from the Databricks CLI
   profile; no extra env var needed beyond the user's
   ``DATABRICKS_CONFIG_PROFILE`` / standard CLI auth.
 
@@ -54,7 +54,7 @@ import pytest
 
 from tests._helpers.compat import apply_server_env, compat_server_cwd, server_executable
 
-# Project root — this file lives at tests/_helpers/live_server.py.
+# Project root â€” this file lives at tests/_helpers/live_server.py.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -122,11 +122,11 @@ def _compute_harness_env(creds: HarnessCredentials) -> dict[str, str]:
             env["CODEX_API_KEY"] = creds.llm_api_key
     elif h == "databricks":
         # Databricks executor reads the CLI profile from
-        # ``~/.databrickscfg`` directly — no extra env var.
+        # ``~/.databrickscfg`` directly â€” no extra env var.
         # The profile is selected via the agent YAML's
         # ``executor.config.profile`` (see translator).
         pass
-    # else: unknown harness — let the server fail loud rather
+    # else: unknown harness â€” let the server fail loud rather
     # than silently injecting nothing.
     return env
 
@@ -139,7 +139,7 @@ def start_live_server(
     log_path: Path,
 ) -> tuple[subprocess.Popen[bytes], str]:
     """
-    Spawn an ``agent_meow.cli server`` subprocess and wait for
+    Spawn an ``omnigent.cli server`` subprocess and wait for
     health.
 
     :param creds: Harness credentials to thread into the subprocess.
@@ -150,7 +150,7 @@ def start_live_server(
         e.g. ``Path("/tmp/test/artifacts/")``.
     :param log_path: File to redirect server stdout/stderr into,
         e.g. ``Path("/tmp/test/server.log")``.
-    :returns: A tuple ``(proc, base_url)`` — the subprocess handle
+    :returns: A tuple ``(proc, base_url)`` â€” the subprocess handle
         the caller is responsible for killing on teardown, and the
         server's base URL.
     :raises RuntimeError: If the server doesn't respond on
@@ -160,21 +160,21 @@ def start_live_server(
     harness_env = _compute_harness_env(creds)
     env = {**os.environ, **harness_env}
     # Force the subprocess to import from the worktree, not whatever's
-    # installed in the venv — otherwise a branch with schema/model changes
+    # installed in the venv â€” otherwise a branch with schema/model changes
     # runs against a stale installed copy and fails with cryptic "no such
     # column" errors. In compat mode (OMNIGENT_COMPAT_SERVER_PYTHON set) this
     # prepend is dropped so the pinned older build in the compat venv wins.
     apply_server_env(env, _REPO_ROOT)
-    log_handle = open(log_path, "w")  # noqa: SIM115 — handle lives for Popen lifetime
+    log_handle = open(log_path, "w")  # noqa: SIM115 â€” handle lives for Popen lifetime
     proc = subprocess.Popen(
         [
             # The test process's own interpreter normally; in compat mode the
             # pinned old server's venv python (server_executable()). Never bare
-            # "python" — that resolves against PATH and on macOS can pick up
+            # "python" â€” that resolves against PATH and on macOS can pick up
             # system Python 2.7 and SyntaxError.
             server_executable(),
             "-m",
-            "agent_meow.cli",
+            "omnigent.cli",
             "server",
             "--port",
             str(port),
@@ -184,7 +184,7 @@ def start_live_server(
             str(artifact_dir),
         ],
         env=env,
-        # Compat mode: neutral CWD so the worktree's agent_meow/ on sys.path[0]
+        # Compat mode: neutral CWD so the worktree's omnigent/ on sys.path[0]
         # doesn't shadow the pinned old install. None (inherit) otherwise.
         cwd=compat_server_cwd(),
         stdout=log_handle,
@@ -215,7 +215,7 @@ def make_live_server_fixture(
 ):
     """
     Build a session-scoped pytest fixture starting an
-    ``agent_meow.cli server`` subprocess.
+    ``omnigent.cli server`` subprocess.
 
     Returned fixture yields the server's base URL. Teardown sends
     SIGTERM, escalates to SIGKILL after 10s.
@@ -279,7 +279,7 @@ def upload_agent(client: httpx.Client, agent_dir: Path) -> str:
         (used as the ``model`` field in subsequent
         ``/v1/responses`` calls). On 409 (agent already
         registered), returns ``agent_dir.name`` as the
-        identifier — matches the existing e2e helper's behavior.
+        identifier â€” matches the existing e2e helper's behavior.
     """
     import json as _json
 
@@ -303,7 +303,7 @@ def upload_agent(client: httpx.Client, agent_dir: Path) -> str:
         if resp.status_code == 409:
             # Agent already registered (idempotent re-upload of
             # the same bundle). Return the directory name as the
-            # identifier — matches the existing e2e helper.
+            # identifier â€” matches the existing e2e helper.
             return agent_dir.name
         resp.raise_for_status()
         session_id = resp.json()["session_id"]

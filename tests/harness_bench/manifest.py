@@ -1,30 +1,30 @@
 """The registry of official harness bench profiles.
 
 Each profile's descriptive columns and *declared* verdicts derive from the
-canonical capability model (:func:`~?agent_meow.harness_plugins.harness_capabilities`),
+canonical capability model (:func:`~?omnigent.harness_plugins.harness_capabilities`),
 so there is a single source of truth for "what each harness supports". The
 base fields (model, env_prefix, marker, cli_binary) are reused from
-``tests.e2e._harness_probes.HARNESS_PROBES`` — a harness added to the e2e
+``tests.e2e._harness_probes.HARNESS_PROBES`` â€” a harness added to the e2e
 parametrize matrix flows into the bench without a second copy.
 
 The declared matrix is the harness's *published capability*; the bench's
 probes measure live behavior. When they disagree,
-:func:`tests.harness_bench.verdict.reconcile` flags ``DRIFT`` — which means a
+:func:`tests.harness_bench.verdict.reconcile` flags ``DRIFT`` â€” which means a
 harness's capability declaration is false. That makes the capability table
 self-enforcing.
 
 Axis mapping (see ``designs/harness-capabilities-bench-seam.md``):
 
-- **Group A — descriptive columns** derive from capabilities:
+- **Group A â€” descriptive columns** derive from capabilities:
   ``implementation`` from ``integration_mode``, ``auth`` from ``auth``.
-- **Group B — declared verdicts** derive where a capability backs the probe:
+- **Group B â€” declared verdicts** derive where a capability backs the probe:
   ``interrupt`` from ``capabilities.interrupt``, ``streaming`` from
   ``capabilities.streaming``, ``model_override`` from membership in
   ``model_env_keys()`` (the SDK model-override registry).
-- **Group C — probe-only** dimensions have no backing capability axis and
+- **Group C â€” probe-only** dimensions have no backing capability axis and
   stay explicit: ``basic_turn`` (every harness completes a turn),
   ``tool_calling`` (not a modeled axis), and ``policy_deny`` (enforcement,
-  distinct from the elicitation ASK surface — deliberately NOT derived from
+  distinct from the elicitation ASK surface â€” deliberately NOT derived from
   ``elicitation``).
 
 Non-P0 harnesses' ``interrupt``/``streaming`` are declared best-effort by
@@ -34,14 +34,14 @@ or correct them as transport coverage lands.
 
 from __future__ import annotations
 
-from agent_meow.harness_aliases import is_native_harness
-from agent_meow.harness_capabilities import AuthModel, HarnessCapabilities, IntegrationMode
-from agent_meow.harness_plugins import harness_capabilities, model_env_keys
+from omnigent.harness_aliases import is_native_harness
+from omnigent.harness_capabilities import AuthModel, HarnessCapabilities, IntegrationMode
+from omnigent.harness_plugins import harness_capabilities, model_env_keys
 from tests.e2e._harness_probes import HARNESS_PROBES, HarnessProbe
 from tests.harness_bench.profile import BenchProfile
 from tests.harness_bench.verdict import Verdict
 
-# ── Group A: enum → prose for the descriptive columns ────────────
+# â”€â”€ Group A: enum â†’ prose for the descriptive columns â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _INTEGRATION_MODE_PROSE: dict[IntegrationMode, str] = {
     IntegrationMode.SDK_IN_PROCESS: "SDK in-process",
@@ -58,7 +58,7 @@ _AUTH_PROSE: dict[AuthModel, str] = {
 }
 
 
-# ── Group C: probe-only dimensions with no backing capability ────
+# â”€â”€ Group C: probe-only dimensions with no backing capability â”€â”€â”€â”€
 #
 # These stay explicitly SUPPORTED for the official (P0) harnesses: every one
 # completes a turn, calls tools, and enforces a policy DENY. They are NOT
@@ -89,7 +89,7 @@ def _declared_from_capabilities(harness: str) -> dict[str, Verdict]:
 
     Group B (capability-backed) plus group C (probe-only, explicit).
     Tolerant of a harness with no declared capabilities (a sparse
-    ``harness_capabilities()`` — e.g. a community plugin): the
+    ``harness_capabilities()`` â€” e.g. a community plugin): the
     capability-backed dimensions are simply omitted (left ``UNKNOWN`` by
     :meth:`BenchProfile.declared_for`) rather than raising.
 
@@ -100,15 +100,15 @@ def _declared_from_capabilities(harness: str) -> dict[str, Verdict]:
 
     caps = harness_capabilities().get(harness)
     if caps is not None:
-        # streaming: True → deltas (SUPPORTED); False → complete-only (PARTIAL).
+        # streaming: True â†’ deltas (SUPPORTED); False â†’ complete-only (PARTIAL).
         declared["streaming"] = Verdict.SUPPORTED if caps.streaming else Verdict.PARTIAL
-        # interrupt: True → SUPPORTED; False → UNSUPPORTED.
+        # interrupt: True â†’ SUPPORTED; False â†’ UNSUPPORTED.
         declared["interrupt"] = Verdict.SUPPORTED if caps.interrupt else Verdict.UNSUPPORTED
 
     # model_override is backed by the registry, not a capability field. An
     # SDK harness takes it via a HARNESS_<H>_MODEL env key (model_env_keys);
     # a native harness takes it as a launch --model argv element (see
-    # agent_meow/model_override.py). Either path means the harness accepts a
+    # omnigent/model_override.py). Either path means the harness accepts a
     # caller-specified model.
     if harness in model_env_keys() or is_native_harness(harness):
         declared["model_override"] = Verdict.SUPPORTED
@@ -149,7 +149,7 @@ OFFICIAL_PROFILES: dict[str, BenchProfile] = {
 }
 
 
-# ── native-tui harnesses ─────────────────────────────────────────
+# â”€â”€ native-tui harnesses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # Native harnesses are not in HARNESS_PROBES (that matrix is the SDK-wrap
 # e2e set), so their profiles are built directly here. Both shipped natives
@@ -160,7 +160,7 @@ OFFICIAL_PROFILES: dict[str, BenchProfile] = {
 #
 # model: native harnesses take the model as a launch --model, not a
 # HARNESS_<H>_MODEL env var, so they are absent from model_env_keys() and
-# their model_override declares UNKNOWN (honest — the probe confirms it live
+# their model_override declares UNKNOWN (honest â€” the probe confirms it live
 # once native model-override observation is wired).
 _NATIVE_PROFILES: dict[str, tuple[str, str]] = {
     # harness: (model, marker)

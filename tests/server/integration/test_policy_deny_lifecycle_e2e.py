@@ -4,9 +4,9 @@ Exercises the full user journey:
 
 1. Create a session with an agent.
 2. Attach a DENY policy via ``POST /v1/sessions/{session_id}/policies``.
-3. Send a user message — verify the DENY fires (synchronous inline verdict).
+3. Send a user message â€” verify the DENY fires (synchronous inline verdict).
 4. Remove the policy via ``DELETE``.
-5. Send another message — verify the mock LLM responds normally.
+5. Send another message â€” verify the mock LLM responds normally.
 6. Verify the policy is gone from the list endpoint.
 
 Also covers phase-scoping: a DENY policy attached on ``tool_call`` phase
@@ -23,23 +23,23 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server.app import create_app
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server.app import create_app
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
 from tests.server.conftest import ControllableMockClient
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -50,7 +50,7 @@ def policy_app(
 ) -> FastAPI:
     """App with a ``policy_store`` so session-policy routes are active.
 
-    Uses no auth provider — the session policy routes fall through to
+    Uses no auth provider â€” the session policy routes fall through to
     the unauthenticated path (no permission checks), which is sufficient
     for testing the policy engine wiring.
 
@@ -90,14 +90,14 @@ async def policy_client(
     through the CRUD routes.
 
     :param policy_app: FastAPI app with policy store.
-    :param mock_llm: Controllable mock LLM — released on teardown.
+    :param mock_llm: Controllable mock LLM â€” released on teardown.
     :param db_uri: Per-test SQLite URI.
     :param tmp_path: Pytest temp dir for the harness process manager.
     :param monkeypatch: Pytest monkeypatch fixture.
     :yields: A ready-to-use async HTTP client.
     """
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()
@@ -105,19 +105,19 @@ async def policy_client(
 
     # Patch the runtime global so the policy engine picks up session policies.
     policy_store = SqlAlchemyPolicyStore(db_uri)
-    monkeypatch.setattr("agent_meow.runtime._globals._policy_store", policy_store)
+    monkeypatch.setattr("omnigent.runtime._globals._policy_store", policy_store)
 
     # Allow the make_fixed_action_callable factory through the registry
     # allowlist. In production this would be added via policy_modules config.
     # Patch at the use site (the route module imports the function directly).
-    from agent_meow.server.routes import session_policies as _sp_mod
+    from omnigent.server.routes import session_policies as _sp_mod
 
     _original_is_registered = _sp_mod.is_registered_handler
     monkeypatch.setattr(
         _sp_mod,
         "is_registered_handler",
         lambda handler: (
-            handler == "agent_meow.policies.function.make_fixed_action_callable"
+            handler == "omnigent.policies.function.make_fixed_action_callable"
             or _original_is_registered(handler)
         ),
     )
@@ -131,7 +131,7 @@ async def policy_client(
     await pm.shutdown()
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def _create_session(client: httpx.AsyncClient, agent_id: str) -> str:
@@ -169,7 +169,7 @@ async def _attach_deny_policy(
         json={
             "name": name,
             "type": "python",
-            "handler": "agent_meow.policies.function.make_fixed_action_callable",
+            "handler": "omnigent.policies.function.make_fixed_action_callable",
             "factory_params": params,
         },
     )
@@ -203,7 +203,7 @@ async def _send_user_message(
     )
 
 
-# ── Tests ─────────────────────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_deny_policy_lifecycle(
@@ -214,18 +214,18 @@ async def test_deny_policy_lifecycle(
 
     1. Create a session with an agent.
     2. Attach a DENY policy via the session policies endpoint.
-    3. Send a user message — verify the DENY fires synchronously.
+    3. Send a user message â€” verify the DENY fires synchronously.
     4. Remove the policy via DELETE.
-    5. Send another message — verify the mock LLM responds normally.
+    5. Send another message â€” verify the mock LLM responds normally.
     6. Verify the policy is gone from the list endpoint.
     """
     agent = await create_test_agent(policy_client)
     session_id = await _create_session(policy_client, agent["id"])
 
-    # ── Step 2: attach DENY policy ──
+    # â”€â”€ Step 2: attach DENY policy â”€â”€
     policy_id = await _attach_deny_policy(policy_client, session_id)
 
-    # ── Step 3: send message, expect DENY ──
+    # â”€â”€ Step 3: send message, expect DENY â”€â”€
     resp_denied = await _send_user_message(
         policy_client, session_id, "Hello, this should be blocked."
     )
@@ -238,7 +238,7 @@ async def test_deny_policy_lifecycle(
         f"expected deny reason to contain 'Blocked by test policy'; got {verdict}"
     )
 
-    # ── Step 4: remove the policy ──
+    # â”€â”€ Step 4: remove the policy â”€â”€
     del_resp = await policy_client.delete(
         f"/v1/sessions/{session_id}/policies/{policy_id}",
     )
@@ -247,12 +247,12 @@ async def test_deny_policy_lifecycle(
     )
     assert del_resp.json()["deleted"] is True
 
-    # ── Step 5: send another message, expect it passes policy ──
+    # â”€â”€ Step 5: send another message, expect it passes policy â”€â”€
     resp_allowed = await _send_user_message(
         policy_client, session_id, "Hello, this should go through."
     )
     # After policy removal the message must NOT be denied by policy.
-    # It may return 202 (queued) or 503 (no runner bound) — both prove
+    # It may return 202 (queued) or 503 (no runner bound) â€” both prove
     # the policy layer allowed it through.
     assert resp_allowed.status_code in {202, 503}, (
         f"expected 202 or 503 after policy removal; "
@@ -262,7 +262,7 @@ async def test_deny_policy_lifecycle(
     # A synchronous DENY verdict ({"denied": true}) would mean the policy is still active.
     assert body.get("denied") is not True, f"message was denied after policy removal; got {body}"
 
-    # ── Step 6: verify the policy list is empty ──
+    # â”€â”€ Step 6: verify the policy list is empty â”€â”€
     list_resp = await policy_client.get(f"/v1/sessions/{session_id}/policies")
     assert list_resp.status_code == 200
     policies = list_resp.json()["data"]
@@ -279,7 +279,7 @@ async def test_deny_policy_only_blocks_matching_phase(
     """A DENY policy scoped to ``tool_call`` phase does not block input messages.
 
     1. Attach a DENY policy that fires only on ``tool_call`` events.
-    2. Send a user message (INPUT/REQUEST phase) — verify it goes through.
+    2. Send a user message (INPUT/REQUEST phase) â€” verify it goes through.
 
     This proves that phase-scoping in ``make_fixed_action_callable``
     correctly causes the callable to abstain (return ``None``) on
@@ -300,8 +300,8 @@ async def test_deny_policy_only_blocks_matching_phase(
         },
     )
 
-    # Send user message (REQUEST phase) — should NOT be denied.
-    # May return 202 (queued) or 503 (no runner) — both prove the
+    # Send user message (REQUEST phase) â€” should NOT be denied.
+    # May return 202 (queued) or 503 (no runner) â€” both prove the
     # policy layer allowed it through; only {"denied": true} is a failure.
     resp = await _send_user_message(policy_client, session_id, "Hello, this should go through.")
     assert resp.status_code in {202, 503}, (

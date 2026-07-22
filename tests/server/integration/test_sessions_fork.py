@@ -1,6 +1,6 @@
 """Integration tests for ``POST /v1/sessions/{source_id}/fork``.
 
-Exercises the fork endpoint through the real route → store → DBOS
+Exercises the fork endpoint through the real route â†’ store â†’ DBOS
 workflow pipeline with a mocked LLM (``ControllableMockClient``).
 Unit tests in ``tests/server/routes/test_sessions_fork.py`` stub
 the stores; these tests verify that the joints between route, store,
@@ -27,7 +27,7 @@ from tests.server.integration.test_sessions_endpoints import (
 pytestmark = pytest.mark.asyncio
 
 
-# ── Helpers ──────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def _fork_session(
@@ -135,7 +135,7 @@ async def _list_comments(
     return resp.json()
 
 
-# ── Tests ────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 # NOTE: ``test_fork_copies_items_and_clones_agent`` and
@@ -143,7 +143,7 @@ async def _list_comments(
 # ``/v1/responses`` removal. Both seeded a session by driving an
 # in-process workflow turn (so the source had user+assistant items to
 # deep-copy), and the second one also posted a follow-up
-# ``/v1/sessions/{id}/events`` to the fork — which now requires a
+# ``/v1/sessions/{id}/events`` to the fork â€” which now requires a
 # runner-bound session to succeed. The remaining tests in this file
 # cover the fork-specific code paths (route logic, label/title
 # inheritance, store-level deep-copy of explicit items, error cases)
@@ -167,7 +167,7 @@ async def test_fork_empty_session(
     assert fork["status"] == "idle"
 
     fork_items = await _get_session_items(client, fork["id"])
-    # No items to copy — fork should be empty.
+    # No items to copy â€” fork should be empty.
     assert fork_items == [], (
         f"Fork of empty session should have no items, got {len(fork_items)}. "
         "If non-empty, fork_conversation is injecting phantom items."
@@ -197,7 +197,7 @@ async def test_fork_preserves_labels(
         f"Fork title should be 'My Fork' (explicitly set), got {fork['title']!r}."
     )
 
-    # Labels should be inherited from source — fork_conversation
+    # Labels should be inherited from source â€” fork_conversation
     # copies labels in its transaction.
     assert fork["labels"] == {"env": "prod", "team": "ml"}, (
         f"Fork labels should match source labels, "
@@ -213,10 +213,10 @@ async def test_fork_coding_session_stamps_fork_source_label(
     Forking a session that had a working directory stamps the
     fork-source label on the clone.
 
-    The source binds a ``workspace`` (no host needed — only ``git``
+    The source binds a ``workspace`` (no host needed â€” only ``git``
     requires one). The fork deliberately drops the workspace, so the
     clone is unbound; ``fork_conversation`` records provenance via the
-    ``agent_meow.fork.source_id`` label (value = source id). That label
+    ``omnigent.fork.source_id`` label (value = source id). That label
     is what later makes the online dot report the clone offline and the
     UI open the directory picker. Without it, typing into the clone
     silently drops the message against a runner that can't start.
@@ -241,11 +241,11 @@ async def test_fork_coding_session_stamps_fork_source_label(
     # original host/dir/branch. A missing key means fork_conversation
     # didn't detect source.workspace; a wrong value means it stamped the
     # wrong source.
-    assert fork["labels"].get("agent_meow.fork.source_id") == source["id"], (
+    assert fork["labels"].get("omnigent.fork.source_id") == source["id"], (
         f"Expected fork-source label = {source['id']!r}, got "
-        f"{fork['labels'].get('agent_meow.ork.source_id')!r}."
+        f"{fork['labels'].get('omnigent.ork.source_id')!r}."
     )
-    # The workspace itself must NOT be carried over — the clone rebinds
+    # The workspace itself must NOT be carried over â€” the clone rebinds
     # its own. If this is set, the clone would look bound and skip the
     # picker entirely.
     assert fork.get("workspace") is None, (
@@ -262,7 +262,7 @@ async def test_fork_chat_session_has_no_fork_source_label(
 
     CUJ 2: a session that never bound a directory has a self-contained
     transcript. Its fork must stay in-process-resumable, so the online
-    dot keeps reading it reachable — i.e. the ``agent_meow.fork.source_id``
+    dot keeps reading it reachable â€” i.e. the ``omnigent.fork.source_id``
     label must be absent. Stamping it here would wrongly force the clone
     offline and pop a directory picker the session doesn't need.
     """
@@ -273,9 +273,9 @@ async def test_fork_chat_session_has_no_fork_source_label(
     assert resp.status_code == 201
     fork = resp.json()
 
-    # Absent key — presence would route a chat-only clone into the
+    # Absent key â€” presence would route a chat-only clone into the
     # coding-resume path it doesn't belong in.
-    assert "agent_meow.fork.source_id" not in fork["labels"], (
+    assert "omnigent.fork.source_id" not in fork["labels"], (
         f"Chat-only fork must not carry the fork-source label, got labels {fork['labels']!r}."
     )
 
@@ -329,8 +329,8 @@ async def test_failed_fork_leaves_no_ghost_in_builtin_agents(
 
     Regression for the duplicate-agent bug: the route pre-created the
     cloned agent in its own committed transaction, so when
-    ``fork_conversation`` then raised — e.g. a stale ``up_to_response_id``
-    from "Fork from this response" — the clone was orphaned as a
+    ``fork_conversation`` then raised â€” e.g. a stale ``up_to_response_id``
+    from "Fork from this response" â€” the clone was orphaned as a
     ``session_id IS NULL`` row, which ``GET /v1/agents`` returns. Each
     failed fork thus leaked a phantom "Claude Code"/"Codex" entry into the
     picker. The clone is now created inside the fork transaction, so a
@@ -345,7 +345,7 @@ async def test_failed_fork_leaves_no_ghost_in_builtin_agents(
     before = await _list_builtin_agent_ids(client)
 
     # "Fork from this response" with a response id that doesn't exist: the
-    # store raises ValueError → the route returns 400, AFTER the point where
+    # store raises ValueError â†’ the route returns 400, AFTER the point where
     # the buggy route had already committed the clone.
     resp = await client.post(
         f"/v1/sessions/{session['id']}/fork",
@@ -381,7 +381,7 @@ async def test_fork_a_fork(
     assert resp1.status_code == 201
     fork1 = resp1.json()
 
-    # Second fork — forking the fork.
+    # Second fork â€” forking the fork.
     resp2 = await _fork_session(client, fork1["id"])
     assert resp2.status_code == 201
     fork2 = resp2.json()
@@ -423,7 +423,7 @@ async def test_fork_a_fork(
     )
 
 
-# ── Fork copies-vs-not-copied semantics ─────────
+# â”€â”€ Fork copies-vs-not-copied semantics â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_fork_copies_transcript_content_with_fresh_ids(
@@ -453,7 +453,7 @@ async def test_fork_copies_transcript_content_with_fresh_ids(
     assert [i["content"][0]["text"] for i in fork_items] == [
         i["content"][0]["text"] for i in source_items
     ]
-    # Fresh IDs — copied items must not alias the source rows.
+    # Fresh IDs â€” copied items must not alias the source rows.
     assert {i["id"] for i in fork_items}.isdisjoint({i["id"] for i in source_items})
 
 

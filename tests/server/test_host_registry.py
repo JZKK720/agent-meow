@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from agent_meow.host.frames import HostHelloFrame
-from agent_meow.server.host_registry import HostRegistry, RunnerExitReports
+from omnigent.host.frames import HostHelloFrame
+from omnigent.server.host_registry import HostRegistry, RunnerExitReports
 
 
 @dataclass

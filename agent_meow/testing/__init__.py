@@ -1,9 +1,0 @@
-"""Test-environment safety helpers for the agent-meow suite.
-
-Houses additive guardrails that assert a test run is pointed at
-throwaway resources (a tmp/in-memory SQLite DB, no dev/prod ports)
-rather than a developer's real local instance. See
-:mod:`~?agent_meow.testing.guardrails`.
-"""
-
-from __future__ import annotations

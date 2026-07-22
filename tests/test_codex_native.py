@@ -16,16 +16,16 @@ import httpx
 import pytest
 import yaml
 
-from agent_meow import codex_native, codex_native_app_server, codex_native_forwarder
-from agent_meow._runner_startup import RunnerStartupProgress
-from agent_meow.codex_native_bridge import (
+from omnigent import codex_native, codex_native_app_server, codex_native_forwarder
+from omnigent._runner_startup import RunnerStartupProgress
+from omnigent.codex_native_bridge import (
     CodexNativeBridgeState,
     clear_bridge_state,
     read_bridge_state,
     write_bridge_state,
 )
-from agent_meow.codex_native_elicitation import codex_elicitation_id
-from agent_meow.spec import load
+from omnigent.codex_native_elicitation import codex_elicitation_id
+from omnigent.spec import load
 
 
 def _write_codex_auth(path: Path, payload: object) -> None:
@@ -45,7 +45,7 @@ def _point_codex_auth_check_at(
 
     ``launch`` pins what :func:`resolve_native_codex_launch` returns; the default
     is the defer-to-Codex-login shape (``profile=None``, ``model_provider`` not
-    set → resolves to ``"openai"``), which is exactly the case where
+    set â†’ resolves to ``"openai"``), which is exactly the case where
     ``auth.json`` is the credential that decides availability. Provider-routed
     tests pass an explicit launch.
     """
@@ -92,8 +92,8 @@ def test_codex_auth_unavailable_reason_chatgpt_tokens_available(
     """A real ChatGPT/OAuth auth.json (tokens block) is available.
 
     Mirrors the openai/codex ``AuthDotJson`` shape: ``auth_mode=chatgpt`` with a
-    ``tokens`` object. There is no top-level expiry field — access-token expiry
-    lives in the JWT and is refreshed via ``refresh_token`` — so presence of the
+    ``tokens`` object. There is no top-level expiry field â€” access-token expiry
+    lives in the JWT and is refreshed via ``refresh_token`` â€” so presence of the
     tokens is what marks the credential configured.
     """
     auth_path = tmp_path / "codex-home" / "auth.json"
@@ -132,7 +132,7 @@ def test_codex_auth_unavailable_reason_no_credential_needs_auth(
     """A parseable auth.json with no credential field reports needs-auth.
 
     e.g. a stub that records ``auth_mode`` but carries neither an
-    ``OPENAI_API_KEY`` nor a ``tokens`` block — there is nothing to authenticate
+    ``OPENAI_API_KEY`` nor a ``tokens`` block â€” there is nothing to authenticate
     with, so the picker should warn rather than show Codex as ready.
     """
     auth_path = tmp_path / "codex-home" / "auth.json"
@@ -161,7 +161,7 @@ def test_codex_auth_unavailable_reason_databricks_profile_available(
 
     The reported bug: the launch mints its bearer via ``databricks auth token``
     and never reads ``auth.json``, so gating on it is a false negative. auth.json
-    is deliberately absent here — availability must come from the launch.
+    is deliberately absent here â€” availability must come from the launch.
     """
     auth_path = tmp_path / "codex-home" / "auth.json"  # never created
     launch = codex_native_app_server.NativeCodexLaunch(
@@ -197,7 +197,7 @@ def test_codex_auth_unavailable_reason_resolver_failure_falls_back_to_auth_json(
 
     monkeypatch.setattr(codex_native, "resolve_native_codex_launch", _boom)
 
-    # No auth.json → falls through to needs-auth rather than propagating.
+    # No auth.json â†’ falls through to needs-auth rather than propagating.
     assert codex_native._codex_auth_unavailable_reason() == "needs-auth"
 
 
@@ -406,7 +406,7 @@ def test_preload_codex_thread_for_resume_resumes_and_closes(
         return fake_client
 
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server.CodexAppServerClient",
+        "omnigent.codex_native_app_server.CodexAppServerClient",
         fake_client_factory,
     )
 
@@ -649,7 +649,7 @@ def test_materialize_codex_agent_spec_uses_codex_native_harness(tmp_path: Path) 
     raw = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
 
     assert raw["name"] == "codex-native-ui"
-    # Exact executor block: the spec must NOT carry a profile key —
+    # Exact executor block: the spec must NOT carry a profile key â€”
     # the --profile CLI flag was removed, so routing is resolved at
     # launch time (provider config / global auth / ambient detection).
     assert raw["executor"] == {
@@ -813,11 +813,11 @@ def test_build_codex_remote_args_emits_config_overrides_before_subcommand(
     The ``--remote`` TUI is a separate process that does not inherit the
     app-server's ``-c`` flags; without these the TUI falls back to the
     OpenAI built-in provider (``requires_openai_auth = true``), renders
-    the first-run login onboarding screen, and never creates a thread —
+    the first-run login onboarding screen, and never creates a thread â€”
     so a host-spawned session hangs in ``running`` with no response.
     Asserting the exact argv (not just membership) guards two things at
     once: that the overrides are forwarded at all, and that they land
-    *before* the ``resume`` subcommand — codex treats ``-c`` as a global
+    *before* the ``resume`` subcommand â€” codex treats ``-c`` as a global
     option and rejects it when placed after a subcommand, which would
     abort TUI startup and reintroduce the hang.
     """
@@ -895,7 +895,7 @@ def test_build_codex_remote_args_default_keeps_approval_flags_no_bypass() -> Non
     The web "Full access" / "Read only" presets are sent as
     ``--sandbox`` / ``--ask-for-approval`` pairs inside ``codex_args``. With
     bypass off those must reach the TUI verbatim and the dangerous bypass
-    flag must never appear — a regression here would either drop a user's
+    flag must never appear â€” a regression here would either drop a user's
     chosen approval preset or silently escalate to full bypass.
     """
     args = codex_native_app_server.build_codex_remote_args(
@@ -968,7 +968,7 @@ def test_build_codex_remote_args_bypass_emits_flag_and_strips_conflicts(
     sandbox`` and strips the conflicting ``--sandbox`` / ``--ask-for-approval``
     pairs.
 
-    See :func:`~?agent_meow.codex_native_app_server._strip_approval_sandbox_flags`.
+    See :func:`~?omnigent.codex_native_app_server._strip_approval_sandbox_flags`.
     Asserting the exact argv guards three things: the bypass flag is present
     exactly once, the conflicting flag pairs are removed (with their values),
     and the bypass flag lands before any ``resume`` subcommand (codex rejects
@@ -1237,7 +1237,7 @@ def test_supervise_forwarder_resumes_when_it_opens_client(
     # Patch at the source: the forwarder builds its fallback client via
     # client_for_transport, which constructs the app_server module's class.
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server.CodexAppServerClient", fake_client_factory
+        "omnigent.codex_native_app_server.CodexAppServerClient", fake_client_factory
     )
 
     async def run() -> None:
@@ -1267,9 +1267,9 @@ def test_supervise_forwarder_resumes_when_it_opens_client(
 @pytest.mark.parametrize(
     ("message", "expected"),
     [
-        # Rollout file missing — the first transient fresh-thread state.
+        # Rollout file missing â€” the first transient fresh-thread state.
         ("{'code': -32600, 'message': 'no rollout found for thread id thread_123'}", True),
-        # Rollout file present but EMPTY — the second transient state the
+        # Rollout file present but EMPTY â€” the second transient state the
         # fresh host-spawned TUI exposes. Previously treated as fatal, which
         # made the forwarder give up subscribing and stop syncing chat.
         (
@@ -1491,7 +1491,7 @@ def test_subscribe_until_ready_replays_completed_turn_status(
             True,
         ),
         # Idle status / fresh-thread announce / control noise do NOT imply a
-        # rollout exists yet — they must NOT release the parked subscribe.
+        # rollout exists yet â€” they must NOT release the parked subscribe.
         (
             {"method": "thread/status/changed", "params": {"status": {"type": "idle"}}},
             False,
@@ -1520,7 +1520,7 @@ def test_subscribe_until_ready_parks_until_signal_then_resumes(
 
     Reproduces the fresh-session path: ``thread/resume`` fails with ``no
     rollout found`` until the thread becomes active. With a ``ready_signal``
-    provided, the subscribe must NOT busy-poll — it waits for the signal
+    provided, the subscribe must NOT busy-poll â€” it waits for the signal
     (set by the caller when the live stream shows the thread active), then
     retries and succeeds. ``_sleep`` is stubbed to raise so a regression
     back to blind-polling turns the task red instead of silently hammering
@@ -1538,7 +1538,7 @@ def test_subscribe_until_ready_parks_until_signal_then_resumes(
         async def fake_request(method: str, params: dict[str, Any]) -> dict[str, Any]:
             nonlocal attempts
             attempts += 1
-            # Not-ready until the thread is "active" (signal set) — mirrors
+            # Not-ready until the thread is "active" (signal set) â€” mirrors
             # codex deferring rollout materialization until the first turn.
             if not ready.is_set():
                 raise not_ready
@@ -1570,19 +1570,19 @@ def test_subscribe_until_ready_parks_until_signal_then_resumes(
             )
             # Let the task make its first resume attempt and park. If it had
             # polled instead, fake_sleep would have raised and the task would
-            # be done with an exception — so an un-done task proves it parked.
+            # be done with an exception â€” so an un-done task proves it parked.
             for _ in range(8):
                 await asyncio.sleep(0)
             assert not task.done(), "subscribe should still be parked on the signal"
             assert attempts >= 1
 
-            # Caller observed the thread go active → release the wait.
+            # Caller observed the thread go active â†’ release the wait.
             ready.set()
             await task
             return attempts
 
     attempts = asyncio.run(run())
-    # ≥2: the initial not-ready attempt plus at least one post-signal retry
+    # â‰¥2: the initial not-ready attempt plus at least one post-signal retry
     # that succeeds. If it were still polling we'd never reach here (fake_sleep
     # raises); if it never retried after the signal it would hang on await task.
     assert attempts >= 2, attempts
@@ -1683,8 +1683,8 @@ def test_forwarder_rotates_session_on_new_codex_thread_and_posts_to_new_session(
                     "agent_id": "ag_codex",
                     "runner_id": "runner_123",
                     "labels": {
-                        "agent_meow.wrapper": "codex-native-ui",
-                        "agent_meow.codex_native.bridge_id": "bridge_shared",
+                        "omnigent.wrapper": "codex-native-ui",
+                        "omnigent.codex_native.bridge_id": "bridge_shared",
                     },
                 },
             )
@@ -1791,7 +1791,7 @@ def test_forwarder_rotates_session_on_new_codex_thread_and_posts_to_new_session(
     assert state.session_id == "conv_new"
     assert state.thread_id == "thread_new"
     # Rotation must re-persist the ws:// transport it was given, not a
-    # clobbered unix path — otherwise the executor would dial a dead unix
+    # clobbered unix path â€” otherwise the executor would dial a dead unix
     # socket after /clear and steering/interrupt would silently fail.
     assert state.socket_path == "ws://127.0.0.1:9876"
     assert fake_client.requests == [
@@ -1804,8 +1804,8 @@ def test_forwarder_rotates_session_on_new_codex_thread_and_posts_to_new_session(
         {
             "agent_id": "ag_codex",
             "labels": {
-                "agent_meow.wrapper": "codex-native-ui",
-                "agent_meow.codex_native.bridge_id": "bridge_shared",
+                "omnigent.wrapper": "codex-native-ui",
+                "omnigent.codex_native.bridge_id": "bridge_shared",
             },
         },
     ) in requests
@@ -2919,7 +2919,7 @@ def test_forwarder_posts_codex_usage_live_per_frame(
         "external_session_usage",
     ]
     # The first frame posts every value (nothing posted yet); the second posts
-    # only the CHANGED keys — context_window was unchanged, so the coalescer's
+    # only the CHANGED keys â€” context_window was unchanged, so the coalescer's
     # dedup drops it (proving latest-only diffing, not blind re-posting).
     assert posts_after_usage_updates[0]["data"] == {
         "context_tokens": 100,
@@ -2930,7 +2930,7 @@ def test_forwarder_posts_codex_usage_live_per_frame(
         "context_tokens": 150,
         "cumulative_input_tokens": 150,
     }
-    # Text still streams via its own coalescer — the per-frame usage posts
+    # Text still streams via its own coalescer â€” the per-frame usage posts
     # neither swallowed nor blocked it.
     assert {
         "type": "external_output_text_delta",
@@ -4869,7 +4869,7 @@ def test_forwarder_posts_user_message_on_assistant_item_started(tmp_path: Path) 
     recovery waited for the assistant's ``item/completed``, the assistant
     text deltas would already have streamed into a bubble rendered ABOVE
     the still-pending user bubble. Recovering at the assistant's
-    ``item/started`` — which fires before any delta — commits the user
+    ``item/started`` â€” which fires before any delta â€” commits the user
     message first, so the web UI renders the question above the reply.
     """
     posted: list[dict[str, Any]] = []
@@ -5129,7 +5129,7 @@ def test_forwarder_skips_user_recovery_when_user_seen_live(tmp_path: Path) -> No
 
     On the happy path the live stream delivers ``userMessage`` before
     ``agentMessage``, so the forwarder must NOT issue a spurious
-    ``thread/resume`` when the reply arrives — the turn is already known
+    ``thread/resume`` when the reply arrives â€” the turn is already known
     to have a posted user message.
     """
     posted: list[dict[str, Any]] = []
@@ -5462,7 +5462,7 @@ def test_forwarder_surfaces_failed_command_exit_code() -> None:
     ]
     # The exit code (3, from the replayed item above) must appear appended
     # to the captured stderr/stdout. If the suffix were missing the output
-    # would be just "boom\n" — a failed command indistinguishable from a
+    # would be just "boom\n" â€” a failed command indistinguishable from a
     # successful one in the UI.
     assert outputs == ["boom\n\n[exit code: 3]"]
 
@@ -5626,7 +5626,7 @@ def test_forwarder_posts_codex_image_generation_tool_call() -> None:
     """
     A completed Codex ``imageGeneration`` becomes a generate_image tool card.
 
-    The raw ``result`` (base64 image bytes) is deliberately NOT mirrored —
+    The raw ``result`` (base64 image bytes) is deliberately NOT mirrored â€”
     the web UI has no assistant-side image rendering and the base64 blob
     would only bloat the transcript. The card carries the revised prompt as
     the argument and the status plus on-disk save path as the output.
@@ -5733,7 +5733,7 @@ def test_forwarder_posts_codex_exited_review_mode_marker() -> None:
     """
     Codex ``exitedReviewMode`` surfaces a visible exit marker.
 
-    With no review subject the marker is just the header — a terse divider
+    With no review subject the marker is just the header â€” a terse divider
     that tells the web user the session left review mode.
     """
     posted: list[dict[str, Any]] = []
@@ -5786,7 +5786,7 @@ def test_forwarder_coalesces_and_flushes_turn_diff(tmp_path: Path) -> None:
     Codex streams the aggregated working-tree diff repeatedly as edits land.
     Posting each update would spam the transcript with a growing diff, so the
     forwarder stores only the newest diff and mirrors it once, at the
-    terminal boundary, as a single ``turn_diff`` function-call pair — after
+    terminal boundary, as a single ``turn_diff`` function-call pair â€” after
     the turn's other items and before the idle status edge.
     """
     write_bridge_state(
@@ -5862,7 +5862,7 @@ def test_forwarder_coalesces_and_flushes_turn_diff(tmp_path: Path) -> None:
             "data": _expected_status_data("idle", "turn_123"),
         },
     ]
-    # The stored diff is consumed on flush — no leak into the next turn.
+    # The stored diff is consumed on flush â€” no leak into the next turn.
     assert forwarder_state.turn_diff_by_turn == {}
 
 
@@ -5871,7 +5871,7 @@ def test_forwarder_skips_turn_diff_when_none_captured(tmp_path: Path) -> None:
     A turn with no ``turn/diff/updated`` posts no turn_diff card.
 
     Read-only turns never receive a diff notification, so the terminal
-    boundary must emit only the idle status edge — no empty diff artifact.
+    boundary must emit only the idle status edge â€” no empty diff artifact.
     """
     write_bridge_state(
         tmp_path,
@@ -5925,7 +5925,7 @@ def test_forwarder_skips_item_retry_on_ambiguous_transport_failure(
     A lost response (e.g. read timeout) after the server already
     appended the item and published ``session.input.consumed`` is
     indistinguishable from a failed send. External items are not deduped
-    server-side, so a retry would persist a second copy — the duplicate
+    server-side, so a retry would persist a second copy â€” the duplicate
     message bug in the web UI. The forwarder must give up after
     the first ambiguous attempt.
 
@@ -5980,7 +5980,7 @@ def test_forwarder_skips_item_retry_on_ambiguous_transport_failure(
 
     # Exactly one POST attempt: the ambiguous failure must not be
     # retried. Two or three attempts would mean the forwarder re-posted
-    # a possibly-committed item — the duplicate-bubble bug.
+    # a possibly-committed item â€” the duplicate-bubble bug.
     assert attempts == ["external_conversation_item"]
     # Returned before any backoff: no retry was even scheduled.
     assert sleep_delays == []
@@ -5993,7 +5993,7 @@ def test_forwarder_retries_item_on_connect_error(
     A provably-undelivered item POST keeps its full retry budget.
 
     A connection error proves no request bytes reached the server, so
-    the item cannot have been committed — retrying is safe and dropping
+    the item cannot have been committed â€” retrying is safe and dropping
     early would lose messages whenever the server is briefly
     unreachable. The complement to the ambiguous-skip test, guarding
     the duplicate fix from turning into a message-loss bug.
@@ -6055,7 +6055,7 @@ def test_forwarder_still_retries_status_on_ambiguous_transport_failure(
     The ambiguous-failure skip applies only to conversation items.
 
     Status events are idempotent (last-write-wins), so re-posting one
-    that may already have landed is harmless — and keeping the retries
+    that may already have landed is harmless â€” and keeping the retries
     preserves delivery of the running/idle badge. A failure here means
     the skip leaked beyond ``external_conversation_item`` and transient
     events lost their retry budget.
@@ -6375,11 +6375,11 @@ def test_local_run_prints_resume_hint_after_attach(
         """
         del kwargs
 
-    monkeypatch.setattr("agent_meow.chat._find_free_port", lambda: 23456)
-    monkeypatch.setattr("agent_meow.chat._start_local_server", fake_start_server)
-    monkeypatch.setattr("agent_meow.chat._stop_local_server", lambda server: None)
-    monkeypatch.setattr("agent_meow.chat._wait_for_server", lambda *a, **k: None)
-    monkeypatch.setattr("agent_meow.chat._bundle_agent", lambda path: b"bundle")
+    monkeypatch.setattr("omnigent.chat._find_free_port", lambda: 23456)
+    monkeypatch.setattr("omnigent.chat._start_local_server", fake_start_server)
+    monkeypatch.setattr("omnigent.chat._stop_local_server", lambda server: None)
+    monkeypatch.setattr("omnigent.chat._wait_for_server", lambda *a, **k: None)
+    monkeypatch.setattr("omnigent.chat._bundle_agent", lambda path: b"bundle")
     monkeypatch.setattr(codex_native, "_prepare_codex_terminal", fake_prepare)
     monkeypatch.setattr(codex_native, "_attach_with_forwarder", fake_attach_with_forwarder)
     monkeypatch.setattr(
@@ -6479,10 +6479,10 @@ def test_local_resume_does_not_print_redundant_resume_hint(
         """
         del kwargs
 
-    monkeypatch.setattr("agent_meow.chat._find_free_port", lambda: 23457)
-    monkeypatch.setattr("agent_meow.chat._start_local_server", fake_start_server)
-    monkeypatch.setattr("agent_meow.chat._stop_local_server", lambda server: None)
-    monkeypatch.setattr("agent_meow.chat._wait_for_server", lambda *a, **k: None)
+    monkeypatch.setattr("omnigent.chat._find_free_port", lambda: 23457)
+    monkeypatch.setattr("omnigent.chat._start_local_server", fake_start_server)
+    monkeypatch.setattr("omnigent.chat._stop_local_server", lambda server: None)
+    monkeypatch.setattr("omnigent.chat._wait_for_server", lambda *a, **k: None)
     monkeypatch.setattr(codex_native, "_prepare_codex_terminal", fake_prepare)
     monkeypatch.setattr(codex_native, "_attach_with_forwarder", fake_attach_with_forwarder)
 
@@ -6581,7 +6581,7 @@ def test_record_launch_for_fresh_session_persists_current_cwd(
     :param tmp_path: Temporary workspace and state root.
     :returns: None.
     """
-    from agent_meow.codex_native_state import read_launch_state
+    from omnigent.codex_native_state import read_launch_state
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -6606,7 +6606,7 @@ def test_align_working_directory_with_session_matching_cwd_is_noop(
     :param tmp_path: Temporary workspace and state root.
     :returns: None.
     """
-    from agent_meow.codex_native_state import write_launch_state
+    from omnigent.codex_native_state import write_launch_state
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(tmp_path / "state"))
@@ -6638,7 +6638,7 @@ def test_align_working_directory_with_session_switches_to_recorded_cwd(
     :param tmp_path: Temporary workspace and state root.
     :returns: None.
     """
-    from agent_meow.codex_native_state import write_launch_state
+    from omnigent.codex_native_state import write_launch_state
 
     recorded = tmp_path / "recorded"
     current = tmp_path / "current"
@@ -6669,7 +6669,7 @@ def test_align_working_directory_with_session_missing_recorded_cwd_raises(
     :param tmp_path: Temporary workspace and state root.
     :returns: None.
     """
-    from agent_meow.codex_native_state import write_launch_state
+    from omnigent.codex_native_state import write_launch_state
 
     current = tmp_path / "current"
     missing = tmp_path / "missing"
@@ -6716,9 +6716,9 @@ def test_run_with_remote_server_aligns_cwd_before_daemon_prepare(
     :param tmp_path: Temporary paths for prepared Codex details.
     :returns: None.
     """
-    import agent_meow.chat as chat_mod
-    import agent_meow.cli as cli_mod
-    import agent_meow.host.identity as identity_mod
+    import omnigent.chat as chat_mod
+    import omnigent.cli as cli_mod
+    import omnigent.host.identity as identity_mod
 
     order: list[str] = []
 
@@ -6831,7 +6831,7 @@ def test_run_with_local_server_records_fresh_session_before_attach(
     :param tmp_path: Temporary paths for fake server and Codex details.
     :returns: None.
     """
-    import agent_meow.chat as chat_mod
+    import omnigent.chat as chat_mod
 
     order: list[str] = []
 
@@ -6911,7 +6911,7 @@ async def test_prepare_codex_terminal_via_daemon_creates_runner_and_ensures_term
     This exercises the real ``_prepare_codex_terminal_via_daemon`` orchestration
     against an ``httpx.MockTransport`` agent-meow server. Removing terminal launch arg
     persistence, daemon runner launch, the runner re-bind (which clears
-    ``agent_meow.stopped`` on resume), the ``ensure_native_terminal``
+    ``omnigent.stopped`` on resume), the ``ensure_native_terminal``
     request, or terminal metadata decoding turns this test red.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -7011,7 +7011,7 @@ async def test_prepare_codex_terminal_via_daemon_creates_runner_and_ensures_term
         "/v1/hosts/host_local/runners",
         {"session_id": "conv_new", "workspace": "/repo"},
     ) in calls
-    # Runner re-bind clears agent_meow.stopped on resume.
+    # Runner re-bind clears omnigent.stopped on resume.
     assert ("PATCH", "/v1/sessions/conv_new", {"runner_id": "runner_new"}) in calls
     assert (
         "POST",
@@ -7049,8 +7049,8 @@ async def test_prepare_codex_terminal_via_daemon_live_resume_skips_config_patch(
     original_async_client = httpx.AsyncClient
     calls: list[tuple[str, str, object]] = []
     thread_id = "019e96aa-0be2-7343-8d3b-6f914d60936b"
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
-    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
     live_rollout = _write_source_rollout(
         codex_home=codex_home_for_bridge_dir(bridge_dir_for_bridge_id("conv_live")),
@@ -7073,7 +7073,7 @@ async def test_prepare_codex_terminal_via_daemon_live_resume_skips_config_patch(
             return httpx.Response(
                 200,
                 json={
-                    "labels": {"agent_meow.wrapper": "codex-native-ui"},
+                    "labels": {"omnigent.wrapper": "codex-native-ui"},
                     "external_session_id": thread_id,
                 },
             )
@@ -7157,8 +7157,8 @@ async def test_prepare_codex_terminal_hot_resume_does_not_rewrite_rollout(
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     monkeypatch.chdir(workspace)
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
-    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
     live_rollout = _write_source_rollout(
         codex_home=codex_home_for_bridge_dir(bridge_dir_for_bridge_id(bridge_id)),
@@ -7182,8 +7182,8 @@ async def test_prepare_codex_terminal_hot_resume_does_not_rewrite_rollout(
                 200,
                 json={
                     "labels": {
-                        "agent_meow.wrapper": "codex-native-ui",
-                        "agent_meow.codex_native.bridge_id": bridge_id,
+                        "omnigent.wrapper": "codex-native-ui",
+                        "omnigent.codex_native.bridge_id": bridge_id,
                     },
                     "external_session_id": thread_id,
                 },
@@ -7533,7 +7533,7 @@ def test_attach_with_forwarder_uses_direct_tmux_when_socket_is_local(
         """
         raise AssertionError("WebSocket attach path should not be used")
 
-    monkeypatch.setattr("agent_meow.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
+    monkeypatch.setattr("omnigent.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
     monkeypatch.setattr(codex_native, "_attach_direct_tmux", fake_attach_direct_tmux)
     monkeypatch.setattr(codex_native, "_attach_with_reconnect", fail_attach_with_reconnect)
 
@@ -7784,7 +7784,7 @@ def test_attach_terminal_resource_runner_owned_missing_socket_fails_loud(
         """
         raise AssertionError("Runner-owned Codex attach must not use WebSocket")
 
-    monkeypatch.setattr("agent_meow.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
+    monkeypatch.setattr("omnigent.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
     monkeypatch.setattr(codex_native, "_attach_with_reconnect", fail_attach_with_reconnect)
 
     with pytest.raises(click.ClickException) as exc_info:
@@ -7863,7 +7863,7 @@ def test_attach_with_forwarder_falls_back_when_tmux_socket_is_not_local(
         assert active_session_id_reader() == "conv_rotated"
         websocket_attaches.append(attach_url)
 
-    monkeypatch.setattr("agent_meow.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
+    monkeypatch.setattr("omnigent.codex_native.shutil.which", lambda _name: "/usr/bin/tmux")
     monkeypatch.setattr(codex_native, "_attach_direct_tmux", fail_attach_direct_tmux)
     monkeypatch.setattr(codex_native, "_attach_with_reconnect", fake_attach_with_reconnect)
 
@@ -7918,7 +7918,7 @@ def test_session_usage_data_extracts_cumulative_tokens() -> None:
     # Existing context-ring fields still flow.
     assert data["context_tokens"] == 1000
     assert data["context_window"] == 200000
-    # No ``cachedInputTokens`` in the frame ⇒ no cache field forwarded. A
+    # No ``cachedInputTokens`` in the frame â‡’ no cache field forwarded. A
     # failure here would mean the server splits a phantom cache bucket out of
     # the input total, under-counting non-cached input.
     assert "cumulative_cache_read_input_tokens" not in data
@@ -7932,7 +7932,7 @@ def test_session_usage_data_forwards_cached_input_tokens() -> None:
     Codex's ``inputTokens`` is inclusive of cached tokens (codex-rs
     ``non_cached_input = input_tokens - cached_input_tokens``). The forwarder
     must report both faithfully so the server can split the cheaper cache-read
-    portion out before pricing — otherwise cached tokens are billed at the full
+    portion out before pricing â€” otherwise cached tokens are billed at the full
     input rate (the cost over-report this fix targets).
     """
     params = {
@@ -7948,7 +7948,7 @@ def test_session_usage_data_forwards_cached_input_tokens() -> None:
     }
     data = codex_native_forwarder._session_usage_data_from_params(params)
     assert data is not None
-    # Full input total preserved (NOT pre-subtracted) — the server owns the
+    # Full input total preserved (NOT pre-subtracted) â€” the server owns the
     # split. If this were 200, the forwarder would have double-applied the
     # subtraction the server also does.
     assert data["cumulative_input_tokens"] == 1000
@@ -7959,7 +7959,7 @@ def test_session_usage_data_forwards_cached_input_tokens() -> None:
 def test_session_usage_data_without_output_tokens_omits_cumulative_output() -> None:
     """
     A usage notification lacking ``outputTokens`` yields no
-    ``cumulative_output_tokens`` — the server then prices input only rather
+    ``cumulative_output_tokens`` â€” the server then prices input only rather
     than treating a missing field as zero output.
     """
     params = {"tokenUsage": {"total": {"inputTokens": 500, "contextWindow": 200000}}}
@@ -7972,7 +7972,7 @@ def test_session_usage_data_without_output_tokens_omits_cumulative_output() -> N
 def test_session_usage_data_context_tokens_uses_last_turn_input() -> None:
     """
     ``context_tokens`` (the context-ring value) should reflect the LAST
-    turn's input — how much of the window the latest request occupied —
+    turn's input â€” how much of the window the latest request occupied â€”
     not the cumulative total across the whole thread.
 
     When ``tokenUsage.last`` is present, ``context_tokens`` comes from
@@ -8055,7 +8055,7 @@ def test_usage_coalescer_flush_attaches_model_to_every_post() -> None:
     when the post carries a ``model`` (codex-native sessions have no
     ``llm.model`` to fall back on). Codex sends settings (model) and usage
     in separate frames, so the coalescer must remember the model and stamp
-    it on every flush — including the second turn's post, where only the
+    it on every flush â€” including the second turn's post, where only the
     token counts changed and the dedup would otherwise omit the model.
     """
     posted: list[dict[str, Any]] = []
@@ -8105,7 +8105,7 @@ def test_usage_coalescer_flush_attaches_model_to_every_post() -> None:
     assert posted[1]["data"]["cumulative_output_tokens"] == 600
 
 
-# ── Codex subagent tracking and dedup ────────────────────────────────────────
+# â”€â”€ Codex subagent tracking and dedup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _collab_item_completed_event(
@@ -8387,7 +8387,7 @@ def test_forwarder_dedupes_replay_and_live_child_item(
         thread_responses={"thread_child": _child_resume_response()}
     )
     events = [
-        # Parent turn — causes child registration + backfill replay.
+        # Parent turn â€” causes child registration + backfill replay.
         _collab_item_completed_event(),
         # Live delivery of the SAME child item already written during replay.
         _child_agent_message_event(text="child output"),
@@ -8450,7 +8450,7 @@ def test_forwarder_does_not_double_write_stable_id_item_delivered_twice(
         "params": {
             "threadId": "thread_child",
             "turnId": "turn_child",
-            # Stable item id — dedup must key on this.
+            # Stable item id â€” dedup must key on this.
             "item": {"type": "agentMessage", "id": "msg_abc123", "text": "stable output"},
         },
     }
@@ -8498,7 +8498,7 @@ def test_forwarder_child_thread_started_does_not_rotate_parent_session(
     rotate the parent agent-meow session.
 
     Native ``/clear`` starts a new top-level thread and must rotate.
-    Child threads also emit ``thread/started`` when they begin — those
+    Child threads also emit ``thread/started`` when they begin â€” those
     events carry ``source.subAgent.thread_spawn`` and must be ignored
     by the rotation check, otherwise the parent's agent-meow session would be
     replaced every time a child starts.
@@ -8506,7 +8506,7 @@ def test_forwarder_child_thread_started_does_not_rotate_parent_session(
     The test fails if ``_maybe_rotate_session_on_thread_started`` returns
     ``True`` for a child ``thread/started`` event.
     """
-    codex_write_bridge_state = write_bridge_state  # noqa: F841 — alias for clarity.
+    codex_write_bridge_state = write_bridge_state  # noqa: F841 â€” alias for clarity.
     write_bridge_state(
         tmp_path,
         CodexNativeBridgeState(
@@ -8694,7 +8694,7 @@ def test_completed_item_key_is_total_never_empty() -> None:
     """
     state = codex_native_forwarder._CodexForwarderState()
 
-    # Case 1: stable item id — the normal production path.
+    # Case 1: stable item id â€” the normal production path.
     key1, is_anon1 = codex_native_forwarder._completed_item_key(
         {"threadId": "t", "turnId": "u"},
         {"id": "item-abc", "type": "agentMessage"},
@@ -8705,7 +8705,7 @@ def test_completed_item_key_is_total_never_empty() -> None:
     )
     assert not is_anon1, "Stable-id item must not be flagged anonymous"
 
-    # Case 2: no item id — must produce a positional fallback key.
+    # Case 2: no item id â€” must produce a positional fallback key.
     key2, is_anon2 = codex_native_forwarder._completed_item_key(
         {"threadId": "t", "turnId": "u"},
         {"type": "agentMessage"},  # no id
@@ -8716,7 +8716,7 @@ def test_completed_item_key_is_total_never_empty() -> None:
     )
     assert is_anon2, "Anonymous item must be flagged is_anon=True"
 
-    # Case 3: no item id AND no turnId — must still produce a non-empty string.
+    # Case 3: no item id AND no turnId â€” must still produce a non-empty string.
     key3, _ = codex_native_forwarder._completed_item_key(
         {"threadId": "t"},  # no turnId
         {"type": "agentMessage"},  # no id
@@ -8746,7 +8746,7 @@ def test_completed_item_key_two_anon_items_same_turn_distinct() -> None:
     assert state.claim_item_key(key_a)
     state.advance_anon_counter("t", "u")
 
-    # Second item: peek key after counter advanced — must be different.
+    # Second item: peek key after counter advanced â€” must be different.
     key_b, _ = codex_native_forwarder._completed_item_key(params, item, state)
 
     assert key_a != key_b, (
@@ -8766,7 +8766,7 @@ def test_completed_item_key_claimed_anon_slot_rejected_on_reclaim() -> None:
     and a re-claim must be rejected.
 
     Note: anonymous-item dedup across replay vs live is only reliable when
-    both paths see the counter at the same value — which holds when they both
+    both paths see the counter at the same value â€” which holds when they both
     call ``_handle_completed_item`` sequentially on the same connection (the
     counter advances after each successful claim). The primary dedup mechanism
     for production items is the stable ``item.id`` path, not this fallback.
@@ -8780,7 +8780,7 @@ def test_completed_item_key_claimed_anon_slot_rejected_on_reclaim() -> None:
     assert state.claim_item_key(key_a)
     state.advance_anon_counter("t", "u")
 
-    # anon-0 is now in synced_item_keys — a direct re-claim must be rejected.
+    # anon-0 is now in synced_item_keys â€” a direct re-claim must be rejected.
     assert not state.claim_item_key("t:u:anon-0"), (
         "anon-0 must be rejected after the first claim; the slot is already in synced_item_keys."
     )
@@ -8825,7 +8825,7 @@ def test_forwarder_resolves_child_thread_elicitation_on_child_session(
         """
         if request.url.path.endswith("/hooks/codex-elicitation-request"):
             hook_started.set()
-            await asyncio.Future()  # pending approval — never resolves natively
+            await asyncio.Future()  # pending approval â€” never resolves natively
         posted_paths.append(request.url.path)
         return httpx.Response(202, json={"queued": False})
 
@@ -8841,7 +8841,7 @@ def test_forwarder_resolves_child_thread_elicitation_on_child_session(
         ) as client:
             elicitation_tracker = _elicitation_tracker()
             usage_coalescer = _usage_coalescer(client)
-            # Routes to the child thread → the approval card is published on
+            # Routes to the child thread â†’ the approval card is published on
             # conv_child (the hook POST blocks, simulating a pending prompt).
             await asyncio.wait_for(
                 codex_native_forwarder._handle_event(
@@ -8893,7 +8893,7 @@ def _write_source_rollout(*, codex_home: Path, thread_id: str, source_cwd: str) 
     ``sessions/YYYY/MM/DD/rollout-<ts>-<thread_id>.jsonl`` whose first
     line is ``session_meta`` (carrying the thread ``id`` and ``cwd``),
     followed by a ``turn_context`` (structural ``cwd``) and two
-    *historical* records that mention *source_cwd* inside their bodies —
+    *historical* records that mention *source_cwd* inside their bodies â€”
     a developer message and a function_call_output. The historical
     mentions exist to prove the clone leaves them untouched.
 
@@ -8953,9 +8953,9 @@ def test_clone_codex_rollout_rewrites_id_and_structural_cwd_into_clone_home(
     workspace, the rollout lands in the CLONE's CODEX_HOME under the
     target id, and record order is preserved.
     """
-    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
     source_thread = "019e96aa-0be2-7343-8d3b-6f914d60936b"
     target_thread = "019eaa11-1111-7222-8333-444455556666"
     source_cwd = "/repo/worktree-source"
@@ -9007,9 +9007,9 @@ def test_clone_codex_rollout_leaves_historical_cwd_untouched(
     workspace; rewriting them would fabricate history. Only the two
     structural fields move.
     """
-    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
     source_thread = "019e96aa-0be2-7343-8d3b-6f914d60936b"
     target_thread = "019eaa11-1111-7222-8333-444455556666"
     source_cwd = "/repo/worktree-source"
@@ -9038,7 +9038,7 @@ def test_clone_codex_rollout_leaves_historical_cwd_untouched(
     assert source_cwd in tool_output, "historical tool output must be preserved"
     assert str(clone_cwd) not in developer_text, "clone cwd must not leak into message history"
     assert str(clone_cwd) not in tool_output, "clone cwd must not leak into tool output"
-    # Historical lines must be copied byte-for-byte — not re-serialized —
+    # Historical lines must be copied byte-for-byte â€” not re-serialized â€”
     # so whitespace / key order / escaping are preserved exactly. The
     # source fixture writes records with default (spaced) JSON separators;
     # if the cloner re-serialized them they would lose those spaces and
@@ -9053,10 +9053,10 @@ def test_clone_codex_rollout_leaves_historical_cwd_untouched(
 def test_clone_codex_rollout_leaves_source_untouched(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The source rollout is read-only — cloning never mutates it."""
-    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    """The source rollout is read-only â€” cloning never mutates it."""
+    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
     source_thread = "019e96aa-0be2-7343-8d3b-6f914d60936b"
     source_cwd = "/repo/worktree-source"
 
@@ -9086,13 +9086,13 @@ def test_clone_codex_rollout_returns_none_when_source_missing(
     """
     Cloning returns None when the source rollout isn't on this host.
 
-    The caller treats None as "launch fresh" — a fork to a host without
+    The caller treats None as "launch fresh" â€” a fork to a host without
     the source rollout must not strand the clone pointing at a missing
     thread.
     """
-    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
     clone_home = codex_home_for_bridge_dir(bridge_dir_for_bridge_id("conv_clone"))
 
     result = codex_native._clone_codex_rollout(
@@ -9115,9 +9115,9 @@ def test_clone_codex_rollout_returns_none_for_unsafe_target_id(
     Guards against path traversal via the minted id being interpolated
     into the rollout filename.
     """
-    from agent_meow.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
+    from omnigent.codex_native_bridge import bridge_dir_for_bridge_id, codex_home_for_bridge_dir
 
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "bridges")
     source_thread = "019e96aa-0be2-7343-8d3b-6f914d60936b"
     source_home = codex_home_for_bridge_dir(bridge_dir_for_bridge_id("conv_source"))
     _write_source_rollout(codex_home=source_home, thread_id=source_thread, source_cwd="/repo/src")
@@ -9507,7 +9507,7 @@ def test_command_execution_appends_sandbox_bypass_guidance_on_namespace_error() 
 
 
 def test_command_execution_leaves_normal_output_untouched() -> None:
-    """A successful command keeps its output verbatim — the guidance only fires
+    """A successful command keeps its output verbatim â€” the guidance only fires
     on the sandbox-namespace failure, never on ordinary output (issue #657)."""
     item = {"command": "pwd", "aggregatedOutput": "/repo\n", "exitCode": 0}
     tool_call = codex_native_forwarder._command_execution_tool_call("call_1", item)
@@ -9523,7 +9523,7 @@ def test_forwarder_mirrors_codex_context_compaction(tmp_path: Path) -> None:
 
     A ``contextCompaction`` item/started shows the spinner (in_progress) and
     the ``thread/compacted`` notification clears it (completed). Both signals
-    were previously dropped, so the web UI never indicated Codex compacted —
+    were previously dropped, so the web UI never indicated Codex compacted â€”
     increasingly relevant with GPT-5.1-Codex-Max auto-compaction.
     """
     write_bridge_state(

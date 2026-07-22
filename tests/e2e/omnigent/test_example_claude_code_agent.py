@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 
 from tests.e2e.conftest import configure_mock_llm, reset_mock_llm
-from tests.e2e.agent_meow._example_helpers import (
+from tests.e2e.omnigent._example_helpers import (
     assert_completed_one_shot,
     require_claude_sdk,
     run_one_shot,
@@ -38,7 +38,7 @@ def test_claude_code_agent_one_shot(
 ) -> None:
     """
     Run the claude_code_agent YAML one-shot through the claude_sdk
-    harness (pinned in the YAML — we pass ``harness=None`` so the
+    harness (pinned in the YAML â€” we pass ``harness=None`` so the
     spec wins).
 
     Uses the mock LLM server so no real Anthropic credentials are
@@ -52,7 +52,7 @@ def test_claude_code_agent_one_shot(
     :param mock_credentials_env: Env dict pointing at the mock LLM
         server (``OPENAI_BASE_URL`` + ``OPENAI_API_KEY``).
     :param mock_llm_server_url: Base URL of the mock LLM server
-        (no ``/v1`` suffix — the Anthropic SDK appends
+        (no ``/v1`` suffix â€” the Anthropic SDK appends
         ``/v1/messages`` automatically).
     """
     if shutil.which("claude") is None:

@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.runner.tool_dispatch import execute_tool
+from omnigent.runner.tool_dispatch import execute_tool
 
 
 class _TimerPostRecorder:

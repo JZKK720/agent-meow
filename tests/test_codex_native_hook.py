@@ -10,8 +10,8 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow import codex_native_hook, native_policy_hook
-from agent_meow.codex_native_bridge import (
+from omnigent import codex_native_hook, native_policy_hook
+from omnigent.codex_native_bridge import (
     CodexNativeBridgeState,
     codex_home_for_bridge_dir,
     prepare_bridge_dir,
@@ -118,7 +118,7 @@ class _RaisesIfCalled:
 
     def post(self, url: str, *, json: dict[str, object]) -> httpx.Response:
         """
-        Fail loudly — the hook should never reach the network here.
+        Fail loudly â€” the hook should never reach the network here.
 
         :param url: Target agent-meow URL (unused).
         :param json: Request body (unused).
@@ -145,7 +145,7 @@ def bridge_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     :param monkeypatch: pytest monkeypatch fixture.
     :returns: Prepared bridge directory.
     """
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
     bdir = prepare_bridge_dir("bridge_test")
     write_bridge_state(
         bdir,
@@ -184,7 +184,7 @@ def test_pre_tool_use_converts_posts_and_returns_deny(
     A PreToolUse hook converts to proto, POSTs to AP, and maps DENY back.
 
     This is the full codex enforcement path: read bridge state +
-    policy_hook config → convert payload → POST /policies/evaluate →
+    policy_hook config â†’ convert payload â†’ POST /policies/evaluate â†’
     map the DENY verdict to ``permissionDecision: deny``. It fails if any
     link breaks (wrong URL/session, missing conversion, missing auth, or
     a mis-mapped verdict that would let the blocked command run).
@@ -237,7 +237,7 @@ def test_user_prompt_submit_converts_posts_and_blocks(
     This is the request-phase enforcement path for native Codex sessions
     (the server-level ``_evaluate_input_policy`` skips native message
     events). The prompt rides in ``event.data.text``; a DENY maps to the
-    top-level ``decision: "block"`` contract — NOT ``permissionDecision`` —
+    top-level ``decision: "block"`` contract â€” NOT ``permissionDecision`` â€”
     which drops the prompt before the model sees it. A break here means a
     blocked prompt would still reach the model.
     """
@@ -263,7 +263,7 @@ def test_user_prompt_submit_converts_posts_and_blocks(
     sent = _DenyHttpxClient.captured["json"]
     assert sent["event"]["type"] == "PHASE_REQUEST"
     assert sent["event"]["data"] == {"text": "delete the prod database"}
-    # DENY → top-level decision/reason block (not permissionDecision).
+    # DENY â†’ top-level decision/reason block (not permissionDecision).
     result = json.loads(captured.out)
     assert result == {"decision": "block", "reason": "rm blocked by admin policy"}
     assert captured.err == ""
@@ -316,12 +316,12 @@ def test_pre_tool_use_stamps_harness_without_config_model(
     """The harness is stamped even when config.toml has no model.
 
     The harness drives the deny message's switch-instruction wording, which
-    must be correct regardless of whether the model is determinable — so it
+    must be correct regardless of whether the model is determinable â€” so it
     is stamped unconditionally (unlike the model, which is only stamped when
     config.toml provides one).
     """
     _DenyHttpxClient.captured = {}
-    # No config.toml written → read_codex_config_model returns None.
+    # No config.toml written â†’ read_codex_config_model returns None.
     write_policy_hook_config(
         bridge_dir,
         ap_server_url="http://127.0.0.1:8787",
@@ -338,7 +338,7 @@ def test_pre_tool_use_stamps_harness_without_config_model(
     assert exit_code == 0
     sent = _DenyHttpxClient.captured["json"]
     assert sent["event"]["context"]["harness"] == "codex-native"
-    # Model absent (no config) — stays unstamped, the gate falls back.
+    # Model absent (no config) â€” stays unstamped, the gate falls back.
     assert "model" not in sent["event"]["context"]
 
 
@@ -351,10 +351,10 @@ def test_missing_bridge_state_is_fail_open(
     With no bridge state, the hook emits nothing and never POSTs.
 
     A bridge dir that has not been initialized must not crash codex or
-    block tools — the hook returns 0 with no verdict. ``_RaisesIfCalled``
+    block tools â€” the hook returns 0 with no verdict. ``_RaisesIfCalled``
     asserts the network was never reached.
     """
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
     empty_dir = prepare_bridge_dir("bridge_no_state")
     monkeypatch.setattr(native_policy_hook.httpx, "Client", _RaisesIfCalled)
 
@@ -365,7 +365,7 @@ def test_missing_bridge_state_is_fail_open(
     )
     captured = capsys.readouterr()
     assert exit_code == 0
-    # No verdict emitted → codex applies its own default (fail-open).
+    # No verdict emitted â†’ codex applies its own default (fail-open).
     assert captured.out == ""
 
 
@@ -405,7 +405,7 @@ def test_pre_tool_use_fails_closed_when_verdict_unavailable(
 
     For native harnesses this hook is the sole TOOL_CALL enforcement point,
     so a server outage / non-2xx / empty / malformed response must fail
-    CLOSED (deny) instead of "no opinion" — the bypass reported in #536.
+    CLOSED (deny) instead of "no opinion" â€” the bypass reported in #536.
     """
     write_policy_hook_config(bridge_dir, ap_server_url="http://127.0.0.1:8787", ap_auth_headers={})
     monkeypatch.setattr(native_policy_hook, "_EVALUATE_POLICY_RETRY_BUDGET_S", 0.0)
@@ -437,7 +437,7 @@ def test_user_prompt_submit_fails_closed_on_error(
     A governed UserPromptSubmit blocks when no usable verdict is returned.
 
     The request gate is the sole pre-turn enforcement point for native
-    sessions — a server outage must not let a blocked request proceed.
+    sessions â€” a server outage must not let a blocked request proceed.
     """
     write_policy_hook_config(bridge_dir, ap_server_url="http://127.0.0.1:8787", ap_auth_headers={})
     monkeypatch.setattr(native_policy_hook, "_EVALUATE_POLICY_RETRY_BUDGET_S", 0.0)
@@ -459,7 +459,7 @@ def test_post_tool_use_fails_open_on_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    PostToolUse fails OPEN on a transport error — the tool already ran.
+    PostToolUse fails OPEN on a transport error â€” the tool already ran.
 
     Mirroring the runner-side ``FAIL_CLOSED_PHASES``.
     """

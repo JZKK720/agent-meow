@@ -1,4 +1,4 @@
-"""Unit tests for ``agent_meow/model_override.py``.
+"""Unit tests for ``omnigent/model_override.py``.
 
 The validator guards a spawn boundary: a model override is persisted on
 the session row and later becomes a ``--model`` argv element (native
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.model_override import (
+from omnigent.model_override import (
     MODEL_OVERRIDE_MAX_LEN,
     canonical_model_spelling,
     harness_supports_model_override,
@@ -120,7 +120,7 @@ def test_harness_supports_model_override_false_for_unplumbed(harness: str | None
     """
     Unplumbed / unknown harnesses report no support.
 
-    A True here would silently drop the orchestrator's model choice —
+    A True here would silently drop the orchestrator's model choice â€”
     exactly the failure mode the dispatch-time gate exists to prevent.
     """
     assert harness_supports_model_override(harness) is False
@@ -144,7 +144,7 @@ class TestModelFamilyMismatch:
             ("openai-agents", "databricks-kimi-k2-6"),
             ("openai-agents", "databricks-meta-llama-3.3-70b-instruct"),
             # The "-sdk" / executor-type spellings canonicalize_harness
-            # passes through must be multi-model too — an earlier change had
+            # passes through must be multi-model too â€” an earlier change had
             # added them to the GPT-only set; a later change removes every
             # openai-agents spelling so none of them family-reject a non-GPT id.
             ("openai-agents-sdk", "databricks-claude-sonnet-4-6"),
@@ -255,7 +255,7 @@ def test_normalize_localizes_canonical_ids_for_gateway_children(model: str, expe
         ("databricks-claude-opus-4-8", "claude-opus-4-8"),
         ("databricks-gpt-5-4", "gpt-5-4"),
         # The stripped remainder must itself be a mechanical claude/gpt
-        # id — other families have no canonical vendor counterpart.
+        # id â€” other families have no canonical vendor counterpart.
         ("databricks-meta-llama-3.3-70b-instruct", "databricks-meta-llama-3.3-70b-instruct"),
         # Already canonical: unchanged.
         ("claude-sonnet-4-6", "claude-sonnet-4-6"),
@@ -304,7 +304,7 @@ def test_normalize_passes_through_for_unmapped_provider_kinds(
         ("databricks-gpt-5-4-mini", "gpt-5-4-mini"),
         # Already canonical: unchanged.
         ("claude-haiku-4-5", "claude-haiku-4-5"),
-        # Non-claude/gpt remainders have no mechanical counterpart —
+        # Non-claude/gpt remainders have no mechanical counterpart â€”
         # stripping would fabricate a vendor id that does not exist.
         ("databricks-meta-llama-3.3-70b-instruct", "databricks-meta-llama-3.3-70b-instruct"),
         # Bracket/slash/dotted shapes are not mechanical either.

@@ -1,18 +1,18 @@
 """End-to-end regression test for the claude-native first-message readiness gate.
 
 Covers the host-spawned Web UI flow for ``claude-native-ui``: list hosts
-→ create a session with ``host_id`` + ``workspace`` → the server launches
-a runner on the host → the runner auto-creates a Claude Code terminal →
+â†’ create a session with ``host_id`` + ``workspace`` â†’ the server launches
+a runner on the host â†’ the runner auto-creates a Claude Code terminal â†’
 the user's first message is injected into that terminal.
 
 The bug this guards against (the "AWAIT TERMINAL UP" race): the runner
 advertises ``tmux.json`` as soon as the tmux session exists, but Claude
 Code's input box mounts several seconds later, and Claude flushes any
 pending terminal input when its TUI initializes. So a first message
-typed into that gap is silently dropped — the UI shows "Working…"
+typed into that gap is silently dropped â€” the UI shows "Workingâ€¦"
 forever and nothing is persisted. ``inject_user_message`` now waits for
 Claude's input prompt to render before typing (see
-``agent_meow.claude_native_bridge._wait_for_claude_prompt_ready``).
+``omnigent.claude_native_bridge._wait_for_claude_prompt_ready``).
 
 Making the race deterministic
 -----------------------------
@@ -24,29 +24,29 @@ wrapper (first on ``PATH``) that:
 1. ``sleep``\\ s for :data:`_BOOT_DELAY_S` so the input box reliably
    renders *after* the runner would otherwise inject, and
 2. flushes pending terminal input (``termios.tcflush``) right before
-   exec'ing the real ``claude`` — faithfully modeling Claude Code's
+   exec'ing the real ``claude`` â€” faithfully modeling Claude Code's
    own boot-time input flush, which is what discards early keystrokes.
 
-With the wrapper, a pre-prompt inject is reliably lost: **gate absent →
-this test fails (marker never answered); gate present → it passes.**
-Verified red→green by toggling the gate.
+With the wrapper, a pre-prompt inject is reliably lost: **gate absent â†’
+this test fails (marker never answered); gate present â†’ it passes.**
+Verified redâ†’green by toggling the gate.
 
 Environment requirements (why this is opt-in, not pure-CI):
 
 * **Opt-in only**: set ``OMNIGENT_E2E_CLAUDE_NATIVE=1`` to run. claude-native
   needs an *interactive* Claude login (OAuth/Enterprise) anchored to the
-  real ``$HOME`` — it cannot be relocated into CI (verified: a copied
+  real ``$HOME`` â€” it cannot be relocated into CI (verified: a copied
   ``~/.claude.json`` reports "Not logged in"). The ``claude`` binary IS
   present in CI (claude-sdk installs it), so gating on binary presence
   alone would let this run unauthenticated and hang the TUI until the
   shard times out. The env-var gate keeps it out of CI entirely; a
   developer with a logged-in Claude opts in explicitly.
-* It runs the daemon under the real HOME with the real Claude login —
+* It runs the daemon under the real HOME with the real Claude login â€”
   like ``claude_coder`` relies on the CLI's own session.
 * The workspace folder must be trusted in ``~/.claude.json`` or Claude
   shows its folder-trust dialog, which blocks (and confounds) the gate.
   The test trusts a temp workspace and restores the original config on
-  teardown. It does NOT touch ``~/.agent_meow/config.yaml``: the test
+  teardown. It does NOT touch ``~/.omnigent/config.yaml``: the test
   server is a fresh random-port instance, so the daemon's real host
   identity registers there with no collision.
 
@@ -87,7 +87,7 @@ from tests.e2e.helpers import POLL_INTERVAL_S
 # binary IS present in CI (the claude-sdk e2e tests install it), but it
 # is not logged in, so this test would launch a Claude TUI that can
 # never reach its input box and hang until the shard times out. Binary
-# presence is therefore NOT a sufficient gate — require an explicit
+# presence is therefore NOT a sufficient gate â€” require an explicit
 # opt-in env var that only a developer with a logged-in Claude sets.
 pytestmark = pytest.mark.skipif(
     os.environ.get("OMNIGENT_E2E_CLAUDE_NATIVE") != "1" or shutil.which("claude") is None,
@@ -102,7 +102,7 @@ pytestmark = pytest.mark.skipif(
 _CLAUDE_NATIVE_AGENT_NAME = "claude-native-ui"
 
 # Seconds the claude wrapper sleeps before exec'ing the real binary.
-# Must comfortably exceed the runner's launch→inject latency so that,
+# Must comfortably exceed the runner's launchâ†’inject latency so that,
 # without the gate, the inject lands during the wrapper's sleep (before
 # the input box renders) and is flushed.
 _BOOT_DELAY_S = 8
@@ -115,7 +115,7 @@ def _workspace_trusted_in_claude_config(workspace: Path) -> Iterator[None]:
 
     Without this, fresh-config Claude shows its folder-trust dialog
     instead of the input box, which both blocks injection and (because
-    the dialog's selector is also ``❯``) confounds the readiness gate.
+    the dialog's selector is also ``â¯``) confounds the readiness gate.
     The original file bytes are restored on exit so the developer's
     config is left untouched.
 
@@ -146,7 +146,7 @@ def _write_claude_boot_delay_wrapper(bin_dir: Path) -> None:
     Placed first on the daemon's ``PATH`` so the runner's auto-created
     terminal launches it instead of the real binary. The shim widens the
     boot window (:data:`_BOOT_DELAY_S`) and flushes pending terminal
-    input before exec — modeling Claude's own boot-time flush so a
+    input before exec â€” modeling Claude's own boot-time flush so a
     pre-prompt inject is deterministically lost without the gate.
 
     :param bin_dir: Directory prepended to ``PATH``; the shim is written
@@ -183,7 +183,7 @@ def _spawn_host_daemon(
 
     claude-native needs the real Claude login (auth can't be relocated),
     so this inherits the real environment. The daemon registers the
-    machine's real host identity with *live_server* — safe because
+    machine's real host identity with *live_server* â€” safe because
     *live_server* is a fresh random-port instance with no other host of
     that id connected.
 
@@ -202,7 +202,7 @@ def _spawn_host_daemon(
     with open(daemon_log, "w") as log_fh:
         return subprocess.Popen(
             # Compat-aware: pinned OLD host venv in runner compat mode (Config 2).
-            [runner_executable(), "-m", "agent_meow.host._daemon_entry", "--server", live_server],
+            [runner_executable(), "-m", "omnigent.host._daemon_entry", "--server", live_server],
             env=apply_runner_env(env),
             cwd=compat_runner_cwd(),
             stdout=subprocess.DEVNULL,
@@ -328,7 +328,7 @@ def _poll_for_assistant_marker(
                     return text
         time.sleep(POLL_INTERVAL_S)
     raise AssertionError(
-        f"No assistant message containing {marker!r} within {timeout}s — "
+        f"No assistant message containing {marker!r} within {timeout}s â€” "
         "the first message was dropped (readiness gate regression)."
     )
 
@@ -342,9 +342,9 @@ def test_claude_native_first_message_survives_terminal_boot(
     A claude-native session's first message lands even when sent at once.
 
     Golden path for the Web UI "Claude Code" flow with a deliberately
-    delayed Claude boot (see module docstring): connect host → create
-    session with host_id + workspace → send the first message
-    immediately (racing Claude's TUI boot) → assert Claude answers with
+    delayed Claude boot (see module docstring): connect host â†’ create
+    session with host_id + workspace â†’ send the first message
+    immediately (racing Claude's TUI boot) â†’ assert Claude answers with
     the marker. Without the AWAIT-TERMINAL-UP gate the keystrokes are
     flushed during boot and this times out.
     """
@@ -369,7 +369,7 @@ def test_claude_native_first_message_survives_terminal_boot(
             create.raise_for_status()
             session_id = create.json()["id"]
 
-            # Fire the FIRST message immediately — the racy path. The gate
+            # Fire the FIRST message immediately â€” the racy path. The gate
             # must hold it until Claude's input box renders (past the
             # shim's boot delay + flush).
             event = http_client.post(
@@ -409,12 +409,12 @@ def test_claude_native_first_message_survives_terminal_boot(
 
 def _plant_poisoned_omnigent_package(workspace: Path) -> None:
     """
-    Write a booby-trapped ``agent_meow/`` package inside *workspace*.
+    Write a booby-trapped ``omnigent/`` package inside *workspace*.
 
     Claude Code runs its hook subprocesses (and the relay MCP server)
     with the cwd set to the session's workspace. Absent ``python -I``,
-    Python prepends that cwd to ``sys.path[0]``, so ``import agent_meow``
-    in the hook resolves to whatever ``agent_meow/`` lives in the
+    Python prepends that cwd to ``sys.path[0]``, so ``import omnigent``
+    in the hook resolves to whatever ``omnigent/`` lives in the
     workspace -- not the installed package. This plants a copy whose
     ``__init__`` raises on import, faithfully modeling the real failure
     mode: a git worktree checked out in the workspace whose ``agent-meow``
@@ -427,7 +427,7 @@ def _plant_poisoned_omnigent_package(workspace: Path) -> None:
     recorded, and the assistant marker never appears.
 
     :param workspace: Absolute workspace path the session starts in; the
-        package is written as ``workspace/agent_meow/__init__.py``.
+        package is written as ``workspace/omnigent/__init__.py``.
     :returns: None.
     """
     pkg_dir = workspace / "agent-meow"
@@ -449,7 +449,7 @@ def test_claude_native_hooks_ignore_workspace_omnigent_package(
     Hooks import the installed ``agent-meow``, not a workspace shadow.
 
     Regression for the ``python -I`` fix (cwd import shadowing). The
-    workspace contains a poisoned ``agent_meow/`` package that raises on
+    workspace contains a poisoned ``omnigent/`` package that raises on
     import. Claude Code runs hook subprocesses with cwd set to that
     workspace, so without ``-I`` the hook imports the poisoned copy and
     crashes -- ``record_hook_event`` never runs, the forwarder never
@@ -530,7 +530,7 @@ def test_claude_native_message_not_duplicated_on_cold_start(
     Each item appears exactly once after the first turn on a cold session.
 
     Regression for the double-forwarder race: on cold start two concurrent
-    code paths could both reach ``_auto_create_claude_terminal`` — the
+    code paths could both reach ``_auto_create_claude_terminal`` â€” the
     runner's ``_on_runner_connect`` (via ``create_session``, which holds
     ``_claude_terminal_ensure_locks``) and the first-message path's
     ``_ensure_native_terminal_ready`` (via ``create_session_terminal`` with
@@ -538,7 +538,7 @@ def test_claude_native_message_not_duplicated_on_cold_start(
 
     Each call spawned an independent transcript forwarder task; each
     forwarder independently posted every transcript item via
-    ``external_conversation_item`` — doubling every user message and
+    ``external_conversation_item`` â€” doubling every user message and
     assistant response in the DB. The fix adds
     ``_claude_terminal_ensure_locks`` to the ``create_session_terminal``
     claude path so the second concurrent caller finds the already-created
@@ -551,7 +551,7 @@ def test_claude_native_message_not_duplicated_on_cold_start(
     the unit test ``test_claude_terminal_ensure_concurrent_calls_create_once``
     (in ``tests/runner/test_session_resources.py``) covers the concurrent
     lock semantics deterministically. This test covers the end-to-end
-    path: one turn → exactly one user item, exactly one assistant item.
+    path: one turn â†’ exactly one user item, exactly one assistant item.
     """
     workspace = tmp_path / "cn_dedup_ws"
     workspace.mkdir()
@@ -590,7 +590,7 @@ def test_claude_native_message_not_duplicated_on_cold_start(
             )
             event.raise_for_status()
 
-            # Wait until Claude has replied — proves the forwarder persisted
+            # Wait until Claude has replied â€” proves the forwarder persisted
             # the assistant response and the turn completed.
             _poll_for_assistant_marker(
                 http_client,
@@ -601,7 +601,7 @@ def test_claude_native_message_not_duplicated_on_cold_start(
 
             # Fetch all items and count by role. With the double-forwarder
             # race, both the user turn and the assistant turn get posted
-            # twice — each count would be 2, not 1.
+            # twice â€” each count would be 2, not 1.
             resp = http_client.get(
                 f"/v1/sessions/{session_id}/items",
                 params={"limit": 50, "order": "asc"},
@@ -612,7 +612,7 @@ def test_claude_native_message_not_duplicated_on_cold_start(
             user_items = [i for i in items if i.get("role") == "user"]
             assistant_items = [i for i in items if i.get("role") == "assistant"]
 
-            # Exactly one user message — the one we sent.
+            # Exactly one user message â€” the one we sent.
             # A count of 2 means two forwarders both posted the transcript
             # user-turn entry (the double-forwarder race re-appeared).
             assert len(user_items) == 1, (

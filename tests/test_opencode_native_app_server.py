@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow import opencode_native_app_server as appsrv
-from agent_meow.opencode_native_app_server import (
+from omnigent import opencode_native_app_server as appsrv
+from omnigent.opencode_native_app_server import (
     OpenCodeCliNotFoundError,
     OpenCodeNativeServer,
     OpenCodeVersionError,

@@ -1,4 +1,4 @@
-"""Tests for :class:`~?agent_meow.server.routes.comments.AddCommentRequest` validation.
+"""Tests for :class:`~?omnigent.server.routes.comments.AddCommentRequest` validation.
 
 ``AddCommentRequest`` has a ``model_validator`` that rejects semantically
 invalid range field combinations at the HTTP boundary before they reach the
@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agent_meow.server.routes.comments import AddCommentRequest
+from omnigent.server.routes.comments import AddCommentRequest
 
 
 def _valid_kwargs(**overrides: object) -> dict:
@@ -30,7 +30,7 @@ def _valid_kwargs(**overrides: object) -> dict:
     return base
 
 
-# ── happy path ────────────────────────────────────────────────────────────────
+# â”€â”€ happy path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_add_comment_request_valid() -> None:
@@ -58,7 +58,7 @@ def test_add_comment_request_valid_anchor_content_optional() -> None:
     assert req_with_anchor.anchor_content == "selected text"
 
 
-# ── start_index validation ────────────────────────────────────────────────────
+# â”€â”€ start_index validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize("start_index", [-1, -100])
@@ -71,7 +71,7 @@ def test_add_comment_request_rejects_negative_start_index(start_index: int) -> N
         AddCommentRequest(**_valid_kwargs(start_index=start_index, end_index=0))
 
 
-# ── end_index validation ──────────────────────────────────────────────────────
+# â”€â”€ end_index validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_add_comment_request_rejects_end_index_before_start_index() -> None:

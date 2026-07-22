@@ -20,7 +20,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow.runner.tool_dispatch import _execute_file_tool
+from omnigent.runner.tool_dispatch import _execute_file_tool
 
 _CONVERSATION_ID = "conv_sec20870"
 

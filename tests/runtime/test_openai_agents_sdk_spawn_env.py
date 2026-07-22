@@ -1,14 +1,14 @@
 """
 Tests for ``_build_openai_agents_sdk_spawn_env`` in
-``agent_meow/runtime/workflow.py``.
+``omnigent/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec.executor`` fields to
 ``HARNESS_OPENAI_AGENTS_*`` env vars that the openai-agents harness
 wrap reads at first-turn time. Mirrors the
 the spawn-env pattern used by the other SDK-style harness tests.
 
-This is a unit test — no subprocess spawn, no real httpx. End-to-end
-verification of the spawn-env → wrap → runtime executor → gateway
+This is a unit test â€” no subprocess spawn, no real httpx. End-to-end
+verification of the spawn-env â†’ wrap â†’ runtime executor â†’ gateway
 path lives in the harness e2e tests.
 """
 
@@ -20,8 +20,8 @@ from pathlib import Path
 import pytest
 import yaml as _yaml
 
-from agent_meow.runtime.workflow import _build_openai_agents_sdk_spawn_env, _load_global_auth
-from agent_meow.spec.types import (
+from omnigent.runtime.workflow import _build_openai_agents_sdk_spawn_env, _load_global_auth
+from omnigent.spec.types import (
     AgentSpec,
     ApiKeyAuth,
     DatabricksAuth,
@@ -35,10 +35,10 @@ def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     """
     Point OMNIGENT_CONFIG_HOME at an empty temp dir for every test in
     this file so tests that don't explicitly set up a global config are
-    not affected by the developer's real ``~/.agent_meow/config.yaml``.
+    not affected by the developer's real ``~/.omnigent/config.yaml``.
 
     Tests that need a specific global config write their own config.yaml
-    into a separate temp dir and set OMNIGENT_CONFIG_HOME themselves —
+    into a separate temp dir and set OMNIGENT_CONFIG_HOME themselves â€”
     that setenv call wins because monkeypatch applies in call order.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
@@ -137,7 +137,7 @@ def test_databricks_model_ignores_env_profile(
 ) -> None:
     """
     Ambient ``DATABRICKS_CONFIG_PROFILE`` does NOT steer the auto-Databricks
-    routing — credentials are controlled by the spec or by ``agent-meow
+    routing â€” credentials are controlled by the spec or by ``agent-meow
     setup`` provider config, never by shell environment. A databricks-*
     model with no spec profile routes via the SDK ``DEFAULT`` profile.
     """
@@ -196,7 +196,7 @@ def test_profile_injects_ucode_state(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -213,11 +213,11 @@ def test_profile_injects_ucode_state(
         },
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow.get_workspace_url_for_profile",
+        "omnigent.runtime.workflow.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow.read_ucode_state",
+        "omnigent.runtime.workflow.read_ucode_state",
         lambda workspace_url: state,
     )
 
@@ -332,7 +332,7 @@ def test_load_global_auth_databricks(
 ) -> None:
     """
     ``_load_global_auth()`` returns a :class:`DatabricksAuth` when the
-    config file has ``auth: {type: databricks, profile: …}``.
+    config file has ``auth: {type: databricks, profile: â€¦}``.
     """
     with tempfile.TemporaryDirectory() as td:
         cfg_path = Path(td) / "config.yaml"
@@ -349,7 +349,7 @@ def test_load_global_auth_api_key(
 ) -> None:
     """
     ``_load_global_auth()`` returns an :class:`ApiKeyAuth` when the
-    config file has ``auth: {type: api_key, api_key: …}`` and expands
+    config file has ``auth: {type: api_key, api_key: â€¦}`` and expands
     env-var references.
     """
     monkeypatch.setenv("MY_GLOBAL_KEY", "sk-global-999")
@@ -372,12 +372,12 @@ def test_global_config_auth_not_applied_when_spec_has_legacy_profile(
 
     Failure means a YAML like ``executor.profile: oss`` silently has its
     Databricks profile overridden by an api_key in the user's global
-    config — the agent then hits ``api.openai.com`` instead of the
+    config â€” the agent then hits ``api.openai.com`` instead of the
     Databricks gateway and gets an auth error.
     """
     with tempfile.TemporaryDirectory() as td:
         cfg_path = Path(td) / "config.yaml"
-        # Global config has api_key auth — should NOT apply when spec has a profile.
+        # Global config has api_key auth â€” should NOT apply when spec has a profile.
         cfg_path.write_text(_yaml.dump({"auth": {"type": "api_key", "api_key": "sk-global"}}))
         monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
         monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
@@ -410,7 +410,7 @@ def test_load_global_auth_api_key_with_base_url(
     and expands env-var references in it.
 
     Failure means a user who configures a custom endpoint in
-    ``~/.agent_meow/config.yaml`` via an env-var reference has the
+    ``~/.omnigent/config.yaml`` via an env-var reference has the
     literal ``$VAR`` string passed as the base URL.
     """
     monkeypatch.setenv("MY_GLOBAL_KEY", "sk-global-abc")
@@ -447,7 +447,7 @@ def test_load_global_auth_unresolved_env_var_raises(
     the literal ``$MISSING_KEY`` string to the API, producing a confusing
     401 "invalid API key" error rather than a clear configuration error.
     """
-    from agent_meow.errors import OmnigentError
+    from omnigent.errors import OmnigentError
 
     monkeypatch.delenv("MISSING_KEY", raising=False)
     with tempfile.TemporaryDirectory() as td:
@@ -461,7 +461,7 @@ def test_load_global_auth_unresolved_env_var_raises(
 
 def test_api_key_auth_base_url_sets_base_url_env_var() -> None:
     """
-    ``executor.auth: {type: api_key, base_url: …}`` writes
+    ``executor.auth: {type: api_key, base_url: â€¦}`` writes
     ``HARNESS_OPENAI_AGENTS_GATEWAY_BASE_URL`` alongside the API key.
 
     Failure means the custom endpoint declared in the spec is silently

@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.errors import OmnigentError
-from agent_meow.server.routes._codex_elicitation import (
+from omnigent.errors import OmnigentError
+from omnigent.server.routes._codex_elicitation import (
     _codex_command_preview,
     _execpolicy_amendment,
     _json_preview,

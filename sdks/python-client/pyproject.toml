@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agent-meow-client"
+name = "omnigent-client"
 version = "0.5.0.dev0"
 description = "Python client SDK for the agent-meow server API"
 readme = "README.md"
@@ -13,13 +13,13 @@ dependencies = [
     # StreamEvent source of truth that the SDK validates SSE
     # envelopes against (see _sessions.py, _sse.py). Resolved via
     # the relative path below so the SDK can be installed
-    # editable alongside the root ``agent-meow`` package. Version-locked
+    # editable alongside the root ``omnigent`` package. Version-locked
     # (==) so a published SDK always pairs with the server release it
     # shipped with (release-agent_meow.yml verifies the pin).
-    "agent-meow==0.5.0.dev0",
+    "omnigent==0.5.0.dev0",
     "httpx>=0.27",
     "pydantic>=2.0,<3",
 ]
 
 [tool.uv.sources]
-agent-meow = { path = "../..", editable = true }
+omnigent = { path = "../..", editable = true }

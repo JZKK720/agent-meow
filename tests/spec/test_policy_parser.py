@@ -1,8 +1,8 @@
 """
-Tests for ``_parse_guardrails`` and helpers — spec-load
-behavior for the policy system (POLICIES.md §3, §14).
+Tests for ``_parse_guardrails`` and helpers â€” spec-load
+behavior for the policy system (POLICIES.md Â§3, Â§14).
 
-Covers every YAML shape from §3.1 of the design doc. The
+Covers every YAML shape from Â§3.1 of the design doc. The
 validator-layer rejections (empty lists, typo guards, unknown
 types) live in ``test_policy_validator.py``; this file only
 covers the happy-path parser behavior and the string-coercion
@@ -19,14 +19,14 @@ from typing import Any
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
-from agent_meow.spec.parser import (
+from omnigent.errors import OmnigentError
+from omnigent.spec.parser import (
     _ConfigYamlLoader,
     _parse_condition,
     _parse_guardrails,
     parse,
 )
-from agent_meow.spec.types import (
+from omnigent.spec.types import (
     DEFAULT_ASK_TIMEOUT,
     FunctionPolicySpec,
 )
@@ -37,18 +37,18 @@ def _yaml(text: str) -> Any:
     Parse YAML text using the spec's custom loader.
 
     Needed so ``on:``, ``off:``, ``yes:``, ``no:`` stay strings
-    (the loader strips the YAML 1.1 bool aliases — see
+    (the loader strips the YAML 1.1 bool aliases â€” see
     :class:`_ConfigYamlLoader`). Without this, ``on: [request]``
     in test YAML would parse to ``{True: [...]}``.
     """
     return yaml.load(text, Loader=_ConfigYamlLoader)
 
 
-# ── Top-level parse ────────────────────────────────────────
+# â”€â”€ Top-level parse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_guardrails_none_returns_none() -> None:
-    """Absent `guardrails:` block → ``None`` (no-op engine)."""
+    """Absent `guardrails:` block â†’ ``None`` (no-op engine)."""
     assert _parse_guardrails(None) is None
 
 
@@ -63,7 +63,7 @@ def test_parse_guardrails_empty_dict_returns_empty_spec() -> None:
 
 
 def test_parse_guardrails_rejects_non_mapping() -> None:
-    """`guardrails: [...]` or other non-dict → clear error."""
+    """`guardrails: [...]` or other non-dict â†’ clear error."""
     with pytest.raises(OmnigentError, match=r"guardrails: must be a mapping"):
         _parse_guardrails([1, 2, 3])  # type: ignore[arg-type]
 
@@ -76,11 +76,11 @@ def test_parse_guardrails_ask_timeout_override() -> None:
 
 
 def test_parse_guardrails_ask_timeout_zero_rejected() -> None:
-    """`ask_timeout: 0` → fail-loud at spec load (POLICIES.md §13).
+    """`ask_timeout: 0` â†’ fail-loud at spec load (POLICIES.md Â§13).
 
     A zero timeout is ambiguous (instant-DENY vs. wait-forever).
     If this test starts passing silently with ``ask_timeout=0``
-    on the result, the §13 rejection was removed — that would
+    on the result, the Â§13 rejection was removed â€” that would
     let broken configs reach runtime.
     """
     with pytest.raises(OmnigentError, match=r"ask_timeout must be > 0"):
@@ -88,22 +88,22 @@ def test_parse_guardrails_ask_timeout_zero_rejected() -> None:
 
 
 def test_parse_guardrails_ask_timeout_negative_rejected() -> None:
-    """Negative ask_timeout → same §13 rejection."""
+    """Negative ask_timeout â†’ same Â§13 rejection."""
     with pytest.raises(OmnigentError, match=r"ask_timeout must be > 0"):
         _parse_guardrails({"ask_timeout": -5})
 
 
 def test_parse_guardrails_ask_timeout_non_integer_rejected() -> None:
-    """Non-integer ask_timeout → loud error (no silent coercion)."""
+    """Non-integer ask_timeout â†’ loud error (no silent coercion)."""
     with pytest.raises(OmnigentError, match=r"ask_timeout must be an integer"):
         _parse_guardrails({"ask_timeout": "soon"})
 
 
-# ── Label definitions ──────────────────────────────────────
+# â”€â”€ Label definitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_labels_bare_string_shorthand() -> None:
-    """`integrity: "1"` → LabelDef(initial="1", values=None)."""
+    """`integrity: "1"` â†’ LabelDef(initial="1", values=None)."""
     spec = _parse_guardrails(_yaml('labels: {integrity: "1"}'))
     assert spec is not None and spec.labels is not None
     d = spec.labels["integrity"]
@@ -129,8 +129,8 @@ labels:
 
 
 def test_parse_labels_schema_without_initial() -> None:
-    """`{values: [...]}` without initial —
-    label is unset until a policy writes it (§10)."""
+    """`{values: [...]}` without initial â€”
+    label is unset until a policy writes it (Â§10)."""
     spec = _parse_guardrails(
         _yaml("""
 labels:
@@ -145,7 +145,7 @@ labels:
 
 
 def test_parse_labels_empty_dict_rejected() -> None:
-    """`integrity: {}` → typo guard (POLICIES.md §13).
+    """`integrity: {}` â†’ typo guard (POLICIES.md Â§13).
 
     An empty dict declaring neither `initial` nor `values`
     is almost always an unfinished edit.
@@ -155,7 +155,7 @@ def test_parse_labels_empty_dict_rejected() -> None:
 
 
 def test_parse_labels_initial_not_in_values_rejected() -> None:
-    """`initial: "5"` with `values: ["1", "2"]` → fail at load."""
+    """`initial: "5"` with `values: ["1", "2"]` â†’ fail at load."""
     with pytest.raises(OmnigentError, match=r"initial.*not in declared .values."):
         _parse_guardrails(
             _yaml("""
@@ -168,7 +168,7 @@ labels:
 
 
 def test_parse_labels_values_non_list_rejected() -> None:
-    """`values: 1` → clear error (must be a list)."""
+    """`values: 1` â†’ clear error (must be a list)."""
     with pytest.raises(OmnigentError, match=r"values. must be a list"):
         _parse_guardrails(
             _yaml("""
@@ -179,11 +179,11 @@ labels:
         )
 
 
-# ── Policy types — FunctionPolicy ──────────────────────────
+# â”€â”€ Policy types â€” FunctionPolicy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_function_policy_short_form() -> None:
-    """Bare-string `function:` path → FunctionRef with no arguments."""
+    """Bare-string `function:` path â†’ FunctionRef with no arguments."""
     spec = _parse_guardrails(
         _yaml("""
 policies:
@@ -228,7 +228,7 @@ policies:
 
 
 def test_parse_function_policy_dict_form_with_arguments() -> None:
-    """`function: {path, arguments}` → factory form."""
+    """`function: {path, arguments}` â†’ factory form."""
     spec = _parse_guardrails(
         _yaml("""
 policies:
@@ -251,7 +251,7 @@ policies:
 
 
 def test_parse_function_policy_missing_function_rejected() -> None:
-    """Function policy without `function:` field → loud error."""
+    """Function policy without `function:` field â†’ loud error."""
     with pytest.raises(OmnigentError, match=r"function. policies require"):
         _parse_guardrails(
             _yaml("""
@@ -264,7 +264,7 @@ policies:
 
 
 def test_parse_function_policy_dict_missing_path_rejected() -> None:
-    """`function: {arguments: {...}}` (no path) → loud error."""
+    """`function: {arguments: {...}}` (no path) â†’ loud error."""
     with pytest.raises(OmnigentError, match=r"function.path. must be a"):
         _parse_guardrails(
             _yaml("""
@@ -279,7 +279,7 @@ policies:
 
 
 def test_parse_function_policy_arguments_non_dict_rejected() -> None:
-    """`function.arguments: [1, 2]` → loud error."""
+    """`function.arguments: [1, 2]` â†’ loud error."""
     with pytest.raises(OmnigentError, match=r"function.arguments. must be a mapping"):
         _parse_guardrails(
             _yaml("""
@@ -296,7 +296,7 @@ policies:
 
 def test_parse_policies_preserve_yaml_order() -> None:
     """Policies land in the list in their YAML declaration
-    order — the engine iterates in this order per §4. If
+    order â€” the engine iterates in this order per Â§4. If
     this breaks, DENY short-circuiting and ASK ordering
     would both silently reorder."""
     spec = _parse_guardrails(
@@ -306,21 +306,21 @@ policies:
     type: function
     on: [request]
     function:
-      path: agent_meow.policies.builtins.prompt.prompt_policy
+      path: omnigent.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
   second:
     type: function
     on: [request]
     function:
-      path: agent_meow.policies.builtins.prompt.prompt_policy
+      path: omnigent.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
   third:
     type: function
     on: [request]
     function:
-      path: agent_meow.policies.builtins.prompt.prompt_policy
+      path: omnigent.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
 """)
@@ -330,7 +330,7 @@ policies:
 
 
 def test_parse_policy_unknown_type_rejected() -> None:
-    """`type: weird` → clear error listing the accepted value."""
+    """`type: weird` â†’ clear error listing the accepted value."""
     with pytest.raises(OmnigentError, match=r"must be 'function'"):
         _parse_guardrails(
             _yaml("""
@@ -343,7 +343,7 @@ policies:
 
 
 def test_parse_policy_missing_type_rejected() -> None:
-    """Every policy must declare `type:` — the dispatcher
+    """Every policy must declare `type:` â€” the dispatcher
     uses it to pick the concrete `PolicySpec` subclass. A
     missing type is an unfinished edit, not a default."""
     with pytest.raises(OmnigentError, match=r"missing required field .type"):
@@ -356,12 +356,12 @@ policies:
         )
 
 
-# ── Per-policy `ask_timeout` override ──────────────────────
+# â”€â”€ Per-policy `ask_timeout` override â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_per_policy_ask_timeout() -> None:
     """A policy may override the spec-wide `ask_timeout:` via
-    its own field — validates the per-policy override wiring
+    its own field â€” validates the per-policy override wiring
     lands on `PolicySpec.ask_timeout`. Needed so
     :func:`_await_elicitation` can read the override off the
     deciding policy's spec."""
@@ -372,7 +372,7 @@ policies:
     type: function
     on: [response]
     function:
-      path: agent_meow.policies.builtins.prompt.prompt_policy
+      path: omnigent.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
     ask_timeout: 300
@@ -382,7 +382,7 @@ policies:
 
 
 def test_parse_per_policy_ask_timeout_zero_rejected() -> None:
-    """Per-policy `ask_timeout: 0` → same §13 rejection as
+    """Per-policy `ask_timeout: 0` â†’ same Â§13 rejection as
     spec-level: the zero-is-ambiguous rule applies at both
     layers. If only the spec-level check existed, authors
     could smuggle a broken `0` through a per-policy override."""
@@ -394,7 +394,7 @@ policies:
     type: function
     on: [request]
     function:
-      path: agent_meow.policies.builtins.prompt.prompt_policy
+      path: omnigent.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
     ask_timeout: 0
@@ -402,7 +402,7 @@ policies:
         )
 
 
-# ── Integration with top-level parse() ─────────────────────
+# â”€â”€ Integration with top-level parse() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -411,7 +411,7 @@ def agent_dir_with_guardrails(tmp_path: Path) -> Path:
     guardrails block alongside other top-level sections.
 
     This is the closest thing to an integration test for
-    Phase 0 — verifies the full parse() path wires
+    Phase 0 â€” verifies the full parse() path wires
     guardrails into AgentSpec without breaking other
     sections.
     """
@@ -445,14 +445,14 @@ def test_full_parse_loads_guardrails(agent_dir_with_guardrails: Path) -> None:
     p = spec.guardrails.policies[0]
     assert isinstance(p, FunctionPolicySpec)
     assert p.name == "taint_web"
-    # Function policies ignore `on:` at the spec level — the
+    # Function policies ignore `on:` at the spec level â€” the
     # callable self-selects via event type. `on` is None.
     assert p.on is None
 
 
 def test_full_parse_without_guardrails(tmp_path: Path) -> None:
-    """AgentSpec.guardrails is None when the block is absent —
-    runtime builds a no-op engine (§10 zero-policy case)."""
+    """AgentSpec.guardrails is None when the block is absent â€”
+    runtime builds a no-op engine (Â§10 zero-policy case)."""
     (tmp_path / "config.yaml").write_text("""
 spec_version: 1
 name: no-guardrails
@@ -461,17 +461,17 @@ name: no-guardrails
     assert spec.guardrails is None
 
 
-# ── YAML 1.1 `on:` trap regression guard ───────────────────
+# â”€â”€ YAML 1.1 `on:` trap regression guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_yaml_on_key_stays_string() -> None:
     """The custom ``_ConfigYamlLoader`` must NOT convert
     ``on:`` into a boolean key. If this regresses, every
     policy in a real config.yaml would silently lose its
-    phase selectors (``on: [request]`` → ``True: [...]``).
+    phase selectors (``on: [request]`` â†’ ``True: [...]``).
 
     This is the single most load-bearing invariant of the
-    policy spec parser — document explicitly so any future
+    policy spec parser â€” document explicitly so any future
     loader change breaks loudly here.
     """
     raw = _yaml("""
@@ -480,20 +480,20 @@ policies:
     type: function
     on: [request, response]
     function:
-      path: agent_meow.policies.builtins.prompt.prompt_policy
+      path: omnigent.policies.builtins.prompt.prompt_policy
       arguments:
         prompt: "Test."
 """)
     # `on` MUST be a string key. If this assertion fails, the
     # loader reverted to PyYAML's default YAML 1.1 bool
-    # aliases — ``on`` / ``off`` / ``yes`` / ``no`` would
+    # aliases â€” ``on`` / ``off`` / ``yes`` / ``no`` would
     # be coerced to booleans.
     assert "on" in raw["policies"]["p"]
     assert True not in raw["policies"]["p"]
 
 
 def test_yaml_true_false_still_booleans() -> None:
-    """The narrowing must not break ``true`` / ``false`` —
+    """The narrowing must not break ``true`` / ``false`` â€”
     other parts of the spec rely on YAML booleans parsing
     as Python booleans."""
     raw = _yaml("enabled: true\ndisabled: false")
@@ -503,24 +503,24 @@ def test_yaml_true_false_still_booleans() -> None:
     assert raw["disabled"] is False
 
 
-# ── `_parse_condition` string coercion ─────────────────────
+# â”€â”€ `_parse_condition` string coercion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_condition_none() -> None:
-    """Omitted condition → None (always-match)."""
+    """Omitted condition â†’ None (always-match)."""
     assert _parse_condition(None, policy_name="p") is None
 
 
 def test_parse_condition_empty_dict_returns_none() -> None:
     """
     ``condition: {}`` is treated identically to an omitted
-    ``condition:`` field — both mean "always match".
+    ``condition:`` field â€” both mean "always match".
 
     Claim: an empty-dict condition parses to the same ``None``
     value as a missing condition, so downstream label-gate
     evaluation takes the same always-match short-circuit.
     Regression pin for the spec-load path: an author writing
-    ``condition: {}`` in YAML must not be rejected — earlier
+    ``condition: {}`` in YAML must not be rejected â€” earlier
     revisions raised :class:`OmnigentError` here, breaking
     specs like ``examples/secure_research_agent.yaml``.
     """
@@ -528,10 +528,10 @@ def test_parse_condition_empty_dict_returns_none() -> None:
 
 
 def test_parse_condition_scalar_values_coerced_to_string() -> None:
-    """Unquoted YAML ints / bools coerce to strings — labels
+    """Unquoted YAML ints / bools coerce to strings â€” labels
     are always string-valued in storage, so a condition
     written as ``{integrity: 0}`` would otherwise silently
-    mismatch the stored ``"0"``. See POLICIES.md §14."""
+    mismatch the stored ``"0"``. See POLICIES.md Â§14."""
     out = _parse_condition({"integrity": 0}, policy_name="p")
     # Key stays string (already is); value coerced from int
     # 0 to "0" to match stored label format.
@@ -539,16 +539,16 @@ def test_parse_condition_scalar_values_coerced_to_string() -> None:
 
 
 def test_parse_condition_list_values_coerced_to_strings() -> None:
-    """List-of-values condition → every element coerced."""
+    """List-of-values condition â†’ every element coerced."""
     out = _parse_condition({"role": ["admin", 1, True]}, policy_name="p")
-    # Every element becomes its str() form — covers mixed
+    # Every element becomes its str() form â€” covers mixed
     # YAML shapes like ``[admin, 1]`` where `admin` is already
     # a string but `1` is an int.
     assert out == {"role": ["admin", "1", "True"]}
 
 
 def test_parse_condition_non_mapping_rejected() -> None:
-    """`condition: [foo, bar]` → loud rejection. Only a dict
+    """`condition: [foo, bar]` â†’ loud rejection. Only a dict
     makes sense for a label-gate (key = label name, value =
     expected value or whitelist)."""
     with pytest.raises(OmnigentError, match=r"must be a mapping"):

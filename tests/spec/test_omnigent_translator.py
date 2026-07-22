@@ -1,8 +1,8 @@
-"""Unit tests for ``agent_meow.spec.agent_meow.agent_spec_to_agent_def``.
+"""Unit tests for ``omnigent.spec.omnigent.agent_spec_to_agent_def``.
 
 Phase 1 ships the forward direction only. These tests hand-craft
 :class:`AgentSpec` objects and assert the resulting
-:class:`~?agent_meow.datamodel.AgentDef` has the expected shape. The
+:class:`~?omnigent.datamodel.AgentDef` has the expected shape. The
 round-trip test (``agent_spec_to_agent_def(agent_def_to_agent_spec(d)) == d``)
 lands in phase 2 once the reverse direction exists.
 
@@ -16,10 +16,10 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.errors import OmnigentError
-from agent_meow.inner.datamodel import OSEnvSpec
-from agent_meow.inner.tools import AgentTool, FunctionTool
-from agent_meow.spec import (
+from omnigent.errors import OmnigentError
+from omnigent.inner.datamodel import OSEnvSpec
+from omnigent.inner.tools import AgentTool, FunctionTool
+from omnigent.spec import (
     AgentSpec,
     ExecutorSpec,
     FunctionPolicySpec,
@@ -33,16 +33,16 @@ from agent_meow.spec import (
     ToolRuntime,
     ToolsConfig,
 )
-from agent_meow.spec.omnigent import (
+from omnigent.spec.omnigent import (
     agent_def_to_agent_spec,
     agent_spec_to_agent_def,
 )
 
-# SandboxConfig is not re-exported from agent_meow.spec's public
+# SandboxConfig is not re-exported from omnigent.spec's public
 # __init__ because it is only addressable under the ``tools.sandbox``
 # sub-block; the translator test needs it directly to construct a
 # sandboxed ToolsConfig.
-from agent_meow.spec.types import SandboxConfig
+from omnigent.spec.types import SandboxConfig
 
 
 # A sample callable used as the target of dotted-path tool resolution.
@@ -64,7 +64,7 @@ NOT_A_FUNCTION = "this is a string, not a function"
 behavior when the dotted path resolves to a non-callable object."""
 
 
-# ── Fixtures ────────────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -91,7 +91,7 @@ def basic_spec() -> AgentSpec:
     )
 
 
-# ── Happy-path translation ──────────────────────────────────────────
+# â”€â”€ Happy-path translation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_basic_spec_produces_agent_def_with_name_and_prompt(
@@ -103,12 +103,12 @@ def test_basic_spec_produces_agent_def_with_name_and_prompt(
 
     **What breaks if this fails**: the agent-meow harness can
     start with an unnamed/unprompted agent, silently degrading
-    to whatever default the harness falls back to — the exact
+    to whatever default the harness falls back to â€” the exact
     behavior the "fail loud on missing data" principle tries to
     prevent.
     """
     agent_def = agent_spec_to_agent_def(basic_spec)
-    # Exact content assertions — a fuzzy "startswith" would pass even
+    # Exact content assertions â€” a fuzzy "startswith" would pass even
     # if the translator truncated the instructions silently.
     assert agent_def.name == "hello-agent"
     assert agent_def.prompt == "You are a helpful assistant."
@@ -139,12 +139,12 @@ def test_missing_profile_maps_to_none(
     """
     ``executor.config`` may omit ``profile``; the translator
     surfaces ``None`` so the agent-meow
-    :class:`~?agent_meow.datamodel.ExecutorSpec.profile` field
+    :class:`~?omnigent.datamodel.ExecutorSpec.profile` field
     reflects absence faithfully rather than coercing to a
     sentinel string.
 
     **What breaks if this fails**: a translator regression
-    that re-introduces ``""`` as a stand-in for "absent" — the
+    that re-introduces ``""`` as a stand-in for "absent" â€” the
     kind of empty-string-sentinel antipattern upstream's
     empty-string-graduation branch just finished removing.
     """
@@ -165,7 +165,7 @@ def test_spec_with_local_tool_resolves_dotted_path(
 
     **What breaks if this fails**: the harness receives a tool
     with no callable, and every invocation of the tool raises
-    from inside the harness rather than from the translator —
+    from inside the harness rather than from the translator â€”
     much harder to diagnose.
     """
     basic_spec.local_tools = [
@@ -184,7 +184,7 @@ def test_spec_with_local_tool_resolves_dotted_path(
     assert tool.callable is sample_tool_callable
 
 
-# ── Fail-loud rejection of phase-2 concepts ─────────────────────────
+# â”€â”€ Fail-loud rejection of phase-2 concepts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_policies_dropped_from_forward_translation(
@@ -193,17 +193,17 @@ def test_policies_dropped_from_forward_translation(
     """
     A spec with ``guardrails.policies`` translates successfully
     to an :class:`AgentDef` and the resulting def carries NO
-    policy metadata — the harness is agnostic to policies
+    policy metadata â€” the harness is agnostic to policies
     because agent-meow enforces them upstream of the executor.
 
     **What breaks if this fails**: two regressions to guard
     against:
     1. The translator starts rejecting again (``OmnigentError``
-       with ``"policies"``) — the agent-meow executor would then
+       with ``"policies"``) â€” the agent-meow executor would then
        be unusable for any spec carrying a ``guardrails:`` block,
        which the whole policy-lift pipeline just enabled.
     2. The translator starts round-tripping policies INTO the
-       AgentDef — meaning both the agent-meow workflow AND the
+       AgentDef â€” meaning both the agent-meow workflow AND the
        agent-meow runtime would enforce them, double-counting
        every DENY.
     """
@@ -220,7 +220,7 @@ def test_policies_dropped_from_forward_translation(
     )
     agent_def = agent_spec_to_agent_def(basic_spec)
     # No rejection. And no policy metadata carried to the
-    # harness — the AgentDef's ``policies`` registry is empty
+    # harness â€” the AgentDef's ``policies`` registry is empty
     # because policies are upstream of the executor.
     assert agent_def.policies == {}
 
@@ -233,7 +233,7 @@ def test_sandbox_block_rejected_with_clear_message(
     is rejected with a message naming ``sandbox``.
 
     **What breaks if this fails**: the harness runs tools outside
-    the sandbox the spec asked for — a security violation.
+    the sandbox the spec asked for â€” a security violation.
     """
     basic_spec.tools = ToolsConfig(
         sandbox=SandboxConfig(container_image="python:3.12-slim"),
@@ -270,7 +270,7 @@ def test_tool_with_filesystem_path_rejected(
 
     **What breaks if this fails**: the translator silently drops
     the tool or raises an opaque ``ModuleNotFoundError`` from
-    deep inside ``importlib`` — both are worse than a clear
+    deep inside ``importlib`` â€” both are worse than a clear
     "use a dotted path" message.
     """
     basic_spec.local_tools = [
@@ -320,7 +320,7 @@ def test_tool_pointing_at_non_callable_rejected(
 
     **What breaks if this fails**: the agent-meow harness
     registers a FunctionTool whose ``callable`` is a string,
-    dict, or other non-callable — every invocation fails with
+    dict, or other non-callable â€” every invocation fails with
     ``TypeError`` inside the harness.
     """
     basic_spec.local_tools = [
@@ -343,7 +343,7 @@ def test_tool_pointing_at_non_callable_rejected(
 def test_missing_llm_rejected(basic_spec: AgentSpec) -> None:
     """
     A spec with ``executor.type='agent-meow'`` but no ``llm``
-    block is rejected — the agent-meow harness needs a model
+    block is rejected â€” the agent-meow harness needs a model
     name. We fail loud at translation time, not deep inside the
     harness constructor.
     """
@@ -352,7 +352,7 @@ def test_missing_llm_rejected(basic_spec: AgentSpec) -> None:
         agent_spec_to_agent_def(basic_spec)
 
 
-# ── Harness inference for native agent-meow v1 specs ────────────────────────────────
+# â”€â”€ Harness inference for native agent-meow v1 specs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -388,7 +388,7 @@ def test_native_omnigent_spec_infers_harness_from_model(
     )
     agent_def = agent_spec_to_agent_def(spec)
     assert agent_def.executor is not None
-    # Wrong harness → wrong executor class at runtime; Claude with
+    # Wrong harness â†’ wrong executor class at runtime; Claude with
     # DatabricksExecutor sends to Responses API which rejects it.
     assert agent_def.executor.harness == expected_harness, (
         f"Model {model!r}: expected harness {expected_harness!r}, "
@@ -434,21 +434,21 @@ def test_sub_agent_infers_harness_and_forwards_os_env() -> None:
     assert isinstance(sub_tool, AgentTool), (
         "backend_engineer should be an AgentTool in the parent's tool registry."
     )
-    # Wrong harness → sub-agent hits Responses API passthrough which
+    # Wrong harness â†’ sub-agent hits Responses API passthrough which
     # rejects databricks-claude-* with HTTP 400.
     assert sub_tool.executor is not None
     assert sub_tool.executor.harness == "claude-sdk", (
         f"Expected harness 'claude-sdk', got {sub_tool.executor.harness!r}. "
         "Harness inference in _sub_spec_to_agent_tool may be missing."
     )
-    # Missing os_env → sub-session boots without file read/write/shell tools.
+    # Missing os_env â†’ sub-session boots without file read/write/shell tools.
     assert sub_tool.os_env == sub_os_env, (
         f"os_env not forwarded: expected {sub_os_env!r}, got {sub_tool.os_env!r}. "
         "os_env=sub.os_env may have been dropped from the AgentTool constructor."
     )
 
 
-# ── Client-runtime tool translation (forward + reverse) ────────────
+# â”€â”€ Client-runtime tool translation (forward + reverse) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_client_runtime_tool_translates_with_no_callable(
@@ -489,10 +489,10 @@ def test_client_runtime_tool_translates_with_no_callable(
     # ``"server"``, the runtime path that emits ``action_required``
     # for spec-declared client tools won't fire.
     assert tool.runtime == "client"
-    # No server-side callable for client-runtime tools — the SDK
+    # No server-side callable for client-runtime tools â€” the SDK
     # consumer implements them at stream-start time.
     assert tool.callable is None
-    # Parameters round-tripped — the LLM relies on this schema
+    # Parameters round-tripped â€” the LLM relies on this schema
     # to construct calls; losing it would silently degrade tool
     # calling to "no arguments".
     assert tool.input_schema == {
@@ -510,7 +510,7 @@ def test_server_runtime_tool_with_no_path_rejected(
     but ``path=None`` is rejected at translation time.
 
     The validator catches this for every spec routed through
-    :func:`~?agent_meow.spec.validator.validate`, but the translator
+    :func:`~?omnigent.spec.validator.validate`, but the translator
     is also reachable from callers that bypass validation (e.g.
     direct in-memory construction in tests/tools). Failing loud
     here keeps the contract honest end-to-end.
@@ -538,7 +538,7 @@ def test_client_runtime_tool_skips_cancellable_check(
     """
     ``_reject_unsupported_concepts`` walks every ``local_tools``
     entry and would call :func:`_is_cancellable_function_path`
-    on its ``path``. Client-runtime tools have ``path=None`` —
+    on its ``path``. Client-runtime tools have ``path=None`` â€”
     the check must short-circuit, not pass ``None`` into the
     string-prefix detector.
 
@@ -562,7 +562,7 @@ def test_client_runtime_tool_skips_cancellable_check(
             parameters={"type": "object", "properties": {}},
         ),
     ]
-    # No exception — translation completes and the client tool
+    # No exception â€” translation completes and the client tool
     # makes it through unchanged.
     agent_def = agent_spec_to_agent_def(basic_spec)
     assert agent_def.tools["open_in_editor"].runtime == "client"
@@ -600,13 +600,13 @@ def test_client_runtime_tool_round_trips_through_reverse_translation(
     agent_def = agent_spec_to_agent_def(basic_spec)
     round_tripped = agent_def_to_agent_spec(agent_def)
     [tool_info] = round_tripped.local_tools
-    # Discriminator survived the reverse direction — this is the
+    # Discriminator survived the reverse direction â€” this is the
     # bit the runtime branch keys off of.
     assert tool_info.runtime == ToolRuntime.CLIENT
     # No path was invented on the way back. If a non-None path
     # appears, the validator's "client tool must NOT declare a
     # callable" rule will reject the round-tripped spec.
     assert tool_info.path is None
-    # Parameters preserved — without these the validator rejects
+    # Parameters preserved â€” without these the validator rejects
     # the round-tripped spec ("client tool has no parameters").
     assert tool_info.parameters == parameters

@@ -9,10 +9,10 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.policy_store.sqlalchemy_store import (
+from omnigent.stores.policy_store.sqlalchemy_store import (
     SqlAlchemyPolicyStore,
 )
 

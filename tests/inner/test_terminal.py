@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.inner.terminal`."""
+"""Unit tests for :mod:`~?omnigent.inner.terminal`."""
 
 from __future__ import annotations
 
@@ -13,16 +13,16 @@ from types import SimpleNamespace
 
 import pytest
 
-import agent_meow.inner.terminal as terminal_mod
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from agent_meow.inner.terminal import (
+import omnigent.inner.terminal as terminal_mod
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
+from omnigent.inner.terminal import (
     TERMINAL_TRANSPORT_CONTROL,
     TERMINAL_TRANSPORT_PTY,
     TerminalInstance,
     create_terminal_instance,
     resolve_terminal_transport,
 )
-from agent_meow.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
+from omnigent.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
 
 
 def _write_transport_config(config_home: Path, value: str | None) -> None:
@@ -42,10 +42,10 @@ def test_resolve_terminal_transport_precedence(
     """Override beats spec, spec beats config, config opts out of the control default."""
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
 
-    # No config file at all → control mode is the default.
+    # No config file at all â†’ control mode is the default.
     assert resolve_terminal_transport() == TERMINAL_TRANSPORT_CONTROL
 
-    # A config with no terminal table → still control.
+    # A config with no terminal table â†’ still control.
     _write_transport_config(tmp_path, None)
     assert resolve_terminal_transport() == TERMINAL_TRANSPORT_CONTROL
 
@@ -191,7 +191,7 @@ def test_threaded_idle_watcher_reports_exit_on_dead_pane(tmp_path: Path) -> None
 
     Issue #540: with ``remain-on-exit on`` the inner CLI's exit no longer takes
     down the server, so ``capture-pane`` keeps succeeding. The watcher must
-    still report the exit by noticing the dead pane — otherwise the session
+    still report the exit by noticing the dead pane â€” otherwise the session
     hangs, mistaking the frozen final frame for an idle agent. The last pane
     text must survive so the exit can be diagnosed.
 
@@ -347,7 +347,7 @@ async def test_server_survives_inner_process_exit_real_tmux(tmp_path: Path) -> N
             raise AssertionError("inner process never reported as exited")
 
         # The crux: the private tmux SERVER must still be reachable after the
-        # inner process exited — has-session succeeds rather than failing with
+        # inner process exited â€” has-session succeeds rather than failing with
         # "no server running on <socket>".
         probe = subprocess.run(
             [
@@ -362,7 +362,7 @@ async def test_server_survives_inner_process_exit_real_tmux(tmp_path: Path) -> N
             timeout=5,
         )
         assert probe.returncode == 0, (
-            "tmux server/session died when the inner process exited — "
+            "tmux server/session died when the inner process exited â€” "
             "exit-empty/remain-on-exit were not applied: "
             f"{probe.stderr.decode().strip()!r}"
         )
@@ -750,14 +750,14 @@ async def test_launch_strips_env_unset_keys_from_inherited_environment(
     # Force the unwanted var into the parent env so the test would
     # also catch a regression where ``env_unset`` is silently dropped.
     monkeypatch.setenv("DATABRICKS_CONFIG_PROFILE", "ambient-host-profile")
-    # A benign ambient var that is NOT in env_unset — proves the strip
+    # A benign ambient var that is NOT in env_unset â€” proves the strip
     # is surgical rather than a wholesale wipe. (We can't use
     # ``OMNIGENT_TMUX_SOCK`` for this any more: the sandbox hardening
     # stopped ``launch`` from advertising the control-socket path to the pane.)
     monkeypatch.setenv("OMNIGENT_BENIGN_SENTINEL", "keep-me")
     # Seed an inherited OMNIGENT_TMUX_SOCK so the negative assertion
     # below exercises ``launch``'s explicit ``env.pop`` of any ambient
-    # value — not merely the fact that launch stopped *setting* it
+    # value â€” not merely the fact that launch stopped *setting* it
     # (``launch`` strips both the self-set and any inherited value).
     monkeypatch.setenv("OMNIGENT_TMUX_SOCK", "/leaked/from/parent.sock")
 
@@ -795,18 +795,18 @@ async def test_launch_strips_env_unset_keys_from_inherited_environment(
         "auth-failing again whenever the parent shell sets the var."
     )
 
-    # Sanity check that ordinary env still flows through — the strip
+    # Sanity check that ordinary env still flows through â€” the strip
     # must be surgical, not a wholesale wipe. The benign ambient var
     # set above must survive since it is not in ``env_unset``.
     assert spawned_env.get("OMNIGENT_BENIGN_SENTINEL") == "keep-me", (
-        "benign ambient var missing from tmux env — env_unset "
+        "benign ambient var missing from tmux env â€” env_unset "
         "must remove only the listed keys, not the entire env."
     )
     # And the control-socket path must NOT be advertised to the pane
     # the tmux server is unsandboxed, so a pane that knows
     # the socket path could ``tmux -S <sock> run-shell`` out of the box.
     assert "OMNIGENT_TMUX_SOCK" not in spawned_env, (
-        "OMNIGENT_TMUX_SOCK leaked into the tmux child env — the pane "
+        "OMNIGENT_TMUX_SOCK leaked into the tmux child env â€” the pane "
         "must not be told the unsandboxed control socket's path."
     )
 
@@ -822,7 +822,7 @@ async def test_launch_default_env_unset_leaks_databricks_profile(
     The companion to ``test_launch_strips_env_unset_keys_from_inherited_environment``:
     proves that the strip is opt-in via the field, not a hidden global
     behavior. If this test ever fails, an unrelated change has started
-    stripping ``DATABRICKS_CONFIG_PROFILE`` from every terminal — that
+    stripping ``DATABRICKS_CONFIG_PROFILE`` from every terminal â€” that
     is a wider behavior change than the original fix intended and
     deserves a deliberate decision, not a silent regression.
 
@@ -866,7 +866,7 @@ async def test_launch_default_env_unset_leaks_databricks_profile(
         session_key="s1",
         socket_path=tmp_path / "tmux.sock",
         private_dir=tmp_path,
-        # No ``env_unset`` — the default behavior is to inherit the
+        # No ``env_unset`` â€” the default behavior is to inherit the
         # parent env untouched.
     )
 
@@ -879,7 +879,7 @@ async def test_launch_default_env_unset_leaks_databricks_profile(
     assert spawned_env.get("DATABRICKS_CONFIG_PROFILE") == "ambient-host-profile", (
         "Expected default launch to inherit DATABRICKS_CONFIG_PROFILE "
         "from the parent env. If this fails, some other code path "
-        "is unconditionally stripping the var — the runner's "
+        "is unconditionally stripping the var â€” the runner's "
         "explicit env_unset is no longer the single source of truth "
         "for which terminals see the profile."
     )
@@ -967,13 +967,13 @@ async def test_launch_strips_runner_binding_token_from_tmux_child(
     )
     assert "from-parent-env" not in spawned_env.values()
     assert "from-spec-env" not in spawned_env.values()
-    # Benign override survived — the strip is targeted at the secret.
+    # Benign override survived â€” the strip is targeted at the secret.
     assert spawned_env.get("BENIGN_TERMINAL_MARKER") == "marker-value", (
-        "per-terminal env override was dropped — the strip must remove "
+        "per-terminal env override was dropped â€” the strip must remove "
         "only the runner-auth secret, not the whole env."
     )
     # The control-socket path must not be advertised to the
-    # pane — the unsandboxed tmux server's run-shell would otherwise be
+    # pane â€” the unsandboxed tmux server's run-shell would otherwise be
     # one ``tmux -S <sock>`` away for the agent payload in the pane.
     assert "OMNIGENT_TMUX_SOCK" not in spawned_env
 
@@ -1033,7 +1033,7 @@ async def test_send_chunks_long_literal_text_under_tmux_command_cap(
     )
     instance.running = True
 
-    # 20,000 chars exceeds tmux's 16KB per-command cap outright — before
+    # 20,000 chars exceeds tmux's 16KB per-command cap outright â€” before
     # chunking this exact call failed with "command too long".
     text = "a" * 20_000
     result = await instance.send(text=text)
@@ -1048,12 +1048,12 @@ async def test_send_chunks_long_literal_text_under_tmux_command_cap(
     literal_calls, enter_call = captured[:-1], captured[-1]
     chunks: list[str] = []
     for call in literal_calls:
-        # Every chunk repeats the full literal-mode flag prefix — a chunk
+        # Every chunk repeats the full literal-mode flag prefix â€” a chunk
         # missing ``-l`` would be interpreted as tmux key names instead
         # of literal text.
         assert contains_subsequence(call, ["send-keys", "-l", "-t", "main"])
         chunk = call[-1]
-        # 1,024 chars pack to at most ~4KB on tmux's wire protocol —
+        # 1,024 chars pack to at most ~4KB on tmux's wire protocol â€”
         # the margin under the 16KB cap this chunking exists to respect.
         assert len(chunk) <= 1_024, (
             f"send-keys -l call carries {len(chunk)} chars; oversized chunks "
@@ -1071,7 +1071,7 @@ def test_idle_detector_honors_short_threshold_override() -> None:
 
     The claude-native status watcher passes a short threshold so the
     session flips to ``idle`` promptly after Claude stops redrawing. This
-    proves the parameter is actually honored by the detector — not
+    proves the parameter is actually honored by the detector â€” not
     silently ignored in favour of the long module default (which would
     leave the status stuck "running", reintroducing the very lag the PTY
     approach removes).
@@ -1085,17 +1085,17 @@ def test_idle_detector_honors_short_threshold_override() -> None:
     snapshot = "claude idle prompt\n"
 
     # ``0.0`` override: the first tick primes the baseline, the second
-    # (identical) tick clears the near-zero threshold → idle edge.
+    # (identical) tick clears the near-zero threshold â†’ idle edge.
     fast = terminal_mod._IdleDetector(idle_threshold_s=0.0)
     assert fast.tick(snapshot) is False  # primes _last_snapshot baseline
-    assert fast.tick(snapshot) is True  # unchanged + 0s threshold → idle
+    assert fast.tick(snapshot) is True  # unchanged + 0s threshold â†’ idle
 
-    # No override → module default (10s). Two rapid identical ticks are
+    # No override â†’ module default (10s). Two rapid identical ticks are
     # nowhere near 10s apart, so the idle edge must NOT fire. If this
     # returned True, the threshold parameter would be doing nothing.
     default = terminal_mod._IdleDetector()
     assert default.tick(snapshot) is False  # primes baseline
-    assert default.tick(snapshot) is False  # <10s elapsed → not idle
+    assert default.tick(snapshot) is False  # <10s elapsed â†’ not idle
 
 
 def test_idle_detector_suppress_activity_discounts_client_driven_repaint() -> None:
@@ -1104,9 +1104,9 @@ def test_idle_detector_suppress_activity_discounts_client_driven_repaint() -> No
     The watcher sets ``suppress_activity`` when a web client interacted
     with the terminal within the recent window (attach/detach reflow,
     focus, mouse, keystroke). The detector must re-baseline such a change
-    WITHOUT flagging ``changed_this_tick`` — otherwise a client attaching,
+    WITHOUT flagging ``changed_this_tick`` â€” otherwise a client attaching,
     detaching, focusing, clicking, or typing would flip the session to
-    "running" — while a change with the flag clear still registers as
+    "running" â€” while a change with the flag clear still registers as
     agent activity.
     """
     detector = terminal_mod._IdleDetector()
@@ -1124,7 +1124,7 @@ def test_idle_detector_suppress_activity_discounts_client_driven_repaint() -> No
     )
 
     # A subsequent change with no recent interaction (flag clear) is real
-    # agent output and DOES register — suppression must not be sticky.
+    # agent output and DOES register â€” suppression must not be sticky.
     assert detector.tick("screen-C agent output") is False
     assert detector.changed_this_tick is True, (
         "agent output outside the client-interaction window must register as "
@@ -1175,10 +1175,10 @@ def test_reap_orphaned_terminals_reaps_only_dead_owner_dirs(
     """
     The orphan sweep removes dead-owner dirs and nothing else.
 
-    Three instance dirs: a dead owner (must be reaped — this is the
+    Three instance dirs: a dead owner (must be reaped â€” this is the
     leak the sweep exists for: detached tmux outliving a SIGKILL'd
-    runner), a live owner (another runner's terminal — must survive),
-    and no marker (unknown provenance — must survive). None has a tmux
+    runner), a live owner (another runner's terminal â€” must survive),
+    and no marker (unknown provenance â€” must survive). None has a tmux
     socket, so ``kill-server`` must never be invoked; the subprocess
     stub raises if it is.
 
@@ -1222,7 +1222,7 @@ def test_reap_orphaned_terminals_kills_server_for_dead_owner_socket(
     A dead-owner instance with a socket gets ``tmux kill-server``.
 
     Removing the dir alone leaves the detached tmux server running on
-    the unlinked socket — the actual resource leak — so the sweep must
+    the unlinked socket â€” the actual resource leak â€” so the sweep must
     issue ``kill-server`` against that socket before deleting.
 
     :param tmp_path: Fake temp root the sweep scans.
@@ -1272,7 +1272,7 @@ def test_create_terminal_instance_denies_control_socket_but_keeps_private_dir_wr
     orphan-reaper (which kills ``<instance-dir>/tmux.sock``) still
     works, and ``private_dir`` must remain a write root so a forked
     workspace is usable. The escape is closed instead by adding the
-    socket to ``deny_unix_socket_paths`` — bwrap masks it with
+    socket to ``deny_unix_socket_paths`` â€” bwrap masks it with
     /dev/null and seatbelt emits a unix-socket deny. We assert all
     three facts on the resolved policy at once because they are
     co-dependent: dropping any one re-opens the escape or breaks
@@ -1282,8 +1282,8 @@ def test_create_terminal_instance_denies_control_socket_but_keeps_private_dir_wr
 
     # create_terminal_instance only guards on tmux availability (it does
     # not launch tmux during construction), so faking the predicate lets
-    # this run in CI without tmux installed — same trick the reaper tests
-    # use — instead of an invisible-coverage-loss skip.
+    # this run in CI without tmux installed â€” same trick the reaper tests
+    # use â€” instead of an invisible-coverage-loss skip.
     monkeypatch.setattr(terminal_mod, "_tmux_available", lambda: True)
 
     backend_type = "linux_bwrap" if sys.platform == "linux" else "darwin_seatbelt"
@@ -1311,11 +1311,11 @@ def test_create_terminal_instance_denies_control_socket_but_keeps_private_dir_wr
 
         assert policy.deny_unix_socket_paths is not None
         assert resolved_sock in policy.deny_unix_socket_paths, (
-            "tmux control socket was not added to the sandbox deny list — "
+            "tmux control socket was not added to the sandbox deny list â€” "
             "the pane could connect to the unsandboxed server and run-shell out"
         )
         assert resolved_private in policy.write_roots, (
-            "private_dir dropped from write roots — a forked workspace would "
+            "private_dir dropped from write roots â€” a forked workspace would "
             "become read-only inside the pane"
         )
     finally:

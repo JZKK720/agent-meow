@@ -3,7 +3,7 @@
 The example wires an ``os_env:`` block onto the agent and exposes
 the built-in ``sys_os_read`` / ``sys_os_write`` / ``sys_os_edit`` /
 ``sys_os_shell`` tools. The YAML now ships with
-``sandbox: type: none`` so it runs on macOS too — flip back to
+``sandbox: type: none`` so it runs on macOS too â€” flip back to
 ``linux_bwrap`` on Linux to exercise the actual sandbox.
 
 **What breaks if this fails:**
@@ -16,11 +16,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.e2e.agent_meow._example_helpers import (
+from tests.e2e.omnigent._example_helpers import (
     assert_completed_one_shot,
     run_one_shot,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 
 def test_agent_with_os_env_one_shot(

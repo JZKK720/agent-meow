@@ -1,4 +1,4 @@
-"""End-to-end UDS transport tests — the load-bearing Phase 2 assertion.
+"""End-to-end UDS transport tests â€” the load-bearing Phase 2 assertion.
 
 A real uvicorn subprocess. A real Unix socket. A real httpx client.
 A real GET /health round-trip. If this passes, the Phase 2 transport
@@ -18,27 +18,27 @@ import tempfile
 import httpx
 import pytest
 
-from agent_meow.runner.transports.uds import (
+from omnigent.runner.transports.uds import (
     RunnerSubprocess,
     create_uds_client,
 )
 
 # UDS isn't available on Windows. Tests use this in a skipif guard
-# rather than declaring the whole module skipped — the function-
+# rather than declaring the whole module skipped â€” the function-
 # level marker means each test's skip reason shows up.
 _REQUIRES_UDS = pytest.mark.skipif(
     sys.platform == "win32", reason="Unix domain sockets are POSIX-only"
 )
 
 # ``_entry:create_app`` requires RUNNER_SERVER_URL in the subprocess
-# environment. Tests don't need a real agent-meow server — the env var only
+# environment. Tests don't need a real agent-meow server â€” the env var only
 # needs to satisfy the non-empty check so the factory can build the
 # httpx client. The actual URL is never dialled during these transport
 # smoke tests.
 _FAKE_SERVER_ENV = {"RUNNER_SERVER_URL": "http://127.0.0.1:1"}
 
 
-# ── Subprocess lifecycle ─────────────────────────────────
+# â”€â”€ Subprocess lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @_REQUIRES_UDS
@@ -53,7 +53,7 @@ def test_runner_subprocess_starts_and_binds_socket() -> None:
     with RunnerSubprocess(extra_env=_FAKE_SERVER_ENV) as runner:
         assert runner.socket_path is not None
         assert os.path.exists(runner.socket_path), (
-            "Socket file must exist after __enter__ returned — "
+            "Socket file must exist after __enter__ returned â€” "
             "uvicorn's startup-complete check is what blocks the "
             "context manager from yielding control prematurely."
         )
@@ -65,7 +65,7 @@ def test_runner_subprocess_cleans_up_on_exit() -> None:
 
     Without cleanup, repeated tests would leak socket files into
     /tmp and zombie uvicorn processes. The context manager owns the
-    full lifecycle — entry spawns, exit reaps.
+    full lifecycle â€” entry spawns, exit reaps.
     """
     with RunnerSubprocess(extra_env=_FAKE_SERVER_ENV) as runner:
         socket_path = runner.socket_path
@@ -86,7 +86,7 @@ def test_runner_subprocess_cleans_up_on_exit() -> None:
 def test_runner_subprocess_with_explicit_socket_path() -> None:
     """Caller-supplied socket path is honored.
 
-    Uses a short tempdir under /tmp instead of pytest's tmp_path —
+    Uses a short tempdir under /tmp instead of pytest's tmp_path â€”
     macOS limits sun_path to 104 bytes and pytest's per-test temp
     path on darwin already exceeds that before any filename is added.
     """
@@ -97,13 +97,13 @@ def test_runner_subprocess_with_explicit_socket_path() -> None:
             assert os.path.exists(sock)
 
 
-# ── Round-trip via the UDS client ────────────────────────
+# â”€â”€ Round-trip via the UDS client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @_REQUIRES_UDS
 @pytest.mark.asyncio
 async def test_health_round_trip_via_uds() -> None:
-    """The flagship Phase 2 test: server → UDS → uvicorn → runner FastAPI.
+    """The flagship Phase 2 test: server â†’ UDS â†’ uvicorn â†’ runner FastAPI.
 
     A successful 200 from /health proves every layer is wired:
     1. uvicorn imported and started the runner FastAPI app.
@@ -132,7 +132,7 @@ async def test_post_session_events_stub_via_uds() -> None:
 
     ``create_runner_app_from_env`` starts without a HarnessProcessManager
     (scaffold mode), so the endpoint returns 501. The test asserts that
-    the route exists and the transport delivers the response — not that
+    the route exists and the transport delivers the response â€” not that
     the runner is fully functional.
     """
     with RunnerSubprocess(extra_env=_FAKE_SERVER_ENV) as runner:
@@ -145,19 +145,19 @@ async def test_post_session_events_stub_via_uds() -> None:
             assert response.status_code == 501
 
 
-# ── Failure modes ────────────────────────────────────────
+# â”€â”€ Failure modes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @_REQUIRES_UDS
 def test_subprocess_with_bad_app_factory_raises() -> None:
-    """Bad import path → uvicorn crashes → __enter__ surfaces a useful error.
+    """Bad import path â†’ uvicorn crashes â†’ __enter__ surfaces a useful error.
 
     The error message MUST include enough detail (rc + stderr) for
     the developer to diagnose. A bare TimeoutError would be
-    misleading — the subprocess died, it didn't time out.
+    misleading â€” the subprocess died, it didn't time out.
     """
     with pytest.raises(RuntimeError, match="exited prematurely"):
-        with RunnerSubprocess(app_factory_path="agent_meow.does.not.exist:app"):
+        with RunnerSubprocess(app_factory_path="omnigent.does.not.exist:app"):
             pass
 
 

@@ -2,7 +2,7 @@
 Unit tests for the ``require_trusted_origin`` CSRF guard dependency.
 
 The dependency adapts the shared, protocol-neutral
-:func:`~?agent_meow.server.ws_origin.origin_allowed` policy into a FastAPI
+:func:`~?omnigent.server.ws_origin.origin_allowed` policy into a FastAPI
 dependency for HTTP routes that accept ``multipart/form-data`` (which the
 JSON Content-Type guard cannot protect, because multipart is
 CORS-safelisted).
@@ -12,13 +12,13 @@ The full origin decision table is already covered by
 these tests deliberately do NOT re-enumerate it. They verify only how the
 dependency wires that policy into an HTTP route:
 
-- a **missing** ``Origin`` currently fails open (request proceeds) — a
+- a **missing** ``Origin`` currently fails open (request proceeds) â€” a
   temporary backward-compat posture, to be closed soon, so that clients
   not yet sending an ``Origin`` keep working. When it is closed, flip
   ``test_absent_origin_is_allowed`` to expect a 403; the rest of the suite
   already sends the sentinel ``Origin`` and so is unaffected;
 - it sources ``local_mode`` from ``local_single_user_enabled()`` and
-  ``extra_allowed`` from ``parse_allowed_origins()`` (the env wiring) —
+  ``extra_allowed`` from ``parse_allowed_origins()`` (the env wiring) â€”
   proven by flipping ``OMNIGENT_LOCAL_SINGLE_USER`` /
   ``OMNIGENT_WS_ALLOWED_ORIGINS`` and watching the same Origin change verdict;
 - an allowed verdict returns ``None`` (request proceeds);
@@ -26,7 +26,7 @@ dependency wires that policy into an HTTP route:
 
 The dependency only reads ``request.headers``, so each case is driven by a
 real :class:`starlette.requests.Request` built from a minimal ASGI scope
-carrying just the ``Origin`` header under test — no body or transport.
+carrying just the ``Origin`` header under test â€” no body or transport.
 """
 
 from __future__ import annotations
@@ -35,8 +35,8 @@ import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
-from agent_meow.server.routes._origin import require_trusted_origin
+from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from omnigent.server.routes._origin import require_trusted_origin
 
 _LOCAL_ENV = "OMNIGENT_LOCAL_SINGLE_USER"
 _ALLOWLIST_ENV = "OMNIGENT_WS_ALLOWED_ORIGINS"
@@ -86,11 +86,11 @@ def test_absent_origin_is_allowed(monkeypatch: pytest.MonkeyPatch, local_mode: b
     A request with no ``Origin`` is allowed in every mode.
 
     Modern browsers attach ``Origin`` to every cross-site (and same-site
-    state-changing) request — and it is on the forbidden-header list, so
-    page JS cannot strip or forge it — so an absent ``Origin`` is not a
+    state-changing) request â€” and it is on the forbidden-header list, so
+    page JS cannot strip or forge it â€” so an absent ``Origin`` is not a
     browser CSRF vector. Allowing it preserves backward compatibility for
     non-browser and older first-party clients that send none. The mode is
-    irrelevant — absent passes whether or not local mode is set — so a
+    irrelevant â€” absent passes whether or not local mode is set â€” so a
     raise in either case would wrongly block those clients.
     """
     if local_mode:
@@ -133,10 +133,10 @@ def test_cross_origin_is_allowed_when_not_local_mode(monkeypatch: pytest.MonkeyP
     ``local_single_user_enabled()``: with the env unset, authenticated
     (cookie / proxy) modes guard CSRF by other means, so the policy passes
     the origin through. If this raised, the dependency would be ignoring
-    the env and hard-coding local-mode strictness — breaking deployed
+    the env and hard-coding local-mode strictness â€” breaking deployed
     multi-user servers whose browser Origin is not loopback.
     """
-    # _clean_origin_env left OMNIGENT_LOCAL_SINGLE_USER unset → non-local.
+    # _clean_origin_env left OMNIGENT_LOCAL_SINGLE_USER unset â†’ non-local.
     assert require_trusted_origin(_request_with_origin(_EVIL_ORIGIN)) is None
 
 
@@ -164,13 +164,13 @@ def test_allowlisted_origin_is_allowed_and_unlisted_rejected(
     flips the default to deny, so an origin ON the list passes while one
     NOT on it is rejected with 403. If the allowlist were not read, the
     listed origin would still pass (non-local passthrough) but the
-    unlisted one would wrongly pass too — the second assertion catches that.
+    unlisted one would wrongly pass too â€” the second assertion catches that.
     """
     monkeypatch.setenv(_ALLOWLIST_ENV, "https://ui.example.com")
-    # On the allowlist → allowed.
+    # On the allowlist â†’ allowed.
     assert require_trusted_origin(_request_with_origin("https://ui.example.com")) is None
     # Not on the allowlist, and a non-empty allowlist flips non-local mode
-    # to deny-by-default → 403.
+    # to deny-by-default â†’ 403.
     with pytest.raises(HTTPException) as exc_info:
         require_trusted_origin(_request_with_origin(_EVIL_ORIGIN))
     assert exc_info.value.status_code == 403

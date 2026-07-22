@@ -4,7 +4,7 @@ Unit tests for ``sys_session_get_history`` and ``sys_session_close``.
 These cover the two tools added in 13a alongside the existing
 ``sys_session_send`` / ``sys_session_list`` family. The tests build a
 real :class:`SqlAlchemyConversationStore` over a temp SQLite DB and
-monkeypatch the ``agent_meow.runtime`` accessors so the tools see them.
+monkeypatch the ``omnigent.runtime`` accessors so the tools see them.
 
 The tasks table has been removed. ``_resolve_parent_conversation_id``
 now reads ``ctx.conversation_id`` directly instead of looking up the
@@ -19,15 +19,15 @@ from dataclasses import dataclass
 
 import pytest
 
-from agent_meow.entities.conversation import MessageData, NewConversationItem
-from agent_meow.runtime import pending_elicitations
-from agent_meow.session_lifecycle import CLOSED_LABEL_KEY, CLOSED_LABEL_VALUE
-from agent_meow.spec.types import AgentSpec, ExecutorSpec
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.entities.conversation import MessageData, NewConversationItem
+from omnigent.runtime import pending_elicitations
+from omnigent.session_lifecycle import CLOSED_LABEL_KEY, CLOSED_LABEL_VALUE
+from omnigent.spec.types import AgentSpec, ExecutorSpec
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins.spawn import (
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins.spawn import (
     _CLOSED_TITLE_INFIX,
     _HISTORY_DEFAULT_TAIL,
     _HISTORY_MAX_TAIL,
@@ -92,7 +92,7 @@ def session_fixture(
     Creates a parent conversation and a child conversation titled
     ``"researcher:auth"`` parented by the parent. Adds two items to the
     child (one user message, one assistant message). Monkeypatches
-    ``agent_meow.runtime.get_conversation_store`` so the tool's
+    ``omnigent.runtime.get_conversation_store`` so the tool's
     late-bound lookups resolve to the test store.
 
     ``_resolve_parent_conversation_id`` reads ``ctx.conversation_id``
@@ -134,10 +134,10 @@ def session_fixture(
         ],
     )
 
-    # The tools' invoke() does ``from agent_meow.runtime import
+    # The tools' invoke() does ``from omnigent.runtime import
     # get_conversation_store`` per call (lazy bind), so patching the
     # runtime module's attribute is sufficient.
-    monkeypatch.setattr("agent_meow.runtime.get_conversation_store", lambda: conv_store)
+    monkeypatch.setattr("omnigent.runtime.get_conversation_store", lambda: conv_store)
 
     # conversation_id is the canonical parent session id; _resolve_parent_conversation_id
     # reads ctx.conversation_id directly (tasks table removed).
@@ -155,7 +155,7 @@ def session_fixture(
     )
 
 
-# ── Schema tests ──────────────────────────────────────────
+# â”€â”€ Schema tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_send_schema_advertises_plain_string_and_purpose_object_args() -> None:
@@ -184,7 +184,7 @@ def test_send_schema_advertises_plain_string_and_purpose_object_args() -> None:
     assert args_schema["anyOf"][0] == {"type": "string"}
     object_schema = args_schema["anyOf"][1]
     assert object_schema["type"] == "object"
-    # ``model`` is optional dispatch metadata — only ``input`` may be
+    # ``model`` is optional dispatch metadata â€” only ``input`` may be
     # required, or plain-string sends would break.
     assert object_schema["required"] == ["input"]
     assert object_schema["additionalProperties"] is False
@@ -216,17 +216,17 @@ def test_send_schema_gates_harness_field_behind_allowlist_opt_in() -> None:
     declares a non-empty ``executor.config.allowed_harnesses``. A sub-agent
     without that opt-in keeps the base ``{input, purpose, model}`` args
     object, so the orchestrator never sees a harness knob it cannot use.
-    This mirrors the per-child dispatch guard in tool_dispatch.py — the two
+    This mirrors the per-child dispatch guard in tool_dispatch.py â€” the two
     gates must agree on what "opted in" means.
     """
-    # Not opted in: a plain sub-agent (no allowed_harnesses) → base schema.
+    # Not opted in: a plain sub-agent (no allowed_harnesses) â†’ base schema.
     plain = SysSessionSendTool(
         {"claude": AgentSpec(spec_version=1, name="claude", description="Review helper.")}
     )
     assert _object_branch_props(plain) == {"input", "purpose", "model", "cost_budget"}
 
     # Opted in: a sub-agent whose executor.config.allowed_harnesses declares a
-    # non-empty allowlist (the polly/debby `codex`/`opencode` worker shape) →
+    # non-empty allowlist (the polly/debby `codex`/`opencode` worker shape) â†’
     # the schema adds the gated `harness` field.
     opted_in_spec = AgentSpec(
         spec_version=1,
@@ -259,7 +259,7 @@ def test_send_schema_gates_harness_field_behind_allowlist_opt_in() -> None:
     assert object_schema["additionalProperties"] is False
 
     # Mixed: one opted-in sub-agent among several opts the whole tool's schema
-    # in — the dispatch guard still rejects harness for the non-opted children.
+    # in â€” the dispatch guard still rejects harness for the non-opted children.
     mixed = SysSessionSendTool(
         {
             "claude": AgentSpec(spec_version=1, name="claude", description="Review helper."),
@@ -307,7 +307,7 @@ def test_peek_schema_tail_items_bounds() -> None:
 def test_close_schema_required_fields_and_no_extra_props() -> None:
     """
     The ``sys_session_close`` schema requires ``conversation_id``
-    only — no ``tail_items``, no extras.
+    only â€” no ``tail_items``, no extras.
 
     Close has a smaller surface than peek (no slice argument);
     extending the schema later would be additive, but a regression
@@ -321,7 +321,7 @@ def test_close_schema_required_fields_and_no_extra_props() -> None:
     assert set(params["properties"].keys()) == {"conversation_id"}
 
 
-# ── Peek invoke tests ─────────────────────────────────────
+# â”€â”€ Peek invoke tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_peek_returns_items_chronological(session_fixture: _Fixture) -> None:
@@ -330,8 +330,8 @@ def test_peek_returns_items_chronological(session_fixture: _Fixture) -> None:
     each one projected through the same activity shape used by
     ``check_task``.
 
-    Two items were inserted (user → assistant). The list_items
-    call uses ``order="desc"`` so peek must reverse the result —
+    Two items were inserted (user â†’ assistant). The list_items
+    call uses ``order="desc"`` so peek must reverse the result â€”
     a regression that forgot the reverse would surface here as the
     user message appearing AFTER the assistant.
     """
@@ -366,7 +366,7 @@ def test_peek_surfaces_pending_elicitation_after_stored_items(
     The elicitation never lands in the conversation store (it lives
     only in the pending-elicitations index), so before this fix a
     peek on a sub-agent blocked on ``AskUserQuestion`` ended at the
-    last stored message with no sign it needed input — the exact bug
+    last stored message with no sign it needed input â€” the exact bug
     this fix addresses. Peek must append the index's outstanding prompt after
     the two stored messages.
     """
@@ -393,13 +393,13 @@ def test_peek_surfaces_pending_elicitation_after_stored_items(
     # 3 = 2 stored messages + 1 synthesized pending elicitation. If 2,
     # the index isn't being read; the parent stays blind to the prompt.
     assert len(items) == 3
-    # The elicitation is the most recent act, so it's appended last —
+    # The elicitation is the most recent act, so it's appended last â€”
     # after the user/assistant messages, in chronological order.
     elicit = items[-1]
     assert elicit["type"] == "pending_elicitation"
     assert elicit["elicitation_id"] == "elicit_bio"
-    # The prompt text proves the params payload traversed the index →
-    # snapshot → projector path, not just a bare "blocked" sentinel.
+    # The prompt text proves the params payload traversed the index â†’
+    # snapshot â†’ projector path, not just a bare "blocked" sentinel.
     assert elicit["prompt"] == "Answer 3 questions on human biology"
     assert elicit["fields"] == ["q1", "q2", "q3"]
     # The stored messages still precede it and are unchanged.
@@ -422,7 +422,7 @@ def test_peek_no_pending_elicitation_when_index_empty(
         session_fixture.ctx,
     )
     items = json.loads(raw)["items"]
-    # Exactly the two fixture messages — no synthesized elicitation.
+    # Exactly the two fixture messages â€” no synthesized elicitation.
     assert len(items) == 2
     assert all(item["type"] != "pending_elicitation" for item in items)
 
@@ -434,7 +434,7 @@ def test_peek_default_tail_when_omitted(session_fixture: _Fixture) -> None:
     The fixture has two items, fewer than the default. A regression
     that used 0 or 1 as the fallback would clip output. The
     assertion uses ``len(items) == 2`` because the fixture only
-    inserted two — anything less means the default was wrong.
+    inserted two â€” anything less means the default was wrong.
     """
     assert _HISTORY_DEFAULT_TAIL >= 2, (
         "Test depends on the default exceeding the fixture's item count "
@@ -466,7 +466,7 @@ def test_peek_clamps_oversize_tail_items(session_fixture: _Fixture) -> None:
     (not the data set size). Specifically: ``_HISTORY_MAX_TAIL + 10``
     extra items, totaling ``_HISTORY_MAX_TAIL + 12`` items in the
     child. Calling peek with ``tail_items = _HISTORY_MAX_TAIL * 20``
-    must return exactly ``_HISTORY_MAX_TAIL`` items — proving the
+    must return exactly ``_HISTORY_MAX_TAIL`` items â€” proving the
     clamp engaged. Without the clamp the LLM would receive all
     ``_HISTORY_MAX_TAIL + 12`` items.
     """
@@ -596,7 +596,7 @@ def test_peek_top_level_conversation_in_tree_is_rejected(
 
     The caller's own root conversation passes the tree-membership
     check (its ``root_conversation_id`` equals the caller's
-    ``root_id``) but it isn't a sub-agent — its title doesn't
+    ``root_id``) but it isn't a sub-agent â€” its title doesn't
     follow the ``"<agent>:<title>"`` convention. The tool must
     return ``session_not_a_sub_agent`` rather than letting
     ``_agent_title_from_conversation`` raise.
@@ -621,7 +621,7 @@ def test_close_top_level_conversation_in_tree_is_rejected(
     Close refuses a top-level conversation_id even when it's in
     the caller's spawn tree.
 
-    Same invariant as the peek case — the LLM cannot tombstone a
+    Same invariant as the peek case â€” the LLM cannot tombstone a
     non-sub-agent conversation, so the tool returns
     ``session_not_a_sub_agent`` and leaves the row's title intact.
 
@@ -644,14 +644,14 @@ def test_close_top_level_conversation_in_tree_is_rejected(
     assert _CLOSED_TITLE_INFIX not in (parent_after.title or "")
 
 
-# ── Close invoke tests ────────────────────────────────────
+# â”€â”€ Close invoke tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_close_marks_closed_and_tombstones_internal_title(session_fixture: _Fixture) -> None:
     """
     Close marks the child closed and internally tombstones its title.
 
-    The explicit ``agent_meow.closed=true`` label is the behavioral
+    The explicit ``omnigent.closed=true`` label is the behavioral
     marker write paths consume. The conv_id title suffix still
     guarantees uniqueness against the partial unique index on
     ``(parent_conversation_id, title)`` even if the same logical
@@ -672,7 +672,7 @@ def test_close_marks_closed_and_tombstones_internal_title(session_fixture: _Fixt
         "title": "auth",
     }
 
-    # Inspect the underlying row directly via list_conversations —
+    # Inspect the underlying row directly via list_conversations â€”
     # exercises the same lookup path the next spawn would use.
     children = session_fixture.conv_store.list_conversations(
         kind="sub_agent",
@@ -682,10 +682,10 @@ def test_close_marks_closed_and_tombstones_internal_title(session_fixture: _Fixt
     titles = [c.title for c in children.data]
     expected = f"researcher:auth{_CLOSED_TITLE_INFIX}{session_fixture.child_conv_id}"
     assert expected in titles, (
-        f"expected title {expected!r} in {titles!r} — close did not "
+        f"expected title {expected!r} in {titles!r} â€” close did not "
         "rewrite the child's title with the conv_id suffix."
     )
-    # And the bare title is gone — proves a follow-up spawn would
+    # And the bare title is gone â€” proves a follow-up spawn would
     # find no match.
     assert "researcher:auth" not in titles
     refreshed = session_fixture.conv_store.get_conversation(session_fixture.child_conv_id)
@@ -747,7 +747,7 @@ def test_close_succeeds_regardless_of_session_state(session_fixture: _Fixture) -
     assert payload.get("closed") is True
     assert payload["conversation_id"] == session_fixture.child_conv_id
 
-    # The title is tombstoned and the closed label is set — proves
+    # The title is tombstoned and the closed label is set â€” proves
     # close ran to completion.
     children = session_fixture.conv_store.list_conversations(
         kind="sub_agent",
@@ -808,7 +808,7 @@ def test_close_out_of_tree_conversation_is_rejected(
 
     Without the tree-scope check, any agent could tombstone any
     other agent's session by guessing conversation_ids. The
-    regression we care about is silent acceptance — the row
+    regression we care about is silent acceptance â€” the row
     should remain unchanged on the way out.
     """
     other_parent = session_fixture.conv_store.create_conversation(kind="default")
@@ -832,7 +832,7 @@ def test_close_out_of_tree_conversation_is_rejected(
     assert refreshed.title == "other:secret"
 
 
-# ── Argument-parsing edge cases ───────────────────────────
+# â”€â”€ Argument-parsing edge cases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_peek_invalid_json_returns_error(session_fixture: _Fixture) -> None:
@@ -893,5 +893,5 @@ def test_peek_empty_conversation_id_returns_error(session_fixture: _Fixture) -> 
 # Tree-scoping resolution via the parent task is exercised by
 # ``test_peek_returns_items_chronological`` (happy path) and
 # ``test_peek_out_of_tree_conversation_is_rejected`` (rejection
-# path). No standalone resolver test — the mechanism has no
+# path). No standalone resolver test â€” the mechanism has no
 # observable behavior beyond those two outcomes.

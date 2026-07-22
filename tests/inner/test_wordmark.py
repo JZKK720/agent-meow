@@ -5,8 +5,8 @@ from __future__ import annotations
 from rich.cells import cell_len
 from rich.console import Console
 
-from agent_meow.inner import wordmark
-from agent_meow.inner.mascots import MASCOT_ART_COLOR, MASCOT_ART_LINES
+from omnigent.inner import wordmark
+from omnigent.inner.mascots import MASCOT_ART_COLOR, MASCOT_ART_LINES
 
 
 def test_wordmark_is_five_rows_of_equal_display_width() -> None:

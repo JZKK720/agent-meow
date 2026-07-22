@@ -1,18 +1,18 @@
-"""Tests for :func:`~?agent_meow.server.routes.comments._format_message`.
+"""Tests for :func:`~?omnigent.server.routes.comments._format_message`.
 
 ``_format_message`` is a pure function with non-trivial grouping and
-sorting logic — it groups comments by file path (alphabetical order)
+sorting logic â€” it groups comments by file path (alphabetical order)
 and sorts within each group by ``start_index`` ascending.  Each bullet
 shows the ``anchor_content`` snippet (when available) plus the
-``start_index``–``end_index`` character range.  These tests cover the
+``start_index``â€“``end_index`` character range.  These tests cover the
 invariants directly so regressions in the sort or group logic surface
 without needing a running HTTP server.
 """
 
 from __future__ import annotations
 
-from agent_meow.entities import Comment
-from agent_meow.server.routes.comments import _format_message
+from omnigent.entities import Comment
+from omnigent.server.routes.comments import _format_message
 
 
 def _make_comment(
@@ -55,7 +55,7 @@ def _make_comment(
     )
 
 
-# ── header ────────────────────────────────────────────────────────────────────
+# â”€â”€ header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_format_message_always_starts_with_header() -> None:
@@ -72,7 +72,7 @@ def test_format_message_always_starts_with_header() -> None:
 
 
 def test_format_message_empty_list_returns_header_only() -> None:
-    """An empty comment list produces only the header — no trailing blank lines."""
+    """An empty comment list produces only the header â€” no trailing blank lines."""
     result = _format_message([])
 
     assert result == "Please address the following review comments.", (
@@ -80,7 +80,7 @@ def test_format_message_empty_list_returns_header_only() -> None:
     )
 
 
-# ── single file ───────────────────────────────────────────────────────────────
+# â”€â”€ single file â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_format_message_single_comment_includes_path_anchor_and_body() -> None:
@@ -132,7 +132,7 @@ def test_format_message_single_file_multiple_comments_sorted_by_start_index() ->
     )
 
 
-# ── multiple files ────────────────────────────────────────────────────────────
+# â”€â”€ multiple files â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_format_message_multiple_files_sorted_alphabetically() -> None:
@@ -191,7 +191,7 @@ def test_format_message_comments_not_mixed_across_files() -> None:
     )
 
 
-# ── bullet format ─────────────────────────────────────────────────────────────
+# â”€â”€ bullet format â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_format_message_uses_anchor_content_as_bullet_prefix() -> None:
@@ -206,8 +206,8 @@ def test_format_message_uses_anchor_content_as_bullet_prefix() -> None:
 
     result = _format_message([comment])
 
-    assert '• "import os" (offset 0–8): Fix the import' in result, (
-        f"Expected '• \"import os\" (offset 0–8): Fix the import' in output, got: {result!r}"
+    assert 'â€¢ "import os" (offset 0â€“8): Fix the import' in result, (
+        f"Expected 'â€¢ \"import os\" (offset 0â€“8): Fix the import' in output, got: {result!r}"
     )
 
 

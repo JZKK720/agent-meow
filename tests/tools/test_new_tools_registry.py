@@ -7,14 +7,14 @@ runner's tool-dispatch frozensets so the dispatch table routes them.
 
 from __future__ import annotations
 
-from agent_meow.runner.tool_dispatch import (
+from omnigent.runner.tool_dispatch import (
     _ALL_LOCAL_TOOLS,
     _DOC_TOOLS,
     _IMAGE_TOOLS,
     _NATIVE_RELAY_BUILTIN_TOOLS,
     _VIDEO_TOOLS,
 )
-from agent_meow.tools.builtins import BUILTIN_NAMES, _BUILTIN_REGISTRY
+from omnigent.tools.builtins import BUILTIN_NAMES, _BUILTIN_REGISTRY
 
 
 def _assert_framework_owned(name: str) -> None:

@@ -1,7 +1,7 @@
 """
 Python policies for the `policies-demo` fixture agent.
 
-Ports relevant callables from agent_meow
+Ports relevant callables from omnigent
 `examples/tool_functions.py` into a location importable by the
 agent-meow parser (dotted path `tests._fixtures.agents.*`).
 
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 
-from agent_meow.policies.schema import PolicyEvent, PolicyResponse
+from omnigent.policies.schema import PolicyEvent, PolicyResponse
 
 # Long-sleep threshold. Sleep calls over this many seconds are
 # blocked. Chosen small enough that trivial test args (like 8 s)
@@ -26,7 +26,7 @@ _ALLOW: PolicyResponse = {"result": "ALLOW"}
 
 def block_long_sleep(event: PolicyEvent) -> PolicyResponse:
     """
-    Ported from agent_meow ``block_long_sleep``.
+    Ported from omnigent ``block_long_sleep``.
 
     Blocks when the requested sleep duration exceeds
     :data:`_MAX_SLEEP_SECONDS`. Returns ALLOW for non-``tool_call``

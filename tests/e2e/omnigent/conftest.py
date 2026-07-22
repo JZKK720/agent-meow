@@ -24,7 +24,7 @@ import pytest
 #
 # Derived from the conftest's own location so git worktrees work
 # naturally: this file lives at
-# ``<root>/tests/e2e/agent_meow/conftest.py`` (post-unification), so
+# ``<root>/tests/e2e/omnigent/conftest.py`` (post-unification), so
 # the checkout root is three levels up. Hardcoding an absolute path
 # broke worktrees because a subprocess spawned there would still
 # exec the main-checkout ``agent-meow`` (via the editable install),
@@ -36,7 +36,7 @@ def _resolve_venv_python() -> Path:
     """
     Return the Python interpreter path for the worktree's venv.
 
-    Git worktrees don't have their own ``.venv`` — they share the
+    Git worktrees don't have their own ``.venv`` â€” they share the
     main checkout's venv. Walk up the directory tree from the
     current repo root, looking for ``.venv/bin/python`` in this
     directory then in each parent, stopping when we find one.
@@ -56,7 +56,7 @@ def _resolve_venv_python() -> Path:
             # Reached filesystem root without finding a venv.
             raise RuntimeError(
                 f"no .venv/bin/python found walking up from "
-                f"{_OMNIGENT_REPO} — worktrees share the main "
+                f"{_OMNIGENT_REPO} â€” worktrees share the main "
                 f"checkout's venv, so one parent of this path "
                 f"should contain ``.venv``."
             )
@@ -81,9 +81,9 @@ def omnigent_python() -> Path:
 
     :returns: Absolute path to the agent-meow ``.venv`` Python
         interpreter, e.g.
-        ``"/path/to/agent_meow/.venv/bin/python"``.
+        ``"/path/to/omnigent/.venv/bin/python"``.
     :raises RuntimeError: If the interpreter is not present at
-        the expected path — indicates the agent-meow checkout is
+        the expected path â€” indicates the agent-meow checkout is
         missing or its .venv hasn't been created.
     """
     if not _OMNIGENT_VENV_PYTHON.is_file():
@@ -159,7 +159,7 @@ def mock_credentials_env(
     return env
 
 
-# ── Mock LLM server fixtures ────────────────────────────────
+# â”€â”€ Mock LLM server fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _find_free_port() -> int:

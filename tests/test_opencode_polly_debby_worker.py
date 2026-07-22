@@ -3,13 +3,13 @@
 Both polly and debby once declared an optional ``opencode`` sub-agent
 (``harness: opencode-native``). Shipping a sub-agent whose harness older
 clients don't recognize made every old runner/host fail to launch the agent at
-all — the version-skew incident behind JZKK720/agent-meow#1145. That incident
+all â€” the version-skew incident behind JZKK720/agent-meow#1145. That incident
 is now mitigated on the execution path: ``spec.load(...,
 prune_invalid_sub_agents=True)`` (runner ``_entry`` + server ``agent_cache``)
 gracefully DROPS a sub-agent whose harness a client doesn't recognize, so an old
 client loads polly with its remaining workers instead of failing. Combined with
 ``opencode-native`` now being a recognized harness
-(``agent_meow.spec._omnigent_compat.OMNIGENT_HARNESSES``), polly re-declares its
+(``omnigent.spec._omnigent_compat.OMNIGENT_HARNESSES``), polly re-declares its
 ``opencode`` worker; the positive test below guards that it stays wired.
 
 debby, however, is still deliberately opencode-free (reverted in #1295), and the
@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agent_meow.spec import load
+from omnigent.spec import load
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 

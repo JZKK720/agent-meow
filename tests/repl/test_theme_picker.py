@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from omnigent_ui_sdk.terminal._theme import DARK_THEME, LIGHT_THEME
 
-from agent_meow.repl._theme_picker import (
+from omnigent.repl._theme_picker import (
     _build_dark_preview,
     _build_light_preview,
     _build_preview,
@@ -15,7 +15,7 @@ from agent_meow.repl._theme_picker import (
     startup_theme_picker,
 )
 
-# ── Preview builders ──────────────────────────────────────────
+# â”€â”€ Preview builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_dark_preview_returns_panel() -> None:
@@ -56,7 +56,7 @@ def test_build_preview_respects_width() -> None:
     assert panel.width == 40
 
 
-# ── Picker rendering ─────────────────────────────────────────
+# â”€â”€ Picker rendering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_render_theme_picker_contains_menu_items() -> None:
@@ -69,13 +69,13 @@ def test_render_theme_picker_contains_menu_items() -> None:
 def test_render_theme_picker_highlights_selected_dark() -> None:
     """When dark (index 0) is selected, its indicator is present."""
     rendered = _render_theme_picker(0, width=60)
-    assert "❯ dark mode" in rendered
+    assert "â¯ dark mode" in rendered
 
 
 def test_render_theme_picker_highlights_selected_light() -> None:
     """When light (index 1) is selected, its indicator is present."""
     rendered = _render_theme_picker(1, width=60)
-    assert "❯ light mode" in rendered
+    assert "â¯ light mode" in rendered
 
 
 def test_render_theme_picker_shows_footer_hints() -> None:
@@ -95,7 +95,7 @@ def test_render_theme_picker_shows_preview_for_selected_only() -> None:
     assert "light" in rendered_light.lower()
 
 
-# ── OSC 11 parsing ────────────────────────────────────────────
+# â”€â”€ OSC 11 parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_osc11_dark_background() -> None:
@@ -114,14 +114,14 @@ def test_parse_osc11_light_background() -> None:
 
 def test_parse_osc11_mid_dark() -> None:
     """A mid-dark background (common terminal themes) classifies as dark."""
-    # rgb:1c1c/1c1c/1c1c — typical dark theme bg.
+    # rgb:1c1c/1c1c/1c1c â€” typical dark theme bg.
     response = "\033]11;rgb:1c1c/1c1c/1c1c\033\\"
     assert _parse_osc11_response(response) == "dark"
 
 
 def test_parse_osc11_mid_light() -> None:
     """A mid-light background classifies as light."""
-    # rgb:e0e0/e0e0/e0e0 — typical light theme bg.
+    # rgb:e0e0/e0e0/e0e0 â€” typical light theme bg.
     response = "\033]11;rgb:e0e0/e0e0/e0e0\033\\"
     assert _parse_osc11_response(response) == "light"
 
@@ -161,7 +161,7 @@ def test_parse_osc11_wrong_number_of_components() -> None:
     assert _parse_osc11_response("\033]11;rgb:0000/0000\033\\") is None
 
 
-# ── Confirmation line ─────────────────────────────────────────
+# â”€â”€ Confirmation line â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_theme_confirmation_dark() -> None:
@@ -180,7 +180,7 @@ def test_build_theme_confirmation_light() -> None:
     assert "mode (saved)" in plain
 
 
-# ── Startup picker (non-tty fallback) ────────────────────────
+# â”€â”€ Startup picker (non-tty fallback) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_startup_picker_non_tty_defaults_to_light(
@@ -193,7 +193,7 @@ def test_startup_picker_non_tty_defaults_to_light(
     monkeypatch.setattr("sys.stdin.isatty", lambda: False)
     # Mock OSC 11 detection to return None (non-tty can't detect).
     monkeypatch.setattr(
-        "agent_meow.repl._theme_picker._detect_terminal_background",
+        "omnigent.repl._theme_picker._detect_terminal_background",
         lambda: None,
     )
 
@@ -215,7 +215,7 @@ def test_startup_picker_non_tty_respects_dark_detection(
     monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
     monkeypatch.setattr("sys.stdin.isatty", lambda: False)
     monkeypatch.setattr(
-        "agent_meow.repl._theme_picker._detect_terminal_background",
+        "omnigent.repl._theme_picker._detect_terminal_background",
         lambda: "dark",
     )
 

@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 from tests.server.helpers import start_session_stream_collector
@@ -117,7 +117,7 @@ async def test_runner_relay_ready_waits_for_runner_heartbeat() -> None:
     relay is listening, producing a successful CLI run with empty
     stdout.
     """
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.server.routes import sessions as sessions_module
 
     sessions_module._runner_relay_tasks.clear()
     release = asyncio.Event()
@@ -263,8 +263,8 @@ async def test_relay_text_flush_publishes_persisted_item(db_uri: str) -> None:
     reconciliation splices the persisted copy in next to it as a
     duplicate bubble (the fork-to-relay-agent duplicate-response bug).
     """
-    from agent_meow.runtime import session_stream
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.runtime import session_stream
+    from omnigent.server.routes import sessions as sessions_module
 
     sessions_module._runner_relay_tasks.clear()
     store = SqlAlchemyConversationStore(db_uri)
@@ -427,8 +427,8 @@ async def test_relay_publishes_failed_status_on_tunnel_close() -> None:
     ``ConnectionError`` and exited silently, leaving the client's SSE
     stream truncated with no error event.
     """
-    from agent_meow.runtime import session_stream
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.runtime import session_stream
+    from omnigent.server.routes import sessions as sessions_module
 
     sessions_module._runner_relay_tasks.clear()
     gate = asyncio.Event()
@@ -510,8 +510,8 @@ async def test_relay_persists_disconnect_error_labels_on_tunnel_close() -> None:
     "Failed"). The code must be ``runner_disconnected`` so the UI can
     branch on it before the generic failed path.
     """
-    from agent_meow.runtime import session_stream
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.runtime import session_stream
+    from omnigent.server.routes import sessions as sessions_module
 
     sessions_module._runner_relay_tasks.clear()
     gate = asyncio.Event()
@@ -573,8 +573,8 @@ async def test_runner_recovery_clears_persisted_disconnect_error_labels() -> Non
     This asserts recovery clears the labels so the projection returns
     ``None`` again.
     """
-    from agent_meow.runtime import session_stream
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.runtime import session_stream
+    from omnigent.server.routes import sessions as sessions_module
 
     sessions_module._runner_relay_tasks.clear()
     gate = asyncio.Event()

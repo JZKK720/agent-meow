@@ -1,4 +1,4 @@
-"""Tests for :mod:`~?agent_meow.onboarding.setup`.
+"""Tests for :mod:`~?omnigent.onboarding.setup`.
 
 Cover the onboarding helpers used by ``agent-meow setup``: env-var hygiene
 (``detect_conflicting_env_vars``), profile-host discovery
@@ -16,8 +16,8 @@ from typing import Any
 import pytest
 from click import ClickException
 
-from agent_meow.onboarding import setup as setup_mod
-from agent_meow.onboarding.setup import (
+from omnigent.onboarding import setup as setup_mod
+from omnigent.onboarding.setup import (
     _CONFLICTING_ENV_VARS,
     SKIP_ENV_VAR,
     ProfileSpec,
@@ -28,13 +28,13 @@ from agent_meow.onboarding.setup import (
     maybe_run_onboarding,
 )
 
-# ── env-var hygiene ────────────────────────────────────
+# â”€â”€ env-var hygiene â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_detect_returns_set_vars_in_catalog_order(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Catalog order is contract — the user-facing notice depends on it."""
+    """Catalog order is contract â€” the user-facing notice depends on it."""
     for v in _CONFLICTING_ENV_VARS:
         monkeypatch.delenv(v, raising=False)
     monkeypatch.setenv("DATABRICKS_TOKEN", "stale")
@@ -43,14 +43,14 @@ def test_detect_returns_set_vars_in_catalog_order(
 
 
 def test_detect_ignores_empty_string(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Empty string is not "set" — some shells use it to unset."""
+    """Empty string is not "set" â€” some shells use it to unset."""
     for v in _CONFLICTING_ENV_VARS:
         monkeypatch.delenv(v, raising=False)
     monkeypatch.setenv("DATABRICKS_TOKEN", "")
     assert detect_conflicting_env_vars() == []
 
 
-# ── _existing_profile_hosts ────────────────────────────
+# â”€â”€ _existing_profile_hosts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _RecordedRun:
@@ -85,7 +85,7 @@ def test_existing_profile_hosts_parses_cli_json(
         {
             "profiles": [
                 {"name": "oss", "host": "https://oss.example.com"},
-                {"name": "broken"},  # missing host — must be skipped
+                {"name": "broken"},  # missing host â€” must be skipped
             ]
         }
     )
@@ -98,7 +98,7 @@ def test_existing_profile_hosts_parses_cli_json(
 def test_existing_profile_hosts_empty_when_cli_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No CLI on PATH → no shell-out, empty mapping."""
+    """No CLI on PATH â†’ no shell-out, empty mapping."""
     monkeypatch.setattr(setup_mod, "find_databricks_cli", lambda: None)
 
     def _explode(*args: Any, **kwargs: Any) -> None:
@@ -109,12 +109,12 @@ def test_existing_profile_hosts_empty_when_cli_missing(
 
 
 def test_find_databricks_cli(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Trivial delegation to ``shutil.which`` — guard against regression."""
+    """Trivial delegation to ``shutil.which`` â€” guard against regression."""
     monkeypatch.setattr(setup_mod.shutil, "which", lambda name: f"/fake/{name}")
     assert find_databricks_cli() == "/fake/databricks"
 
 
-# ── maybe_run_onboarding skip paths ────────────────────
+# â”€â”€ maybe_run_onboarding skip paths â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_maybe_run_skips_when_skip_env_set(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -130,7 +130,7 @@ def test_maybe_run_skips_when_skip_env_set(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_maybe_run_skips_when_no_tty(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Piped stdin → skip (can't safely launch interactive OAuth in CI)."""
+    """Piped stdin â†’ skip (can't safely launch interactive OAuth in CI)."""
     monkeypatch.delenv(SKIP_ENV_VAR, raising=False)
     monkeypatch.setattr(setup_mod.sys.stdin, "isatty", lambda: False)
 
@@ -141,7 +141,7 @@ def test_maybe_run_skips_when_no_tty(monkeypatch: pytest.MonkeyPatch) -> None:
     maybe_run_onboarding()
 
 
-# ── login_databricks_workspace ─────────────────────────
+# â”€â”€ login_databricks_workspace â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _LoginRecorder:
@@ -161,7 +161,7 @@ class _LoginRecorder:
 def test_login_databricks_workspace_reuses_existing_profile(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """When a profile already points at the workspace host, reuse it — no login.
+    """When a profile already points at the workspace host, reuse it â€” no login.
 
     The OAuth token cache is host-keyed, so re-authenticating would be a
     pointless extra browser window. If this regressed to always logging in,
@@ -214,7 +214,7 @@ def test_login_databricks_workspace_drops_stale_same_name_profile(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """If the derived name already exists but points elsewhere, drop that stale
-    section before re-logging in — the CLI refuses ``--host`` against a name
+    section before re-logging in â€” the CLI refuses ``--host`` against a name
     already bound to a different host, so skipping the removal would fail login.
     """
     monkeypatch.setattr(setup_mod, "find_databricks_cli", lambda: "/usr/bin/databricks")
@@ -240,7 +240,7 @@ def test_login_databricks_workspace_drops_stale_same_name_profile(
 def test_login_databricks_workspace_raises_without_cli(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No ``databricks`` CLI on PATH → a clear ClickException with install help,
+    """No ``databricks`` CLI on PATH â†’ a clear ClickException with install help,
     not a confusing crash deep in the login subprocess."""
     monkeypatch.setattr(setup_mod, "find_databricks_cli", lambda: None)
     with pytest.raises(ClickException, match=r"`databricks` CLI not on PATH"):

@@ -3,10 +3,10 @@
 The OIDC login flow accepts a caller-supplied ``return_to`` query param,
 signs it into the short-lived state cookie, and after authentication
 issues a server-side 302 to it. Without validation that is an open
-redirect — ``/auth/login?return_to=https://evil.example`` would land the
+redirect â€” ``/auth/login?return_to=https://evil.example`` would land the
 user on an attacker page under the app's own domain.
 
-These tests pin both halves of the fix in ``agent_meow/server/routes/auth.py``:
+These tests pin both halves of the fix in ``omnigent/server/routes/auth.py``:
 
 1. **Ingest** (``/auth/login``): a malicious ``return_to`` is reduced to
    ``"/"`` *before* it is signed into the state cookie, so the cookie
@@ -18,7 +18,7 @@ These tests pin both halves of the fix in ``agent_meow/server/routes/auth.py``:
    302 targets ``"/"``, not the attacker URL.
 
 The callback path drives the real route; the external IdP token exchange
-and id_token→email resolution are the only mocked boundaries.
+and id_tokenâ†’email resolution are the only mocked boundaries.
 """
 
 from __future__ import annotations
@@ -33,12 +33,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import agent_meow.server.routes.auth as auth_module
-from agent_meow.server.admin_list import AdminList
-from agent_meow.server.auth import UnifiedAuthProvider
-from agent_meow.server.oidc import OIDCConfig
-from agent_meow.server.routes.auth import create_auth_router
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+import omnigent.server.routes.auth as auth_module
+from omnigent.server.admin_list import AdminList
+from omnigent.server.auth import UnifiedAuthProvider
+from omnigent.server.oidc import OIDCConfig
+from omnigent.server.routes.auth import create_auth_router
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 _TEST_SECRET = bytes.fromhex("aa" * 32)
 # The plain (non-__Host-) state cookie name, used because the test
@@ -54,7 +54,7 @@ def _oidc_config() -> OIDCConfig:
     request, and selects the plain ``ap_auth_state`` cookie name.
 
     :returns: A generic-OIDC config pointing at Google's endpoints (no
-        network is touched — the token exchange is mocked in tests).
+        network is touched â€” the token exchange is mocked in tests).
     """
     return OIDCConfig(
         issuer="https://accounts.google.com",
@@ -112,7 +112,7 @@ def _decode_state_cookie(client: TestClient) -> dict[str, Any]:
     return jwt.decode(raw, _TEST_SECRET, algorithms=["HS256"])
 
 
-# ── Ingest: /auth/login sanitizes before signing into the cookie ──
+# â”€â”€ Ingest: /auth/login sanitizes before signing into the cookie â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -120,7 +120,7 @@ def _decode_state_cookie(client: TestClient) -> dict[str, Any]:
     [
         "https://evil.example",  # absolute cross-origin URL (the PoC)
         "http://evil.example/path",  # absolute, explicit scheme
-        "//evil.example",  # protocol-relative — browsers treat as cross-origin
+        "//evil.example",  # protocol-relative â€” browsers treat as cross-origin
         "/\\evil.example",  # backslash trick some browsers normalize to //
         "javascript:alert(1)",  # scheme with no leading slash
         "",  # empty string
@@ -131,7 +131,7 @@ def test_login_sanitizes_malicious_return_to(oidc_client: TestClient, malicious:
 
     Asserts on the decoded cookie payload (not just status) so we prove
     the attacker value never reaches the signed state the callback
-    trusts — sanitization happens at ingest, before signing.
+    trusts â€” sanitization happens at ingest, before signing.
     """
     resp = oidc_client.get("/auth/login", params={"return_to": malicious}, follow_redirects=False)
     assert resp.status_code == 302
@@ -172,14 +172,14 @@ def test_login_absent_return_to_defaults_to_root(oidc_client: TestClient) -> Non
     assert claims["return_to"] == "/"
 
 
-# ── Egress: /auth/callback re-sanitizes a hostile/pre-fix cookie ──
+# â”€â”€ Egress: /auth/callback re-sanitizes a hostile/pre-fix cookie â”€â”€
 
 
 def _mint_state_cookie(*, state: str, return_to: str) -> str:
     """Forge a validly-signed state cookie carrying ``return_to``.
 
     Models a state cookie minted before the ingest fix shipped (or a
-    tampering attempt that somehow produced a valid HS256 signature) —
+    tampering attempt that somehow produced a valid HS256 signature) â€”
     the callback must still not honor a hostile ``return_to``.
 
     :param state: The CSRF ``state`` value; must match the ``state``
@@ -205,7 +205,7 @@ class _FakeResponse:
     def json(self) -> dict[str, str]:
         """Return a token-endpoint body with an opaque id_token.
 
-        :returns: ``{"id_token": "..."}`` — the value is irrelevant
+        :returns: ``{"id_token": "..."}`` â€” the value is irrelevant
             because email resolution is mocked.
         """
         return {"id_token": "stub", "access_token": "stub"}
@@ -242,7 +242,7 @@ def test_callback_redirects_to_root_for_hostile_cookie(
     Defense-in-depth: presents a validly-signed state cookie whose
     ``return_to`` is an attacker URL (a pre-fix cookie or forgery), drives
     the real callback, and asserts the redirect lands on ``"/"`` with a
-    session cookie set — proving the open redirect is closed at egress
+    session cookie set â€” proving the open redirect is closed at egress
     too, not only at ingest.
     """
     state = "csrf-state-token"
@@ -263,7 +263,7 @@ def test_callback_redirects_to_root_for_hostile_cookie(
     assert resp.headers["location"] == "/", (
         f"callback honored hostile return_to {malicious!r}: Location={resp.headers['location']!r}"
     )
-    # The login still succeeded — a session cookie was issued.
+    # The login still succeeded â€” a session cookie was issued.
     assert any(
         c.strip().startswith(f"{_oidc_config().session_cookie_name}=")
         for c in resp.headers.get_list("set-cookie")

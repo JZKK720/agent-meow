@@ -22,14 +22,14 @@ import httpx
 import pytest
 from click.testing import CliRunner
 
-import agent_meow.cli as cli_mod
+import omnigent.cli as cli_mod
 
 cli_group = cli_mod.cli
 
 _APPS_URL = "https://myapp-1234.aws.databricksapps.com"
 _WORKSPACE = "https://example.databricks.com"
 _APPS_REDIRECT = f"{_WORKSPACE}/oidc/oauth2/v2.0/authorize?client_id=abc&response_type=code"
-_WORKSPACE_API_URL = f"{_WORKSPACE}/api/2.0/agent_meow"
+_WORKSPACE_API_URL = f"{_WORKSPACE}/api/2.0/omnigent"
 
 
 @dataclass
@@ -93,7 +93,7 @@ def token_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     :returns: The temp directory path.
     """
     monkeypatch.setattr(
-        "agent_meow.cli_auth._token_file_path",
+        "omnigent.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
@@ -126,7 +126,7 @@ def _patch_login_env(
     # login body's own requests.
     monkeypatch.setattr(cli_mod, "_workspace_api_server_url", lambda server: server)
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.databricks_sdk_installed",
+        "omnigent.onboarding.databricks_config.databricks_sdk_installed",
         lambda: sdk_installed,
     )
     tokens = list(cached_tokens if cached_tokens is not None else ["tok-cached"])
@@ -157,9 +157,9 @@ def test_login_apps_redirect_stores_pointer_record(
     """An Apps 302-to-OIDC probe logs in via the workspace and stores a record.
 
     The record (not a bearer) is what later commands resolve to fresh
-    workspace tokens — this is the core of the no-profile Apps CUJ.
+    workspace tokens â€” this is the core of the no-profile Apps CUJ.
     """
-    from agent_meow.cli_auth import load_databricks_workspace_host
+    from omnigent.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -172,7 +172,7 @@ def test_login_apps_redirect_stores_pointer_record(
     result = CliRunner().invoke(cli_group, ["login", _APPS_URL])
 
     assert result.exit_code == 0, result.output
-    # The pointer record names the workspace parsed from the redirect —
+    # The pointer record names the workspace parsed from the redirect â€”
     # a miss means the auth chain would fall back to ambient credentials.
     assert load_databricks_workspace_host(_APPS_URL) == _WORKSPACE
     # The verify call carried the minted workspace bearer to the app.
@@ -185,11 +185,11 @@ def test_login_workspace_hosted_401_uses_url_host(
 ) -> None:
     """A DatabricksRealm 401 (workspace API path) logs in to the URL's host.
 
-    Hosted agent-meow lives at ``https://<workspace>/api/2.0/agent-meow`` —
+    Hosted agent-meow lives at ``https://<workspace>/api/2.0/agent-meow`` â€”
     the workspace IS the server host, and the record must key on the full
     server URL (path included).
     """
-    from agent_meow.cli_auth import load_databricks_workspace_host
+    from omnigent.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -220,7 +220,7 @@ def test_login_apps_fails_loud_without_databricks_extra(
     fallback to the OIDC flow would produce a baffling ticket-endpoint
     error instead.
     """
-    from agent_meow.cli_auth import load_databricks_workspace_host
+    from omnigent.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(responses=[_response(302, headers={"location": _APPS_REDIRECT})])
     _patch_login_env(monkeypatch, fake_httpx=fake, sdk_installed=False)
@@ -236,12 +236,12 @@ def test_login_apps_fails_loud_without_databricks_extra(
 def test_login_runs_databricks_auth_login_when_no_cached_grant(
     monkeypatch: pytest.MonkeyPatch, token_dir: Path
 ) -> None:
-    """No cached host-keyed grant → ``databricks auth login --host <ws>`` runs.
+    """No cached host-keyed grant â†’ ``databricks auth login --host <ws>`` runs.
 
     The login is host-keyed (no ``--profile`` / profile name anywhere);
     after it succeeds the token resolves and the record is stored.
     """
-    from agent_meow.cli_auth import load_databricks_workspace_host
+    from omnigent.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -259,7 +259,7 @@ def test_login_runs_databricks_auth_login_when_no_cached_grant(
     result = CliRunner().invoke(cli_group, ["login", _APPS_URL])
 
     assert result.exit_code == 0, result.output
-    # Exactly one browser login, host-keyed, with no profile flag — a
+    # Exactly one browser login, host-keyed, with no profile flag â€” a
     # `--profile` here would recreate the named-profile coupling this
     # flow exists to remove.
     assert login_calls == [f"auth login --host {_WORKSPACE}"]
@@ -269,13 +269,13 @@ def test_login_runs_databricks_auth_login_when_no_cached_grant(
 def test_login_fails_loud_when_app_rejects_workspace_token(
     monkeypatch: pytest.MonkeyPatch, token_dir: Path
 ) -> None:
-    """Workspace login OK but the app 403s → no record, actionable error.
+    """Workspace login OK but the app 403s â†’ no record, actionable error.
 
     A user without CAN_USE on the app authenticates at the workspace yet
     can't reach the app; storing the record anyway would make every later
     command fail with the same opaque 403.
     """
-    from agent_meow.cli_auth import load_databricks_workspace_host
+    from omnigent.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -324,7 +324,7 @@ def test_login_stale_cached_grant_triggers_fresh_login_and_retry(
     server 302s/403s. Failing outright would strand the user; the fresh
     login replaces the bad cache entry and the retry succeeds.
     """
-    from agent_meow.cli_auth import load_databricks_workspace_host
+    from omnigent.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -345,7 +345,7 @@ def test_login_stale_cached_grant_triggers_fresh_login_and_retry(
     result = CliRunner().invoke(cli_group, ["login", _APPS_URL])
 
     assert result.exit_code == 0, result.output
-    # Exactly one forced re-login — a second rejection must fail loud,
+    # Exactly one forced re-login â€” a second rejection must fail loud,
     # not loop the browser flow.
     assert login_calls == [f"auth login --host {_WORKSPACE}"]
     # The retry verify presented the freshly minted token, not the stale one.
@@ -353,7 +353,7 @@ def test_login_stale_cached_grant_triggers_fresh_login_and_retry(
     assert load_databricks_workspace_host(_APPS_URL) == _WORKSPACE
 
 
-# ── ?o= workspace selector ──────────────────────────────────────────
+# â”€â”€ ?o= workspace selector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _ORG_ID = "2850744067564480"
 # A login URL where the bare host is the account and ``?o=`` picks the workspace.
@@ -367,7 +367,7 @@ _SELECTOR_URL = f"{_WORKSPACE}/?o={_ORG_ID}"
         (f"{_WORKSPACE_API_URL}?o={_ORG_ID}", _ORG_ID),
         # Selector among other params is still found.
         (f"{_WORKSPACE}/?foo=bar&o={_ORG_ID}", _ORG_ID),
-        # No selector → None (the single-workspace / Apps case).
+        # No selector â†’ None (the single-workspace / Apps case).
         (_WORKSPACE, None),
         (_APPS_URL, None),
         (f"{_WORKSPACE}/?o=", None),
@@ -387,7 +387,7 @@ def test_org_id_from_url(url: str, expected: str | None) -> None:
     ("workspace_host", "org_id", "expected"),
     [
         (_WORKSPACE, "2850744067564480", f"{_WORKSPACE}/?o=2850744067564480"),
-        # No org id → host returned untouched (single-workspace / Apps).
+        # No org id â†’ host returned untouched (single-workspace / Apps).
         (_WORKSPACE, None, _WORKSPACE),
         # A selector carrying & / = is encoded, not interpolated, so it can't
         # inject extra query params onto the `databricks auth login --host` URL.
@@ -412,12 +412,12 @@ def test_login_threads_org_id_through_workspace_login_and_verify(
     """A ``?o=`` login binds the grant to the workspace and routes the verify.
 
     When the bare host is the account, the browser login must carry ``?o=``
-    so the CLI records ``workspace_id`` (else the grant is account-scoped →
+    so the CLI records ``workspace_id`` (else the grant is account-scoped â†’
     HTTP 403), and the verify request must carry ``?o=`` so it routes to the
-    workspace (else it defaults to the account → HTTP 503). The selector is
+    workspace (else it defaults to the account â†’ HTTP 503). The selector is
     also persisted so later commands replay it.
     """
-    from agent_meow.cli_auth import load_databricks_org_id, load_databricks_workspace_host
+    from omnigent.cli_auth import load_databricks_org_id, load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -445,7 +445,7 @@ def test_login_threads_org_id_through_workspace_login_and_verify(
     assert load_databricks_workspace_host(_SELECTOR_URL) == _WORKSPACE
 
 
-# ── login sets the default server ───────────────────────────────────
+# â”€â”€ login sets the default server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_login_sets_default_server(monkeypatch: pytest.MonkeyPatch, token_dir: Path) -> None:
@@ -453,7 +453,7 @@ def test_login_sets_default_server(monkeypatch: pytest.MonkeyPatch, token_dir: P
     A successful login records the server as the user-level default.
 
     Without this, a freshly-logged-in user who runs a bare ``agent-meow`` is
-    still routed at whatever default ``setup`` baked in — the "logged in,
+    still routed at whatever default ``setup`` baked in â€” the "logged in,
     yet asked to log in again to a different server" CUJ. The
     just-logged-in server must become the configured default so the next
     bare run targets it.
@@ -479,8 +479,8 @@ def test_login_header_mode_sets_default_server(
     Header-auth mode logs in nothing but still records the default.
 
     ``agent-meow login <url>`` against a header-mode server needs no
-    credentials (a proxy injects identity), but the user's intent — "make
-    this my server" — is the same, so a bare ``agent-meow`` afterwards
+    credentials (a proxy injects identity), but the user's intent â€” "make
+    this my server" â€” is the same, so a bare ``agent-meow`` afterwards
     targets it. This also proves the default is set for a non-Databricks
     posture, not just the Apps branch.
     """
@@ -504,12 +504,12 @@ def test_login_accounts_mode_sets_default_server(
     default-setting lives in the login command *after* ``_accounts_login``
     returns, so a successful sign-in repoints the default just like the
     Databricks path. ``_accounts_login`` is stubbed to a clean return
-    (success) to isolate that wiring — its own HTTP flow is a separate
+    (success) to isolate that wiring â€” its own HTTP flow is a separate
     concern.
     """
     fake = _FakeHttpx(responses=[_response(401, body={"login_url": "/login"})])
     _patch_login_env(monkeypatch, fake_httpx=fake)
-    monkeypatch.setattr("agent_meow.cli._accounts_login", lambda server: None)
+    monkeypatch.setattr("omnigent.cli._accounts_login", lambda server: None)
 
     result = CliRunner().invoke(cli_group, ["login", "http://omni.internal:6767"])
 
@@ -525,7 +525,7 @@ def test_login_oidc_mode_sets_default_server(
 
     OIDC is the other non-Databricks posture, and its success path is
     inline in the login command (no helper to stub), so this drives the
-    full ticket → poll flow to prove the default is repointed there too.
+    full ticket â†’ poll flow to prove the default is repointed there too.
     """
     import time
     import webbrowser
@@ -560,7 +560,7 @@ def test_login_failure_leaves_default_server_unchanged(
     """
     A login the server rejects must NOT repoint the default.
 
-    The default is persisted only after the server accepts the token —
+    The default is persisted only after the server accepts the token â€”
     otherwise a failed login against a server the user can't actually
     reach would strand every later bare ``agent-meow`` on that dead URL.
     """
@@ -580,7 +580,7 @@ def test_login_failure_leaves_default_server_unchanged(
     assert cli_mod._load_global_config().get("server") == "https://existing.example.com"
 
 
-# ── bare-workspace URL expansion ────────────────────────────────────
+# â”€â”€ bare-workspace URL expansion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _scripted_normalizer_httpx(
@@ -590,7 +590,7 @@ def _scripted_normalizer_httpx(
     """Route ``httpx.get`` by exact URL for normalizer tests.
 
     :param monkeypatch: Pytest monkeypatch fixture.
-    :param responses_by_url: Exact-URL → response map; an unmapped URL
+    :param responses_by_url: Exact-URL â†’ response map; an unmapped URL
         fails the test loudly (it means an unexpected probe ran).
     :returns: The list of URLs probed, in order.
     """
@@ -656,7 +656,7 @@ def test_workspace_url_leaves_apps_edge_alone(
 ) -> None:
     """A Databricks Apps URL (302 to OIDC) is already a server base.
 
-    Apps hosts are path-less AND answer with ``server: databricks`` —
+    Apps hosts are path-less AND answer with ``server: databricks`` â€”
     only the login-target detection distinguishes them from a bare
     workspace, so a regression here would bolt /api/2.0/agent-meow onto
     every app URL.
@@ -679,7 +679,7 @@ def test_workspace_url_with_path_probes_nothing(
 ) -> None:
     """URLs that already carry a path return untouched with zero probes.
 
-    The expansion is a convenience for pasted bare hosts only — an
+    The expansion is a convenience for pasted bare hosts only â€” an
     explicit path is the user's choice, and probing on every command
     would tax all remote invocations.
     """
@@ -698,8 +698,8 @@ def test_workspace_url_expands_when_mount_hidden_from_anonymous_probe(
     """A mount invisible to anonymous probes expands via a cached bearer.
 
     Azure workspace edges answer the anonymous /api/2.0/agent-meow probe
-    with a plain 404 — not the AWS proxy's 401-with-DatabricksRealm
-    challenge — so a mount that works for authenticated callers looks
+    with a plain 404 â€” not the AWS proxy's 401-with-DatabricksRealm
+    challenge â€” so a mount that works for authenticated callers looks
     absent and the user gets stranded on the bare workspace URL. With
     a cached ``databricks auth login`` grant, the probe is retried
     authenticated and the mount is adopted.
@@ -709,7 +709,7 @@ def test_workspace_url_expands_when_mount_hidden_from_anonymous_probe(
         responses=[
             # Root: the workspace web app shape that triggers expansion.
             _response(404, headers={"server": "databricks"}),
-            # Mount, anonymous: hidden — plain 404, no realm challenge.
+            # Mount, anonymous: hidden â€” plain 404, no realm challenge.
             _response(404, headers={"server": "databricks"}),
             # Mount, authenticated: agent-meow answers.
             _response(200, body={"user_id": "alice"}),
@@ -717,7 +717,7 @@ def test_workspace_url_expands_when_mount_hidden_from_anonymous_probe(
     )
     monkeypatch.setattr(httpx, "get", fake.get)
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.databricks_sdk_installed",
+        "omnigent.onboarding.databricks_config.databricks_sdk_installed",
         lambda: True,
     )
     minted_for: list[str] = []
@@ -731,7 +731,7 @@ def test_workspace_url_expands_when_mount_hidden_from_anonymous_probe(
     result = cli_mod._workspace_api_server_url(_WORKSPACE)
 
     assert result == _WORKSPACE_API_URL
-    # The bearer is minted for the workspace host (the bare URL) — that
+    # The bearer is minted for the workspace host (the bare URL) â€” that
     # is what the Databricks OAuth token cache is keyed on, not the
     # /api/2.0/agent-meow candidate.
     assert minted_for == [_WORKSPACE]
@@ -754,7 +754,7 @@ def test_workspace_url_hints_when_mount_dark_and_no_cached_grant(
     """Declining a workspace-shaped URL explains itself and the remedy.
 
     Without a cached grant there is nothing to retry with, so the URL
-    is left as given — but a silent decline strands the user on a bare
+    is left as given â€” but a silent decline strands the user on a bare
     workspace URL whose host tunnel can only 404, so the decline must
     name the ``databricks auth login`` remedy.
     """
@@ -767,7 +767,7 @@ def test_workspace_url_hints_when_mount_dark_and_no_cached_grant(
     )
     monkeypatch.setattr(httpx, "get", fake.get)
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.databricks_sdk_installed",
+        "omnigent.onboarding.databricks_config.databricks_sdk_installed",
         lambda: True,
     )
     monkeypatch.setattr(cli_mod, "_databricks_workspace_token", lambda workspace_host: None)
@@ -775,7 +775,7 @@ def test_workspace_url_hints_when_mount_dark_and_no_cached_grant(
     result = cli_mod._workspace_api_server_url(_WORKSPACE)
 
     assert result == _WORKSPACE
-    # No grant resolves → no authenticated retry: exactly the two
+    # No grant resolves â†’ no authenticated retry: exactly the two
     # anonymous probes ran. A third request here would mean a Bearer
     # header was fabricated from nothing.
     assert [r["authorization"] for r in fake.requests] == [None, None]
@@ -792,7 +792,7 @@ def test_workspace_url_hints_when_authed_probe_also_misses(
     """A mount dark even to authenticated probes declines with a hint.
 
     A 404 with valid credentials means agent-meow is genuinely not
-    served on this workspace (or the grant is stale) — the URL is left
+    served on this workspace (or the grant is stale) â€” the URL is left
     as given, and the message distinguishes this from the
     never-logged-in case so the user doesn't loop on `auth login`.
     """
@@ -801,13 +801,13 @@ def test_workspace_url_hints_when_authed_probe_also_misses(
         responses=[
             _response(404, headers={"server": "databricks"}),
             _response(404, headers={"server": "databricks"}),
-            # Mount, authenticated: still 404 — not served here.
+            # Mount, authenticated: still 404 â€” not served here.
             _response(404, headers={"server": "databricks"}),
         ]
     )
     monkeypatch.setattr(httpx, "get", fake.get)
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.databricks_sdk_installed",
+        "omnigent.onboarding.databricks_config.databricks_sdk_installed",
         lambda: True,
     )
     monkeypatch.setattr(cli_mod, "_databricks_workspace_token", lambda workspace_host: "tok-ws")
@@ -819,7 +819,7 @@ def test_workspace_url_hints_when_authed_probe_also_misses(
     # this test would be identical to the no-grant case.
     assert [r["authorization"] for r in fake.requests] == [None, None, "Bearer tok-ws"]
     out = capsys.readouterr().out
-    # The message must say credentials were already tried — pointing
+    # The message must say credentials were already tried â€” pointing
     # the user at `auth login` alone would send them in a circle.
     assert "even with the cached workspace credentials" in out
 
@@ -827,7 +827,7 @@ def test_workspace_url_hints_when_authed_probe_also_misses(
 def test_workspace_url_skips_authed_probe_without_databricks_extra(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No ``databricks`` extra → the token cache is never consulted.
+    """No ``databricks`` extra â†’ the token cache is never consulted.
 
     ``_databricks_workspace_token`` imports the databricks-sdk-backed
     auth resolver; calling it without the extra installed raises
@@ -843,14 +843,14 @@ def test_workspace_url_skips_authed_probe_without_databricks_extra(
     )
     monkeypatch.setattr(httpx, "get", fake.get)
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.databricks_sdk_installed",
+        "omnigent.onboarding.databricks_config.databricks_sdk_installed",
         lambda: False,
     )
 
     def _must_not_mint(workspace_host: str) -> str:
         raise AssertionError(
             "_databricks_workspace_token was called without the databricks "
-            "extra installed — the databricks_sdk_installed() gate in "
+            "extra installed â€” the databricks_sdk_installed() gate in "
             "_cached_workspace_bearer did not short-circuit."
         )
 
@@ -859,11 +859,11 @@ def test_workspace_url_skips_authed_probe_without_databricks_extra(
     result = cli_mod._workspace_api_server_url(_WORKSPACE)
 
     assert result == _WORKSPACE
-    # Only the two anonymous probes — no token, no authed retry.
+    # Only the two anonymous probes â€” no token, no authed retry.
     assert [r["authorization"] for r in fake.requests] == [None, None]
 
 
-# ── schemeless input + web-UI URL acceptance (internal user guide) ──
+# â”€â”€ schemeless input + web-UI URL acceptance (internal user guide) â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -871,11 +871,11 @@ def test_workspace_url_skips_authed_probe_without_databricks_extra(
     [
         # The guide hands out the web URL without a scheme; default https.
         (
-            "dbc-a5d4177a-49dc.cloud.databricks.com/agent_meow",
-            "https://dbc-a5d4177a-49dc.cloud.databricks.com/agent_meow",
+            "dbc-a5d4177a-49dc.cloud.databricks.com/omnigent",
+            "https://dbc-a5d4177a-49dc.cloud.databricks.com/omnigent",
         ),
         ("example.cloud.databricks.com", "https://example.cloud.databricks.com"),
-        # Loopback hosts stay http — local dev servers are plain http.
+        # Loopback hosts stay http â€” local dev servers are plain http.
         ("localhost:6767", "http://localhost:6767"),
         ("127.0.0.1:6767", "http://127.0.0.1:6767"),
         ("[::1]:6767", "http://[::1]:6767"),
@@ -918,7 +918,7 @@ def test_resolve_server_url_defaults_scheme_and_expands(
     )
 
     assert cli_mod._resolve_server_url("example.databricks.com") == _WORKSPACE_API_URL
-    assert cli_mod._resolve_server_url("example.databricks.com/agent_meow") == _WORKSPACE_API_URL
+    assert cli_mod._resolve_server_url("example.databricks.com/omnigent") == _WORKSPACE_API_URL
 
 
 def test_resolve_server_url_strips_query_and_expands(
@@ -927,7 +927,7 @@ def test_resolve_server_url_strips_query_and_expands(
     """A bare workspace URL carrying ``?o=`` still expands to the API mount.
 
     The ``?o=`` selector on the input must not corrupt the probe or defeat
-    expansion — ``agent-meow run --server https://<ws>/?o=<id>`` has to reach
+    expansion â€” ``agent-meow run --server https://<ws>/?o=<id>`` has to reach
     ``/api/2.0/agent-meow`` (the selector rides via the login record /
     ``X-Databricks-Org-Id``, never the base URL). A regression sends every
     request to the workspace root, which bounces to ``/login``.
@@ -943,8 +943,8 @@ def test_resolve_server_url_strips_query_and_expands(
     )
 
     assert cli_mod._resolve_server_url(f"{_WORKSPACE}/?o=2850744067564480") == _WORKSPACE_API_URL
-    # The probes hit the CLEAN root/mount — never a ?o=-corrupted URL (which
-    # would push the path into the query string, e.g. ``…/?o=123/v1/me``).
+    # The probes hit the CLEAN root/mount â€” never a ?o=-corrupted URL (which
+    # would push the path into the query string, e.g. ``â€¦/?o=123/v1/me``).
     assert probed and all("o=" not in url and "%2F" not in url for url in probed)
 
 
@@ -954,7 +954,7 @@ def test_resolve_server_url_strips_query_on_full_mount(
     """A full ``/api/2.0/agent-meow?o=`` URL returns the clean mount with no probe.
 
     When the user already passes the mount path, only the ``?o=`` needs
-    stripping — the path-carrying URL is returned untouched (no network probe).
+    stripping â€” the path-carrying URL is returned untouched (no network probe).
     """
     probed = _scripted_normalizer_httpx(monkeypatch, {})  # any probe fails the test
 
@@ -985,9 +985,9 @@ def test_workspace_url_expands_web_ui_path_to_api_mount(
         },
     )
 
-    assert cli_mod._workspace_api_server_url(f"{_WORKSPACE}/agent_meow") == _WORKSPACE_API_URL
-    # The bare root and its API mount were probed — never the UI path itself.
-    assert f"{_WORKSPACE}/agent_meow/v1/me" not in probed
+    assert cli_mod._workspace_api_server_url(f"{_WORKSPACE}/omnigent") == _WORKSPACE_API_URL
+    # The bare root and its API mount were probed â€” never the UI path itself.
+    assert f"{_WORKSPACE}/omnigent/v1/me" not in probed
 
 
 def test_workspace_url_web_ui_path_left_alone_off_workspace(
@@ -1020,7 +1020,7 @@ def test_login_defaults_scheme_to_https(monkeypatch: pytest.MonkeyPatch, token_d
     to https so the probe reaches the workspace API proxy and the stored
     record keys on the https URL.
     """
-    from agent_meow.cli_auth import load_databricks_workspace_host
+    from omnigent.cli_auth import load_databricks_workspace_host
 
     fake = _FakeHttpx(
         responses=[
@@ -1030,8 +1030,8 @@ def test_login_defaults_scheme_to_https(monkeypatch: pytest.MonkeyPatch, token_d
     )
     _patch_login_env(monkeypatch, fake_httpx=fake)
 
-    # Schemeless input (no https://) — the guide hands out bare URLs.
-    result = CliRunner().invoke(cli_group, ["login", "example.databricks.com/api/2.0/agent_meow"])
+    # Schemeless input (no https://) â€” the guide hands out bare URLs.
+    result = CliRunner().invoke(cli_group, ["login", "example.databricks.com/api/2.0/omnigent"])
 
     assert result.exit_code == 0, result.output
     # The probe used the https:// default, and the record keys on it.

@@ -12,11 +12,11 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.entities import SessionPermission
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.entities import SessionPermission
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.permission_store.sqlalchemy_store import (
+from omnigent.stores.permission_store.sqlalchemy_store import (
     SqlAlchemyPermissionStore,
 )
 
@@ -573,8 +573,8 @@ def test_cascade_delete_removes_permissions_when_conversation_deleted(
     # Delete the conversation directly via SQLAlchemy to trigger FK CASCADE.
     from sqlalchemy import delete as sa_delete
 
-    from agent_meow.db.db_models import SqlConversation
-    from agent_meow.db.utils import get_or_create_engine, make_managed_session_maker
+    from omnigent.db.db_models import SqlConversation
+    from omnigent.db.utils import get_or_create_engine, make_managed_session_maker
 
     engine = get_or_create_engine(db_uri)
     session_maker = make_managed_session_maker(engine)
@@ -608,8 +608,8 @@ def test_cascade_delete_does_not_affect_other_sessions(
     # Delete conv_a.
     from sqlalchemy import delete as sa_delete
 
-    from agent_meow.db.db_models import SqlConversation
-    from agent_meow.db.utils import get_or_create_engine, make_managed_session_maker
+    from omnigent.db.db_models import SqlConversation
+    from omnigent.db.utils import get_or_create_engine, make_managed_session_maker
 
     engine = get_or_create_engine(db_uri)
     session_maker = make_managed_session_maker(engine)
@@ -976,7 +976,7 @@ def test_check_access_direct_grant(store: SqlAlchemyPermissionStore, db_uri: str
 
 def test_check_access_public_grant_fallback(store: SqlAlchemyPermissionStore, db_uri: str) -> None:
     """check_access falls back to __public__ grant when user has no direct grant."""
-    from agent_meow.server.auth import RESERVED_USER_PUBLIC
+    from omnigent.server.auth import RESERVED_USER_PUBLIC
 
     _ensure_user(store, "alice")
     _ensure_user(store, RESERVED_USER_PUBLIC)
@@ -1015,7 +1015,7 @@ def test_get_permission_level_admin_gets_owner(
     store: SqlAlchemyPermissionStore, db_uri: str
 ) -> None:
     """get_permission_level returns LEVEL_OWNER for admin users."""
-    from agent_meow.server.auth import LEVEL_OWNER
+    from omnigent.server.auth import LEVEL_OWNER
 
     store.ensure_user("admin_user", is_admin=True)
     conv = _create_conversation(db_uri)
@@ -1027,7 +1027,7 @@ def test_get_permission_level_public_fallback(
     store: SqlAlchemyPermissionStore, db_uri: str
 ) -> None:
     """get_permission_level falls back to public grant when no direct grant."""
-    from agent_meow.server.auth import RESERVED_USER_PUBLIC
+    from omnigent.server.auth import RESERVED_USER_PUBLIC
 
     _ensure_user(store, "alice")
     _ensure_user(store, RESERVED_USER_PUBLIC)

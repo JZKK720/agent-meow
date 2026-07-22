@@ -28,15 +28,15 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server.app import create_app
-from agent_meow.server.auth import LEVEL_EDIT
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server.app import create_app
+from omnigent.server.auth import LEVEL_EDIT
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 from tests.server.conftest import ControllableMockClient
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ def auth_app(
     tmp_path: Path,
 ) -> FastAPI:
     """App with permission store enabled (auth active)."""
-    from agent_meow.server.auth import UnifiedAuthProvider
+    from omnigent.server.auth import UnifiedAuthProvider
 
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     return create_app(
@@ -107,8 +107,8 @@ async def auth_client(
     tmp_path: Path,
 ) -> AsyncIterator[httpx.AsyncClient]:
     """Async HTTP client wired to the auth-enabled app."""
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()

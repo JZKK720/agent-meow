@@ -27,8 +27,8 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.entities.conversation import MessageData, NewConversationItem
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.entities.conversation import MessageData, NewConversationItem
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 from tests.server.helpers import create_test_agent

@@ -4,31 +4,31 @@ Re-homes three suppressed e2e tests that lived in
 ``tests/e2e/test_sys_terminal_e2e.py`` and only stayed red because they
 drove the **removed** ``POST /v1/responses`` route (plus
 ``poll_until_terminal``'s ``GET /v1/responses/{id}``). That route no
-longer exists under ``agent_meow/server/routes/``; the cited
+longer exists under ``omnigent/server/routes/``; the cited
 "500 / runner availability" reason on issue 532 was a stale
 misdiagnosis. These replacements drive the current runner-bound
-sessions API in mock-LLM mode instead — the same path the merged D6
+sessions API in mock-LLM mode instead â€” the same path the merged D6
 re-homes (``test_d6_async_cancel_round_trip``,
 ``test_d6_parallel_fan_out_round_trip``) use.
 
 Why this faithfully exercises the same surface
 -----------------------------------------------
 ``sys_terminal_*`` are AP-side / server-executed tools (the runner's
-tool dispatcher runs ``TerminalRegistry`` → real tmux and threads the
+tool dispatcher runs ``TerminalRegistry`` â†’ real tmux and threads the
 result back to the model), NOT client-side ``action_required`` tools.
 So a mock LLM scripted to emit ``sys_terminal_launch`` / ``send`` /
 ``read`` / ``list`` / ``close`` calls actually drives real tmux on the
-server — no external client has to fulfill anything. The agent loop
+server â€” no external client has to fulfill anything. The agent loop
 consumes exactly one queued mock response per model call, so a single
 user turn with a queue of ``[launch, send, read, ..., final_text]``
 executes the steps in strict sequential order (each tool result is
 posted back before the next queued response is consumed). That gives
-the same launch→send→read→list→close ordering the old real-LLM e2e
+the same launchâ†’sendâ†’readâ†’listâ†’close ordering the old real-LLM e2e
 relied on, without trusting an LLM to follow a prompt.
 
 Harness choice
 --------------
-Runs on the ``openai-agents`` harness — the default in mock mode (see
+Runs on the ``openai-agents`` harness â€” the default in mock mode (see
 ``tests/integration/conftest.py::harness_name``). The mock LLM speaks
 the OpenAI ``/v1/responses`` SSE shape that harness consumes. Terminal
 tool execution is harness-agnostic (it is a runner-side registry
@@ -42,13 +42,13 @@ Coverage deltas vs. the old e2e (honest notes)
 ----------------------------------------------
 * The old tests proved a *real LLM* chose to call the tools from a
   natural-language prompt. The mock layer scripts the calls, so it does
-  NOT prove prompt-following / tool-selection — only that the
+  NOT prove prompt-following / tool-selection â€” only that the
   server-executed terminal plumbing round-trips correctly. The
-  registration→dispatch→tmux→result path, the load-bearing behavior, is
+  registrationâ†’dispatchâ†’tmuxâ†’result path, the load-bearing behavior, is
   exercised identically.
 * Markers are produced by the shell itself (``echo`` output captured by
   ``sys_terminal_read``), so a passing assertion still proves data flowed
-  send→tmux→read, exactly as before.
+  sendâ†’tmuxâ†’read, exactly as before.
 
 Runs in mock mode (no ``--llm-api-key``); the ``tests/integration``
 package gate is lifted in mock mode by
@@ -215,7 +215,7 @@ def terminal_session(
 ) -> tuple[str, str]:
     """A fresh runner-bound session on an inline agent with terminals enabled.
 
-    :returns: ``(session_id, model_name)`` — the model name keys the
+    :returns: ``(session_id, model_name)`` â€” the model name keys the
         mock LLM response queue.
     """
     if shutil.which("tmux") is None:
@@ -237,7 +237,7 @@ def test_sys_terminal_basic_round_trip(
     terminal_session: tuple[str, str],
     mock_llm_server_url: str | None,
 ) -> None:
-    """Launch → send (echo a marker) → read → the marker comes back.
+    """Launch â†’ send (echo a marker) â†’ read â†’ the marker comes back.
 
     Re-homes ``test_sys_terminal_basic_round_trip_e2e``. The mock LLM
     is scripted with one tool call per loop step; the agent executes
@@ -248,7 +248,7 @@ def test_sys_terminal_basic_round_trip(
       AP-side terminal result),
     * the first launch reports ``status="launched"``,
     * the unique marker echoed by ``echo`` appears in a
-      ``sys_terminal_read`` capture — proving send reached tmux and
+      ``sys_terminal_read`` capture â€” proving send reached tmux and
       read saw the output.
 
     Two reads are scripted purely for timing resilience: ``echo``
@@ -334,21 +334,21 @@ def test_sys_terminal_full_workflow(
     """All five ``sys_terminal_*`` tools, in one ordered sequence.
 
     Re-homes ``test_sys_terminal_full_workflow_e2e``:
-    launch → send (echo a marker) → read → list → close → list. Asserts
+    launch â†’ send (echo a marker) â†’ read â†’ list â†’ close â†’ list. Asserts
     state at each step:
 
     * all five tools produced output (so list/close, which the focused
       round-trip test never exercises, have coverage here),
     * the echoed marker is captured by read,
     * a ``list`` call shows ``bash:investigate`` running (pre-close),
-      and a later ``list`` no longer shows it (post-close) — the only
+      and a later ``list`` no longer shows it (post-close) â€” the only
       check that ``close`` removed the registry entry, not just killed
       the process,
     * ``close`` returned ``status="closed"`` (not ``not_found``).
 
     Because the agent loop consumes the scripted calls in strict order,
     the pre-close list provably runs before close and the post-close
-    list after — no reliance on an LLM to order the steps.
+    list after â€” no reliance on an LLM to order the steps.
     """
     session_id, model_name = terminal_session
     marker = f"FULL_WORKFLOW_MARKER_{uuid.uuid4().hex[:8]}"
@@ -480,7 +480,7 @@ def test_sys_terminal_send_keys_drives_interactive(
 ) -> None:
     """Two distinct sends drive an interactive Python REPL across calls.
 
-    Re-homes ``test_sys_terminal_send_keys_drives_interactive_e2e`` —
+    Re-homes ``test_sys_terminal_send_keys_drives_interactive_e2e`` â€”
     the load-bearing capability ``sys_terminal_*`` adds over a one-shot
     ``sys_os_shell``: a process that stays alive across two separate
     ``send`` calls, with the second send interpreted by the live process
@@ -490,11 +490,11 @@ def test_sys_terminal_send_keys_drives_interactive(
     2. send ``python3`` + Enter (start the REPL),
     3. send ``print(2+2)`` + Enter (the second send the REPL must
        interpret),
-    4. read (x3 for timing resilience — see below).
+    4. read (x3 for timing resilience â€” see below).
 
     Asserts ``>= 2`` sends fired (a single merged send would not prove
-    interactive driving) and that ``4`` — the REPL's evaluation of the
-    *second* send — appears in a read capture. The two sends crossing
+    interactive driving) and that ``4`` â€” the REPL's evaluation of the
+    *second* send â€” appears in a read capture. The two sends crossing
     Enter-key handling and the REPL surviving between them is what
     distinguishes this from a stateless shell command.
 
@@ -502,7 +502,7 @@ def test_sys_terminal_send_keys_drives_interactive(
     assertions (``>=2`` sends + ``4`` in the pane). The only difference
     is the calls are scripted rather than chosen by a real LLM, so this
     does not prove a model would *decide* to drive the REPL with two
-    sends — only that the server-side send/Enter/REPL plumbing works
+    sends â€” only that the server-side send/Enter/REPL plumbing works
     when it does. Three reads (extra model round-trips) give the cold
     ``python3`` interpreter time to boot and evaluate before capture;
     the old e2e leaned on real-LLM "wait briefly" pauses for the same

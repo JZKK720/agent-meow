@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_meow.entities.pagination import PagedList, paginate_in_memory
+from omnigent.entities.pagination import PagedList, paginate_in_memory
 
 # ── PagedList ─────────────────────────────────────────
 

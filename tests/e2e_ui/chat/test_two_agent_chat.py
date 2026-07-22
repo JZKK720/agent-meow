@@ -55,7 +55,7 @@ none of which any other UI test touches:
 - the right-rail Agents tab and SubagentsPanel child row + status dot
   (web/src/shell/SubagentsPanel.tsx);
 - navigation into the child's own `/c/<child-id>` session and back;
-- round 2: a follow-up relayed to the SAME child (named continuation —
+- round 2: a follow-up relayed to the SAME child (named continuation â€”
   one child row after two rounds, the D6 ambient-hint behavior that was
   previously only API-tested), with the child transcript accumulating
   both exchanges.
@@ -78,7 +78,7 @@ from playwright.sync_api import Page, expect
 
 from tests.e2e_ui.conftest import TwoAgentChatSession, open_right_rail
 
-_COMPOSER = "Ask the agent anything…"
+_COMPOSER = "Ask the agent anythingâ€¦"
 _ASSISTANT = '[data-testid="message-bubble"][data-role="assistant"]'
 _WORKING = '[data-testid="working-indicator"]'
 _SUBAGENT_ROW = '[data-testid="subagent-row"]'
@@ -121,7 +121,7 @@ def _expect_dispatch_tool_call_rendered(page: Page) -> None:
     first. The trigger renders toolTitle.ts's raw-name fallback
     ("sys_session_send(...)"), not the friendly "Start child session:"
     verb: sessionTitle() reads `tool`/`session` args while the named
-    spawn schema (agent_meow/tools/builtins/spawn.py) sends `agent`/`title`,
+    spawn schema (omnigent/tools/builtins/spawn.py) sends `agent`/`title`,
     so the formatter never matches. If this starts failing with the
     friendly verb present instead, that mismatch was fixed and this
     should assert "Start child session:".
@@ -210,7 +210,7 @@ def test_two_agents_discuss_hitchhikers_guide(
         "including its verification code.",
     )
     _expect_relayed_reply(page, chat.verification_code)
-    # Deep Thought's Answer itself rendered too — the relay was verbatim.
+    # Deep Thought's Answer itself rendered too â€” the relay was verbatim.
     expect(page.locator(_ASSISTANT, has_text="42").first).to_be_visible()
     _expect_dispatch_tool_call_rendered(page)
 
@@ -228,8 +228,8 @@ def test_two_agents_discuss_hitchhikers_guide(
     )
     _expect_relayed_reply(page, chat.question_code)
 
-    # Same single Deep Thought — round 2 continued the round-1 child
-    # instead of spawning a second one — and his transcript accumulated
+    # Same single Deep Thought â€” round 2 continued the round-1 child
+    # instead of spawning a second one â€” and his transcript accumulated
     # both exchanges.
     assert _expect_single_deep_thought_row(page) == child_session_id, (
         "round 2 should continue the round-1 deep_thought session, but the "

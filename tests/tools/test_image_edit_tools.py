@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from agent_meow.tools.builtins.images import (
+from omnigent.tools.builtins.images import (
     ImageEditAiTool,
     ImageGenerateTool,
     ImageRemoveBgTool,

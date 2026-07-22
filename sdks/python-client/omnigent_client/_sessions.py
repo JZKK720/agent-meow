@@ -30,7 +30,7 @@ from typing import Any
 import httpx
 from pydantic import TypeAdapter
 
-from agent_meow.server.schemas import ServerStreamEvent
+from omnigent.server.schemas import ServerStreamEvent
 
 from ._child_status import child_summary_busy
 from ._errors import raise_for_status, require_json_object, response_body

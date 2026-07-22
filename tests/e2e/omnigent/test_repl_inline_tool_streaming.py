@@ -11,9 +11,9 @@ rendering path.
 
 **What breakage would surface here:**
 - ``_translate_omnigent_event`` reverts to buffering function_call
-  events — call lines render only at flush, AFTER assistant text.
+  events â€” call lines render only at flush, AFTER assistant text.
 - ``_dispatch_action_required`` stops emitting inline
-  ``function_call_output`` — result panels bunch at end-of-turn.
+  ``function_call_output`` â€” result panels bunch at end-of-turn.
 - ``BlockStream`` reverts to deferring ``ToolResultBlock`` yields.
 """
 
@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
@@ -29,7 +29,7 @@ from tests.e2e.agent_meow._pexpect_harness import (
     submit_prompt,
     wait_for_ready,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _MODEL = "mock-inline-tool-streaming"
 _HARNESS = "openai-agents"
@@ -100,14 +100,14 @@ def test_repl_inline_tool_call_and_result_streaming(
             running_timeout=_RUNNING_TIMEOUT,
             completion_timeout=_COMPLETION_TIMEOUT,
             running_marker=r"working",
-            completion_pattern=r"❯ ",
+            completion_pattern=r"â¯ ",
         )
         clean_exit(child, timeout=_EXIT_TIMEOUT)
     finally:
         if not child.closed:
             child.close(force=True)
 
-    # The turn completed — verify the done marker appeared in the rendered
+    # The turn completed â€” verify the done marker appeared in the rendered
     # output, proving the tool call round-trip completed successfully.
     combined = turn.stripped + "\n" + strip_ansi(child.before or "")
     assert _DONE_MARKER in combined, (

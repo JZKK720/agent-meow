@@ -1,6 +1,6 @@
 """Tests for the Antigravity (agy) launch-config module.
 
-No live agy calls are made — all external dependencies (shutil.which,
+No live agy calls are made â€” all external dependencies (shutil.which,
 gemini_auth_has_credential, agy_binary_path) are monkeypatched.
 """
 
@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-import agent_meow.antigravity_native_launch as _mod
-from agent_meow.antigravity_native_launch import (
+import omnigent.antigravity_native_launch as _mod
+from omnigent.antigravity_native_launch import (
     NativeAntigravityLaunch,
     agy_binary_path,
     build_agy_launch,
@@ -80,7 +80,7 @@ class TestResolveNativeAntigravityLaunch:
     ) -> None:
         """Return subscription mode when Gemini credential is detected."""
         monkeypatch.setattr(
-            "agent_meow.antigravity_native_launch.gemini_auth_has_credential",
+            "omnigent.antigravity_native_launch.gemini_auth_has_credential",
             lambda: True,
         )
         result = resolve_native_antigravity_launch()
@@ -92,7 +92,7 @@ class TestResolveNativeAntigravityLaunch:
     ) -> None:
         """Return subscription mode even when no Gemini credential is found."""
         monkeypatch.setattr(
-            "agent_meow.antigravity_native_launch.gemini_auth_has_credential",
+            "omnigent.antigravity_native_launch.gemini_auth_has_credential",
             lambda: False,
         )
         result = resolve_native_antigravity_launch()
@@ -102,7 +102,7 @@ class TestResolveNativeAntigravityLaunch:
     def test_passes_model_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Model kwarg is forwarded to NativeAntigravityLaunch."""
         monkeypatch.setattr(
-            "agent_meow.antigravity_native_launch.gemini_auth_has_credential",
+            "omnigent.antigravity_native_launch.gemini_auth_has_credential",
             lambda: True,
         )
         result = resolve_native_antigravity_launch(model="gemini-2.5-pro")
@@ -111,7 +111,7 @@ class TestResolveNativeAntigravityLaunch:
     def test_model_none_by_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Model defaults to None when not provided."""
         monkeypatch.setattr(
-            "agent_meow.antigravity_native_launch.gemini_auth_has_credential",
+            "omnigent.antigravity_native_launch.gemini_auth_has_credential",
             lambda: True,
         )
         result = resolve_native_antigravity_launch()
@@ -122,12 +122,12 @@ class TestResolveNativeAntigravityLaunch:
     ) -> None:
         """A warning naming both token paths is logged when no agy credential is found."""
         monkeypatch.setattr(
-            "agent_meow.antigravity_native_launch.gemini_auth_has_credential",
+            "omnigent.antigravity_native_launch.gemini_auth_has_credential",
             lambda: False,
         )
         import logging
 
-        with caplog.at_level(logging.WARNING, logger="agent_meow.antigravity_native_launch"):
+        with caplog.at_level(logging.WARNING, logger="omnigent.antigravity_native_launch"):
             resolve_native_antigravity_launch()
         records = [r.message for r in caplog.records]
         assert any("agy OAuth credential" in m for m in records)
@@ -283,11 +283,11 @@ class TestBuildAgyLaunch:
         assert argv[-2:] == ["--print-timeout", "30"]
 
     # ------------------------------------------------------------------
-    # Permission-mode → --dangerously-skip-permissions (phase 4 task 1)
+    # Permission-mode â†’ --dangerously-skip-permissions (phase 4 task 1)
     # ------------------------------------------------------------------
 
     def test_bypass_mode_appends_skip_flag(self, fake_agy: str) -> None:
-        """bypassPermissions → the skip flag is present in argv."""
+        """bypassPermissions â†’ the skip flag is present in argv."""
         argv, _ = build_agy_launch(
             conversation_id=None,
             model=None,
@@ -298,7 +298,7 @@ class TestBuildAgyLaunch:
         assert _SKIP_FLAG in argv
 
     def test_non_bypass_interactive_omits_skip_flag(self, fake_agy: str) -> None:
-        """Non-bypass mode + interactive (attended) → the skip flag is absent."""
+        """Non-bypass mode + interactive (attended) â†’ the skip flag is absent."""
         argv, _ = build_agy_launch(
             conversation_id=None,
             model=None,
@@ -309,7 +309,7 @@ class TestBuildAgyLaunch:
         assert _SKIP_FLAG not in argv
 
     def test_non_bypass_headless_appends_skip_flag(self, fake_agy: str) -> None:
-        """Non-bypass mode + headless → the skip flag is auto-added (no hang)."""
+        """Non-bypass mode + headless â†’ the skip flag is auto-added (no hang)."""
         argv, _ = build_agy_launch(
             conversation_id=None,
             model=None,

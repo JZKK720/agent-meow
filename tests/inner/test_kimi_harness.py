@@ -15,15 +15,15 @@ from unittest.mock import patch
 
 import pytest
 
-from agent_meow.inner import kimi_executor, kimi_harness
-from agent_meow.inner.executor import (
+from omnigent.inner import kimi_executor, kimi_harness
+from omnigent.inner.executor import (
     ExecutorError,
     TextChunk,
     ToolCallComplete,
     ToolCallRequest,
     TurnComplete,
 )
-from agent_meow.inner.kimi_executor import (
+from omnigent.inner.kimi_executor import (
     _SESSION_RESUME_RE,
     KimiExecutor,
     _latest_user_text,
@@ -31,8 +31,8 @@ from agent_meow.inner.kimi_executor import (
     _resolve_kimi_binary,
     _resolve_skills_dirs,
 )
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
-from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESS_ALIASES, OMNIGENT_HARNESSES
+from omnigent.runtime.harnesses import _HARNESS_MODULES
+from omnigent.spec._omnigent_compat import OMNIGENT_HARNESS_ALIASES, OMNIGENT_HARNESSES
 
 # ---------------------------------------------------------------------------
 # Registry / allowlist
@@ -40,8 +40,8 @@ from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESS_ALIASES, OMNIGENT_
 
 
 def test_kimi_in_module_registry() -> None:
-    assert _HARNESS_MODULES.get("kimi") == "agent_meow.inner.kimi_harness"
-    assert _HARNESS_MODULES.get("kimi-code") == "agent_meow.inner.kimi_harness"
+    assert _HARNESS_MODULES.get("kimi") == "omnigent.inner.kimi_harness"
+    assert _HARNESS_MODULES.get("kimi-code") == "omnigent.inner.kimi_harness"
 
 
 def test_kimi_in_omnigent_harnesses_allowlist() -> None:
@@ -50,7 +50,7 @@ def test_kimi_in_omnigent_harnesses_allowlist() -> None:
 
 
 def test_kimi_canonical_alias_resolution() -> None:
-    from agent_meow.harness_aliases import canonicalize_harness
+    from omnigent.harness_aliases import canonicalize_harness
 
     assert canonicalize_harness("kimi-code") == "kimi"
     assert canonicalize_harness("kimi") == "kimi"
@@ -82,7 +82,7 @@ def test_executor_factory_reads_env_vars(monkeypatch: pytest.MonkeyPatch) -> Non
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.kimi_harness.KimiExecutor.__init__",
+        "omnigent.inner.kimi_harness.KimiExecutor.__init__",
         _fake_init,
     ):
         kimi_harness._build_kimi_executor()
@@ -115,7 +115,7 @@ def test_executor_factory_defaults_when_env_unset(monkeypatch: pytest.MonkeyPatc
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.kimi_harness.KimiExecutor.__init__",
+        "omnigent.inner.kimi_harness.KimiExecutor.__init__",
         _fake_init,
     ):
         kimi_harness._build_kimi_executor()
@@ -131,8 +131,8 @@ def test_executor_factory_defaults_when_env_unset(monkeypatch: pytest.MonkeyPatc
 def test_executor_factory_falls_back_to_runner_workspace_cwd(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With no HARNESS_KIMI_CWD, kimi runs in OMNIGENT_RUNNER_WORKSPACE — the
-    session workspace the user launched in — not the runner's /tmp cwd.
+    """With no HARNESS_KIMI_CWD, kimi runs in OMNIGENT_RUNNER_WORKSPACE â€” the
+    session workspace the user launched in â€” not the runner's /tmp cwd.
 
     Regression: kimi lacked the workspace fallback the other SDK harnesses have,
     so `omni --harness kimi` launched in the repo but kimi's tools reported the
@@ -143,7 +143,7 @@ def test_executor_factory_falls_back_to_runner_workspace_cwd(
 
     captured: dict[str, Any] = {}
     with patch(
-        "agent_meow.inner.kimi_harness.KimiExecutor.__init__",
+        "omnigent.inner.kimi_harness.KimiExecutor.__init__",
         lambda self, **kwargs: captured.update(kwargs),
     ):
         kimi_harness._build_kimi_executor()
@@ -153,7 +153,7 @@ def test_executor_factory_falls_back_to_runner_workspace_cwd(
     monkeypatch.setenv("HARNESS_KIMI_CWD", "/tmp/explicit")
     captured.clear()
     with patch(
-        "agent_meow.inner.kimi_harness.KimiExecutor.__init__",
+        "omnigent.inner.kimi_harness.KimiExecutor.__init__",
         lambda self, **kwargs: captured.update(kwargs),
     ):
         kimi_harness._build_kimi_executor()
@@ -168,7 +168,7 @@ def test_malformed_os_env_falls_back_to_default(monkeypatch: pytest.MonkeyPatch)
         captured["os_env"] = kwargs["os_env"]
 
     with patch(
-        "agent_meow.inner.kimi_harness.KimiExecutor.__init__",
+        "omnigent.inner.kimi_harness.KimiExecutor.__init__",
         _fake_init,
     ):
         kimi_harness._build_kimi_executor()
@@ -246,7 +246,7 @@ def test_latest_user_text_drops_image_blocks_with_warning(
 ) -> None:
     import logging
 
-    caplog.set_level(logging.WARNING, logger="agent_meow.inner.kimi_executor")
+    caplog.set_level(logging.WARNING, logger="omnigent.inner.kimi_executor")
     messages = [
         {
             "role": "user",
@@ -497,7 +497,7 @@ class _FakeProcess:
     async def wait(self) -> int:
         return self._returncode
 
-    def terminate(self) -> None:  # pragma: no cover — happy path doesn't terminate
+    def terminate(self) -> None:  # pragma: no cover â€” happy path doesn't terminate
         pass
 
     def kill(self) -> None:  # pragma: no cover
@@ -512,7 +512,7 @@ async def _collect(ex: KimiExecutor, messages: list[dict[str, Any]]) -> list[Any
 
 
 def test_run_turn_streams_text_and_emits_turn_complete(monkeypatch: pytest.MonkeyPatch) -> None:
-    """End-to-end: assistant text + meta resume_hint → TextChunk + session id captured."""
+    """End-to-end: assistant text + meta resume_hint â†’ TextChunk + session id captured."""
     stdout_lines = [
         json.dumps({"role": "assistant", "content": "Hi there!"}),
         json.dumps(
@@ -547,7 +547,7 @@ def test_run_turn_streams_text_and_emits_turn_complete(monkeypatch: pytest.Monke
     assert turn_completes and turn_completes[0].response == "Hi there!"
     assert ex._session_id == "session_abc12345-6789"
     assert captured_argv[0] == "kimi"
-    # No --print on upstream — make sure we don't reintroduce it.
+    # No --print on upstream â€” make sure we don't reintroduce it.
     assert "--print" not in captured_argv
     assert "--output-format" in captured_argv
     assert "stream-json" in captured_argv
@@ -624,7 +624,7 @@ def test_run_turn_no_resume_hint_leaves_session_id_none(
 ) -> None:
     """When neither a meta event nor the stderr footer surfaces a resume id,
     ``_session_id`` stays ``None`` so the next turn omits ``-S`` and starts a
-    fresh kimi session — never an invented uuid that upstream might reject."""
+    fresh kimi session â€” never an invented uuid that upstream might reject."""
     fake = _FakeProcess(
         [json.dumps({"role": "assistant", "content": "hi"})],
         b"",  # no resume footer
@@ -666,8 +666,8 @@ def test_run_turn_passes_generous_stream_limit(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_sandbox_launch_path_bare_binary_when_no_sandbox() -> None:
-    """No os_env (or sandbox=none) → spawn the bare binary, never a launcher."""
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    """No os_env (or sandbox=none) â†’ spawn the bare binary, never a launcher."""
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     assert KimiExecutor(binary_path="kimi")._sandbox_launch_path(()) == "kimi"
 
@@ -683,8 +683,8 @@ def test_sandbox_launch_path_wraps_when_sandbox_requested(
 ) -> None:
     """A spec requesting confinement routes the binary through the platform
     sandbox launcher so kimi's in-process tools run jailed."""
-    from agent_meow.inner import sandbox as sandbox_mod
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner import sandbox as sandbox_mod
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     class _ActivePolicy:
         active = True
@@ -760,11 +760,11 @@ def test_run_turn_warns_once_when_tools_declared(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Tools on the spec are silently dropped (no MCP bridge on upstream kimi
-    yet) — we should warn exactly once per session.
+    yet) â€” we should warn exactly once per session.
     """
     import logging
 
-    caplog.set_level(logging.WARNING, logger="agent_meow.inner.kimi_executor")
+    caplog.set_level(logging.WARNING, logger="omnigent.inner.kimi_executor")
 
     def _make_fake() -> _FakeProcess:
         return _FakeProcess(

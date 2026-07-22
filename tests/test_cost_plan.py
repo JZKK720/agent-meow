@@ -1,6 +1,6 @@
-"""Tests for :mod:`~?agent_meow.cost_plan` — the advisor v3 verdict contract.
+"""Tests for :mod:`~?omnigent.cost_plan` â€” the advisor v3 verdict contract.
 
-Covers the single-verdict label round-trip (serialize → parse), the
+Covers the single-verdict label round-trip (serialize â†’ parse), the
 fail-loud paths for malformed v3 labels, the tolerated legacy-v2 label
 (parses to ``None`` rather than crashing the reader), tier ranking, the
 reserved-namespace helper, and the one-line ``describe_verdict`` summary.
@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from agent_meow.cost_plan import (
+from omnigent.cost_plan import (
     COST_CONTROL_PLAN_LABEL,
     PLAN_VERSION,
     TIER_ORDER,
@@ -45,7 +45,7 @@ def _verdict(
     )
 
 
-# ── Tier ordering ────────────────────────────────────────────────────────────
+# â”€â”€ Tier ordering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -70,7 +70,7 @@ def test_tier_order_is_cheap_medium_expensive() -> None:
     assert TIER_ORDER == ("cheap", "medium", "expensive")
 
 
-# ── Reserved namespace helper ──────────────────────────────────────────────────
+# â”€â”€ Reserved namespace helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_reserved_cost_control_keys_filters_namespace() -> None:
@@ -78,7 +78,7 @@ def test_reserved_cost_control_keys_filters_namespace() -> None:
     keys = reserved_cost_control_keys(
         {"cost_control.plan": "{}", "team": "ml", "cost_control.other": "x"}
     )
-    # Both reserved keys, the unrelated "team" key dropped — proves the
+    # Both reserved keys, the unrelated "team" key dropped â€” proves the
     # server's reserved-label gate sees exactly the advisor namespace.
     assert keys == ("cost_control.plan", "cost_control.other")
 
@@ -88,7 +88,7 @@ def test_reserved_cost_control_keys_empty_when_none() -> None:
     assert reserved_cost_control_keys({"team": "ml"}) == ()
 
 
-# ── Round-trip ─────────────────────────────────────────────────────────────────
+# â”€â”€ Round-trip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize("applied", [True, False])
@@ -121,7 +121,7 @@ def test_parse_verdict_absent_label_is_none() -> None:
     assert parse_verdict({"team": "ml"}) is None
 
 
-# ── Legacy tolerance ───────────────────────────────────────────────────────────
+# â”€â”€ Legacy tolerance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_verdict_tolerates_legacy_v2_label() -> None:
@@ -148,7 +148,7 @@ def test_parse_verdict_tolerates_legacy_v1_label() -> None:
     assert parse_verdict({COST_CONTROL_PLAN_LABEL: legacy_v1}) is None
 
 
-# ── Fail-loud on a corrupt v3 label ─────────────────────────────────────────────
+# â”€â”€ Fail-loud on a corrupt v3 label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_verdict_invalid_json_raises() -> None:
@@ -215,7 +215,7 @@ def test_parse_verdict_non_bool_applied_raises() -> None:
         parse_verdict({COST_CONTROL_PLAN_LABEL: raw})
 
 
-# ── describe_verdict ────────────────────────────────────────────────────────────
+# â”€â”€ describe_verdict â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_describe_verdict_is_model_and_tier() -> None:
@@ -258,7 +258,7 @@ def test_label_value_preserves_non_ascii_rationale_within_budget() -> None:
         tier="expensive",
         model="databricks-claude-opus-4-8",
         applied=True,
-        rationale="复杂重构任务" * 12,  # ~72 CJK chars, overflows the column
+        rationale="å¤æ‚é‡æž„ä»»åŠ¡" * 12,  # ~72 CJK chars, overflows the column
         turn_anchor="2026-06-11T05:30:45.670436+00:00",
     )
     value = verdict_to_label_value(verdict)
@@ -268,7 +268,7 @@ def test_label_value_preserves_non_ascii_rationale_within_budget() -> None:
     # The rationale survives as a trimmed prefix, not destroyed to null.
     assert parsed.rationale is not None
     assert parsed.rationale.endswith("...")
-    assert parsed.rationale.startswith("复杂重构")
+    assert parsed.rationale.startswith("å¤æ‚é‡æž„")
 
 
 def test_label_value_keeps_short_non_ascii_rationale_verbatim() -> None:
@@ -277,12 +277,12 @@ def test_label_value_keeps_short_non_ascii_rationale_verbatim() -> None:
         tier="cheap",
         model="databricks-claude-haiku-4-5",
         applied=False,
-        rationale="简单任务",
+        rationale="ç®€å•ä»»åŠ¡",
         turn_anchor=_ANCHOR,
     )
     parsed = parse_verdict({COST_CONTROL_PLAN_LABEL: verdict_to_label_value(verdict)})
     assert parsed is not None
-    assert parsed.rationale == "简单任务"
+    assert parsed.rationale == "ç®€å•ä»»åŠ¡"
 
 
 def test_label_value_caps_escape_heavy_rationale() -> None:

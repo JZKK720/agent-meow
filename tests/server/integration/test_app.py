@@ -7,15 +7,15 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server import app as app_module
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server import app as app_module
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 pytestmark = pytest.mark.asyncio
 
@@ -197,7 +197,7 @@ async def test_host_routes_mounted_with_host_store(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """With a host_store configured, the host REST routes are mounted."""
-    from agent_meow.stores.host_store import HostStore
+    from omnigent.stores.host_store import HostStore
 
     monkeypatch.setattr(app_module, "_WEB_UI_DIST", tmp_path / "missing-web-ui")
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
@@ -241,7 +241,7 @@ async def test_me_header_mode_behaviors(
         ``OMNIGENT_LOCAL_SINGLE_USER`` so the strict (deployed
         multi-user) posture is under test.
     """
-    from agent_meow.server.auth import create_auth_provider
+    from omnigent.server.auth import create_auth_provider
 
     monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "header")
     monkeypatch.delenv("OMNIGENT_LOCAL_SINGLE_USER", raising=False)
@@ -307,7 +307,7 @@ async def test_me_is_admin_honors_admin_list_before_db_promotion(
         roster containing ``alice`` — whose DB row is intentionally left
         non-admin.
     """
-    from agent_meow.server.auth import create_auth_provider
+    from omnigent.server.auth import create_auth_provider
 
     monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "header")
     monkeypatch.delenv("OMNIGENT_LOCAL_SINGLE_USER", raising=False)

@@ -13,10 +13,10 @@ from typing import Any
 
 import pytest
 
-from agent_meow.policies.function import FunctionPolicy
-from agent_meow.policies.types import PolicyResult
-from agent_meow.spec.types import FunctionPolicySpec, FunctionRef, PhaseSelector, PolicyAction
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.policies.function import FunctionPolicy
+from omnigent.policies.types import PolicyResult
+from omnigent.spec.types import FunctionPolicySpec, FunctionRef, PhaseSelector, PolicyAction
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 

@@ -1,8 +1,8 @@
-"""Phase 0 characterization test — sub-agent visibility in overview.
+"""Phase 0 characterization test â€” sub-agent visibility in overview.
 
 Migrated to mock LLM: the supervisor is backed by ``openai-agents``
 with mock responses. Sub-agent (``claude-sdk`` and ``codex``)
-parametrize rows still require the real CLI binary on PATH — those
+parametrize rows still require the real CLI binary on PATH â€” those
 are skipped when the binary is missing.
 
 The core invariant remains: when a sub-agent session is registered,
@@ -11,7 +11,7 @@ harness, and user message.
 
 **What breaks if this fails:**
 - The ``sys_session_send`` builtin's output JSON drops
-  ``conversation_id`` — the REPL's overview target registration
+  ``conversation_id`` â€” the REPL's overview target registration
   keys on it.
 - ``_collect_overview_targets`` stops including managed agent sessions.
 - ``_render_overview_managed_session_text`` drops metadata lines.
@@ -30,17 +30,17 @@ import pexpect
 import pytest
 
 from tests.e2e._harness_probes import HARNESS_HARNESS_MODELS, HARNESS_IDS
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     submit_prompt,
     wait_for_ready,
 )
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
-# Supervisor model — mock LLM serves deterministic responses.
+# Supervisor model â€” mock LLM serves deterministic responses.
 _SUPERVISOR_MODEL = "mock-overview-subagent-supervisor"
 _SUPERVISOR_HARNESS = "openai-agents"
 
@@ -109,19 +109,19 @@ def test_repl_overview_subagent_visibility(
 
     Uses the mock LLM server for supervisor responses. Sub-agent
     harnesses (claude-sdk, codex) still require their respective CLI
-    binaries on PATH — rows fail loudly (not skip) when those are
+    binaries on PATH â€” rows fail loudly (not skip) when those are
     absent, see :func:`_check_worker_harness_available`.
 
     The visibility contract is narrow on purpose: the worker CLI runs
     for real and typically fails to authenticate in the sandbox, so it
     never reaches the mock and produces an error turn. That does not
-    matter here — the sub-agent session is registered at *dispatch*
+    matter here â€” the sub-agent session is registered at *dispatch*
     time (``status: launching``) with the dispatched user message in
     its args, so it appears in the overview regardless of whether the
     worker's own turn succeeds. We assert only that: the sub-agent's
     label and the dispatched user message render. (The overview does
-    not render an executor-harness line for sub-agent targets at all —
-    that is gated to the main session in ``_repl.py`` — so there is no
+    not render an executor-harness line for sub-agent targets at all â€”
+    that is gated to the main session in ``_repl.py`` â€” so there is no
     executor-harness assertion.)
 
     :param omnigent_python: Interpreter with agent-meow installed.
@@ -175,7 +175,7 @@ def test_repl_overview_subagent_visibility(
                 ]
             },
             {"text": "hello from the worker"},
-            # Final supervisor turn — its text is the turn-complete sync marker.
+            # Final supervisor turn â€” its text is the turn-complete sync marker.
             {"text": "The worker said: hello"},
             # Spares so any extra agent LLM call never 500s the mock.
             {"text": "(spare)"},
@@ -198,27 +198,27 @@ def test_repl_overview_subagent_visibility(
         submit_prompt(child, user_prompt)
         # Sync on the supervisor's FINAL reply (mock parent-summary), which
         # renders only after the worker ran and its result auto-woke the
-        # supervisor — by then the sub-agent session is registered as an
+        # supervisor â€” by then the sub-agent session is registered as an
         # overview target. (Syncing on the tool-call line is unreliable: the
-        # "⏵ sys_session_send(" render carries ANSI between the name and "(",
+        # "âµ sys_session_send(" render carries ANSI between the name and "(",
         # and a bare "sys_session_send" would match the prompt echo at t=0,
         # before the sub-agent exists.)
         child.expect("The worker said", timeout=_COMPLETION_TIMEOUT)
-        # Open the overview (Ctrl+O; binding moved off Ctrl+G — Warp intercepts
+        # Open the overview (Ctrl+O; binding moved off Ctrl+G â€” Warp intercepts
         # Ctrl+G, see _repl.py "Why Ctrl+O and not Ctrl+G").
         child.sendcontrol("o")
         # Wait for the sidebar to paint the sub-agent target. The sidebar entry
-        # is "👾 <worker>:demo"; "<worker>:demo" matches there cleanly. (The
+        # is "ðŸ‘¾ <worker>:demo"; "<worker>:demo" matches there cleanly. (The
         # detail header renders "Session: <worker>:demo", but the two-column
         # overlay wraps the narrow detail column and splits "Session: <worker>:",
-        # so it never matches contiguously — sync on the sidebar label instead.)
+        # so it never matches contiguously â€” sync on the sidebar label instead.)
         child.expect(f"{worker_label_prefix}demo", timeout=_EXPECT_SUBAGENT_TIMEOUT)
         # Select the sub-agent target so its detail pane (Session header +
         # message stream, incl. the dispatched user message) renders; TAB
         # cycles main -> sub-agent.
         child.send("\t")
-        # Accumulate the detail pane. The status-bar clock ticks ~1×/s, so
-        # a drain that bails on a 0.3s idle gap is unreliable here — force a
+        # Accumulate the detail pane. The status-bar clock ticks ~1Ã—/s, so
+        # a drain that bails on a 0.3s idle gap is unreliable here â€” force a
         # fixed-duration read with an impossible-pattern expect.
         with contextlib.suppress(pexpect.TIMEOUT):
             child.expect("ZZZ_NEVER_MATCHES_DRAIN", timeout=_OVERVIEW_DRAIN_TIMEOUT)
@@ -233,7 +233,7 @@ def test_repl_overview_subagent_visibility(
             child.close(force=True)
 
     # NOTE: the Ctrl+O overview does NOT render an executor-harness line for
-    # sub-agent targets — the Agent/Model/harness fields are gated to the main
+    # sub-agent targets â€” the Agent/Model/harness fields are gated to the main
     # session (`is_main`) in _repl.py. So a "subagent_executor_harness_rendered"
     # assertion would only ever pass for [codex] by coincidence (the substring
     # "codex" appears in the agent name "codex_worker"), never for [claude-sdk].

@@ -1,13 +1,13 @@
-"""Tests for ``agent_meow._runner_startup`` (startup UX helpers).
+"""Tests for ``omnigent._runner_startup`` (startup UX helpers).
 
 These cover the two pieces of UX added when local-runner startup
 fails or stalls:
 
-1. ``format_runner_log_tail`` — the failure-message helper that
+1. ``format_runner_log_tail`` â€” the failure-message helper that
    surfaces the captured runner log path and a tail of its
    contents on the ``ClickException``.
-2. ``runner_startup_progress`` — the context manager that wraps
-   the runner-spawn → registration-wait window with a rich
+2. ``runner_startup_progress`` â€” the context manager that wraps
+   the runner-spawn â†’ registration-wait window with a rich
    spinner on a TTY, falling back to plain ``click.echo`` lines
    off-TTY.
 
@@ -24,7 +24,7 @@ import sys
 
 import pytest
 
-from agent_meow._runner_startup import (
+from omnigent._runner_startup import (
     _NO_SPINNER_ENV_VAR,
     STARTUP_PHASE_LABELS,
     _spinner_enabled,
@@ -66,7 +66,7 @@ def test_format_runner_log_tail_surfaces_path_only(tmp_path) -> None:
     out = format_runner_log_tail(log)
     # The path is named explicitly so the user can ``cat`` it.
     assert out == f"\nRunner log: {log}"
-    # Content of the log MUST NOT leak into the error message —
+    # Content of the log MUST NOT leak into the error message â€”
     # that was the previous, overwhelming behavior.
     assert "ERROR: tunnel rejected" not in out
 
@@ -77,7 +77,7 @@ def test_format_runner_log_tail_does_not_require_existing_file(tmp_path) -> None
     The runner may fail before its log file actually lands on
     disk (fork error, bad cwd, immediate import crash). We still
     want to surface the configured log location so the user can
-    see where we *expected* the log to live — "file is missing"
+    see where we *expected* the log to live â€” "file is missing"
     is itself useful diagnostic information.
 
     :param tmp_path: Pytest tmp dir fixture.
@@ -175,7 +175,7 @@ def test_runner_startup_progress_plain_mode_does_not_swallow_exceptions(
 ) -> None:
     """An exception inside the body propagates with no extra wrapping.
 
-    The context manager only owns the renderer — it must not turn
+    The context manager only owns the renderer â€” it must not turn
     a real runner-startup failure into a generic "context exited
     with error" message.
 
@@ -233,8 +233,8 @@ def test_startup_phase_labels_avoid_internal_jargon(label: str) -> None:
     The whole point of the ``run`` / ``chat`` startup spinner is to make
     the silent cold-start gap read as ordinary forward motion to a user
     who does not (and should not need to) know the framework's internals.
-    A regression that surfaces an internal term — "Waiting for runner
-    tunnel registration…", "Spawning host daemon…" — defeats that, so
+    A regression that surfaces an internal term â€” "Waiting for runner
+    tunnel registrationâ€¦", "Spawning host daemonâ€¦" â€” defeats that, so
     pin the intent: none of the labels may contain an internal term.
 
     A failure here means a phase label was changed to leak an
@@ -242,7 +242,7 @@ def test_startup_phase_labels_avoid_internal_jargon(label: str) -> None:
     understand.
 
     :param label: One cold-start phase label under test, e.g.
-        ``"Starting the local server…"``.
+        ``"Starting the local serverâ€¦"``.
     :returns: None.
     """
     # Internal nouns that mean nothing to an end user staring at startup.
@@ -292,7 +292,7 @@ def test_startup_phase_labels_render_in_order_plain_mode(capsys) -> None:
             p.update(label)
 
     captured = capsys.readouterr()
-    # stdout stays clean — the spinner is a stderr-only affordance.
+    # stdout stays clean â€” the spinner is a stderr-only affordance.
     assert captured.out == ""
     # Every label landed on stderr, and in the order it was emitted (the
     # find-index of each label is strictly increasing). A wrong order

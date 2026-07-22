@@ -1,8 +1,8 @@
 """
 Integration tests for the ``sys_agent_start`` policy gate in the runner.
 
-Verifies the full flow: runner resolves spec → policy gate fires →
-sandbox override applied → spawn env reflects the forced config.
+Verifies the full flow: runner resolves spec â†’ policy gate fires â†’
+sandbox override applied â†’ spawn env reflects the forced config.
 
 Uses the same ``_FakeProcessManager`` + ``create_runner_app`` pattern
 as ``test_app_sessions_native.py``.  The process manager captures the
@@ -21,8 +21,8 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from agent_meow.runner import create_runner_app
-from agent_meow.spec.types import (
+from omnigent.runner import create_runner_app
+from omnigent.spec.types import (
     AgentSpec,
     ExecutorSpec,
     FunctionPolicySpec,
@@ -31,11 +31,11 @@ from agent_meow.spec.types import (
 )
 from tests.runner.helpers import NullServerClient
 
-# ── Stubs ────────────────────────────────────────────────────────────────
+# â”€â”€ Stubs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _ScriptedHarnessClient:
-    """Minimal harness client stub — never called in these tests.
+    """Minimal harness client stub â€” never called in these tests.
 
     Session creation only spawns the harness; it doesn't run a
     turn, so the client is never invoked.
@@ -101,11 +101,11 @@ class _FakeProcessManager:
         self._sessions.discard(conversation_id)
 
     def mark_in_flight(self, conversation_id: str, response_id: str) -> None:
-        """Reaper in-flight marker — no-op for this stub (issue #1414)."""
+        """Reaper in-flight marker â€” no-op for this stub (issue #1414)."""
         del conversation_id, response_id
 
     def clear_in_flight(self, conversation_id: str) -> None:
-        """Reaper in-flight clear — no-op for this stub (issue #1414)."""
+        """Reaper in-flight clear â€” no-op for this stub (issue #1414)."""
         del conversation_id
 
 
@@ -139,7 +139,7 @@ def _spec_with_enforce_sandbox(
     :returns: An ``AgentSpec`` with guardrails containing the
         ``enforce_sandbox`` policy.
     """
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     factory_args: dict[str, Any] = {
         "sandbox_type": sandbox_type,
@@ -165,7 +165,7 @@ def _spec_with_enforce_sandbox(
                     name="force_bwrap",
                     on=None,
                     function=FunctionRef(
-                        path="agent_meow.policies.builtins.safety.enforce_sandbox",
+                        path="omnigent.policies.builtins.safety.enforce_sandbox",
                         arguments=factory_args,
                     ),
                 ),
@@ -174,7 +174,7 @@ def _spec_with_enforce_sandbox(
     )
 
 
-# ── Tests ────────────────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -222,21 +222,21 @@ async def test_enforce_sandbox_overrides_spawn_env() -> None:
     # Session created successfully.
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
 
-    # Process manager was called — harness subprocess would have spawned.
-    assert pm.get_client_calls, "get_client was never called — harness was not spawned"
+    # Process manager was called â€” harness subprocess would have spawned.
+    assert pm.get_client_calls, "get_client was never called â€” harness was not spawned"
     _conv_id, _harness, env = pm.get_client_calls[-1]
-    assert env is not None, "spawn_env was None — _build_spawn_env_from_spec returned nothing"
+    assert env is not None, "spawn_env was None â€” _build_spawn_env_from_spec returned nothing"
 
     # The spawn env must carry the forced sandbox config.
     os_env_json = env.get("HARNESS_CLAUDE_SDK_OS_ENV")
     assert os_env_json is not None, (
-        "HARNESS_CLAUDE_SDK_OS_ENV missing from spawn env — "
+        "HARNESS_CLAUDE_SDK_OS_ENV missing from spawn env â€” "
         "os_env was not serialized into the harness env"
     )
     os_env = json.loads(os_env_json)
     sandbox = os_env.get("sandbox", {})
 
-    # Policy forced linux_bwrap — spec declared "none".
+    # Policy forced linux_bwrap â€” spec declared "none".
     # If type is still "none", the policy gate didn't fire.
     assert sandbox["type"] == "linux_bwrap", (
         f"Expected sandbox type 'linux_bwrap' (forced by policy), "
@@ -260,7 +260,7 @@ async def test_enforce_sandbox_no_policy_leaves_spec_unchanged() -> None:
     Control test: ensures the gate is a no-op when no policy applies.
     If this fails, the gate is mutating specs unconditionally.
     """
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     spec = AgentSpec(
         spec_version=1,
@@ -273,7 +273,7 @@ async def test_enforce_sandbox_no_policy_leaves_spec_unchanged() -> None:
             type="caller_process",
             sandbox=OSEnvSandboxSpec(type="none"),
         ),
-        # No guardrails — no policies.
+        # No guardrails â€” no policies.
     )
     pm = _FakeProcessManager(_ScriptedHarnessClient())
 
@@ -309,7 +309,7 @@ async def test_enforce_sandbox_no_policy_leaves_spec_unchanged() -> None:
     os_env = json.loads(os_env_json)
     sandbox = os_env.get("sandbox", {})
 
-    # No policy attached — sandbox stays "none" as declared in spec.
+    # No policy attached â€” sandbox stays "none" as declared in spec.
     assert sandbox["type"] == "none", (
         f"Expected sandbox type 'none' (no policy), got '{sandbox['type']}'. "
         f"The gate is mutating specs even when no policy applies."

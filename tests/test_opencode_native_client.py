@@ -8,7 +8,7 @@ from collections.abc import Callable
 import httpx
 import pytest
 
-from agent_meow.opencode_native_client import (
+from omnigent.opencode_native_client import (
     OpenCodeClient,
     OpenCodeClientError,
     OpenCodeEvent,

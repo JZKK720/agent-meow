@@ -33,11 +33,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jwt.algorithms import RSAAlgorithm
 
-from agent_meow.server.admin_list import AdminList
-from agent_meow.server.auth import UnifiedAuthProvider
-from agent_meow.server.oidc import OIDCConfig
-from agent_meow.server.routes.auth import _AUTH_STATE_COOKIE_PLAIN, create_auth_router
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from omnigent.server.admin_list import AdminList
+from omnigent.server.auth import UnifiedAuthProvider
+from omnigent.server.oidc import OIDCConfig
+from omnigent.server.routes.auth import _AUTH_STATE_COOKIE_PLAIN, create_auth_router
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 _TEST_SECRET = bytes.fromhex("aa" * 32)
 _ISSUER = "https://accounts.google.com"

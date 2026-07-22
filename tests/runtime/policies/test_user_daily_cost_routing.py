@@ -3,7 +3,7 @@
 The daily cost-budget policy emits its approved-checkpoint write under
 the reserved ``USER_DAILY_ASK_APPROVED_STATE_KEY``. The engine must
 route that to the session owner's ``user_daily_cost.ask_approved_usd``
-(per user+day) — NOT the per-conversation ``session_state`` — so an
+(per user+day) â€” NOT the per-conversation ``session_state`` â€” so an
 approval persists across the user's sessions. These tests exercise the
 public ``PolicyEngine.apply_state_updates`` against a real store.
 """
@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.db.utils import now_epoch, utc_day
-from agent_meow.policies.builtins.cost import user_daily_cost_budget
-from agent_meow.policies.function import FunctionPolicy
-from agent_meow.policies.schema import USER_DAILY_ASK_APPROVED_STATE_KEY
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.types import (
+from omnigent.db.utils import now_epoch, utc_day
+from omnigent.policies.builtins.cost import user_daily_cost_budget
+from omnigent.policies.function import FunctionPolicy
+from omnigent.policies.schema import USER_DAILY_ASK_APPROVED_STATE_KEY
+from omnigent.policies.types import EvaluationContext
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.types import (
     FunctionPolicySpec,
     FunctionRef,
     Phase,
@@ -27,10 +27,10 @@ from agent_meow.spec.types import (
     StateUpdate,
     StateUpdateAction,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 
 def _engine_with_owner(
@@ -126,7 +126,7 @@ async def test_approval_updates_in_memory_so_same_engine_does_not_reask(
         FunctionPolicySpec(
             name="daily",
             on=[PhaseSelector(phase=Phase.TOOL_CALL, tool_name=None)],
-            function=FunctionRef(path="agent_meow.policies.builtins.cost.user_daily_cost_budget"),
+            function=FunctionRef(path="omnigent.policies.builtins.cost.user_daily_cost_budget"),
         ),
         user_daily_cost_budget(max_cost_usd=5.0, ask_thresholds_usd=[2.0]),
     )
@@ -136,7 +136,7 @@ async def test_approval_updates_in_memory_so_same_engine_does_not_reask(
         ask_timeout=30,
         conversation_id=conv.id,
         initial_labels={},
-        # $3 today, nothing approved yet → first tool call crosses the $2 checkpoint.
+        # $3 today, nothing approved yet â†’ first tool call crosses the $2 checkpoint.
         initial_user_daily_cost={"cost_usd": 3.0, "ask_approved_usd": 0.0},
         conversation_store=conversation_store,
     )
@@ -154,5 +154,5 @@ async def test_approval_updates_in_memory_so_same_engine_does_not_reask(
 
     second = await engine.evaluate(ctx)
     # WITHOUT the in-memory refresh this would ASK again (stale snapshot);
-    # WITH it, the $2 checkpoint is approved → ALLOW.
+    # WITH it, the $2 checkpoint is approved â†’ ALLOW.
     assert second.action == PolicyAction.ALLOW

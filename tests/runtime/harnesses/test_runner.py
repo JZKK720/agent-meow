@@ -3,7 +3,7 @@ Tests for the harness runner CLI argument parsing, module
 resolution, and parent-death watchdog.
 
 Spawn-and-serve is exercised by ``test_process_manager.py`` since
-that requires actually waiting on uvicorn — covering the same
+that requires actually waiting on uvicorn â€” covering the same
 ground here would just duplicate.
 """
 
@@ -11,19 +11,19 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.runtime.harnesses import _runner
+from omnigent.runtime.harnesses import _runner
 
 
 def test_parse_args_requires_all_args() -> None:
     """Missing any of the four required args is a CLI error.
 
     Catches a regression where one of the arguments gets a default
-    or becomes optional — the runner's contract is that all four
+    or becomes optional â€” the runner's contract is that all four
     (harness, module, socket, conversation-id) are AP-allocated
     and must arrive on the command line.
     """
     with pytest.raises(SystemExit):
-        # Empty argv → argparse rejects, raising SystemExit(2).
+        # Empty argv â†’ argparse rejects, raising SystemExit(2).
         _runner._parse_args([])
 
 
@@ -98,19 +98,19 @@ def test_load_harness_app_import_error_exits(
 ) -> None:
     """A non-importable module path is fatal at boot.
 
-    Per §Process management: misconfigurations should surface at
+    Per Â§Process management: misconfigurations should surface at
     spawn time as a non-zero exit, not as a connection refused
     on the first request. Verifies SystemExit(2) + a stderr
     message naming the bad module path.
     """
     with pytest.raises(SystemExit) as excinfo:
-        _runner._load_harness_app("missing", "agent_meow.does_not_exist", "conv_x")
+        _runner._load_harness_app("missing", "omnigent.does_not_exist", "conv_x")
     assert excinfo.value.code == 2
     err = capsys.readouterr().err
     # Catch a future regression where the loud-fail message gets
     # silenced or the module path gets dropped from it.
     assert "cannot import harness module" in err
-    assert "'agent_meow.oes_not_exist'" in err
+    assert "'omnigent.oes_not_exist'" in err
 
 
 def test_load_harness_app_module_without_create_app_exits(
@@ -121,10 +121,10 @@ def test_load_harness_app_module_without_create_app_exits(
     Verifies the runner's structural check (``getattr(module,
     "create_app", None)``) catches the misnaming case loudly.
     Pointing the runner at a real module without ``create_app``
-    (``agent_meow.errors``) reproduces the failure mode.
+    (``omnigent.errors``) reproduces the failure mode.
     """
     with pytest.raises(SystemExit) as excinfo:
-        _runner._load_harness_app("broken", "agent_meow.errors", "conv_x")
+        _runner._load_harness_app("broken", "omnigent.errors", "conv_x")
     assert excinfo.value.code == 2
     err = capsys.readouterr().err
     assert "does not export create_app" in err
@@ -133,18 +133,18 @@ def test_load_harness_app_module_without_create_app_exits(
 def test_load_harness_app_loads_test_fixture() -> None:
     """A real module with create_app loads + stashes app state.
 
-    Verifies the happy path: import → factory call →
+    Verifies the happy path: import â†’ factory call â†’
     app.state.conversation_id + app.state.harness stash. The
     conversation id plumbing is the most fragile part of the
     runner contract (the design doc explicitly forbids parsing
     it from the socket path), so it gets a focused assertion.
     """
     app = _runner._load_harness_app("test", "tests.runtime.harnesses._test_harness", "conv_xyz")
-    # The fixture's create_app() returns a real FastAPI app — the
+    # The fixture's create_app() returns a real FastAPI app â€” the
     # runner's job is to stash the conversation id on it. If this
     # fails, the harness can't scope its in-memory state per
-    # §Harness in-memory state.
+    # Â§Harness in-memory state.
     assert app.state.conversation_id == "conv_xyz"
     # The harness name is also stashed for introspection /
-    # logging — verifies the second app.state plumbing.
+    # logging â€” verifies the second app.state plumbing.
     assert app.state.harness == "test"

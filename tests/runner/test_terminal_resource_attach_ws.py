@@ -18,15 +18,15 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from agent_meow.entities.session_resources import SessionResourceView
-from agent_meow.inner.terminal import TerminalInstance
-from agent_meow.runner import create_runner_app
-from agent_meow.runner.resource_registry import (
+from omnigent.entities.session_resources import SessionResourceView
+from omnigent.inner.terminal import TerminalInstance
+from omnigent.runner import create_runner_app
+from omnigent.runner.resource_registry import (
     OMNIGENT_REPL_TERMINAL_ROLE,
     QWEN_NATIVE_TERMINAL_ROLE,
     SessionResourceRegistry,
 )
-from agent_meow.terminals import TerminalRegistry
+from omnigent.terminals import TerminalRegistry
 from tests.runner.helpers import NullServerClient, make_test_terminal_instance
 
 
@@ -94,13 +94,13 @@ def test_runner_resource_attach_spawns_tmux_for_running_terminal(
         raise OSError("stop child path")
 
     exit_exc = RuntimeError("child exited")
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.pty.fork", fake_fork)
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.pty.fork", fake_fork)
     # Production resolves the absolute tmux path and builds the child env
     # in the parent; the child calls os.execve (no PATH search, explicit
-    # env) — patch execve, not execv/execvp.
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.os.execve", fake_execve)
+    # env) â€” patch execve, not execv/execvp.
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.os.execve", fake_execve)
     monkeypatch.setattr(
-        "agent_meow.terminals.ws_bridge.os._exit",
+        "omnigent.terminals.ws_bridge.os._exit",
         lambda code: (_ for _ in ()).throw(exit_exc),
     )
 
@@ -156,13 +156,13 @@ def test_runner_resource_attach_passes_read_only_to_tmux(
         raise OSError("stop child path")
 
     exit_exc = RuntimeError("child exited")
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.pty.fork", fake_fork)
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.pty.fork", fake_fork)
     # Production resolves the absolute tmux path and builds the child env
     # in the parent; the child calls os.execve (no PATH search, explicit
-    # env) — patch execve, not execv/execvp.
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.os.execve", fake_execve)
+    # env) â€” patch execve, not execv/execvp.
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.os.execve", fake_execve)
     monkeypatch.setattr(
-        "agent_meow.terminals.ws_bridge.os._exit",
+        "omnigent.terminals.ws_bridge.os._exit",
         lambda code: (_ for _ in ()).throw(exit_exc),
     )
 
@@ -208,10 +208,10 @@ def test_runner_resource_attach_selects_control_bridge_on_transport_query(
         calls.append("pty")
         await websocket.close()
 
-    monkeypatch.setattr("agent_meow.runner.app.bridge_tmux_control_to_websocket", fake_control)
-    monkeypatch.setattr("agent_meow.runner.app.bridge_tmux_pty_to_websocket", fake_pty)
+    monkeypatch.setattr("omnigent.runner.app.bridge_tmux_control_to_websocket", fake_control)
+    monkeypatch.setattr("omnigent.runner.app.bridge_tmux_pty_to_websocket", fake_pty)
     # Point config resolution at an empty scratch dir so the no-query case is
-    # deterministic regardless of the developer's real ~/.agent_meow/config.yaml.
+    # deterministic regardless of the developer's real ~/.omnigent/config.yaml.
     # With no terminal.transport configured, control mode is the product default.
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
 
@@ -224,7 +224,7 @@ def test_runner_resource_attach_selects_control_bridge_on_transport_query(
         with client.websocket_connect(f"{base}?transport=pty"):
             pass
     with contextlib.suppress(WebSocketDisconnect):
-        with client.websocket_connect(base):  # no query → control default
+        with client.websocket_connect(base):  # no query â†’ control default
             pass
 
     assert calls == ["control", "pty", "control"], (
@@ -339,7 +339,7 @@ def test_runner_resource_attach_recreates_dead_repl_terminal(
     every later attach closed 4404 and the web Terminal view stayed a
     dead, blank pane for the rest of the session. The attach route must
     instead tear down the stale entry, re-run the REPL auto-create, and
-    bridge the fresh pane — and must NOT recreate again on the next
+    bridge the fresh pane â€” and must NOT recreate again on the next
     attach once the fresh pane is live (recreating a live REPL would
     kill the user's running TUI).
 
@@ -413,14 +413,14 @@ def test_runner_resource_attach_recreates_dead_repl_terminal(
             name="tui",
         )
 
-    monkeypatch.setattr("agent_meow.runner.app._auto_create_repl_terminal", fake_auto_create)
+    monkeypatch.setattr("omnigent.runner.app._auto_create_repl_terminal", fake_auto_create)
 
     attach_argvs: list[list[str]] = []
 
     def fake_fork() -> tuple[int, int]:
         """Drive the child branch of ``pty.fork`` in-process.
 
-        :returns: ``(0, 0)`` — pid 0 selects the child path.
+        :returns: ``(0, 0)`` â€” pid 0 selects the child path.
         """
         return 0, 0
 
@@ -437,14 +437,14 @@ def test_runner_resource_attach_recreates_dead_repl_terminal(
         raise OSError("stop child path")
 
     exit_exc = RuntimeError("child exited")
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.pty.fork", fake_fork)
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.os.execve", fake_execve)
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.pty.fork", fake_fork)
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.os.execve", fake_execve)
     monkeypatch.setattr(
-        "agent_meow.terminals.ws_bridge.os._exit",
+        "omnigent.terminals.ws_bridge.os._exit",
         lambda code: (_ for _ in ()).throw(exit_exc),
     )
 
-    # First attach: dead pane → recreate → bridge the fresh pane.
+    # First attach: dead pane â†’ recreate â†’ bridge the fresh pane.
     with pytest.raises(RuntimeError, match="child exited"):
         with TestClient(app).websocket_connect(
             "/v1/sessions/conv_abc/resources/terminals/terminal_tui_main/attach?transport=pty"
@@ -464,7 +464,7 @@ def test_runner_resource_attach_recreates_dead_repl_terminal(
     # surviving would leak its activity watcher and scratch dir.
     assert registry.get("conv_abc", "tui", "main") is fresh
 
-    # Second attach: the fresh pane is live → bridge it directly. A
+    # Second attach: the fresh pane is live â†’ bridge it directly. A
     # second auto-create call would mean the route recreates
     # unconditionally, killing the user's running REPL on every attach.
     with pytest.raises(RuntimeError, match="child exited"):
@@ -555,7 +555,7 @@ def test_runner_resource_attach_recreates_dead_qwen_terminal(
             name="qwen",
         )
 
-    monkeypatch.setattr("agent_meow.runner.app._auto_create_qwen_terminal", fake_auto_create)
+    monkeypatch.setattr("omnigent.runner.app._auto_create_qwen_terminal", fake_auto_create)
 
     attach_argvs: list[list[str]] = []
 
@@ -569,10 +569,10 @@ def test_runner_resource_attach_recreates_dead_qwen_terminal(
         raise OSError("stop child path")
 
     exit_exc = RuntimeError("child exited")
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.pty.fork", fake_fork)
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.os.execve", fake_execve)
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.pty.fork", fake_fork)
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.os.execve", fake_execve)
     monkeypatch.setattr(
-        "agent_meow.terminals.ws_bridge.os._exit",
+        "omnigent.terminals.ws_bridge.os._exit",
         lambda code: (_ for _ in ()).throw(exit_exc),
     )
 
@@ -601,7 +601,7 @@ def test_runner_resource_attach_dead_non_repl_terminal_keeps_4404(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Recreate-on-attach is scoped to the REPL role — other dead
+    Recreate-on-attach is scoped to the REPL role â€” other dead
     terminals keep the strict 4404 contract.
 
     A dead agent-created terminal is meaningful state (the command
@@ -644,11 +644,11 @@ def test_runner_resource_attach_dead_non_repl_terminal_keeps_4404(
         :returns: None.
         """
         raise AssertionError(
-            "REPL auto-create was invoked for a non-REPL terminal — the "
+            "REPL auto-create was invoked for a non-REPL terminal â€” the "
             "recreate path must be gated on OMNIGENT_REPL_TERMINAL_ROLE."
         )
 
-    monkeypatch.setattr("agent_meow.runner.app._auto_create_repl_terminal", must_not_recreate)
+    monkeypatch.setattr("omnigent.runner.app._auto_create_repl_terminal", must_not_recreate)
 
     with TestClient(app).websocket_connect(
         "/v1/sessions/conv_abc/resources/terminals/terminal_bash_s1/attach"
@@ -685,7 +685,7 @@ def test_runner_resource_attach_closes_4404_when_pty_ends(
     Models the user-reported failure mode: claude exits / tmux dies
     while the browser (or ``agent-meow claude --server``) is attached.
     Without the dedicated close code, the client's reconnect loop in
-    ``agent_meow/claude_native.py`` interprets the close as a transient
+    ``omnigent/claude_native.py`` interprets the close as a transient
     bounce and spins forever on "Claude session connection closed by
     server; reconnecting...". The fix has the bridge close with the
     same ``WS_CLOSE_TERMINAL_NOT_FOUND`` (4404) it already uses for
@@ -710,7 +710,7 @@ def test_runner_resource_attach_closes_4404_when_pty_ends(
     )
 
     pty_side, bridge_side = socket.socketpair()
-    # Address the bridge_side socket via its fd — the bridge reads
+    # Address the bridge_side socket via its fd â€” the bridge reads
     # with ``os.read(master_fd, ...)`` and registers it with
     # ``loop.add_reader``, both of which accept any readable fd.
     bridge_fd = bridge_side.fileno()
@@ -724,8 +724,8 @@ def test_runner_resource_attach_closes_4404_when_pty_ends(
         # runner does not own.
         return 999_999, bridge_fd
 
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.pty.fork", fake_fork)
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.os.kill", lambda *_args, **_kw: None)
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.pty.fork", fake_fork)
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.os.kill", lambda *_args, **_kw: None)
 
     try:
         with TestClient(app).websocket_connect(

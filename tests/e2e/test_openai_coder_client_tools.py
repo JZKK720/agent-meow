@@ -32,7 +32,7 @@ from typing import Any
 import httpx
 
 # Load the coder tool set for client-side tool execution.
-from agent_meow.client_tools import get_tool_set as _get_tool_set
+from omnigent.client_tools import get_tool_set as _get_tool_set
 from tests.e2e.conftest import (
     configure_mock_llm,
     create_runner_bound_session,

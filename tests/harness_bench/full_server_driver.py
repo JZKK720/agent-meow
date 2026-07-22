@@ -3,7 +3,7 @@
 Unlike :class:`tests.harness_bench.driver.SdkInprocDriver` (which drives a
 harness wrap subprocess directly), this driver spins up a REAL agent-meow
 ``server`` + ``runner`` pair, registers an agent, and drives turns through
-the full session path — so policy enforcement and server-dispatched tools
+the full session path â€” so policy enforcement and server-dispatched tools
 are exercised the way production does, not simulated at the wrap boundary.
 
 It reuses the exact spawn recipe of the e2e ``live_server`` fixture
@@ -11,12 +11,12 @@ It reuses the exact spawn recipe of the e2e ``live_server`` fixture
 a plain async context manager so the bench CLI can drive it without pytest.
 
 Status (live-verified): server+runner lifecycle, a basic turn, and the
-payoff this transport exists for — a real **server-dispatched tool call**
+payoff this transport exists for â€” a real **server-dispatched tool call**
 (a read-only builtin) and **tool-call policy enforcement** (a spec-baked
 ``tool_call`` deny policy blocks the call the way production does). Ad-hoc
 request-level function tools are NOT used here: the SDK harnesses handle
 tools internally, so they never round-trip as a server-dispatched, policy-
-gated call — a builtin does.
+gated call â€” a builtin does.
 
 Interrupt/cancel is verified (a long turn is interrupted mid-flight and the
 server's cancellation marker confirms it stopped), and delta-level
@@ -41,7 +41,7 @@ from typing import Any
 
 import httpx
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN, token_bound_runner_id
+from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN, token_bound_runner_id
 from tests._helpers.compat import (
     apply_runner_env,
     apply_server_env,
@@ -114,7 +114,7 @@ def spawn_omnigent_server(
     """Spawn an ``agent-meow server`` subprocess writing state under *tmp*.
 
     Shared by the full-server and native-tui drivers (both need the same
-    server; only what connects to it differs — a bare runner vs a host
+    server; only what connects to it differs â€” a bare runner vs a host
     daemon). Writes ``server.log`` / ``bench.db`` / ``artifacts`` under *tmp*.
     """
     db_path = tmp / "bench.db"
@@ -124,7 +124,7 @@ def spawn_omnigent_server(
     args = [
         server_executable(),
         "-m",
-        "agent_meow.cli",
+        "omnigent.cli",
         "server",
         "--port",
         str(port),
@@ -231,7 +231,7 @@ class FullServerDriver:
 
         shutil.rmtree(self._tmp, ignore_errors=True)
 
-    # ── async driver protocol ────────────────────────────────
+    # â”€â”€ async driver protocol â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # This driver's provisioning and turns are synchronous (subprocess spawn,
     # blocking snapshot polls, a threaded SSE reader). Bridge to the bench's
     # async Driver protocol by running the blocking work in a worker thread so
@@ -256,7 +256,7 @@ class FullServerDriver:
     async def run_interrupt_turn(self) -> TurnResult:
         return await asyncio.to_thread(self.interrupt_probe_turn)
 
-    # ── spawn ────────────────────────────────────────────────
+    # â”€â”€ spawn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _spawn_server(
         self, port: int, base_env: dict[str, str], binding_token: str
@@ -280,7 +280,7 @@ class FullServerDriver:
             }
         )
         return subprocess.Popen(
-            [runner_executable(), "-m", "agent_meow.runner._entry"],
+            [runner_executable(), "-m", "omnigent.runner._entry"],
             env=runner_env,
             cwd=compat_runner_cwd(),
             stdout=log.open("wb"),
@@ -309,7 +309,7 @@ class FullServerDriver:
             f"server+runner not ready within {_HEALTH_TIMEOUT_S}s; logs in {self._tmp}"
         )
 
-    # ── agent + session ──────────────────────────────────────
+    # â”€â”€ agent + session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _register_agent(self, *, deny: bool) -> str:
         import io
@@ -342,7 +342,7 @@ class FullServerDriver:
                     "deny_tool": {
                         "type": "function",
                         "function": {
-                            "path": "agent_meow.policies.function.make_fixed_action_callable",
+                            "path": "omnigent.policies.function.make_fixed_action_callable",
                             "arguments": {
                                 "action": "deny",
                                 "reason": _DENY_REASON,
@@ -389,7 +389,7 @@ class FullServerDriver:
             self._deny_session_id = self._create_session(name, self._runner_id)
         return self._deny_session_id
 
-    # ── tool / policy probe ──────────────────────────────────
+    # â”€â”€ tool / policy probe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def tool_probe_turn(self, *, deny: bool, timeout: float = 180.0) -> TurnResult:
         """Drive a turn that calls the builtin tool; return a :class:`TurnResult`.
@@ -435,7 +435,7 @@ class FullServerDriver:
             result.timed_out = True
         return result
 
-    # ── streaming probe ──────────────────────────────────────
+    # â”€â”€ streaming probe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def streaming_probe_turn(self, *, timeout: float = 120.0) -> TurnResult:
         """Measure token-level streaming via the session SSE subscribe stream.
@@ -488,7 +488,7 @@ class FullServerDriver:
             result.timed_out = True
         return result
 
-    # ── interrupt probe ──────────────────────────────────────
+    # â”€â”€ interrupt probe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def interrupt_probe_turn(self, *, timeout: float = 120.0) -> TurnResult:
         """Start a long turn, interrupt it mid-flight, and report the outcome.
@@ -496,7 +496,7 @@ class FullServerDriver:
         Posts an ``interrupt`` event once the turn is running (after a short
         hold so some text streams first), then waits for the server's
         cancellation marker. Sets :attr:`TurnResult.cancelled` when the
-        marker appears — the honored-interrupt signal.
+        marker appears â€” the honored-interrupt signal.
         """
         assert self._client is not None and self._session_id is not None
         sid = self._session_id
@@ -532,7 +532,7 @@ class FullServerDriver:
             result.timed_out = True
         return result
 
-    # ── turn ─────────────────────────────────────────────────
+    # â”€â”€ turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def run_turn(self, prompt: str, *, timeout: float = 180.0) -> TurnResult:
         """Drive one basic turn through the full server, return a :class:`TurnResult`.
@@ -542,8 +542,8 @@ class FullServerDriver:
         ``failed`` / ``timed_out``. A synchronous (request-phase) policy
         DENY short-circuits to ``failed``.
 
-        The dimensions that motivated this transport — server-dispatched
-        tools, tool-call policy enforcement, delta streaming, interrupt —
+        The dimensions that motivated this transport â€” server-dispatched
+        tools, tool-call policy enforcement, delta streaming, interrupt â€”
         are follow-ups (see the module docstring); they extend this
         signature and are not implemented yet.
         """

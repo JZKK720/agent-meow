@@ -13,21 +13,21 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from httpx import ASGITransport, AsyncClient
 
-from agent_meow.host.frames import (
+from omnigent.host.frames import (
     HostHelloFrame,
     HostLaunchRunnerResultFrame,
     encode_host_frame,
 )
-from agent_meow.server.auth import LEVEL_OWNER
-from agent_meow.server.host_registry import HostRegistry
-from agent_meow.server.routes._host_launch import HostLaunchTarget, resolve_host_launch
-from agent_meow.server.routes.host_tunnel import create_host_tunnel_router
-from agent_meow.server.routes.hosts import create_hosts_router
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.server.auth import LEVEL_OWNER
+from omnigent.server.host_registry import HostRegistry
+from omnigent.server.routes._host_launch import HostLaunchTarget, resolve_host_launch
+from omnigent.server.routes.host_tunnel import create_host_tunnel_router
+from omnigent.server.routes.hosts import create_hosts_router
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.host_store import HostStore
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from omnigent.stores.host_store import HostStore
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 pytestmark = pytest.mark.asyncio
 
@@ -421,7 +421,7 @@ async def test_launch_runner_happy_path(
         assert conn is not None
         # Drain until we find the launch frame (skip pings).
 
-        from agent_meow.host.frames import HostLaunchRunnerFrame, decode_host_frame
+        from omnigent.host.frames import HostLaunchRunnerFrame, decode_host_frame
 
         for _ in range(20):
             output = await comm.receive_output(timeout=2.0)
@@ -483,7 +483,7 @@ async def test_launch_runner_harness_not_configured_returns_412(
     machine-readable code (and the `agent-meow setup` hint) on the
     fork-resume relaunch path.
     """
-    from agent_meow.errors import OmnigentError
+    from omnigent.errors import OmnigentError
 
     app, registry, _hs, conv_store = host_api_app
 
@@ -509,7 +509,7 @@ async def test_launch_runner_harness_not_configured_returns_412(
 
     async def _refuse_launch() -> None:
         """Reply 'failed' with the structured harness error code."""
-        from agent_meow.host.frames import HostLaunchRunnerFrame, decode_host_frame
+        from omnigent.host.frames import HostLaunchRunnerFrame, decode_host_frame
 
         for _ in range(20):
             output = await comm.receive_output(timeout=2.0)
@@ -761,7 +761,7 @@ async def test_launch_runner_403_wrong_owner(
     """
     _app, registry, host_store, conv_store = multi_user_app
     host_store.upsert_on_connect("host_alice3", "alice-laptop", "alice@test.com")
-    from agent_meow.host.frames import HostHelloFrame
+    from omnigent.host.frames import HostHelloFrame
 
     registry.register(
         "host_alice3",
@@ -807,10 +807,10 @@ async def test_launch_runner_validates_workspace_boundary(
     is covered by the session-create + e2e suites; here we assert the
     endpoint wires it in and maps failures to 400 before binding.
     """
-    from agent_meow.runtime.agent_cache import AgentCache
-    from agent_meow.server.routes import _workspace_validation
-    from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-    from agent_meow.stores.artifact_store.local import LocalArtifactStore
+    from omnigent.runtime.agent_cache import AgentCache
+    from omnigent.server.routes import _workspace_validation
+    from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+    from omnigent.stores.artifact_store.local import LocalArtifactStore
 
     registry = HostRegistry()
     host_store = HostStore(db_uri)
@@ -1148,9 +1148,9 @@ async def test_runner_exited_report_surfaces_in_runner_status(
     here means crashed runners regress to the blind 60s timeout with
     "check the logs directory".
     """
-    from agent_meow.host.frames import HostRunnerExitedFrame
-    from agent_meow.server.host_registry import RunnerExitReports
-    from agent_meow.server.routes.runner_tunnel import create_runner_tunnel_router
+    from omnigent.host.frames import HostRunnerExitedFrame
+    from omnigent.server.host_registry import RunnerExitReports
+    from omnigent.server.routes.runner_tunnel import create_runner_tunnel_router
 
     registry = HostRegistry()
     host_store = HostStore(db_uri)
@@ -1160,7 +1160,7 @@ async def test_runner_exited_report_surfaces_in_runner_status(
         create_host_tunnel_router(registry, host_store, runner_exit_reports=reports),
         prefix="/v1",
     )
-    from agent_meow.runner.transports.ws_tunnel.registry import TunnelRegistry
+    from omnigent.runner.transports.ws_tunnel.registry import TunnelRegistry
 
     app.include_router(
         create_runner_tunnel_router(TunnelRegistry(), runner_exit_reports=reports),
@@ -1213,7 +1213,7 @@ async def test_runner_exited_invokes_callback_with_runner_and_error(
     sessions stay stuck "starting" with no error — the exact desktop
     bug this fixes.
     """
-    from agent_meow.host.frames import HostRunnerExitedFrame
+    from omnigent.host.frames import HostRunnerExitedFrame
 
     registry = HostRegistry()
     host_store = HostStore(db_uri)

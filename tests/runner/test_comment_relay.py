@@ -1,7 +1,7 @@
 """Tests for the claude-native comment-tool relay wiring in the runner.
 
-These exercise the public runner HTTP surface — ``POST
-/v1/sessions/{id}/resources/terminals`` and ``DELETE /v1/sessions/{id}`` —
+These exercise the public runner HTTP surface â€” ``POST
+/v1/sessions/{id}/resources/terminals`` and ``DELETE /v1/sessions/{id}`` â€”
 to verify that launching a Claude terminal with ``bridge_inject_dir``
 starts the per-session comment-tool relay (writing ``tool_relay.json``
 into the bridge directory) and that deleting the session tears it down.
@@ -27,14 +27,14 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from agent_meow.claude_native_bridge import bridge_dir_for_bridge_id, prepare_bridge_dir
-from agent_meow.entities.session_resources import SessionResourceView, terminal_resource_view
-from agent_meow.inner.datamodel import TerminalEnvSpec
-from agent_meow.runner import create_runner_app
-from agent_meow.terminals import TerminalListEntry
+from omnigent.claude_native_bridge import bridge_dir_for_bridge_id, prepare_bridge_dir
+from omnigent.entities.session_resources import SessionResourceView, terminal_resource_view
+from omnigent.inner.datamodel import TerminalEnvSpec
+from omnigent.runner import create_runner_app
+from omnigent.terminals import TerminalListEntry
 from tests.runner.helpers import NullServerClient, make_test_terminal_instance
 
-# Matches ``_TOOL_RELAY_FILE`` in ``agent_meow.claude_native_bridge``.
+# Matches ``_TOOL_RELAY_FILE`` in ``omnigent.claude_native_bridge``.
 _TOOL_RELAY_FILE = "tool_relay.json"
 
 
@@ -233,7 +233,7 @@ def _skip_tools_changed_notification(monkeypatch: pytest.MonkeyPatch) -> None:
     ``_ensure_comment_relay_started`` fire ``post_tools_changed`` as a
     fire-and-forget executor task (the cold path, ``await_notify=False``).
     These unit tests stub the terminal, so no real Claude Code MCP bridge
-    ever publishes ``server.json`` — ``post_tools_changed`` then spins in
+    ever publishes ``server.json`` â€” ``post_tools_changed`` then spins in
     ``_wait_for_server_info`` for the full 30s ``_TOOLS_CHANGED_READY_TIMEOUT_S``
     before giving up. The notify runs in the default ``ThreadPoolExecutor``,
     so the call returns instantly but the worker thread stays stuck; at
@@ -241,9 +241,9 @@ def _skip_tools_changed_notification(monkeypatch: pytest.MonkeyPatch) -> None:
     that thread, making every relay test's teardown take ~30s.
 
     The relay wiring these tests cover (``tool_relay.json`` written, socket
-    bound, idempotency, teardown unlink) does not involve the notification —
+    bound, idempotency, teardown unlink) does not involve the notification â€”
     the real notify round-trip is covered by
-    ``tests/e2e/test_comment_tools_claude_native.py`` — so stubbing it to a
+    ``tests/e2e/test_comment_tools_claude_native.py`` â€” so stubbing it to a
     no-op removes the dead wait without weakening coverage. Mirrors the
     established stub in ``tests/runner/test_app_sessions_native.py``.
     """
@@ -253,7 +253,7 @@ def _skip_tools_changed_notification(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # The runner imports the name from this module at call time, so patching
     # the module attribute is picked up by _ensure_comment_relay_started.
-    monkeypatch.setattr("agent_meow.claude_native_bridge.post_tools_changed", _noop)
+    monkeypatch.setattr("omnigent.claude_native_bridge.post_tools_changed", _noop)
 
 
 @pytest.fixture
@@ -354,12 +354,12 @@ async def test_terminal_launch_with_bridge_inject_advertises_comment_tools(
     # (sys_session_list / sys_session_get_history / sys_session_get_info),
     # read-only agent tools (sys_agent_list / sys_agent_get /
     # sys_agent_download), policy tools (sys_add_policy /
-    # sys_policy_registry), and OS tools (sys_os_*) — claude-native
+    # sys_policy_registry), and OS tools (sys_os_*) â€” claude-native
     # ignores the harness tool schemas, so this relay is the only
     # surface that reaches Claude Code. All are routed through the AP
     # server's /mcp endpoint for policy enforcement. The opt-in spawn
     # writes (sys_session_send/close/create) are absent here because
-    # this fixture's session has no resolvable spec — the fallback
+    # this fixture's session has no resolvable spec â€” the fallback
     # can't evaluate the (tools.agents | spawn) gate; specs that opt
     # in get them via the ToolManager-derived branch.
     # No more, no less: a missing entry means the schema loop dropped a class;
@@ -380,7 +380,7 @@ async def test_terminal_launch_with_bridge_inject_advertises_comment_tools(
         "sys_os_edit",
         "sys_os_shell",
     }
-    # Parameters must be the real schemas from the tool classes — proving
+    # Parameters must be the real schemas from the tool classes â€” proving
     # get_schema() flowed through rather than an empty placeholder. "status"
     # is a real list_comments filter; "comment_id" is required by update_comment;
     # "conversation_id" is the sys_session_get_history arg the runner dispatch matches;
@@ -443,7 +443,7 @@ async def test_repeated_terminal_launch_keeps_single_relay(relay_env: _RelayEnv)
 
     # The relay URL (its bound port) must be unchanged. A different port means
     # _ensure_comment_relay_started bound a second relay instead of
-    # short-circuiting on the _session_comment_relays guard — which would leak
+    # short-circuiting on the _session_comment_relays guard â€” which would leak
     # the first relay's HTTP server and socket.
     assert second_url == first_url, (
         f"second launch rebound the relay ({first_url!r} -> {second_url!r}); "
@@ -460,11 +460,11 @@ async def test_relay_executor_routes_through_omnigent_in_omnigent_mode(
 
     Verifies that when the runner is configured with a server_client (AP mode),
     the ``_relay_tool_executor`` closure routes calls through
-    :class:`~?agent_meow.runner.proxy_mcp_manager.ProxyMcpManager` instead of
+    :class:`~?omnigent.runner.proxy_mcp_manager.ProxyMcpManager` instead of
     dispatching directly to comment/session-query handlers.  Policy enforcement
     on these relay tools was previously bypassed; this test pins the fix.
     """
-    import agent_meow.claude_native_bridge as _bridge_mod
+    import omnigent.claude_native_bridge as _bridge_mod
 
     # Records every POST sent to the fake agent-meow server.
     ap_mcp_posts: list[dict[str, Any]] = []
@@ -551,7 +551,7 @@ async def test_relay_executor_routes_through_omnigent_in_omnigent_mode(
             )
             assert resp.status_code == 200, f"terminal launch failed: {resp.text}"
 
-        # start_tool_relay must have fired exactly once — one terminal launch,
+        # start_tool_relay must have fired exactly once â€” one terminal launch,
         # one relay. 0 means _ensure_comment_relay_started never called
         # start_tool_relay (wiring broken); >1 means multiple relays were
         # started for a single session (idempotency guard broken).

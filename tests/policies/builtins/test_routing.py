@@ -1,5 +1,5 @@
 """
-Tests for :mod:`~?agent_meow.policies.builtins.routing`.
+Tests for :mod:`~?omnigent.policies.builtins.routing`.
 
 Covers:
 
@@ -25,7 +25,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agent_meow.policies.builtins.routing import (
+from omnigent.policies.builtins.routing import (
     _CACHE_KEY_PREFIX,
     _CLASSIFICATION_SCHEMA,
     _INTENT_CHECK_PREFIX,
@@ -37,14 +37,14 @@ from agent_meow.policies.builtins.routing import (
 
 from .helpers import llm_request_event
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _EXPENSIVE = ["databricks-claude-opus-4-6", "openai/o3"]
 
 
 class _FakeResponse:
     """
-    Minimal stand-in for ``agent_meow.llms.types.Response``.
+    Minimal stand-in for ``omnigent.llms.types.Response``.
 
     Exposes ``output_text`` which is what the routing policy reads.
     For structured output, the text is a JSON string.
@@ -79,7 +79,7 @@ class _FakePolicyLLMClient:
     """
     Stub ``PolicyLLMClient`` that returns a fixed response.
 
-    Does not use MagicMock — attributes are explicit.
+    Does not use MagicMock â€” attributes are explicit.
 
     :param response: The :class:`_FakeResponse` to return from
         ``create()``.
@@ -119,7 +119,7 @@ def _llm_request_with_client(
     return event
 
 
-# ── Factory ──────────────────────────────────────────────────────────────────
+# â”€â”€ Factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_factory_returns_callable() -> None:
@@ -146,7 +146,7 @@ def test_factory_requires_expensive_models() -> None:
         deny_trivial_to_expensive_model()  # type: ignore[call-arg]
 
 
-# ── TRIVIAL classification → DENY ───────────────────────────────────────────
+# â”€â”€ TRIVIAL classification â†’ DENY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -157,7 +157,7 @@ async def test_trivial_classification_denies() -> None:
     reason.
 
     What breaks if this fails: trivial tasks are not blocked from
-    expensive models — the whole point of this policy.
+    expensive models â€” the whole point of this policy.
     """
     client = _FakePolicyLLMClient(_trivial_response())
     policy = deny_trivial_to_expensive_model(expensive_models=_EXPENSIVE)
@@ -175,7 +175,7 @@ async def test_trivial_classification_denies() -> None:
     client._mock_create.assert_awaited_once()
 
 
-# ── COMPLEX classification → abstain ────────────────────────────────────────
+# â”€â”€ COMPLEX classification â†’ abstain â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -201,7 +201,7 @@ async def test_complex_classification_allows_and_caches() -> None:
     assert result["state_updates"][0]["value"] == "COMPLEX"
 
 
-# ── Non-expensive model → skip ──────────────────────────────────────────────
+# â”€â”€ Non-expensive model â†’ skip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -220,11 +220,11 @@ async def test_non_expensive_model_abstains() -> None:
     result = await policy(event)
 
     assert result is None
-    # No classification call was made — skipped early.
+    # No classification call was made â€” skipped early.
     client._mock_create.assert_not_awaited()
 
 
-# ── Malformed responses ─────────────────────────────────────────────────────
+# â”€â”€ Malformed responses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -263,13 +263,13 @@ async def test_missing_difficulty_key_abstains() -> None:
     assert result is None
 
 
-# ── Non-llm_request phases ──────────────────────────────────────────────────
+# â”€â”€ Non-llm_request phases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_non_llm_request_phase_abstains() -> None:
     """
-    Non-``llm_request`` events are abstained on — the policy only
+    Non-``llm_request`` events are abstained on â€” the policy only
     fires on ``llm_request``.
 
     What breaks if this fails: the policy interferes with tool
@@ -289,7 +289,7 @@ async def test_non_llm_request_phase_abstains() -> None:
         assert result is None, f"Expected None for phase {phase!r}"
 
 
-# ── Missing llm_client ──────────────────────────────────────────────────────
+# â”€â”€ Missing llm_client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -309,13 +309,13 @@ async def test_missing_llm_client_abstains() -> None:
     assert result is None
 
 
-# ── Edge cases ──────────────────────────────────────────────────────────────
+# â”€â”€ Edge cases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_empty_user_message_abstains() -> None:
     """
-    When ``last_user_message`` is empty, the policy abstains —
+    When ``last_user_message`` is empty, the policy abstains â€”
     nothing to classify.
 
     What breaks if this fails: the policy sends an empty string
@@ -351,7 +351,7 @@ async def test_classification_failure_abstains() -> None:
     assert result is None
 
 
-# ── Structured output forwarding ─────────────────────────────────────────────
+# â”€â”€ Structured output forwarding â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -397,7 +397,7 @@ async def test_custom_classification_prompt_forwarded() -> None:
     assert call_kwargs["instructions"] == custom_prompt
 
 
-# ── Cache hits ───────────────────────────────────────────────────────────────
+# â”€â”€ Cache hits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _cache_key_for(message: str) -> str:
@@ -431,7 +431,7 @@ async def test_cached_trivial_denies_without_llm_call() -> None:
 
     assert result is not None
     assert result["result"] == "DENY"
-    # No classification call — served from cache.
+    # No classification call â€” served from cache.
     client._mock_create.assert_not_awaited()
 
 
@@ -459,7 +459,7 @@ async def test_cached_complex_allows_without_llm_call() -> None:
 @pytest.mark.asyncio
 async def test_different_message_not_cached() -> None:
     """
-    A cache entry for message A does not affect message B — the
+    A cache entry for message A does not affect message B â€” the
     cache is keyed by message hash.
 
     What breaks if this fails: a stale cache entry from a prior
@@ -473,14 +473,14 @@ async def test_different_message_not_cached() -> None:
 
     result = await policy(event)
 
-    # Not cached — the classifier was called.
+    # Not cached â€” the classifier was called.
     client._mock_create.assert_awaited_once()
-    # COMPLEX → ALLOW with cache update.
+    # COMPLEX â†’ ALLOW with cache update.
     assert result is not None
     assert result["result"] == "ALLOW"
 
 
-# ── Registry ─────────────────────────────────────────────────────────────────
+# â”€â”€ Registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_registry_entry_well_formed() -> None:
@@ -494,13 +494,13 @@ def test_registry_entry_well_formed() -> None:
     required ``expensive_models`` parameter.
     """
     handlers = {e["handler"] for e in POLICY_REGISTRY}
-    assert "agent_meow.policies.builtins.routing.deny_trivial_to_expensive_model" in handlers
-    assert "agent_meow.policies.builtins.routing.intent_gate" in handlers
+    assert "omnigent.policies.builtins.routing.deny_trivial_to_expensive_model" in handlers
+    assert "omnigent.policies.builtins.routing.intent_gate" in handlers
 
     trivial_entry = next(
         e
         for e in POLICY_REGISTRY
-        if e["handler"] == "agent_meow.policies.builtins.routing.deny_trivial_to_expensive_model"
+        if e["handler"] == "omnigent.policies.builtins.routing.deny_trivial_to_expensive_model"
     )
     assert trivial_entry["kind"] == "factory"
     schema = trivial_entry["params_schema"]
@@ -510,13 +510,13 @@ def test_registry_entry_well_formed() -> None:
     intent_entry = next(
         e
         for e in POLICY_REGISTRY
-        if e["handler"] == "agent_meow.policies.builtins.routing.intent_gate"
+        if e["handler"] == "omnigent.policies.builtins.routing.intent_gate"
     )
     assert intent_entry["kind"] == "factory"
     assert intent_entry["params_schema"]["required"] == []
 
 
-# ── intent_gate ───────────────────────────────────────────────────────────────
+# â”€â”€ intent_gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _request_event(message: str, *, state: dict | None = None) -> dict[str, Any]:
@@ -580,7 +580,7 @@ async def test_intent_gate_ignores_subsequent_requests() -> None:
 
 @pytest.mark.asyncio
 async def test_intent_gate_empty_request_abstains() -> None:
-    """Blank first message abstains — nothing to record."""
+    """Blank first message abstains â€” nothing to record."""
     policy = intent_gate()
     assert await policy(_request_event("   ")) is None
 

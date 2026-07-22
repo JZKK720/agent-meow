@@ -1,6 +1,6 @@
 """Snapshot loader + comparator for agent-meow Phase 0 characterization tests.
 
-Snapshots are JSON files under ``tests/e2e/agent_meow/snapshots/``
+Snapshots are JSON files under ``tests/e2e/omnigent/snapshots/``
 and capture the *structural* observations a test makes about a
 live agent-meow run. They are the golden-master contract the
 Phase 0 design requires: written against current agent-meow,
@@ -10,16 +10,16 @@ doesn't change observable behavior.
 This helper distinguishes three comparator kinds so LLM
 non-determinism doesn't cause flakes:
 
-- ``"exact"`` — the observed value must equal the snapshot
+- ``"exact"`` â€” the observed value must equal the snapshot
   value. Used for statuses, field presence, tool names,
   known-constant strings.
-- ``"contains"`` — the observed string must contain the snapshot
+- ``"contains"`` â€” the observed string must contain the snapshot
   substring. Used for error messages or partial banners.
-- ``"min_length"`` — the observed string must be at least
+- ``"min_length"`` â€” the observed string must be at least
   ``value`` characters. Used for free-form assistant text where
   the exact content is LLM-dependent.
 
-A snapshot file is a JSON object mapping field name → comparator
+A snapshot file is a JSON object mapping field name â†’ comparator
 entry; each entry is ``{"kind": "...", "value": ...}``. A single
 ``compare_snapshot(path, observed)`` call returns a list of
 human-readable diffs; empty list means pass.
@@ -34,7 +34,7 @@ from typing import Literal
 
 # Directory (relative to this module) where snapshot JSONs live.
 # Tests reference snapshots by their pytest test name so each test
-# owns exactly one file — makes update-churn tractable in review.
+# owns exactly one file â€” makes update-churn tractable in review.
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
 
 # Valid comparator kinds. Kept as a frozenset so the loader can
@@ -70,7 +70,7 @@ def load_snapshot(test_name: str) -> dict[str, SnapshotField]:
         ``"test_per_harness_claude_sdk"``.
     :returns: Mapping of observed-field name to
         :class:`SnapshotField`.
-    :raises FileNotFoundError: If the snapshot file is missing —
+    :raises FileNotFoundError: If the snapshot file is missing â€”
         Phase 0 requires every test to ship with a captured
         snapshot, so the missing file is a bug, not a
         first-run side effect.
@@ -103,7 +103,7 @@ def compare_snapshot(
     """
     Compare observed fields against the named snapshot.
 
-    :param test_name: The snapshot name — see :func:`load_snapshot`.
+    :param test_name: The snapshot name â€” see :func:`load_snapshot`.
         Example: ``"test_per_harness_claude_sdk"``.
     :param observed: Dict of observed values the test gathered
         from the live agent-meow run, e.g.
@@ -115,7 +115,7 @@ def compare_snapshot(
     snapshot = load_snapshot(test_name)
     diffs: list[str] = []
     # Any snapshot field missing from the observed dict is a
-    # structural regression — the test no longer produces the
+    # structural regression â€” the test no longer produces the
     # observation the snapshot was written against.
     for field_name, entry in snapshot.items():
         if field_name not in observed:
@@ -181,6 +181,6 @@ def _compare_field(
                 f">= {threshold} chars, got {len(observed)}"
             )
         return None
-    # Should be impossible — load_snapshot already validates
-    # kinds — but fail loud rather than silently pass.
+    # Should be impossible â€” load_snapshot already validates
+    # kinds â€” but fail loud rather than silently pass.
     raise ValueError(f"Unreachable: unknown kind {entry.kind!r}")

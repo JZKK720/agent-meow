@@ -1,19 +1,19 @@
 """
 Tests for the built-in session-risk-score policy
-(:mod:`~?agent_meow.policies.builtins.risk_score`) — the single configurable
+(:mod:`~?omnigent.policies.builtins.risk_score`) â€” the single configurable
 factory ``risk_score_policy``.
 
 Layers:
 
-- **Layer 1** — direct callable: per-call scoring, sensitive-label scoring from
+- **Layer 1** â€” direct callable: per-call scoring, sensitive-label scoring from
   tool results, threshold gating (ASK/DENY), MCP-prefix-agnostic matching,
   per-actor offsets, escalation-vs-scoring precedence, and
   abstention on non-tool phases.
-- **Layer 2** — spec resolution through :func:`resolve_function_policy`.
-- **Layer 3** — accumulation through a real :class:`PolicyEngine` + SQLite store:
+- **Layer 2** â€” spec resolution through :func:`resolve_function_policy`.
+- **Layer 3** â€” accumulation through a real :class:`PolicyEngine` + SQLite store:
   proves the score survives an engine rebuild via persisted ``session_state`` and
   that crossing the threshold gates a guarded tool.
-- **Layer 4** — registry discovery + factory-param validation.
+- **Layer 4** â€” registry discovery + factory-param validation.
 """
 
 from __future__ import annotations
@@ -23,21 +23,21 @@ from typing import Any
 
 import pytest
 
-from agent_meow.policies.builtins.risk_score import (
+from omnigent.policies.builtins.risk_score import (
     DEFAULT_RISK_STATE_KEY,
     risk_score_policy,
 )
-from agent_meow.policies.function import FunctionPolicy, resolve_function_policy
-from agent_meow.policies.registry import get_registry, load_registry, validate_factory_params
-from agent_meow.policies.schema import PolicyEvent
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
-from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from omnigent.policies.function import FunctionPolicy, resolve_function_policy
+from omnigent.policies.registry import get_registry, load_registry, validate_factory_params
+from omnigent.policies.schema import PolicyEvent
+from omnigent.policies.types import EvaluationContext
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
+from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
 from tests.policies.builtins.helpers import tool_call_event as tc
 from tests.policies.builtins.helpers import tool_result_event as tr
 
-_HANDLER = "agent_meow.policies.builtins.risk_score.risk_score_policy"
+_HANDLER = "omnigent.policies.builtins.risk_score.risk_score_policy"
 
 
 def _tc_actor(tool: str, run_as: str, session_state: dict[str, Any] | None = None) -> PolicyEvent:
@@ -63,9 +63,9 @@ def _tc_actor(tool: str, run_as: str, session_state: dict[str, Any] | None = Non
     }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — per-call scoring
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” per-call scoring
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_configured_tool_call_increments_score() -> None:
@@ -77,7 +77,7 @@ def test_configured_tool_call_increments_score() -> None:
     result = risk_score_policy(tool_points={"web_search": 10})(tc("web_search", {"q": "x"}))
     assert result is not None
     assert result["result"] == "ALLOW"
-    # Exactly one increment of +10 on the default key — proves the configured
+    # Exactly one increment of +10 on the default key â€” proves the configured
     # weight (10) flows into a session_state mutation, not a no-op ALLOW.
     assert result["state_updates"] == [
         {"key": DEFAULT_RISK_STATE_KEY, "action": "increment", "value": 10}
@@ -109,15 +109,15 @@ def test_scoring_is_mcp_prefix_agnostic(raw_tool: str) -> None:
 def test_scoring_match_respects_segment_boundary() -> None:
     """A configured name must match a whole ``__``-segment, not a substring.
 
-    ``"search"`` must NOT match ``"web_search"`` — otherwise an over-broad config
+    ``"search"`` must NOT match ``"web_search"`` â€” otherwise an over-broad config
     name would silently score unrelated tools.
     """
     assert risk_score_policy(tool_points={"search": 10})(tc("web_search", {})) is None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — sensitive-label scoring from tool results
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” sensitive-label scoring from tool results
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @pytest.mark.parametrize(
@@ -126,14 +126,14 @@ def test_scoring_match_respects_segment_boundary() -> None:
 def test_sensitive_label_in_result_increments(label: str) -> None:
     """A result carrying a configured classification adds points, case-insensitively.
 
-    Failure means reading sensitive material doesn't raise risk — the core
+    Failure means reading sensitive material doesn't raise risk â€” the core
     "reading a Highly Confidential doc bumps the score" behavior.
     """
     policy = risk_score_policy(sensitive_labels={"Highly Confidential": 30})
     result = policy(tr("docs_document_get", json.dumps({"label_classification": label})))
     assert result is not None and result["result"] == "ALLOW"
     # +30 = the configured weight for this label; a different value would mean the
-    # label→weight lookup or case-folding is wrong.
+    # labelâ†’weight lookup or case-folding is wrong.
     assert result["state_updates"][0]["value"] == 30
 
 
@@ -163,7 +163,7 @@ def test_nested_label_is_found() -> None:
 def test_multiple_labels_takes_max_points() -> None:
     """When several configured labels appear, the highest weight is added once.
 
-    20 (not 50 or 30) proves we take the max single match, not the sum — a result
+    20 (not 50 or 30) proves we take the max single match, not the sum â€” a result
     that echoes the same classification in two fields must not double-count.
     """
     policy = risk_score_policy(sensitive_labels={"confidential": 30, "secret": 20})
@@ -188,13 +188,13 @@ def test_result_scoring_off_when_no_sensitive_labels() -> None:
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — threshold gating of guarded tools
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” threshold gating of guarded tools
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_guarded_tool_below_threshold_abstains() -> None:
-    """Below threshold, a guarded tool is not gated (abstains → ALLOW).
+    """Below threshold, a guarded tool is not gated (abstains â†’ ALLOW).
 
     A non-None result would mean the gate fires before enough risk accrued.
     """
@@ -247,14 +247,14 @@ def test_per_actor_offset_only_affects_that_actor() -> None:
     )
     gated = policy(_tc_actor("gmail_message_send", "contractor@example.com"))
     assert gated is not None and gated["result"] == "ASK"
-    # Employee has no offset → effective score 0 < 50 → not gated.
+    # Employee has no offset â†’ effective score 0 < 50 â†’ not gated.
     assert policy(_tc_actor("gmail_message_send", "employee@example.com")) is None
 
 
 def test_guarded_scorer_scores_below_then_gates_above() -> None:
     """A tool that is both scored and guarded: scores below threshold, gates above.
 
-    Documents the precedence rule — below threshold the tool accrues its weight;
+    Documents the precedence rule â€” below threshold the tool accrues its weight;
     at/above threshold the escalation replaces scoring (and on ASK the engine
     withholds state-updates anyway).
     """
@@ -268,7 +268,7 @@ def test_guarded_scorer_scores_below_then_gates_above() -> None:
     assert below["state_updates"][0]["value"] == 5  # accrues while still low-risk
     above = policy(tc("gmail_message_send", {}, {DEFAULT_RISK_STATE_KEY: 50}))
     assert above is not None and above["result"] == "ASK"
-    # Escalation carries no state mutation — gating is not a scoring event.
+    # Escalation carries no state mutation â€” gating is not a scoring event.
     assert "state_updates" not in above
 
 
@@ -296,16 +296,16 @@ def test_invalid_escalate_action_raises() -> None:
         risk_score_policy(escalate_action="warn")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 2 — resolution through resolve_function_policy
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 2 â€” resolution through resolve_function_policy
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @pytest.mark.asyncio
 async def test_resolve_from_spec_gates_over_threshold() -> None:
     """The factory resolves and runs via ``resolve_function_policy``.
 
-    Drives the same gating through the real spec → FunctionPolicy path that the
+    Drives the same gating through the real spec â†’ FunctionPolicy path that the
     server uses, asserting the coerced ``PolicyResult.action`` is ASK.
     """
     spec = FunctionPolicySpec(
@@ -329,9 +329,9 @@ async def test_resolve_from_spec_gates_over_threshold() -> None:
     assert result.action == PolicyAction.ASK
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 3 — accumulation through a real PolicyEngine + SQLite store
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 3 â€” accumulation through a real PolicyEngine + SQLite store
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @pytest.fixture()
@@ -399,7 +399,7 @@ async def test_score_accumulates_across_rebuilds_then_gates(
     }
     conv = conversation_store.create_conversation()
 
-    # Turn 1: one web_search → +10. Guarded tool still allowed (10 < 20).
+    # Turn 1: one web_search â†’ +10. Guarded tool still allowed (10 < 20).
     engine1 = _engine(conversation_store, conv.id, {}, args)
     r1 = await engine1.evaluate(
         EvaluationContext(
@@ -411,7 +411,7 @@ async def test_score_accumulates_across_rebuilds_then_gates(
     assert r1.action == PolicyAction.ALLOW
     reloaded = conversation_store.get_conversation(conv.id)
     assert reloaded is not None
-    # +10 persisted — if 0/missing, the increment never reached the store.
+    # +10 persisted â€” if 0/missing, the increment never reached the store.
     assert reloaded.session_state.get(DEFAULT_RISK_STATE_KEY) == 10
 
     not_yet = await engine1.evaluate(
@@ -423,7 +423,7 @@ async def test_score_accumulates_across_rebuilds_then_gates(
     )
     assert not_yet.action == PolicyAction.ALLOW  # 10 < 20, not gated
 
-    # Turn 2: a fresh engine seeded from the persisted state. Another +10 → 20.
+    # Turn 2: a fresh engine seeded from the persisted state. Another +10 â†’ 20.
     engine2 = _engine(conversation_store, conv.id, dict(reloaded.session_state), args)
     r2 = await engine2.evaluate(
         EvaluationContext(
@@ -438,7 +438,7 @@ async def test_score_accumulates_across_rebuilds_then_gates(
     # 20 = 10 (turn 1) + 10 (turn 2). If 10, the seed state was dropped on rebuild.
     assert reloaded2.session_state.get(DEFAULT_RISK_STATE_KEY) == 20
 
-    # Turn 3: now at threshold → the guarded tool is blocked.
+    # Turn 3: now at threshold â†’ the guarded tool is blocked.
     engine3 = _engine(conversation_store, conv.id, dict(reloaded2.session_state), args)
     gated = await engine3.evaluate(
         EvaluationContext(
@@ -458,7 +458,7 @@ async def test_sensitive_result_accrues_risk_through_engine(
     """
     Reading a sensitive-labeled result raises risk enough to gate via the engine.
 
-    Exercises the full tool_result → label scoring → persisted state → gate path
+    Exercises the full tool_result â†’ label scoring â†’ persisted state â†’ gate path
     end-to-end through a real engine and store.
     """
     args = {
@@ -480,7 +480,7 @@ async def test_sensitive_result_accrues_risk_through_engine(
     assert read.action == PolicyAction.ALLOW
     reloaded = conversation_store.get_conversation(conv.id)
     assert reloaded is not None
-    # +30 from the confidential read — the DLP label drove the increment.
+    # +30 from the confidential read â€” the DLP label drove the increment.
     assert reloaded.session_state.get(DEFAULT_RISK_STATE_KEY) == 30
 
     engine2 = _engine(conversation_store, conv.id, dict(reloaded.session_state), args)
@@ -491,13 +491,13 @@ async def test_sensitive_result_accrues_risk_through_engine(
             content={"name": "gmail_message_send", "arguments": {}},
         )
     )
-    # 30 >= 25 → the send is blocked after the confidential read.
+    # 30 >= 25 â†’ the send is blocked after the confidential read.
     assert gated.action == PolicyAction.DENY
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 4 — registry discovery + param validation
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 4 â€” registry discovery + param validation
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_registry_discovers_risk_score() -> None:

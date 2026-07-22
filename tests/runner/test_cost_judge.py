@@ -1,9 +1,9 @@
-"""Tests for :mod:`~?agent_meow.runner.cost_judge` — the per-turn LLM judge.
+"""Tests for :mod:`~?omnigent.runner.cost_judge` â€” the per-turn LLM judge.
 
 Covers:
 
 - The judge's LLM-call-and-parse path with a SCRIPTED client returning
-  canned JSON (real :class:`Response` types, never MagicMock — the judge
+  canned JSON (real :class:`Response` types, never MagicMock â€” the judge
   relies on the ``isinstance(item, MessageOutput)`` gate): a single
   tier+model verdict, the conversational null verdict, an out-of-tier
   model clamp, a fenced-JSON body, malformed JSON, an unknown tier, a
@@ -11,7 +11,7 @@ Covers:
   success), and total judge failure.
 - The judge-model resolution (cheapest-tier default + ``advisor_model``
   override).
-- The mode-resolution precedence matrix (override × spec marker).
+- The mode-resolution precedence matrix (override Ã— spec marker).
 
 The judge fails OPEN: a broken call (error, malformed, unknown tier)
 returns ``None`` and never raises into the turn, so the judge can only
@@ -24,9 +24,9 @@ from typing import Any
 
 import pytest
 
-from agent_meow.cost_plan import AdvisorVerdict
-from agent_meow.llms.types import MessageOutput, OutputText, Response
-from agent_meow.runner.cost_judge import (
+from omnigent.cost_plan import AdvisorVerdict
+from omnigent.llms.types import MessageOutput, OutputText, Response
+from omnigent.runner.cost_judge import (
     LLMJudge,
     build_llm_judge,
     resolve_advisor_mode,
@@ -66,7 +66,7 @@ class _ScriptedClient:
     fails loud instead of silently passing.
 
     :param texts: One assistant text per expected call, returned in
-        order. Exception instances are re-raised instead of returned —
+        order. Exception instances are re-raised instead of returned â€”
         used to script the retry path.
     """
 
@@ -113,12 +113,12 @@ def _judge(client: _ScriptedClient) -> LLMJudge:
     )
 
 
-# ── Judge: response → verdict ─────────────────────────────────────────────────
+# â”€â”€ Judge: response â†’ verdict â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_verdict_carries_judged_tier_and_model() -> None:
-    """A tier+model response becomes a verdict with that tier + model —
+    """A tier+model response becomes a verdict with that tier + model â€”
     proving the parsed JSON reached the caller intact."""
     client = _ScriptedClient(
         '{"tier": "expensive", "model": "databricks-claude-opus-4-8", '
@@ -132,9 +132,9 @@ async def test_verdict_carries_judged_tier_and_model() -> None:
     assert verdict.model == "databricks-claude-opus-4-8"
     assert verdict.rationale == "deep refactor"
     assert verdict.turn_anchor == _ANCHOR
-    # The judge never sets applied — that is the advisor's decision.
+    # The judge never sets applied â€” that is the advisor's decision.
     assert verdict.applied is False
-    # Exactly one judge call per turn — a second would double the cost.
+    # Exactly one judge call per turn â€” a second would double the cost.
     assert client.call_count == 1
 
 
@@ -165,7 +165,7 @@ async def test_null_verdict_returns_none_for_conversational_turn() -> None:
 
 @pytest.mark.asyncio
 async def test_empty_query_skips_llm_call() -> None:
-    """A whitespace-only query is conversational without any LLM call —
+    """A whitespace-only query is conversational without any LLM call â€”
     saves a judge call on non-text turns."""
     client = _ScriptedClient()  # no scripted responses; a call would IndexError
     verdict = await _judge(client).judge(query="   ", turn_anchor=_ANCHOR)
@@ -191,7 +191,7 @@ async def test_out_of_tier_model_is_clamped_to_tier_first() -> None:
 
 @pytest.mark.asyncio
 async def test_unknown_tier_fails_open_to_none() -> None:
-    """A verdict naming an unconfigured tier is a judge failure → None."""
+    """A verdict naming an unconfigured tier is a judge failure â†’ None."""
     client = _ScriptedClient('{"tier": "platinum", "model": "x"}')
     verdict = await _judge(client).judge(query="do a thing", turn_anchor=_ANCHOR)
     # None (not raise): an unknown tier can't be ranked, so the turn runs
@@ -201,11 +201,11 @@ async def test_unknown_tier_fails_open_to_none() -> None:
 
 @pytest.mark.asyncio
 async def test_malformed_json_fails_open_after_retry() -> None:
-    """Non-JSON output fails open to None — after retrying once."""
+    """Non-JSON output fails open to None â€” after retrying once."""
     client = _ScriptedClient("not json at all", "still not json")
     verdict = await _judge(client).judge(query="hello", turn_anchor=_ANCHOR)
     assert verdict is None
-    # Two attempts (initial + one retry) before giving up — a single
+    # Two attempts (initial + one retry) before giving up â€” a single
     # attempt would mean the retry path was lost.
     assert client.call_count == 2
 
@@ -248,7 +248,7 @@ async def test_retry_recovers_from_transient_error() -> None:
     verdict = await judge.judge(query="summarize this module", turn_anchor=_ANCHOR)
     assert verdict is not None
     assert verdict.tier == "medium"
-    # Clamped to the only medium model — proves the recovered call's verdict
+    # Clamped to the only medium model â€” proves the recovered call's verdict
     # flowed through the clamp.
     assert verdict.model == "databricks-claude-sonnet-4-6"
     # Two calls: the failed one + the successful retry.
@@ -271,14 +271,14 @@ async def test_prompt_inlines_tier_menu_for_the_judge() -> None:
     client = _ScriptedClient('{"tier": null}')
     await _judge(client).judge(query="anything", turn_anchor=_ANCHOR)
     prompt = client.captured[0]["input"][0]["content"][0]["text"]
-    # Every configured model id appears in the prompt menu — a missing one
+    # Every configured model id appears in the prompt menu â€” a missing one
     # would mean the judge can't pin it and would always clamp.
     for tier_models in _TIERS.values():
         for model in tier_models:
             assert model in prompt
 
 
-# ── Judge-model resolution ─────────────────────────────────────────────────────
+# â”€â”€ Judge-model resolution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -305,7 +305,7 @@ async def test_advisor_model_override_picks_judge_model() -> None:
     assert client.captured[0]["model"] == "databricks-gpt-5-4-mini"
 
 
-# ── Mode resolution precedence ──────────────────────────────────────────────────
+# â”€â”€ Mode resolution precedence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -314,7 +314,7 @@ async def test_advisor_model_override_picks_judge_model() -> None:
         # No override: spec mode stands.
         ("advise", None, "advise"),
         ("optimize", None, "optimize"),
-        # Toggle ON escalates to optimize — even an advise-default spec.
+        # Toggle ON escalates to optimize â€” even an advise-default spec.
         ("advise", "on", "optimize"),
         ("optimize", "on", "optimize"),
         # Toggle OFF disables the advisor for the session.
@@ -346,7 +346,7 @@ def test_verdict_dataclass_is_unapplied_by_judge() -> None:
     assert v.applied is False
 
 
-# ── Databricks judge-model routing (real-client path) ─────────────────────────
+# â”€â”€ Databricks judge-model routing (real-client path) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -359,9 +359,9 @@ async def test_bare_databricks_judge_model_routes_via_databricks_adapter(
 
     Without the prefix the generic client routes the bare id to the default
     openai adapter (api.openai.com) and the judge 401s and fails open on
-    EVERY turn — the live-run failure that motivated the routing.
+    EVERY turn â€” the live-run failure that motivated the routing.
     """
-    from agent_meow.runtime.credentials.databricks import WorkspaceCreds
+    from omnigent.runtime.credentials.databricks import WorkspaceCreds
 
     client = _ScriptedClient('{"tier": null}')
     resolved_profiles: list[str | None] = []
@@ -370,10 +370,10 @@ async def test_bare_databricks_judge_model_routes_via_databricks_adapter(
         resolved_profiles.append(profile)
         return WorkspaceCreds(host="https://example.databricks.com", token="tok-123")
 
-    # The real-client path lazily does `from agent_meow.llms.client import
+    # The real-client path lazily does `from omnigent.llms.client import
     # Client`; rebind that symbol so no real client is constructed.
-    monkeypatch.setattr("agent_meow.llms.client.Client", lambda: client)
-    monkeypatch.setattr("agent_meow.runner.cost_judge._resolve_workspace_creds", _fake_creds)
+    monkeypatch.setattr("omnigent.llms.client.Client", lambda: client)
+    monkeypatch.setattr("omnigent.runner.cost_judge._resolve_workspace_creds", _fake_creds)
     judge = build_llm_judge(
         tiers=_TIERS,
         executor_config={"cost_optimize": {"tiers": {}}},
@@ -381,7 +381,7 @@ async def test_bare_databricks_judge_model_routes_via_databricks_adapter(
         databricks_profile="brain-profile",
     )
     await judge.judge(query="hi", turn_anchor=_ANCHOR)
-    # Credentials were resolved from the BRAIN's profile — a None here
+    # Credentials were resolved from the BRAIN's profile â€” a None here
     # means the advisor's profile threading broke (ambient fallback).
     assert resolved_profiles == ["brain-profile"]
     # Prefixed model = the databricks adapter handles the call; the bare id
@@ -399,15 +399,15 @@ async def test_databricks_credential_failure_falls_back_to_adapter_defaults(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A failed credential resolution keeps the prefixed model but passes no
-    connection (the adapter then auto-resolves ambiently) — building the
+    connection (the adapter then auto-resolves ambiently) â€” building the
     judge never raises into the turn."""
 
     def _broken_creds(profile: str | None) -> None:
         raise OSError("no usable Databricks credentials")
 
     client = _ScriptedClient('{"tier": null}')
-    monkeypatch.setattr("agent_meow.llms.client.Client", lambda: client)
-    monkeypatch.setattr("agent_meow.runner.cost_judge._resolve_workspace_creds", _broken_creds)
+    monkeypatch.setattr("omnigent.llms.client.Client", lambda: client)
+    monkeypatch.setattr("omnigent.runner.cost_judge._resolve_workspace_creds", _broken_creds)
     judge = build_llm_judge(
         tiers=_TIERS,
         executor_config={"cost_optimize": {"tiers": {}}},
@@ -432,8 +432,8 @@ async def test_non_databricks_judge_model_is_not_rerouted(
         raise AssertionError("credential resolution must not run for a non-Databricks model")
 
     client = _ScriptedClient('{"tier": null}')
-    monkeypatch.setattr("agent_meow.llms.client.Client", lambda: client)
-    monkeypatch.setattr("agent_meow.runner.cost_judge._resolve_workspace_creds", _must_not_resolve)
+    monkeypatch.setattr("omnigent.llms.client.Client", lambda: client)
+    monkeypatch.setattr("omnigent.runner.cost_judge._resolve_workspace_creds", _must_not_resolve)
     judge = build_llm_judge(
         tiers=_TIERS,
         executor_config={"cost_optimize": {"advisor_model": "anthropic/claude-haiku-4-5"}},

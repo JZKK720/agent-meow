@@ -29,9 +29,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow import cursor_native_bridge as cnb
-from agent_meow import cursor_native_permissions as cnp
-from agent_meow.cursor_native_permissions import (
+from omnigent import cursor_native_bridge as cnb
+from omnigent import cursor_native_permissions as cnp
+from omnigent.cursor_native_permissions import (
     CursorApprovalPrompt,
     CursorPendingToolCall,
     cursor_tool_call_elicitation_id,

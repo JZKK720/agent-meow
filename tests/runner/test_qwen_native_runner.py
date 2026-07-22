@@ -8,8 +8,8 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow import qwen_native_bridge as qnb
-from agent_meow.runner.app import _build_qwen_fork_recording, _persist_qwen_external_session_id
+from omnigent import qwen_native_bridge as qnb
+from omnigent.runner.app import _build_qwen_fork_recording, _persist_qwen_external_session_id
 
 
 class _RecordingClient:

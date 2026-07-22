@@ -1,12 +1,12 @@
 """
-Tests for ``_build_pi_spawn_env`` in ``agent_meow/runtime/workflow.py``.
+Tests for ``_build_pi_spawn_env`` in ``omnigent/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec.executor`` fields to ``HARNESS_PI_*``
 env vars that the pi harness wrap reads at executor-construction time.
-Mirrors ``test_claude_sdk_spawn_env.py`` — pi must have the same
+Mirrors ``test_claude_sdk_spawn_env.py`` â€” pi must have the same
 Databricks-gateway default-model parity that claude-sdk has.
 
-This is a unit test — no subprocess spawn, no real pi CLI.
+This is a unit test â€” no subprocess spawn, no real pi CLI.
 """
 
 from __future__ import annotations
@@ -15,15 +15,15 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.runtime.workflow import _build_pi_spawn_env
-from agent_meow.spec.types import AgentSpec, ExecutorSpec, LLMConfig
+from omnigent.runtime.workflow import _build_pi_spawn_env
+from omnigent.spec.types import AgentSpec, ExecutorSpec, LLMConfig
 
 
 @pytest.fixture(autouse=True)
 def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """
     Point OMNIGENT_CONFIG_HOME at an empty temp dir for every test in
-    this file so the developer's real ``~/.agent_meow/config.yaml`` (e.g.
+    this file so the developer's real ``~/.omnigent/config.yaml`` (e.g.
     a default provider) cannot hijack the legacy-profile path under test.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -38,7 +38,7 @@ def _make_spec(*, model: str | None = None, profile: str | None = None) -> Agent
 
     :param model: Model identifier threaded into executor config and
         ``spec.llm``, e.g. ``"databricks-claude-sonnet-4-6"``. ``None``
-        omits it (no model pinned in YAML — the nessie shape).
+        omits it (no model pinned in YAML â€” the nessie shape).
     :param profile: Legacy profile set via ``executor.config["profile"]``.
         ``None`` omits it (no profile declared in YAML).
     :returns: A populated :class:`AgentSpec`.
@@ -92,7 +92,7 @@ def _ucode_state_for_pi(
         entry at all, exercising the early-return in
         ``configure_agent_harness_with_ucode``.
     """
-    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     agents = (
         {
@@ -113,11 +113,11 @@ def _ucode_state_for_pi(
         agents=agents,
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow.get_workspace_url_for_profile",
+        "omnigent.runtime.workflow.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow.read_ucode_state",
+        "omnigent.runtime.workflow.read_ucode_state",
         lambda workspace_url: state,
     )
 
@@ -186,7 +186,7 @@ def test_no_ucode_pi_entry_leaves_model_to_executor_default(
     default-model fallback when the workspace state has no ``pi`` agent.
     The spawn env must still enable the gateway + carry the profile so
     the executor's own profile-derived Databricks default (see
-    ``PiExecutor._resolve_model``) covers this path — asserting the model
+    ``PiExecutor._resolve_model``) covers this path â€” asserting the model
     var is absent proves that executor-side fallback is actually reached.
     """
     _ucode_state_for_pi(monkeypatch, model=None, with_pi_entry=False)
@@ -196,5 +196,5 @@ def test_no_ucode_pi_entry_leaves_model_to_executor_default(
 
     assert env["HARNESS_PI_GATEWAY"] == "true"
     assert env["HARNESS_PI_DATABRICKS_PROFILE"] == "oss"
-    # No producer model — the executor's profile-path default applies.
+    # No producer model â€” the executor's profile-path default applies.
     assert "HARNESS_PI_MODEL" not in env

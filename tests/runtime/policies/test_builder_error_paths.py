@@ -6,7 +6,7 @@ fail loudly on malformed input rather than silently producing
 broken engines.
 
 Load-bearing: silent failures here would let broken agents
-ship to production — a FunctionPolicy whose dotted path
+ship to production â€” a FunctionPolicy whose dotted path
 doesn't resolve should fail at workflow start, not silently
 ALLOW every evaluation.
 """
@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.policies.function import (
+from omnigent.policies.function import (
     resolve_function_policy,
 )
-from agent_meow.spec.types import (
+from omnigent.spec.types import (
     FunctionPolicySpec,
     FunctionRef,
     Phase,
@@ -38,11 +38,11 @@ def _fn_spec(
     )
 
 
-# ── Dotted path resolution errors ─────────────────────
+# â”€â”€ Dotted path resolution errors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_bare_path_rejected() -> None:
-    """Single-segment path (no dot) is rejected — useful
+    """Single-segment path (no dot) is rejected â€” useful
     module-level imports are dotted. If this regresses, an
     author writing `function: my_tool` would get a confusing
     AttributeError on some irrelevant module attribute."""
@@ -51,7 +51,7 @@ def test_resolve_bare_path_rejected() -> None:
 
 
 def test_resolve_missing_module_raises_import_error() -> None:
-    """Module not found → clear ImportError. The caller
+    """Module not found â†’ clear ImportError. The caller
     (Phase 6 workflow init) surfaces this at workflow start
     so an incorrect spec fails before any evaluation runs."""
     with pytest.raises(ImportError):
@@ -61,32 +61,32 @@ def test_resolve_missing_module_raises_import_error() -> None:
 
 
 def test_resolve_missing_attribute_raises_attribute_error() -> None:
-    """Module exists but attribute doesn't → AttributeError.
+    """Module exists but attribute doesn't â†’ AttributeError.
     Distinguishes "typo in module name" from "typo in attr
-    name" — gives the author a precise hint."""
+    name" â€” gives the author a precise hint."""
     with pytest.raises(AttributeError):
         resolve_function_policy(
-            _fn_spec("agent_meow.spec.types.nonexistent_attr"),
+            _fn_spec("omnigent.spec.types.nonexistent_attr"),
         )
 
 
 def test_resolve_non_callable_rejected() -> None:
     """Dotted path resolves to a non-callable (e.g. a module
-    constant) → ValueError naming the resolved type."""
+    constant) â†’ ValueError naming the resolved type."""
     # Point at a non-callable module-level constant
-    # (`agent_meow.spec.types.DEFAULT_ASK_TIMEOUT` is an int).
+    # (`omnigent.spec.types.DEFAULT_ASK_TIMEOUT` is an int).
     with pytest.raises(ValueError, match=r"not callable"):
         resolve_function_policy(
-            _fn_spec("agent_meow.spec.types.DEFAULT_ASK_TIMEOUT"),
+            _fn_spec("omnigent.spec.types.DEFAULT_ASK_TIMEOUT"),
         )
 
 
-# ── Missing function field ────────────────────────────
+# â”€â”€ Missing function field â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_with_none_function_raises() -> None:
     """A FunctionPolicySpec with function=None (shouldn't
-    happen after parser validation, but defensive) → clear
+    happen after parser validation, but defensive) â†’ clear
     ValueError mentioning the parser responsibility."""
     bad_spec = FunctionPolicySpec(
         name="p",
@@ -97,11 +97,11 @@ def test_resolve_with_none_function_raises() -> None:
         resolve_function_policy(bad_spec)
 
 
-# ── Factory-form errors ───────────────────────────────
+# â”€â”€ Factory-form errors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_factory_bad_arguments_raises_at_build() -> None:
-    """Factory accepts kwargs; calling with wrong kwargs →
+    """Factory accepts kwargs; calling with wrong kwargs â†’
     TypeError surfaces at build time, NOT at evaluate time.
     Fail-early so deploy pipelines catch the misconfiguration."""
     # rate_limit_search accepts `limit: int`; passing an
@@ -115,7 +115,7 @@ def test_factory_bad_arguments_raises_at_build() -> None:
         )
 
 
-# ── Builder + spec integration ────────────────────────
+# â”€â”€ Builder + spec integration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_engine_fails_on_invalid_function_path(
@@ -123,8 +123,8 @@ def test_build_engine_fails_on_invalid_function_path(
 ) -> None:
     """build_policy_engine propagates resolution errors so
     the workflow startup fails loudly on a broken spec."""
-    from agent_meow.runtime.policies import build_policy_engine
-    from agent_meow.spec.types import (
+    from omnigent.runtime.policies import build_policy_engine
+    from omnigent.spec.types import (
         AgentSpec,
         GuardrailsSpec,
     )

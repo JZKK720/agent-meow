@@ -4,7 +4,7 @@
 The macOS sibling of ``agent_with_os_env_bwrap``: same ``sys_os_*`` tools, but
 the helper subprocess runs under the ``darwin_seatbelt`` sandbox
 (``sandbox-exec`` profile, read-only cwd, dotfile masking, egress allowlist).
-Pure spec-load — the live sandbox only engages on macOS at run time, so this
+Pure spec-load â€” the live sandbox only engages on macOS at run time, so this
 guard locks the distinctive ``sandbox: type: darwin_seatbelt`` + egress wiring
 rather than depending on the credential-gated one-shot.
 
@@ -20,10 +20,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.spec import load
-from agent_meow.spec.types import AgentSpec
+from omnigent.spec import load
+from omnigent.spec.types import AgentSpec
 
-# tests/e2e/agent_meow/test_example_agent_with_os_env_seatbelt.py -> repo root 3 up.
+# tests/e2e/omnigent/test_example_agent_with_os_env_seatbelt.py -> repo root 3 up.
 _SEATBELT_YAML = (
     Path(__file__).resolve().parents[3]
     / "tests"
@@ -55,7 +55,7 @@ def test_egress_allowlist_present(seatbelt_spec: AgentSpec) -> None:
     """
     The sandbox pins an egress allowlist (httpbin GET routes). Losing it would
     either open unrestricted network or strip the reachability the example
-    relies on — both regressions worth failing on.
+    relies on â€” both regressions worth failing on.
     """
     sandbox = seatbelt_spec.os_env.sandbox
     assert sandbox.egress_rules == [

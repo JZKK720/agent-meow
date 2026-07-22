@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import tomllib
 
-from agent_meow.kimi_native_credentials import (
+from omnigent.kimi_native_credentials import (
     KIMI_CODE_HOME_ENV_VAR,
     build_kimi_session_home,
     render_kimi_hooks_toml,
@@ -33,13 +33,13 @@ def test_render_hooks_toml_is_valid_and_complete() -> None:
     events = {h["event"] for h in parsed["hooks"]}
     assert events == {"PreToolUse", "PermissionRequest"}
     for hook in parsed["hooks"]:
-        assert "agent_meow.kimi_native_hook" in hook["command"]
+        assert "omnigent.kimi_native_hook" in hook["command"]
         assert "/tmp/b r" in hook["command"]  # space-bearing path round-trips
         # ``-I`` (isolated mode) is mandatory: kimi runs the hook with cwd set to
         # the session workspace, so without it a workspace containing its own
-        # ``agent_meow/`` shadows the install and the hook dies on ImportError
+        # ``omnigent/`` shadows the install and the hook dies on ImportError
         # before publishing the approval card.
-        assert " -I -m agent_meow.kimi_native_hook" in hook["command"]
+        assert " -I -m omnigent.kimi_native_hook" in hook["command"]
         # Pinned above kimi's 30s default so the permission hook survives a slow
         # web verdict (else the injected keystroke never lands); 600 is kimi's
         # ceiling.
@@ -58,10 +58,10 @@ def test_build_session_home_preserves_user_config_and_appends_hooks(
 
     assert env == {KIMI_CODE_HOME_ENV_VAR: str(session_home)}
     parsed = tomllib.loads((session_home / "config.toml").read_text(encoding="utf-8"))
-    # User config preserved …
+    # User config preserved â€¦
     assert parsed["default_model"] == "kimi-code/x"
     assert "managed" in parsed["providers"]
-    # … and the agent-meow hooks appended.
+    # â€¦ and the agent-meow hooks appended.
     assert {h["event"] for h in parsed["hooks"]} == {"PreToolUse", "PermissionRequest"}
 
 
@@ -75,11 +75,11 @@ def test_build_session_home_symlinks_auth_but_not_config(
 
     build_kimi_session_home(session_home, bridge_dir=bridge_dir)
 
-    # oauth is symlinked through to the user's tokens (auth keeps working) …
+    # oauth is symlinked through to the user's tokens (auth keeps working) â€¦
     oauth_link = session_home / "oauth"
     assert oauth_link.is_symlink()
     assert (oauth_link / "token").read_text(encoding="utf-8") == "secret"
-    # … but config.toml is a real file (we own its content), not a symlink.
+    # â€¦ but config.toml is a real file (we own its content), not a symlink.
     assert not (session_home / "config.toml").is_symlink()
 
 

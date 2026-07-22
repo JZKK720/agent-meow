@@ -1,4 +1,4 @@
-"""Tests for the RPC read driver (:mod:`~?agent_meow.antigravity_native_reader`).
+"""Tests for the RPC read driver (:mod:`~?omnigent.antigravity_native_reader`).
 
 The reader replaces the transcript-tail forwarder's read loop: it polls agy's
 connect-RPC for trajectory steps, maps each new step to agent-meow conversation
@@ -58,10 +58,10 @@ from typing import Any, cast
 import httpx
 import pytest
 
-from agent_meow import antigravity_native_reader as reader
-from agent_meow.antigravity_native_bridge import read_bridge_state
-from agent_meow.antigravity_native_rpc import AntigravityRpcError
-from agent_meow.antigravity_native_steps import PendingInteraction
+from omnigent import antigravity_native_reader as reader
+from omnigent.antigravity_native_bridge import read_bridge_state
+from omnigent.antigravity_native_rpc import AntigravityRpcError
+from omnigent.antigravity_native_steps import PendingInteraction
 
 # ---------------------------------------------------------------------------
 # Fixtures + scaffolding
@@ -191,7 +191,7 @@ def _frame(steps: list[dict[str, Any]]) -> dict[str, Any]:
     """Wrap a step list in a ``StreamAgentStateUpdates`` update frame.
 
     Mirrors the live shape ``update.mainTrajectoryUpdate.stepsUpdate.steps[]``
-    (design §10.2) that :func:`stream_agent_state_updates` yields per frame.
+    (design Â§10.2) that :func:`stream_agent_state_updates` yields per frame.
     """
     return {"mainTrajectoryUpdate": {"stepsUpdate": {"steps": copy.deepcopy(steps)}}}
 
@@ -200,7 +200,7 @@ def _generating_planner(text: str, *, step_index: int = 2) -> dict[str, Any]:
     """A PLANNER_RESPONSE step mid-generation (status GENERATING).
 
     Built from the committed ``planner_response_text`` fixture but with the
-    partial-text contract verified live (design §10.2): ``modifiedResponse``
+    partial-text contract verified live (design Â§10.2): ``modifiedResponse``
     holds the growing partial, ``response`` is ABSENT during generation, and
     ``status == CORTEX_STEP_STATUS_GENERATING``.
     """
@@ -219,7 +219,7 @@ def _generating_planner_with_thinking(
     """A GENERATING PLANNER_RESPONSE carrying a growing ``thinking`` block.
 
     Gemini Thinking-model variants stream chain-of-thought at
-    ``plannerResponse.thinking`` (design §10.2) alongside the growing
+    ``plannerResponse.thinking`` (design Â§10.2) alongside the growing
     ``modifiedResponse``. Built from :func:`_generating_planner` so the partial
     text contract (``response`` absent, status GENERATING) is preserved; the
     ``thinking`` field is added to model the reasoning stream.
@@ -233,7 +233,7 @@ def _done_planner(text: str, *, step_index: int = 2) -> dict[str, Any]:
     """A DONE PLANNER_RESPONSE step whose committed text is ``text``.
 
     On DONE both ``response`` and ``modifiedResponse`` are present and equal
-    (design §10.2); the mapper emits one committed ``message`` from it.
+    (design Â§10.2); the mapper emits one committed ``message`` from it.
     """
     step = copy.deepcopy(_load("planner_response_text"))
     step["status"] = "CORTEX_STEP_STATUS_DONE"
@@ -248,7 +248,7 @@ def _running_run_command() -> dict[str, Any]:
     """A RUN_COMMAND step still executing (status RUNNING; no output yet).
 
     Built from the DONE fixture but rolled back to RUNNING with its output
-    stripped — the pre-DONE shape the stream surfaces before the command
+    stripped â€” the pre-DONE shape the stream surfaces before the command
     completes. The mapper emits nothing for it (output only at DONE).
     """
     step = copy.deepcopy(_load("run_command_done"))
@@ -398,7 +398,7 @@ async def _run(
     """Drive ``supervise_reader`` for a bounded number of poll iterations.
 
     The reader is stream-primary (Task T-D), so to exercise the POLL path these
-    tests inject a ``stream_agent_state_updates`` that fails immediately —
+    tests inject a ``stream_agent_state_updates`` that fails immediately â€”
     forcing the documented graceful fallback to the (committed-only) poll loop.
     """
     monkeypatch.setattr(
@@ -505,7 +505,7 @@ async def test_poll_planner_generating_then_done_posts_one_final_message(
     intercept GENERATING (only the stream path emits deltas), and the mapper now
     gates the committed planner message on DONE. So a poll that sees the planner
     GENERATING ("Hi") then DONE ("Hi there") must post exactly one ``message``
-    whose text is the FINAL "Hi there" — not "Hi", and not two messages.
+    whose text is the FINAL "Hi there" â€” not "Hi", and not two messages.
     """
     script = _StepScript(
         [
@@ -551,7 +551,7 @@ async def test_user_input_commits_user_message_once(
     """A USER_INPUT step posts one user ``message`` item, deduped across reads.
 
     Regression guard for #1155: the user turn must be committed (so the web UI
-    reconciles its optimistic bubble) and committed only ONCE — the reader
+    reconciles its optimistic bubble) and committed only ONCE â€” the reader
     dedups the step by its per-turn ``executionId`` across repeated polls.
     """
     user = _load("user_input")
@@ -570,7 +570,7 @@ async def test_user_input_commits_user_message_once(
 
 
 # ---------------------------------------------------------------------------
-# WAITING step → on_pending_interaction invoked exactly once
+# WAITING step â†’ on_pending_interaction invoked exactly once
 # ---------------------------------------------------------------------------
 
 
@@ -636,7 +636,7 @@ async def test_streaming_continues_while_interaction_pending(
     sink = _PostSink()
 
     async def _block(_cascade_id: str, _port: int, _pending: PendingInteraction) -> None:
-        await asyncio.Event().wait()  # never completes — simulates a human holding
+        await asyncio.Event().wait()  # never completes â€” simulates a human holding
 
     await asyncio.wait_for(
         _run(
@@ -657,7 +657,7 @@ async def test_streaming_continues_while_interaction_pending(
 @pytest.mark.asyncio
 async def test_single_in_flight_guard_skips_second_interaction() -> None:
     """While one interaction is handled off-loop, a second (e.g. agy's higher-index
-    WAITING retry) is NOT fired again — the in-flight bridge owns the retries."""
+    WAITING retry) is NOT fired again â€” the in-flight bridge owns the retries."""
     state = reader._ReaderState(
         allocator=reader._ToolCallIdAllocator(conversation_id=_CASCADE_ID),
         seen=set(),
@@ -801,10 +801,10 @@ def _permission_waiting() -> dict[str, Any]:
 
 
 def _permission_done() -> dict[str, Any]:
-    """The same permission step advanced to DONE (answered/timed out → no WAITING).
+    """The same permission step advanced to DONE (answered/timed out â†’ no WAITING).
 
     Built from the WAITING fixture by flipping the status and dropping the
-    ``requestedInteraction`` block, so ``pending_interaction`` returns ``None`` —
+    ``requestedInteraction`` block, so ``pending_interaction`` returns ``None`` â€”
     exactly what the reader sees once the step leaves WAITING.
     """
     step = copy.deepcopy(_load("run_command_waiting"))
@@ -819,7 +819,7 @@ async def test_step_leaving_waiting_withdraws_surfaced_elicitation(
     monkeypatch: pytest.MonkeyPatch,
     patched_discovery: None,
 ) -> None:
-    """A surfaced WAITING step that later is NOT WAITING → withdraw the web card.
+    """A surfaced WAITING step that later is NOT WAITING â†’ withdraw the web card.
 
     Models the terminal-answered / timed-out case: the reader surfaces the
     permission elicitation, then on a later poll the step is DONE (no
@@ -827,7 +827,7 @@ async def test_step_leaving_waiting_withdraws_surfaced_elicitation(
     ``external_elicitation_resolved`` for that step's deterministic elicitation id
     so the lingering web card clears (#1200, direction 2).
     """
-    from agent_meow.antigravity_native_interactions import agy_elicitation_id
+    from omnigent.antigravity_native_interactions import agy_elicitation_id
 
     waiting = _permission_waiting()
     done = _permission_done()
@@ -851,7 +851,7 @@ async def test_step_leaving_waiting_withdraws_surfaced_elicitation(
 
     async def _on_pending(_cascade_id: str, _port: int, _pending: PendingInteraction) -> None:
         # Simulate a long-poll await that the terminal answer / timeout will
-        # short-circuit — it never returns a verdict here.
+        # short-circuit â€” it never returns a verdict here.
         await asyncio.Event().wait()
 
     async with client:
@@ -978,7 +978,7 @@ async def test_withdraw_helper_pops_and_posts_once_directly() -> None:
     Drives the helper directly with a surfaced id so the pop/no-double-post
     contract is asserted without the full supervise loop.
     """
-    from agent_meow.antigravity_native_interactions import agy_elicitation_id
+    from omnigent.antigravity_native_interactions import agy_elicitation_id
 
     waiting = _permission_waiting()
     done = _permission_done()
@@ -998,11 +998,11 @@ async def test_withdraw_helper_pops_and_posts_once_directly() -> None:
     client, captured = _capturing_client()
 
     async with client:
-        # First call on a DONE step → posts the withdraw and pops the entry.
+        # First call on a DONE step â†’ posts the withdraw and pops the entry.
         await reader._maybe_withdraw_interaction(
             done, key=key, client=client, session_id=_SESSION_ID, state=state
         )
-        # Second call → entry gone, no further post.
+        # Second call â†’ entry gone, no further post.
         await reader._maybe_withdraw_interaction(
             done, key=key, client=client, session_id=_SESSION_ID, state=state
         )
@@ -1016,7 +1016,7 @@ async def test_withdraw_helper_pops_and_posts_once_directly() -> None:
 @pytest.mark.asyncio
 async def test_withdraw_helper_noop_while_still_waiting() -> None:
     """``_maybe_withdraw_interaction`` does nothing while the step is still WAITING."""
-    from agent_meow.antigravity_native_interactions import agy_elicitation_id
+    from omnigent.antigravity_native_interactions import agy_elicitation_id
 
     waiting = _permission_waiting()
     key = reader._step_key(waiting)
@@ -1039,7 +1039,7 @@ async def test_withdraw_helper_noop_while_still_waiting() -> None:
             waiting, key=key, client=client, session_id=_SESSION_ID, state=state
         )
 
-    # Still WAITING → entry retained, nothing posted.
+    # Still WAITING â†’ entry retained, nothing posted.
     assert state.surfaced_elicitations.get(key) == eid
     assert captured == []
 
@@ -1111,7 +1111,7 @@ async def test_status_failed_on_error_planner_close(
 ) -> None:
     """A turn that ends in a terminal-ERROR planner closes as FAILED (not idle).
 
-    A model/turn ERROR must surface as a failed turn — not a clean idle that
+    A model/turn ERROR must surface as a failed turn â€” not a clean idle that
     looks identical to a normal empty reply (#6). The turn still closes (the
     spinner clears; ``turn_active`` resets so the next turn can re-open RUNNING),
     but on the ``failed`` status edge, and the mapper commits a visible error
@@ -1120,7 +1120,7 @@ async def test_status_failed_on_error_planner_close(
     user = _load("user_input")
     error_planner = _load("planner_response_text")
     error_planner["status"] = "CORTEX_STEP_STATUS_ERROR"
-    # No closing text — prove the close is from the ERROR-terminal rule.
+    # No closing text â€” prove the close is from the ERROR-terminal rule.
     error_planner["plannerResponse"] = {}
     script = _StepScript([[user], [user, error_planner], [user, error_planner]])
     sink = _PostSink()
@@ -1169,7 +1169,7 @@ async def test_http_error_does_not_crash_loop(
         iterations=3,
     )
 
-    # First poll raised; second poll delivered the message — loop survived.
+    # First poll raised; second poll delivered the message â€” loop survived.
     assert steps.calls == 2
     assert sink.item_types() == ["message"]
 
@@ -1312,7 +1312,7 @@ async def test_stream_generating_emits_incremental_deltas(
     )
 
     deltas = sink.deltas()
-    # Three growing frames → three non-empty deltas.
+    # Three growing frames â†’ three non-empty deltas.
     assert [d["delta"] for d in deltas] == [full[:cut1], full[cut1:cut2], full[cut2:]]
     # Suffixes concatenate exactly to the full text (no overlap, no gap).
     assert "".join(cast(str, d["delta"]) for d in deltas) == full
@@ -1320,7 +1320,7 @@ async def test_stream_generating_emits_incremental_deltas(
     message_ids = {d["message_id"] for d in deltas}
     assert message_ids == {f"antigravity:{_CASCADE_ID}:2:planner"}
     assert all(d["final"] is False for d in deltas)
-    # No committed message yet — the step never reached DONE in this script.
+    # No committed message yet â€” the step never reached DONE in this script.
     assert sink.item_types() == []
 
 
@@ -1376,7 +1376,7 @@ async def test_stream_generating_emits_incremental_reasoning_deltas(
     """Growing ``thinking`` while GENERATING emits non-overlapping reasoning deltas.
 
     Mirrors the text-delta contract for ``plannerResponse.thinking`` (design
-    §10.2): suffixes concatenate to the full reasoning, only the FIRST delta
+    Â§10.2): suffixes concatenate to the full reasoning, only the FIRST delta
     carries ``started=True`` (so the server emits one ``response.reasoning.started``
     before the block), and the rest carry ``started=False``.
     """
@@ -1399,7 +1399,7 @@ async def test_stream_generating_emits_incremental_reasoning_deltas(
     )
 
     reasonings = sink.reasonings()
-    # Three growing frames → three non-empty reasoning deltas.
+    # Three growing frames â†’ three non-empty reasoning deltas.
     assert [r["delta"] for r in reasonings] == [full[:cut1], full[cut1:cut2], full[cut2:]]
     # Suffixes concatenate exactly to the full reasoning (no overlap, no gap).
     assert "".join(cast(str, r["delta"]) for r in reasonings) == full
@@ -1415,14 +1415,14 @@ async def test_stream_reasoning_precedes_text_and_has_no_committed_item(
     monkeypatch: pytest.MonkeyPatch,
     patched_discovery: None,
 ) -> None:
-    """Reasoning deltas precede text deltas (§10.2); DONE commits ONE message only.
+    """Reasoning deltas precede text deltas (Â§10.2); DONE commits ONE message only.
 
-    Asserts the §10.2 ordering (thinking before response) within the frame and
-    that reasoning, unlike text, never produces a committed conversation item —
+    Asserts the Â§10.2 ordering (thinking before response) within the frame and
+    that reasoning, unlike text, never produces a committed conversation item â€”
     only the assistant ``message`` is committed on DONE.
     """
     thinking = "First, parse intent. Then answer."
-    text = "Sure — here is the answer."
+    text = "Sure â€” here is the answer."
     frames = [
         _frame([_generating_planner_with_thinking(thinking="First, parse intent.", text="Sure")]),
         _frame([_generating_planner_with_thinking(thinking=thinking, text=text)]),
@@ -1447,7 +1447,7 @@ async def test_stream_reasoning_precedes_text_and_has_no_committed_item(
     assert first_reasoning < first_text
     # Reasoning deltas concatenate to the full thinking text.
     assert "".join(cast(str, r["delta"]) for r in sink.reasonings()) == thinking
-    # Exactly ONE committed item — the assistant message; NO committed reasoning.
+    # Exactly ONE committed item â€” the assistant message; NO committed reasoning.
     assert sink.item_types() == ["message"]
     # Every reasoning post is a delta (transient); none is a conversation item.
     assert all(
@@ -1506,7 +1506,7 @@ async def test_stream_reasoning_no_growth_frame_emits_nothing(
     thinking = "Reasoning that stops growing."
     frames = [
         _frame([_generating_planner_with_thinking(thinking=thinking)]),
-        # Same thinking again (no growth) → no second reasoning delta.
+        # Same thinking again (no growth) â†’ no second reasoning delta.
         _frame([_generating_planner_with_thinking(thinking=thinking)]),
     ]
     sink = _PostSink()
@@ -1537,7 +1537,7 @@ async def test_stream_reasoning_reanchors_after_non_monotonic_rewrite(
     Regression for Fix A: the reasoning tracker must re-anchor UNCONDITIONALLY
     (like the text path), not only when a delta is emitted. A frame streams
     ``"abcdef"``; the next frame is a non-monotonic rewrite ``"XYZ"`` (does not
-    extend the forwarded prefix → no delta); the third frame ``"XYZmore"`` DOES
+    extend the forwarded prefix â†’ no delta); the third frame ``"XYZmore"`` DOES
     extend the rewrite. Before the fix the tracker stayed pinned at ``"abcdef"``,
     so ``"XYZmore"`` (which does not start with ``"abcdef"``) emitted nothing and
     the step's reasoning froze forever; after the fix the rewrite re-anchors the
@@ -1545,10 +1545,10 @@ async def test_stream_reasoning_reanchors_after_non_monotonic_rewrite(
     """
     frames = [
         _frame([_generating_planner_with_thinking(thinking="abcdef")]),
-        # Non-monotonic rewrite: does not extend "abcdef" → no delta, but must
+        # Non-monotonic rewrite: does not extend "abcdef" â†’ no delta, but must
         # re-anchor the tracker to "XYZ".
         _frame([_generating_planner_with_thinking(thinking="XYZ")]),
-        # Extends the re-anchored "XYZ" → the "more" suffix must be emitted.
+        # Extends the re-anchored "XYZ" â†’ the "more" suffix must be emitted.
         _frame([_generating_planner_with_thinking(thinking="XYZmore")]),
     ]
     sink = _PostSink()
@@ -1636,7 +1636,7 @@ async def test_stream_tool_result_running_then_done_emits_output(
     """A tool step seen RUNNING then DONE still emits its output (no early dedup).
 
     Regression guard: the stream observes every intermediate status, so a
-    RUN_COMMAND surfaces RUNNING (mapper → ``[]``) before DONE. Recording its
+    RUN_COMMAND surfaces RUNNING (mapper â†’ ``[]``) before DONE. Recording its
     identity as ``seen`` on the RUNNING sighting would dedup the DONE frame and
     DROP the ``function_call_output``; the settled-only de-dup prevents that.
     """
@@ -1645,7 +1645,7 @@ async def test_stream_tool_result_running_then_done_emits_output(
     done = _load("run_command_done")
     frames = [
         _frame([tool_call, running]),
-        _frame([tool_call, running]),  # still running — re-sent snapshot
+        _frame([tool_call, running]),  # still running â€” re-sent snapshot
         _frame([tool_call, done]),  # now complete
         _frame([tool_call, done]),  # snapshot replay of the DONE step
     ]
@@ -1666,7 +1666,7 @@ async def test_stream_tool_result_running_then_done_emits_output(
 
 
 # ---------------------------------------------------------------------------
-# Stream mode: WAITING frame → bridge callback once
+# Stream mode: WAITING frame â†’ bridge callback once
 # ---------------------------------------------------------------------------
 
 
@@ -1720,7 +1720,7 @@ async def test_stream_waiting_then_non_waiting_withdraws_elicitation(
     poll fallback (a permission answered in the TUI / timed out surfaces as a
     DONE frame after the WAITING frame).
     """
-    from agent_meow.antigravity_native_interactions import agy_elicitation_id
+    from omnigent.antigravity_native_interactions import agy_elicitation_id
 
     waiting = _permission_waiting()
     done = _permission_done()
@@ -1764,7 +1764,7 @@ async def test_stream_waiting_then_non_waiting_withdraws_elicitation(
 
 
 # ---------------------------------------------------------------------------
-# Stream mode: status edges (USER_INPUT → RUNNING, assistant-text DONE → IDLE)
+# Stream mode: status edges (USER_INPUT â†’ RUNNING, assistant-text DONE â†’ IDLE)
 # ---------------------------------------------------------------------------
 
 
@@ -1794,14 +1794,14 @@ async def test_stream_status_running_then_idle(
     )
 
     assert sink.statuses() == ["running", "idle"]
-    # USER_INPUT commits the user message first, then the assistant message —
+    # USER_INPUT commits the user message first, then the assistant message â€”
     # so the web UI renders the user turn ABOVE the reply (#1155).
     assert sink.item_types() == ["message", "message"]
     assert sink.message_roles() == ["user", "assistant"]
 
 
 # ---------------------------------------------------------------------------
-# Stream mode: /clear-rotation guard (design §10.5)
+# Stream mode: /clear-rotation guard (design Â§10.5)
 # ---------------------------------------------------------------------------
 
 
@@ -2327,7 +2327,7 @@ async def test_two_turn_usage_is_cumulative(
     monkeypatch: pytest.MonkeyPatch,
     patched_discovery: None,
 ) -> None:
-    """Two turns each with 1000 input tokens → turn 1 posts 1000, turn 2 posts 2000.
+    """Two turns each with 1000 input tokens â†’ turn 1 posts 1000, turn 2 posts 2000.
 
     Regression guard for the SET-semantics bug: if the reader emitted per-call
     values, turn 2 would also post 1000, causing the server to compute a zero
@@ -2394,7 +2394,7 @@ def test_step_key_distinct_for_user_input_turns_without_step_index() -> None:
     key1 = reader._step_key(turn1)
     key2 = reader._step_key(turn2)
     assert key1 != key2, f"USER_INPUT keys collided across turns: {key1} == {key2}"
-    # The discriminator (3rd element) is what separates them — the first two
+    # The discriminator (3rd element) is what separates them â€” the first two
     # elements are identical (same trajectory_id, both step_index None).
     assert key1[:2] == key2[:2]
     assert key1[2] == "exec-turn-1"
@@ -2410,12 +2410,12 @@ async def test_two_real_wire_turns_each_emit_running_then_idle(
     """Two turns whose USER_INPUT carries NO stepIndex each fire RUNNING + IDLE.
 
     End-to-end regression for Fix I-1. Each turn is a USER_INPUT (opens the
-    turn → RUNNING) followed by a DONE assistant-text planner (closes the turn →
+    turn â†’ RUNNING) followed by a DONE assistant-text planner (closes the turn â†’
     IDLE). The USER_INPUT steps are built with the REAL wire shape (per-turn
-    ``executionId``, no ``stepIndex``) — NOT the synthetic-stepIndex helper that
+    ``executionId``, no ``stepIndex``) â€” NOT the synthetic-stepIndex helper that
     masks this bug. Before the fix, turn 2's USER_INPUT collides with turn 1's on
     ``(trajectory_id, None)``, is treated as already-seen, and its emit block is
-    skipped → no second RUNNING edge (the web spinner never restarts), so the
+    skipped â†’ no second RUNNING edge (the web spinner never restarts), so the
     sequence would be ``["running", "idle", "idle"]`` instead of the expected
     per-turn ``["running", "idle", "running", "idle"]``.
     """
@@ -2444,7 +2444,7 @@ async def test_two_real_wire_turns_each_emit_running_then_idle(
 
     assert sink.statuses() == ["running", "idle", "running", "idle"]
     # Each turn commits a user message (from USER_INPUT) then an assistant
-    # message — user-before-assistant ordering, per turn (#1155).
+    # message â€” user-before-assistant ordering, per turn (#1155).
     assert sink.item_types() == ["message", "message", "message", "message"]
     assert sink.message_roles() == ["user", "assistant", "user", "assistant"]
 
@@ -2511,7 +2511,7 @@ def test_turn_close_true_for_error_planner() -> None:
     """A terminal-ERROR planner closes the turn even with no closing text.
 
     Regression: without this the IDLE edge never fires when a turn ends in an
-    ERROR planner — ``turn_active`` sticks True, the spinner never clears, and
+    ERROR planner â€” ``turn_active`` sticks True, the spinner never clears, and
     the next USER_INPUT can't re-open RUNNING (it is gated on ``not
     turn_active``). The text-close predicate (which requires DONE + text) does
     NOT catch this case.
@@ -2580,7 +2580,7 @@ async def test_stream_reentry_backoff_between_clean_immediate_returns(
 
     Regression for the busy-spin: if agy returns an immediate clean trailer (no
     frames) repeatedly, ``_stream_loop`` must NOT re-POST the stream at zero
-    delay — it must await ``_STREAM_REENTRY_BACKOFF_S`` between re-entries.
+    delay â€” it must await ``_STREAM_REENTRY_BACKOFF_S`` between re-entries.
 
     The ``stop`` predicate here fires once the stream has been entered
     ``target_entries`` times, so the assertion is tied to stream re-entries (not
@@ -2627,7 +2627,7 @@ async def test_stream_reentry_backoff_between_clean_immediate_returns(
     # The stream was re-entered exactly target_entries times (no crash, no
     # fallback to the poll loop). Filtering out the rotation detector's coarse
     # interval sleep (it shares the ``_sleep`` seam), the re-entry backoffs are
-    # exactly the documented value — proving the loop did NOT busy-spin re-POSTing
+    # exactly the documented value â€” proving the loop did NOT busy-spin re-POSTing
     # at zero delay, and that no poll-interval sleep ran. There is one backoff per
     # re-entry that precedes another entry: target_entries - 1.
     assert empty_stream.calls == target_entries
@@ -2691,7 +2691,7 @@ def test_detect_rotation_minted_but_unused_sibling_returns_none() -> None:
     """A freshly /clear-minted sibling (no activity timestamps) is NOT a rotation.
 
     The bare mint reports no ``lastUserInputTime`` / ``lastModifiedTime`` until its
-    first turn runs, so it must not trigger rotation — only a USED new conversation
+    first turn runs, so it must not trigger rotation â€” only a USED new conversation
     does.
     """
     summaries = {
@@ -2722,7 +2722,7 @@ def test_detect_rotation_non_cascade_sibling_returns_none() -> None:
     """A newer NON-cascade (subagent) sibling must not be a rotation target.
 
     Rotating to a child/subagent trajectory would mirror a sub-conversation, not
-    the user's top-level conversation — so a newer subagent is ignored.
+    the user's top-level conversation â€” so a newer subagent is ignored.
     """
     summaries = {
         _BOUND_CASCADE: _summary(last_user_input_time="2026-06-23T17:34:54.152668Z"),
@@ -2790,9 +2790,9 @@ def test_detect_rotation_malformed_timestamp_is_not_candidate() -> None:
 def test_detect_rotation_real_capture_shape() -> None:
     """The exact two-entry capture: the used sibling rotates away from the idle one.
 
-    Mirrors ``wire_ref/all_cascade_trajectories.json`` — the bound cascade has no
+    Mirrors ``wire_ref/all_cascade_trajectories.json`` â€” the bound cascade has no
     activity timestamps (never used) while the sibling carries a
-    ``lastUserInputTime`` — so the active sibling is the rotation target.
+    ``lastUserInputTime`` â€” so the active sibling is the rotation target.
     """
     summaries = {
         # The capture's first entry: created, never used (no activity stamps).
@@ -2916,7 +2916,7 @@ class _RotationFetchScript:
     Each call raises the next exception in ``exceptions``; once exhausted the
     final exception repeats. A test ends the otherwise-infinite
     :func:`_watch_for_rotation` loop by scripting a terminal
-    :class:`asyncio.CancelledError` — a ``BaseException`` (not ``Exception``), so
+    :class:`asyncio.CancelledError` â€” a ``BaseException`` (not ``Exception``), so
     the detector's ``httpx``/``ValueError`` arms do not catch it and it
     propagates out of the worker thread to stop the loop.
     """
@@ -2979,7 +2979,7 @@ async def test_watch_for_rotation_connect_error_logs_debug_and_continues(
     When the agy port is force-killed during teardown/rotation/shutdown before this
     detector is cancelled, every poll tick raises ``httpx.ConnectError`` (connection
     refused). That is benign (no spawn/leak; the supervisor cancels us), so it must
-    log at DEBUG to avoid per-tick WARNING spam — and the loop must still advance to
+    log at DEBUG to avoid per-tick WARNING spam â€” and the loop must still advance to
     the next tick (proven here by the script reaching its second call).
     """
     script = await _watch_until_cancelled(
@@ -3053,8 +3053,8 @@ async def test_rotate_session_for_cascade_mirrors_claude_sequence(
 ) -> None:
     """``_rotate_session_for_cascade`` runs claude's exact session-rotation sequence.
 
-    Asserts: GET old snapshot → POST /v1/sessions (agent_id + inherited labels) →
-    PATCH runner_id → POST terminal transfer → PATCH old runner_id="" — and that
+    Asserts: GET old snapshot â†’ POST /v1/sessions (agent_id + inherited labels) â†’
+    PATCH runner_id â†’ POST terminal transfer â†’ PATCH old runner_id="" â€” and that
     bridge state is rewritten with the new session id + new cascade id. Crucially,
     NO ``external_session_id`` PATCH is made: agy is one long-lived process hosting
     many cascades, so the new cascade is already live (reached via the rewritten
@@ -3062,7 +3062,7 @@ async def test_rotate_session_for_cascade_mirrors_claude_sequence(
     ``_create_clear_replacement_session`` makes no such PATCH. The old code PATCHed
     it, which 400'd on the auto-cold-started session and looped the rotation.
     """
-    from agent_meow.antigravity_native_bridge import (
+    from omnigent.antigravity_native_bridge import (
         ANTIGRAVITY_NATIVE_BRIDGE_ID_LABEL_KEY,
         read_bridge_state,
     )
@@ -3084,7 +3084,7 @@ async def test_rotate_session_for_cascade_mirrors_claude_sequence(
         )
 
     assert new_session_id == "conv_new"
-    # The exact ordered API sequence (method, path) mirroring claude rotation —
+    # The exact ordered API sequence (method, path) mirroring claude rotation â€”
     # ONE PATCH on the new session (runner_id bind), then transfer, then release.
     methods_paths = [(m, p) for (m, p, _b) in calls]
     assert methods_paths == [
@@ -3133,7 +3133,7 @@ async def test_rotate_session_for_cascade_returns_none_on_create_failure(
     binding: ``_rotate_session_for_cascade`` returns ``None`` and bridge state still
     names the OLD cascade (no half-rotation).
     """
-    from agent_meow.antigravity_native_bridge import read_bridge_state
+    from omnigent.antigravity_native_bridge import read_bridge_state
 
     bridge_dir = _bridge_dir(tmp_path)
     snapshot: dict[str, object] = {"agent_id": "agent_xyz", "runner_id": "runner_abc"}
@@ -3141,7 +3141,7 @@ async def test_rotate_session_for_cascade_returns_none_on_create_failure(
     def handler(request: httpx.Request) -> httpx.Response:
         if request.method == "GET":
             return httpx.Response(200, json=snapshot)
-        # The create POST fails (500) — rotation must abort cleanly.
+        # The create POST fails (500) â€” rotation must abort cleanly.
         return httpx.Response(500, json={"error": {"message": "boom"}})
 
     async with httpx.AsyncClient(
@@ -3166,13 +3166,13 @@ async def test_run_reader_with_bridge_rebinds_after_rotation(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The rebind loop: supervise_reader signals rotation → rotate → re-bind once.
+    """The rebind loop: supervise_reader signals rotation â†’ rotate â†’ re-bind once.
 
     Mocks ``supervise_reader`` to return a new cascade id on the FIRST call and
     ``None`` on the second (the rebound run ending), and ``_rotate_session_for_cascade``
     to create a replacement session. Asserts: the replacement session was created
     for the detected cascade, and the SECOND supervise_reader run was driven with
-    the NEW (rotated) session id — proving the loop rebinds and advances ownership.
+    the NEW (rotated) session id â€” proving the loop rebinds and advances ownership.
     """
     new_cascade = "abcdef00-1111-2222-3333-444444444444"
     new_session = "conv_rotated"
@@ -3212,7 +3212,7 @@ async def test_run_reader_with_bridge_rebinds_after_rotation(
     monkeypatch.setattr(reader, "_rotate_session_for_cascade", _fake_rotate)
     # Avoid importing the heavy interaction-bridge module in this unit test.
     monkeypatch.setattr(
-        "agent_meow.antigravity_native_interactions.bridge_interaction",
+        "omnigent.antigravity_native_interactions.bridge_interaction",
         lambda *a, **k: None,
     )
 
@@ -3240,7 +3240,7 @@ async def test_run_reader_with_bridge_adopts_first_cascade_in_place(
 
     The cold-start ``StartCascade`` cascade is a headless placeholder the agy TUI
     never shows; the TUI mints its OWN cascade on the first typed turn. That first
-    transition is the conversation STARTING, not a ``/clear`` — so the loop must
+    transition is the conversation STARTING, not a ``/clear`` â€” so the loop must
     adopt the new cascade in the SAME agent-meow session (rewrite bridge state, NO
     fork) so the user's current session starts mirroring (#1156/#1158). Modeled by
     a supervise_reader that reports ZERO committed turns on the rotation run.
@@ -3260,7 +3260,7 @@ async def test_run_reader_with_bridge_adopts_first_cascade_in_place(
         **_kwargs: object,
     ) -> str | None:
         supervise_session_ids.append(session_id)
-        # The bound cascade committed ZERO turns → first-cascade adoption.
+        # The bound cascade committed ZERO turns â†’ first-cascade adoption.
         if committed_steps_out is not None:
             committed_steps_out.append(0)
         return new_cascade if len(supervise_session_ids) == 1 else None
@@ -3278,7 +3278,7 @@ async def test_run_reader_with_bridge_adopts_first_cascade_in_place(
     monkeypatch.setattr(reader, "_rotate_session_for_cascade", _fake_rotate)
     monkeypatch.setattr(reader, "_record_external_session_id", _fake_record_external)
     monkeypatch.setattr(
-        "agent_meow.antigravity_native_interactions.bridge_interaction",
+        "omnigent.antigravity_native_interactions.bridge_interaction",
         lambda *a, **k: None,
     )
 
@@ -3316,7 +3316,7 @@ async def test_run_reader_with_bridge_keeps_old_binding_when_rotation_fails(
 
     When ``_rotate_session_for_cascade`` returns ``None``, the loop must re-enter
     supervise_reader on the SAME (old) session id with the failed cascade in
-    ``skip_cascade_ids`` — so it keeps serving rather than losing the reader, and
+    ``skip_cascade_ids`` â€” so it keeps serving rather than losing the reader, and
     never hot-loops on the un-rotatable cascade.
     """
     failed_cascade = "00000000-9999-8888-7777-666666666666"
@@ -3333,7 +3333,7 @@ async def test_run_reader_with_bridge_keeps_old_binding_when_rotation_fails(
         **_kwargs: object,
     ) -> str | None:
         supervise_calls.append((session_id, skip_cascade_ids))
-        # Genuine /clear (bound cascade had committed turns) → the loop attempts a
+        # Genuine /clear (bound cascade had committed turns) â†’ the loop attempts a
         # FORK (which fails here), not the zero-turn adopt-in-place path.
         if committed_steps_out is not None:
             committed_steps_out.append(2)
@@ -3352,7 +3352,7 @@ async def test_run_reader_with_bridge_keeps_old_binding_when_rotation_fails(
     monkeypatch.setattr(reader, "supervise_reader", _fake_supervise)
     monkeypatch.setattr(reader, "_rotate_session_for_cascade", _fake_rotate_fail)
     monkeypatch.setattr(
-        "agent_meow.antigravity_native_interactions.bridge_interaction",
+        "omnigent.antigravity_native_interactions.bridge_interaction",
         lambda *a, **k: None,
     )
 
@@ -3378,7 +3378,7 @@ class _BlockingStream:
     deadline-less ``aiter_bytes`` read with no further frame and no trailer (after
     a ``/clear`` the bound cascade goes idle). The generator awaits an
     ``asyncio.Event`` that never fires, so the cooperative ``stop`` re-check the
-    body would do between stream re-entries / poll iterations is NEVER reached —
+    body would do between stream re-entries / poll iterations is NEVER reached â€”
     only cancellation can unwedge it. ``await``-ing the event (rather than a true
     busy-hang) keeps the generator cancellable so the test can't actually hang.
     """
@@ -3393,7 +3393,7 @@ class _BlockingStream:
         async def _gen() -> AsyncIterator[dict[str, object]]:
             never = asyncio.Event()
             try:
-                await never.wait()  # blocks until cancelled — never set
+                await never.wait()  # blocks until cancelled â€” never set
             except asyncio.CancelledError:
                 self.cancelled = True
                 raise
@@ -3413,8 +3413,8 @@ async def test_supervise_reader_actuates_rotation_when_stream_is_wedged(
     Regression test for the T-G actuation deadlock: the stream blocks forever on a
     deadline-less idle read (the live ``/clear``-then-idle shape), so the body's
     cooperative ``_body_should_stop`` checkpoint is never reached. The rotation
-    detector must therefore CANCEL the wedged body task — not merely flip ``stop``
-    — so ``supervise_reader`` returns the new cascade id instead of hanging.
+    detector must therefore CANCEL the wedged body task â€” not merely flip ``stop``
+    â€” so ``supervise_reader`` returns the new cascade id instead of hanging.
 
     Before the fix this would hang (the body ``await``-ed the wedged stream
     directly); the tight :func:`asyncio.wait_for` budget makes a regression fail
@@ -3467,7 +3467,7 @@ async def test_supervise_reader_external_cancel_propagates_not_rotation(
     monkeypatch: pytest.MonkeyPatch,
     patched_discovery: None,
 ) -> None:
-    """An external cancel of a wedged reader propagates — never a phantom rotation.
+    """An external cancel of a wedged reader propagates â€” never a phantom rotation.
 
     With NO rotation pending, cancelling the ``supervise_reader`` task (a shutdown)
     must raise :class:`asyncio.CancelledError` out of it rather than being mistaken

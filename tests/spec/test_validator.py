@@ -1,11 +1,11 @@
-"""Tests for agent_meow.spec.validator."""
+"""Tests for omnigent.spec.validator."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-from agent_meow.spec.types import (
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+from omnigent.spec.types import (
     AgentSpec,
     CompactionConfig,
     ExecutorSpec,
@@ -17,7 +17,7 @@ from agent_meow.spec.types import (
     SkillSpec,
     ToolsConfig,
 )
-from agent_meow.spec.validator import validate
+from omnigent.spec.validator import validate
 
 
 def _minimal_spec(**overrides: object) -> AgentSpec:
@@ -32,7 +32,7 @@ def _minimal_spec(**overrides: object) -> AgentSpec:
         "executor": ExecutorSpec(config={"harness": "claude-sdk"}),
     }
     defaults.update(overrides)
-    # Consolidate llm → executor (same as parser does at load time).
+    # Consolidate llm â†’ executor (same as parser does at load time).
     llm = defaults.get("llm")
     if isinstance(llm, LLMConfig):
         executor = defaults.get("executor")
@@ -78,7 +78,7 @@ def test_llm_empty_model() -> None:
 
 
 def test_llm_arbitrary_extra_passes_validation() -> None:
-    """Extra keys are passed through — validator does not reject them."""
+    """Extra keys are passed through â€” validator does not reject them."""
     spec = _minimal_spec(
         llm=LLMConfig(
             model="openai/gpt-5.4",
@@ -333,12 +333,12 @@ def test_multiple_errors_reported() -> None:
     assert len(result.errors) >= 3
 
 
-# ── agents_sdk executor validation ────────────────────────
+# â”€â”€ agents_sdk executor validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_agents_sdk_rejects_compaction() -> None:
     """
-    ``agents_sdk`` executor forbids ``compaction`` — the SDK
+    ``agents_sdk`` executor forbids ``compaction`` â€” the SDK
     manages context internally.
     """
     spec = _minimal_spec(
@@ -358,7 +358,7 @@ def test_agents_sdk_rejects_compaction() -> None:
 
 def test_agents_sdk_accepts_connection() -> None:
     """
-    ``agents_sdk`` executor allows ``llm.connection`` — unlike
+    ``agents_sdk`` executor allows ``llm.connection`` â€” unlike
     ``claude_sdk`` which forbids it. The SDK supports custom
     OpenAI clients with per-agent API keys.
     """
@@ -378,7 +378,7 @@ def test_omnigent_executor_accepts_valid_harness() -> None:
     ``agent-meow`` executor with ``config.harness`` set to one of
     the four supported harnesses validates cleanly.
 
-    Failure here means every valid spec is rejected — a complete
+    Failure here means every valid spec is rejected â€” a complete
     break of the phase 1 integration.
     """
     spec = _minimal_spec(
@@ -452,7 +452,7 @@ def test_omnigent_executor_rejects_unknown_harness() -> None:
 
 def test_omnigent_executor_rejects_compaction() -> None:
     """
-    ``agent-meow`` executor forbids ``compaction`` — the inner
+    ``agent-meow`` executor forbids ``compaction`` â€” the inner
     harness manages context internally, so any compaction
     directive from the spec would be silently ignored.
     """
@@ -478,7 +478,7 @@ def test_mcp_stdio_valid() -> None:
 
     What breaks if this fails: a stdio MCPServerConfig constructed
     programmatically (e.g. by the translator in
-    spec/agent_meow.py's _translate_mcp_tool_from_def) would fail
+    spec/omnigent.py's _translate_mcp_tool_from_def) would fail
     validation at spec-load time even though it's correct.
     """
     spec = _minimal_spec(
@@ -536,7 +536,7 @@ def test_mcp_http_without_url_invalid() -> None:
     """
     Validator rejects HTTP MCP without ``url``. The default
     ``transport="http"`` + missing ``url`` is the shape produced
-    by ``MCPServerConfig(name="x")`` — easy mistake.
+    by ``MCPServerConfig(name="x")`` â€” easy mistake.
     """
     spec = _minimal_spec(mcp_servers=[MCPServerConfig(name="ghosted")])
     result = validate(spec)
@@ -548,7 +548,7 @@ def test_mcp_http_with_stdio_field_invalid() -> None:
     """
     Validator rejects HTTP MCP that has a stdio-only field
     (``command``, ``args``, or ``env``) set. Symmetric coverage
-    of the stdio-with-url test — either direction of mistaken
+    of the stdio-with-url test â€” either direction of mistaken
     transport mixing must fail validation.
     """
     spec = _minimal_spec(
@@ -573,8 +573,8 @@ def test_mcp_http_with_stdio_field_invalid() -> None:
 # os_env sandbox combo checks.
 # ---------------------------------------------------------------------------
 # These mirror the loader / parser checks so an AgentSpec built
-# programmatically — by tests, the agent-meow compat shim, or any
-# caller skipping the YAML pipeline — still gets the same validation
+# programmatically â€” by tests, the agent-meow compat shim, or any
+# caller skipping the YAML pipeline â€” still gets the same validation
 # guard before the spec reaches the runtime.
 
 
@@ -588,7 +588,7 @@ def _os_env(**sandbox_kwargs: object) -> OSEnvSpec:
 
 
 def test_os_env_egress_rules_requires_hard_enforcing_backend() -> None:
-    """``egress_rules`` on ``sandbox.type=none`` is rejected — the
+    """``egress_rules`` on ``sandbox.type=none`` is rejected â€” the
     ``none`` backend doesn't isolate the network namespace so the
     rules would be inert decoration on the policy. The error names
     both hard-enforcing backends so the spec author knows the fix.
@@ -657,7 +657,7 @@ def test_os_env_start_in_scratch_requires_active_sandbox() -> None:
 
 
 def test_os_env_start_in_scratch_and_fork_mutually_exclusive() -> None:
-    """``start_in_scratch`` and ``fork`` are mutually exclusive —
+    """``start_in_scratch`` and ``fork`` are mutually exclusive â€”
     fork already provides a writable workspace by copying cwd.
     """
     spec = _minimal_spec(
@@ -677,7 +677,7 @@ def test_os_env_start_in_scratch_and_fork_mutually_exclusive() -> None:
 
 
 def test_os_env_no_validation_when_absent() -> None:
-    """``os_env`` is optional — when absent, the validator is a no-op
+    """``os_env`` is optional â€” when absent, the validator is a no-op
     and the spec stays valid against an otherwise minimal shape.
     """
     spec = _minimal_spec()

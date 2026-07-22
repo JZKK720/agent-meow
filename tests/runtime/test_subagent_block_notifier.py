@@ -1,11 +1,11 @@
 """
-Unit tests for :mod:`~?agent_meow.runtime.subagent_block_notifier`.
+Unit tests for :mod:`~?omnigent.runtime.subagent_block_notifier`.
 
 The notifier observes elicitation publish events and wakes a blocked
 sub-agent's *immediate parent* once per distinct block, then re-arms
 when the block resolves. The wake delivery itself is an injected
 ``WakeDispatch`` callback so this module stays free of HTTP / runner
-knowledge — these tests exercise every branch of the observer logic
+knowledge â€” these tests exercise every branch of the observer logic
 against a real :class:`SqlAlchemyConversationStore` (no mocks for the
 parent-resolve lookup) and a controllable async wake callback.
 """
@@ -22,14 +22,14 @@ from typing import Any
 import pytest
 import pytest_asyncio
 
-from agent_meow.entities.conversation import Conversation
-from agent_meow.runtime import pending_elicitations, subagent_block_notifier
-from agent_meow.runtime.subagent_block_notifier import (
+from omnigent.entities.conversation import Conversation
+from omnigent.runtime import pending_elicitations, subagent_block_notifier
+from omnigent.runtime.subagent_block_notifier import (
     SubagentBlockNotifier,
     _block_reason,
     _child_label,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -38,7 +38,7 @@ async def _instant_sleep(_seconds: float) -> None:
     """
     Drop-in for the notifier's ``_sleep`` retry backoff that returns at once.
 
-    Patched in over :func:`~?agent_meow.runtime.subagent_block_notifier._sleep`
+    Patched in over :func:`~?omnigent.runtime.subagent_block_notifier._sleep`
     (the module's own helper, not the global ``asyncio.sleep``) so retry tests
     are fast and deterministic with no real wall-clock wait.
 
@@ -55,7 +55,7 @@ def elicitation_armed(notifier: SubagentBlockNotifier, elicitation_id: str) -> b
     Read-only assertion accessor: tests drive state changes through the
     public ``observe`` / ``record_publish`` surface and use this only to
     *observe* the resulting arm, never to mutate it. The arm is the
-    per-block dedupe slot — held after a confirmed wake, released after a
+    per-block dedupe slot â€” held after a confirmed wake, released after a
     resolve or an exhausted-failure.
 
     :param notifier: The notifier under test.
@@ -80,7 +80,7 @@ class _CapturedWake:
     :param parent_id: Parent session id passed to the dispatch.
     :param child_id: ``child.id`` recorded at dispatch time so tests
         don't need to keep a separate handle to the conversation.
-    :param notice: The pre-formatted ``[System: …]`` notice text.
+    :param notice: The pre-formatted ``[System: â€¦]`` notice text.
     """
 
     parent_id: str
@@ -93,7 +93,7 @@ class _RecordingDispatch:
     ``WakeDispatch`` test double that records every call.
 
     Tests assert on :attr:`calls` to verify that the notifier woke the
-    correct parent exactly once per block. Pure recording — no HTTP, no
+    correct parent exactly once per block. Pure recording â€” no HTTP, no
     side effects, so the tests exercise the *observer* logic in
     isolation.
 
@@ -136,8 +136,8 @@ class _FailThenSucceedDispatch:
 
     A real stub (not ``MagicMock``) so an unexpected extra call surfaces
     in :attr:`calls` rather than being silently absorbed. Returns ``False``
-    (delivery not confirmed) on the first invocation — modelling the
-    parent's runner being briefly unroutable during a reconnect — and
+    (delivery not confirmed) on the first invocation â€” modelling the
+    parent's runner being briefly unroutable during a reconnect â€” and
     ``True`` on every invocation thereafter.
 
     :ivar calls: Every recorded invocation, in order.
@@ -272,7 +272,7 @@ async def test_observe_wakes_immediate_parent_for_blocked_child(
     )
     await _wait_for_calls(dispatch, expected=1)
 
-    # Exactly one dispatch — the immediate parent is the wake target,
+    # Exactly one dispatch â€” the immediate parent is the wake target,
     # and the notice carries the agent label + prompt reason so the
     # parent agent can decide what to do without re-fetching.
     assert len(dispatch.calls) == 1
@@ -331,7 +331,7 @@ async def test_observe_debounces_repeated_publishes_of_same_id(
     notifier.observe(child.id, _request_event("elicit_dup"))
     await _wait_for_calls(dispatch, expected=1)
     # Yield a couple more times to give any duplicate dispatch a chance
-    # to fire — if the debounce is missing, this surfaces it.
+    # to fire â€” if the debounce is missing, this surfaces it.
     await asyncio.sleep(0)
     await asyncio.sleep(0)
 
@@ -427,7 +427,7 @@ async def test_resolve_during_escalation_grace_suppresses_wake(
     This is the attended-web case the grace exists for: the approval card
     is mirrored into the parent chat the moment the block publishes, so a
     human answering it promptly should leave the parent conversation
-    untouched — no ``[System: …]`` block notice, no resolution notice.
+    untouched â€” no ``[System: â€¦]`` block notice, no resolution notice.
     """
     parent = conv_store.create_conversation(kind="default", title="parent")
     child = conv_store.create_conversation(
@@ -470,8 +470,8 @@ async def test_wake_fires_only_after_escalation_grace(
     An unanswered block wakes the parent only once the grace elapses.
 
     Pins both halves of the escalation contract: no dispatch while the
-    grace is pending (the mirrored card is the surface), and the wake —
-    pointing at that mirrored prompt — once it expires unanswered.
+    grace is pending (the mirrored card is the surface), and the wake â€”
+    pointing at that mirrored prompt â€” once it expires unanswered.
     """
     parent = conv_store.create_conversation(kind="default", title="parent")
     child = conv_store.create_conversation(
@@ -552,7 +552,7 @@ class _ResolveDuringDispatch:
     Dispatch double that resolves the block while its wake is in flight.
 
     Models the human answering the mirrored card in the instant the block
-    notice is being delivered — the tightest race against the resolution
+    notice is being delivered â€” the tightest race against the resolution
     signal. Real stub (not MagicMock) so unexpected extra calls surface.
 
     :ivar calls: Every recorded invocation, in order.
@@ -663,7 +663,7 @@ async def test_no_resolution_notice_after_failed_wake(
     for _ in range(10):
         await asyncio.sleep(0)
 
-    # Still exactly the 3 failed block attempts — no resolution notice
+    # Still exactly the 3 failed block attempts â€” no resolution notice
     # was dispatched for a wake that never reached the parent.
     assert len(dispatch.calls) == 3
     assert all("has been resolved" not in call.notice for call in dispatch.calls)
@@ -711,7 +711,7 @@ async def test_observe_wake_targets_only_recorded_parent_not_other_trees(
     target purely from ``parent_conversation_id`` keeps every wake
     inside one owner's tree. This builds two independent trees (standing
     in for two users) and proves a block in tree A dispatches solely to
-    tree A's parent — never to tree B's parent or any other session. A
+    tree A's parent â€” never to tree B's parent or any other session. A
     regression that broadcast the prompt or mis-resolved the parent (the
     cross-user leak reviewers flagged on the stream-mirror
     approach) would surface here as an extra or wrong dispatch target.
@@ -769,7 +769,7 @@ async def test_observe_ignores_non_elicitation_events(
     await asyncio.sleep(0)
     await asyncio.sleep(0)
 
-    # No wake for non-elicitation events — the observer is on the hot
+    # No wake for non-elicitation events â€” the observer is on the hot
     # publish path and must filter cleanly. A stray wake here would
     # spam the parent on every text delta.
     assert dispatch.calls == []
@@ -805,7 +805,7 @@ async def test_observe_retries_then_releases_arm_when_dispatch_raises(
     )
 
     expected_attempts = 1 + subagent_block_notifier._WAKE_RETRIES
-    with caplog.at_level(logging.WARNING, logger="agent_meow.runtime.subagent_block_notifier"):
+    with caplog.at_level(logging.WARNING, logger="omnigent.runtime.subagent_block_notifier"):
         notifier.observe(child.id, _request_event("elicit_fail"))
         await _wait_for_calls(dispatch, expected=expected_attempts)
         # Yield so the handler unwinds (final release + summary log) after the
@@ -814,17 +814,17 @@ async def test_observe_retries_then_releases_arm_when_dispatch_raises(
             await asyncio.sleep(0)
 
     # Every attempt ran (1 initial + the retries): the exception was caught and
-    # retried, never propagated back through observe() — if it had, it would
+    # retried, never propagated back through observe() â€” if it had, it would
     # break every other consumer on the record_publish publish path.
     assert len(dispatch.calls) == expected_attempts
-    # Each raising attempt was logged with its traceback — a non-transport
+    # Each raising attempt was logged with its traceback â€” a non-transport
     # failure (a bug, a store error) must be debuggable, not silently dropped.
     raise_logs = [r for r in caplog.records if "wake dispatch raised" in r.getMessage()]
     assert len(raise_logs) == expected_attempts
     assert all(r.exc_info is not None for r in raise_logs)
     assert isinstance(raise_logs[0].exc_info[1], RuntimeError)
     # Arm released after exhaustion: an always-failing delivery must NOT leave
-    # the block permanently debounced — a non-empty set here means a later
+    # the block permanently debounced â€” a non-empty set here means a later
     # re-publish would be silently dropped (the exact regression this guards against).
     assert elicitation_armed(notifier, "elicit_fail") is False
 
@@ -842,11 +842,11 @@ async def test_failed_dispatch_releases_arm_so_republish_re_fires(
     wake dispatch returns ``False`` (not delivered). The notifier must then
     *release* the per-block debounce arm so that when the same elicitation is
     published again (the SSE chokepoint re-emits it, or the next poll re-fires
-    it) the wake is re-attempted — and this time the runner is back, so the
+    it) the wake is re-attempted â€” and this time the runner is back, so the
     dispatch succeeds and the parent is finally told.
 
     Drives everything through the production publish vehicle
-    (``record_publish`` → registered observer → notifier) and asserts only on
+    (``record_publish`` â†’ registered observer â†’ notifier) and asserts only on
     observable state: the dispatch call log and the arm. With the fix reverted
     (arm armed before scheduling, never released on failure), the first failed
     dispatch leaves the arm stuck, the second ``record_publish`` is debounced
@@ -873,7 +873,7 @@ async def test_failed_dispatch_releases_arm_so_republish_re_fires(
 
     event = _request_event("elicit_retry", message="Codex wants to run 'git fetch'")
 
-    # First publish: runner unroutable → dispatch returns False.
+    # First publish: runner unroutable â†’ dispatch returns False.
     pending_elicitations.record_publish(child.id, event)
     await _wait_for_calls(dispatch, expected=1)
     # Yield so handle_request unwinds and releases the arm after the failure.
@@ -890,22 +890,22 @@ async def test_failed_dispatch_releases_arm_so_republish_re_fires(
     assert elicitation_armed(notifier, "elicit_retry") is False
 
     # Re-publish the SAME elicitation id (runner has since rebound). Because the
-    # arm was released, this is NOT debounced — it schedules a fresh wake.
+    # arm was released, this is NOT debounced â€” it schedules a fresh wake.
     pending_elicitations.record_publish(child.id, event)
     await _wait_for_calls(dispatch, expected=2)
     for _ in range(5):
         await asyncio.sleep(0)
 
     # Re-dispatched: 2, not 1. A stuck arm (reverted fix) would debounce the
-    # re-publish and leave this at 1 — the parent never learns of the block.
+    # re-publish and leave this at 1 â€” the parent never learns of the block.
     assert len(dispatch.calls) == 2
     assert dispatch.calls[1].parent_id == parent.id
     # The redelivered notice still names the child + carries the approval
-    # reason — proving the re-fire carried the real payload, not an empty wake.
+    # reason â€” proving the re-fire carried the real payload, not an empty wake.
     assert "codex/retry" in dispatch.calls[1].notice
     assert "git fetch" in dispatch.calls[1].notice
     # Arm now HELD: the second dispatch confirmed delivery (returned True), so
-    # the success debounce is intact — a third publish of this id would be
+    # the success debounce is intact â€” a third publish of this id would be
     # suppressed. This proves the release is failure-specific, not unconditional.
     assert elicitation_armed(notifier, "elicit_retry") is True
 
@@ -919,7 +919,7 @@ async def test_handle_request_skips_stale_wake_when_block_resolved(
 
     Models the race where a block resolves while the (off-loop) parent
     lookup is in flight: ``observe`` arms the slot on the request and clears
-    it on the resolve — both synchronously on the publish path — and only
+    it on the resolve â€” both synchronously on the publish path â€” and only
     then does the scheduled handler run. ``handle_request`` is awaited
     directly here (it is the notifier's public entry point for one request)
     so the assertion does not depend on loop-scheduling timing: with the
@@ -939,12 +939,12 @@ async def test_handle_request_skips_stale_wake_when_block_resolved(
     event = _request_event("elicit_race")
 
     # Arm the slot as a real request would, then clear it as its resolve
-    # would — both synchronous, with no await between, so the resolve
+    # would â€” both synchronous, with no await between, so the resolve
     # deterministically lands before the handler proceeds.
     notifier.observe(child.id, event)
     notifier.observe(child.id, _resolved_event("elicit_race"))
 
-    # Drive the handler to completion directly — deterministic, no reliance
+    # Drive the handler to completion directly â€” deterministic, no reliance
     # on how many loop turns the auto-scheduled handler's lookup takes.
     await notifier.handle_request(child.id, event)
     # Drain the handler observe() auto-scheduled; it sees the same cleared
@@ -953,7 +953,7 @@ async def test_handle_request_skips_stale_wake_when_block_resolved(
         await asyncio.sleep(0)
 
     # Zero wakes: the handler's re-check saw the cleared slot and skipped.
-    # Without that re-check the stale wake would fire — 1, not 0. (Re-arm
+    # Without that re-check the stale wake would fire â€” 1, not 0. (Re-arm
     # after resolve is covered by test_observe_re_arms_after_resolved_event.)
     assert dispatch.calls == []
 
@@ -1008,7 +1008,7 @@ async def test_observe_ignores_invalid_elicitation_id(
         await asyncio.sleep(0)
 
     # Without a usable id, the debounce can never be cleared by a
-    # later resolved event — so the safe path is not to wake at all.
+    # later resolved event â€” so the safe path is not to wake at all.
     assert dispatch.calls == []
 
 
@@ -1028,7 +1028,7 @@ def test_block_reason_truncates_long_messages() -> None:
     # 200-char ceiling per ``_REASON_MAX_CHARS``; ellipsis sentinel
     # signals that the reason was truncated rather than complete.
     assert len(reason) <= 200
-    assert reason.endswith("…")
+    assert reason.endswith("â€¦")
 
 
 def test_block_reason_returns_none_for_missing_message() -> None:

@@ -1,10 +1,10 @@
-"""Tests for ``agent_meow/onboarding/cursor_auth.py`` — the Cursor API-key store.
+"""Tests for ``omnigent/onboarding/cursor_auth.py`` â€” the Cursor API-key store.
 
 Cursor's ``CURSOR_API_KEY`` lives in a dedicated top-level ``cursor:`` config
 block (not the shared global ``auth:``) and the agent-meow secret store, resolved
 with the same ``resolve_secret`` resolver the provider families use. These
 tests isolate the config + secret store to a tmp dir (file backend, no OS
-keychain) and assert the read/resolve/configured helpers behave — including the
+keychain) and assert the read/resolve/configured helpers behave â€” including the
 **soft** resolution that returns ``None`` on a dangling reference instead of
 raising, so a run / setup readout falls back rather than crashing.
 """
@@ -16,9 +16,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.onboarding import cursor_auth, extra_install
-from agent_meow.onboarding import secrets as secret_store
-from agent_meow.onboarding.cursor_auth import (
+from omnigent.onboarding import cursor_auth, extra_install
+from omnigent.onboarding import secrets as secret_store
+from omnigent.onboarding.cursor_auth import (
     CURSOR_SECRET_NAME,
     cursor_api_key_configured,
     cursor_api_key_ref,
@@ -85,8 +85,8 @@ def test_env_ref_strips_surrounding_whitespace(
     """A whitespace-padded ``env:`` key validates and resolves cleanly (F103).
 
     A ``CURSOR_API_KEY`` exported with a stray leading/trailing newline (a
-    common ``export $(…)`` mishap) must strip before the ``crsr_`` prefix
-    check and before forwarding to the SDK — else the padding fails the
+    common ``export $(â€¦)`` mishap) must strip before the ``crsr_`` prefix
+    check and before forwarding to the SDK â€” else the padding fails the
     ``looks_like`` validation and reaches the harness verbatim.
     """
     monkeypatch.setenv("CURSOR_API_KEY", "\ncrsr_test\n")
@@ -105,7 +105,7 @@ def test_empty_env_ref_reads_as_unconfigured(
     The shared ``resolve_secret`` ``env:`` branch only raises on an *unset*
     variable, so an exported-but-empty ``CURSOR_API_KEY=""`` (or all-whitespace)
     resolves to ``""``. The cursor layer must fold that to ``None`` so the setup
-    readout (``cursor_api_key_configured``) and the spawn-env builder agree —
+    readout (``cursor_api_key_configured``) and the spawn-env builder agree â€”
     both treat it as unset rather than claiming a key the runtime won't forward.
     """
     monkeypatch.setenv("CURSOR_API_KEY", "")
@@ -157,7 +157,7 @@ def test_settings_shape() -> None:
     }
 
 
-# ── SDK-extra detection + install (the optional ``cursor`` extra) ─────────────
+# â”€â”€ SDK-extra detection + install (the optional ``cursor`` extra) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # ``cursor-sdk`` is now an OPTIONAL extra, so setup must detect a missing SDK
 # and offer to install it.
 
@@ -195,7 +195,7 @@ def test_cursor_sdk_installed_false_when_module_not_found(
 
 
 def test_cursor_install_command_prefers_uv(monkeypatch: pytest.MonkeyPatch) -> None:
-    """With ``uv`` on PATH, the install runs ``uv pip install`` — no index URL."""
+    """With ``uv`` on PATH, the install runs ``uv pip install`` â€” no index URL."""
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: "/usr/bin/uv")
     cmd = cursor_install_command()
@@ -204,7 +204,7 @@ def test_cursor_install_command_prefers_uv(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_cursor_install_command_falls_back_to_pip(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Without ``uv``, it falls back to this interpreter's pip — still no index."""
+    """Without ``uv``, it falls back to this interpreter's pip â€” still no index."""
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: None)
     cmd = cursor_install_command()

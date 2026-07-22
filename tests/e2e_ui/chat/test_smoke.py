@@ -1,7 +1,7 @@
 """Smoke test: build SPA, spawn server, send a message, see a response.
 
-This is the bootstrap test for ``tests/e2e_ui/`` — it verifies the
-full chain (Vite build → static mount → React boot → SSE stream →
+This is the bootstrap test for ``tests/e2e_ui/`` â€” it verifies the
+full chain (Vite build â†’ static mount â†’ React boot â†’ SSE stream â†’
 DOM render) is wired correctly. It is intentionally minimal; richer
 coverage (multi-turn, refresh hydration, stop-cancel, deep-link
 errors) lands in follow-up tests once stable selectors are in place.
@@ -11,9 +11,9 @@ is found by its placeholder, the Send button by its accessible name
 (a hidden ``<span class="sr-only">Send</span>`` per
 ``web/src/pages/ChatPage.tsx``). Real message bubbles use
 ``data-testid="message-bubble"`` + ``data-role={user|assistant}``.
-Without the testid we can't distinguish the streaming "Working…"
+Without the testid we can't distinguish the streaming "Workingâ€¦"
 shimmer (also rendered as ``<Message from="assistant">``) from a
-real assistant bubble — the test would pass on the spinner.
+real assistant bubble â€” the test would pass on the spinner.
 """
 
 from __future__ import annotations
@@ -34,18 +34,18 @@ def test_send_message_renders_assistant_response(
     A failure here means one of:
 
     - The SPA didn't boot (build missing or static mount broken in
-      ``agent_meow/server/app.py``'s ``_SPAStaticFiles``).
+      ``omnigent/server/app.py``'s ``_SPAStaticFiles``).
     - The composer is mis-wired (``ChatPage.tsx`` regression).
     - The agent never received the request (server / runtime
-      regression — check the live_server log).
+      regression â€” check the live_server log).
     - The LLM never responded (Databricks credentials missing or
       hello_world model unavailable).
     - The SDK reducer didn't render output (TS reducer parity drift
-      vs ``omnigent_client/_stream.py`` — see
-      ``web/README.md`` § Reducer parity).
+      vs ``omnigent_client/_stream.py`` â€” see
+      ``web/README.md`` Â§ Reducer parity).
 
     Starts from ``/c/<id>`` rather than ``/`` because the home route
-    no longer renders a composer — see :func:`seeded_session`.
+    no longer renders a composer â€” see :func:`seeded_session`.
 
     :param page: Playwright page fixture (function-scoped, fresh
         browser context per test).
@@ -55,7 +55,7 @@ def test_send_message_renders_assistant_response(
     base_url, session_id = seeded_session
     page.goto(f"{base_url}/c/{session_id}")
 
-    composer = page.get_by_placeholder("Ask the agent anything…")
+    composer = page.get_by_placeholder("Ask the agent anythingâ€¦")
     expect(composer).to_be_visible()
     composer.fill("Say 'pong' in one word.")
     page.get_by_role("button", name="Send", exact=True).click()
@@ -63,11 +63,11 @@ def test_send_message_renders_assistant_response(
     # The URL should already match /c/<id> since we started there.
     expect(page).to_have_url(re.compile(rf"/c/{re.escape(session_id)}"))
 
-    # Wait for a real assistant bubble (NOT the "Working…" shimmer
-    # — that has data-testid="working-indicator" instead). 60s budget
+    # Wait for a real assistant bubble (NOT the "Workingâ€¦" shimmer
+    # â€” that has data-testid="working-indicator" instead). 60s budget
     # covers cold-start LLM latency under Databricks routing without
     # masking a true hang. ``re.compile(r"\S")`` matches any non-
-    # whitespace character — a rendered bubble whose MessageContent
+    # whitespace character â€” a rendered bubble whose MessageContent
     # is empty would mean the streaming reducer fired but produced
     # no text, itself a regression worth surfacing.
     assistant = page.locator('[data-testid="message-bubble"][data-role="assistant"]').first

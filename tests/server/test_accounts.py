@@ -2,16 +2,16 @@
 
 Covers the four layers of the stack:
 
-1. ``agent_meow.server.passwords`` — argon2 wrapper (hash / verify
+1. ``omnigent.server.passwords`` â€” argon2 wrapper (hash / verify
    round-trip, constant-time-equalized failures).
-2. ``agent_meow.server.accounts_config.AccountsConfig`` — env-var
+2. ``omnigent.server.accounts_config.AccountsConfig`` â€” env-var
    parsing, fail-loud validation, secure-cookie derivation.
-3. ``agent_meow.server.auth.UnifiedAuthProvider`` with
-   ``source='accounts'`` — cookie validation, reserved-name
+3. ``omnigent.server.auth.UnifiedAuthProvider`` with
+   ``source='accounts'`` â€” cookie validation, reserved-name
    rejection, ``create_auth_provider`` factory gating.
-4. ``agent_meow.server.accounts_bootstrap.bootstrap_admin`` matrix
+4. ``omnigent.server.accounts_bootstrap.bootstrap_admin`` matrix
    (auto-gen / pre-seed / idempotent / loopback handoff).
-5. ``agent_meow.server.routes.accounts_auth`` — login / logout /
+5. ``omnigent.server.routes.accounts_auth`` â€” login / logout /
    me / invite / register / magic / members admin endpoints via
    FastAPI TestClient, including cross-user (Alice/Bob)
    permission isolation and reserved-name guards.
@@ -30,25 +30,25 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_meow.server.accounts_bootstrap import (
+from omnigent.server.accounts_bootstrap import (
     bootstrap_admin,
     resolve_admin_username,
 )
-from agent_meow.server.accounts_config import AccountsConfig
-from agent_meow.server.accounts_store import SqlAlchemyAccountStore
-from agent_meow.server.auth import (
+from omnigent.server.accounts_config import AccountsConfig
+from omnigent.server.accounts_store import SqlAlchemyAccountStore
+from omnigent.server.auth import (
     AuthProvider,
     UnifiedAuthProvider,
     create_auth_provider,
     resolve_auth_source,
 )
-from agent_meow.server.passwords import (
+from omnigent.server.passwords import (
     InvalidPasswordError,
     hash_password,
     needs_rehash,
     verify_password,
 )
-from agent_meow.stores.permission_store.sqlalchemy_store import (
+from omnigent.stores.permission_store.sqlalchemy_store import (
     SqlAlchemyPermissionStore,
 )
 
@@ -60,7 +60,7 @@ def _clear_ambient_oidc_issuer(monkeypatch: pytest.MonkeyPatch) -> None:
     With auth enabled, the presence of an issuer selects ``oidc`` over
     ``accounts`` (see :func:`resolve_auth_source`). A developer who
     tests OIDC locally may have the issuer exported; without clearing
-    it, the enable-switch → accounts assertions below would resolve to
+    it, the enable-switch â†’ accounts assertions below would resolve to
     ``oidc`` and fail. Accounts mode never reads the issuer, so clearing
     it is safe for every test in this file. Tests that need an issuer
     set it explicitly *after* this fixture runs.
@@ -68,7 +68,7 @@ def _clear_ambient_oidc_issuer(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OMNIGENT_OIDC_ISSUER", raising=False)
 
 
-# ── Password helper (unit) ────────────────────────────────────────
+# â”€â”€ Password helper (unit) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_hash_password_round_trip() -> None:
@@ -78,13 +78,13 @@ def test_hash_password_round_trip() -> None:
     of a freshly-set password no longer matches when verified.
     """
     h = hash_password("hunter2")
-    verify_password("hunter2", h)  # no exception → OK
+    verify_password("hunter2", h)  # no exception â†’ OK
 
 
 def test_hash_password_emits_argon2id_envelope() -> None:
     """The hash uses argon2id (modern OWASP-recommended variant).
 
-    Argon2 is self-describing — the encoded prefix declares the
+    Argon2 is self-describing â€” the encoded prefix declares the
     variant. If a future refactor accidentally switched to argon2i
     or argon2d, this test fires before any user logs in with the
     wrong algorithm.
@@ -108,7 +108,7 @@ def test_verify_password_rejects_wrong_password() -> None:
 def test_verify_password_rejects_malformed_hash() -> None:
     """A corrupted stored hash collapses to InvalidPasswordError.
 
-    Same exception class as wrong-password — the route's 401
+    Same exception class as wrong-password â€” the route's 401
     response can't accidentally reveal whether the user's DB row
     is corrupted vs whether they typed the wrong password.
     """
@@ -127,13 +127,13 @@ def test_needs_rehash_false_on_fresh_hash() -> None:
     assert needs_rehash(hash_password("hunter2")) is False
 
 
-# ── AccountsConfig.from_env (unit) ────────────────────────────────
+# â”€â”€ AccountsConfig.from_env (unit) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _set_required_accounts_env(
     monkeypatch: pytest.MonkeyPatch,
     *,
-    base_url: str = "https://agent_meow.example.com",
+    base_url: str = "https://omnigent.example.com",
 ) -> None:
     """Populate every required env var so from_env() doesn't fail loud."""
     monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
@@ -146,12 +146,12 @@ def test_accounts_config_round_trips_required_env(
     """from_env() parses every required var into the dataclass."""
     secret_hex = secrets.token_hex(32)
     monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secret_hex)
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "https://agent_meow.example.com")
+    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "https://omnigent.example.com")
 
     cfg = AccountsConfig.from_env()
 
     assert cfg.cookie_secret == bytes.fromhex(secret_hex)
-    assert cfg.base_url == "https://agent_meow.example.com"
+    assert cfg.base_url == "https://omnigent.example.com"
     assert cfg.secure_cookies is True
     assert cfg.session_cookie_name == "__Host-ap_session"
 
@@ -213,9 +213,9 @@ def test_accounts_config_http_base_url_uses_plain_cookie(
 def test_accounts_config_rejects_non_http_scheme(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """BASE_URL must start with http(s):// — fail loud otherwise."""
+    """BASE_URL must start with http(s):// â€” fail loud otherwise."""
     monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "ftp://agent_meow.example.com")
+    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "ftp://omnigent.example.com")
 
     with pytest.raises(RuntimeError, match="http://"):
         AccountsConfig.from_env()
@@ -227,7 +227,7 @@ def test_accounts_config_init_admin_empty_string_is_unset(
     """INIT_ADMIN_PASSWORD="" is treated as unset, not as a literal empty password.
 
     Same docker-compose ``${VAR:-}`` pattern that motivated the
-    OIDC SCOPES fix — passing an empty string would
+    OIDC SCOPES fix â€” passing an empty string would
     silently set a zero-length admin password if not guarded.
     """
     _set_required_accounts_env(monkeypatch)
@@ -238,7 +238,7 @@ def test_accounts_config_init_admin_empty_string_is_unset(
     assert cfg.init_admin_password is None
 
 
-# ── UnifiedAuthProvider accounts source (unit) ────────────────────
+# â”€â”€ UnifiedAuthProvider accounts source (unit) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 _TEST_COOKIE_SECRET = secrets.token_bytes(32)
@@ -260,7 +260,7 @@ class _FakeReq:
     """Minimal HTTPConnection stand-in for cookie/header tests.
 
     Used over MagicMock because the auth code reads ``.cookies``
-    and ``.headers`` as dicts — a real dict-shaped object is
+    and ``.headers`` as dicts â€” a real dict-shaped object is
     safer than letting MagicMock fall through to a default that
     silently coerces.
     """
@@ -277,7 +277,7 @@ class _FakeReq:
 
 def test_accounts_source_reads_valid_cookie() -> None:
     """The accounts source extracts a user_id from a valid session JWT."""
-    from agent_meow.server.oidc import mint_session_cookie
+    from omnigent.server.oidc import mint_session_cookie
 
     cfg = _make_accounts_config()
     provider = UnifiedAuthProvider(source="accounts", accounts_config=cfg)
@@ -297,7 +297,7 @@ def test_accounts_source_rejects_reserved_user_in_cookie() -> None:
     malicious admin somehow gets a session JWT with sub=local
     minted, the auth provider refuses to honor it.
     """
-    from agent_meow.server.oidc import mint_session_cookie
+    from omnigent.server.oidc import mint_session_cookie
 
     cfg = _make_accounts_config()
     provider = UnifiedAuthProvider(source="accounts", accounts_config=cfg)
@@ -313,11 +313,11 @@ def test_accounts_source_rejects_reserved_user_in_cookie() -> None:
 def test_accounts_source_rejects_cookie_signed_with_wrong_secret() -> None:
     """A cookie signed by a different key is rejected.
 
-    Cross-deployment cookie reuse — stealing a cookie from one
+    Cross-deployment cookie reuse â€” stealing a cookie from one
     server and presenting it to another with a different secret
     must not authenticate.
     """
-    from agent_meow.server.oidc import mint_session_cookie
+    from omnigent.server.oidc import mint_session_cookie
 
     cfg = _make_accounts_config()
     provider = UnifiedAuthProvider(source="accounts", accounts_config=cfg)
@@ -335,10 +335,10 @@ def test_accounts_source_accepts_bearer_token_for_cli() -> None:
     """CLI bearer tokens (no cookie) also authenticate against accounts.
 
     The runner / CLI use Authorization: Bearer <jwt> after picking
-    the token up from ~/.agent_meow/auth_tokens.json — the same
+    the token up from ~/.omnigent/auth_tokens.json â€” the same
     code path the OIDC mode supports.
     """
-    from agent_meow.server.oidc import mint_session_cookie
+    from omnigent.server.oidc import mint_session_cookie
 
     cfg = _make_accounts_config()
     provider = UnifiedAuthProvider(source="accounts", accounts_config=cfg)
@@ -369,7 +369,7 @@ def test_mint_runner_token_round_trips_to_owner() -> None:
 
     The sandbox runner has no login of its own, so the server mints an
     owner JWT it presents as ``Authorization: Bearer`` on its HTTP
-    callbacks — ``get_user_id`` (the same check ``require_user`` applies)
+    callbacks â€” ``get_user_id`` (the same check ``require_user`` applies)
     must resolve it to the owner, else every callback 401s.
     """
     cfg = _make_accounts_config()
@@ -383,7 +383,7 @@ def test_mint_runner_token_round_trips_to_owner() -> None:
 
 
 def test_mint_runner_token_rejects_empty_and_reserved_owner() -> None:
-    """No token for an empty or reserved owner — never mint reserved-identity creds."""
+    """No token for an empty or reserved owner â€” never mint reserved-identity creds."""
     cfg = _make_accounts_config()
     provider = UnifiedAuthProvider(source="accounts", accounts_config=cfg)
     assert provider.mint_runner_token("", 1800) is None
@@ -410,7 +410,7 @@ def test_mint_runner_token_expired_resolves_to_none() -> None:
     """A short TTL genuinely expires: past its exp, get_user_id returns None.
 
     This is what makes the managed-runner auth refreshable rather than a
-    fixed cap — the token expires and the runner re-mints, so there is no
+    fixed cap â€” the token expires and the runner re-mints, so there is no
     static long-lived credential.
     """
     cfg = _make_accounts_config()
@@ -423,13 +423,13 @@ def test_mint_runner_token_expired_resolves_to_none() -> None:
     assert provider.get_user_id(request) is None
 
 
-# ── resolve_auth_source (shared resolver used by every spawn path) ──
+# â”€â”€ resolve_auth_source (shared resolver used by every spawn path) â”€â”€
 
 
 def test_resolve_auth_source_defaults_to_header(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Env-unset resolves to header — the shared resolver's baseline.
+    """Env-unset resolves to header â€” the shared resolver's baseline.
 
     This is the contract the daemon-owned server, the per-command server,
     and the config-signature all rely on, so a regression here would
@@ -461,7 +461,7 @@ def test_resolve_auth_source_oidc_issuer_selects_oidc(
     accounts by default, but flips to the native OIDC flow the moment
     the operator supplies an issuer. If this asserted ``"accounts"`` the
     issuer-based mode selection (resolve_auth_source's OIDC branch)
-    would be dead — an operator who set the OIDC vars would silently get
+    would be dead â€” an operator who set the OIDC vars would silently get
     the built-in login form instead of their IdP.
     """
     monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
@@ -476,7 +476,7 @@ def test_resolve_auth_source_oidc_issuer_ignored_when_auth_disabled(
     """An OIDC issuer alone (auth switch off) does NOT enable oidc.
 
     The issuer only chooses *which* multi-user mode runs once auth is
-    enabled — it is not itself an enable switch. A stray issuer in the
+    enabled â€” it is not itself an enable switch. A stray issuer in the
     environment must not silently turn a single-user header deploy into
     an OIDC one. If this resolved to ``"oidc"`` the switch would have
     been bypassed.
@@ -534,20 +534,20 @@ def test_resolve_auth_source_explicit_passthrough_lowercased(
     assert resolve_auth_source() == "oidc"
 
 
-# ── create_auth_provider factory (default + explicit overrides) ──
+# â”€â”€ create_auth_provider factory (default + explicit overrides) â”€â”€
 
 
 def test_factory_defaults_to_header_when_env_unset(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Unset OMNIGENT_AUTH_PROVIDER (+ no enable switch) → header mode.
+    """Unset OMNIGENT_AUTH_PROVIDER (+ no enable switch) â†’ header mode.
 
     The shipped default is single-user, no-login: a bare
     ``agent-meow server`` on a laptop should pop open with no
     multi-user wiring. Multi-user (accounts) is opt-in via
     ``OMNIGENT_AUTH_ENABLED=1`` (see
     :func:`test_factory_accounts_enabled_truthy_enables_accounts`).
-    No accounts env is set here — header mode must not require it.
+    No accounts env is set here â€” header mode must not require it.
     """
     monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
     monkeypatch.delenv("OMNIGENT_AUTH_ENABLED", raising=False)
@@ -605,12 +605,12 @@ def test_factory_accounts_enabled_falsy_stays_header(
     monkeypatch: pytest.MonkeyPatch,
     disable_value: str,
 ) -> None:
-    """An explicitly falsy ``OMNIGENT_AUTH_ENABLED`` → header mode.
+    """An explicitly falsy ``OMNIGENT_AUTH_ENABLED`` â†’ header mode.
 
     Header is already the env-unset default, but a falsy value must
-    be treated the same as unset (not as "set, therefore truthy") —
+    be treated the same as unset (not as "set, therefore truthy") â€”
     selecting header mode, which falls back to the ``local`` user
-    when no proxy header is present. No accounts env needed — header
+    when no proxy header is present. No accounts env needed â€” header
     mode doesn't build AccountsConfig.
     """
     monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
@@ -663,7 +663,7 @@ def test_factory_explicit_accounts_beats_disabled_switch(
     assert provider._source == "accounts"
 
 
-# ── bootstrap_admin (unit) ────────────────────────────────────────
+# â”€â”€ bootstrap_admin (unit) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture
@@ -675,11 +675,11 @@ def fresh_store(tmp_path: Path) -> SqlAlchemyAccountStore:
     invented its own table layout would mask migration drift.
 
     Named ``fresh_store`` (not ``fresh_account_store``) so the
-    bootstrap test signatures stay terse — there's only one store
+    bootstrap test signatures stay terse â€” there's only one store
     in play at this layer of the suite.
     """
     db_url = f"sqlite:///{tmp_path}/test.db"
-    from agent_meow.db.utils import get_or_create_engine
+    from omnigent.db.utils import get_or_create_engine
 
     get_or_create_engine(db_url)  # runs alembic upgrade
     return SqlAlchemyAccountStore(db_url)
@@ -690,7 +690,7 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Redirect $HOME so cli_auth.store_token writes to a temp file.
 
     Without this, the test could write into the developer's real
-    ``~/.agent_meow/auth_tokens.json`` — fine, but noisy. The
+    ``~/.omnigent/auth_tokens.json`` â€” fine, but noisy. The
     fixture also pins OMNIGENT_ADMIN_CREDENTIALS_PATH so the
     bootstrap's 0600 file lands inside the tmp dir too.
     """
@@ -713,7 +713,7 @@ def test_bootstrap_with_password_creates_admin(
 
     The flag/env path (``--admin-password`` /
     ``OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD``) is the one
-    bootstrap path that creates an admin directly — for headless /
+    bootstrap path that creates an admin directly â€” for headless /
     CI deploys. The password the caller supplied must be the one
     that authenticates.
     """
@@ -733,7 +733,7 @@ def test_bootstrap_with_password_creates_admin(
 def test_bootstrap_without_password_creates_nothing_and_needs_setup(
     fresh_store: SqlAlchemyAccountStore, isolated_home: Path
 ) -> None:
-    """No supplied password → NO admin, NO default credential, needs_setup.
+    """No supplied password â†’ NO admin, NO default credential, needs_setup.
 
     The core "never auto-generate" invariant. With no
     ``--admin-password`` / ``INIT_ADMIN_PASSWORD``, bootstrap must
@@ -746,7 +746,7 @@ def test_bootstrap_without_password_creates_nothing_and_needs_setup(
 
     assert result.fresh_boot is False
     assert result.needs_setup is True
-    # Nothing was created — no admin, no password-having user anywhere.
+    # Nothing was created â€” no admin, no password-having user anywhere.
     assert fresh_store.get_user("admin") is None
     assert not any(u.has_password for u in fresh_store.list_users())
 
@@ -756,7 +756,7 @@ def test_bootstrap_with_password_is_idempotent_on_reboot(
 ) -> None:
     """Re-running bootstrap is a no-op once the admin exists.
 
-    A re-bootstrap MUST NOT rotate the password — that would lock
+    A re-bootstrap MUST NOT rotate the password â€” that would lock
     out anyone using the original. Rotation is an explicit action.
     """
     bootstrap_admin(fresh_store, init_admin_password="pw-12345")
@@ -772,12 +772,12 @@ def test_bootstrap_with_password_is_idempotent_on_reboot(
 def test_bootstrap_ignores_supplied_password_once_admin_exists(
     fresh_store: SqlAlchemyAccountStore, isolated_home: Path
 ) -> None:
-    """A second boot with a new password is a no-op — the first wins.
+    """A second boot with a new password is a no-op â€” the first wins.
 
     The admin password is set exactly once, on the first boot of a
     machine's accounts DB. A later ``--admin-password`` /
     ``INIT_ADMIN_PASSWORD`` (e.g. a stale shell var, or someone trying
-    to "re-set" it) must NOT silently rotate the live credential — that
+    to "re-set" it) must NOT silently rotate the live credential â€” that
     would be a footgun and a privilege surprise. It's ignored (with a
     warning, surfaced in the logs); rotation goes through the web UI's
     admin reset instead.
@@ -800,17 +800,17 @@ def test_bootstrap_ignores_supplied_password_once_admin_exists(
 def test_bootstrap_remote_no_password_needs_setup_no_token(
     fresh_store: SqlAlchemyAccountStore, isolated_home: Path
 ) -> None:
-    """Remote (non-loopback) + no password → needs_setup, no token, no auto-open.
+    """Remote (non-loopback) + no password â†’ needs_setup, no token, no auto-open.
 
     On a Docker / Render / Railway deploy the first admin is claimed
     via the web Create-admin form (needs_setup). Bootstrap creates
     nothing, writes no CLI token (the operator is on a different
-    machine), and requests no browser auto-open (open_url None — the
+    machine), and requests no browser auto-open (open_url None â€” the
     server has no display).
     """
     result = bootstrap_admin(
         fresh_store,
-        base_url="https://agent_meow.example.com",
+        base_url="https://omnigent.example.com",
         cookie_secret=secrets.token_bytes(32),
     )
 
@@ -823,12 +823,12 @@ def test_bootstrap_remote_no_password_needs_setup_no_token(
 def test_bootstrap_loopback_no_password_needs_setup_opens_form(
     fresh_store: SqlAlchemyAccountStore, isolated_home: Path
 ) -> None:
-    """Loopback + no password → needs_setup, browser auto-opens to the form.
+    """Loopback + no password â†’ needs_setup, browser auto-opens to the form.
 
     Local first run with no flag: no admin is created (no defaults),
     needs_setup is reported, and open_url is the loopback base URL so
     the lifespan opens the browser straight to the Create-admin form.
-    No CLI token yet — there's no admin to mint one for.
+    No CLI token yet â€” there's no admin to mint one for.
     """
     base_url = "http://localhost:8000"
     result = bootstrap_admin(fresh_store, base_url=base_url, cookie_secret=secrets.token_bytes(32))
@@ -842,11 +842,11 @@ def test_bootstrap_loopback_no_password_needs_setup_opens_form(
 def test_bootstrap_init_password_loopback_writes_cli_token_no_autoopen(
     fresh_store: SqlAlchemyAccountStore, isolated_home: Path
 ) -> None:
-    """Supplied password on loopback → admin created, CLI token written, no auto-open.
+    """Supplied password on loopback â†’ admin created, CLI token written, no auto-open.
 
     The flag path creates the admin and mints the loopback CLI token
     (so ``agent-meow run`` is signed in), but does NOT auto-open the
-    browser — the operator chose the password and will log in when
+    browser â€” the operator chose the password and will log in when
     they want.
     """
     base_url = "http://localhost:8000"
@@ -861,7 +861,7 @@ def test_bootstrap_init_password_loopback_writes_cli_token_no_autoopen(
     assert result.needs_setup is False
     assert result.open_url is None
     assert result.tui_token_written is True
-    from agent_meow import cli_auth
+    from omnigent import cli_auth
 
     assert cli_auth.load_token(base_url) is not None
 
@@ -873,12 +873,12 @@ def test_bootstrap_refreshes_cli_token_on_returning_loopback_boot(
 
     The daemon spawns the loopback server on a fresh port each time and
     the first-boot token is port-keyed + one-time, so a returning boot
-    must re-mint a token for the current URL — otherwise ``agent-meow
+    must re-mint a token for the current URL â€” otherwise ``agent-meow
     run`` 401s against its own server once an admin exists (the Bug B
     that motivated this). Here the second boot uses a *different* base
     URL (new port) and must still produce a usable token for it.
     """
-    from agent_meow import cli_auth
+    from omnigent import cli_auth
 
     first = bootstrap_admin(
         fresh_store,
@@ -904,7 +904,7 @@ def test_bootstrap_refreshes_cli_token_on_returning_loopback_boot(
     )
 
 
-# ── resolve_admin_username (unit) ─────────────────────────────────
+# â”€â”€ resolve_admin_username (unit) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_admin_username_uses_env_override(
@@ -926,7 +926,7 @@ def test_resolve_admin_username_falls_back_to_os_user(
 ) -> None:
     """With no env override, the OS user (via getpass) is the admin name.
 
-    This is the laptop-UX win — running ``agent-meow server`` as
+    This is the laptop-UX win â€” running ``agent-meow server`` as
     ``dhruv.gupta`` creates a ``dhruv.gupta`` admin, so the CLI
     and the web UI share one identity from the start (no
     separate "local" / "admin" split).
@@ -950,7 +950,7 @@ def test_resolve_admin_username_falls_back_to_admin_on_reserved_name(
     Without this, a deploy launched as the (admittedly weird) OS
     user "local" would create an account named "local" and
     immediately have it rejected by the auth provider's
-    reserved-name guard — silent breakage.
+    reserved-name guard â€” silent breakage.
     """
     monkeypatch.delenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME", raising=False)
     import getpass
@@ -973,7 +973,7 @@ def test_resolve_admin_username_falls_back_on_regex_mismatch(
     import getpass
 
     monkeypatch.setattr(getpass, "getuser", lambda: "Administrator")
-    # Lowercased "administrator" actually IS valid — the regex
+    # Lowercased "administrator" actually IS valid â€” the regex
     # accepts lowercase letters. Use a name that breaks the regex
     # outright: leading dash, since the regex requires [a-z0-9]
     # as the first char.
@@ -981,7 +981,7 @@ def test_resolve_admin_username_falls_back_on_regex_mismatch(
     assert resolve_admin_username() == "admin"
 
 
-# ── Routes (integration via TestClient) ───────────────────────────
+# â”€â”€ Routes (integration via TestClient) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _build_accounts_app(
@@ -993,7 +993,7 @@ def _build_accounts_app(
     """Build a production-shaped accounts-mode app + TestClient.
 
     Shared by the :func:`accounts_app` (admin pre-seeded) and
-    :func:`accounts_app_needs_setup` (no admin → first-run setup
+    :func:`accounts_app_needs_setup` (no admin â†’ first-run setup
     pending) fixtures. Wires every store + router + provider exactly
     like ``create_app`` does in production.
 
@@ -1023,24 +1023,24 @@ def _build_accounts_app(
     monkeypatch.setenv("OMNIGENT_ACCOUNTS_AUTO_OPEN", "0")
 
     db_url = f"sqlite:///{tmp_path}/test.db"
-    from agent_meow.db.utils import get_or_create_engine
-    from agent_meow.runtime import init as init_runtime
-    from agent_meow.runtime import telemetry
-    from agent_meow.runtime.agent_cache import AgentCache
-    from agent_meow.runtime.caps import RuntimeCaps
-    from agent_meow.server.app import create_app
-    from agent_meow.stores.agent_store.sqlalchemy_store import (
+    from omnigent.db.utils import get_or_create_engine
+    from omnigent.runtime import init as init_runtime
+    from omnigent.runtime import telemetry
+    from omnigent.runtime.agent_cache import AgentCache
+    from omnigent.runtime.caps import RuntimeCaps
+    from omnigent.server.app import create_app
+    from omnigent.stores.agent_store.sqlalchemy_store import (
         SqlAlchemyAgentStore,
     )
-    from agent_meow.stores.artifact_store.local import LocalArtifactStore
-    from agent_meow.stores.comment_store.sqlalchemy_store import (
+    from omnigent.stores.artifact_store.local import LocalArtifactStore
+    from omnigent.stores.comment_store.sqlalchemy_store import (
         SqlAlchemyCommentStore,
     )
-    from agent_meow.stores.conversation_store.sqlalchemy_store import (
+    from omnigent.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
-    from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-    from agent_meow.stores.host_store import HostStore
+    from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+    from omnigent.stores.host_store import HostStore
 
     get_or_create_engine(db_url)
     telemetry.init()
@@ -1063,7 +1063,7 @@ def _build_accounts_app(
     )
 
     auth_provider = create_auth_provider()
-    # Explicit AccountStore — create_app no longer constructs one
+    # Explicit AccountStore â€” create_app no longer constructs one
     # internally so the internal hosted product can opt out by
     # passing None.
     account_store = SqlAlchemyAccountStore(db_url)
@@ -1087,7 +1087,7 @@ def _build_accounts_app(
 def accounts_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     """Accounts-mode app with the admin pre-seeded (``admin`` / ``admin-pw-12345``).
 
-    The common case for route tests — an admin already exists, so
+    The common case for route tests â€” an admin already exists, so
     ``/v1/info`` reports ``needs_setup=false`` and ``_login`` works.
     """
     yield from _build_accounts_app(tmp_path, monkeypatch, init_admin_password="admin-pw-12345")
@@ -1097,7 +1097,7 @@ def accounts_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Te
 def accounts_app_needs_setup(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[TestClient]:
-    """Accounts-mode app with NO admin yet — first-run setup pending.
+    """Accounts-mode app with NO admin yet â€” first-run setup pending.
 
     No ``INIT_ADMIN_PASSWORD``, so bootstrap creates nothing and
     ``/v1/info`` reports ``needs_setup=true``. Exercises the
@@ -1115,7 +1115,7 @@ def header_mode_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator
     and the accounts router never mounts. Used to verify the
     "internal hosted product is byte-equivalent" invariant.
     """
-    # Accounts is now the default provider — explicitly pin
+    # Accounts is now the default provider â€” explicitly pin
     # "header" so this negative-case fixture actually exercises
     # header mode regardless of the global default.
     monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "header")
@@ -1123,20 +1123,20 @@ def header_mode_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator
     monkeypatch.delenv("OMNIGENT_ACCOUNTS_BASE_URL", raising=False)
 
     db_url = f"sqlite:///{tmp_path}/header.db"
-    from agent_meow.db.utils import get_or_create_engine
-    from agent_meow.runtime import init as init_runtime
-    from agent_meow.runtime import telemetry
-    from agent_meow.runtime.agent_cache import AgentCache
-    from agent_meow.runtime.caps import RuntimeCaps
-    from agent_meow.server.app import create_app
-    from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-    from agent_meow.stores.artifact_store.local import LocalArtifactStore
-    from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-    from agent_meow.stores.conversation_store.sqlalchemy_store import (
+    from omnigent.db.utils import get_or_create_engine
+    from omnigent.runtime import init as init_runtime
+    from omnigent.runtime import telemetry
+    from omnigent.runtime.agent_cache import AgentCache
+    from omnigent.runtime.caps import RuntimeCaps
+    from omnigent.server.app import create_app
+    from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+    from omnigent.stores.artifact_store.local import LocalArtifactStore
+    from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+    from omnigent.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
-    from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-    from agent_meow.stores.host_store import HostStore
+    from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+    from omnigent.stores.host_store import HostStore
 
     get_or_create_engine(db_url)
     telemetry.init()
@@ -1178,7 +1178,7 @@ def _login(client: TestClient, username: str, password: str) -> TestClient:
     """Log in via /auth/login and confirm the session cookie was set."""
     resp = client.post("/auth/login", json={"username": username, "password": password})
     assert resp.status_code == 200, resp.text
-    # The TestClient holds cookies across calls — return it so the
+    # The TestClient holds cookies across calls â€” return it so the
     # caller can use it as the authed client.
     return client
 
@@ -1186,7 +1186,7 @@ def _login(client: TestClient, username: str, password: str) -> TestClient:
 def test_info_endpoint_advertises_accounts_enabled(accounts_app: TestClient) -> None:
     """``/v1/info`` reports accounts_enabled=true when the provider is active.
 
-    The SPA reads this at boot (unauthed — must not 401) and uses
+    The SPA reads this at boot (unauthed â€” must not 401) and uses
     the flag to decide whether to register /login, /register,
     /members routes and render the AccountMenu. If this regresses,
     the internal hosted product's SPA would start rendering
@@ -1218,10 +1218,10 @@ def test_info_endpoint_reports_disabled_in_header_mode(
 
 
 def test_login_wrong_password_returns_401(accounts_app: TestClient) -> None:
-    """Wrong password → 401 with a generic error message.
+    """Wrong password â†’ 401 with a generic error message.
 
     The message MUST NOT distinguish "no such user" from "wrong
-    password" — leaking that would enable username enumeration.
+    password" â€” leaking that would enable username enumeration.
     """
     resp = accounts_app.post("/auth/login", json={"username": "admin", "password": "wrong"})
     assert resp.status_code == 401
@@ -1229,7 +1229,7 @@ def test_login_wrong_password_returns_401(accounts_app: TestClient) -> None:
 
 
 def test_login_unknown_user_returns_401(accounts_app: TestClient) -> None:
-    """Unknown user → same 401 + same generic message as wrong-password."""
+    """Unknown user â†’ same 401 + same generic message as wrong-password."""
     resp = accounts_app.post(
         "/auth/login", json={"username": "ghost", "password": "anything12345"}
     )
@@ -1238,7 +1238,7 @@ def test_login_unknown_user_returns_401(accounts_app: TestClient) -> None:
 
 
 def test_login_correct_password_sets_cookie(accounts_app: TestClient) -> None:
-    """Correct credentials → 200 + session cookie + user payload."""
+    """Correct credentials â†’ 200 + session cookie + user payload."""
     resp = accounts_app.post(
         "/auth/login", json={"username": "admin", "password": "admin-pw-12345"}
     )
@@ -1252,7 +1252,7 @@ def test_login_correct_password_sets_cookie(accounts_app: TestClient) -> None:
 
 
 def test_me_unauthed_returns_401(accounts_app: TestClient) -> None:
-    """No cookie → /auth/me returns 401."""
+    """No cookie â†’ /auth/me returns 401."""
     resp = accounts_app.get("/auth/me")
     assert resp.status_code == 401
 
@@ -1274,7 +1274,7 @@ def test_logout_clears_cookie(accounts_app: TestClient) -> None:
     assert resp.status_code == 204
 
 
-# ── Invite + register (integration) ───────────────────────────────
+# â”€â”€ Invite + register (integration) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_non_admin_cannot_mint_invite(accounts_app: TestClient) -> None:
@@ -1289,7 +1289,7 @@ def test_non_admin_cannot_mint_invite(accounts_app: TestClient) -> None:
     invite_resp = admin_client.post("/auth/invite", json={})
     token = invite_resp.json()["token"]
 
-    # Register alice via the invite (fresh client → fresh cookie).
+    # Register alice via the invite (fresh client â†’ fresh cookie).
     from fastapi.testclient import TestClient as _TC
 
     alice = _TC(accounts_app.app)
@@ -1299,7 +1299,7 @@ def test_non_admin_cannot_mint_invite(accounts_app: TestClient) -> None:
     )
     assert register_resp.status_code == 200
 
-    # Alice trying to mint an invite → 403.
+    # Alice trying to mint an invite â†’ 403.
     bad_resp = alice.post("/auth/invite", json={})
     assert bad_resp.status_code == 403
 
@@ -1386,7 +1386,7 @@ def test_alice_cannot_see_bobs_admin_endpoints(accounts_app: TestClient) -> None
         assert resp.status_code == 403, f"{method} {path} should 403 for non-admin"
 
 
-# ── Magic-link (integration) ──────────────────────────────────────
+# â”€â”€ Magic-link (integration) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_magic_link_authenticates_in_fresh_client(
@@ -1394,7 +1394,7 @@ def test_magic_link_authenticates_in_fresh_client(
 ) -> None:
     """Magic-link redeem in a fresh browser signs the same user in.
 
-    Closes the CLI → web handoff: a CLI session mints a magic
+    Closes the CLI â†’ web handoff: a CLI session mints a magic
     URL, the URL pops the user into a browser already signed in.
     """
     admin = _login(accounts_app, "admin", "admin-pw-12345")
@@ -1446,7 +1446,7 @@ def test_unauthed_cannot_mint_magic_link(accounts_app: TestClient) -> None:
     assert resp.status_code == 401
 
 
-# ── Members admin (integration) ───────────────────────────────────
+# â”€â”€ Members admin (integration) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_admin_can_list_users(accounts_app: TestClient) -> None:
@@ -1464,7 +1464,7 @@ def test_admin_list_excludes_legacy_local_and_public_sentinels(
 ) -> None:
     """The Members page hides ``"local"`` and ``"__public__"``.
 
-    Both rows exist in the ``users`` table — ``"local"`` is
+    Both rows exist in the ``users`` table â€” ``"local"`` is
     backfilled by the original session-permissions migration so
     pre-accounts deploys had a default owner row for existing
     conversations, and ``"__public__"`` is the anonymous-grant
@@ -1477,8 +1477,8 @@ def test_admin_list_excludes_legacy_local_and_public_sentinels(
     ``accounts_app`` fixture wired up, then confirm the admin
     list filter drops them.
     """
-    from agent_meow.db.db_models import SqlUser
-    from agent_meow.db.utils import get_or_create_engine, make_managed_session_maker
+    from omnigent.db.db_models import SqlUser
+    from omnigent.db.utils import get_or_create_engine, make_managed_session_maker
 
     db_url = f"sqlite:///{tmp_path}/test.db"
     engine = get_or_create_engine(db_url)
@@ -1507,7 +1507,7 @@ def test_admin_cannot_delete_self(accounts_app: TestClient) -> None:
 
     Prevents self-lockout: deleting yourself while signed in
     would leave your session valid but the row gone, and any
-    future cookie validation would fail. Worse — if you're the
+    future cookie validation would fail. Worse â€” if you're the
     only admin, the deploy has no recovery path.
     """
     admin = _login(accounts_app, "admin", "admin-pw-12345")
@@ -1527,7 +1527,7 @@ def test_admin_can_delete_former_admin_when_others_exist(
     always the literal "admin". Now the bootstrap defaults to
     the OS user (``dhruv.gupta`` etc.) so the check generalized
     to "would this leave zero admins". As long as another admin
-    exists, the original bootstrap row IS deletable — admins
+    exists, the original bootstrap row IS deletable â€” admins
     might want to rename or rotate it.
 
     The "last admin" invariant is exercised by the negative
@@ -1566,12 +1566,12 @@ def test_admin_cannot_delete_last_admin(accounts_app: TestClient) -> None:
         json={"invite": member_invite, "username": "alice", "password": "alice-pw-1234"},
     )
 
-    # alice (non-admin) → 403; doesn't even reach the last-admin check.
+    # alice (non-admin) â†’ 403; doesn't even reach the last-admin check.
     resp = member.delete("/auth/users/admin")
     assert resp.status_code == 403
 
     # Now promote alice manually by using the admin to reset, then
-    # try deleting admin from alice's session — but alice would
+    # try deleting admin from alice's session â€” but alice would
     # need to be admin first. Simpler scenario: use admin to
     # delete admin (self-delete is the actual block here). For
     # last-admin, a future test where alice IS promoted would
@@ -1590,7 +1590,7 @@ def test_admin_reset_returns_new_plaintext_once(
 ) -> None:
     """Admin-issued reset returns the new plaintext password exactly once.
 
-    This is the "DM the password" flow — the admin sends the
+    This is the "DM the password" flow â€” the admin sends the
     plaintext out-of-band. The route returning it is the only
     place it surfaces; the stored hash overwrites the old one
     so the prior password stops working.
@@ -1622,7 +1622,7 @@ def test_admin_can_delete_normal_member(accounts_app: TestClient) -> None:
     """Admin DELETE /auth/users/{id} succeeds and removes the user.
 
     The refusal paths (self-delete, bootstrap-admin) are tested
-    above; this is the positive path — confirms the route + the
+    above; this is the positive path â€” confirms the route + the
     store's ``delete_user`` actually drop the row and the user
     no longer appears in the listing.
     """
@@ -1650,7 +1650,7 @@ def test_admin_can_delete_normal_member(accounts_app: TestClient) -> None:
 def test_change_own_password_round_trip(accounts_app: TestClient) -> None:
     """POST /auth/users/me/password rotates the password.
 
-    Correct old password → 204, new password works on the next
+    Correct old password â†’ 204, new password works on the next
     login, old password stops working. Covers the happy path
     that the self-serve UX depends on.
     """
@@ -1679,10 +1679,10 @@ def test_change_own_password_round_trip(accounts_app: TestClient) -> None:
 def test_change_own_password_rejects_wrong_old_password(
     accounts_app: TestClient,
 ) -> None:
-    """Wrong old_password → 401, password is NOT rotated.
+    """Wrong old_password â†’ 401, password is NOT rotated.
 
     Required because the route is reachable by anyone with a
-    valid session — without verifying old_password an attacker
+    valid session â€” without verifying old_password an attacker
     who steals a session cookie could lock out the legitimate
     user by setting a new password.
     """
@@ -1743,35 +1743,35 @@ def test_purge_expired_tokens_drops_only_expired(
     assert redeemed is not None and redeemed.id == "live"
 
 
-# ── CLI: agent-meow login accounts flow ───────────────────────────
+# â”€â”€ CLI: agent-meow login accounts flow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_cli_accounts_login_happy_path_stores_token(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`agent-meow login` in accounts mode prompts → POSTs → stores token.
+    """`agent-meow login` in accounts mode prompts â†’ POSTs â†’ stores token.
 
     Mocks the network surface (the /v1/me probe + the /auth/login
     POST) and the token storage (cli_auth.store_token writes to
-    the user's ~/.agent_meow/), so the test verifies the CLI
+    the user's ~/.omnigent/), so the test verifies the CLI
     plumbing without spinning up a server.
 
-    Closes the AI-review gap flagged in the first review pass —
+    Closes the AI-review gap flagged in the first review pass â€”
     the accounts-login CLI path was the only auth code in the
     PR without test coverage.
     """
     import httpx as _httpx
     from click.testing import CliRunner
 
-    from agent_meow import cli_auth
-    from agent_meow.cli import cli
+    from omnigent import cli_auth
+    from omnigent.cli import cli
 
     # Redirect $HOME so cli_auth.store_token writes into tmp.
     monkeypatch.setenv("HOME", str(tmp_path))
 
-    # First call: /v1/me probe → 401 + login_url=/login so the CLI
+    # First call: /v1/me probe â†’ 401 + login_url=/login so the CLI
     # picks the accounts branch.
-    # Second call: /auth/login → 200 with the token payload.
+    # Second call: /auth/login â†’ 200 with the token payload.
     calls = {"n": 0}
 
     class _FakeResponse:
@@ -1809,7 +1809,7 @@ def test_cli_accounts_login_happy_path_stores_token(
     monkeypatch.setattr(_httpx, "get", fake_get)
     monkeypatch.setattr(_httpx, "post", fake_post)
 
-    # CliRunner feeds the prompts via stdin: username (empty → default
+    # CliRunner feeds the prompts via stdin: username (empty â†’ default
     # "admin", but we override with "alice"), then password.
     result = CliRunner().invoke(
         cli,
@@ -1819,24 +1819,24 @@ def test_cli_accounts_login_happy_path_stores_token(
 
     assert result.exit_code == 0, result.output
     assert "Logged in as alice" in result.output
-    # The store_token side effect lands in ~/.agent_meow/auth_tokens.json.
+    # The store_token side effect lands in ~/.omnigent/auth_tokens.json.
     assert cli_auth.load_token("http://localhost:8000") == "fake.jwt.token"
 
 
 def test_cli_accounts_login_wrong_password_surfaces_clean_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A 401 from /auth/login → ClickException with the generic message.
+    """A 401 from /auth/login â†’ ClickException with the generic message.
 
     The server returns "invalid username or password" without
-    distinguishing between unknown-user and wrong-password — the
+    distinguishing between unknown-user and wrong-password â€” the
     CLI surfaces that as a ``ClickException`` (non-zero exit,
     formatted as ``Error: ...``) rather than a raw traceback.
     """
     import httpx as _httpx
     from click.testing import CliRunner
 
-    from agent_meow.cli import cli
+    from omnigent.cli import cli
 
     monkeypatch.setenv("HOME", str(tmp_path))
 
@@ -1870,7 +1870,7 @@ def test_cli_accounts_login_wrong_password_surfaces_clean_error(
 
     assert result.exit_code != 0
     assert "Invalid username or password" in result.output
-    # Generic message — no enumeration leak about whether the
+    # Generic message â€” no enumeration leak about whether the
     # username exists.
     assert "username" not in result.output.lower() or "invalid" in result.output.lower()
 
@@ -1878,7 +1878,7 @@ def test_cli_accounts_login_wrong_password_surfaces_clean_error(
 def test_cli_accounts_login_network_failure_surfaces_clean_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A network error reaching /auth/login → ClickException, not traceback.
+    """A network error reaching /auth/login â†’ ClickException, not traceback.
 
     Covers the case an invited user might hit when their network
     flakes or the server is briefly down between probe and login.
@@ -1886,7 +1886,7 @@ def test_cli_accounts_login_network_failure_surfaces_clean_error(
     import httpx as _httpx
     from click.testing import CliRunner
 
-    from agent_meow.cli import cli
+    from omnigent.cli import cli
 
     monkeypatch.setenv("HOME", str(tmp_path))
 
@@ -1922,7 +1922,7 @@ def test_cli_accounts_login_network_failure_surfaces_clean_error(
     assert "Could not reach" in result.output
 
 
-# ── First-run web setup: POST /auth/setup (first-admin claim) ─────
+# â”€â”€ First-run web setup: POST /auth/setup (first-admin claim) â”€â”€â”€â”€â”€
 
 
 def test_setup_creates_first_admin_and_signs_in(
@@ -1932,7 +1932,7 @@ def test_setup_creates_first_admin_and_signs_in(
 
     The remote-deploy CUJ (Render/Railway/Docker): open the URL, the
     first visitor picks a username + password, and lands signed in as
-    an admin — no container access, no log-digging.
+    an admin â€” no container access, no log-digging.
     """
     client = accounts_app_needs_setup
 
@@ -1963,11 +1963,11 @@ def test_setup_writes_loopback_cli_token(
     The local CUJ: ``agent-meow run`` (re)spawns the local server in
     accounts mode with no admin, so the operator claims it via the
     browser form. ``/auth/setup`` must also mint the loopback CLI token
-    (the fixture's base URL is ``http://localhost:8000`` — loopback) so
+    (the fixture's base URL is ``http://localhost:8000`` â€” loopback) so
     the in-flight ``agent-meow run`` is signed in immediately instead of
     401-ing until the next server boot.
     """
-    from agent_meow import cli_auth
+    from omnigent import cli_auth
 
     client = accounts_app_needs_setup
     base_url = "http://localhost:8000"

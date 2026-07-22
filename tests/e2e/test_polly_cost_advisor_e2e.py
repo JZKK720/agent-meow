@@ -47,7 +47,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.cost_plan import COST_CONTROL_PLAN_LABEL
+from omnigent.cost_plan import COST_CONTROL_PLAN_LABEL
 from tests.e2e.test_polly_e2e import (
     _MOCK_BRAIN_MODEL,
     _REPO,

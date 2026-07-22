@@ -1,8 +1,8 @@
-"""Unit tests for ``agent_meow.llms.summarize`` helpers."""
+"""Unit tests for ``omnigent.llms.summarize`` helpers."""
 
 from __future__ import annotations
 
-from agent_meow.llms.summarize import build_summarization_input
+from omnigent.llms.summarize import build_summarization_input
 
 
 def test_build_summarization_input_appends_trigger_when_last_role_is_assistant() -> None:
@@ -38,7 +38,7 @@ def test_build_summarization_input_appends_trigger_when_last_role_is_assistant()
 def test_build_summarization_input_skips_trigger_when_last_role_is_user() -> None:
     """
     A conversation already ending in a user message must NOT gain a
-    second user turn — some providers reject consecutive same-role
+    second user turn â€” some providers reject consecutive same-role
     messages and the existing user turn is already a valid final
     position.
     """
@@ -55,7 +55,7 @@ def test_build_summarization_input_skips_trigger_when_last_role_is_user() -> Non
         "ends with a user message; failure means a redundant trigger turn "
         "was appended, which can produce consecutive user turns."
     )
-    # Must be a copy — mutating result must not affect caller.
+    # Must be a copy â€” mutating result must not affect caller.
     result.append({"role": "user", "content": "extra"})
     assert len(messages) == 3, "Helper must return a copy, not the input list."
 
@@ -64,7 +64,7 @@ def test_build_summarization_input_appends_trigger_when_last_item_is_tool_output
     """
     A conversation ending in a function_call_output (becomes
     role=tool after chat-completions conversion) must gain a
-    trailing user turn — tool messages aren't a valid final position
+    trailing user turn â€” tool messages aren't a valid final position
     for the summarization request.
     """
     messages = [

@@ -1,17 +1,17 @@
 """
 Tests for the built-in Google Workspace policies
-(:mod:`~?agent_meow.policies.builtins.google`) — the three sibling factories
+(:mod:`~?omnigent.policies.builtins.google`) â€” the three sibling factories
 ``gdrive_policy`` / ``gmail_policy`` / ``gcalendar_policy`` in one module.
 
 Layers per policy:
 
-- **Layer 1** — direct callable: verb / allowlist gating, created-ID tracking,
+- **Layer 1** â€” direct callable: verb / allowlist gating, created-ID tracking,
   MCP-prefix-agnostic matching, fail-closed on unknown same-service tools, and
   abstention on other services (the composition guarantee).
-- **Layer 2** — spec resolution through :func:`resolve_function_policy`.
-- **Layer 3** — created-ID roundtrip via a real :class:`PolicyEngine` + SQLite
+- **Layer 2** â€” spec resolution through :func:`resolve_function_policy`.
+- **Layer 3** â€” created-ID roundtrip via a real :class:`PolicyEngine` + SQLite
   store (proves ``session_state`` persistence across an engine rebuild).
-- **Layer 4** — registry discovery: all three are one ``POLICY_REGISTRY`` with
+- **Layer 4** â€” registry discovery: all three are one ``POLICY_REGISTRY`` with
   three factory entries, validated against their schemas.
 """
 
@@ -22,25 +22,25 @@ from typing import Any
 
 import pytest
 
-from agent_meow.policies.builtins.google import (
+from omnigent.policies.builtins.google import (
     CREATED_DRAFTS_STATE_KEY,
     CREATED_FILES_STATE_KEY,
     gcalendar_policy,
     gdrive_policy,
     gmail_policy,
 )
-from agent_meow.policies.function import FunctionPolicy, resolve_function_policy
-from agent_meow.policies.registry import get_registry, load_registry, validate_factory_params
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
-from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from omnigent.policies.function import FunctionPolicy, resolve_function_policy
+from omnigent.policies.registry import get_registry, load_registry, validate_factory_params
+from omnigent.policies.types import EvaluationContext
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
+from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
 from tests.policies.builtins.helpers import tool_call_event as tc
 from tests.policies.builtins.helpers import tool_result_event as tr
 
-_DRIVE_HANDLER = "agent_meow.policies.builtins.google.gdrive_policy"
-_GMAIL_HANDLER = "agent_meow.policies.builtins.google.gmail_policy"
-_CAL_HANDLER = "agent_meow.policies.builtins.google.gcalendar_policy"
+_DRIVE_HANDLER = "omnigent.policies.builtins.google.gdrive_policy"
+_GMAIL_HANDLER = "omnigent.policies.builtins.google.gmail_policy"
+_CAL_HANDLER = "omnigent.policies.builtins.google.gcalendar_policy"
 _DOC_ID = "1AbCdefGHIjklMNOpqrSTUvwxyz0123456789"
 _DOC_URL = f"https://docs.google.com/document/d/{_DOC_ID}/edit?tab=t.0"
 
@@ -91,9 +91,9 @@ def _engine(
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # gdrive_policy
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_drive_read_all_allows_any_read() -> None:
@@ -111,7 +111,7 @@ def test_drive_read_all_allows_any_read() -> None:
 def test_drive_restricted_read_allowlisted_prefix_agnostic(prefix: str) -> None:
     """Restricted read of an allowlisted ID abstains, for either server prefix.
 
-    Proves canonical matching is MCP-agnostic — the same allowlist works against
+    Proves canonical matching is MCP-agnostic â€” the same allowlist works against
     the standard ``mcp__google__*`` and the Databricks ``google__*``.
     """
     policy = gdrive_policy(read_all=False, read_files=[_DOC_ID])
@@ -269,7 +269,7 @@ def test_drive_create_result_depth_bounded() -> None:
     Failure (a ``RecursionError``) would mean a crafted MCP response with a
     deeply-nested structure could crash the policy engine. The shallow ID is
     still collected; an ID buried below the depth bound is simply not scanned
-    (safe — not tracking a created file only makes later writes to it fail
+    (safe â€” not tracking a created file only makes later writes to it fail
     closed).
     """
     nested: Any = {"documentId": "buried-too-deep"}
@@ -391,7 +391,7 @@ async def test_drive_created_file_roundtrip(
     assert write_foreign.action == PolicyAction.DENY
 
 
-# ── gdrive_policy: Bell-LaPadula "no write-down" (confidential compartment) ────
+# â”€â”€ gdrive_policy: Bell-LaPadula "no write-down" (confidential compartment) â”€â”€â”€â”€
 
 _CONF_ID = "1ConfidentialDocABCDEFGHIJKLMNOPQRSTUV"
 _OTHER_ID = "1OtherDocABCDEFGHIJKLMNOPQRSTUVWXYZ0123"
@@ -457,7 +457,7 @@ def test_no_write_down_latch_is_idempotent() -> None:
             request_arguments={"document_id": _CONF_ID},
         )
     )
-    assert result is None  # already latched — no duplicate update
+    assert result is None  # already latched â€” no duplicate update
 
 
 def test_no_write_down_write_outside_compartment_denied() -> None:
@@ -471,7 +471,7 @@ def test_no_write_down_write_outside_compartment_denied() -> None:
 
 def test_no_write_down_write_inside_compartment_allowed() -> None:
     """After reading confidential, a write to a confidential file the agent may
-    write (here, in ``write_files``) is allowed — it stays inside the set.
+    write (here, in ``write_files``) is allowed â€” it stays inside the set.
 
     The no-write-down check does not fire (target is confidential), and the base
     write rule permits it because the file is explicitly writable.
@@ -555,7 +555,7 @@ async def test_no_write_down_roundtrip_read_then_blocked_write(
     """End-to-end: read a confidential doc, then a later-turn outside write is denied.
 
     Proves the confidential-read latch survives an engine rebuild via persisted
-    ``session_state`` — the demo's core narrative.
+    ``session_state`` â€” the demo's core narrative.
     """
     conv = conversation_store.create_conversation()
     args = {"confidential_files": [_CONF_ID]}
@@ -593,9 +593,9 @@ async def test_no_write_down_roundtrip_read_then_blocked_write(
     assert write.action == PolicyAction.DENY
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # gmail_policy
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_gmail_read_gated_by_allow_read() -> None:
@@ -608,7 +608,7 @@ def test_gmail_read_gated_by_allow_read() -> None:
 
 
 def test_gmail_send_denied_by_default() -> None:
-    """Sending mail is denied by default — the draft-but-don't-send guardrail.
+    """Sending mail is denied by default â€” the draft-but-don't-send guardrail.
 
     Failure means an agent could send email with no human in the loop.
     """
@@ -755,9 +755,9 @@ async def test_gmail_created_draft_roundtrip(
     assert edit_other.action == PolicyAction.DENY
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # gcalendar_policy
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_cal_read_gated_by_allow_read() -> None:
@@ -831,9 +831,9 @@ async def test_cal_resolve_from_spec() -> None:
     assert denied.action == PolicyAction.DENY
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Registry — one POLICY_REGISTRY, three factory entries
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Registry â€” one POLICY_REGISTRY, three factory entries
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @pytest.mark.parametrize("handler", [_DRIVE_HANDLER, _GMAIL_HANDLER, _CAL_HANDLER])

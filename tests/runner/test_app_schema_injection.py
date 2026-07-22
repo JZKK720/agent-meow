@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_meow.runner.app import _inject_mcp_schemas
+from omnigent.runner.app import _inject_mcp_schemas
 
 
 def _schema(name: str) -> dict[str, Any]:

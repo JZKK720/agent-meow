@@ -1,17 +1,17 @@
-"""Phase 0 characterization test — mid-turn cancellation re-arms the REPL.
+"""Phase 0 characterization test â€” mid-turn cancellation re-arms the REPL.
 
 Submits a long-running prompt that produces visible streaming
 text, then issues the REPL's documented mid-turn cancellation
 mechanism. Asserts (a) the REPL stays alive (does NOT exit)
 after the cancellation, and (b) a follow-up prompt is accepted
-and produces a new assistant response — proving the streaming
+and produces a new assistant response â€” proving the streaming
 consumer re-armed for the next turn instead of getting stuck
 in a half-cancelled state.
 
 **The cancel gesture:** the REPL binds ``Escape`` to
 ``host.cancel()`` (the ``@kb.add("escape")`` handler in
 ``omnigent_ui_sdk.terminal._host``), which cancels the in-flight
-turn and renders a muted ``cancelled`` line — the surface the
+turn and renders a muted ``cancelled`` line â€” the surface the
 bottom toolbar advertises as "Esc cancel". This is the live
 mid-turn cancel path, and the design doc's spec ("send the
 cancel key, assert the REPL stays alive") maps onto it: the
@@ -20,9 +20,9 @@ prompt re-uses the same streaming consumer. When Ctrl+C is later
 re-pointed from ``app.exit`` to this same cancel call, the test
 need only swap the keystroke and the assertions still hold.
 
-Turn synchronization uses the visible ``⠹ working`` activity
-line and the ``❯`` input prompt rather than the bottom-right
-``state:`` badge (truncated/CPR-suppressed under a PTY — see
+Turn synchronization uses the visible ``â ¹ working`` activity
+line and the ``â¯`` input prompt rather than the bottom-right
+``state:`` badge (truncated/CPR-suppressed under a PTY â€” see
 test_repl_smoke), and the cancel acknowledgement is the muted
 ``cancelled`` line the run loop prints on Escape.
 
@@ -30,13 +30,13 @@ test_repl_smoke), and the cancel acknowledgement is the muted
 - The Escape cancel binding regresses so the in-flight turn
   doesn't stop (no ``cancelled`` ack would print).
 - The REPL's stream consumer fails to re-arm after
-  cancellation — would manifest as the follow-up prompt never
-  reaching ``working`` or never settling back at ``❯``. **This
+  cancellation â€” would manifest as the follow-up prompt never
+  reaching ``working`` or never settling back at ``â¯``. **This
   is the regression the design identified as the highest-priority
   interrupt test.**
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
-REPL pexpect suite — "Ctrl+C interrupt mid-stream".
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
+REPL pexpect suite â€” "Ctrl+C interrupt mid-stream".
 """
 
 from __future__ import annotations
@@ -44,22 +44,22 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     submit_prompt,
 )
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 # Visible turn-synchronization markers (see test_repl_smoke).
-# ``working`` is the streaming activity line; ``❯ `` is the idle
+# ``working`` is the streaming activity line; ``â¯ `` is the idle
 # input prompt. Both survive PTY truncation, unlike the far-right
 # ``state:`` badge the test originally synchronized on.
 _RUNNING_MARKER = r"working"
-_COMPLETION_MARKER = r"❯ "
+_COMPLETION_MARKER = r"â¯ "
 
 _MODEL = "mock-model"
 _HARNESS = "openai-agents"
@@ -83,17 +83,17 @@ _FOLLOW_UP_PROMPT = "say hi"
 # being silently dropped.
 _CANCEL_ACK_MARKER = r"cancelled"
 
-# The ``◆`` diamond the formatter commits in front of an assistant
-# message (``_DiamondMarkdown`` in omnigent_ui_sdk; ``◆ <model>`` on
+# The ``â—†`` diamond the formatter commits in front of an assistant
+# message (``_DiamondMarkdown`` in omnigent_ui_sdk; ``â—† <model>`` on
 # the resume path). It is committed to scrollback only when the model
 # actually returns text, and never appears in the user-prompt echo
-# (``❯``) or toolbar chrome — so it is an assistant-ONLY signal, not
+# (``â¯``) or toolbar chrome â€” so it is an assistant-ONLY signal, not
 # satisfiable by the submitted prompt's echo.
-_ASSISTANT_HEADER_GLYPH = "◆"
+_ASSISTANT_HEADER_GLYPH = "â—†"
 
-# Minimum prose length (after the ``◆`` header) required to count the
+# Minimum prose length (after the ``â—†`` header) required to count the
 # follow-up as a real assistant response. A bare header with no body
-# — or the prompt echo alone — must not pass. Two chars clears those
+# â€” or the prompt echo alone â€” must not pass. Two chars clears those
 # while staying robust to a terse reply like "Hi".
 _MIN_ASSISTANT_BODY_CHARS = 2
 
@@ -119,7 +119,7 @@ def test_repl_cancel_re_arms_for_next_turn(
 ) -> None:
     """
     Submit a long prompt, ``/cancel`` it mid-stream, then
-    submit a follow-up and verify it completes — proving the
+    submit a follow-up and verify it completes â€” proving the
     REPL stayed alive AND the streaming consumer re-armed.
 
     Uses the mock LLM server. The first response is configured
@@ -161,16 +161,16 @@ def test_repl_cancel_re_arms_for_next_turn(
     try:
         child.expect(_COMPLETION_MARKER, timeout=_BOOT_TIMEOUT)
         submit_prompt(child, _LONG_PROMPT)
-        # Wait for the turn to actually start streaming — the
-        # visible ``⠹ working`` activity line marks the moment the
+        # Wait for the turn to actually start streaming â€” the
+        # visible ``â ¹ working`` activity line marks the moment the
         # executor accepted the prompt and is producing output.
         child.expect(_RUNNING_MARKER, timeout=_INITIAL_RUNNING_BUDGET)
-        # Press Escape — the REPL's live mid-turn cancel gesture.
+        # Press Escape â€” the REPL's live mid-turn cancel gesture.
         child.send("\x1b")
         # The muted ``cancelled`` line is the observable proof the
         # gesture actually interrupted the streaming turn.
         child.expect(_CANCEL_ACK_MARKER, timeout=_CANCEL_ACK_TIMEOUT)
-        # Follow-up prompt — proves the input area still accepts
+        # Follow-up prompt â€” proves the input area still accepts
         # text and the streaming consumer re-armed.
         submit_prompt(child, _FOLLOW_UP_PROMPT)
         followup_turn = await_turn_complete(
@@ -189,7 +189,7 @@ def test_repl_cancel_re_arms_for_next_turn(
     # Merge the captured turn with the post-exit before-buffer.
     combined_stripped = followup_turn.stripped + "\n" + strip_ansi(child.before or "")
 
-    # Assistant-only signal: the ``◆`` diamond header.
+    # Assistant-only signal: the ``â—†`` diamond header.
     diamond_idx = combined_stripped.find(_ASSISTANT_HEADER_GLYPH)
     assistant_body = (
         combined_stripped[diamond_idx + len(_ASSISTANT_HEADER_GLYPH) :]
@@ -201,7 +201,7 @@ def test_repl_cancel_re_arms_for_next_turn(
         "exit_code": exit_code,
         "follow_up_assistant_response_rendered": diamond_idx != -1
         and len(assistant_body.strip()) >= _MIN_ASSISTANT_BODY_CHARS,
-        "follow_up_user_prompt_echoed": "❯" in combined_stripped
+        "follow_up_user_prompt_echoed": "â¯" in combined_stripped
         and _FOLLOW_UP_PROMPT in combined_stripped,
     }
     diffs = compare_snapshot("test_repl_ctrl_c_interrupt", observed)

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow import hermes_native_bridge as b
+from omnigent import hermes_native_bridge as b
 
 
 def test_bridge_dir_is_per_session_and_under_root() -> None:

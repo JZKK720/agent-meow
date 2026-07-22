@@ -8,9 +8,9 @@ from typing import Any
 
 import pytest
 
-from agent_meow.entities import Conversation, ConversationItem, MessageData, PagedList
-from agent_meow.server.routes import sessions as _sessions_mod
-from agent_meow.server.routes.sessions import (
+from omnigent.entities import Conversation, ConversationItem, MessageData, PagedList
+from omnigent.server.routes import sessions as _sessions_mod
+from omnigent.server.routes.sessions import (
     _LABEL_VALUE_MAX_LEN,
     SessionLiveness,
     _get_session_snapshot,
@@ -51,7 +51,7 @@ class _ConversationStore:
     :param items: Items returned by every ``list_items`` call.
     :param conversations: Optional explicit conversation graph keyed by id,
         used by the subtree-usage tests. When ``None`` (the default), a
-        single childless conversation is synthesized per id — preserving the
+        single childless conversation is synthesized per id â€” preserving the
         original single-session snapshot tests, which have no spawn tree.
     """
 
@@ -218,11 +218,11 @@ async def test_session_snapshot_surfaces_runner_exit_report_as_failed() -> None:
     This is the reload-durability leg: the live ``session.status:failed``
     push is gone by the time a page reloads, so the snapshot must read the
     cause from ``RunnerExitReports`` (keyed by the session's runner_id) and
-    project it as ``status="failed"`` + ``last_task_error`` — exactly what
+    project it as ``status="failed"`` + ``last_task_error`` â€” exactly what
     the web's synthetic-error path renders. Without this, a reload after a
     runner crash shows no error.
     """
-    from agent_meow.server.host_registry import RunnerExitReports
+    from omnigent.server.host_registry import RunnerExitReports
 
     conv = Conversation(
         id="conv_crashed",
@@ -272,8 +272,8 @@ async def test_session_snapshot_surfaces_status_error_labels_as_last_task_error(
         root_conversation_id="conv_failed_terminal",
         agent_id="ag_test",
         labels={
-            "agent_meow.last_task_error_code": "required_terminal_exited",
-            "agent_meow.last_task_error_message": "Required terminal exited unexpectedly",
+            "omnigent.last_task_error_code": "required_terminal_exited",
+            "omnigent.last_task_error_message": "Required terminal exited unexpectedly",
         },
     )
     conv_store = _ConversationStore(
@@ -296,10 +296,10 @@ async def test_session_snapshot_surfaces_status_error_labels_as_last_task_error(
 async def test_session_snapshot_no_exit_report_stays_unfailed() -> None:
     """A session whose runner has no exit report is not marked failed.
 
-    Guards the override from firing for healthy/idle sessions — only a
+    Guards the override from firing for healthy/idle sessions â€” only a
     recorded crash for THIS session's runner should flip it.
     """
-    from agent_meow.server.host_registry import RunnerExitReports
+    from omnigent.server.host_registry import RunnerExitReports
 
     conv = Conversation(
         id="conv_ok",
@@ -313,7 +313,7 @@ async def test_session_snapshot_no_exit_report_stays_unfailed() -> None:
         [_message_item("item_1", "hi")],
         conversations={"conv_ok": conv},
     )
-    reports = RunnerExitReports()  # empty — no crash recorded
+    reports = RunnerExitReports()  # empty â€” no crash recorded
 
     snapshot = await _get_session_snapshot(
         conv_store,  # type: ignore[arg-type]
@@ -321,7 +321,7 @@ async def test_session_snapshot_no_exit_report_stays_unfailed() -> None:
         runner_exit_reports=reports,
     )
 
-    # No report for runner_live → no forced failure, no synthetic error.
+    # No report for runner_live â†’ no forced failure, no synthetic error.
     assert snapshot.status != "failed"
     assert snapshot.last_task_error is None
 
@@ -332,7 +332,7 @@ async def test_session_snapshot_queries_runner_on_cache_miss(
 ) -> None:
     """When _session_status_cache is empty, the snapshot should
     query the runner for live status."""
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
 
@@ -353,7 +353,7 @@ async def test_session_snapshot_queries_runner_on_cache_miss(
 
     fake_client = _FakeRunnerClient()
     monkeypatch.setattr(
-        "agent_meow.runtime.get_runner_client",
+        "omnigent.runtime.get_runner_client",
         lambda: fake_client,
     )
 
@@ -377,8 +377,8 @@ async def test_session_snapshot_queries_runner_on_cache_miss(
     assert snapshot2.status == "running"
     # Status is server-cached, so only the FIRST snapshot queries the
     # runner for status; the second hits the cache. (Skills are
-    # runner-owned and fetched every snapshot via ``/skills`` — the
-    # runner caches them per session — so filter those out here.)
+    # runner-owned and fetched every snapshot via ``/skills`` â€” the
+    # runner caches them per session â€” so filter those out here.)
     status_calls = [u for u in fake_client.get_calls if not u.endswith("/skills")]
     assert len(status_calls) == 1, (
         f"Expected 1 runner status GET (cache hit on second call), "
@@ -393,17 +393,17 @@ async def test_session_snapshot_defaults_idle_when_runner_unreachable(
 ) -> None:
     """When the runner is unreachable on cache miss, status
     defaults to idle rather than crashing."""
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
 
     # No runner client available (both router and singleton).
     monkeypatch.setattr(
-        "agent_meow.runtime.get_runner_client",
+        "omnigent.runtime.get_runner_client",
         lambda: None,
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_runner_router",
+        "omnigent.runtime.get_runner_router",
         lambda: None,
     )
 
@@ -426,10 +426,10 @@ async def test_session_snapshot_uses_router_when_singleton_unset(
     cache-miss path only consulted the legacy ``get_runner_client``
     singleton; in any router-only setup that singleton is ``None``,
     so status silently defaulted to ``"idle"`` even when the runner
-    had an active turn — which is exactly the cold-start race that
+    had an active turn â€” which is exactly the cold-start race that
     flaked ``test_native_session_happy_path_via_ws_tunnel``.
     """
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
     _mod._runner_skills_cache.clear()
@@ -449,7 +449,7 @@ async def test_session_snapshot_uses_router_when_singleton_unset(
             self.get_calls.append(url)
             return _FakeResponse()
 
-    from agent_meow.runner.routing import RoutedRunner
+    from omnigent.runner.routing import RoutedRunner
 
     fake_client = _FakeRunnerClient()
 
@@ -466,11 +466,11 @@ async def test_session_snapshot_uses_router_when_singleton_unset(
     # Singleton stays None (production-shape router-only deployment);
     # router resolves the runner via the conversation's affinity.
     monkeypatch.setattr(
-        "agent_meow.runtime.get_runner_client",
+        "omnigent.runtime.get_runner_client",
         lambda: None,
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_runner_router",
+        "omnigent.runtime.get_runner_router",
         lambda: fake_router,
     )
 
@@ -503,7 +503,7 @@ async def test_session_snapshot_includes_skills_from_runner(
     (discovered against the runner's filesystem), so the web composer
     can list them in its slash-command menu.
     """
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
     _mod._runner_skills_cache.clear()
@@ -535,8 +535,8 @@ async def test_session_snapshot_includes_skills_from_runner(
             return _FakeResponse({"status": "idle"})
 
     fake_client = _FakeRunnerClient()
-    monkeypatch.setattr("agent_meow.runtime.get_runner_client", lambda: fake_client)
-    monkeypatch.setattr("agent_meow.runtime.get_runner_router", lambda: None)
+    monkeypatch.setattr("omnigent.runtime.get_runner_client", lambda: fake_client)
+    monkeypatch.setattr("omnigent.runtime.get_runner_router", lambda: None)
 
     conv_store = _ConversationStore([_message_item("item_1", "hi")])
     # First poll returns [] and kicks the background fetch; a later poll serves them.
@@ -569,7 +569,7 @@ async def test_session_snapshot_includes_model_options_from_runner(
     regresses to a hardcoded frontend list, this runner path would not be
     called and the snapshot would stay empty.
     """
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
     _mod._runner_skills_cache.clear()
@@ -616,8 +616,8 @@ async def test_session_snapshot_includes_model_options_from_runner(
             return _FakeResponse({"status": "idle"})
 
     fake_client = _FakeRunnerClient()
-    monkeypatch.setattr("agent_meow.runtime.get_runner_client", lambda: fake_client)
-    monkeypatch.setattr("agent_meow.runtime.get_runner_router", lambda: None)
+    monkeypatch.setattr("omnigent.runtime.get_runner_client", lambda: fake_client)
+    monkeypatch.setattr("omnigent.runtime.get_runner_router", lambda: None)
 
     conv = Conversation(
         id="conv_codex_options",
@@ -667,9 +667,9 @@ async def test_session_snapshot_serves_static_cursor_model_options(
     per session, so the snapshot returns it on the FIRST read with no runner
     round-trip and no background fetch. Serving it directly (not through the
     runner-backed cache) is what keeps the picker from blanking on a
-    ``refresh_state`` snapshot — the regression behind the effort-change bug.
+    ``refresh_state`` snapshot â€” the regression behind the effort-change bug.
     """
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
     _mod._runner_skills_cache.clear()
@@ -696,8 +696,8 @@ async def test_session_snapshot_serves_static_cursor_model_options(
             return _FakeResponse({"status": "idle"})
 
     fake_client = _FakeRunnerClient()
-    monkeypatch.setattr("agent_meow.runtime.get_runner_client", lambda: fake_client)
-    monkeypatch.setattr("agent_meow.runtime.get_runner_router", lambda: None)
+    monkeypatch.setattr("omnigent.runtime.get_runner_client", lambda: fake_client)
+    monkeypatch.setattr("omnigent.runtime.get_runner_router", lambda: None)
 
     conv = Conversation(
         id="conv_cursor_options",
@@ -714,7 +714,7 @@ async def test_session_snapshot_serves_static_cursor_model_options(
         conversations={"conv_cursor_options": conv},
     )
 
-    # First snapshot already carries the full catalog — no kick-and-empty.
+    # First snapshot already carries the full catalog â€” no kick-and-empty.
     snapshot = await _get_session_snapshot(
         conv_store,  # type: ignore[arg-type]
         "conv_cursor_options",
@@ -724,9 +724,9 @@ async def test_session_snapshot_serves_static_cursor_model_options(
     assert not any("model-options" in url for url in fake_client.get_calls)
     ids = [m["id"] for m in snapshot.model_options]
     assert "claude-opus-4-6" in ids and "gpt-5.2" in ids and "composer-2.5" in ids
-    # base-id namespace only — no flattened effort variants leak through.
+    # base-id namespace only â€” no flattened effort variants leak through.
     assert not any("-high" in i or "-xhigh" in i for i in ids)
-    # The cache must stay untouched — that's what makes it refresh_state-proof.
+    # The cache must stay untouched â€” that's what makes it refresh_state-proof.
     assert "conv_cursor_options" not in _mod._model_options_cache
 
 
@@ -743,7 +743,7 @@ async def test_session_snapshot_refresh_state_reloads_model_options(
     once the background runner read lands, a later snapshot serves the live
     catalog.
     """
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
     _mod._runner_skills_cache.clear()
@@ -797,8 +797,8 @@ async def test_session_snapshot_refresh_state_reloads_model_options(
             return _FakeResponse({"status": "idle"})
 
     fake_client = _FakeRunnerClient()
-    monkeypatch.setattr("agent_meow.runtime.get_runner_client", lambda: fake_client)
-    monkeypatch.setattr("agent_meow.runtime.get_runner_router", lambda: None)
+    monkeypatch.setattr("omnigent.runtime.get_runner_client", lambda: fake_client)
+    monkeypatch.setattr("omnigent.runtime.get_runner_router", lambda: None)
 
     conv = Conversation(
         id="conv_codex_refresh",
@@ -846,7 +846,7 @@ async def test_session_snapshot_retries_empty_model_options(
     Older runners returned ``200 {"models": []}`` for that window; caching
     that response permanently hid the picker until AP restart.
     """
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
     _mod._runner_skills_cache.clear()
@@ -894,8 +894,8 @@ async def test_session_snapshot_retries_empty_model_options(
             return _FakeResponse({"status": "idle"})
 
     fake_client = _FakeRunnerClient()
-    monkeypatch.setattr("agent_meow.runtime.get_runner_client", lambda: fake_client)
-    monkeypatch.setattr("agent_meow.runtime.get_runner_router", lambda: None)
+    monkeypatch.setattr("omnigent.runtime.get_runner_client", lambda: fake_client)
+    monkeypatch.setattr("omnigent.runtime.get_runner_router", lambda: None)
 
     conv = Conversation(
         id="conv_codex_empty_then_ready",
@@ -945,7 +945,7 @@ async def test_session_snapshot_retries_503_model_options(
     should stay alive across that transient 503 and publish/cache the catalog
     once the next retry succeeds.
     """
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
     _mod._runner_skills_cache.clear()
@@ -1006,8 +1006,8 @@ async def test_session_snapshot_retries_503_model_options(
             return _FakeResponse({"status": "idle"})
 
     fake_client = _FakeRunnerClient()
-    monkeypatch.setattr("agent_meow.runtime.get_runner_client", lambda: fake_client)
-    monkeypatch.setattr("agent_meow.runtime.get_runner_router", lambda: None)
+    monkeypatch.setattr("omnigent.runtime.get_runner_client", lambda: fake_client)
+    monkeypatch.setattr("omnigent.runtime.get_runner_router", lambda: None)
 
     conv = Conversation(
         id="conv_codex_503_then_ready",
@@ -1056,7 +1056,7 @@ async def test_session_snapshot_publishes_skills_event_when_fetch_resolves(
     empty until the next bind (the bug that motivated this event): the
     first snapshot poll serves ``[]`` and the web query does not poll.
     """
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
     _mod._runner_skills_cache.clear()
@@ -1078,14 +1078,14 @@ async def test_session_snapshot_publishes_skills_event_when_fetch_resolves(
                 )
             return _FakeResponse({"status": "idle"})
 
-    monkeypatch.setattr("agent_meow.runtime.get_runner_client", lambda: _FakeRunnerClient())
-    monkeypatch.setattr("agent_meow.runtime.get_runner_router", lambda: None)
+    monkeypatch.setattr("omnigent.runtime.get_runner_client", lambda: _FakeRunnerClient())
+    monkeypatch.setattr("omnigent.runtime.get_runner_router", lambda: None)
 
     # Capture session-stream publishes by rebinding the module's
     # ``session_stream`` reference to a recorder. Rebinding the name in
     # the sessions module's namespace (not patching ``publish`` through
     # the shared module singleton) keeps the mock from leaking into other
-    # tests — see omnigent-testing rule 14.
+    # tests â€” see omnigent-testing rule 14.
     published: list[dict[str, object]] = []
 
     class _RecordingStream:
@@ -1122,18 +1122,18 @@ async def test_session_snapshot_skills_empty_without_runner(
 ) -> None:
     """
     With no runner bound (neither router nor singleton resolves a
-    client), skills come back ``[]`` rather than crashing — discovery
+    client), skills come back ``[]`` rather than crashing â€” discovery
     is runner-owned and there is nothing to query.
     """
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
     monkeypatch.setattr(
-        "agent_meow.runtime.get_runner_client",
+        "omnigent.runtime.get_runner_client",
         lambda: None,
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_runner_router",
+        "omnigent.runtime.get_runner_router",
         lambda: None,
     )
     conv_store = _ConversationStore([_message_item("item_1", "hi")])
@@ -1152,10 +1152,10 @@ async def test_session_snapshot_skills_empty_on_malformed_runner_payload(
 ) -> None:
     """
     A malformed ``/skills`` payload (items missing ``name``/``description``,
-    or a non-JSON body) must not break the snapshot — skills fall back to
+    or a non-JSON body) must not break the snapshot â€” skills fall back to
     ``[]`` (the documented best-effort contract).
     """
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
 
@@ -1174,8 +1174,8 @@ async def test_session_snapshot_skills_empty_on_malformed_runner_payload(
                 return _FakeResponse({"skills": [{"oops": "no name"}]})
             return _FakeResponse({"status": "idle"})
 
-    monkeypatch.setattr("agent_meow.runtime.get_runner_client", lambda: _FakeRunnerClient())
-    monkeypatch.setattr("agent_meow.runtime.get_runner_router", lambda: None)
+    monkeypatch.setattr("omnigent.runtime.get_runner_client", lambda: _FakeRunnerClient())
+    monkeypatch.setattr("omnigent.runtime.get_runner_router", lambda: None)
     conv_store = _ConversationStore([_message_item("item_1", "hi")])
 
     snapshot = await _get_session_snapshot(
@@ -1191,11 +1191,11 @@ async def test_session_snapshot_prefers_router_over_singleton(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """When both the router and the legacy singleton are wired, the
-    router wins — it knows the per-conversation runner affinity, the
+    router wins â€” it knows the per-conversation runner affinity, the
     singleton is process-wide and only correct in single-runner mode.
     """
-    from agent_meow.runner.routing import RoutedRunner
-    from agent_meow.server.routes import sessions as _mod
+    from omnigent.runner.routing import RoutedRunner
+    from omnigent.server.routes import sessions as _mod
 
     _mod._session_status_cache.clear()
     _mod._runner_skills_cache.clear()
@@ -1226,11 +1226,11 @@ async def test_session_snapshot_prefers_router_over_singleton(
             return RoutedRunner(runner_id="runner_test", client=router_client)  # type: ignore[arg-type]
 
     monkeypatch.setattr(
-        "agent_meow.runtime.get_runner_router",
+        "omnigent.runtime.get_runner_router",
         lambda: _FakeRouter(),
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_runner_client",
+        "omnigent.runtime.get_runner_client",
         lambda: singleton_client,
     )
 
@@ -1336,7 +1336,7 @@ async def test_session_snapshot_cost_sums_subagent_subtree() -> None:
     snapshot = await _get_session_snapshot(conv_store, "conv_parent")  # type: ignore[arg-type]
 
     # 3.5 = parent $1.00 + sub-agent $2.50. If this reads 1.00, the snapshot
-    # regressed to the parent's own session_usage and dropped the subtree sum —
+    # regressed to the parent's own session_usage and dropped the subtree sum â€”
     # a sub-agent burning budget would be invisible on the parent's badge.
     assert snapshot.total_cost_usd == 3.5
 
@@ -1403,7 +1403,7 @@ async def test_session_snapshot_sums_by_model_over_subtree() -> None:
 async def test_session_snapshot_usage_by_model_none_when_unrecorded() -> None:
     """An unpriced session with no per-model usage omits ``usage_by_model``.
 
-    ``None`` (no row rendered) rather than an empty dict — an empty dict
+    ``None`` (no row rendered) rather than an empty dict â€” an empty dict
     would imply models were tracked but none contributed.
     """
     solo = _graph_conv("conv_solo", root="conv_solo", parent=None, cost=None)
@@ -1465,9 +1465,9 @@ def test_publish_subtree_cost_to_ancestors_publishes_each_ancestor_subtree(
     """A child usage update re-publishes every ancestor's subtree cost.
 
     A sub-agent's spend lives on its own child conversation, so an ancestor's
-    stored usage never moves — without this re-publish a parent's live badge
-    would never reflect a running sub-agent. For a grandparent($1) →
-    parent($2) → child($4) tree, updating the child must publish
+    stored usage never moves â€” without this re-publish a parent's live badge
+    would never reflect a running sub-agent. For a grandparent($1) â†’
+    parent($2) â†’ child($4) tree, updating the child must publish
     parent=$6 ({parent, child}) and grandparent=$7 ({all three}), and must NOT
     publish to the originating child.
     """
@@ -1505,7 +1505,7 @@ def test_publish_subtree_cost_to_ancestors_publishes_each_ancestor_subtree(
     _publish_subtree_cost_to_ancestors(conv_store, "conv_c")  # type: ignore[arg-type]
 
     by_conv = {pub.conversation_id: pub.event for pub in recorder.published}
-    # Only the two ancestors are re-published — never the originating child.
+    # Only the two ancestors are re-published â€” never the originating child.
     # A "conv_c" entry would mean the helper republished the node that already
     # got its own session.usage event (double broadcast); a missing ancestor
     # would mean the parent-to-root walk stopped early.
@@ -1522,7 +1522,7 @@ def test_publish_subtree_cost_to_ancestors_publishes_each_ancestor_subtree(
     assert by_conv["conv_p"]["type"] == "session.usage"
 
 
-# ── _truncate_label ──────────────────────────────────────────────────────────
+# â”€â”€ _truncate_label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_truncate_label_short_value_unchanged() -> None:
@@ -1537,16 +1537,16 @@ def test_truncate_label_long_value_fits_column() -> None:
     result = _truncate_label(long_value)
     assert len(result) == _LABEL_VALUE_MAX_LEN
     # The informative head is preserved and a marker signals the truncation.
-    assert result.endswith("…")
+    assert result.endswith("â€¦")
     assert result[:-1] == long_value[: _LABEL_VALUE_MAX_LEN - 1]
 
 
 def test_truncate_label_at_limit_no_marker() -> None:
-    """A value exactly at the limit is kept verbatim — no spurious ellipsis."""
+    """A value exactly at the limit is kept verbatim â€” no spurious ellipsis."""
     value = "b" * _LABEL_VALUE_MAX_LEN
     result = _truncate_label(value)
     assert result == value
-    assert not result.endswith("…")
+    assert not result.endswith("â€¦")
 
 
 def test_truncate_label_empty_string() -> None:
@@ -1554,14 +1554,14 @@ def test_truncate_label_empty_string() -> None:
     assert _truncate_label("") == ""
 
 
-# ── _persist_session_status_error_labels ─────────────────────────────────────
+# â”€â”€ _persist_session_status_error_labels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_persist_error_labels_truncates_long_message() -> None:
     """A failure message longer than 256 chars is truncated before the store
     write, preventing the ``DataError`` that silently dropped the reason."""
-    from agent_meow.server.schemas import ErrorDetail
+    from omnigent.server.schemas import ErrorDetail
 
     captured: dict[str, dict[str, str]] = {}
 
@@ -1574,7 +1574,7 @@ async def test_persist_error_labels_truncates_long_message() -> None:
 
     await _persist_session_status_error_labels("conv_123", error, _MockStore())  # type: ignore[arg-type]
 
-    stored = captured["conv_123"]["agent_meow.last_task_error_message"]
+    stored = captured["conv_123"]["omnigent.last_task_error_message"]
     assert len(stored) <= _LABEL_VALUE_MAX_LEN
     # The diagnostic prefix survives so the reload-visible reason is still useful.
     assert stored.startswith("Runner MCP execute failed: ")
@@ -1583,7 +1583,7 @@ async def test_persist_error_labels_truncates_long_message() -> None:
 @pytest.mark.asyncio
 async def test_persist_error_labels_short_message_stored_verbatim() -> None:
     """A short failure message is stored without modification."""
-    from agent_meow.server.schemas import ErrorDetail
+    from omnigent.server.schemas import ErrorDetail
 
     captured: dict[str, dict[str, str]] = {}
 
@@ -1595,5 +1595,5 @@ async def test_persist_error_labels_short_message_stored_verbatim() -> None:
 
     await _persist_session_status_error_labels("conv_456", error, _MockStore())  # type: ignore[arg-type]
 
-    assert captured["conv_456"]["agent_meow.last_task_error_message"] == "Process exited with code 1"
-    assert captured["conv_456"]["agent_meow.last_task_error_code"] == "runner_error"
+    assert captured["conv_456"]["omnigent.last_task_error_message"] == "Process exited with code 1"
+    assert captured["conv_456"]["omnigent.last_task_error_code"] == "runner_error"

@@ -23,13 +23,13 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-import agent_meow.server.routes.sessions as sessions_routes
-from agent_meow.server.auth import LEVEL_OWNER, UnifiedAuthProvider
-from agent_meow.server.routes.sessions import SessionLiveness, create_sessions_router
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+import omnigent.server.routes.sessions as sessions_routes
+from omnigent.server.auth import LEVEL_OWNER, UnifiedAuthProvider
+from omnigent.server.routes.sessions import SessionLiveness, create_sessions_router
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 ALICE = "alice@example.com"
 BOB = "bob@example.com"
@@ -39,7 +39,7 @@ class _NoIdentityAuthProvider:
     """Auth provider whose handshake yields no identity.
 
     Exercises the updates-stream's reject-when-unauthenticated gate
-    deterministically — unlike header mode, which falls back to the
+    deterministically â€” unlike header mode, which falls back to the
     reserved ``"local"`` user and would never return ``None``.
     """
 
@@ -101,7 +101,7 @@ def app(
     comment_store: SqlAlchemyCommentStore,
 ) -> FastAPI:
     """Minimal app mounting only the sessions router, with header-based
-    auth and a real permission store — the surface the updates stream
+    auth and a real permission store â€” the surface the updates stream
     actually exercises. ``liveness_lookup`` reads the mutable
     ``liveness_state`` (default runner online, no host) so tests control
     liveness."""
@@ -182,7 +182,7 @@ def test_watch_returns_snapshot_of_accessible_sessions(app: FastAPI, stores) -> 
         ws.send_text(json.dumps({"type": "watch", "session_ids": [s1, s2]}))
         snapshot = _recv_until(ws, {"snapshot"})
         items = {item["id"]: item for item in snapshot["items"]}  # type: ignore[index]
-        # Both watched, owned sessions are present — proves the snapshot
+        # Both watched, owned sessions are present â€” proves the snapshot
         # reads real conversation rows for exactly the watched ids.
         assert set(items) == {s1, s2}
         assert items[s1]["title"] == "first"
@@ -246,7 +246,7 @@ def test_runner_offline_pushes_changed_frame(
 ) -> None:
     """Flipping a watched session's runner to offline (host still up) pushes
     a ``changed`` frame carrying ``runner_online: false`` and
-    ``host_online: true`` — this is the runner-down-but-host-alive state the
+    ``host_online: true`` â€” this is the runner-down-but-host-alive state the
     open view uses, and it lets the client retire its /health poll."""
     s1 = _seed_session(stores, owner=ALICE, title="live")
     with TestClient(app).websocket_connect(
@@ -262,7 +262,7 @@ def test_runner_offline_pushes_changed_frame(
         changed = _recv_until(ws, {"changed"})
         items = {item["id"]: item for item in changed["items"]}  # type: ignore[index]
         # Strict runner_online flipped to False while host_online reports the
-        # host is still reachable — exactly the pair that distinguishes "wake
+        # host is still reachable â€” exactly the pair that distinguishes "wake
         # the runner with a message" from "host offline, must reconnect".
         assert items[s1]["runner_online"] is False
         assert items[s1]["host_online"] is True
@@ -310,7 +310,7 @@ def test_title_change_pushes_changed_frame(app: FastAPI, stores, fast_rescan: No
         conversation_store.update_conversation(s1, title="after")
         changed = _recv_until(ws, {"changed"})
         items = {item["id"]: item for item in changed["items"]}  # type: ignore[index]
-        # The changed frame carries the new title — proves the diff fired
+        # The changed frame carries the new title â€” proves the diff fired
         # on the real field change, not a spurious or stale value.
         assert items[s1]["title"] == "after"
 
@@ -321,7 +321,7 @@ def test_cleared_field_pushes_explicit_null(app: FastAPI, stores, fast_rescan: N
     explicit ``null``.
 
     The stream dumps full rows (NOT ``exclude_none``) precisely so a
-    non-null → null transition arrives as an explicit ``null`` the client can
+    non-null â†’ null transition arrives as an explicit ``null`` the client can
     overlay-clear, rather than a dropped key that would leave the stale value.
     If the stream regressed to ``exclude_none``, ``runner_id`` would be absent
     from the frame and this test's ``in`` assertion fails.
@@ -329,14 +329,14 @@ def test_cleared_field_pushes_explicit_null(app: FastAPI, stores, fast_rescan: N
     conversation_store = stores[0]
     s1 = _seed_session(stores, owner=ALICE, title="bound")
     # Bind a runner first so the snapshot baseline carries runner_id; the
-    # clear below is then a genuine non-null → null transition.
+    # clear below is then a genuine non-null â†’ null transition.
     assert conversation_store.set_runner_id(s1, "rnr_test") is True
     with TestClient(app).websocket_connect(
         "/v1/sessions/updates", headers={"X-Forwarded-Email": ALICE}
     ) as ws:
         ws.send_text(json.dumps({"type": "watch", "session_ids": [s1]}))
         snapshot = _recv_until(ws, {"snapshot"})
-        # Baseline carries the bound runner — the value the clear must reverse.
+        # Baseline carries the bound runner â€” the value the clear must reverse.
         assert snapshot["items"][0]["runner_id"] == "rnr_test"  # type: ignore[index]
         conversation_store.clear_runner_id(s1)
         changed = _recv_until(ws, {"changed"})
@@ -349,8 +349,8 @@ def test_cleared_field_pushes_explicit_null(app: FastAPI, stores, fast_rescan: N
 
 
 def test_no_change_emits_no_changed_frame(app: FastAPI, stores, fast_rescan: None) -> None:
-    """An idle watched session produces no ``changed`` frames — only
-    heartbeats — so a static list generates no diff traffic."""
+    """An idle watched session produces no ``changed`` frames â€” only
+    heartbeats â€” so a static list generates no diff traffic."""
     s1 = _seed_session(stores, owner=ALICE, title="static")
     with TestClient(app).websocket_connect(
         "/v1/sessions/updates", headers={"X-Forwarded-Email": ALICE}
@@ -378,7 +378,7 @@ def test_delete_pushes_removed_frame(app: FastAPI, stores, fast_rescan: None) ->
         ws.send_text(json.dumps({"type": "watch", "session_ids": [s1]}))
         _recv_until(ws, {"snapshot"})
         # Drop access so the next rescan can no longer resolve the id for
-        # this user — the list-stream's definition of "removed".
+        # this user â€” the list-stream's definition of "removed".
         permission_store.revoke(ALICE, s1)
         removed = _recv_until(ws, {"removed"})
         # The removed frame names exactly the now-inaccessible id.
@@ -386,7 +386,7 @@ def test_delete_pushes_removed_frame(app: FastAPI, stores, fast_rescan: None) ->
 
 
 def test_other_users_session_is_not_visible(app: FastAPI, stores, fast_rescan: None) -> None:
-    """Bob watching Alice's session never receives it — neither in the
+    """Bob watching Alice's session never receives it â€” neither in the
     snapshot nor in any later frame (cross-user isolation, W-series)."""
     s_alice = _seed_session(stores, owner=ALICE, title="alice-only")
     with TestClient(app).websocket_connect(
@@ -394,7 +394,7 @@ def test_other_users_session_is_not_visible(app: FastAPI, stores, fast_rescan: N
     ) as ws:
         ws.send_text(json.dumps({"type": "watch", "session_ids": [s_alice]}))
         snapshot = _recv_until(ws, {"snapshot"})
-        # Bob has no grant on Alice's session → the snapshot omits it.
+        # Bob has no grant on Alice's session â†’ the snapshot omits it.
         assert snapshot["items"] == []
         # And it must not leak via a later changed frame when Alice mutates
         # her own session.
@@ -403,7 +403,7 @@ def test_other_users_session_is_not_visible(app: FastAPI, stores, fast_rescan: N
             frame = json.loads(ws.receive_text())
             assert frame["type"] == "heartbeat", (
                 f"Bob received a {frame['type']} frame for a session he "
-                f"cannot access — cross-user leak"
+                f"cannot access â€” cross-user leak"
             )
 
 
@@ -425,7 +425,7 @@ def test_unauthenticated_connection_is_rejected(stores) -> None:
     with pytest.raises(WebSocketDisconnect) as exc_info:
         with TestClient(app).websocket_connect("/v1/sessions/updates"):
             pass
-    # 1008 = WS_1008_POLICY_VIOLATION — the auth gate fired before accept.
+    # 1008 = WS_1008_POLICY_VIOLATION â€” the auth gate fired before accept.
     assert exc_info.value.code == 1008
 
 
@@ -436,7 +436,7 @@ def test_watch_set_truncated_at_cap(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """A watch-set larger than the cap is truncated to the cap, and the
-    drop is logged. Ids past the cap never appear in the snapshot — they
+    drop is logged. Ids past the cap never appear in the snapshot â€” they
     fall back to the client's list poll, so the server must surface the
     truncation rather than silently shrinking the set."""
     # Shrink the cap to 2 so three seeded sessions exceed it without
@@ -445,7 +445,7 @@ def test_watch_set_truncated_at_cap(
     s1 = _seed_session(stores, owner=ALICE, title="one")
     s2 = _seed_session(stores, owner=ALICE, title="two")
     s3 = _seed_session(stores, owner=ALICE, title="three")
-    with caplog.at_level(logging.WARNING, logger="agent_meow.server.routes.sessions"):
+    with caplog.at_level(logging.WARNING, logger="omnigent.server.routes.sessions"):
         with TestClient(app).websocket_connect(
             "/v1/sessions/updates", headers={"X-Forwarded-Email": ALICE}
         ) as ws:
@@ -473,7 +473,7 @@ def test_transient_store_error_does_not_kill_stream(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A store read that raises during one rescan tick is logged and
-    skipped — the stream stays open and a later real change still pushes a
+    skipped â€” the stream stays open and a later real change still pushes a
     ``changed`` frame. Without the ticker's guard, the raised exception
     would tear the connection down and force a reconnect + re-snapshot."""
     conversation_store = stores[0]
@@ -483,10 +483,10 @@ def test_transient_store_error_does_not_kill_stream(
 
     def flaky_get(ids: list[str]) -> dict[str, object]:
         """Succeed on the connect snapshot, fail the first rescan tick,
-        then recover — a transient blip, not a permanent outage."""
+        then recover â€” a transient blip, not a permanent outage."""
         calls["n"] += 1
         # Call 1 is the snapshot (must succeed so the client gets a
-        # baseline). Call 2 is the first ticker rescan — fail it.
+        # baseline). Call 2 is the first ticker rescan â€” fail it.
         if calls["n"] == 2:
             raise RuntimeError("transient store blip")
         return real_get(ids)
@@ -517,7 +517,7 @@ def test_session_added_event_pushes_unwatched_session(
     app: FastAPI, stores, fast_rescan: None
 ) -> None:
     """A ``session_added`` discovery event pushes a session the client isn't
-    watching — the path that lets a session created elsewhere (another tab /
+    watching â€” the path that lets a session created elsewhere (another tab /
     CLI) enter the sidebar without a list poll.
 
     The client can never put an unknown session in its watch-set, so the
@@ -535,14 +535,14 @@ def test_session_added_event_pushes_unwatched_session(
         ws.send_text(json.dumps({"type": "watch", "session_ids": [s1]}))
         _recv_until(ws, {"snapshot"})
         # A brand-new session is created for Alice elsewhere and announced on
-        # her discovery channel — it is NOT in the watch-set above.
+        # her discovery channel â€” it is NOT in the watch-set above.
         s2 = _seed_session(stores, owner=ALICE, title="brand new")
         sessions_routes.user_session_stream.publish(
             ALICE, {"type": "session_added", "session_id": s2}
         )
         changed = _recv_until(ws, {"changed"})
         items = {item["id"]: item for item in changed["items"]}  # type: ignore[index]
-        # The unwatched new session is pushed, carrying its persisted title —
+        # The unwatched new session is pushed, carrying its persisted title â€”
         # proving the server fetched the real row, not echoed the event.
         assert s2 in items
         assert items[s2]["title"] == "brand new"
@@ -580,10 +580,10 @@ def test_session_added_for_inaccessible_session_is_not_pushed(
             )
 
 
-# ── comments fingerprint ──────────────────────────────────────────────
+# â”€â”€ comments fingerprint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
-# One second in microseconds — comments_updated_at is epoch-µs.
+# One second in microseconds â€” comments_updated_at is epoch-Âµs.
 _US = 1_000_000
 
 
@@ -601,7 +601,7 @@ def comment_clock(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
     """
     state = {"now": 1_000}
     monkeypatch.setattr(
-        "agent_meow.stores.comment_store.sqlalchemy_store.now_epoch_us",
+        "omnigent.stores.comment_store.sqlalchemy_store.now_epoch_us",
         lambda: state["now"] * _US,
     )
     return state
@@ -656,9 +656,9 @@ def test_comment_status_change_pushes_changed_frame(
 ) -> None:
     """Marking a comment addressed pushes a ``changed`` frame.
 
-    This is the agent flow: ``update_comment`` (status draft →
+    This is the agent flow: ``update_comment`` (status draft â†’
     addressed) changes no row count, so the ``updated_at`` bump is the
-    only signal — if it didn't move, other viewers would keep showing
+    only signal â€” if it didn't move, other viewers would keep showing
     the comment as open.
     """
     s1 = _seed_session(stores, owner=ALICE, title="addressed")
@@ -682,7 +682,7 @@ def test_comment_status_change_pushes_changed_frame(
         comment_store.update_comment(comment.id, s1, status="addressed")
         changed = _recv_until(ws, {"changed"})
         changed_items = {item["id"]: item for item in changed["items"]}
-        # Count is unchanged — the moved timestamp alone must trigger the
+        # Count is unchanged â€” the moved timestamp alone must trigger the
         # frame. A stale creation-time value here means update_comment didn't bump
         # updated_at and in-place edits are invisible to clients.
         assert changed_items[s1]["comments_count"] == 1
@@ -699,7 +699,7 @@ def test_comment_delete_of_older_comment_pushes_changed_frame(
     """Deleting a non-newest comment pushes a ``changed`` frame.
 
     The deleted row is not the most recently updated one, so
-    ``max(updated_at)`` is unchanged — the count drop is the only
+    ``max(updated_at)`` is unchanged â€” the count drop is the only
     signal. This is the case that justifies ``comments_count``.
     """
     s1 = _seed_session(stores, owner=ALICE, title="deleted")
@@ -721,7 +721,7 @@ def test_comment_delete_of_older_comment_pushes_changed_frame(
         changed = _recv_until(ws, {"changed"})
         changed_items = {item["id"]: item for item in changed["items"]}
         # The timestamp must NOT move (the surviving comment is the
-        # newest) — count 2 → 1 is what fires the frame. If this hangs
+        # newest) â€” count 2 â†’ 1 is what fires the frame. If this hangs
         # at _recv_until, deletes of older comments are invisible.
         assert changed_items[s1]["comments_count"] == 1
         assert changed_items[s1]["comments_updated_at"] == 2_000 * _US
@@ -745,7 +745,7 @@ def test_daily_cost_recorded_for_owned_session_without_a_policy(app: FastAPI, st
         headers={"X-Forwarded-Email": ALICE},
     )
     assert resp.status_code == 202, resp.text
-    # Recorded under the owner despite no policy on the session — proves the
+    # Recorded under the owner despite no policy on the session â€” proves the
     # write is no longer policy-gated.
     assert conversation_store.get_daily_cost(ALICE, today) == pytest.approx(0.5)
 
@@ -775,7 +775,7 @@ def test_daily_cost_tracks_display_cost_not_policy_cost(app: FastAPI, stores) ->
     assert resp.status_code == 202, resp.text
     # Daily = S (0.20), NOT the 0.90 enforcement figure. A value of 0.90 would
     # mean the rollup tracked policy_cost_usd and inherited the gate's
-    # mid-turn inflation — the daily over-report this split prevents.
+    # mid-turn inflation â€” the daily over-report this split prevents.
     assert conversation_store.get_daily_cost(ALICE, today) == pytest.approx(0.20)
 
 
@@ -788,20 +788,20 @@ def test_daily_cost_attributed_via_root_for_sub_agent_without_owner_grant(
     context in the POST), so their conversations never receive an owner
     permission grant.  Previously ``_record_daily_cost`` called
     ``get_session_owner(child.id)``, got ``None``, and silently dropped the
-    cost from the daily rollup — the per-user daily budget never saw it.
+    cost from the daily rollup â€” the per-user daily budget never saw it.
 
     The fix: fall back to ``get_session_owner(root_conversation_id)`` when
     the direct lookup misses.  This test creates a parent (owned) + a child
-    conversation (no grant, but ``root_conversation_id`` → parent), posts
+    conversation (no grant, but ``root_conversation_id`` â†’ parent), posts
     cumulative spend on the child, and asserts the owner's daily total rises.
     """
     conversation_store, _agent_store, _permission_store = stores
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    # Parent session — owned by Alice.
+    # Parent session â€” owned by Alice.
     parent_id = _seed_session(stores, owner=ALICE, title="parent session")
 
-    # Child conversation — simulates a relay sub-agent: no permission grant.
+    # Child conversation â€” simulates a relay sub-agent: no permission grant.
     # Passing parent_conversation_id causes create_conversation to inherit
     # root_conversation_id from the parent automatically.
     child = conversation_store.create_conversation(
@@ -812,7 +812,7 @@ def test_daily_cost_attributed_via_root_for_sub_agent_without_owner_grant(
     # Sanity: child has no owner grant (the gap being fixed).
     assert conversation_store.get_session_owner(child.id) is None
 
-    # Post cumulative cost on the child — no auth header (internal runner path).
+    # Post cumulative cost on the child â€” no auth header (internal runner path).
     resp = TestClient(app).post(
         f"/v1/sessions/{child.id}/events",
         json={"type": "external_session_usage", "data": {"cumulative_cost_usd": 0.75}},

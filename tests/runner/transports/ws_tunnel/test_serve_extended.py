@@ -11,15 +11,15 @@ from typing import Any
 
 import pytest
 
-from agent_meow.runner.transports.ws_tunnel import serve as serve_module
-from agent_meow.runner.transports.ws_tunnel.frames import (
+from omnigent.runner.transports.ws_tunnel import serve as serve_module
+from omnigent.runner.transports.ws_tunnel.frames import (
     RequestFrame,
     ResponseBodyFrame,
     ResponseEndFrame,
     ResponseHeadFrame,
     decode_frame,
 )
-from agent_meow.runner.transports.ws_tunnel.serve import (
+from omnigent.runner.transports.ws_tunnel.serve import (
     _refresh_auth_token,
     _tunnel_url,
     _websocket_auth_redirect_url,

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from agent_meow.inner.pi_settings import prepare_managed_pi_agent_dir
+from omnigent.inner.pi_settings import prepare_managed_pi_agent_dir
 
 
 def test_prepare_managed_pi_agent_dir_copies_settings_and_symlinks_npm(

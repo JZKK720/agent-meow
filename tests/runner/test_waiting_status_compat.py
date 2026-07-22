@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.runner.app import _version_supports_waiting_status
+from omnigent.runner.app import _version_supports_waiting_status
 
 
 @pytest.mark.parametrize(

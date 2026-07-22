@@ -3,7 +3,7 @@
 Sentinel is a report-only security-review orchestrator: it collects audit scope,
 delegates read-only code investigation to a ``scanner`` sub-agent (claude-sdk),
 and can route the draft through an independent ``reviewer`` sub-agent (codex).
-Pure spec-load — no LLM, no credentials — modeled on ``test_example_scribe.py``.
+Pure spec-load â€” no LLM, no credentials â€” modeled on ``test_example_scribe.py``.
 
 What breaks if this fails:
 - a sub-agent is dropped or renamed (Sentinel loses scanning or fact-checking),
@@ -23,10 +23,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.spec import load
-from agent_meow.spec.types import AgentSpec
+from omnigent.spec import load
+from omnigent.spec.types import AgentSpec
 
-# tests/e2e/agent_meow/test_example_sentinel.py -> repo root is 3 parents up.
+# tests/e2e/omnigent/test_example_sentinel.py -> repo root is 3 parents up.
 _SENTINEL_BUNDLE = Path(__file__).resolve().parents[3] / "examples" / "sentinel"
 
 

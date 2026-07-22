@@ -4,10 +4,10 @@ The native ``hermes-native`` ("Hermes") wrapper is terminal-first: the real
 ``hermes`` CLI runs in the session terminal, the SPA's **Terminal** view attaches
 to that live TUI over a WebSocket, and the SPA's **Chat** view renders the SAME
 canonical transcript the TUI prints. A native forwarder
-(:mod:`~?agent_meow.hermes_native_forwarder`) tails Hermes' SQLite ``state.db`` and
+(:mod:`~?omnigent.hermes_native_forwarder`) tails Hermes' SQLite ``state.db`` and
 mirrors the transcript back OUT as conversation items; web-composer messages are
 injected INTO the TUI's tmux pane by
-:class:`~?agent_meow.inner.hermes_native_executor.HermesNativeExecutor`. This suite is
+:class:`~?omnigent.inner.hermes_native_executor.HermesNativeExecutor`. This suite is
 the hermes sibling of ``test_native_goose_render_parity`` and asserts the same
 three properties:
 
@@ -21,7 +21,7 @@ three properties:
 Gating
 ------
 Like goose-native, Hermes authenticates from its own config (``hermes setup`` /
-``hermes model`` → ``~/.hermes/config.yaml``), which CI does not provision. The
+``hermes model`` â†’ ``~/.hermes/config.yaml``), which CI does not provision. The
 suite **skips** when ``hermes``/``tmux`` are absent or no Hermes config is
 present, and runs for real where Hermes is configured.
 """
@@ -64,7 +64,7 @@ def _hermes_unavailable_reason() -> str | None:
 
     hermes-native needs the ``hermes`` binary + ``tmux`` on PATH and a usable
     Hermes configuration (``~/.hermes/config.yaml``, or ``$HERMES_HOME``). Any
-    missing → a clean skip (CI provisions no Hermes account).
+    missing â†’ a clean skip (CI provisions no Hermes account).
 
     :returns: A human-readable skip reason, or ``None`` when prerequisites exist.
     """
@@ -139,7 +139,7 @@ def _wait_marker_in_transcript(
             return
         time.sleep(2.0)
     raise AssertionError(
-        f"marker {marker!r} never reached the transcript within {timeout_ms}ms — "
+        f"marker {marker!r} never reached the transcript within {timeout_ms}ms â€” "
         f"the TUI-typed turn was not submitted/forwarded for {session_id}."
     )
 

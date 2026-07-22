@@ -1,8 +1,8 @@
 """
-Tests for ``agent_meow.server.routes._host_worktree``.
+Tests for ``omnigent.server.routes._host_worktree``.
 
 Drives the create/remove worktree proxies with a fake host that
-auto-replies to the outbound frames — verifies the request_id/future
+auto-replies to the outbound frames â€” verifies the request_id/future
 plumbing, success unpacking, failure surfacing, and offline handling
 without a live host process. Mirrors ``test_workspace_validation.py``.
 """
@@ -15,14 +15,14 @@ from typing import Any
 
 import pytest
 
-from agent_meow.host.frames import (
+from omnigent.host.frames import (
     HostCreateWorktreeFrame,
     HostHelloFrame,
     HostRemoveWorktreeFrame,
     decode_host_frame,
 )
-from agent_meow.server.host_registry import HostRegistry
-from agent_meow.server.routes._host_worktree import (
+from omnigent.server.host_registry import HostRegistry
+from omnigent.server.routes._host_worktree import (
     WorktreeHostUnavailableError,
     WorktreeProxyError,
     create_worktree_on_host,
@@ -72,7 +72,7 @@ async def host_setup() -> AsyncIterator[HostRegistry]:
     ws = _FakeWebSocket()
     conn = registry.register(
         host_id=_HOST_ID,
-        ws=ws,  # type: ignore[arg-type] — duck-typed
+        ws=ws,  # type: ignore[arg-type] â€” duck-typed
         hello=_hello_frame(),
         owner=None,
     )
@@ -210,7 +210,7 @@ async def test_remove_worktree_success(host_setup: HostRegistry) -> None:
     )
     sent = registry._sent_frames_for_test[-1]  # type: ignore[attr-defined]
     assert isinstance(sent, HostRemoveWorktreeFrame)
-    # delete_branch must thread through unchanged — it controls whether
+    # delete_branch must thread through unchanged â€” it controls whether
     # the branch is destroyed.
     assert sent.delete_branch is True
     assert sent.worktree_path == "/Users/alice/myrepo-worktrees/feature-login"
@@ -275,13 +275,13 @@ async def test_create_worktree_timeout_raises_unavailable(
     Uses a host with no auto-replier so the pending future never
     resolves; a tiny patched timeout keeps the test fast.
     """
-    import agent_meow.server.routes._host_worktree as hw_mod
+    import omnigent.server.routes._host_worktree as hw_mod
 
     monkeypatch.setattr(hw_mod, "_WORKTREE_TIMEOUT_S", 0.05)
     registry = HostRegistry()
     registry.register(
         host_id="host_silent",
-        ws=_FakeWebSocket(),  # type: ignore[arg-type] — duck-typed
+        ws=_FakeWebSocket(),  # type: ignore[arg-type] â€” duck-typed
         hello=_hello_frame(),
         owner=None,
     )

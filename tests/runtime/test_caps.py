@@ -1,11 +1,11 @@
-"""Tests for agent_meow.runtime.caps."""
+"""Tests for omnigent.runtime.caps."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_meow.runtime.caps import RuntimeCaps
-from agent_meow.spec.types import ExecutorSpec
+from omnigent.runtime.caps import RuntimeCaps
+from omnigent.spec.types import ExecutorSpec
 
 
 def test_runtime_caps_default_value() -> None:

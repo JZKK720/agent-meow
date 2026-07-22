@@ -3,7 +3,7 @@ Unit tests for the JSON Content-Type guard dependencies.
 
 Covers :func:`require_json_content_type` and
 :func:`require_json_or_multipart_content_type` from
-``agent_meow.server.routes._content_type`` across the full matrix of
+``omnigent.server.routes._content_type`` across the full matrix of
 Content-Type values: canonical JSON, the ``application/*+json``
 structured suffix, charset parameters, case insensitivity, a missing
 header, and the non-JSON / multipart types that must (or must not) be
@@ -11,7 +11,7 @@ rejected.
 
 The dependencies only read ``request.headers``, so each case is driven
 by a real :class:`starlette.requests.Request` built from a minimal ASGI
-scope carrying just the header under test — no body, transport, or mock
+scope carrying just the header under test â€” no body, transport, or mock
 is involved.
 """
 
@@ -21,7 +21,7 @@ import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from agent_meow.server.routes._content_type import (
+from omnigent.server.routes._content_type import (
     require_json_content_type,
     require_json_or_multipart_content_type,
 )
@@ -55,7 +55,7 @@ _JSON_ACCEPTED = [
     "Application/JSON; charset=UTF-8",
 ]
 
-# Content-Type values that are neither JSON nor multipart — both
+# Content-Type values that are neither JSON nor multipart â€” both
 # dependencies must reject these with 415. ``None`` is the missing-header
 # case; "" is a present-but-empty header.
 _NON_JSON_NON_MULTIPART = [
@@ -65,7 +65,7 @@ _NON_JSON_NON_MULTIPART = [
     "text/plain; charset=utf-8",
     "application/x-www-form-urlencoded",
     "application/octet-stream",
-    "text/json",  # not application/* — must NOT be treated as JSON
+    "text/json",  # not application/* â€” must NOT be treated as JSON
 ]
 
 # Multipart variants: rejected by the json-only dependency, accepted by
@@ -86,7 +86,7 @@ def test_require_json_accepts_json_media_types(content_type: str) -> None:
     ``application/ld+json``, or charset-suffixed, or uppercased) request
     into a spurious 415.
     """
-    # Returns None (no exception) → the request is allowed through to the handler.
+    # Returns None (no exception) â†’ the request is allowed through to the handler.
     assert require_json_content_type(_request_with_content_type(content_type)) is None
 
 
@@ -129,7 +129,7 @@ def test_require_json_or_multipart_rejects_other_types(content_type: str | None)
     ``require_json_or_multipart_content_type`` still rejects simple types.
 
     The multipart-allowing variant must keep rejecting ``text/plain``, a
-    missing header, and other non-JSON / non-multipart types with 415 —
+    missing header, and other non-JSON / non-multipart types with 415 â€”
     otherwise the bundled-create route would inherit the same CSRF gap the
     guard exists to close.
     """

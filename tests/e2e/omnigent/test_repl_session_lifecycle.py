@@ -26,14 +26,14 @@ import pexpect
 import pytest
 from omnigent_client import OmnigentClient, SessionsChat
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     PROMPT_READY,
     STATE_SLEEPING,
     clean_exit,
     ensure_repl_test_theme_env,
     submit_prompt,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _MODEL = "mock-session-lifecycle"
 _HARNESS = "openai-agents"
@@ -316,7 +316,7 @@ def _newest_session_id(base_url: str, agent_name: str) -> str:
     The sessions-adapter debug log emits ``session created``/``resuming
     existing session`` ids, but in the ``--server``/daemon flow those
     fire once at STARTUP (before :func:`_wait_ready` returns) and never
-    re-appear on a turn — so scraping them from the PTY races. The
+    re-appear on a turn â€” so scraping them from the PTY races. The
     server's session list is the robust source of truth instead.
 
     :param base_url: agent-meow server URL.
@@ -358,7 +358,7 @@ def _drive_turn(
       created/resumed at STARTUP (before :func:`_wait_ready` returns), so
       those markers fire once at boot and never re-appear on the turn
       (#523). Sync on the assistant *marker* and read the ids from the
-      server API instead — robust to that timing.
+      server API instead â€” robust to that timing.
 
     :param child: Live REPL process.
     :param marker: Literal assistant marker expected in the PTY.
@@ -431,8 +431,8 @@ def _runner_pid_from_daemon_log(home: Path, runner_id: str) -> int:
     Resolve a runner subprocess pid from the connect-daemon log.
 
     The daemon logs ``Launched runner <id> for workspace <ws> (pid=<N>)``
-    when it spawns a runner (agent_meow/host/connect.py). Reading the pid
-    from that line is robust across environments — unlike walking the
+    when it spawns a runner (omnigent/host/connect.py). Reading the pid
+    from that line is robust across environments â€” unlike walking the
     daemon's process tree, which assumes the runner is a process-tree
     descendant of the daemon. That holds locally but NOT under CI's
     container/daemon model, where the tree walk yields "No runner
@@ -499,16 +499,16 @@ from pathlib import Path
 
 import uvicorn
 
-from agent_meow.cli import _create_artifact_store
-from agent_meow.runtime import init as init_runtime
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.runtime.caps import RuntimeCaps
-from agent_meow.server.app import create_app
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.host_store import HostStore
+from omnigent.cli import _create_artifact_store
+from omnigent.runtime import init as init_runtime
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.runtime.caps import RuntimeCaps
+from omnigent.server.app import create_app
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.host_store import HostStore
 db_uri = os.environ["OMNIGENT_E2E_DB_URI"]
 artifact_location = Path(os.environ["OMNIGENT_E2E_ARTIFACT_LOCATION"])
 port = int(os.environ["OMNIGENT_E2E_PORT"])
@@ -624,7 +624,7 @@ def _registered_runner(
         runner subprocess, e.g. mock LLM credentials.
     :yields: Registered runner id.
     """
-    from agent_meow.cli import _start_cli_runner_process, _stop_cli_runner_process
+    from omnigent.cli import _start_cli_runner_process, _stop_cli_runner_process
 
     runner = _start_cli_runner_process(
         server_url=base_url,
@@ -883,7 +883,7 @@ async def test_repl_reasoning_effort_threads_through(
         key=_MODEL,
     )
     with _running_server(omnigent_python, omnigent_repo_root, env, tmp_path) as server:
-        from agent_meow.cli import _bundle
+        from omnigent.cli import _bundle
 
         bundle = _bundle(yaml_path)
         with _registered_runner(

@@ -45,7 +45,7 @@ import httpx
 import pytest
 import yaml
 
-from agent_meow.claude_native_bridge import (
+from omnigent.claude_native_bridge import (
     augment_claude_args,
     bridge_dir_for_bridge_id,
     prepare_bridge_dir,

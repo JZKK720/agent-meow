@@ -1,5 +1,5 @@
 """
-Tests for ``_build_cursor_spawn_env`` in ``agent_meow/runtime/workflow.py``.
+Tests for ``_build_cursor_spawn_env`` in ``omnigent/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec`` fields to the ``HARNESS_CURSOR_*`` env
 vars the cursor harness wrap reads at first-turn time. Unlike the
@@ -8,8 +8,8 @@ explicit ``api_key`` auth maps to ``HARNESS_CURSOR_API_KEY``, and a
 ``DatabricksAuth`` profile is deliberately ignored (cursor-agent talks only
 to Cursor's own backend). Mirrors ``test_openai_agents_sdk_spawn_env.py``.
 
-This is a unit test — no subprocess spawn. End-to-end verification of the
-spawn-env → wrap → executor path lives in the harness e2e tests.
+This is a unit test â€” no subprocess spawn. End-to-end verification of the
+spawn-env â†’ wrap â†’ executor path lives in the harness e2e tests.
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.runtime.workflow import _build_cursor_spawn_env
-from agent_meow.spec.types import (
+from omnigent.runtime.workflow import _build_cursor_spawn_env
+from omnigent.spec.types import (
     AgentSpec,
     ApiKeyAuth,
     DatabricksAuth,
@@ -32,9 +32,9 @@ from agent_meow.spec.types import (
 @pytest.fixture(autouse=True)
 def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Point OMNIGENT_CONFIG_HOME at an empty temp dir so the developer's real
-    ``~/.agent_meow/config.yaml`` can't leak in, and clear any ambient
+    ``~/.omnigent/config.yaml`` can't leak in, and clear any ambient
     ``CURSOR_API_KEY`` so the no-auth / DatabricksAuth cases are deterministic
-    (the builder falls back to an ambient key — see the ambient-fallback test)."""
+    (the builder falls back to an ambient key â€” see the ambient-fallback test)."""
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
     monkeypatch.delenv("CURSOR_API_KEY", raising=False)
 
@@ -79,7 +79,7 @@ def test_api_key_auth_sets_api_key_env_var() -> None:
 def test_databricks_auth_does_not_set_api_key() -> None:
     """A ``DatabricksAuth`` profile has no cursor equivalent and is ignored.
 
-    Failure means a Databricks profile is mis-forwarded as a Cursor API key —
+    Failure means a Databricks profile is mis-forwarded as a Cursor API key â€”
     cursor-agent has no gateway path, so the only correct behaviour is to leave
     auth to an inherited ``CURSOR_API_KEY`` / ``cursor-agent login``.
     """
@@ -157,7 +157,7 @@ def test_stored_cursor_key_used_when_spec_has_no_auth(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """A CURSOR_API_KEY registered via ``agent-meow setup`` flows when the spec
-    declares no auth — so a user need not export it in every shell."""
+    declares no auth â€” so a user need not export it in every shell."""
     monkeypatch.setenv("CURSOR_KEY_SRC", "crsr_stored_123")
     _write_cursor_config(tmp_path, "env:CURSOR_KEY_SRC")
     env = _build_cursor_spawn_env(_make_spec(auth=None))
@@ -197,7 +197,7 @@ def test_spec_api_key_auth_wins_over_stored_key(
     """An explicit api-key auth on the spec takes precedence over the stored key.
 
     Failure means a per-agent ``executor.auth`` is silently overridden by the
-    machine-wide default — the spec must always win.
+    machine-wide default â€” the spec must always win.
     """
     monkeypatch.setenv("CURSOR_KEY_SRC", "crsr_stored_123")
     _write_cursor_config(tmp_path, "env:CURSOR_KEY_SRC")
@@ -224,7 +224,7 @@ def test_empty_stored_env_key_is_omitted(monkeypatch: pytest.MonkeyPatch, tmp_pa
     """A configured ``env:CURSOR_API_KEY`` ref pointing at an EMPTY var is omitted.
 
     ``resolve_secret``'s ``env:`` branch only raises on an *unset* variable, so
-    an exported-but-empty ``CURSOR_API_KEY=""`` resolves to ``""`` — which the
+    an exported-but-empty ``CURSOR_API_KEY=""`` resolves to ``""`` â€” which the
     cursor layer folds to ``None``. The builder must therefore write no
     ``HARNESS_CURSOR_API_KEY`` (the ambient fallback reads the same empty var
     and is also skipped), agreeing with ``cursor_api_key_configured() is False``

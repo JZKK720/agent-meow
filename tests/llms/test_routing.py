@@ -1,9 +1,9 @@
-"""Tests for llms.routing — model string parsing and harness inference."""
+"""Tests for llms.routing â€” model string parsing and harness inference."""
 
 import pytest
 
-from agent_meow.errors import OmnigentError
-from agent_meow.llms.routing import RoutedModel, infer_harness_from_model, parse_model_string
+from omnigent.errors import OmnigentError
+from omnigent.llms.routing import RoutedModel, infer_harness_from_model, parse_model_string
 
 
 @pytest.mark.parametrize(
@@ -79,24 +79,24 @@ def test_unknown_provider_raises() -> None:
         parse_model_string("foobar/some-model")
 
 
-# ── infer_harness_from_model ─────────────────────────────────────────────────
+# â”€â”€ infer_harness_from_model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
     ("model", "expected_harness"),
     [
-        # Databricks-hosted Claude → claude-sdk harness; these are the
+        # Databricks-hosted Claude â†’ claude-sdk harness; these are the
         # models that triggered the original routing bug (Responses API
         # passthrough 400s for Claude).
         ("databricks-claude-sonnet-4", "claude-sdk"),
         ("databricks-claude-sonnet-4-6", "claude-sdk"),
         # Anthropic-prefixed models also need claude-sdk.
         ("anthropic/claude-sonnet-4-20250514", "claude-sdk"),
-        # Databricks-hosted GPT and plain OpenAI models → openai-agents.
+        # Databricks-hosted GPT and plain OpenAI models â†’ openai-agents.
         ("databricks-gpt-5-4", "openai-agents"),
         ("openai/gpt-5.4", "openai-agents"),
         ("gpt-5.4", "openai-agents"),
-        # Unknown model — no prefix match — returns empty string so the
+        # Unknown model â€” no prefix match â€” returns empty string so the
         # downstream validator can surface a "harness required" error.
         ("llama3-groq", ""),
         ("unknown-model-xyz", ""),
@@ -107,12 +107,12 @@ def test_infer_harness_from_model(model: str, expected_harness: str) -> None:
     :func:`infer_harness_from_model` maps known model prefixes to their
     harness names and returns ``""`` for unrecognised models.
 
-    A failure here means the prefix table has drifted — either a new
+    A failure here means the prefix table has drifted â€” either a new
     model family was added without updating the table, or an existing
     prefix was renamed.
     """
     assert infer_harness_from_model(model) == expected_harness, (
         f"Model {model!r}: expected harness {expected_harness!r}, "
         f"got {infer_harness_from_model(model)!r}. "
-        "Check _HARNESS_FOR_MODEL_PREFIX in agent_meow/llms/routing.py."
+        "Check _HARNESS_FOR_MODEL_PREFIX in omnigent/llms/routing.py."
     )

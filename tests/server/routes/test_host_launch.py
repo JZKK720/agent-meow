@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 import pytest
 from fastapi import HTTPException
 
-from agent_meow.entities import Conversation
-from agent_meow.server.routes._host_launch import (
+from omnigent.entities import Conversation
+from omnigent.server.routes._host_launch import (
     resolve_host_launch,
     resolve_host_owner,
 )

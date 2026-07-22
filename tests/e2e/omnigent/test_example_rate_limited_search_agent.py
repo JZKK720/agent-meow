@@ -3,7 +3,7 @@
 The example wires a :class:`FunctionPolicy` (loaded from
 ``tests.resources.examples._shared.search_rate_limit_policy``) that caps tool-call counts
 per turn. The policy runs in the tool-call phase of the agent
-loop — every turn exercises the policy's pre/post-tool hooks
+loop â€” every turn exercises the policy's pre/post-tool hooks
 regardless of whether the cap is actually hit.
 
 **What breaks if this fails:**
@@ -20,14 +20,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.e2e.agent_meow._example_helpers import (
+from tests.e2e.omnigent._example_helpers import (
     assert_completed_one_shot,
     run_one_shot,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 # Low-token summary request so the policy's rate limit stays
-# comfortably unrehced — the goal is to exercise the hook, not
+# comfortably unrehced â€” the goal is to exercise the hook, not
 # to trigger the cap.
 _PROMPT = "Summarize in one sentence: the sky is blue."
 

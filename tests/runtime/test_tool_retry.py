@@ -9,13 +9,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agent_meow.runtime.tool_retry import (
+from omnigent.runtime.tool_retry import (
     call_tool_with_timeout,
     execute_tool_with_retry,
     resolve_tool_retry,
     resolve_tool_timeout,
 )
-from agent_meow.spec.types import RetryPolicy, ToolsConfig
+from omnigent.spec.types import RetryPolicy, ToolsConfig
 
 
 @pytest.fixture()
@@ -173,7 +173,7 @@ def test_execute_tool_with_retry_retries_on_timeout(
 ) -> None:
     """A timeout on the first attempt triggers a retry that then succeeds."""
     # Patch time.sleep inside the retry module to avoid real delays.
-    monkeypatch.setattr("agent_meow.runtime.tool_retry.time.sleep", lambda _: None)
+    monkeypatch.setattr("omnigent.runtime.tool_retry.time.sleep", lambda _: None)
 
     call_count = 0
 
@@ -191,7 +191,7 @@ def test_execute_tool_with_retry_retries_on_timeout(
 
     # Patch call_tool_with_timeout so we control failures without real threads.
     monkeypatch.setattr(
-        "agent_meow.runtime.tool_retry.call_tool_with_timeout",
+        "omnigent.runtime.tool_retry.call_tool_with_timeout",
         lambda call_fn, timeout, cancel_fn=None: flaky_tool(),
     )
 
@@ -220,13 +220,13 @@ def test_execute_tool_with_retry_returns_error_string_on_exhaustion(
 ) -> None:
     """When all attempts time out, an error string is returned (not raised)."""
     # Patch time.sleep inside the retry module to avoid real delays.
-    monkeypatch.setattr("agent_meow.runtime.tool_retry.time.sleep", lambda _: None)
+    monkeypatch.setattr("omnigent.runtime.tool_retry.time.sleep", lambda _: None)
 
     retry_config = RetryPolicy(max_retries=2, backoff_base_s=1.0, backoff_max_s=10.0)
 
     # Patch call_tool_with_timeout so every call raises TimeoutError.
     monkeypatch.setattr(
-        "agent_meow.runtime.tool_retry.call_tool_with_timeout",
+        "omnigent.runtime.tool_retry.call_tool_with_timeout",
         lambda call_fn, timeout, cancel_fn=None: (_ for _ in ()).throw(
             TimeoutError("Tool execution timed out after 5s")
         ),
@@ -271,13 +271,13 @@ def test_tool_retry_event_has_correct_fields(
     :param captured_events: List accumulating events for inspection.
     """
     # Patch time.sleep to avoid real delays.
-    monkeypatch.setattr("agent_meow.runtime.tool_retry.time.sleep", lambda _: None)
+    monkeypatch.setattr("omnigent.runtime.tool_retry.time.sleep", lambda _: None)
     # Fix random.uniform to 1.0 so delay is deterministic.
     # ``compute_backoff_delay`` lives on ``RetryPolicy`` (in
-    # ``agent_meow.spec.types``) and uses a function-local
-    # ``import random`` — patching either
-    # ``agent_meow.runtime.tool_retry.random`` or
-    # ``agent_meow.spec.types.random`` won't catch the local
+    # ``omnigent.spec.types``) and uses a function-local
+    # ``import random`` â€” patching either
+    # ``omnigent.runtime.tool_retry.random`` or
+    # ``omnigent.spec.types.random`` won't catch the local
     # binding. Patch the global ``random.uniform`` instead.
     import random as _random_module
 
@@ -306,7 +306,7 @@ def test_tool_retry_event_has_correct_fields(
         return "ok"
 
     monkeypatch.setattr(
-        "agent_meow.runtime.tool_retry.call_tool_with_timeout",
+        "omnigent.runtime.tool_retry.call_tool_with_timeout",
         timeout_then_succeed,
     )
 
@@ -330,11 +330,11 @@ def test_tool_retry_event_has_correct_fields(
 
     evt = retry_events[0]
 
-    # "type" must be "response.retry" — identifies this as a retry SSE event.
+    # "type" must be "response.retry" â€” identifies this as a retry SSE event.
     # Failure means the event type is wrong, breaking SSE consumers.
     assert evt["type"] == "response.retry"
 
-    # "source" must be "tool" — distinguishes tool retries from other sources.
+    # "source" must be "tool" â€” distinguishes tool retries from other sources.
     # Failure means the event source label is incorrect.
     assert evt["source"] == "tool"
 
@@ -369,7 +369,7 @@ def test_tool_retry_event_has_correct_fields(
     # Failure means the original error message was lost or altered.
     assert "timed out" in evt["error"]["message"]
 
-    # "error.detail" must be None — no additional detail for timeouts.
+    # "error.detail" must be None â€” no additional detail for timeouts.
     # Failure means unexpected detail was attached.
     assert evt["error"]["detail"] is None
 
@@ -388,11 +388,11 @@ def test_tool_error_event_has_correct_fields(
     :param captured_events: List accumulating events for inspection.
     """
     # Patch time.sleep to avoid real delays.
-    monkeypatch.setattr("agent_meow.runtime.tool_retry.time.sleep", lambda _: None)
+    monkeypatch.setattr("omnigent.runtime.tool_retry.time.sleep", lambda _: None)
 
     # Every call raises TimeoutError to exhaust all attempts.
     monkeypatch.setattr(
-        "agent_meow.runtime.tool_retry.call_tool_with_timeout",
+        "omnigent.runtime.tool_retry.call_tool_with_timeout",
         lambda call_fn, timeout, cancel_fn=None: (_ for _ in ()).throw(
             TimeoutError("Tool execution timed out after 5s")
         ),
@@ -414,12 +414,12 @@ def test_tool_error_event_has_correct_fields(
 
     evt = error_events[0]
 
-    # "type" must be "response.error" — identifies this as a terminal
+    # "type" must be "response.error" â€” identifies this as a terminal
     # error SSE event.
     # Failure means the event type is wrong, breaking SSE consumers.
     assert evt["type"] == "response.error"
 
-    # "source" must be "tool" — distinguishes tool errors from others.
+    # "source" must be "tool" â€” distinguishes tool errors from others.
     # Failure means the event source label is incorrect.
     assert evt["source"] == "tool"
 
@@ -439,7 +439,7 @@ def test_tool_error_event_has_correct_fields(
     # reports total tries, not just the retry count.
     assert "3 attempts" in evt["error"]["message"]
 
-    # "error.detail" must be None — no additional detail for timeouts.
+    # "error.detail" must be None â€” no additional detail for timeouts.
     # Failure means unexpected detail was attached.
     assert evt["error"]["detail"] is None
 
@@ -474,7 +474,7 @@ def test_tool_retry_non_timeout_exception_no_retry(
         raise ValueError("bad input")
 
     monkeypatch.setattr(
-        "agent_meow.runtime.tool_retry.call_tool_with_timeout",
+        "omnigent.runtime.tool_retry.call_tool_with_timeout",
         raise_value_error,
     )
 
@@ -499,7 +499,7 @@ def test_tool_retry_non_timeout_exception_no_retry(
 
     evt = error_events[0]
 
-    # "type" must be "response.error" — terminal failure event.
+    # "type" must be "response.error" â€” terminal failure event.
     assert evt["type"] == "response.error"
 
     # "source" must be "tool".

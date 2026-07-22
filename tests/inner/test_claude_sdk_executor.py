@@ -16,8 +16,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agent_meow.inner.claude_sdk_executor import _to_anthropic_content_blocks
-from agent_meow.inner.executor import (
+from omnigent.inner.claude_sdk_executor import _to_anthropic_content_blocks
+from omnigent.inner.executor import (
     ExecutorError,
     TextChunk,
     ToolCallComplete,
@@ -42,7 +42,7 @@ def _run(coro):
 
 class TestPromptExtraction(unittest.TestCase):
     def _make_executor(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         return ClaudeSDKExecutor()
 
@@ -92,8 +92,8 @@ class TestPromptExtraction(unittest.TestCase):
 
 class TestConstructor(unittest.TestCase):
     def test_default_values(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-        from agent_meow.spec.types import RetryPolicy
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.spec.types import RetryPolicy
 
         executor = ClaudeSDKExecutor()
         self.assertFalse(executor._os_env)
@@ -110,8 +110,8 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(executor._extra_env, RetryPolicy().claude_cli.env())
 
     def test_os_env_spec_with_no_sandbox_keeps_native_tools_enabled(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-        from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
         executor = ClaudeSDKExecutor(
             os_env=OSEnvSpec(
@@ -123,17 +123,17 @@ class TestConstructor(unittest.TestCase):
         self.assertIsNotNone(executor._os_env_spec)
 
     def test_os_env_spec_wraps_cli_and_enables_native_tools(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor, PreparedClaudeCli
-        from agent_meow.inner.datamodel import OSEnvSpec
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor, PreparedClaudeCli
+        from omnigent.inner.datamodel import OSEnvSpec
 
         spec = OSEnvSpec(type="caller_process", cwd="/tmp/work")
         with (
             patch(
-                "agent_meow.inner.claude_sdk_executor._find_system_claude",
+                "omnigent.inner.claude_sdk_executor._find_system_claude",
                 return_value="/usr/bin/claude",
             ),
             patch(
-                "agent_meow.inner.claude_sdk_executor.prepare_claude_cli_path",
+                "omnigent.inner.claude_sdk_executor.prepare_claude_cli_path",
                 return_value=PreparedClaudeCli(
                     cli_path="/tmp/omnigent-claude-wrapper",
                     enable_native_tools=True,
@@ -148,9 +148,9 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(executor._cwd, "/tmp/work")
 
     def test_prepare_claude_cli_path_adds_internal_roots_to_read_allowlist(self):
-        from agent_meow.inner.claude_sdk_executor import prepare_claude_cli_path
-        from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-        from agent_meow.inner.sandbox import SandboxPolicy
+        from omnigent.inner.claude_sdk_executor import prepare_claude_cli_path
+        from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+        from omnigent.inner.sandbox import SandboxPolicy
 
         captured: dict[str, SandboxPolicy] = {}
 
@@ -171,7 +171,7 @@ class TestConstructor(unittest.TestCase):
 
         with (
             patch(
-                "agent_meow.inner.claude_sdk_executor.resolve_sandbox",
+                "omnigent.inner.claude_sdk_executor.resolve_sandbox",
                 return_value=SandboxPolicy(
                     backend_type="linux_bwrap",
                     active=True,
@@ -182,15 +182,15 @@ class TestConstructor(unittest.TestCase):
                 ),
             ),
             patch(
-                "agent_meow.inner.claude_sdk_executor._claude_internal_write_roots",
+                "omnigent.inner.claude_sdk_executor._claude_internal_write_roots",
                 return_value=[Path("/home/test/.claude/sessions")],
             ),
             patch(
-                "agent_meow.inner.claude_sdk_executor._claude_internal_write_files",
+                "omnigent.inner.claude_sdk_executor._claude_internal_write_files",
                 return_value=[],
             ),
             patch(
-                "agent_meow.inner.claude_sdk_executor.create_exec_launcher",
+                "omnigent.inner.claude_sdk_executor.create_exec_launcher",
                 side_effect=_capture_launcher,
             ),
         ):
@@ -199,22 +199,22 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(prepared.cli_path, "/tmp/launcher")
         self.assertTrue(prepared.enable_native_tools)
         # Sandbox helpers call ``.resolve(strict=False)``, which on
-        # macOS rewrites ``/home`` → ``/System/Volumes/Data/home``.
+        # macOS rewrites ``/home`` â†’ ``/System/Volumes/Data/home``.
         # Compare against the resolved form so the assertion is stable
         # across platforms.
         expected = Path("/home/test/.claude/sessions").resolve(strict=False)
         self.assertIn(expected, captured["sandbox"].read_roots)
 
     def test_default_process_sandbox_wraps_cli_without_enabling_native_tools(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         with (
             patch(
-                "agent_meow.inner.claude_sdk_executor._find_system_claude",
+                "omnigent.inner.claude_sdk_executor._find_system_claude",
                 return_value="/usr/bin/claude",
             ),
             patch(
-                "agent_meow.inner.claude_sdk_executor.prepare_tight_cli_process_path",
+                "omnigent.inner.claude_sdk_executor.prepare_tight_cli_process_path",
                 return_value="/tmp/omnigent-claude-tight-wrapper",
             ),
         ):
@@ -228,17 +228,17 @@ class TestConstructor(unittest.TestCase):
         )
 
     def test_os_env_spec_without_supported_native_sandbox_disables_native_tools(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor, PreparedClaudeCli
-        from agent_meow.inner.datamodel import OSEnvSpec
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor, PreparedClaudeCli
+        from omnigent.inner.datamodel import OSEnvSpec
 
         spec = OSEnvSpec(type="caller_process", cwd="/tmp/work")
         with (
             patch(
-                "agent_meow.inner.claude_sdk_executor._find_system_claude",
+                "omnigent.inner.claude_sdk_executor._find_system_claude",
                 return_value="/usr/bin/claude",
             ),
             patch(
-                "agent_meow.inner.claude_sdk_executor.prepare_claude_cli_path",
+                "omnigent.inner.claude_sdk_executor.prepare_claude_cli_path",
                 return_value=PreparedClaudeCli(
                     cli_path="/usr/bin/claude",
                     enable_native_tools=False,
@@ -252,29 +252,29 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(executor._cli_path, "/usr/bin/claude")
 
     def test_model_override(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         executor = ClaudeSDKExecutor(model="claude-haiku-4-5-20251001")
         self.assertEqual(executor._model_override, "claude-haiku-4-5-20251001")
 
     def test_supports_streaming(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         self.assertTrue(ClaudeSDKExecutor().supports_streaming())
 
     def test_supports_tool_calling(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         self.assertTrue(ClaudeSDKExecutor().supports_tool_calling())
 
     def test_databricks_flag_with_profile(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-        from agent_meow.inner.databricks_executor import DatabricksCredentials
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.databricks_executor import DatabricksCredentials
 
         with (
             patch.dict("os.environ", {}, clear=True),
             patch(
-                "agent_meow.inner.databricks_executor._read_databrickscfg",
+                "omnigent.inner.databricks_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(
                     host="https://example.cloud.databricks.com",
                     token="dapi_test_token",
@@ -300,16 +300,16 @@ class TestConstructor(unittest.TestCase):
 
         Two ``~/.databrickscfg`` profiles can share one host, which makes
         ``databricks auth token --host`` fail ("Use --profile to specify
-        which profile") → empty token → a silent ``status=401``. Selecting
+        which profile") â†’ empty token â†’ a silent ``status=401``. Selecting
         by ``--profile`` avoids that.
         """
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-        from agent_meow.inner.databricks_executor import DatabricksCredentials
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.databricks_executor import DatabricksCredentials
 
         with (
             patch.dict("os.environ", {}, clear=True),
             patch(
-                "agent_meow.inner.databricks_executor._read_databrickscfg",
+                "omnigent.inner.databricks_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(
                     host="https://example.cloud.databricks.com",
                     token="dapi_test_token",
@@ -319,33 +319,33 @@ class TestConstructor(unittest.TestCase):
             executor = ClaudeSDKExecutor(gateway=True, databricks_profile="oss")
         helper = executor._extra_env["OMNIGENT_CLAUDE_API_KEY_HELPER"]
         # Proves the selector is --profile, not --host. A regression to --host
-        # makes a two-profiles-one-host workspace yield an empty token → 401.
+        # makes a two-profiles-one-host workspace yield an empty token â†’ 401.
         self.assertIn('databricks auth token --profile "oss"', helper)
         self.assertNotIn("--host", helper)
         # `--force-refresh` only exists in Databricks CLI >= v0.296.0, so it
         # must be applied via a `--help` capability probe ($force), never
-        # passed unconditionally — an older CLI rejects the unknown flag and
-        # yields an empty token → silent 401.
+        # passed unconditionally â€” an older CLI rejects the unknown flag and
+        # yields an empty token â†’ silent 401.
         self.assertIn("databricks auth token --help", helper)
         self.assertIn("force=--force-refresh", helper)
         self.assertNotIn('oss" --force-refresh', helper)
 
     def test_databricks_flag_no_creds_raises(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         with (
             patch.dict("os.environ", {}, clear=True),
-            patch("agent_meow.inner.claude_sdk_executor._resolve_gateway_env", return_value={}),
+            patch("omnigent.inner.claude_sdk_executor._resolve_gateway_env", return_value={}),
         ):
             with self.assertRaises(EnvironmentError):
                 ClaudeSDKExecutor(gateway=True)
 
     def test_databricks_flag_with_host_override(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         with (
             patch.dict("os.environ", {}, clear=True),
-            patch("agent_meow.inner.databricks_executor._read_databrickscfg") as read_cfg,
+            patch("omnigent.inner.databricks_executor._read_databrickscfg") as read_cfg,
         ):
             executor = ClaudeSDKExecutor(
                 gateway=True,
@@ -366,7 +366,7 @@ class TestConstructor(unittest.TestCase):
         )
 
     def test_databricks_flag_with_host_override_requires_base_url(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         with (
             patch.dict("os.environ", {}, clear=True),
@@ -379,7 +379,7 @@ class TestConstructor(unittest.TestCase):
             )
 
     def test_databricks_flag_with_host_override_requires_auth_command(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         with (
             patch.dict("os.environ", {}, clear=True),
@@ -392,16 +392,16 @@ class TestConstructor(unittest.TestCase):
             )
 
     def test_databricks_false_no_extra_env(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-        from agent_meow.spec.types import RetryPolicy
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.spec.types import RetryPolicy
 
         executor = ClaudeSDKExecutor(gateway=False)
-        # gateway=False → no Databricks env, but RetryPolicy CLI env
+        # gateway=False â†’ no Databricks env, but RetryPolicy CLI env
         # is always merged in. Verify the only entries are the retry env.
         self.assertEqual(executor._extra_env, RetryPolicy().claude_cli.env())
 
     def test_databricks_profile_default_model_used_when_unset(self):
-        """gateway=True (profile-derived) + no model → Databricks default.
+        """gateway=True (profile-derived) + no model â†’ Databricks default.
 
         On the Databricks-profile gateway path (transport derived from
         ~/.databrickscfg, no gateway base URL supplied directly), a missing
@@ -409,15 +409,15 @@ class TestConstructor(unittest.TestCase):
         generic-provider gateway path never does this (see
         ``test_neutral_gateway_no_model_does_not_inject_databricks_default``).
         """
-        from agent_meow.inner.claude_sdk_executor import (
+        from omnigent.inner.claude_sdk_executor import (
             _DATABRICKS_CLAUDE_DEFAULT_MODEL,
             ClaudeSDKExecutor,
         )
-        from agent_meow.inner.databricks_executor import DatabricksCredentials
+        from omnigent.inner.databricks_executor import DatabricksCredentials
 
         async def _t():
             with patch(
-                "agent_meow.inner.databricks_executor._read_databrickscfg",
+                "omnigent.inner.databricks_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(
                     host="https://example.cloud.databricks.com",
                     token="dapi_test_token",
@@ -445,13 +445,13 @@ class TestConstructor(unittest.TestCase):
         _run(_t())
 
     def test_neutral_gateway_no_model_does_not_inject_databricks_default(self):
-        """Neutral gateway (base URL supplied directly) + no model → ``None``.
+        """Neutral gateway (base URL supplied directly) + no model â†’ ``None``.
 
         The neutral generic-provider gateway transport never falls back to a
         ``databricks-*`` model: the agent-meow producer resolves a concrete model
         before spawning, so the executor passes ``None`` through to the SDK.
         """
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         async def _t():
             executor = ClaudeSDKExecutor(
@@ -482,12 +482,12 @@ class TestConstructor(unittest.TestCase):
 
     def test_gateway_model_passes_through(self):
         """Explicit model on the gateway path passes through unchanged."""
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-        from agent_meow.inner.databricks_executor import DatabricksCredentials
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.databricks_executor import DatabricksCredentials
 
         async def _t():
             with patch(
-                "agent_meow.inner.databricks_executor._read_databrickscfg",
+                "omnigent.inner.databricks_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(
                     host="https://example.cloud.databricks.com",
                     token="dapi_test_token",
@@ -516,7 +516,7 @@ class TestConstructor(unittest.TestCase):
 
     def test_no_databricks_default_when_databricks_off(self):
         """gateway=False keeps prior behavior: None falls through to the SDK."""
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         async def _t():
             executor = ClaudeSDKExecutor(gateway=False)
@@ -541,12 +541,12 @@ class TestConstructor(unittest.TestCase):
 
     def test_databricks_opus_pins_thinking_to_adaptive(self):
         """gateway=True + opus sets ``thinking={"type": "adaptive", "display": "summarized"}``."""
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-        from agent_meow.inner.databricks_executor import DatabricksCredentials
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.databricks_executor import DatabricksCredentials
 
         async def _t():
             with patch(
-                "agent_meow.inner.databricks_executor._read_databrickscfg",
+                "omnigent.inner.databricks_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(
                     host="https://example.cloud.databricks.com",
                     token="dapi_test_token",
@@ -581,12 +581,12 @@ class TestConstructor(unittest.TestCase):
         thinking=enabled for it too. If this stays unset, a fable session
         through the gateway 400s on the first request.
         """
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-        from agent_meow.inner.databricks_executor import DatabricksCredentials
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.databricks_executor import DatabricksCredentials
 
         async def _t():
             with patch(
-                "agent_meow.inner.databricks_executor._read_databrickscfg",
+                "omnigent.inner.databricks_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(
                     host="https://example.databricks.com",
                     token="dapi_test_token",
@@ -615,12 +615,12 @@ class TestConstructor(unittest.TestCase):
 
     def test_databricks_sonnet_leaves_thinking_unset(self):
         """gateway=True + non-adaptive-tier model preserves CLI default thinking."""
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-        from agent_meow.inner.databricks_executor import DatabricksCredentials
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.databricks_executor import DatabricksCredentials
 
         async def _t():
             with patch(
-                "agent_meow.inner.databricks_executor._read_databrickscfg",
+                "omnigent.inner.databricks_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(
                     host="https://example.cloud.databricks.com",
                     token="dapi_test_token",
@@ -649,7 +649,7 @@ class TestConstructor(unittest.TestCase):
 
     def test_no_databricks_leaves_thinking_unset(self):
         """gateway=False does not touch ``thinking``; preserves CLI default."""
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         async def _t():
             executor = ClaudeSDKExecutor(gateway=False, model="claude-opus-4-7")
@@ -673,7 +673,7 @@ class TestConstructor(unittest.TestCase):
         _run(_t())
 
     def test_force_close_client_uses_process_tree_termination(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         class _Transport:
             def __init__(self):
@@ -688,7 +688,7 @@ class TestConstructor(unittest.TestCase):
 
         async def _t():
             with patch(
-                "agent_meow.inner.claude_sdk_executor._terminate_process_tree"
+                "omnigent.inner.claude_sdk_executor._terminate_process_tree"
             ) as terminate_tree:
                 await ClaudeSDKExecutor._force_close_client(client)
             terminate_tree.assert_called_once()
@@ -700,9 +700,9 @@ class TestConstructor(unittest.TestCase):
         # anyio task group (`_stderr_task_group`) to a single `_stderr_task`
         # TaskHandle. A transport shaped like the current SDK (no
         # `_stderr_task_group` attribute at all) must not raise AttributeError
-        # out of `_force_close_client` — that exception escaped the runner's
+        # out of `_force_close_client` â€” that exception escaped the runner's
         # lifespan shutdown and crashed it on every session stop.
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         stderr_task = SimpleNamespace(cancel=Mock())
 
@@ -720,7 +720,7 @@ class TestConstructor(unittest.TestCase):
 
         async def _t():
             with patch(
-                "agent_meow.inner.claude_sdk_executor._terminate_process_tree"
+                "omnigent.inner.claude_sdk_executor._terminate_process_tree"
             ) as terminate_tree:
                 await ClaudeSDKExecutor._force_close_client(client)
             terminate_tree.assert_called_once()
@@ -734,26 +734,26 @@ class TestConstructor(unittest.TestCase):
         self.assertIsNone(transport._stderr_task)
 
     def test_claude_internal_write_files_omits_missing_config(self):
-        from agent_meow.inner.claude_sdk_executor import _claude_internal_write_files
+        from omnigent.inner.claude_sdk_executor import _claude_internal_write_files
 
         with tempfile.TemporaryDirectory() as td:
             home = Path(td)
             config_path = home / ".claude.json"
             self.assertFalse(config_path.exists())
-            with patch("agent_meow.inner.claude_sdk_executor.pathlib.Path.home", return_value=home):
+            with patch("omnigent.inner.claude_sdk_executor.pathlib.Path.home", return_value=home):
                 paths = _claude_internal_write_files()
 
             self.assertEqual(paths, [])
             self.assertFalse(config_path.exists())
 
     def test_claude_internal_write_files_includes_existing_config(self):
-        from agent_meow.inner.claude_sdk_executor import _claude_internal_write_files
+        from omnigent.inner.claude_sdk_executor import _claude_internal_write_files
 
         with tempfile.TemporaryDirectory() as td:
             home = Path(td)
             config_path = home / ".claude.json"
             config_path.write_text("{}\n", encoding="utf-8")
-            with patch("agent_meow.inner.claude_sdk_executor.pathlib.Path.home", return_value=home):
+            with patch("omnigent.inner.claude_sdk_executor.pathlib.Path.home", return_value=home):
                 paths = _claude_internal_write_files()
 
             self.assertEqual(paths, [config_path])
@@ -766,7 +766,7 @@ class TestConstructor(unittest.TestCase):
 
 class TestBuildMcpTools(unittest.TestCase):
     def test_builds_tools_from_schemas(self):
-        from agent_meow.inner.claude_sdk_executor import _build_mcp_tools
+        from omnigent.inner.claude_sdk_executor import _build_mcp_tools
 
         async def mock_executor(name, args):
             return {"result": "ok"}
@@ -786,12 +786,12 @@ class TestBuildMcpTools(unittest.TestCase):
         self.assertEqual(tools[0].name, "calc")
 
     def test_empty_schemas(self):
-        from agent_meow.inner.claude_sdk_executor import _build_mcp_tools
+        from omnigent.inner.claude_sdk_executor import _build_mcp_tools
 
         self.assertEqual(_build_mcp_tools([], None), [])
 
     def test_handler_calls_executor(self):
-        from agent_meow.inner.claude_sdk_executor import _build_mcp_tools
+        from omnigent.inner.claude_sdk_executor import _build_mcp_tools
 
         calls = []
 
@@ -818,7 +818,7 @@ class TestBuildMcpTools(unittest.TestCase):
         self.assertNotIn("isError", result)
 
     def test_handler_marks_blocked_result_as_error(self):
-        from agent_meow.inner.claude_sdk_executor import _build_mcp_tools
+        from omnigent.inner.claude_sdk_executor import _build_mcp_tools
 
         async def mock_executor(name, args):
             return {"blocked": True, "reason": "Exceeded max tool calls"}
@@ -840,7 +840,7 @@ class TestBuildMcpTools(unittest.TestCase):
         self.assertTrue(parsed["blocked"])
 
     def test_handler_marks_error_result_as_error(self):
-        from agent_meow.inner.claude_sdk_executor import _build_mcp_tools
+        from omnigent.inner.claude_sdk_executor import _build_mcp_tools
 
         async def mock_executor(name, args):
             return {"error": "boom"}
@@ -862,7 +862,7 @@ class TestBuildMcpTools(unittest.TestCase):
         self.assertEqual(parsed["error"], "boom")
 
     def test_handler_no_executor(self):
-        from agent_meow.inner.claude_sdk_executor import _build_mcp_tools
+        from omnigent.inner.claude_sdk_executor import _build_mcp_tools
 
         schemas = [
             {
@@ -887,13 +887,13 @@ class TestBuildMcpTools(unittest.TestCase):
 
 class TestResolveGatewayEnv(unittest.TestCase):
     def test_from_profile(self):
-        from agent_meow.inner.claude_sdk_executor import _resolve_gateway_env
-        from agent_meow.inner.databricks_executor import DatabricksCredentials
+        from omnigent.inner.claude_sdk_executor import _resolve_gateway_env
+        from omnigent.inner.databricks_executor import DatabricksCredentials
 
         with (
             patch.dict("os.environ", {}, clear=True),
             patch(
-                "agent_meow.inner.databricks_executor._read_databrickscfg",
+                "omnigent.inner.databricks_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(
                     host="https://example.databricks.com",
                     token="dapi_abc123",
@@ -913,13 +913,13 @@ class TestResolveGatewayEnv(unittest.TestCase):
             self.assertNotIn("ANTHROPIC_AUTH_TOKEN", env)
 
     def test_strips_trailing_slash(self):
-        from agent_meow.inner.claude_sdk_executor import _resolve_gateway_env
-        from agent_meow.inner.databricks_executor import DatabricksCredentials
+        from omnigent.inner.claude_sdk_executor import _resolve_gateway_env
+        from omnigent.inner.databricks_executor import DatabricksCredentials
 
         with (
             patch.dict("os.environ", {}, clear=True),
             patch(
-                "agent_meow.inner.databricks_executor._read_databrickscfg",
+                "omnigent.inner.databricks_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(host="https://my-workspace.com/", token="tok"),
             ),
         ):
@@ -928,19 +928,19 @@ class TestResolveGatewayEnv(unittest.TestCase):
             self.assertTrue(env["ANTHROPIC_BASE_URL"].endswith("/ai-gateway/anthropic"))
 
     def test_no_creds_returns_empty(self):
-        from agent_meow.inner.claude_sdk_executor import _resolve_gateway_env
+        from omnigent.inner.claude_sdk_executor import _resolve_gateway_env
 
         with (
             patch.dict("os.environ", {}, clear=True),
-            patch("agent_meow.inner.databricks_executor._read_databrickscfg", return_value=None),
+            patch("omnigent.inner.databricks_executor._read_databrickscfg", return_value=None),
         ):
             env = _resolve_gateway_env()
             self.assertEqual(env, {})
 
     def test_host_override_skips_profile_lookup(self):
-        from agent_meow.inner.claude_sdk_executor import _resolve_gateway_env
+        from omnigent.inner.claude_sdk_executor import _resolve_gateway_env
 
-        with patch("agent_meow.inner.databricks_executor._read_databrickscfg") as read_cfg:
+        with patch("omnigent.inner.databricks_executor._read_databrickscfg") as read_cfg:
             env = _resolve_gateway_env(
                 profile="missing-profile",
                 host_override="https://example.databricks.com/",
@@ -956,7 +956,7 @@ class TestResolveGatewayEnv(unittest.TestCase):
         self.assertEqual(env["OMNIGENT_CLAUDE_API_KEY_HELPER"], "printf token")
 
     def test_host_override_requires_base_url(self):
-        from agent_meow.inner.claude_sdk_executor import _resolve_gateway_env
+        from omnigent.inner.claude_sdk_executor import _resolve_gateway_env
 
         with self.assertRaisesRegex(OSError, "GATEWAY_BASE_URL"):
             _resolve_gateway_env(
@@ -965,7 +965,7 @@ class TestResolveGatewayEnv(unittest.TestCase):
             )
 
     def test_host_override_requires_auth_command(self):
-        from agent_meow.inner.claude_sdk_executor import _resolve_gateway_env
+        from omnigent.inner.claude_sdk_executor import _resolve_gateway_env
 
         with self.assertRaisesRegex(OSError, "GATEWAY_AUTH_COMMAND"):
             _resolve_gateway_env(
@@ -981,7 +981,7 @@ class TestResolveGatewayEnv(unittest.TestCase):
 
 class TestEmptyPrompt(unittest.TestCase):
     def test_empty_prompt_yields_turn_complete(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         async def _t():
             executor = ClaudeSDKExecutor()
@@ -997,7 +997,7 @@ class TestEmptyPrompt(unittest.TestCase):
 
 class TestSystemMessages(unittest.TestCase):
     def test_databricks_auth_uses_api_key_helper_settings(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         captured_options = []
 
@@ -1062,10 +1062,10 @@ class TestSystemMessages(unittest.TestCase):
             )
             with (
                 patch(
-                    "agent_meow.inner.claude_sdk_executor._resolve_gateway_env",
+                    "omnigent.inner.claude_sdk_executor._resolve_gateway_env",
                     _resolve_gateway_env,
                 ),
-                patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK),
+                patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK),
             ):
                 events = [
                     e
@@ -1116,7 +1116,7 @@ class TestSystemMessages(unittest.TestCase):
             SystemMessage as SDKSystemMessage,
         )
 
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         class _Sentinel:
             pass
@@ -1162,7 +1162,7 @@ class TestSystemMessages(unittest.TestCase):
 
         async def _t():
             executor = ClaudeSDKExecutor()
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 events = [
                     e
                     async for e in executor.run_turn(
@@ -1193,7 +1193,7 @@ class TestSystemMessages(unittest.TestCase):
             SystemMessage as SDKSystemMessage,
         )
 
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         class _Sentinel:
             pass
@@ -1239,10 +1239,10 @@ class TestSystemMessages(unittest.TestCase):
 
         async def _t():
             # Create a gateway executor that uses a Databricks profile path.
-            # gateway=True + no host/base_url overrides → _gateway_uses_databricks_profile is True.
+            # gateway=True + no host/base_url overrides â†’ _gateway_uses_databricks_profile is True.
             # Patch _resolve_gateway_env to avoid needing a real ~/.databrickscfg.
             with patch(
-                "agent_meow.inner.claude_sdk_executor._resolve_gateway_env",
+                "omnigent.inner.claude_sdk_executor._resolve_gateway_env",
                 return_value={
                     "ANTHROPIC_BASE_URL": "https://host/ai-gateway/anthropic",
                     "CLAUDE_CODE_API_KEY_HELPER_TTL_MS": "900000",
@@ -1251,7 +1251,7 @@ class TestSystemMessages(unittest.TestCase):
                 },
             ):
                 executor = ClaudeSDKExecutor(gateway=True)
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 events = [
                     e
                     async for e in executor.run_turn(
@@ -1270,7 +1270,7 @@ class TestSystemMessages(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Tests: skills_filter → SDK skills option translation + plugin manifest
+# Tests: skills_filter â†’ SDK skills option translation + plugin manifest
 # ---------------------------------------------------------------------------
 
 
@@ -1287,7 +1287,7 @@ class TestSkillsFilterTranslation(unittest.TestCase):
 
     def test_all_lets_sdk_default_setting_sources(self) -> None:
         """
-        ``"all"`` → SDK ``skills="all"`` and
+        ``"all"`` â†’ SDK ``skills="all"`` and
         ``setting_sources=None`` (the SDK's default-derivation
         kicks in, producing ``["user", "project"]``).
 
@@ -1296,7 +1296,7 @@ class TestSkillsFilterTranslation(unittest.TestCase):
         explicit list here would freeze the default and miss
         future SDK changes.
         """
-        from agent_meow.inner.claude_sdk_executor import _resolve_skills_option
+        from omnigent.inner.claude_sdk_executor import _resolve_skills_option
 
         result = _resolve_skills_option("all")
         assert result is not None
@@ -1305,13 +1305,13 @@ class TestSkillsFilterTranslation(unittest.TestCase):
 
     def test_none_zeros_skills_and_setting_sources(self) -> None:
         """
-        ``"none"`` → SDK ``skills=[]`` AND
+        ``"none"`` â†’ SDK ``skills=[]`` AND
         ``setting_sources=[]``.
 
         BOTH must be set to truly suppress host skills. The SDK's
         ``_apply_skills_defaults`` auto-fills
         ``setting_sources=["user","project"]`` when ``skills`` is
-        non-None — including when ``skills=[]``. That auto-default
+        non-None â€” including when ``skills=[]``. That auto-default
         loads ``~/.claude/skills/`` into the system prompt
         listing even though the ``Skill`` tool itself is hidden.
         Forcing ``setting_sources=[]`` is what actually keeps the
@@ -1319,7 +1319,7 @@ class TestSkillsFilterTranslation(unittest.TestCase):
         ``skills=[]`` set, ``skills: none`` in YAML still showed
         every host skill in the model's output.
         """
-        from agent_meow.inner.claude_sdk_executor import _resolve_skills_option
+        from omnigent.inner.claude_sdk_executor import _resolve_skills_option
 
         result = _resolve_skills_option("none")
         assert result is not None
@@ -1328,7 +1328,7 @@ class TestSkillsFilterTranslation(unittest.TestCase):
 
     def test_list_lets_sdk_default_setting_sources(self) -> None:
         """A list of names round-trips and uses the SDK default."""
-        from agent_meow.inner.claude_sdk_executor import _resolve_skills_option
+        from omnigent.inner.claude_sdk_executor import _resolve_skills_option
 
         result = _resolve_skills_option(["foo", "bar:baz"])
         assert result is not None
@@ -1342,7 +1342,7 @@ class TestSkillsFilterTranslation(unittest.TestCase):
         spec parser already validates, so this is a belt-and-
         suspenders defense at the executor boundary.
         """
-        from agent_meow.inner.claude_sdk_executor import _resolve_skills_option
+        from omnigent.inner.claude_sdk_executor import _resolve_skills_option
 
         self.assertIsNone(_resolve_skills_option("bogus"))
 
@@ -1354,7 +1354,7 @@ class TestSkillsFilterTranslation(unittest.TestCase):
 
 class TestStreamEventStreaming(unittest.TestCase):
     def test_live_clients_are_reused_per_omnigent_session(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         query_calls = []
         connect_calls = []
@@ -1411,7 +1411,7 @@ class TestStreamEventStreaming(unittest.TestCase):
 
         async def _t():
             executor = ClaudeSDKExecutor()
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 session_a = [{"role": "user", "content": "hello", "session_id": "session-a"}]
                 session_b = [{"role": "user", "content": "bonjour", "session_id": "session-b"}]
 
@@ -1422,7 +1422,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             self.assertEqual(query_calls[0]["session_id"], "session-a")
             # ``--bare`` was previously included to suppress host config
             # leakage. It was dropped because bare mode also kills
-            # CLAUDE.md auto-discovery, plugin sync, and skill loading —
+            # CLAUDE.md auto-discovery, plugin sync, and skill loading â€”
             # which the spec's ``skills:`` field is the proper knob for.
             self.assertEqual(
                 query_calls[0]["extra_args"],
@@ -1430,7 +1430,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             )
             # Skill is always in the base tool set so the Skill tool is
             # actually exposed to the model when ``skills="all"`` (the
-            # SDK only adds Skill to ``allowedTools`` — without listing
+            # SDK only adds Skill to ``allowedTools`` â€” without listing
             # it in ``tools`` the CLI passes ``--tools ""`` and zeros
             # the base set).
             self.assertEqual(query_calls[0]["tools"], ["Skill"])
@@ -1446,8 +1446,8 @@ class TestStreamEventStreaming(unittest.TestCase):
         _run(_t())
 
     def test_os_env_spec_exposes_only_explicit_native_tools(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-        from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
         captured_options = {}
 
@@ -1520,7 +1520,7 @@ class TestStreamEventStreaming(unittest.TestCase):
                     sandbox=OSEnvSandboxSpec(type="none"),
                 ),
             )
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 events = [
                     e
                     async for e in executor.run_turn(
@@ -1545,7 +1545,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         _run(_t())
 
     def test_mcp_only_session_disables_native_tool_base_set(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         captured_options = {}
 
@@ -1607,7 +1607,7 @@ class TestStreamEventStreaming(unittest.TestCase):
 
         async def _t():
             executor = ClaudeSDKExecutor()
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 events = [
                     e
                     async for e in executor.run_turn(
@@ -1625,7 +1625,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             # Default ``skills_filter="all"`` exposes the ``Skill``
             # tool so the model can invoke discovered skills via
             # the Claude SDK plugin mechanism. The OS tools
-            # (Bash/Read/Edit/Write/Glob/Grep) stay absent — that's
+            # (Bash/Read/Edit/Write/Glob/Grep) stay absent â€” that's
             # what this test pins. ``Skill`` itself doesn't widen
             # the FS attack surface; it only loads pre-approved
             # SKILL.md content.
@@ -1636,7 +1636,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         _run(_t())
 
     def test_session_send_tool_is_exposed_via_mcp(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         captured_options = {}
 
@@ -1698,7 +1698,7 @@ class TestStreamEventStreaming(unittest.TestCase):
 
         async def _t():
             executor = ClaudeSDKExecutor()
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 events = [
                     e
                     async for e in executor.run_turn(
@@ -1730,7 +1730,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         _run(_t())
 
     def test_crashed_session_refuses_future_turns(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         class _FakeSDK:
             AssistantMessage = type("AssistantMessage", (), {})
@@ -1764,7 +1764,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         async def _t():
             executor = ClaudeSDKExecutor()
             messages = [{"role": "user", "content": "hello", "session_id": "session-a"}]
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 first_events = [e async for e in executor.run_turn(messages, [], "")]
                 second_events = [e async for e in executor.run_turn(messages, [], "")]
 
@@ -1778,7 +1778,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         _run(_t())
 
     def test_close_session_disconnects_live_client(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor, _ClaudeClientState
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor, _ClaudeClientState
 
         disconnect = AsyncMock()
         client = type("Client", (), {"disconnect": disconnect})()
@@ -1804,7 +1804,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         next turn would resume and silently continue the canceled
         instruction.
         """
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor, _ClaudeClientState
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor, _ClaudeClientState
 
         interrupt = AsyncMock()
         disconnect = AsyncMock()
@@ -1831,11 +1831,11 @@ class TestStreamEventStreaming(unittest.TestCase):
         """A failed safe interrupt still drops the session.
 
         The session must be torn down regardless of whether the SDK's
-        ``interrupt()`` succeeds — otherwise a flaky interrupt would
+        ``interrupt()`` succeeds â€” otherwise a flaky interrupt would
         leave the abandoned-prompt session resumable. If ``close_session``
         is not awaited here, the interrupt-failure path leaks the session.
         """
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor, _ClaudeClientState
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor, _ClaudeClientState
 
         async def fail_interrupt():
             raise RuntimeError("boom")
@@ -1854,7 +1854,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         _run(_t())
 
     def test_close_disconnects_all_live_clients(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor, _ClaudeClientState
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor, _ClaudeClientState
 
         disconnect_a = AsyncMock()
         disconnect_b = AsyncMock()
@@ -1873,7 +1873,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         _run(_t())
 
     def test_close_session_force_closes_on_loop_mismatch(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor, _ClaudeClientState
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor, _ClaudeClientState
 
         client = type("Client", (), {})()
         client.disconnect = AsyncMock()
@@ -1905,7 +1905,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             StreamEvent as SDKStreamEvent,
         )
 
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         class _Sentinel:
             pass
@@ -1967,7 +1967,7 @@ class TestStreamEventStreaming(unittest.TestCase):
 
         async def _t():
             executor = ClaudeSDKExecutor()
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 events = [
                     e
                     async for e in executor.run_turn(
@@ -1995,7 +1995,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         Regression pin: the streaming path used to emit
         ``ToolCallRequest(name=..., args={})`` at ``content_block_start``,
         before Claude had streamed the ``input_json_delta`` events. The
-        REPL then rendered tool calls as ``⏵ Bash()`` with no visible
+        REPL then rendered tool calls as ``âµ Bash()`` with no visible
         command because the args summary saw an empty dict. The fix
         defers the emission to the ``AssistantMessage`` branch where
         ``tool_block.input`` is populated.
@@ -2024,7 +2024,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             ToolUseBlock as SDKToolUseBlock,
         )
 
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         class _Sentinel:
             pass
@@ -2044,7 +2044,7 @@ class TestStreamEventStreaming(unittest.TestCase):
                 # Live SDK order: tool_use block_start fires before
                 # Claude has streamed the full ``input_json_delta``
                 # sequence. The production path now only tracks the
-                # tool id here — it does NOT emit ToolCallRequest
+                # tool id here â€” it does NOT emit ToolCallRequest
                 # yet. Keeping this event in the fixture ensures a
                 # future regression that re-introduces the early
                 # emission fails the ``len(reqs) == 1`` check below.
@@ -2063,7 +2063,7 @@ class TestStreamEventStreaming(unittest.TestCase):
                     },
                 ),
                 # Full AssistantMessage after input deltas have
-                # assembled — this is where ``tool_block.input`` is
+                # assembled â€” this is where ``tool_block.input`` is
                 # populated and the ToolCallRequest must fire.
                 SDKAssistantMessage(
                     content=[
@@ -2106,7 +2106,7 @@ class TestStreamEventStreaming(unittest.TestCase):
 
         async def _t():
             executor = ClaudeSDKExecutor()
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 events = [
                     e
                     async for e in executor.run_turn(
@@ -2124,13 +2124,13 @@ class TestStreamEventStreaming(unittest.TestCase):
             self.assertEqual(reqs[0].name, "Bash")
             # The specific regression: args must be the assembled dict
             # from ``tool_block.input``, not ``{}``. Pre-fix this was
-            # ``{}`` and downstream rendered ``⏵ Bash()``.
+            # ``{}`` and downstream rendered ``âµ Bash()``.
             self.assertEqual(reqs[0].args, {"command": "ls -la"})
 
         _run(_t())
 
     def test_tool_result_error_yields_tool_call_complete_error(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         class _ToolUseBlock:
             def __init__(self, id, name, input):
@@ -2204,7 +2204,7 @@ class TestStreamEventStreaming(unittest.TestCase):
 
         async def _t():
             executor = ClaudeSDKExecutor()
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 events = [
                     e
                     async for e in executor.run_turn(
@@ -2221,7 +2221,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         _run(_t())
 
     def test_tool_result_blocked_yields_blocked_status(self):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         class _ToolUseBlock:
             def __init__(self, id, name, input):
@@ -2295,7 +2295,7 @@ class TestStreamEventStreaming(unittest.TestCase):
 
         async def _t():
             executor = ClaudeSDKExecutor()
-            with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+            with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
                 events = [
                     e
                     async for e in executor.run_turn(
@@ -2319,7 +2319,7 @@ class TestStreamEventStreaming(unittest.TestCase):
 
 def test_unset_env_var_removes_and_restores(monkeypatch):
     """Env var present before ``with`` is absent during, restored after."""
-    from agent_meow.inner.claude_sdk_executor import _unset_env_var
+    from omnigent.inner.claude_sdk_executor import _unset_env_var
 
     monkeypatch.setenv("CLAUDECODE", "parent-value")
     with _unset_env_var("CLAUDECODE"):
@@ -2329,7 +2329,7 @@ def test_unset_env_var_removes_and_restores(monkeypatch):
 
 def test_unset_env_var_noop_when_unset(monkeypatch):
     """When env var is not set before ``with``, block runs cleanly and key stays unset."""
-    from agent_meow.inner.claude_sdk_executor import _unset_env_var
+    from omnigent.inner.claude_sdk_executor import _unset_env_var
 
     monkeypatch.delenv("CLAUDECODE", raising=False)
     with _unset_env_var("CLAUDECODE"):
@@ -2339,7 +2339,7 @@ def test_unset_env_var_noop_when_unset(monkeypatch):
 
 def test_unset_env_var_restores_on_exception(monkeypatch):
     """Restoration must still happen when the block raises."""
-    from agent_meow.inner.claude_sdk_executor import _unset_env_var
+    from omnigent.inner.claude_sdk_executor import _unset_env_var
 
     monkeypatch.setenv("CLAUDECODE", "original")
     with pytest.raises(RuntimeError, match="boom"):
@@ -2357,7 +2357,7 @@ def test_databricks_model_without_routing_raises() -> None:
     """
     import pytest
 
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     with pytest.raises(ValueError, match="Databricks-hosted model"):
         ClaudeSDKExecutor(
@@ -2371,7 +2371,7 @@ def test_non_databricks_model_without_routing_does_not_raise() -> None:
 
     Ensures the guard only fires on the ``databricks-`` prefix.
     """
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     executor = ClaudeSDKExecutor(
         model="claude-3-5-sonnet-20241022",
@@ -2395,7 +2395,7 @@ async def test_anthropic_api_key_stripped_during_connect(monkeypatch):
     captures ``os.environ`` at the moment ``connect()`` is invoked,
     ensuring both ``CLAUDECODE`` and ``ANTHROPIC_API_KEY`` are absent.
     """
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     # Env snapshot captured inside connect() -- proves the real code
     # path strips the keys, not just a standalone _unset_env_var call.
@@ -2455,8 +2455,8 @@ async def test_get_or_create_client_surfaces_cli_stderr_on_connect_timeout(monke
     raised ``TimeoutError`` so CI logs surface what the subprocess was
     doing while it hung.
     """
-    from agent_meow.inner import claude_sdk_executor as cse
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner import claude_sdk_executor as cse
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     monkeypatch.setattr(cse, "_CONNECT_TIMEOUT_SECONDS", 0.2)
 
@@ -2512,8 +2512,8 @@ def test_prepare_claude_cli_path_bypasses_wrapper_when_env_set(
     diagnostic knob to isolate the sandbox as a cause of the silent
     claude-sdk connect hang on the nightly Linux runner.
     """
-    from agent_meow.inner.claude_sdk_executor import prepare_claude_cli_path
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner.claude_sdk_executor import prepare_claude_cli_path
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_SDK_NO_SANDBOX", env_value)
 
@@ -2521,7 +2521,7 @@ def test_prepare_claude_cli_path_bypasses_wrapper_when_env_set(
         raise AssertionError("create_exec_launcher must not be called when bypass is enabled")
 
     monkeypatch.setattr(
-        "agent_meow.inner.claude_sdk_executor.create_exec_launcher",
+        "omnigent.inner.claude_sdk_executor.create_exec_launcher",
         _fail_if_called,
     )
 
@@ -2535,7 +2535,7 @@ def test_prepare_claude_cli_path_bypasses_wrapper_when_env_set(
             allow_network=True,
         ),
     )
-    with caplog.at_level(logging.WARNING, logger="agent_meow.inner.claude_sdk_executor"):
+    with caplog.at_level(logging.WARNING, logger="omnigent.inner.claude_sdk_executor"):
         prepared = prepare_claude_cli_path("/usr/bin/claude", spec)
 
     assert prepared.cli_path == "/usr/bin/claude"
@@ -2552,7 +2552,7 @@ def test_prepare_claude_cli_path_bypasses_wrapper_when_env_set(
 
 def test_prepare_tight_cli_process_path_bypasses_wrapper_when_env_set(monkeypatch) -> None:
     """``prepare_tight_cli_process_path`` must also honor the bypass env."""
-    from agent_meow.inner.claude_sdk_executor import prepare_tight_cli_process_path
+    from omnigent.inner.claude_sdk_executor import prepare_tight_cli_process_path
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_SDK_NO_SANDBOX", "1")
 
@@ -2560,7 +2560,7 @@ def test_prepare_tight_cli_process_path_bypasses_wrapper_when_env_set(monkeypatc
         raise AssertionError("create_exec_launcher must not be called when bypass is enabled")
 
     monkeypatch.setattr(
-        "agent_meow.inner.claude_sdk_executor.create_exec_launcher",
+        "omnigent.inner.claude_sdk_executor.create_exec_launcher",
         _fail_if_called,
     )
 
@@ -2577,7 +2577,7 @@ def _b64(text: str) -> str:
 
 
 def test_to_anthropic_content_blocks_pdf_uses_base64_source() -> None:
-    """PDF input_file blocks must use ``source.type = "base64"`` — the
+    """PDF input_file blocks must use ``source.type = "base64"`` â€” the
     only MIME Anthropic accepts for the base64 document source shape."""
     pdf_data = _b64(b"%PDF-1.4 fake pdf content".decode("latin-1"))
     blocks = [{"type": "input_file", "file_data": f"data:application/pdf;base64,{pdf_data}"}]
@@ -2591,7 +2591,7 @@ def test_to_anthropic_content_blocks_pdf_uses_base64_source() -> None:
 
 
 def test_to_anthropic_content_blocks_markdown_uses_text_source() -> None:
-    """Markdown input_file blocks must use ``source.type = "text"`` —
+    """Markdown input_file blocks must use ``source.type = "text"`` â€”
     Anthropic rejects ``base64`` source with non-PDF media types."""
     md_content = "# Hello\n\nThis is markdown."
     md_b64 = _b64(md_content)
@@ -2627,7 +2627,7 @@ def test_to_anthropic_content_blocks_plain_text_uses_text_source() -> None:
 @pytest.mark.asyncio
 async def test_get_or_create_client_surfaces_cli_stderr_on_connect_error() -> None:
     """A non-timeout connect failure includes captured CLI stderr."""
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     class _StubClient:
         def __init__(self, options: object) -> None:
@@ -2696,7 +2696,7 @@ async def test_result_message_usage_populates_turn_complete_usage() -> None:
     from claude_agent_sdk.types import ResultMessage as SDKResultMessage
     from claude_agent_sdk.types import StreamEvent as SDKStreamEvent
 
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     class _Sentinel:
         pass
@@ -2745,7 +2745,7 @@ async def test_result_message_usage_populates_turn_complete_usage() -> None:
                 return None
 
     executor = ClaudeSDKExecutor()
-    with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+    with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
         events = [
             e
             async for e in executor.run_turn(
@@ -2757,34 +2757,34 @@ async def test_result_message_usage_populates_turn_complete_usage() -> None:
 
     turn = next(e for e in events if isinstance(e, TurnComplete))
 
-    # Provider-reported counts must appear verbatim — if this is None the
+    # Provider-reported counts must appear verbatim â€” if this is None the
     # REPL context ring will never update after the first turn for claude-sdk.
     assert turn.usage is not None, (
-        "TurnComplete.usage is None — ResultMessage.usage was not captured. "
+        "TurnComplete.usage is None â€” ResultMessage.usage was not captured. "
         "The context ring and /context command will show stale data after "
         "the first turn."
     )
 
     # input_tokens / output_tokens must come through from ResultMessage.usage
     assert turn.usage["input_tokens"] == 500, (
-        f"input_tokens {turn.usage['input_tokens']} != 500 — "
+        f"input_tokens {turn.usage['input_tokens']} != 500 â€” "
         "ResultMessage.usage['input_tokens'] was not forwarded."
     )
     assert turn.usage["output_tokens"] == 200, (
-        f"output_tokens {turn.usage['output_tokens']} != 200 — "
+        f"output_tokens {turn.usage['output_tokens']} != 200 â€” "
         "ResultMessage.usage['output_tokens'] was not forwarded."
     )
 
     # total_tokens is computed as input + output so the toolbar ring can
     # use usage["total_tokens"] without also needing individual fields.
     assert turn.usage["total_tokens"] == 700, (
-        f"total_tokens {turn.usage['total_tokens']} != 700 (500+200) — "
+        f"total_tokens {turn.usage['total_tokens']} != 700 (500+200) â€” "
         "total_tokens must be computed as input_tokens + output_tokens."
     )
 
     # Cache fields pass through as-is so the server can persist them.
     assert turn.usage.get("cache_read_input_tokens") == 50, (
-        f"cache_read_input_tokens {turn.usage.get('cache_read_input_tokens')} != 50 — "
+        f"cache_read_input_tokens {turn.usage.get('cache_read_input_tokens')} != 50 â€” "
         "extra usage keys from ResultMessage.usage should be forwarded verbatim."
     )
 
@@ -2796,16 +2796,16 @@ async def test_result_message_usage_populates_turn_complete_usage() -> None:
     # from total_tokens here (550 != 700) precisely because total ignores the
     # cached prompt while context includes it.
     assert turn.usage["context_tokens"] == 550, (
-        f"context_tokens {turn.usage.get('context_tokens')} != 550 (500+0+50) — "
+        f"context_tokens {turn.usage.get('context_tokens')} != 550 (500+0+50) â€” "
         "context_tokens must sum input + cache_creation + cache_read so the "
         "runner reports accurate, accumulating context-window fill."
     )
 
     # The resolved model is forwarded in usage so the server cost path can
     # price the turn even when the agent spec pins no llm.model. The key must
-    # be present (here it's None — no model is configured in this unit test).
+    # be present (here it's None â€” no model is configured in this unit test).
     assert "model" in turn.usage, (
-        "TurnComplete.usage is missing the 'model' key — the server cost path "
+        "TurnComplete.usage is missing the 'model' key â€” the server cost path "
         "relies on it to price relay turns whose spec pins no llm.model."
     )
 
@@ -2819,7 +2819,7 @@ async def test_context_tokens_uses_last_call_not_cumulative_on_multi_iteration_t
     across all of them, so its ``input_tokens`` / cache buckets are the
     sum of every iteration's prompt. Since each iteration re-sends the
     whole (growing) conversation, summing the prompt side K-fold
-    over-counts context — which surfaced as the toolbar context ring
+    over-counts context â€” which surfaced as the toolbar context ring
     spiking up during a tool-using turn and snapping back down on the
     next plain turn.
 
@@ -2843,7 +2843,7 @@ async def test_context_tokens_uses_last_call_not_cumulative_on_multi_iteration_t
     from claude_agent_sdk.types import ResultMessage as SDKResultMessage
     from claude_agent_sdk.types import StreamEvent as SDKStreamEvent
 
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     class _Sentinel:
         pass
@@ -2913,7 +2913,7 @@ async def test_context_tokens_uses_last_call_not_cumulative_on_multi_iteration_t
                 return None
 
     executor = ClaudeSDKExecutor()
-    with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+    with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
         events = [
             e
             async for e in executor.run_turn(
@@ -2930,28 +2930,28 @@ async def test_context_tokens_uses_last_call_not_cumulative_on_multi_iteration_t
     # cumulative sum (800 + 20300 = 21100). This is the whole point of the
     # fix: a tool-using turn must not inflate the context ring.
     assert turn.usage["context_tokens"] == 10800, (
-        f"context_tokens {turn.usage.get('context_tokens')} != 10800 — must be the "
+        f"context_tokens {turn.usage.get('context_tokens')} != 10800 â€” must be the "
         "LAST message_start call's prompt (input+cache_creation+cache_read), not the "
         "cumulative ResultMessage sum (21100). Using the cumulative value over-counts "
         "context K-fold on a K-call turn."
     )
     assert turn.usage["context_tokens"] != 21100, (
-        "context_tokens equals the cumulative over-count (21100) — the executor is "
+        "context_tokens equals the cumulative over-count (21100) â€” the executor is "
         "summing prompt usage across tool-loop iterations instead of taking the last call."
     )
 
     # Billing totals still come from the cumulative ResultMessage.usage so
     # cost is charged for every call, not just the last one.
     assert turn.usage["input_tokens"] == 800, (
-        f"input_tokens {turn.usage.get('input_tokens')} != 800 — billing input must "
+        f"input_tokens {turn.usage.get('input_tokens')} != 800 â€” billing input must "
         "stay the cumulative cross-call sum from ResultMessage.usage."
     )
     assert turn.usage["output_tokens"] == 250, (
-        f"output_tokens {turn.usage.get('output_tokens')} != 250 — billing output must "
+        f"output_tokens {turn.usage.get('output_tokens')} != 250 â€” billing output must "
         "stay the cumulative sum from ResultMessage.usage."
     )
     assert turn.usage["total_tokens"] == 1050, (
-        f"total_tokens {turn.usage.get('total_tokens')} != 1050 (800+250) — total must "
+        f"total_tokens {turn.usage.get('total_tokens')} != 1050 (800+250) â€” total must "
         "be the cumulative input + output for billing."
     )
 
@@ -2962,7 +2962,7 @@ async def test_context_tokens_emitted_when_turn_ends_without_result_message() ->
 
     ``context_tokens`` (context-window fill) is normally assembled in the
     ``ResultMessage`` branch at successful completion. But a turn can end the
-    stream without a ``ResultMessage`` — the CLI can close the stream early,
+    stream without a ``ResultMessage`` â€” the CLI can close the stream early,
     or the turn can be cut short before its final usage is reported. Before
     this fix the executor yielded ``TurnComplete(usage=None)`` in that case,
     so the occupancy meter froze at the previous successful turn's value and
@@ -2984,13 +2984,13 @@ async def test_context_tokens_emitted_when_turn_ends_without_result_message() ->
     from claude_agent_sdk.types import ResultMessage as SDKResultMessage
     from claude_agent_sdk.types import StreamEvent as SDKStreamEvent
 
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     class _Sentinel:
         pass
 
     # The turn opens one API call (carrying its prompt usage) and then the
-    # stream simply ends — no ResultMessage, mirroring an early CLI stream
+    # stream simply ends â€” no ResultMessage, mirroring an early CLI stream
     # close or a turn cut short before final usage is reported.
     message_start = SDKStreamEvent(
         uuid="u1",
@@ -3034,7 +3034,7 @@ async def test_context_tokens_emitted_when_turn_ends_without_result_message() ->
                 return None
 
     executor = ClaudeSDKExecutor()
-    with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+    with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
         events = [
             e
             async for e in executor.run_turn(
@@ -3046,7 +3046,7 @@ async def test_context_tokens_emitted_when_turn_ends_without_result_message() ->
 
     turn = next(e for e in events if isinstance(e, TurnComplete))
     assert turn.usage is not None, (
-        "TurnComplete.usage is None on a turn that ended without a ResultMessage — "
+        "TurnComplete.usage is None on a turn that ended without a ResultMessage â€” "
         "the observed message_start prompt usage was discarded, so the occupancy "
         "meter freezes at the last successful turn's value (#1533)."
     )
@@ -3054,14 +3054,14 @@ async def test_context_tokens_emitted_when_turn_ends_without_result_message() ->
     # context_tokens = the observed prompt = input + cache_creation + cache_read
     # (400 + 100 + 9000), so a failed/early-ending turn still refreshes fill.
     assert turn.usage["context_tokens"] == 9500, (
-        f"context_tokens {turn.usage.get('context_tokens')} != 9500 (400+100+9000) — "
+        f"context_tokens {turn.usage.get('context_tokens')} != 9500 (400+100+9000) â€” "
         "an incomplete turn must report context_tokens from the last observed "
         "message_start prompt so the occupancy meter does not freeze."
     )
     # output_tokens is unknown on an incomplete turn, so it is reported as 0
     # rather than guessed; the meaningful field here is context_tokens.
     assert turn.usage["output_tokens"] == 0, (
-        f"output_tokens {turn.usage.get('output_tokens')} != 0 — output is unknown "
+        f"output_tokens {turn.usage.get('output_tokens')} != 0 â€” output is unknown "
         "on an incomplete turn and must not be fabricated."
     )
     assert "model" in turn.usage, (
@@ -3074,10 +3074,10 @@ async def test_assistant_message_model_flows_to_turn_usage() -> None:
     """The SDK's assistant-message model is forwarded in ``TurnComplete.usage``.
 
     When the agent spec pins no model (a delegating supervisor on the gateway),
-    the resolved config model is ``None`` — but the Claude SDK reports the
+    the resolved config model is ``None`` â€” but the Claude SDK reports the
     concrete model on each ``AssistantMessage``. The executor captures it and
     forwards it as ``usage["model"]`` so the server cost path can price the
-    turn. A regression here leaves cost unpriced ("—") for every unpinned
+    turn. A regression here leaves cost unpriced ("â€”") for every unpinned
     claude-sdk agent (the debbie/debby supervisors).
     """
     from unittest.mock import patch
@@ -3088,7 +3088,7 @@ async def test_assistant_message_model_flows_to_turn_usage() -> None:
     from claude_agent_sdk.types import ResultMessage as SDKResultMessage
     from claude_agent_sdk.types import StreamEvent as SDKStreamEvent
 
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     class _AsstMsg:
         """Minimal stand-in for the SDK AssistantMessage (carries model)."""
@@ -3137,7 +3137,7 @@ async def test_assistant_message_model_flows_to_turn_usage() -> None:
                 return None
 
     executor = ClaudeSDKExecutor()
-    with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+    with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
         events = [
             e
             async for e in executor.run_turn(
@@ -3152,7 +3152,7 @@ async def test_assistant_message_model_flows_to_turn_usage() -> None:
     # No model is configured (no cfg.model / override), so a non-None model here
     # can only be the one captured from the AssistantMessage.
     assert turn.usage["model"] == "claude-opus-4-8", (
-        f"usage model {turn.usage.get('model')!r} != 'claude-opus-4-8' — the "
+        f"usage model {turn.usage.get('model')!r} != 'claude-opus-4-8' â€” the "
         "assistant-message model was not captured/forwarded."
     )
 
@@ -3164,7 +3164,7 @@ async def test_result_message_usage_none_yields_turn_complete_without_usage() ->
     The executor must not synthesize fake usage when the SDK doesn't report it
     (e.g. Databricks gateway not returning usage). ``None`` usage causes the
     REPL to fall back to its local ``count_tokens()`` estimate, which is correct
-    behaviour — no invented numbers should appear in the context ring.
+    behaviour â€” no invented numbers should appear in the context ring.
 
     Regression guard: if the usage-capture code unconditionally sets
     ``turn_usage = {}`` (or any non-None dict), the REPL would display
@@ -3178,7 +3178,7 @@ async def test_result_message_usage_none_yields_turn_complete_without_usage() ->
     from claude_agent_sdk.types import ResultMessage as SDKResultMessage
     from claude_agent_sdk.types import StreamEvent as SDKStreamEvent
 
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
     class _Sentinel:
         pass
@@ -3222,7 +3222,7 @@ async def test_result_message_usage_none_yields_turn_complete_without_usage() ->
                 return None
 
     executor = ClaudeSDKExecutor()
-    with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+    with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
         events = [
             e
             async for e in executor.run_turn(
@@ -3254,13 +3254,13 @@ class TestToolCallPolicyGate(unittest.TestCase):
     """
 
     def _make_executor(self, permission_mode="bypassPermissions"):
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         return ClaudeSDKExecutor(permission_mode=permission_mode)
 
     @staticmethod
     def _verdict(action, reason=None):
-        from agent_meow.runtime.harnesses._scaffold import PolicyVerdictPayload
+        from omnigent.runtime.harnesses._scaffold import PolicyVerdictPayload
 
         return PolicyVerdictPayload(action=action, reason=reason)
 
@@ -3319,7 +3319,7 @@ class TestToolCallPolicyGate(unittest.TestCase):
 
             self.assertIsInstance(result, PermissionResultDeny)
             self.assertEqual(result.message, "no writes to github")
-            # DENY short-circuits — no human prompt.
+            # DENY short-circuits â€” no human prompt.
             elicit.assert_not_awaited()
 
         _run(_t())
@@ -3523,9 +3523,9 @@ class TestToolCallPolicyGate(unittest.TestCase):
 
     def test_gate_installed_under_bypass_permissions(self):
         """run_turn installs the can_use_tool gate even under
-        bypassPermissions when a policy evaluator is wired — the
+        bypassPermissions when a policy evaluator is wired â€” the
         regression this feature fixes."""
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         async def _t():
             executor = ClaudeSDKExecutor(permission_mode="bypassPermissions")
@@ -3557,7 +3557,7 @@ class TestToolCallPolicyGate(unittest.TestCase):
     def test_gate_not_installed_without_evaluator_or_handler(self):
         """With neither a policy evaluator nor an elicitation handler, no
         can_use_tool callback is installed (unchanged baseline)."""
-        from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
+        from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
 
         async def _t():
             executor = ClaudeSDKExecutor(permission_mode="bypassPermissions")
@@ -3590,8 +3590,8 @@ def test_precompact_hook_emits_compaction_complete_with_session_messages() -> No
     """When PreCompact fires and a ResultMessage carries a session_id,
     CompactionComplete is emitted with compacted_messages read from
     the CLI's session transcript."""
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-    from agent_meow.inner.executor import CompactionComplete
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.executor import CompactionComplete
 
     class _ResultMessage:
         def __init__(self, session_id, result):
@@ -3668,7 +3668,7 @@ def test_precompact_hook_emits_compaction_complete_with_session_messages() -> No
         executor = ClaudeSDKExecutor()
         with (
             patch(
-                "agent_meow.inner.claude_sdk_executor._ensure_sdk",
+                "omnigent.inner.claude_sdk_executor._ensure_sdk",
                 return_value=_FakeSDK,
             ),
             patch(
@@ -3703,8 +3703,8 @@ def test_precompact_hook_emits_compaction_complete_with_session_messages() -> No
 
 def test_no_precompact_no_compaction_event() -> None:
     """When no PreCompact hook fires, no CompactionComplete is yielded."""
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-    from agent_meow.inner.executor import CompactionComplete
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.executor import CompactionComplete
 
     class _ResultMessage:
         def __init__(self, session_id, result):
@@ -3753,7 +3753,7 @@ def test_no_precompact_no_compaction_event() -> None:
 
     async def _t():
         executor = ClaudeSDKExecutor()
-        with patch("agent_meow.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
+        with patch("omnigent.inner.claude_sdk_executor._ensure_sdk", return_value=_FakeSDK):
             events = [
                 e
                 async for e in executor.run_turn(

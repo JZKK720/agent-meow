@@ -17,8 +17,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.runner.app import _spec_with_workdir_paths
-from agent_meow.spec.types import AgentSpec, LocalToolInfo
+from omnigent.runner.app import _spec_with_workdir_paths
+from omnigent.spec.types import AgentSpec, LocalToolInfo
 
 
 def _spec_with_tools(tools: list[LocalToolInfo]) -> AgentSpec:

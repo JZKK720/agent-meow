@@ -1,7 +1,7 @@
-"""Unit tests for ``agent_meow/model_catalog.py``.
+"""Unit tests for ``omnigent/model_catalog.py``.
 
 The catalog backs ``sys_list_models`` and the dispatch gate's
-canonical→local model-id normalization: provider resolution must mirror
+canonicalâ†’local model-id normalization: provider resolution must mirror
 the spawn paths' precedence, and enumeration must hit each provider
 kind's real listing endpoint. HTTP is mocked at the transport boundary
 (``httpx.MockTransport``) with realistic provider payloads; the
@@ -20,15 +20,15 @@ import httpx
 import pytest
 from cachetools import TTLCache
 
-import agent_meow.model_catalog as model_catalog
-from agent_meow.model_catalog import (
+import omnigent.model_catalog as model_catalog
+from omnigent.model_catalog import (
     catalog_for_spec,
     list_models_for_worker,
     resolve_model_provider,
     spec_harness,
 )
-from agent_meow.runtime.credentials.databricks import WorkspaceCreds
-from agent_meow.spec.types import AgentSpec, ApiKeyAuth, DatabricksAuth, ExecutorSpec
+from omnigent.runtime.credentials.databricks import WorkspaceCreds
+from omnigent.spec.types import AgentSpec, ApiKeyAuth, DatabricksAuth, ExecutorSpec
 
 
 @pytest.fixture(autouse=True)
@@ -52,7 +52,7 @@ def _no_ambient_detection(monkeypatch: pytest.MonkeyPatch) -> None:
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
+    monkeypatch.setattr("omnigent.onboarding.detected.detect_providers", list)
 
 
 def _isolate_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, yaml_text: str) -> None:
@@ -119,7 +119,7 @@ _SERVING_ENDPOINTS_PAGE = {
 }
 
 
-# ── Provider resolution ────────────────────────────────────
+# â”€â”€ Provider resolution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_provider_databricks_default(
@@ -165,7 +165,7 @@ def test_resolve_provider_key_kind_resolves_family_credential(
     assert provider.kind == "key"
     assert provider.family == "anthropic"
     assert provider.base_url == "https://api.anthropic.com"
-    # The $VAR reference resolved to the real secret — the enumerator
+    # The $VAR reference resolved to the real secret â€” the enumerator
     # authenticates with this value.
     assert provider.api_key == "sk-ant-test"
 
@@ -272,7 +272,7 @@ def test_resolve_provider_databricks_model_prefix_uses_env_profile(
 @pytest.mark.parametrize(
     ("spec", "harness"),
     [
-        # No providers, no auth, no ambient → nothing resolves.
+        # No providers, no auth, no ambient â†’ nothing resolves.
         pytest.param(_worker_spec("claude-native"), "claude-native", id="nothing-configured"),
         # A harness outside the provider-resolution map.
         pytest.param(_worker_spec("unknown-harness"), "unknown-harness", id="unknown-harness"),
@@ -293,7 +293,7 @@ def test_resolve_provider_none_cases(
     """Unresolvable workers come back as kind ``"none"``, never an exception.
 
     The gate passes models through unchanged on ``"none"`` and the tool
-    reports the row as a dead worker — a raise here would crash both.
+    reports the row as a dead worker â€” a raise here would crash both.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Per-test temp dir.
@@ -303,11 +303,11 @@ def test_resolve_provider_none_cases(
     _isolate_config(monkeypatch, tmp_path, "")
     provider = resolve_model_provider(spec, harness)
     assert provider.kind == "none"
-    # The detail is what surfaces in the tool's note — it must say why.
+    # The detail is what surfaces in the tool's note â€” it must say why.
     assert provider.detail != ""
 
 
-# ── Per-harness legacy auth parity with the spawn-env builders ─────
+# â”€â”€ Per-harness legacy auth parity with the spawn-env builders â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize("harness", ["codex-native", "pi"])
@@ -328,7 +328,7 @@ def test_resolve_provider_codex_pi_ignore_legacy_auth_fields(
     """codex / pi report ``none`` for legacy auth fields their builders skip.
 
     ``_build_codex_spawn_env`` / ``_build_pi_spawn_env`` consume ONLY
-    ``config["profile"]`` and the ``databricks-*`` model prefix — never
+    ``config["profile"]`` and the ``databricks-*`` model prefix â€” never
     ``auth:`` blocks or top-level ``executor.profile``. If the catalog
     resolved these fields anyway, ``sys_list_models`` would advertise
     models the spawned child has no credentials to reach (the resolution
@@ -355,7 +355,7 @@ def test_resolve_provider_claude_sdk_consumes_top_level_executor_profile(
 
     The contrast case to the codex/pi test above:
     ``_build_claude_sdk_spawn_env`` reads ``config["profile"] or
-    executor.profile``, so the catalog must resolve it too — reporting
+    executor.profile``, so the catalog must resolve it too â€” reporting
     ``none`` here would mark a perfectly routable claude worker dead.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -375,7 +375,7 @@ def test_resolve_provider_openai_agents_api_key_auth_keeps_base_url(
 
     ``_build_openai_agents_sdk_spawn_env`` threads ``auth.base_url``
     into ``HARNESS_OPENAI_AGENTS_GATEWAY_BASE_URL``, so the listing must
-    enumerate that gateway — falling back to the vendor default would
+    enumerate that gateway â€” falling back to the vendor default would
     list api.openai.com models the child never talks to.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -399,8 +399,8 @@ def test_resolve_provider_global_auth_consumed_by_claude_sdk_not_codex(
     """A global ``auth:`` api_key block routes claude-sdk but not codex.
 
     ``_build_claude_sdk_spawn_env`` falls through to
-    ``_load_global_auth()`` (→ ``apiKeyHelper``); the codex builder
-    never reads the global block. One config, two verdicts — collapsing
+    ``_load_global_auth()`` (â†’ ``apiKeyHelper``); the codex builder
+    never reads the global block. One config, two verdicts â€” collapsing
     them either way mis-advertises one of the workers.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -408,7 +408,7 @@ def test_resolve_provider_global_auth_consumed_by_claude_sdk_not_codex(
     """
     _isolate_config(monkeypatch, tmp_path, "auth:\n  type: api_key\n  api_key: sk-global\n")
     claude = resolve_model_provider(_worker_spec("claude-native"), "claude-native")
-    # claude-sdk consumes the global key via apiKeyHelper → vendor API.
+    # claude-sdk consumes the global key via apiKeyHelper â†’ vendor API.
     assert claude.kind == "key"
     assert claude.family == "anthropic"
     assert claude.api_key == "sk-global"
@@ -417,7 +417,7 @@ def test_resolve_provider_global_auth_consumed_by_claude_sdk_not_codex(
     assert codex.kind == "none"
 
 
-# ── Enumeration per provider kind ──────────────────────────
+# â”€â”€ Enumeration per provider kind â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _databricks_transport(
@@ -457,7 +457,7 @@ def test_databricks_listing_filters_to_chat_llms(
 ) -> None:
     """The gateway listing keeps chat LLM endpoints and tags families.
 
-    The embeddings endpoint must be excluded — including it would let an
+    The embeddings endpoint must be excluded â€” including it would let an
     orchestrator dispatch a worker onto a non-chat endpoint.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -495,7 +495,7 @@ def test_databricks_listing_skips_explicitly_non_ready_endpoints(
     Listing a provisioning/failed endpoint would let an orchestrator
     dispatch a worker onto an endpoint that immediately errors. But the
     serving-endpoints API may omit ``state`` entirely, so dropping
-    absent-state endpoints would hide every model on those workspaces —
+    absent-state endpoints would hide every model on those workspaces â€”
     only an EXPLICIT non-READY value excludes.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -546,7 +546,7 @@ def test_databricks_listing_skips_explicitly_non_ready_endpoints(
         pytest.param("codex-native", {"databricks-gpt-5-4"}, id="openai-family-only"),
         # The executor-type spelling spec_harness() yields when a spec
         # declares no config harness must filter like its canonical
-        # sibling — an unrecognized spelling silently disables the
+        # sibling â€” an unrecognized spelling silently disables the
         # filter and lists wrong-family models.
         pytest.param(
             "claude_sdk", {"databricks-claude-sonnet-4-6"}, id="claude-sdk-executor-type"
@@ -700,7 +700,7 @@ def test_anthropic_api_listing_uses_api_key_headers(
 
     assert str(requests_seen[0].url) == "https://api.anthropic.com/v1/models"
     # The Anthropic API authenticates via x-api-key + anthropic-version,
-    # NOT a bearer header — a Bearer here means the wrong fetcher ran.
+    # NOT a bearer header â€” a Bearer here means the wrong fetcher ran.
     assert requests_seen[0].headers["x-api-key"] == "sk-ant-test"
     assert requests_seen[0].headers["anthropic-version"] == "2023-06-01"
     assert listing.source == "anthropic-api"
@@ -723,7 +723,7 @@ def test_subscription_listing_is_static_and_unverified(
     listing = list_models_for_worker(_worker_spec("claude-native"), "claude-native")
     assert listing.source == "static"
     assert listing.verified is False
-    # Exactly the curated claude tiers — these are aliases, not a live list.
+    # Exactly the curated claude tiers â€” these are aliases, not a live list.
     assert [m.id for m in listing.models] == [
         "claude-opus-4-8",
         "claude-sonnet-4-6",
@@ -748,7 +748,7 @@ def test_none_listing_explains_dead_worker(
     assert "cannot run here" in listing.note
 
 
-# ── TTL cache + failure behavior ───────────────────────────
+# â”€â”€ TTL cache + failure behavior â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_listing_cached_within_ttl_and_refetched_after_expiry(
@@ -775,7 +775,7 @@ def test_listing_cached_within_ttl_and_refetched_after_expiry(
 
     first = list_models_for_worker(_worker_spec("pi"), "pi", transport=transport)
     second = list_models_for_worker(_worker_spec("pi"), "pi", transport=transport)
-    # One fetch served both calls — the second replayed from the cache.
+    # One fetch served both calls â€” the second replayed from the cache.
     assert len(requests_seen) == 1
     assert [m.id for m in second.models] == [m.id for m in first.models]
 
@@ -823,7 +823,7 @@ def test_listing_failure_reported_and_not_cached(
 def test_listing_cache_is_keyed_by_credential_identity(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Same provider coordinates + different credential ⇒ separate entries.
+    """Same provider coordinates + different credential â‡’ separate entries.
 
     Two tenants sharing kind + base_url but holding different api keys
     must never replay each other's listing through the runner-wide TTL
@@ -884,8 +884,8 @@ def test_failed_auth_command_note_never_leaks_the_command(
     """An ``auth_command`` failure surfaces a category, never the command.
 
     ``subprocess.CalledProcessError`` stringifies the full ``/bin/sh``
-    argv — including the ``auth_command`` and any secret embedded in
-    it — and failure notes flow into the LLM-visible,
+    argv â€” including the ``auth_command`` and any secret embedded in
+    it â€” and failure notes flow into the LLM-visible,
     transcript-persisted ``sys_list_models`` payload. A leak here writes
     the secret into the conversation store.
 
@@ -918,16 +918,16 @@ def test_failed_auth_command_note_never_leaks_the_command(
     )
     catalog = catalog_for_spec(parent, transport=httpx.MockTransport(_handler))
 
-    # The note names the redacted category so the orchestrator can react…
+    # The note names the redacted category so the orchestrator can reactâ€¦
     assert catalog["worker"]["source"] == "none"
     assert "provider auth command failed" in catalog["worker"]["note"]
-    # …and the secret embedded in the failing command never reaches ANY
+    # â€¦and the secret embedded in the failing command never reaches ANY
     # part of the serialized tool payload. If this fails, raw exception
     # text (str(CalledProcessError) quotes the argv) leaked into a note.
     assert secret not in json.dumps(catalog)
 
 
-# ── catalog_for_spec (the tool payload) ────────────────────
+# â”€â”€ catalog_for_spec (the tool payload) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_catalog_isolates_per_worker_failures(
@@ -936,7 +936,7 @@ def test_catalog_isolates_per_worker_failures(
     """One worker's broken provider never hides the other workers' rows.
 
     The claude worker resolves a subscription (static, no HTTP) while
-    the codex worker's gateway listing 503s — the codex row must degrade
+    the codex worker's gateway listing 503s â€” the codex row must degrade
     to ``none`` with the failure note while claude and self stay intact.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -1018,7 +1018,7 @@ def test_catalog_payload_is_json_serializable_and_omits_unknown_context(
 def test_spec_harness_derivation() -> None:
     """Harness derives from ``config["harness"]`` then ``executor.type``.
 
-    Mirrors the runner's ``_resolve_harness_config`` rule — a drift here
+    Mirrors the runner's ``_resolve_harness_config`` rule â€” a drift here
     would route a worker's provider resolution to the wrong harness.
     """
     assert spec_harness(_worker_spec("codex-native")) == "codex-native"
@@ -1034,7 +1034,7 @@ def test_openai_compatible_listing_mints_bearer_via_auth_command(
 ) -> None:
     """A family with only ``auth_command`` mints its bearer via the shell.
 
-    Dynamic-credential providers carry no static key at all — the
+    Dynamic-credential providers carry no static key at all â€” the
     enumerator must run the command and send its stdout as the bearer,
     or every such deployment silently degrades to ``none``.
 

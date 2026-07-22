@@ -1,8 +1,8 @@
-"""Tests for :mod:`~?agent_meow.onboarding.ucode_cleanup`.
+"""Tests for :mod:`~?omnigent.onboarding.ucode_cleanup`.
 
 The fixture configs mirror what ucode actually writes (see ucode's
 ``agents/codex.py`` legacy overlay and ``agents/claude.py`` MCP entry), so
-the strips are exercised against the real on-disk shapes — not invented
+the strips are exercised against the real on-disk shapes â€” not invented
 ones.
 """
 
@@ -16,8 +16,8 @@ from pathlib import Path
 import pytest
 import tomllib
 
-from agent_meow.errors import OmnigentError
-from agent_meow.onboarding.ucode_cleanup import (
+from omnigent.errors import OmnigentError
+from omnigent.onboarding.ucode_cleanup import (
     UcodeWiringRemoval,
     remove_ucode_sidecars,
     remove_ucode_web_search_mcp,
@@ -76,13 +76,13 @@ def test_strip_removes_ucode_keys_and_preserves_user_config(tmp_path: Path) -> N
 
     text = config_path.read_text(encoding="utf-8")
     doc = tomllib.loads(text)
-    # The top-level profile selector is gone — bare codex no longer
+    # The top-level profile selector is gone â€” bare codex no longer
     # activates ucode's profile. If present, the strip missed the one key
     # that causes the reported bug.
     assert "profile" not in doc
     # ucode's tables are gone wholesale (including nested http_headers /
     # auth subtables), while the user's own profile and provider survive
-    # with their exact values — a wrong value here means the strip
+    # with their exact values â€” a wrong value here means the strip
     # rewrote user-owned data.
     assert doc["profiles"] == {"personal": {"model_provider": "kimi"}}
     assert doc["model_providers"] == {
@@ -90,7 +90,7 @@ def test_strip_removes_ucode_keys_and_preserves_user_config(tmp_path: Path) -> N
     }
     assert doc["model"] == "moonshotai/kimi-k2.5"
     assert doc["approval_policy"] == "never"
-    # tomlkit round-trip preserved the user's comment — a missing comment
+    # tomlkit round-trip preserved the user's comment â€” a missing comment
     # means we rewrote the file destructively instead of editing it.
     assert "# kept: user comment" in text
 
@@ -98,7 +98,7 @@ def test_strip_removes_ucode_keys_and_preserves_user_config(tmp_path: Path) -> N
 def test_strip_keeps_foreign_profile_selector(tmp_path: Path) -> None:
     """A ``profile`` pointing at the user's own profile is never touched.
 
-    The selector is only ucode's when it equals ``"ucode"`` — if the user
+    The selector is only ucode's when it equals ``"ucode"`` â€” if the user
     re-pointed it after ucode wrote it, removing it would break their setup.
     """
     config_path = tmp_path / "config.toml"
@@ -117,10 +117,10 @@ def test_strip_keeps_foreign_profile_selector(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    # ucode's profile table was still present, so the file changed …
+    # ucode's profile table was still present, so the file changed â€¦
     assert strip_ucode_codex_config(config_path) is True
     doc = tomllib.loads(config_path.read_text(encoding="utf-8"))
-    # … but the user's selector survived: only the "ucode" value is ours.
+    # â€¦ but the user's selector survived: only the "ucode" value is ours.
     assert doc["profile"] == "personal"
     assert doc["profiles"] == {"personal": {"model_provider": "kimi"}}
 
@@ -140,7 +140,7 @@ def test_strip_without_ucode_keys_leaves_file_byte_identical(tmp_path: Path) -> 
 
 
 def test_strip_missing_file_returns_false(tmp_path: Path) -> None:
-    """A missing config is a no-op — and is not created as a side effect."""
+    """A missing config is a no-op â€” and is not created as a side effect."""
     config_path = tmp_path / "config.toml"
     assert strip_ucode_codex_config(config_path) is False
     assert not config_path.exists()
@@ -176,7 +176,7 @@ def test_strip_drops_empty_parent_tables(tmp_path: Path) -> None:
 def test_strip_malformed_toml_raises_and_leaves_file(tmp_path: Path) -> None:
     """An unparseable config fails loud instead of being rewritten.
 
-    Rewriting a file we failed to parse could destroy the user's config —
+    Rewriting a file we failed to parse could destroy the user's config â€”
     the error tells them what to remove by hand.
     """
     original = 'profile = "ucode\n'  # unterminated string
@@ -197,7 +197,7 @@ def test_remove_sidecars_deletes_only_existing(tmp_path: Path) -> None:
 
     removed = remove_ucode_sidecars([codex_sidecar, claude_sidecar])
 
-    # Only the file that existed is reported — a claude_sidecar entry here
+    # Only the file that existed is reported â€” a claude_sidecar entry here
     # would mean we claim to have deleted something that wasn't there.
     assert removed == [codex_sidecar]
     assert not codex_sidecar.exists()
@@ -237,7 +237,7 @@ def _ucode_web_search_entry_by_command() -> dict[str, object]:
 def _user_owned_web_search_entry() -> dict[str, object]:
     """Build a ``web_search`` entry the user registered themselves.
 
-    :returns: An entry with no ucode markers — must never be removed.
+    :returns: An entry with no ucode markers â€” must never be removed.
     """
     return {
         "type": "stdio",
@@ -269,7 +269,7 @@ def test_remove_web_search_removes_ucode_owned_entry(
     )
     cli_calls: list[bool] = []
     monkeypatch.setattr(
-        "agent_meow.onboarding.ucode_cleanup._remove_web_search_via_claude_cli",
+        "omnigent.onboarding.ucode_cleanup._remove_web_search_via_claude_cli",
         lambda: cli_calls.append(True) or True,
     )
 
@@ -282,13 +282,13 @@ def test_remove_web_search_removes_ucode_owned_entry(
 @pytest.mark.parametrize(
     "claude_json_content",
     [
-        # A web_search server the user registered themselves — no ucode markers.
+        # A web_search server the user registered themselves â€” no ucode markers.
         json.dumps({"mcpServers": {"web_search": _user_owned_web_search_entry()}}),
         # No web_search entry at all.
         json.dumps({"mcpServers": {"other": {"command": "npx"}}}),
         # No mcpServers block.
         json.dumps({"projects": {}}),
-        # Corrupt JSON — Claude Code owns this file; we must not guess.
+        # Corrupt JSON â€” Claude Code owns this file; we must not guess.
         "{not json",
     ],
 )
@@ -310,7 +310,7 @@ def test_remove_web_search_never_touches_non_ucode_config(
         )
 
     monkeypatch.setattr(
-        "agent_meow.onboarding.ucode_cleanup._remove_web_search_via_claude_cli",
+        "omnigent.onboarding.ucode_cleanup._remove_web_search_via_claude_cli",
         _must_not_run,
     )
 

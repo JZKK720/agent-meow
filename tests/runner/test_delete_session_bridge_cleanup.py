@@ -18,41 +18,41 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from agent_meow.antigravity_native_bridge import (
+from omnigent.antigravity_native_bridge import (
     bridge_dir_for_bridge_id as antigravity_bridge_dir,
 )
-from agent_meow.claude_native_bridge import bridge_dir_for_bridge_id, prepare_bridge_dir
-from agent_meow.claude_native_bridge import (
+from omnigent.claude_native_bridge import bridge_dir_for_bridge_id, prepare_bridge_dir
+from omnigent.claude_native_bridge import (
     bridge_dir_for_bridge_id as claude_bridge_dir,
 )
-from agent_meow.codex_native_bridge import (
+from omnigent.codex_native_bridge import (
     bridge_dir_for_bridge_id as codex_bridge_dir,
 )
-from agent_meow.cursor_native_bridge import (
+from omnigent.cursor_native_bridge import (
     bridge_dir_for_session_id as cursor_bridge_dir,
 )
-from agent_meow.goose_native_bridge import (
+from omnigent.goose_native_bridge import (
     bridge_dir_for_session_id as goose_bridge_dir,
 )
-from agent_meow.hermes_native_bridge import (
+from omnigent.hermes_native_bridge import (
     bridge_dir_for_session_id as hermes_bridge_dir,
 )
-from agent_meow.kimi_native_bridge import (
+from omnigent.kimi_native_bridge import (
     bridge_dir_for_session_id as kimi_bridge_dir,
 )
-from agent_meow.kiro_native_bridge import (
+from omnigent.kiro_native_bridge import (
     bridge_dir_for_session_id as kiro_bridge_dir,
 )
-from agent_meow.opencode_native_bridge import (
+from omnigent.opencode_native_bridge import (
     bridge_dir_for_bridge_id as opencode_bridge_dir,
 )
-from agent_meow.pi_native_bridge import (
+from omnigent.pi_native_bridge import (
     bridge_dir_for_session_id as pi_bridge_dir,
 )
-from agent_meow.qwen_native_bridge import (
+from omnigent.qwen_native_bridge import (
     bridge_dir_for_session_id as qwen_bridge_dir,
 )
-from agent_meow.runner import create_runner_app
+from omnigent.runner import create_runner_app
 from tests.runner.helpers import NullServerClient
 
 # One resolver per native family — the session_id-keyed dir each harness leaves

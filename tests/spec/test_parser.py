@@ -1,4 +1,4 @@
-"""Tests for agent_meow.spec.parser."""
+"""Tests for omnigent.spec.parser."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
-from agent_meow.spec.parser import discover_host_skills, parse
-from agent_meow.spec.types import ApiKeyAuth, DatabricksAuth, ProviderAuth, SharePolicy
+from omnigent.errors import OmnigentError
+from omnigent.spec.parser import discover_host_skills, parse
+from omnigent.spec.types import ApiKeyAuth, DatabricksAuth, ProviderAuth, SharePolicy
 
 
 @pytest.fixture()
@@ -82,7 +82,7 @@ def test_parse_full_config(tmp_path: Path) -> None:
     assert spec.description == "A fully configured agent."
     assert spec.llm is not None
     assert spec.llm.model == "openai/gpt-5.4"
-    # executor.model is the canonical source — verify consolidation
+    # executor.model is the canonical source â€” verify consolidation
     assert spec.executor.model == "openai/gpt-5.4"
     assert spec.llm.extra == {
         "max_completion_tokens": 4096,
@@ -311,7 +311,7 @@ def test_parse_instructions_rejects_path_traversal(tmp_path: Path) -> None:
     A crafted/uploaded bundle could set ``instructions: ../secret.txt`` to make
     the runner read a file outside the bundle root and fold it into the agent's
     system prompt (W7 spec-injection). The parser must NOT read an out-of-root
-    target — it falls back to treating the value as inline text, so the file's
+    target â€” it falls back to treating the value as inline text, so the file's
     contents never enter the spec. If this regresses, ``spec.instructions``
     would contain the secret file's body.
     """
@@ -324,9 +324,9 @@ def test_parse_instructions_rejects_path_traversal(tmp_path: Path) -> None:
 
     spec = parse(bundle)
 
-    # The out-of-root target is never read — its contents must not leak.
+    # The out-of-root target is never read â€” its contents must not leak.
     assert "TOP SECRET" not in (spec.instructions or "")
-    # Falls back to the literal value (the existing "missing file → inline" path).
+    # Falls back to the literal value (the existing "missing file â†’ inline" path).
     assert spec.instructions == "../secret.txt"
 
 
@@ -355,7 +355,7 @@ def test_parse_prompt_alias_inline(tmp_path: Path) -> None:
     (tmp_path / "config.yaml").write_text(yaml.dump(config))
     spec = parse(tmp_path)
     # Without the alias, ``prompt:`` is ignored and instructions falls
-    # back to None (no AGENTS.md here) — the silent generic-prompt bug.
+    # back to None (no AGENTS.md here) â€” the silent generic-prompt bug.
     assert spec.instructions == "Be concise and helpful."
 
 
@@ -428,7 +428,7 @@ def test_auto_detect_cursorrules_when_others_absent(agent_dir: Path) -> None:
 
 
 def test_auto_detect_none_when_no_context_files(agent_dir: Path) -> None:
-    """No context files present → instructions is None."""
+    """No context files present â†’ instructions is None."""
     spec = parse(agent_dir)
     assert spec.instructions is None
 
@@ -474,19 +474,19 @@ def test_parse_skill_user_invocable_false(agent_dir: Path) -> None:
 @pytest.mark.parametrize(
     "raw,expected",
     [
-        # Quoted-string spellings (YAML keeps these as ``str``, not bool) —
+        # Quoted-string spellings (YAML keeps these as ``str``, not bool) â€”
         # the string branch of _falsey_flag, never exercised by the bare forms.
         ('"false"', False),
         ('"False"', False),
         ('"FALSE"', False),
         ('" false "', False),
-        ('"no"', False),  # extended false spellings (quoted → str)
+        ('"no"', False),  # extended false spellings (quoted â†’ str)
         ('"off"', False),
         ('"0"', False),
         ('"true"', True),
         ('"yes"', True),  # not in the false set
         ('"maybe"', True),
-        # Genuine YAML booleans — PyYAML parses bare false/no/off to ``bool``.
+        # Genuine YAML booleans â€” PyYAML parses bare false/no/off to ``bool``.
         ("false", False),
         ("no", False),
         ("off", False),
@@ -539,7 +539,7 @@ def test_parse_skill_non_utf8_raises_omnigent_error(agent_dir: Path) -> None:
     """
     skill_dir = agent_dir / "skills" / "bad-bytes"
     skill_dir.mkdir(parents=True)
-    # 0xff is invalid UTF-8 — read_text() raises UnicodeDecodeError.
+    # 0xff is invalid UTF-8 â€” read_text() raises UnicodeDecodeError.
     (skill_dir / "SKILL.md").write_bytes(b"---\nname: bad-bytes\ndescription: \xff\n---\nx")
     with pytest.raises(OmnigentError, match=r"could not be read"):
         parse(agent_dir)
@@ -560,7 +560,7 @@ def test_parse_skill_invalid_yaml_frontmatter_in_bundle_raises(
     agent_dir: Path,
 ) -> None:
     """
-    Agent-bundle skills are shipped with the spec and stay strict —
+    Agent-bundle skills are shipped with the spec and stay strict â€”
     a YAML parse error in the bundle's own ``skills/`` directory
     must fail loud, not silently drop the skill. ``parse()`` calls
     ``_discover_skills`` without the ``strict=False`` opt-in, so
@@ -585,7 +585,7 @@ def test_discover_host_skills_skips_invalid_yaml_frontmatter(
     ``.claude/skills/``) and may contain third-party skills whose
     frontmatter doesn't strictly parse as YAML. This test uses the
     literal upstream ``argument-hint:`` line from the
-    ``databricks-data-generation`` Claude Code skill — the exact
+    ``databricks-data-generation`` Claude Code skill â€” the exact
     string that aborted ``agent-meow --harness codex`` REPL launch
     in production.
 
@@ -620,7 +620,7 @@ def test_discover_host_skills_skips_invalid_yaml_frontmatter(
     good_dir.mkdir()
     (good_dir / "SKILL.md").write_text("---\nname: good-skill\ndescription: y\n---\nContent.")
 
-    with caplog.at_level("WARNING", logger="agent_meow.spec.parser"):
+    with caplog.at_level("WARNING", logger="omnigent.spec.parser"):
         result = discover_host_skills(agent_root, "all")
 
     names = [s.name for s in result]
@@ -630,7 +630,7 @@ def test_discover_host_skills_skips_invalid_yaml_frontmatter(
     )
 
     skip_records = [rec for rec in caplog.records if "Skipping skill" in rec.message]
-    assert len(skip_records) == 1, "exactly one skip warning expected — one per bad skill"
+    assert len(skip_records) == 1, "exactly one skip warning expected â€” one per bad skill"
     msg = skip_records[0].message
     # Warning must name the offending file so the user can fix it,
     # and must surface the YAML parser error so the cause is clear.
@@ -675,7 +675,7 @@ def test_discover_host_skills_skips_unreadable_skill_file(
     (good_dir / "SKILL.md").write_text("---\nname: good\ndescription: y\n---\nContent.")
 
     try:
-        with caplog.at_level("WARNING", logger="agent_meow.spec.parser"):
+        with caplog.at_level("WARNING", logger="omnigent.spec.parser"):
             result = discover_host_skills(agent_root, "all")
     finally:
         # Restore so pytest can clean tmp_path on teardown.
@@ -689,13 +689,13 @@ def test_discover_host_skills_skips_unreadable_skill_file(
     assert "could not be read" in msg
 
 
-# ── top-level ``skills:`` field (host-skill filter) ──────────────
+# â”€â”€ top-level ``skills:`` field (host-skill filter) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_skills_filter_omitted_defaults_to_all(agent_dir: Path) -> None:
     """
     The top-level ``skills:`` field is optional. When omitted, the
-    spec defaults to ``"all"`` — every host-discovered skill is
+    spec defaults to ``"all"`` â€” every host-discovered skill is
     exposed by default.
 
     Claim: a config.yaml without ``skills:`` produces
@@ -726,7 +726,7 @@ def test_parse_skills_filter_none(agent_dir: Path) -> None:
 
 def test_parse_skills_filter_empty_list_normalizes_to_none(agent_dir: Path) -> None:
     """
-    ``skills: []`` is an explicit "no skills" declaration —
+    ``skills: []`` is an explicit "no skills" declaration â€”
     normalizes to ``"none"`` so the executor handles both the same
     way.
 
@@ -758,7 +758,7 @@ def test_parse_skills_filter_named_subset(agent_dir: Path) -> None:
 def test_parse_skills_filter_invalid_string_rejects(agent_dir: Path) -> None:
     """
     Strings other than ``"all"`` / ``"none"`` are rejected at
-    parse time — no silent coercion of typos like ``"al"`` or
+    parse time â€” no silent coercion of typos like ``"al"`` or
     ``"All"`` to a permissive default.
     """
     (agent_dir / "config.yaml").write_text(
@@ -782,7 +782,7 @@ def test_parse_skills_filter_non_string_list_item_rejects(agent_dir: Path) -> No
 
 def test_parse_skills_filter_dict_rejects(agent_dir: Path) -> None:
     """
-    Mappings (and other unsupported shapes — booleans, integers)
+    Mappings (and other unsupported shapes â€” booleans, integers)
     are rejected. The field is a string or list, never a dict.
     """
     (agent_dir / "config.yaml").write_text(
@@ -819,12 +819,12 @@ def test_parse_skills_filter_is_independent_of_bundled_skills_dir(
     # Bundled skill is preserved.
     assert len(spec.skills) == 1
     assert spec.skills[0].name == "researcher"
-    # And the host filter says "none" — bundled and host are
+    # And the host filter says "none" â€” bundled and host are
     # separate channels.
     assert spec.skills_filter == "none"
 
 
-# ── lenient host-skill discovery ────────────────────
+# â”€â”€ lenient host-skill discovery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_discover_host_skills_skips_missing_frontmatter(
@@ -840,7 +840,7 @@ def test_discover_host_skills_skips_missing_frontmatter(
     :param monkeypatch: Pytest monkeypatch for isolating ``Path.home()``.
     :param capsys: Pytest capture fixture for stderr assertions.
     """
-    from agent_meow.spec.parser import discover_host_skills
+    from omnigent.spec.parser import discover_host_skills
 
     # Use a separate home dir so the walk-up from agent_root
     # doesn't double-scan the same .claude/skills/ as Path.home().
@@ -855,7 +855,7 @@ def test_discover_host_skills_skips_missing_frontmatter(
     (good / "SKILL.md").write_text(
         "---\nname: good-skill\ndescription: Works fine.\n---\nContent."
     )
-    # Bad skill — no frontmatter.
+    # Bad skill â€” no frontmatter.
     bad = skills_dir / "bad-skill"
     bad.mkdir(parents=True)
     (bad / "SKILL.md").write_text("# No frontmatter here")
@@ -885,7 +885,7 @@ def test_discover_host_skills_skips_yaml_syntax_error(
     :param monkeypatch: Pytest monkeypatch for isolating ``Path.home()``.
     :param capsys: Pytest capture fixture for stderr assertions.
     """
-    from agent_meow.spec.parser import discover_host_skills
+    from omnigent.spec.parser import discover_host_skills
 
     fake_home = tmp_path / "home"
     fake_home.mkdir()
@@ -916,13 +916,13 @@ def test_discover_host_skills_skips_multiple_bad_skills(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    All broken skills are reported in one pass — no whack-a-mole.
+    All broken skills are reported in one pass â€” no whack-a-mole.
 
     :param tmp_path: Temporary directory for test fixtures.
     :param monkeypatch: Pytest monkeypatch for isolating ``Path.home()``.
     :param capsys: Pytest capture fixture for stderr assertions.
     """
-    from agent_meow.spec.parser import discover_host_skills
+    from omnigent.spec.parser import discover_host_skills
 
     fake_home = tmp_path / "home"
     fake_home.mkdir()
@@ -951,7 +951,7 @@ def test_bundled_skills_still_fail_loud_on_bad_frontmatter(
 ) -> None:
     """
     Bundled skills (inside the agent directory, parsed by
-    :func:`parse`) must still fail loud — lenient mode is only
+    :func:`parse`) must still fail loud â€” lenient mode is only
     for host-discovered skills.
 
     :param agent_dir: Temporary agent directory fixture.
@@ -1110,7 +1110,7 @@ def test_parse_inline_mcp_stdio_server(tmp_path: Path) -> None:
     assert len(spec.mcp_servers) == 1
     srv = spec.mcp_servers[0]
     assert srv.name == "my_mcp"
-    # command present → transport inferred as "stdio"
+    # command present â†’ transport inferred as "stdio"
     assert srv.transport == "stdio"
     assert srv.command == "uvx"
     assert srv.args == ["mcp-server-github"]
@@ -1144,7 +1144,7 @@ def test_parse_inline_mcp_http_server(tmp_path: Path) -> None:
     assert len(spec.mcp_servers) == 1
     srv = spec.mcp_servers[0]
     assert srv.name == "my_service"
-    # url present → transport inferred as "http"
+    # url present â†’ transport inferred as "http"
     assert srv.transport == "http"
     assert srv.url == "http://localhost:9000/mcp"
     assert srv.description == "My HTTP service"
@@ -1178,7 +1178,7 @@ def test_parse_inline_mcp_skips_standard_tools_keys(tmp_path: Path) -> None:
     (tmp_path / "config.yaml").write_text(yaml.dump(config))
     spec = parse(tmp_path)
 
-    # Only the real_mcp entry surfaces — the 5 standard keys are filtered.
+    # Only the real_mcp entry surfaces â€” the 5 standard keys are filtered.
     # If any standard key leaked through, len() would be > 1.
     assert len(spec.mcp_servers) == 1
     assert spec.mcp_servers[0].name == "real_mcp"
@@ -1268,7 +1268,7 @@ def test_parse_inline_mcp_databricks_only_skipped(tmp_path: Path) -> None:
     (tmp_path / "config.yaml").write_text(yaml.dump(config))
     spec = parse(tmp_path)
 
-    # No command/url → transport unresolvable → entry skipped.
+    # No command/url â†’ transport unresolvable â†’ entry skipped.
     # If the skip were removed, mcp_servers would be non-empty.
     assert spec.mcp_servers == []
 
@@ -1393,7 +1393,7 @@ def test_parse_inline_and_bundle_mcp_combined(tmp_path: Path) -> None:
     (tmp_path / "config.yaml").write_text(yaml.dump(config))
     spec = parse(tmp_path)
 
-    # Both sources contribute — two distinct entries.
+    # Both sources contribute â€” two distinct entries.
     # If only one path ran, len() would be 1.
     assert len(spec.mcp_servers) == 2
     names = {srv.name for srv in spec.mcp_servers}
@@ -1471,7 +1471,7 @@ def test_parse_interaction_partial_modalities(tmp_path: Path) -> None:
 
 def test_parse_os_env_absent_yields_none(agent_dir: Path) -> None:
     """A native YAML without an ``os_env:`` block leaves
-    ``spec.os_env`` as ``None`` — no sys_os_* tools registered.
+    ``spec.os_env`` as ``None`` â€” no sys_os_* tools registered.
 
     What breaks if this fails: the runtime would build a default
     :class:`OSEnvironment` for every agent and silently expose
@@ -1488,9 +1488,9 @@ def test_parse_os_env_caller_process(tmp_path: Path) -> None:
     :class:`OSEnvSpec` with the declared ``type`` and ``cwd``.
 
     What breaks if this fails: native agent-meow YAMLs cannot opt into
-    sys_os_* tools — the whole point of step 5l.
+    sys_os_* tools â€” the whole point of step 5l.
     """
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     config = {
         "spec_version": 1,
@@ -1502,13 +1502,13 @@ def test_parse_os_env_caller_process(tmp_path: Path) -> None:
     }
     (tmp_path / "config.yaml").write_text(yaml.dump(config))
     spec = parse(tmp_path)
-    # Real OSEnvSpec dataclass — not a dict — so the runtime's
+    # Real OSEnvSpec dataclass â€” not a dict â€” so the runtime's
     # isinstance check in ToolManager._register_os_env_tools
     # registers the sys_os_* tools.
     assert isinstance(spec.os_env, OSEnvSpec)
     assert spec.os_env.type == "caller_process"
     assert spec.os_env.cwd == "."
-    # Sandbox absent → None (the wrap then defaults appropriately).
+    # Sandbox absent â†’ None (the wrap then defaults appropriately).
     assert spec.os_env.sandbox is None
     assert spec.os_env.fork is False
 
@@ -1522,7 +1522,7 @@ def test_parse_os_env_with_sandbox(tmp_path: Path) -> None:
     runtime, leaving sys_os_* tools running with the agent's
     full process privileges.
     """
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     config = {
         "spec_version": 1,
@@ -1549,13 +1549,13 @@ def test_parse_os_env_with_sandbox(tmp_path: Path) -> None:
     assert sandbox.write_paths == ["."]
     # write_files is the per-file grant carve-out for files like
     # ~/.claude.json that can't be expressed as a directory write
-    # path — the parser must thread it through.
+    # path â€” the parser must thread it through.
     assert sandbox.write_files == ["/home/me/.claude.json"]
     assert sandbox.allow_network is False
 
 
 def test_parse_os_env_non_mapping_raises(tmp_path: Path) -> None:
-    """A scalar/list under ``os_env:`` raises OmnigentError —
+    """A scalar/list under ``os_env:`` raises OmnigentError â€”
     fail loud rather than silently dropping the malformed block.
     """
     config = {
@@ -1570,7 +1570,7 @@ def test_parse_os_env_non_mapping_raises(tmp_path: Path) -> None:
 
 def test_parse_os_env_sandbox_non_mapping_raises(tmp_path: Path) -> None:
     """A scalar/list under ``os_env.sandbox:`` raises
-    OmnigentError — same fail-loud contract as the parent.
+    OmnigentError â€” same fail-loud contract as the parent.
     """
     config = {
         "spec_version": 1,
@@ -1654,7 +1654,7 @@ def test_parse_os_env_sandbox_cwd_allow_hidden_validation(
     points the author at the rule they violated.
 
     Validation is the only thing standing between a typo'd YAML
-    and a sandbox that exposes ``../etc`` (path traversal) — fail
+    and a sandbox that exposes ``../etc`` (path traversal) â€” fail
     loud is the right contract here.
     """
     config = {
@@ -1738,7 +1738,7 @@ def test_parse_os_env_sandbox_cwd_hidden_scan_max_entries_validation(
 ) -> None:
     """
     Non-integer or non-positive caps fail at parse time. The bool
-    rejection is intentional — YAML scalars are loose, and ``True``
+    rejection is intentional â€” YAML scalars are loose, and ``True``
     masquerading as ``1`` would be a confusing accident.
     """
     config = {
@@ -1807,7 +1807,7 @@ def test_parse_multiple_skills_sorted(agent_dir: Path) -> None:
     assert [s.name for s in spec.skills] == ["alpha-skill", "beta-skill"]
 
 
-# ── Env var expansion in MCP configs ───────────────────
+# â”€â”€ Env var expansion in MCP configs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_mcp_env_vars_expanded_from_environment(
@@ -1886,7 +1886,7 @@ def test_mcp_env_expansion_mixed_set_and_unset_raises(
         parse(agent_dir)
 
 
-# ── MCP required field validation ─────────────────────
+# â”€â”€ MCP required field validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_mcp_missing_url_raises(agent_dir: Path) -> None:
@@ -1909,7 +1909,7 @@ def test_mcp_missing_url_raises(agent_dir: Path) -> None:
         parse(agent_dir)
 
 
-# ── Timeout / retry / execution parsing ────────────────
+# â”€â”€ Timeout / retry / execution parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_llm_timeout_and_retry(tmp_path: Path) -> None:
@@ -1969,7 +1969,7 @@ def test_parse_llm_profile_survives_consolidation(tmp_path: Path) -> None:
     That rebuild used to omit ``profile``, silently dropping the credentials
     profile. Downstream, the policy/guardrail builder resolves a Databricks
     workspace connection from ``spec.llm.profile``
-    (``agent_meow/runtime/policies/builder.py``), so losing it makes those
+    (``omnigent/runtime/policies/builder.py``), so losing it makes those
     paths fall back to env/default auth instead of the declared profile.
 
     Regression guard: pre-fix ``spec.llm.profile`` is ``None`` here.
@@ -1985,7 +1985,7 @@ def test_parse_llm_profile_survives_consolidation(tmp_path: Path) -> None:
     spec = parse(tmp_path)
     assert spec.llm is not None
     assert spec.llm.profile == "my-workspace", (
-        f"spec.llm.profile is {spec.llm.profile!r}, expected 'my-workspace' — the "
+        f"spec.llm.profile is {spec.llm.profile!r}, expected 'my-workspace' â€” the "
         "consolidation rebuild dropped the declared credentials profile."
     )
 
@@ -2076,10 +2076,10 @@ def test_parse_builtins_mixed_entries(tmp_path: Path) -> None:
     spec = parse(tmp_path)
 
     assert len(spec.tools.builtins) == 2
-    # First entry: string → no config.
+    # First entry: string â†’ no config.
     assert spec.tools.builtins[0].name == "web_search"
     assert spec.tools.builtins[0].config == {}
-    # Second entry: dict → has config.
+    # Second entry: dict â†’ has config.
     assert spec.tools.builtins[1].name == "web_search_cfg"
     assert spec.tools.builtins[1].config == {"api_key": "pplx-test"}
 
@@ -2286,7 +2286,7 @@ def test_parse_mcp_stdio_with_args_and_env(
     assert mcp.command == "npx"
     # Args preserved verbatim, not expanded (they're a literal argv).
     assert mcp.args == ["-y", "@modelcontextprotocol/server-github"]
-    # ${GITHUB_TOKEN} expanded via monkeypatch — the subprocess sees
+    # ${GITHUB_TOKEN} expanded via monkeypatch â€” the subprocess sees
     # the real token, not the literal.
     assert mcp.env == {"GITHUB_TOKEN": "ghp_xyz"}
 
@@ -2345,7 +2345,7 @@ def test_parse_mcp_stdio_rejects_http_fields(agent_dir: Path) -> None:
     the wrong-transport field.
 
     What breaks if this fails: authors migrating between
-    transports see their changes silently ignored — e.g. an HTTP
+    transports see their changes silently ignored â€” e.g. an HTTP
     config edited to stdio but still carrying ``url`` looks fine
     but doesn't actually use the URL.
 
@@ -2419,7 +2419,7 @@ def test_parse_mcp_unknown_transport_raises(agent_dir: Path) -> None:
         parse(agent_dir)
 
 
-# ─── Top-level ``timers:`` flag (step 10 of harness contract) ─
+# â”€â”€â”€ Top-level ``timers:`` flag (step 10 of harness contract) â”€
 
 
 def test_parse_timers_defaults_to_false_when_omitted(agent_dir: Path) -> None:
@@ -2428,7 +2428,7 @@ def test_parse_timers_defaults_to_false_when_omitted(agent_dir: Path) -> None:
     is ``False``.
 
     Default-off matches the inner stack (``AgentDef.timers`` is also
-    ``False`` by default) — agents authored before step 10 must keep
+    ``False`` by default) â€” agents authored before step 10 must keep
     their pre-step-10 tool surface unchanged. A regression that
     flipped the default to ``True`` would silently expose the timer
     builtins to every agent.
@@ -2445,7 +2445,7 @@ def test_parse_timers_true_sets_flag(tmp_path: Path) -> None:
     ``AgentSpec.timers == True``.
 
     The flag is the gate for ``ToolManager._register_timer_tools``
-    (see step 10) — a regression where the parser dropped the
+    (see step 10) â€” a regression where the parser dropped the
     field would mean the YAML opt-in had no effect at runtime.
 
     :param tmp_path: pytest-provided temporary directory.
@@ -2456,7 +2456,7 @@ def test_parse_timers_true_sets_flag(tmp_path: Path) -> None:
     assert spec.timers is True
 
 
-# ─── Top-level ``spawn:`` flag (spawn-write opt-in) ───────────
+# â”€â”€â”€ Top-level ``spawn:`` flag (spawn-write opt-in) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_spawn_defaults_to_false_when_omitted(agent_dir: Path) -> None:
@@ -2483,7 +2483,7 @@ def test_parse_spawn_true_sets_flag(tmp_path: Path) -> None:
 
     The flag is the sole grant for ``sys_session_create`` in
     ``ToolManager._register_sub_agent_tools`` (``tools.agents`` only
-    permits the declared sub-agent list via send/close) — a regression
+    permits the declared sub-agent list via send/close) â€” a regression
     where the parser dropped the field would mean the YAML opt-in had
     no effect at runtime and the agent couldn't author-and-launch
     child sessions.
@@ -2499,7 +2499,7 @@ def test_parse_spawn_true_sets_flag(tmp_path: Path) -> None:
 def test_parse_share_defaults_to_none_when_omitted(agent_dir: Path) -> None:
     """
     Without a top-level ``agent_session_sharing:`` key the parsed
-    ``AgentSpec.agent_session_sharing`` is :attr:`SharePolicy.NONE` —
+    ``AgentSpec.agent_session_sharing`` is :attr:`SharePolicy.NONE` â€”
     sharing is off by default, so ``sys_session_share`` is not
     registered. A regression flipping the default would expose the
     access-control mutation (incl. ``__public__``) to every agent.
@@ -2543,7 +2543,7 @@ def test_parse_share_maps_each_policy_string(
 def test_parse_share_invalid_value_fails_loud(tmp_path: Path) -> None:
     """
     An unrecognized ``agent_session_sharing:`` value (here a plausible
-    typo) raises rather than silently disabling sharing — fail-loud, so
+    typo) raises rather than silently disabling sharing â€” fail-loud, so
     a misconfigured capability surfaces at parse time instead of becoming
     a confusing "the tool isn't there" at runtime.
 
@@ -2568,7 +2568,7 @@ def test_parse_os_env_sandbox_env_passthrough_default_none(tmp_path: Path) -> No
     Pinning the default here ensures that future spec changes don't
     silently flip the helper to "inherit everything from the parent",
     which would re-open the credential-leak vector
-    :func:`~?agent_meow.inner.os_env.build_helper_env` is meant to close.
+    :func:`~?omnigent.inner.os_env.build_helper_env` is meant to close.
     """
     config = {
         "spec_version": 1,
@@ -2742,7 +2742,7 @@ def test_parse_os_env_start_in_scratch_with_fork_rejected(tmp_path: Path) -> Non
 
     What breaks if this fails: a misconfigured spec with both knobs
     set ships a helper whose effective cwd silently depends on which
-    setup step ran last — exactly the kind of "where did my files
+    setup step ran last â€” exactly the kind of "where did my files
     go?" footgun the explicit error is meant to prevent.
     """
     config = {
@@ -2811,7 +2811,7 @@ def test_executor_profile_field_lifted_from_yaml(tmp_path: Path) -> None:
     spec = parse(tmp_path)
     # Concrete field populated for every executor type.
     assert spec.executor.profile == "dev"
-    # Back-compat mirror into config["profile"] for agent_meow.
+    # Back-compat mirror into config["profile"] for omnigent.
     # Without this the legacy agent-meow executor (which still
     # reads config["profile"]) would silently fall back to env
     # vars / DEFAULT section.
@@ -2968,7 +2968,7 @@ def test_parse_executor_auth_absent(tmp_path: Path) -> None:
     (tmp_path / "config.yaml").write_text(yaml.dump(config))
     spec = parse(tmp_path)
 
-    # auth must be None — harness falls back to env-var / profile defaults.
+    # auth must be None â€” harness falls back to env-var / profile defaults.
     assert spec.executor.auth is None
 
 
@@ -3015,7 +3015,7 @@ def test_parse_executor_auth_api_key_with_base_url(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
-    ``executor.auth: {type: api_key, api_key: …, base_url: …}`` parses
+    ``executor.auth: {type: api_key, api_key: â€¦, base_url: â€¦}`` parses
     both fields and expands env-var references in ``base_url``.
 
     Failure means a custom endpoint declared alongside an API key is
@@ -3057,7 +3057,7 @@ def test_parse_executor_auth_api_key_base_url_absent(
     assert spec.executor.auth.base_url is None
 
 
-# ── credential_proxy parser tests ─────────────────────────────────
+# â”€â”€ credential_proxy parser tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _credential_proxy_config(entries: list[dict[str, object]]) -> dict[str, object]:
@@ -3207,17 +3207,17 @@ def test_parse_credential_proxy_https_env_optional(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "entries,match",
     [
-        # Unknown ``type`` — caught by the pydantic ``Literal``.
+        # Unknown ``type`` â€” caught by the pydantic ``Literal``.
         ([{"type": "bogus", "source": {"env": "X"}}], r"type: Input should be"),
-        # Missing ``source`` — pydantic ``Field required``.
+        # Missing ``source`` â€” pydantic ``Field required``.
         ([{"type": "https_bearer", "target": "h.example.com"}], r"source: Field required"),
-        # ``source`` as a bare string (the old surface) is now rejected —
+        # ``source`` as a bare string (the old surface) is now rejected â€”
         # it must be a nested ``{env|file|command: ...}`` mapping.
         (
             [{"type": "https_bearer", "target": "h.example.com", "source": "env:X", "env": "T"}],
             r"source:.*valid dictionary",
         ),
-        # Two source keys set — exactly one is allowed.
+        # Two source keys set â€” exactly one is allowed.
         (
             [
                 {
@@ -3258,7 +3258,7 @@ def test_parse_credential_proxy_https_env_optional(tmp_path: Path) -> None:
             [{"type": "git_https", "target": "bad_host!", "source": {"env": "X"}}],
             r"must be an exact DNS hostname",
         ),
-        # Unknown key — ``extra="forbid"`` rejects typos.
+        # Unknown key â€” ``extra="forbid"`` rejects typos.
         (
             [
                 {
@@ -3291,7 +3291,7 @@ def test_parse_credential_proxy_requires_egress_rules(tmp_path: Path) -> None:
 
     The MITM proxy (driven by egress_rules) is what performs the swap and
     blocks placeholder leaks; without it the feature would be a no-op that
-    injects placeholders the agent can't use — fail loud instead.
+    injects placeholders the agent can't use â€” fail loud instead.
     """
     config = {
         "spec_version": 1,
@@ -3316,12 +3316,12 @@ def test_parse_credential_proxy_requires_hard_backend(tmp_path: Path) -> None:
     """``credential_proxy`` requires a network-isolating backend.
 
     On ``linux_landlock`` (no hard network deny) the egress proxy isn't
-    the only path out, so binding credentials there is unsafe — rejected.
+    the only path out, so binding credentials there is unsafe â€” rejected.
 
     We deliberately OMIT ``egress_rules`` here so the egress-rules backend
     guard doesn't fire first: that isolates the credential_proxy-specific
     backend check (parser.py:1117). The ``match`` asserts the
-    credential_proxy message, not the egress one — so deleting the
+    credential_proxy message, not the egress one â€” so deleting the
     credential_proxy backend guard (falling through to the
     "requires egress_rules" error with its different text) would fail
     this test.
@@ -3349,8 +3349,8 @@ def test_parse_credential_proxy_gh_basic_rejected_on_macos(tmp_path: Path) -> No
     """``gh_basic`` is rejected on macOS (``darwin_seatbelt``).
 
     ``gh_basic`` wires the GitHub CLI, a Go binary, and Go on macOS verifies
-    TLS via the system keychain and ignores ``SSL_CERT_FILE`` — the var the
-    egress MITM proxy uses to publish its CA — so every ``gh`` call would fail
+    TLS via the system keychain and ignores ``SSL_CERT_FILE`` â€” the var the
+    egress MITM proxy uses to publish its CA â€” so every ``gh`` call would fail
     at runtime with an opaque ``certificate is not trusted`` error. We fail
     loud at parse time instead. The ``match`` asserts the macOS-specific
     message (not the backend/egress guards, which pass here since

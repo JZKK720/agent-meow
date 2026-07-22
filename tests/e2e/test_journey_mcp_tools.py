@@ -114,7 +114,7 @@ def _register_mcp_echo_agent(
             tar.addfile(info, io.BytesIO(yaml_bytes))
         bundle = buf.getvalue()
 
-    from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+    from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 
     resp = client.post(
         "/v1/sessions",

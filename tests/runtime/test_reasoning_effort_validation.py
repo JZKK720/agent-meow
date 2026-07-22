@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-from agent_meow.inner.codex_executor import CodexExecutor
-from agent_meow.inner.executor import ExecutorConfig, ExecutorError
-from agent_meow.inner.openai_agents_sdk_executor import OpenAIAgentsSDKExecutor
-from agent_meow.llms.adapters.anthropic import _effort_to_budget
-from agent_meow.llms.errors import PermanentLLMError
+from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+from omnigent.inner.codex_executor import CodexExecutor
+from omnigent.inner.executor import ExecutorConfig, ExecutorError
+from omnigent.inner.openai_agents_sdk_executor import OpenAIAgentsSDKExecutor
+from omnigent.llms.adapters.anthropic import _effort_to_budget
+from omnigent.llms.errors import PermanentLLMError
 
 
 @pytest.mark.parametrize("effort", ["none", "minimal"])
@@ -56,7 +56,7 @@ async def test_openai_agents_rejects_max_without_sdk_call(monkeypatch: pytest.Mo
 
     fake_agents = types.SimpleNamespace()
     monkeypatch.setattr(
-        "agent_meow.inner.openai_agents_sdk_executor._ensure_agents_sdk", lambda: fake_agents
+        "omnigent.inner.openai_agents_sdk_executor._ensure_agents_sdk", lambda: fake_agents
     )
     executor = OpenAIAgentsSDKExecutor(client=object())
     events = [

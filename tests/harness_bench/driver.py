@@ -4,7 +4,7 @@ A driver hides the transport (how a turn is started and how events come
 back) behind a small harness-agnostic surface the probes call. The only
 driver today is :class:`SdkInprocDriver`, which spawns a single harness
 wrap subprocess via :class:`HarnessProcessManager` and drives turns over
-the wrap's ``POST /v1/sessions/{conv}/events`` SSE endpoint — the same
+the wrap's ``POST /v1/sessions/{conv}/events`` SSE endpoint â€” the same
 path exercised by ``tests/e2e/test_harness_wrap_e2e.py``.
 
 Native transports (tmux TUI, app-server, HTTP/SSE) are phase-2 drivers
@@ -25,7 +25,7 @@ from typing import Any
 
 import httpx
 
-from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 from tests.e2e._harness_probes import cli_unavailable_reason
 from tests.harness_bench.profile import BenchProfile
 
@@ -34,7 +34,7 @@ POLICY_ALLOW = "POLICY_ACTION_ALLOW"
 POLICY_DENY = "POLICY_ACTION_DENY"
 
 # Proto-style policy evaluation phases (see _scaffold.evaluate_policy and
-# agent_meow/native_policy_hook.py). A tool call is gated at PHASE_TOOL_CALL;
+# omnigent/native_policy_hook.py). A tool call is gated at PHASE_TOOL_CALL;
 # the request/result phases fire at other points in the turn. The policy
 # probe must scope its DENY to PHASE_TOOL_CALL so a DENY on the request
 # phase cannot masquerade as a tool-call guardrail pass.
@@ -138,7 +138,7 @@ class TurnResult:
     :param text: Concatenation of all ``response.output_text.delta``
         payloads.
     :param text_delta_count: Number of ``response.output_text.delta``
-        events — the streaming signal (>1 = token-level deltas, 1 = a
+        events â€” the streaming signal (>1 = token-level deltas, 1 = a
         single complete blob).
     :param reasoning_delta_count: Number of reasoning-delta events, if the
         harness forwards any.
@@ -148,7 +148,7 @@ class TurnResult:
         (one per ``policy_evaluation.requested``), so a probe can tell which
         verdict was delivered for which phase.
     :param tool_call_denied: Whether a ``PHASE_TOOL_CALL`` evaluation was
-        answered DENY — the only signal that proves a tool-call guardrail
+        answered DENY â€” the only signal that proves a tool-call guardrail
         (not a request/result-phase DENY) was actually exercised.
     :param completed: Whether a terminal ``response.completed`` was seen.
     :param cancelled: Whether a terminal ``response.cancelled`` was seen
@@ -211,7 +211,7 @@ class SdkInprocDriver:
         Checks, in order: the profile's transport matches this driver, a
         supplied Databricks profile (no gateway route without one), and a
         runnable harness CLI binary. Mirrors the e2e suite's gating so the
-        bench skips — rather than errors — in environments missing creds or
+        bench skips â€” rather than errors â€” in environments missing creds or
         a vendor CLI, or when a profile declares a transport this driver
         does not implement (e.g. a native/community harness).
         """
@@ -266,15 +266,15 @@ class SdkInprocDriver:
 
         Handles the three downward round-trips the wrap may need mid-turn:
 
-        - ``policy_evaluation.requested`` → posts a ``policy_verdict``,
+        - ``policy_evaluation.requested`` â†’ posts a ``policy_verdict``,
           answering DENY only for evaluations whose ``phase`` is in
           *deny_phases* and ALLOW otherwise. Scoping the DENY by phase is
           what lets the policy probe prove a *tool-call* guardrail rather
           than accidentally denying the request phase.
-        - ``response.output_item.done`` (function_call, action_required) →
+        - ``response.output_item.done`` (function_call, action_required) â†’
           when *auto_tool_output* is set, posts a ``tool_result`` so a
           tool-calling turn can complete.
-        - *interrupt_on_first_delta* → posts an ``interrupt`` event the
+        - *interrupt_on_first_delta* â†’ posts an ``interrupt`` event the
           first time text streams, to exercise cancellation.
 
         :param prompt: The user text for the turn.
@@ -319,7 +319,7 @@ class SdkInprocDriver:
             result.timed_out = True
         return result
 
-    # ── semantic driver protocol ─────────────────────────────
+    # â”€â”€ semantic driver protocol â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # The probe-facing surface (see tests/harness_bench/transport.py). Each
     # method wraps run_turn with the wrap-transport mechanism for one
     # capability dimension, so probes stay transport-agnostic.
@@ -445,8 +445,8 @@ class SdkInprocDriver:
         """POST a downward event on the wrap's events endpoint (best-effort).
 
         Downward events race the turn's terminal state (e.g. an interrupt
-        landing just as the turn ends). A failed post here is benign — the
-        probe reads the outcome from the stream — so the error is suppressed.
+        landing just as the turn ends). A failed post here is benign â€” the
+        probe reads the outcome from the stream â€” so the error is suppressed.
 
         :returns: ``True`` if the post got a non-error response, else
             ``False``. Callers that record a verdict as "delivered" gate on

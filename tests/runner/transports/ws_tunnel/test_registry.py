@@ -17,13 +17,13 @@ from collections.abc import Callable
 
 import pytest
 
-from agent_meow.runner.transports.ws_tunnel.frames import (
+from omnigent.runner.transports.ws_tunnel.frames import (
     HelloFrame,
     ResponseBodyFrame,
     ResponseEndFrame,
     ResponseHeadFrame,
 )
-from agent_meow.runner.transports.ws_tunnel.registry import TunnelRegistry
+from omnigent.runner.transports.ws_tunnel.registry import TunnelRegistry
 
 
 class _NoopWS:

@@ -8,12 +8,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     submit_prompt,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _MODEL = "mock-effort-model"
 _HARNESS = "openai-agents"
@@ -37,7 +37,7 @@ def test_repl_effort_command_show_set_reset(
 
     Uses the mock LLM server so no real LLM credentials are needed.
     The /effort slash commands are handled entirely within the REPL
-    process — no LLM turn is required to assert the UI state machine.
+    process â€” no LLM turn is required to assert the UI state machine.
 
     :param omnigent_python: Interpreter with agent-meow +
         openai-agents installed.
@@ -64,7 +64,7 @@ def test_repl_effort_command_show_set_reset(
         # Match the visible prompt marker rather than the bottom-toolbar
         # state text: under pexpect the prompt-toolkit CPR handshake can
         # suppress ``state: sleeping`` even though the REPL is ready.
-        child.expect(r"❯ ", timeout=_BOOT_TIMEOUT)
+        child.expect(r"â¯ ", timeout=_BOOT_TIMEOUT)
 
         _submit_slash_command(child, "/effort")
         child.expect("reasoning effort: default", timeout=10)
@@ -82,7 +82,7 @@ def test_repl_effort_command_show_set_reset(
         # so typing a normal prompt immediately can append to the old
         # slash-command text instead of starting a model turn.
         child.send("\r")
-        child.expect(r"❯ ", timeout=10)
+        child.expect(r"â¯ ", timeout=10)
 
         _submit_slash_command(child, "/effort default")
         child.expect("reasoning effort reset to agent default", timeout=10)

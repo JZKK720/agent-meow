@@ -1,16 +1,16 @@
-"""Tests for agent_meow.onboarding.provider_selection — selection logic."""
+"""Tests for omnigent.onboarding.provider_selection â€” selection logic."""
 
 from __future__ import annotations
 
 import pytest
 from click import ClickException
 
-from agent_meow.onboarding.provider_selection import (
+from omnigent.onboarding.provider_selection import (
     ProviderSelection,
     resolve_provider_from_model,
 )
 
-# ── resolve_provider_from_model ────────────────────────
+# â”€â”€ resolve_provider_from_model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_parses_provider_and_model(
@@ -91,7 +91,7 @@ def test_resolve_openai_omits_base_url_when_unset(
 ) -> None:
     """
     Without ``OPENAI_BASE_URL`` set, credentials carry only
-    ``api_key`` — no synthetic default that would point onboarding
+    ``api_key`` â€” no synthetic default that would point onboarding
     at an unintended endpoint.
     """
     monkeypatch.setenv("OPENAI_API_KEY", "sk-openai-test")

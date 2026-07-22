@@ -12,11 +12,11 @@ import pytest
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from agent_meow.entities import DEFAULT_ENVIRONMENT_ID, Conversation, ConversationItem, PagedList
-from agent_meow.errors import ErrorCode, OmnigentError
-from agent_meow.runtime import _globals, session_stream, set_runner_client, set_runner_router
-from agent_meow.server.routes.sessions import create_sessions_router
-from agent_meow.server.schemas import SessionEventInput
+from omnigent.entities import DEFAULT_ENVIRONMENT_ID, Conversation, ConversationItem, PagedList
+from omnigent.errors import ErrorCode, OmnigentError
+from omnigent.runtime import _globals, session_stream, set_runner_client, set_runner_router
+from omnigent.server.routes.sessions import create_sessions_router
+from omnigent.server.schemas import SessionEventInput
 
 
 class _ConversationStore:
@@ -53,8 +53,8 @@ class _ConversationStore:
                 root_conversation_id="conv_claude",
                 agent_id="ag_test",
                 labels={
-                    "agent_meow.ui": "terminal",
-                    "agent_meow.wrapper": "claude-code-native-ui",
+                    "omnigent.ui": "terminal",
+                    "omnigent.wrapper": "claude-code-native-ui",
                 },
             ),
             "conv_kiro": Conversation(
@@ -64,8 +64,8 @@ class _ConversationStore:
                 root_conversation_id="conv_kiro",
                 agent_id="ag_kiro",
                 labels={
-                    "agent_meow.ui": "terminal",
-                    "agent_meow.wrapper": "kiro-native-ui",
+                    "omnigent.ui": "terminal",
+                    "omnigent.wrapper": "kiro-native-ui",
                 },
             ),
             # A spec-driven native sub-agent child (e.g. a nessie
@@ -82,8 +82,8 @@ class _ConversationStore:
                 parent_conversation_id="conv_parent",
                 agent_id="ag_test",
                 labels={
-                    "agent_meow.ui": "terminal",
-                    "agent_meow.wrapper": "claude-code-native-ui",
+                    "omnigent.ui": "terminal",
+                    "omnigent.wrapper": "claude-code-native-ui",
                 },
             ),
         }
@@ -162,7 +162,7 @@ class _ConversationStore:
         """
         import time
 
-        from agent_meow.entities import ConversationItem
+        from omnigent.entities import ConversationItem
 
         result = []
         for item in items:
@@ -223,9 +223,9 @@ class _FakeRunnerClient:
     :param payload: Default JSON payload for all requests.
     :param status_code: Default HTTP status code.
     :param exc: If set, raise this on every call.
-    :param responses: Optional map of URL path → (status, payload)
+    :param responses: Optional map of URL path â†’ (status, payload)
         for per-path overrides.
-    :param text_responses: Optional map of URL path → (status,
+    :param text_responses: Optional map of URL path â†’ (status,
         body text, headers) for non-JSON overrides.
     """
 
@@ -245,7 +245,7 @@ class _FakeRunnerClient:
         :param payload: Default JSON payload for every response.
         :param status_code: Default HTTP status code.
         :param exc: Exception to raise on every request.
-        :param exc_paths: Per-URL exception overrides — raise only when
+        :param exc_paths: Per-URL exception overrides â€” raise only when
             the request targets that exact path, e.g.
             ``{"/v1/sessions/conv_x/events": ConnectionError("boom")}``.
             Lets a test pass one stage (terminal ensure) and fail the
@@ -263,7 +263,7 @@ class _FakeRunnerClient:
         self.calls: list[tuple[str, str]] = []
         self.post_json_calls: list[tuple[str, Any]] = []
         # Query params passed to each GET, in call order. ``None`` when
-        # the caller sent no params — lets tests assert that a proxy
+        # the caller sent no params â€” lets tests assert that a proxy
         # forwarded (or deliberately dropped) the incoming query string.
         self.get_params: list[dict[str, str] | None] = []
 
@@ -503,8 +503,8 @@ async def test_get_session_labels_uses_labels_only_path(
     assert resp.json() == {
         "id": "conv_claude",
         "labels": {
-            "agent_meow.ui": "terminal",
-            "agent_meow.wrapper": "claude-code-native-ui",
+            "omnigent.ui": "terminal",
+            "omnigent.wrapper": "claude-code-native-ui",
         },
     }
     assert fake_runner.calls == []
@@ -726,8 +726,8 @@ async def test_claude_native_message_tunnel_close_mid_forward_returns_502(
     """
     A WS-tunnel drop between terminal ensure and message forward is a 502.
 
-    WSTunnelTransport raises bare ``ConnectionError`` — not an
-    ``httpx.HTTPError`` — when the runner tunnel closes mid-request.
+    WSTunnelTransport raises bare ``ConnectionError`` â€” not an
+    ``httpx.HTTPError`` â€” when the runner tunnel closes mid-request.
     Before this fix the exception escaped the forward's
     ``except httpx.HTTPError`` clause to the global catch-all and the
     client saw an opaque 500 ``internal_error``; it must map to the
@@ -787,8 +787,8 @@ async def test_native_subagent_terminal_boot_failure_wakes_parent(
     forever and a retry of the same (agent, title) hits the busy guard.
 
     This fails (RED) if the failure path stops at
-    ``_publish_status("failed")`` — which writes only the SSE / status
-    cache — and omits the runner forward the normal completion path
+    ``_publish_status("failed")`` â€” which writes only the SSE / status
+    cache â€” and omits the runner forward the normal completion path
     performs.
     """
     # The runner accepts the terminal-ensure POST with a definitive
@@ -822,7 +822,7 @@ async def test_native_subagent_terminal_boot_failure_wakes_parent(
         },
     )
 
-    # The route still acknowledges the message (202) — the failure is
+    # The route still acknowledges the message (202) â€” the failure is
     # reported to the parent out-of-band, not by failing this request.
     assert resp.status_code == 202, resp.text
 
@@ -838,7 +838,7 @@ async def test_native_subagent_terminal_boot_failure_wakes_parent(
     # external_session_status carrying the boot error as ``output`` so
     # the runner delivers the real cause into the parent's inbox
     # (runner: ``output or "...turn failed"``). Asserting the exact
-    # payload proves the parent is notified — not left running forever.
+    # payload proves the parent is notified â€” not left running forever.
     forward_url, forward_body = fake_runner.post_json_calls[-1]
     assert forward_url == "/v1/sessions/conv_child_native/events"
     assert forward_body == {
@@ -926,7 +926,7 @@ async def test_native_subagent_terminal_boot_failure_surfaces_unreachable_runner
     assert fake_runner.post_json_calls[-1][1]["data"]["status"] == "failed"
 
 
-# ── Phase 1b: typed collections & single-resource proxy tests ────
+# â”€â”€ Phase 1b: typed collections & single-resource proxy tests â”€â”€â”€â”€
 
 
 def _env_only_payload() -> dict[str, object]:
@@ -1004,7 +1004,7 @@ async def test_list_terminals_forwards_pagination_params_to_runner(
     # Exactly the runner endpoint's supported pagination params are
     # forwarded; an unknown param (``bogus``) must be dropped so the
     # proxy can't be used to smuggle arbitrary query strings. A ``None``
-    # here means the proxy dropped the whole query string — the
+    # here means the proxy dropped the whole query string â€” the
     # refresh-flips-tab-order regression.
     assert fake_runner.get_params == [{"order": "asc", "limit": "1000"}]
 
@@ -1069,14 +1069,14 @@ def bash_terminal_spec(monkeypatch: pytest.MonkeyPatch) -> None:
     names in the spec's ``terminals:`` block. These route tests run
     with a stub agent store (no real bundle to load), so the module's
     spec loader is patched to return a minimal spec declaring
-    ``bash`` — the name the create tests request.
+    ``bash`` â€” the name the create tests request.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from agent_meow.inner.datamodel import TerminalEnvSpec
-    from agent_meow.server.routes import sessions as sessions_module
-    from agent_meow.spec.types import AgentSpec
+    from omnigent.inner.datamodel import TerminalEnvSpec
+    from omnigent.server.routes import sessions as sessions_module
+    from omnigent.spec.types import AgentSpec
 
     spec = AgentSpec(spec_version=1, terminals={"bash": TerminalEnvSpec(command="bash")})
     monkeypatch.setattr(
@@ -1127,7 +1127,7 @@ async def test_create_terminal_rejected_without_agent_terminal_access(
     """User creates are rejected when the agent declares no terminals.
 
     The stub agent store resolves no agent, so the session has no
-    spec and therefore no ``terminals:`` block — the iff gate must
+    spec and therefore no ``terminals:`` block â€” the iff gate must
     refuse the create instead of letting the runner synthesize an
     arbitrary terminal the agent can't see or manage.
     """
@@ -1141,7 +1141,7 @@ async def test_create_terminal_rejected_without_agent_terminal_access(
 
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "invalid_input"
-    # The gate fired BEFORE the proxy — a recorded call here means an
+    # The gate fired BEFORE the proxy â€” a recorded call here means an
     # unauthorized launch reached the runner despite the 400.
     assert fake_runner.calls == []
 
@@ -1155,7 +1155,7 @@ async def test_create_terminal_rejected_for_undeclared_name(
 
     The agent declares only ``bash``; requesting ``zsh`` would hit the
     runner's synthesize-from-body path, producing a terminal outside
-    the operator-declared set — the gate must refuse it.
+    the operator-declared set â€” the gate must refuse it.
     """
     fake_runner = _FakeRunnerClient(payload={})
     set_runner_router(_FakeRunnerRouter(fake_runner))  # type: ignore[arg-type]
@@ -1183,7 +1183,7 @@ async def test_create_terminal_native_bootstrap_exempt_from_gate(
     own CLI terminal under undeclared names (``"claude"`` /
     ``"codex"``); gating them would break every native session boot.
     No spec resolves here (stub agent store), so a recorded proxy call
-    proves the exemption — without it this request would 400 like the
+    proves the exemption â€” without it this request would 400 like the
     ungated test above.
     """
     terminal_resource = {
@@ -1236,7 +1236,7 @@ async def test_create_terminal_bootstrap_markers_do_not_bypass_gate_for_other_sh
     The exemption markers ride the JSON body, so any LEVEL_EDIT caller
     can set them. Without the claude/codex + main narrowing, a caller
     could launch ANY terminal name (with bridge injection) on a
-    no-terminal-access agent just by adding the flag — the W5
+    no-terminal-access agent just by adding the flag â€” the W5
     operator-restriction bypass flagged in review. No spec resolves
     here (stub agent store), so a 400 with no recorded runner call
     proves the marker alone no longer opens the gate.
@@ -1251,7 +1251,7 @@ async def test_create_terminal_bootstrap_markers_do_not_bypass_gate_for_other_sh
 
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "invalid_input"
-    # Gate fired before the proxy — a recorded call means the marker
+    # Gate fired before the proxy â€” a recorded call means the marker
     # bypassed the gate and the unauthorized launch reached the runner.
     assert fake_runner.calls == []
 
@@ -1275,8 +1275,8 @@ async def test_create_terminal_bootstrap_markers_do_not_bypass_gate_for_other_sh
             ErrorCode.RUNNER_UNAVAILABLE,
             "tunnel closed before request completed",
         ),
-        # Runner returns an error with no body — fall back to
-        # INTERNAL_ERROR (→500) and a message carrying the raw status.
+        # Runner returns an error with no body â€” fall back to
+        # INTERNAL_ERROR (â†’500) and a message carrying the raw status.
         (
             500,
             {},
@@ -1302,7 +1302,7 @@ async def test_create_terminal_surfaces_runner_error_without_crashing(
     has no ``http_status`` arg (it is a derived property), so any runner
     error turned into an unhandled ``TypeError`` instead of a legible error.
     With the bug present, ``client.post`` below raises ``TypeError`` rather
-    than returning a response, so this test errors out — the failure signal.
+    than returning a response, so this test errors out â€” the failure signal.
 
     :param runner_status: HTTP status the fake runner returns for the
         terminal-launch proxy POST, e.g. ``503``.
@@ -1327,7 +1327,7 @@ async def test_create_terminal_surfaces_runner_error_without_crashing(
     # masked by the old TypeError path or a generic internal error).
     assert resp.status_code == expected_status
     body = resp.json()
-    # The runner's own code/message reach the client unchanged — proves the
+    # The runner's own code/message reach the client unchanged â€” proves the
     # error was surfaced, not swallowed or replaced by a generic 500.
     assert body["error"]["code"] == expected_code
     assert body["error"]["message"] == expected_message
@@ -1425,7 +1425,7 @@ async def test_delete_terminal_surfaces_runner_404(
     assert resp.json()["error"]["code"] == "not_found"
 
 
-# ── Phase 1c: session-scoped file endpoint tests ────────────────
+# â”€â”€ Phase 1c: session-scoped file endpoint tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _InMemoryArtifactStore:
@@ -1456,7 +1456,7 @@ def file_conv_store() -> _ConversationStore:
 @pytest.fixture
 def file_store(db_uri: str) -> Any:
     """Real SqlAlchemy file store for file endpoint tests."""
-    from agent_meow.stores.file_store.sqlalchemy_store import (
+    from omnigent.stores.file_store.sqlalchemy_store import (
         SqlAlchemyFileStore,
     )
 
@@ -1497,7 +1497,7 @@ def file_app(
     test_app.include_router(
         create_sessions_router(
             file_conv_store,  # type: ignore[arg-type]
-            object(),  # type: ignore[arg-type]  — stub agent store
+            object(),  # type: ignore[arg-type]  â€” stub agent store
             file_store=file_store,  # type: ignore[arg-type]
             artifact_store=artifact_store,  # type: ignore[arg-type]
         ),
@@ -1615,7 +1615,7 @@ async def test_download_session_file_html_is_attachment_not_inline(
         f"/v1/sessions/conv_proxy/resources/files/{file_id}/content",
     )
     assert resp.status_code == 200
-    # The bytes are still served verbatim — we don't mangle content,
+    # The bytes are still served verbatim â€” we don't mangle content,
     # we only change how the browser is told to handle them.
     assert resp.content == b"<script>alert(document.domain)</script>"
     # attachment => browser downloads instead of rendering the script.
@@ -1648,7 +1648,7 @@ async def test_delete_session_file(
     assert get_resp.status_code == 404
 
 
-# ── Phase 1d: integration hardening tests ────────────────────────
+# â”€â”€ Phase 1d: integration hardening tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -1702,7 +1702,7 @@ async def test_delete_for_session_cleans_up_all_files(
     )
     assert len(list_resp.json()["data"]) == 3
 
-    # Use the injected file_store fixture directly — no closure
+    # Use the injected file_store fixture directly â€” no closure
     # introspection needed.
     deleted_ids = file_store.delete_all_for_session("conv_proxy")
     assert len(deleted_ids) == 3
@@ -1717,7 +1717,7 @@ def test_resource_lifecycle_event_schemas_in_union() -> None:
     """Session resource events are part of the ServerStreamEvent union."""
     from pydantic import TypeAdapter
 
-    from agent_meow.server.schemas import (
+    from omnigent.server.schemas import (
         ServerStreamEvent,
         SessionResourceCreatedEvent,
         SessionResourceDeletedEvent,
@@ -1753,7 +1753,7 @@ def test_resource_lifecycle_event_schemas_in_union() -> None:
     assert deleted.resource_id == "terminal_bash_s1"
 
 
-# ── Server filesystem proxy tests ────────────────────────────────
+# â”€â”€ Server filesystem proxy tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _fs_list_payload() -> dict[str, object]:
@@ -1850,7 +1850,7 @@ async def test_filesystem_list_forwards_custom_limit_and_order(
     )
 
     assert resp.status_code == 200
-    # limit=1000 and order=asc must reach the runner — they are not silently capped or ignored.
+    # limit=1000 and order=asc must reach the runner â€” they are not silently capped or ignored.
     assert fake_runner.calls == [
         (
             "GET",
@@ -1874,7 +1874,7 @@ async def test_filesystem_list_forwards_after_cursor(
 
     assert resp.status_code == 200
     forwarded_url = fake_runner.calls[0][1]
-    # after=README.md must be included — without it the runner would return the
+    # after=README.md must be included â€” without it the runner would return the
     # first page again instead of the next page.
     assert "after=README.md" in forwarded_url
     assert "limit=100" in forwarded_url
@@ -1896,7 +1896,7 @@ async def test_filesystem_list_forwards_before_cursor(
 
     assert resp.status_code == 200
     forwarded_url = fake_runner.calls[0][1]
-    # before=src must be included — without it the runner would not constrain
+    # before=src must be included â€” without it the runner would not constrain
     # the upper bound of the page window.
     assert "before=src" in forwarded_url
 
@@ -1915,7 +1915,7 @@ async def test_filesystem_list_omits_absent_cursors(
 
     assert resp.status_code == 200
     forwarded_url = fake_runner.calls[0][1]
-    # after and before must be absent — including them as empty strings or
+    # after and before must be absent â€” including them as empty strings or
     # "None" would corrupt the runner's cursor parsing.
     assert "after" not in forwarded_url
     assert "before" not in forwarded_url
@@ -1959,7 +1959,7 @@ async def test_filesystem_path_omits_absent_cursors(
     assert resp.status_code == 200
     forwarded_url = fake_runner.calls[0][1]
     # Cursor params absent from the client request must not appear in the
-    # proxied URL — "after=None" or "before=None" would break the runner.
+    # proxied URL â€” "after=None" or "before=None" would break the runner.
     assert "after" not in forwarded_url
     assert "before" not in forwarded_url
 
@@ -2082,7 +2082,7 @@ async def test_filesystem_proxy_validates_session(
     assert not fake_runner.calls
 
 
-# ── Server shell proxy test ──────────────────────────────────────
+# â”€â”€ Server shell proxy test â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -2124,7 +2124,7 @@ async def test_shell_proxies_to_runner(
     assert published == []
 
 
-# ── Conversation deletion cleanup test ───────────────────────────
+# â”€â”€ Conversation deletion cleanup test â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -2150,7 +2150,7 @@ async def test_session_file_cleanup_on_delete(
     assert file_id not in artifact_store._blobs
 
 
-# ── Resource event persistence tests ─────────────────────────────
+# â”€â”€ Resource event persistence tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -2198,7 +2198,7 @@ async def test_file_delete_persists_resource_event(
 class _FakeStreamCtx:
     """Async-context-manager body for ``_FakeStreamingRunnerClient.stream``.
 
-    Yields the configured SSE frame strings in order, then ends — the
+    Yields the configured SSE frame strings in order, then ends â€” the
     relay loop returns when it reads the terminal ``[DONE]`` frame.
 
     :param frames: SSE frame strings (each already terminated by a
@@ -2260,8 +2260,8 @@ class _ScriptedStreamCtx:
     Each step is either an SSE frame string (yielded to the relay) or a
     zero-arg callable (run between frames). Because the relay fully
     processes one frame before pulling the next chunk, a callable step
-    runs at a deterministic point — after every prior frame's processing
-    and before any later frame's — which is how these tests install the
+    runs at a deterministic point â€” after every prior frame's processing
+    and before any later frame's â€” which is how these tests install the
     stop fence "mid-turn" exactly the way the ``POST /events`` route does.
 
     :param steps: Ordered frames and hooks to execute.
@@ -2293,7 +2293,7 @@ class _ScriptedStreamingRunnerClient:
     Real stub class (not ``MagicMock``) so an unexpected method call
     raises ``AttributeError`` loudly instead of silently passing.
 
-    :param steps: SSE frame strings and zero-arg hooks, in order — see
+    :param steps: SSE frame strings and zero-arg hooks, in order â€” see
         :class:`_ScriptedStreamCtx`.
     """
 
@@ -2313,10 +2313,10 @@ async def test_relay_persists_terminal_resource_created_from_runner() -> None:
     An agent ``sys_terminal_launch`` makes the runner emit
     ``session.resource.created`` on its SSE stream. The agent-meow relay must
     persist a durable ``resource_event`` item so a client reconnecting
-    mid-turn rediscovers the terminal in the snapshot — matching the
+    mid-turn rediscovers the terminal in the snapshot â€” matching the
     REST resource path.
     """
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
@@ -2339,7 +2339,7 @@ async def test_relay_persists_terminal_resource_created_from_runner() -> None:
     await _relay_runner_stream("conv_proxy", client, store)  # type: ignore[arg-type]
 
     events = [i for i in store.appended_items if i.type == "resource_event"]
-    # Exactly one durable item — the created event. Zero would mean the
+    # Exactly one durable item â€” the created event. Zero would mean the
     # relay dropped it (the bug this change fixes); more than one would
     # mean a non-resource frame leaked into the resource-event path.
     assert len(events) == 1, f"expected 1 resource_event, got {store.appended_items}"
@@ -2361,7 +2361,7 @@ async def test_relay_persists_terminal_resource_deleted_from_runner() -> None:
     runner emit ``session.resource.deleted``; the relay persists the
     durable delete item.
     """
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
@@ -2392,7 +2392,7 @@ async def test_relay_persists_terminal_resource_deleted_from_runner() -> None:
 @pytest.mark.asyncio
 async def test_relay_persists_failed_status_error_labels_from_runner() -> None:
     """Runner ``session.status: failed`` error details survive reload."""
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
@@ -2414,11 +2414,11 @@ async def test_relay_persists_failed_status_error_labels_from_runner() -> None:
     await _relay_runner_stream("conv_proxy", client, store)  # type: ignore[arg-type]
 
     assert (
-        store._conversations["conv_proxy"].labels["agent_meow.last_task_error_code"]
+        store._conversations["conv_proxy"].labels["omnigent.last_task_error_code"]
         == "required_terminal_exited"
     )
     assert (
-        store._conversations["conv_proxy"].labels["agent_meow.last_task_error_message"]
+        store._conversations["conv_proxy"].labels["omnigent.last_task_error_message"]
         == "Required terminal exited unexpectedly"
     )
 
@@ -2429,12 +2429,12 @@ async def test_relay_truncates_long_error_message_before_persisting() -> None:
 
     Long messages (tracebacks, 5xx bodies) overflow the String(256)
     ``conversation_labels.value`` column and previously caused a
-    ``DataError`` that silently dropped the failure reason — the session
+    ``DataError`` that silently dropped the failure reason â€” the session
     rendered as bare ``"failed"`` with no explanation on reload.
     Truncation must happen inside the relay (the real call site) so no
     long message ever reaches the store.
     """
-    from agent_meow.server.routes.sessions import _LABEL_VALUE_MAX_LEN, _relay_runner_stream
+    from omnigent.server.routes.sessions import _LABEL_VALUE_MAX_LEN, _relay_runner_stream
 
     store = _ConversationStore()
     long_message = "Runner MCP execute failed: " + "x" * 300  # 327 chars, well over 256
@@ -2456,7 +2456,7 @@ async def test_relay_truncates_long_error_message_before_persisting() -> None:
 
     await _relay_runner_stream("conv_proxy", client, store)  # type: ignore[arg-type]
 
-    stored = store._conversations["conv_proxy"].labels["agent_meow.last_task_error_message"]
+    stored = store._conversations["conv_proxy"].labels["omnigent.last_task_error_message"]
     assert len(stored) <= _LABEL_VALUE_MAX_LEN
 
 
@@ -2469,9 +2469,9 @@ async def test_relay_persists_routing_decision_before_assistant_output() -> None
     ``response.output_item.done`` (item type ``routing_decision``) at turn
     start, before ``response.in_progress`` and any assistant message. The
     relay must persist it as a durable, display-only item at that position
-    so a reload renders the chip before the answer it sized — not after.
+    so a reload renders the chip before the answer it sized â€” not after.
     """
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
@@ -2517,7 +2517,7 @@ async def test_relay_persists_routing_decision_before_assistant_output() -> None
     )
     routing = store.appended_items[0]
     # Every render field round-tripped through RoutingDecisionData on
-    # persist — a parse failure would have dropped the item entirely.
+    # persist â€” a parse failure would have dropped the item entirely.
     assert routing.data.model == "databricks-claude-opus-4-8"
     assert routing.data.tier == "expensive"
     assert routing.data.applied is True
@@ -2532,10 +2532,10 @@ async def test_relay_routing_decision_live_event_carries_persisted_id() -> None:
     (which fetches the just-persisted item with its store id) would render
     a SECOND chip alongside the live one. The relay must publish the live
     ``response.output_item.done`` carrying the persisted item id so the
-    web UI dedups both copies by ``ctx.itemId`` — exactly one chip.
+    web UI dedups both copies by ``ctx.itemId`` â€” exactly one chip.
     """
-    from agent_meow.runtime import session_stream
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import session_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     published: list[dict[str, Any]] = []
     routing_seen = asyncio.Event()
@@ -2586,7 +2586,7 @@ async def test_relay_routing_decision_live_event_carries_persisted_id() -> None:
         for e in published
         if isinstance(e.get("item"), dict) and e["item"].get("type") == "routing_decision"
     ]
-    # Exactly one live frame, carrying the SAME id as the persisted item —
+    # Exactly one live frame, carrying the SAME id as the persisted item â€”
     # a null/missing id (the raw runner event) would not dedup against a
     # snapshot-merged copy and would double-render the chip.
     assert len(routing_live) == 1, f"expected 1 live routing frame, got {published}"
@@ -2605,7 +2605,7 @@ async def test_relay_drops_malformed_routing_decision() -> None:
     ``RoutingDecisionData`` (which rejects an empty model); on failure the
     relay drops it.
     """
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
@@ -2629,7 +2629,7 @@ async def test_relay_drops_malformed_routing_decision() -> None:
     await _relay_runner_stream("conv_proxy", client, store)  # type: ignore[arg-type]
 
     routing = [i for i in store.appended_items if i.type == "routing_decision"]
-    # Empty-model frame dropped — zero persisted. A persisted item would
+    # Empty-model frame dropped â€” zero persisted. A persisted item would
     # mean the relay stored a chip with no model to render.
     assert routing == []
 
@@ -2645,7 +2645,7 @@ async def test_relay_does_not_persist_session_level_response_error() -> None:
     message fast-fails and records its own ordered ``message,error``
     pair.
     """
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
@@ -2679,7 +2679,7 @@ async def test_relay_persists_in_turn_response_error_once_from_runner() -> None:
     persists that visible error payload so refresh shows the banner, but
     still dedupes identical frames so history is not spammed.
     """
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
@@ -2736,8 +2736,8 @@ async def test_relay_dedupes_duplicate_error_persistence_but_forwards_live_frame
     persists only the first matching banner until another user message
     starts a new transcript turn.
     """
-    from agent_meow.runtime import session_stream
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import session_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     published: list[dict[str, Any]] = []
     live_errors_seen = asyncio.Event()
@@ -2811,7 +2811,7 @@ async def test_native_dispatch_fast_fails_and_consumes_message_on_terminal_error
     create a pending input or forward into the dead terminal. It should
     persist the user message plus a durable error item instead.
     """
-    from agent_meow.server.routes.sessions import _dispatch_session_event_to_runner
+    from omnigent.server.routes.sessions import _dispatch_session_event_to_runner
 
     store = _ConversationStore()
     conv = store.get_conversation("conv_claude")
@@ -2871,8 +2871,8 @@ async def test_native_dispatch_fast_fails_and_consumes_message_on_terminal_error
 @pytest.mark.asyncio
 async def test_kiro_native_dispatch_forwards_without_persisting() -> None:
     """Kiro web-chat input is mirrored by Kiro's session forwarder."""
-    from agent_meow.runtime import pending_inputs
-    from agent_meow.server.routes.sessions import _dispatch_session_event_to_runner
+    from omnigent.runtime import pending_inputs
+    from omnigent.server.routes.sessions import _dispatch_session_event_to_runner
 
     pending_inputs.reset_for_tests()
     store = _ConversationStore()
@@ -2918,8 +2918,8 @@ async def test_kiro_native_dispatch_forwards_without_persisting() -> None:
 @pytest.mark.asyncio
 async def test_kiro_native_dispatch_clears_pending_when_injection_fails() -> None:
     """A failed Kiro tmux injection must not leave a ghost pending input."""
-    from agent_meow.runtime import pending_inputs
-    from agent_meow.server.routes.sessions import _dispatch_session_event_to_runner
+    from omnigent.runtime import pending_inputs
+    from omnigent.server.routes.sessions import _dispatch_session_event_to_runner
 
     pending_inputs.reset_for_tests()
     store = _ConversationStore()
@@ -2960,8 +2960,8 @@ async def test_kiro_native_dispatch_clears_pending_when_injection_fails() -> Non
 @pytest.mark.asyncio
 async def test_kiro_external_prompt_matches_pending_and_reports_skipped_input() -> None:
     """A failed Kiro prompt must not make the next prompt clear the wrong pending input."""
-    from agent_meow.runtime import pending_inputs
-    from agent_meow.server.routes.sessions import _persist_external_conversation_item
+    from omnigent.runtime import pending_inputs
+    from omnigent.server.routes.sessions import _persist_external_conversation_item
 
     pending_inputs.reset_for_tests()
     store = _ConversationStore()
@@ -3023,7 +3023,7 @@ async def test_native_dispatch_reports_malformed_runner_error_body() -> None:
     native CLI cause or persist the raw HTTP body; it should say the
     runner returned a malformed ensure response.
     """
-    from agent_meow.server.routes.sessions import _dispatch_session_event_to_runner
+    from omnigent.server.routes.sessions import _dispatch_session_event_to_runner
 
     store = _ConversationStore()
     conv = store.get_conversation("conv_claude")
@@ -3076,7 +3076,7 @@ async def test_native_dispatch_transport_error_does_not_fallback_to_forwarding()
     should not fall back to forwarding the message and waiting on the
     old boot grace path, because that reintroduces the slow hang.
     """
-    from agent_meow.server.routes.sessions import _dispatch_session_event_to_runner
+    from omnigent.server.routes.sessions import _dispatch_session_event_to_runner
 
     store = _ConversationStore()
     conv = store.get_conversation("conv_claude")
@@ -3128,8 +3128,8 @@ async def test_native_dispatch_transport_error_does_not_fallback_to_forwarding()
 async def test_native_dispatch_tunnel_close_is_definitive_ensure_error() -> None:
     """A WS-tunnel drop during terminal ensure fails the turn durably.
 
-    WSTunnelTransport raises bare ``ConnectionError`` — not an
-    ``httpx.HTTPError`` — when the runner's tunnel closes mid-request
+    WSTunnelTransport raises bare ``ConnectionError`` â€” not an
+    ``httpx.HTTPError`` â€” when the runner's tunnel closes mid-request
     ("tunnel closed before request completed"). Before this fix the
     exception escaped the ensure probe's ``except httpx.HTTPError``
     clause to the global catch-all, so the web client saw an opaque
@@ -3137,7 +3137,7 @@ async def test_native_dispatch_tunnel_close_is_definitive_ensure_error() -> None
     error. The dispatch must treat it exactly like an httpx transport
     failure: consume the user message and persist an explicit error.
     """
-    from agent_meow.server.routes.sessions import _dispatch_session_event_to_runner
+    from omnigent.server.routes.sessions import _dispatch_session_event_to_runner
 
     store = _ConversationStore()
     conv = store.get_conversation("conv_claude")
@@ -3183,7 +3183,7 @@ async def test_native_dispatch_persists_error_for_each_user_retry() -> None:
     must be written after that user message so refresh still shows why
     the retry failed.
     """
-    from agent_meow.server.routes.sessions import _dispatch_session_event_to_runner
+    from omnigent.server.routes.sessions import _dispatch_session_event_to_runner
 
     store = _ConversationStore()
     conv = store.get_conversation("conv_claude")
@@ -3246,8 +3246,8 @@ async def test_native_dispatch_records_same_error_after_recovery_boundary() -> N
     retry should record a new visible error instead of being suppressed
     by the previous failure.
     """
-    from agent_meow.entities import MessageData, NewConversationItem
-    from agent_meow.server.routes.sessions import _dispatch_session_event_to_runner
+    from omnigent.entities import MessageData, NewConversationItem
+    from omnigent.server.routes.sessions import _dispatch_session_event_to_runner
 
     store = _ConversationStore()
     conv = store.get_conversation("conv_claude")
@@ -3326,9 +3326,9 @@ async def test_relay_skips_malformed_resource_created_from_runner() -> None:
     """A ``session.resource.created`` missing its ``resource`` persists nothing.
 
     A malformed frame must not poison the relay or persist a partial
-    item — the snapshot endpoint stays the source of truth.
+    item â€” the snapshot endpoint stays the source of truth.
     """
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
@@ -3348,7 +3348,7 @@ async def test_relay_skips_malformed_resource_created_from_runner() -> None:
 @pytest.mark.parametrize(
     "frame_payload",
     [
-        # created: empty-string id / type are malformed — isinstance(str)
+        # created: empty-string id / type are malformed â€” isinstance(str)
         # admits "" but it can't resolve to a real resource.
         {"type": "session.resource.created", "resource": {"id": "", "type": "terminal"}},
         {"type": "session.resource.created", "resource": {"id": "terminal_zsh_s1", "type": ""}},
@@ -3372,12 +3372,12 @@ async def test_relay_skips_empty_resource_id_or_type_from_runner(
 ) -> None:
     """Empty-string resource id/type frames persist nothing.
 
-    A frame whose id or type is ``""`` is malformed — persisting it
+    A frame whose id or type is ``""`` is malformed â€” persisting it
     would leave a ``resource_event`` item the snapshot can't map back
     to a real resource. The relay must drop it (regression guard for
     the ``isinstance(x, str)``-only check that accepted ``""``).
     """
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient([_sse_frame(frame_payload), "data: [DONE]\n\n"])
@@ -3395,11 +3395,11 @@ async def test_relay_pairs_function_call_output_with_call_response_id() -> None:
 
     When the harness starts a new response before the tool result
     arrives, the relay's ``current_response_id`` has already advanced.
-    Without the call_id → response_id tracking, the output gets the
-    new id and the web UI can't pair it with the spinner — the tool
+    Without the call_id â†’ response_id tracking, the output gets the
+    new id and the web UI can't pair it with the spinner â€” the tool
     card shows "Waiting for output" forever.
     """
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
@@ -3410,7 +3410,7 @@ async def test_relay_pairs_function_call_output_with_call_response_id() -> None:
                     "response": {"id": "resp_first"},
                 }
             ),
-            # function_call: the relay records call_id → response_id
+            # function_call: the relay records call_id â†’ response_id
             # from the raw event even though parse_item_data fails
             # (serialization alias mismatch for the ``model`` field).
             _sse_frame(
@@ -3454,7 +3454,7 @@ async def test_relay_pairs_function_call_output_with_call_response_id() -> None:
     await _relay_runner_stream("conv_proxy", client, store)  # type: ignore[arg-type]
 
     outputs = [i for i in store.appended_items if i.type == "function_call_output"]
-    # Exactly one output — the single tool result in the stream. Zero
+    # Exactly one output â€” the single tool result in the stream. Zero
     # would mean the relay dropped it; more than one means a duplicate.
     assert len(outputs) == 1
     # The output must share the CALL's response_id, not the second
@@ -3470,15 +3470,15 @@ async def test_relay_publishes_inflight_frames_and_discards_on_exit() -> None:
     """
     The relay feeds the in-flight index, then discards it on exit.
 
-    Drives the REAL relay with the runner's actual SSE frame shapes —
-    ``response.created`` + ``response.output_text.delta`` — and ends the
+    Drives the REAL relay with the runner's actual SSE frame shapes â€”
+    ``response.created`` + ``response.output_text.delta`` â€” and ends the
     stream with NO terminal ``response.*`` (a runner death / Stop /
     tunnel drop mid-turn). Two properties:
 
     * **Producer:** the relay republishes the lifecycle + text frames
       through ``session_stream.publish`` (captured via a concurrent
       subscriber). Those are exactly what ``record_publish`` accumulates
-      into the in-flight index for snapshot replay — so the populate
+      into the in-flight index for snapshot replay â€” so the populate
       path is real, not just asserted in isolation.
     * **Leak fix:** when the relay task exits without a terminal event,
       its ``finally`` calls ``inflight_text.discard`` so the entry is
@@ -3486,8 +3486,8 @@ async def test_relay_publishes_inflight_frames_and_discards_on_exit() -> None:
       would strand the entry forever and replay stale text on the next
       reload (and grow the index unbounded).
     """
-    from agent_meow.runtime import inflight_text, session_stream
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import inflight_text, session_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     inflight_text.reset_for_tests()
     published: list[dict[str, Any]] = []
@@ -3518,7 +3518,7 @@ async def test_relay_publishes_inflight_frames_and_discards_on_exit() -> None:
                 ),
                 _sse_frame({"type": "response.output_text.delta", "delta": "Planning "}),
                 _sse_frame({"type": "response.output_text.delta", "delta": "the work."}),
-                # No response.completed / cancelled — the turn is still
+                # No response.completed / cancelled â€” the turn is still
                 # streaming when the stream ends (runner death / Stop).
                 "data: [DONE]\n\n",
             ]
@@ -3534,7 +3534,7 @@ async def test_relay_publishes_inflight_frames_and_discards_on_exit() -> None:
         published_types = [e.get("type") for e in published]
         assert "response.created" in published_types, published_types
         assert published_types.count("response.output_text.delta") == 2, published_types
-        # The turn never completed → no assistant message persisted.
+        # The turn never completed â†’ no assistant message persisted.
         assert [i for i in store.appended_items if i.type == "message"] == [], (
             "an unfinished turn must not persist an assistant message"
         )
@@ -3556,15 +3556,15 @@ async def test_relay_fences_cancelled_turn_and_resumes_on_next_turn(
     """A Stop fences the turn: its trailing deltas aren't persisted or forwarded.
 
     Repro of the stop-mid-stream bug: after the user Stops, the cancelled
-    turn's remaining deltas must be DROPPED — not persisted to the transcript
+    turn's remaining deltas must be DROPPED â€” not persisted to the transcript
     and not forwarded to the live stream. Dropped deltas never enter the text
     buffer, so the turn's ``response.completed`` (which now lifts the fence
     and is processed normally) flushes nothing for the abandoned tail. The
     follow-up turn persists + forwards normally so it has a real effect.
     """
-    from agent_meow.runtime import session_stream
-    from agent_meow.server.routes import sessions as sessions_module
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import session_stream
+    from omnigent.server.routes import sessions as sessions_module
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     sid = "conv_fenced"
     published: list[dict[str, Any]] = []
@@ -3579,7 +3579,7 @@ async def test_relay_fences_cancelled_turn_and_resumes_on_next_turn(
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
         [
-            # Cancelled turn's trailing content — the session is already fenced.
+            # Cancelled turn's trailing content â€” the session is already fenced.
             _sse_frame({"type": "response.output_text.delta", "delta": "ABANDONED"}),
             _sse_frame({"type": "response.completed", "response": {"id": "r1", "model": "m"}}),
             # Follow-up turn: running lifts the fence, then a real reply.
@@ -3597,7 +3597,7 @@ async def test_relay_fences_cancelled_turn_and_resumes_on_next_turn(
     finally:
         sessions_module._interrupt_fenced_sessions.discard(sid)
 
-    # Exactly one assistant message persisted — the follow-up reply. The
+    # Exactly one assistant message persisted â€” the follow-up reply. The
     # cancelled turn's delta+completed were dropped. If 2 (or "ABANDONED"),
     # the fence leaked and the abandoned reply reached the transcript.
     messages = [
@@ -3626,13 +3626,13 @@ async def test_relay_flushes_partial_text_on_failed_turn_before_error_item() -> 
 
     Repro of the lost-narration bug: scaffold text only flushed at tool
     boundaries and on ``response.completed``, so a turn that FAILED dropped
-    everything streamed since the last boundary — after reload only the error
+    everything streamed since the last boundary â€” after reload only the error
     remained. The relay must flush the buffered text on ``response.failed``
     (before the durable error item, matching what the user watched stream),
     and the terminal's publish must clear the in-flight replay entry.
     """
-    from agent_meow.runtime import inflight_text
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import inflight_text
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     inflight_text.reset_for_tests()
     sid = "conv_proxy"
@@ -3700,7 +3700,7 @@ async def test_relay_flushes_partial_text_on_failed_turn_before_error_item() -> 
             ]
         ], inflight_after_deltas
         # Cleared by the terminal's publish AFTER the flush persisted the
-        # text — a non-empty snapshot here would double-render on reconnect.
+        # text â€” a non-empty snapshot here would double-render on reconnect.
         assert inflight_after_failed == [[]], inflight_after_failed
     finally:
         inflight_text.reset_for_tests()
@@ -3719,9 +3719,9 @@ async def test_relay_flushes_final_text_on_fenced_response_completed(
     completed proves the turn was NOT cancelled: it must flush + publish
     normally and lift the fence.
     """
-    from agent_meow.runtime import inflight_text, session_stream
-    from agent_meow.server.routes import sessions as sessions_module
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import inflight_text, session_stream
+    from omnigent.server.routes import sessions as sessions_module
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     inflight_text.reset_for_tests()
     sid = "conv_fence_completed"
@@ -3764,7 +3764,7 @@ async def test_relay_flushes_final_text_on_fenced_response_completed(
         assert len(messages) == 1, f"expected 1 assistant message, got {store.appended_items}"
         assert "".join(b["text"] for b in messages[0].data.content) == "The answer is 42."
         assert messages[0].response_id == "resp_done"
-        # The terminal lifted the fence — without this, every later turn's
+        # The terminal lifted the fence â€” without this, every later turn's
         # output would be dropped until the next "running" status.
         assert sid not in sessions_module._interrupt_fenced_sessions
         # The completed event reached the live stream so clients close the
@@ -3784,13 +3784,13 @@ async def test_relay_persists_pre_stop_narration_on_fenced_incomplete(
     The live tab keeps showing the text streamed before the Stop, so reload
     must too: the fenced ``response.incomplete`` (the runtime cancel
     handler's terminal) flushes the buffered pre-Stop text. Deltas that
-    arrive AFTER the Stop are still suppressed — they never reach the live
+    arrive AFTER the Stop are still suppressed â€” they never reach the live
     stream, so persisting them would make reload diverge from what was
     watched.
     """
-    from agent_meow.runtime import inflight_text, session_stream
-    from agent_meow.server.routes import sessions as sessions_module
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import inflight_text, session_stream
+    from omnigent.server.routes import sessions as sessions_module
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     inflight_text.reset_for_tests()
     sid = "conv_fence_incomplete"
@@ -3857,12 +3857,12 @@ async def test_relay_lets_elicitation_resolved_pass_the_fence(
     Repro of the ghost-approval-card leak: on Stop, the runner's parked-ASK
     cleanup publishes ``response.elicitation_resolved`` exactly inside the
     fenced window. The pending-elicitations index decrements ONLY via that
-    event, so swallowing it leaks the entry — every later snapshot replays a
+    event, so swallowing it leaks the entry â€” every later snapshot replays a
     dead approval card and the "Needs input" badge never clears.
     """
-    from agent_meow.runtime import inflight_text, pending_elicitations, session_stream
-    from agent_meow.server.routes import sessions as sessions_module
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import inflight_text, pending_elicitations, session_stream
+    from omnigent.server.routes import sessions as sessions_module
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     inflight_text.reset_for_tests()
     pending_elicitations.reset_for_tests()
@@ -3908,14 +3908,14 @@ async def test_relay_lets_elicitation_resolved_pass_the_fence(
         await _relay_runner_stream(sid, client, store)  # type: ignore[arg-type]
 
         # [1, 0]: the request was tracked, and the FENCED resolved drained it.
-        # A trailing 1 means the fence swallowed the resolved event — the
+        # A trailing 1 means the fence swallowed the resolved event â€” the
         # ghost-card leak this change fixes.
         assert counts == [1, 0], counts
         # The resolved event also reached live subscribers so open tabs
         # clear their approval card.
         assert any(e.get("type") == "response.elicitation_resolved" for e in published), published
         # Elicitation bookkeeping is exempt from the fence but must not
-        # LIFT it — only a terminal or the next turn's running does.
+        # LIFT it â€” only a terminal or the next turn's running does.
         assert sid in sessions_module._interrupt_fenced_sessions
     finally:
         sessions_module._interrupt_fenced_sessions.discard(sid)
@@ -3934,9 +3934,9 @@ async def test_relay_suppresses_fenced_deltas_until_running_when_no_terminal_arr
     trailing deltas and lift only on the next turn's ``running`` status, so
     the follow-up turn flows normally.
     """
-    from agent_meow.runtime import session_stream
-    from agent_meow.server.routes import sessions as sessions_module
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import session_stream
+    from omnigent.server.routes import sessions as sessions_module
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     sid = "conv_fence_no_terminal"
     published: list[dict[str, Any]] = []
@@ -3951,7 +3951,7 @@ async def test_relay_suppresses_fenced_deltas_until_running_when_no_terminal_arr
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
         [
-            # Dead turn's trailing delta — the session is already fenced.
+            # Dead turn's trailing delta â€” the session is already fenced.
             _sse_frame({"type": "response.output_text.delta", "delta": "GHOST"}),
             # Next turn: running lifts the fence, then a real reply.
             _sse_frame({"type": "session.status", "status": "running"}),
@@ -3989,13 +3989,13 @@ async def test_relay_interleaves_text_segments_with_tool_calls() -> None:
     """
     Scaffold narration persists interleaved with the tool calls it preceded.
 
-    A scaffold turn streams text1 → tool1 → tool2 → text2 → tool3 → text3.
+    A scaffold turn streams text1 â†’ tool1 â†’ tool2 â†’ text2 â†’ tool3 â†’ text3.
     The relay must persist three SEPARATE assistant messages, each BEFORE
-    the tool call that followed it — not one concatenated message after all
+    the tool call that followed it â€” not one concatenated message after all
     the tools (which renders tools-above-text + run-on text on reload).
     """
-    from agent_meow.runtime import inflight_text
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import inflight_text
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     inflight_text.reset_for_tests()
     store = _ConversationStore()
@@ -4055,7 +4055,7 @@ async def test_relay_interleaves_text_segments_with_tool_calls() -> None:
     try:
         await _relay_runner_stream("conv_proxy", client, store)  # type: ignore[arg-type]
 
-        # Persisted order interleaves narration with its tool calls — the
+        # Persisted order interleaves narration with its tool calls â€” the
         # first text lands BEFORE call_1, not pooled after every tool.
         types = [i.type for i in store.appended_items]
         assert types == [
@@ -4070,7 +4070,7 @@ async def test_relay_interleaves_text_segments_with_tool_calls() -> None:
             "message",
         ], types
 
-        # Three SEPARATE messages, each its own segment — not one run-on.
+        # Three SEPARATE messages, each its own segment â€” not one run-on.
         msgs = [i for i in store.appended_items if i.type == "message"]
         texts = ["".join(b["text"] for b in m.data.content) for m in msgs]
         assert texts == [
@@ -4087,16 +4087,16 @@ async def test_relay_flush_drops_committed_text_from_inflight_replay(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    After a text→tool flush, a mid-turn reconnect must NOT replay the
-    just-committed narration — it would double-render beside the persisted
+    After a textâ†’tool flush, a mid-turn reconnect must NOT replay the
+    just-committed narration â€” it would double-render beside the persisted
     copy. Pins that the relay calls ``inflight_text.reset_text`` at the
     flush: feed a turn that ENDS right after the first flush (no terminal
     event), neutralize the relay's teardown ``discard``, and assert the
     text both committed AND no longer replays. Without the reset call this
     fails (the in-flight buffer would still replay the committed text).
     """
-    from agent_meow.runtime import inflight_text
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.runtime import inflight_text
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     inflight_text.reset_for_tests()
     # The relay's finally discards the in-flight entry (the leak fix);
@@ -4125,7 +4125,7 @@ async def test_relay_flush_drops_committed_text_from_inflight_replay(
                     },
                 }
             ),
-            # Ends mid-turn (no terminal response.* / session.status) — only
+            # Ends mid-turn (no terminal response.* / session.status) â€” only
             # the flush's reset_text could have cleared the in-flight buffer.
             "data: [DONE]\n\n",
         ]
@@ -4213,7 +4213,7 @@ class _SubagentTerminalStore:
         type: str,
     ) -> Any:
         """Return a one-item assistant page (or empty) as a real PagedList."""
-        from agent_meow.entities import ConversationItem, MessageData, PagedList
+        from omnigent.entities import ConversationItem, MessageData, PagedList
 
         del conversation_id, limit, order, type
         if self._assistant_text is None:
@@ -4237,7 +4237,7 @@ def _make_subagent_conv(child_id: str, *, wrapper: str, kind: str = "sub_agent")
     """Build a sub-agent conversation row for terminal-delivery relay tests.
 
     :param child_id: Child session id, e.g. ``"conv_cc_child"``.
-    :param wrapper: ``agent_meow.wrapper`` label, e.g.
+    :param wrapper: ``omnigent.wrapper`` label, e.g.
         ``"claude-code-native-ui"`` or ``"codex-native-ui"``.
     :param kind: Conversation kind, ``"sub_agent"`` or ``"default"``.
     :returns: A real :class:`Conversation` carrying the wrapper label.
@@ -4250,7 +4250,7 @@ def _make_subagent_conv(child_id: str, *, wrapper: str, kind: str = "sub_agent")
         parent_conversation_id="conv_parent",
         agent_id="ag_test",
         kind=kind,
-        labels={"agent_meow.ui": "terminal", "agent_meow.wrapper": wrapper},
+        labels={"omnigent.ui": "terminal", "omnigent.wrapper": wrapper},
     )
 
 
@@ -4278,10 +4278,10 @@ async def test_relay_never_delivers_terminal_on_pty_status(
     orchestrator mid-turn and idempotently locked out the child's real
     completion. Terminal delivery now rides the ``Stop`` / ``StopFailure``
     hook (``external_session_status``, the codex-shared path), so the relay
-    must forward nothing on a PTY status edge — it only republishes the UI
+    must forward nothing on a PTY status edge â€” it only republishes the UI
     status. Were the relay to deliver here, ``posts`` would be non-empty.
     """
-    from agent_meow.server.routes.sessions import _relay_runner_stream
+    from omnigent.server.routes.sessions import _relay_runner_stream
 
     child_id = "conv_relay_nodeliver"
     store = _SubagentTerminalStore(

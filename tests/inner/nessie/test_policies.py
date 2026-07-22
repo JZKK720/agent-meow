@@ -1,7 +1,7 @@
 """Unit tests for nessie's bounds + blast-radius policies.
 
-These exercise the real :mod:`~?agent_meow.inner.nessie.policies` evaluator
-logic. The callables take and return plain dicts, so no mocks are needed —
+These exercise the real :mod:`~?omnigent.inner.nessie.policies` evaluator
+logic. The callables take and return plain dicts, so no mocks are needed â€”
 the tests construct real V0 event dicts and assert on the decision. Each
 test fails if the corresponding guard regresses (a command mis-classified,
 the per-turn cap broken, or a worktree escape let through).
@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.inner.nessie.policies import (
+from omnigent.inner.nessie.policies import (
     blast_radius,
     headless_subagent_purpose_guard,
     read_only_os,
@@ -48,12 +48,12 @@ def _result(decision: dict[str, Any]) -> str:
         ("git commit -m wip", "ALLOW"),
         ("git merge --no-ff nessie/t1", "ALLOW"),
         ("git worktree add .worktrees/t1 -b nessie/t1", "ALLOW"),
-        # Outward / destructive-but-recoverable → ASK the human.
+        # Outward / destructive-but-recoverable â†’ ASK the human.
         ("git push origin main", "ASK"),
         ("gh pr merge 42", "ASK"),
         ("terraform apply", "ASK"),
         ("rm -rf build", "ASK"),
-        # Irreversible → DENY outright.
+        # Irreversible â†’ DENY outright.
         ("git push --force origin main", "DENY"),
         ("git push -f", "DENY"),
         ("rm -rf /", "DENY"),
@@ -79,19 +79,19 @@ def test_blast_radius_gates_native_bash_tool() -> None:
     (surfaced via the ``PreToolUse`` hook contract).
 
     Both harnesses' shell tool reaches the policy layer as a ``Bash``
-    tool_call with a string ``command`` — codex-native normalizes its
+    tool_call with a string ``command`` â€” codex-native normalizes its
     ``shell`` tool to this Claude-compatible hook shape (verified by a live
     capture), so the single ``Bash`` match set covers both. If this returns
     ALLOW, a native-harness ``git push --force`` bypasses the gate entirely.
     """
     evaluate = blast_radius()
-    # Catastrophic via native Bash — should DENY.
+    # Catastrophic via native Bash â€” should DENY.
     assert (
         _result(evaluate(_tool_call("Bash", command="git push --force origin main"), {})) == "DENY"
     )
-    # Recoverable via native Bash — should ASK.
+    # Recoverable via native Bash â€” should ASK.
     assert _result(evaluate(_tool_call("Bash", command="git push origin main"), {})) == "ASK"
-    # Safe via native Bash — should ALLOW.
+    # Safe via native Bash â€” should ALLOW.
     assert _result(evaluate(_tool_call("Bash", command="git status"), {})) == "ALLOW"
 
 
@@ -100,7 +100,7 @@ def test_blast_radius_gates_pi_native_bash_tool() -> None:
     blast_radius must also gate Pi's lowercase native ``bash`` tool.
 
     Pi surfaces its in-process shell as ``bash`` (lowercase) with the same
-    string ``command`` key via the pi ``tool_call`` hook — distinct from the
+    string ``command`` key via the pi ``tool_call`` hook â€” distinct from the
     Claude/Codex ``Bash`` casing. If this returns ALLOW, a pi worker's
     ``git push --force`` bypasses the catastrophic-command gate entirely.
     """
@@ -114,7 +114,7 @@ def test_blast_radius_gates_pi_native_bash_tool() -> None:
 
 def test_blast_radius_ignores_non_shell_tools() -> None:
     """
-    Non-shell tool calls pass through ALLOW — blast_radius only inspects
+    Non-shell tool calls pass through ALLOW â€” blast_radius only inspects
     ``sys_os_shell`` and ``Bash``. A failure here means the guard is matching
     on the wrong tool and would corrupt unrelated tool dispatch.
     """
@@ -137,7 +137,7 @@ def test_blast_radius_gate_pushes_false_allows_recoverable_not_catastrophic() ->
     assert _result(evaluate(_tool_call("sys_os_shell", command="rm -rf /"), {})) == "DENY"
 
 
-# Catastrophic commands that the previous single-regex DENY set MISSED — each
+# Catastrophic commands that the previous single-regex DENY set MISSED â€” each
 # fell through to ASK, then ALLOW under the checked-in ``gate_pushes=False``,
 # so a worker could run them ungated. They must now DENY at both gate settings
 # (the DENY tier runs regardless of ``gate_pushes``).
@@ -174,7 +174,7 @@ _DENY_GAP_COMMANDS = [
 def test_blast_radius_denies_destructive_variants(command: str) -> None:
     """
     blast_radius DENIES catastrophic ``rm`` / ``git push`` in every flag,
-    path, and refspec form — at both gate settings.
+    path, and refspec form â€” at both gate settings.
 
     Regression guard for the DENY-pattern gaps: each command here previously
     fell through to ASK (then ALLOW under ``gate_pushes=False``). A non-DENY
@@ -205,7 +205,7 @@ def test_blast_radius_denies_destructive_variants(command: str) -> None:
 def test_blast_radius_recoverable_variants_ask_not_deny(command: str) -> None:
     """
     Recoverable destructive commands ASK (not DENY) and ALLOW under
-    ``gate_pushes=False`` — so the hardened classifier did not over-block.
+    ``gate_pushes=False`` â€” so the hardened classifier did not over-block.
 
     A DENY here means the catastrophic-target test is too broad (it would
     block routine worker cleanup like ``rm -rf build`` or its own pushes); an
@@ -232,7 +232,7 @@ def test_blast_radius_recoverable_variants_ask_not_deny(command: str) -> None:
 )
 def test_blast_radius_safe_commands_allow(command: str) -> None:
     """
-    Safe commands ALLOW — the tokenizer must not over-match.
+    Safe commands ALLOW â€” the tokenizer must not over-match.
 
     Guards the over-match traps the robust classifier could fall into: a
     ``push`` substring inside a commit message, a ``git`` subcommand that
@@ -318,7 +318,7 @@ def test_headless_subagent_purpose_guard_requires_explicit_purpose(
 
     A missing, retired (``small_scoped``), or out-of-set purpose must DENY,
     otherwise the model can spawn a ``sys_session_send`` sub-agent with no
-    declared role — or relabel implementation as a lightweight ask.
+    declared role â€” or relabel implementation as a lightweight ask.
     """
     evaluate = headless_subagent_purpose_guard()
 
@@ -331,7 +331,7 @@ def test_headless_subagent_purpose_guard_honors_custom_allowed_purposes() -> Non
     The ``allowed_purposes`` factory param controls the accepted set.
 
     With a restricted set of only ``implement``, an ``implement`` dispatch
-    ALLOWs and a ``review`` dispatch DENYs — proving the param is honored. If it
+    ALLOWs and a ``review`` dispatch DENYs â€” proving the param is honored. If it
     were ignored (a hardcoded set used instead), the ``review`` case would
     wrongly ALLOW.
     """
@@ -438,7 +438,7 @@ def test_worktree_guard_gates_native_write_edit(
     tools (surfaced via the ``PreToolUse`` hook).
 
     If this returns ALLOW for an escape path, an unsandboxed native-harness
-    worker could write outside its worktree — the confinement that makes
+    worker could write outside its worktree â€” the confinement that makes
     workers safe would be bypassed.
 
     :param tool: Native tool name, e.g. ``"Write"``.
@@ -453,7 +453,7 @@ def test_worktree_guard_gates_native_write_edit(
 
 def test_worktree_guard_only_guards_writes() -> None:
     """
-    Reads and shells pass through — the guard constrains only write/edit
+    Reads and shells pass through â€” the guard constrains only write/edit
     tools. Fails if the guard broadened to reads (workers couldn't read
     files outside the worktree, breaking exploration).
     """
@@ -489,7 +489,7 @@ def test_read_only_os_denies_every_write_tool(tool: str, args: dict[str, Any]) -
 
 def test_read_only_os_allows_reads_and_shell() -> None:
     """
-    Reads, searches, and shell pass through — read_only_os gates only writes.
+    Reads, searches, and shell pass through â€” read_only_os gates only writes.
     Fails if it broadened to reads (a reviewer couldn't open files to
     fact-check) or to shell (pair blast_radius for that, not this policy).
     """

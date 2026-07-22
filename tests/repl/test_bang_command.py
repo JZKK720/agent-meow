@@ -15,8 +15,8 @@ import pathlib
 import pytest
 from prompt_toolkit.document import Document
 
-from agent_meow.repl import _repl
-from agent_meow.repl._repl import (
+from omnigent.repl import _repl
+from omnigent.repl._repl import (
     _BANG_INPUT_STYLE,
     _bang_shell_argv,
     _BangInputLexer,

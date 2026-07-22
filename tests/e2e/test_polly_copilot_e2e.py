@@ -3,16 +3,16 @@
 Unlike the mock-LLM smoke in ``test_polly_e2e.py`` (which swaps polly's brain to
 ``openai-agents`` against a fake server), the Copilot SDK talks only to GitHub's
 Copilot backend, so this exercises the REAL harness. It is **skipped** unless a
-Copilot-capable GitHub token is resolvable — the ``copilot:`` config block
+Copilot-capable GitHub token is resolvable â€” the ``copilot:`` config block
 written by ``agent-meow setup``, or an ambient ``COPILOT_GITHUB_TOKEN`` /
-``GH_TOKEN`` / ``GITHUB_TOKEN`` — so CI without a token skips it, mirroring how
+``GH_TOKEN`` / ``GITHUB_TOKEN`` â€” so CI without a token skips it, mirroring how
 the harness probes skip when a CLI binary is absent from ``PATH``.
 
 It boots a throwaway local server from this working tree (which carries polly's
-in-tree ``agent_meow.inner.nessie.policies`` guardrails, resolved server-side) and
+in-tree ``omnigent.inner.nessie.policies`` guardrails, resolved server-side) and
 runs the real ``examples/polly`` bundle with its orchestrator brain overridden
 to ``--harness copilot``. The committed assertion is a brain-only smoke (boots +
-coherent reply). The full dispatch→collect→synthesize orchestration loop on a
+coherent reply). The full dispatchâ†’collectâ†’synthesize orchestration loop on a
 copilot brain is exercised by the ``copilot-sdk-e2e-dev`` skill's polly driver
 (smoke / fanout / review-pr CUJs), which additionally needs the sub-agent CLIs.
 
@@ -49,7 +49,7 @@ _COPILOT_RUN_TIMEOUT_SEC = 280
 def _copilot_token_available() -> bool:
     """Return whether a Copilot-capable GitHub token is resolvable on this host."""
     try:
-        from agent_meow.onboarding.copilot_auth import (
+        from omnigent.onboarding.copilot_auth import (
             COPILOT_TOKEN_ENV_VARS,
             copilot_github_token_configured,
         )
@@ -74,7 +74,7 @@ def local_polly_server_real(tmp_path: Path) -> Iterator[str]:
     """Boot a throwaway local ``agent-meow server`` from this working tree.
 
     Unlike ``test_polly_e2e.local_polly_server`` this does NOT strip the
-    developer's credentials — the Copilot harness needs the real GitHub token to
+    developer's credentials â€” the Copilot harness needs the real GitHub token to
     reach GitHub's backend. Own sqlite DB + artifact dir under ``tmp_path`` keep
     it isolated from the developer's real state.
 

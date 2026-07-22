@@ -6,12 +6,12 @@ Three CUJs caught these regressions during manual testing of
 1. ``ResponseCreated`` was imported from the public ``omnigent_client``
    re-export, which doesn't include it. ImportError on first turn.
 2. The adapter passed server-shape events
-   (:class:`~?agent_meow.server.schemas.OutputTextDeltaEvent`) through
+   (:class:`~?omnigent.server.schemas.OutputTextDeltaEvent`) through
    without translating to the SDK-shape dataclasses in
    :mod:`omnigent_client._events`. Net: spinner spun, server-side
    LLM call completed, no assistant text reached the TUI.
 3. The translator initially used wrong class names from
-   ``agent_meow.server.schemas`` (``ResponseTextDeltaEvent`` vs the
+   ``omnigent.server.schemas`` (``ResponseTextDeltaEvent`` vs the
    actual ``OutputTextDeltaEvent``); silent ImportError on the local
    import inside the translator.
 
@@ -36,12 +36,12 @@ from omnigent_client._events import (
     TextDelta,
 )
 
-from agent_meow.repl._repl import (
+from omnigent.repl._repl import (
     _plan_output_item_render,
     _server_event_to_sdk_event,
     _TurnProseTracker,
 )
-from agent_meow.server.schemas import (
+from omnigent.server.schemas import (
     CancelledEvent,
     CompletedEvent,
     CreatedEvent,
@@ -81,7 +81,7 @@ def _resp_obj(status: str = "in_progress") -> ResponseObject:
 
 
 def test_created_event_translates_to_response_created() -> None:
-    """``CreatedEvent`` → :class:`ResponseCreated` carrying the response id.
+    """``CreatedEvent`` â†’ :class:`ResponseCreated` carrying the response id.
 
     Regression: without this mapping the REPL adapter never sets
     ``current_response_id`` and downstream history lookups silently
@@ -94,7 +94,7 @@ def test_created_event_translates_to_response_created() -> None:
 
 
 def test_text_delta_event_translates_to_text_delta() -> None:
-    """``OutputTextDeltaEvent`` → :class:`TextDelta` with the same payload.
+    """``OutputTextDeltaEvent`` â†’ :class:`TextDelta` with the same payload.
 
     Regression: this is the event the sessions renderer consumes
     to paint assistant text on the screen. A mismatch here means a
@@ -175,10 +175,10 @@ def test_unknown_event_returns_none() -> None:
 
 
 def test_elicitation_request_event_translates() -> None:
-    """``ElicitationRequestEvent`` → :class:`ElicitationRequest` with all fields."""
+    """``ElicitationRequestEvent`` â†’ :class:`ElicitationRequest` with all fields."""
     from omnigent_client._events import ElicitationRequest
 
-    from agent_meow.server.schemas import (
+    from omnigent.server.schemas import (
         ElicitationRequestEvent,
         ElicitationRequestParams,
     )
@@ -219,7 +219,7 @@ def test_elicitation_request_event_preserves_target_session_id() -> None:
     """
     from omnigent_client._events import ElicitationRequest
 
-    from agent_meow.server.schemas import (
+    from omnigent.server.schemas import (
         ElicitationRequestEvent,
         ElicitationRequestParams,
     )
@@ -254,7 +254,7 @@ def test_elicitation_resolve_session_id_routes_mirrored_child_to_child() -> None
     """
     from omnigent_client._events import ElicitationRequest
 
-    from agent_meow.repl._repl import _elicitation_resolve_session_id
+    from omnigent.repl._repl import _elicitation_resolve_session_id
 
     mirrored = ElicitationRequest(
         elicitation_id="elicit_child",
@@ -284,7 +284,7 @@ def test_elicitation_resolve_session_id_routes_mirrored_child_to_child() -> None
 
 def test_output_item_done_event_passes_through() -> None:
     """``OutputItemDoneEvent`` is returned as-is for adapter-level handling."""
-    from agent_meow.server.schemas import OutputItemDoneEvent
+    from omnigent.server.schemas import OutputItemDoneEvent
 
     event = OutputItemDoneEvent(
         type="response.output_item.done",
@@ -308,7 +308,7 @@ def test_output_item_done_message_passes_through() -> None:
     rendered via ``TextDelta`` streaming) and only rendering
     ``function_call`` / ``function_call_output`` as history entries.
     """
-    from agent_meow.server.schemas import OutputItemDoneEvent
+    from omnigent.server.schemas import OutputItemDoneEvent
 
     event = OutputItemDoneEvent(
         type="response.output_item.done",
@@ -329,7 +329,7 @@ def test_output_item_done_message_passes_through() -> None:
         # Regression (the "growing preamble" bug): a tool call interrupts
         # streamed prose. The executor emits no per-block ``message``
         # boundary, so this is the ONLY chance to commit the in-flight
-        # text. It MUST flush — otherwise the next text block appends to
+        # text. It MUST flush â€” otherwise the next text block appends to
         # the prior block's buffer and the live region re-renders the
         # whole turn's prose on every later delta.
         ("function_call", None, True, True, True),
@@ -340,7 +340,7 @@ def test_output_item_done_message_passes_through() -> None:
         ("function_call", None, False, False, True),
         # Assistant message after streamed deltas: commit the trailing
         # tail at the boundary, but DON'T re-render the full item (the
-        # deltas already rendered it — re-rendering would duplicate it).
+        # deltas already rendered it â€” re-rendering would duplicate it).
         ("message", "assistant", True, True, False),
         # Assistant message with no streamed deltas (non-streaming
         # harness): render the full item, nothing to flush.
@@ -364,7 +364,7 @@ def test_plan_output_item_render(
 
     A single turn interleaves assistant text blocks with tool calls,
     but the streaming executor emits the assistant ``message`` output
-    item only once (after all deltas) — never between text blocks. A
+    item only once (after all deltas) â€” never between text blocks. A
     ``function_call`` arriving mid-stream is therefore the only signal
     that one text block ended; the plan must request a flush there
     (``expect_flush``) or the formatter's paragraph buffer accumulates
@@ -398,7 +398,7 @@ def _assistant_message_item(text: str) -> dict[str, object]:
     Shape matches what the relay's ``_flush_relay_text`` publishes after
     persisting a streamed text segment (``response.output_item.done``).
 
-    :param text: The message's output text, e.g. ``"Got it — done."``.
+    :param text: The message's output text, e.g. ``"Got it â€” done."``.
     :returns: The ``item`` dict of the ``output_item.done`` event.
     """
     return {
@@ -415,10 +415,10 @@ def test_prose_tracker_suppresses_persisted_segment_copy() -> None:
     streamed text segment at a tool-call boundary and publishes the
     persisted item as ``output_item.done``. By then the tool-call item
     already committed the in-flight prose, so the delta-based skip
-    can't catch the item — the content match must.
+    can't catch the item â€” the content match must.
     """
     tracker = _TurnProseTracker()
-    tracker.on_delta("Got it — ")
+    tracker.on_delta("Got it â€” ")
     tracker.on_delta("dispatching.")
     # Tool-call boundary commits the in-flight prose (mirrors
     # _flush_inflight_assistant_text resetting _saw_text_deltas).
@@ -426,11 +426,11 @@ def test_prose_tracker_suppresses_persisted_segment_copy() -> None:
 
     # The persisted copy byte-matches the streamed segment: it must be
     # consumed (suppressed). A False here re-renders the whole segment
-    # as a duplicate "◆ agent + text" block — the reported bug.
-    assert tracker.consume_match(_assistant_message_item("Got it — dispatching.")) is True
+    # as a duplicate "â—† agent + text" block â€” the reported bug.
+    assert tracker.consume_match(_assistant_message_item("Got it â€” dispatching.")) is True
     # The entry is consumed: an identical item later in the turn has no
     # streamed counterpart left and must render (it is real content).
-    assert tracker.consume_match(_assistant_message_item("Got it — dispatching.")) is False
+    assert tracker.consume_match(_assistant_message_item("Got it â€” dispatching.")) is False
 
 
 def test_prose_tracker_does_not_match_unstreamed_text() -> None:
@@ -464,7 +464,7 @@ def test_prose_tracker_multiset_handles_identical_segments() -> None:
 
     assert tracker.consume_match(_assistant_message_item("Done.")) is True
     assert tracker.consume_match(_assistant_message_item("Done.")) is True
-    # Both entries consumed — a third identical message is new content.
+    # Both entries consumed â€” a third identical message is new content.
     assert tracker.consume_match(_assistant_message_item("Done.")) is False
 
 
@@ -541,7 +541,7 @@ def test_prose_tracker_uncommitted_segment_does_not_match() -> None:
 
 def test_client_task_cancel_event_passes_through() -> None:
     """``ClientTaskCancelEvent`` is returned as-is for adapter-level handling."""
-    from agent_meow.server.schemas import ClientTaskCancelEvent
+    from omnigent.server.schemas import ClientTaskCancelEvent
 
     event = ClientTaskCancelEvent(
         type="response.client_task.cancel",
@@ -576,7 +576,7 @@ def test_render_callback_event_flow() -> None:
 
     from pydantic import TypeAdapter
 
-    from agent_meow.server.schemas import ServerStreamEvent
+    from omnigent.server.schemas import ServerStreamEvent
 
     adapter = TypeAdapter(ServerStreamEvent)
 
@@ -673,13 +673,13 @@ def test_render_callback_event_flow() -> None:
         TextDelta as _TD,
     )
 
-    from agent_meow.server.schemas import (
+    from omnigent.server.schemas import (
         OutputItemDoneEvent as _OIDE,
     )
-    from agent_meow.server.schemas import (
+    from omnigent.server.schemas import (
         SessionInputConsumedEvent as _SICEv,
     )
-    from agent_meow.server.schemas import (
+    from omnigent.server.schemas import (
         SessionStatusEvent as _StatusEv,
     )
 
@@ -748,14 +748,14 @@ def test_session_input_consumed_renders_cross_client_user_message() -> None:
     """``session.input.consumed`` from another client renders a user bubble.
 
     When the local send FIFO counter is zero the event
-    must have originated from a different client (Web UI ↔ TUI on the
+    must have originated from a different client (Web UI â†” TUI on the
     same session); the renderer pulls the text from the event payload
     and emits it via the same ``fmt.user_message`` echo a local send
     would produce.
     """
     from pydantic import TypeAdapter
 
-    from agent_meow.server.schemas import (
+    from omnigent.server.schemas import (
         ServerStreamEvent,
         SessionInputConsumedEvent,
     )
@@ -778,7 +778,7 @@ def test_session_input_consumed_renders_cross_client_user_message() -> None:
     assert isinstance(event, SessionInputConsumedEvent)
 
     class _FakeSession:
-        _pending_local_user_sends = 0  # Counter is empty → cross-client.
+        _pending_local_user_sends = 0  # Counter is empty â†’ cross-client.
 
     fake_session = _FakeSession()
     rendered: list[str] = []
@@ -810,9 +810,9 @@ def test_autonomous_turn_renders_without_local_send() -> None:
 
     The required rendering invariants for an autonomous turn are:
 
-    * ``session.status running`` → header + start-timer.
-    * ``response.output_text.delta`` → streamed text via formatter.
-    * ``session.status idle`` → flush + stop-timer + turn-done.
+    * ``session.status running`` â†’ header + start-timer.
+    * ``response.output_text.delta`` â†’ streamed text via formatter.
+    * ``session.status idle`` â†’ flush + stop-timer + turn-done.
 
     If ``_render_session_event`` ever regresses on the
     ``_saw_text_deltas = False`` reset (so subsequent autonomous turns
@@ -824,11 +824,11 @@ def test_autonomous_turn_renders_without_local_send() -> None:
     """
     from pydantic import TypeAdapter
 
-    from agent_meow.server.schemas import ServerStreamEvent
+    from omnigent.server.schemas import ServerStreamEvent
 
     adapter = TypeAdapter(ServerStreamEvent)
 
-    # No ``session.input.consumed`` in this stream — the turn was
+    # No ``session.input.consumed`` in this stream â€” the turn was
     # NOT triggered by the local client. The renderer must still
     # produce the same output as a local-send turn.
     raw_events = [
@@ -867,15 +867,15 @@ def test_autonomous_turn_renders_without_local_send() -> None:
 
     fake_session = _FakeSession()
 
-    from agent_meow.server.schemas import (
+    from omnigent.server.schemas import (
         SessionInputConsumedEvent as _SICEv,
     )
-    from agent_meow.server.schemas import (
+    from omnigent.server.schemas import (
         SessionStatusEvent as _StatusEv,
     )
 
     # Replay events through the same branching logic as
-    # ``_render_session_event`` in ``agent_meow/repl/_repl.py``.
+    # ``_render_session_event`` in ``omnigent/repl/_repl.py``.
     for event in events:
         if isinstance(event, _StatusEv):
             if event.status == "running":
@@ -897,7 +897,7 @@ def test_autonomous_turn_renders_without_local_send() -> None:
 
     # The autonomous-turn render must produce the same shape as a
     # local-send turn (sans the suppressed ``session.input.consumed``
-    # echo) — header on running, streamed text, flush + stop-timer
+    # echo) â€” header on running, streamed text, flush + stop-timer
     # on idle. If any of the four entries is missing or the order
     # changes, a timer-fired or cross-client assistant turn never
     # reaches the user's screen.
@@ -908,7 +908,7 @@ def test_autonomous_turn_renders_without_local_send() -> None:
         "FLUSH",
         "STOP_TIMER",
     ]
-    # The local-send FIFO is undisturbed — proves the renderer did
+    # The local-send FIFO is undisturbed â€” proves the renderer did
     # not accidentally consume a phantom slot for the autonomous turn.
     assert fake_session._pending_local_user_sends == 0
 
@@ -917,7 +917,7 @@ def test_response_failed_translates_with_error_message() -> None:
     """``ResponseFailed`` carries the error message from the response.
 
     Regression: ``_render_session_event`` had no handler for
-    ``ResponseFailed`` — the event fell through all ``isinstance``
+    ``ResponseFailed`` â€” the event fell through all ``isinstance``
     checks and was silently dropped. The TUI showed an empty
     response while the web UI rendered the error correctly.
     """
@@ -938,7 +938,7 @@ def test_failed_status_event_renders_error_message() -> None:
 
     Regression: a SETUP-phase failure (spec resolution, spawn-env
     build) ends the turn before the LLM stream starts, so the runner
-    publishes only ``session.status: failed`` (carrying the error) —
+    publishes only ``session.status: failed`` (carrying the error) â€”
     no ``response.failed`` event is ever emitted. The REPL handled
     ``failed`` identically to ``idle`` (empty ``format_text_done``),
     so the working spinner vanished with no output: the failure was
@@ -947,9 +947,9 @@ def test_failed_status_event_renders_error_message() -> None:
     """
     from omnigent_ui_sdk import RichBlockFormatter
 
-    from agent_meow.repl._repl import _render_failed_status_error
-    from agent_meow.server.schemas import ErrorDetail
-    from agent_meow.server.schemas import SessionStatusEvent as _StatusEv
+    from omnigent.repl._repl import _render_failed_status_error
+    from omnigent.server.schemas import ErrorDetail
+    from omnigent.server.schemas import SessionStatusEvent as _StatusEv
     from tests.repl.helpers import CapturingHost
 
     host = CapturingHost()
@@ -965,7 +965,7 @@ def test_failed_status_event_renders_error_message() -> None:
 
     items = _render_failed_status_error(RichBlockFormatter(), host, event)  # type: ignore[arg-type]
 
-    # The exact error CONTENT must reach the screen — not just that
+    # The exact error CONTENT must reach the screen â€” not just that
     # *something* was rendered. Without the fix host.text is empty.
     assert "turn setup failed: no resolvable model for provider 'acme'" in host.text
     # The helper returns the rendered items so the caller can record
@@ -984,8 +984,8 @@ def test_failed_status_event_without_error_falls_back() -> None:
     """
     from omnigent_ui_sdk import RichBlockFormatter
 
-    from agent_meow.repl._repl import _render_failed_status_error
-    from agent_meow.server.schemas import SessionStatusEvent as _StatusEv
+    from omnigent.repl._repl import _render_failed_status_error
+    from omnigent.server.schemas import SessionStatusEvent as _StatusEv
     from tests.repl.helpers import CapturingHost
 
     host = CapturingHost()

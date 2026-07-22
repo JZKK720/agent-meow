@@ -33,24 +33,24 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.runtime import pending_elicitations, session_stream
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server.app import create_app
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runtime import pending_elicitations, session_stream
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server.app import create_app
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
 from tests.server.conftest import ControllableMockClient
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
 
 
-# ── Fixtures ────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -107,8 +107,8 @@ async def client(
     :param db_uri: Test database URI.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()
@@ -116,7 +116,7 @@ async def client(
 
     # Wire the policy store into the runtime global so
     # ``get_policy_store()`` returns it during evaluate.
-    from agent_meow.runtime import _globals
+    from omnigent.runtime import _globals
 
     monkeypatch.setattr(_globals, "_policy_store", SqlAlchemyPolicyStore(db_uri))
 
@@ -128,7 +128,7 @@ async def client(
     await pm.shutdown()
 
 
-# ── Helpers ─────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def _create_session(client: httpx.AsyncClient, agent_id: str) -> str:
@@ -164,7 +164,7 @@ async def _attach_ask_policy(
         json={
             "name": "test_ask_policy",
             "type": "python",
-            "handler": "agent_meow.policies.builtins.safety.ask_on_os_tools",
+            "handler": "omnigent.policies.builtins.safety.ask_on_os_tools",
         },
     )
     assert resp.status_code == 200, f"attach policy failed: {resp.status_code} {resp.text}"
@@ -219,18 +219,18 @@ async def _drain_elicitation_id(
     raise AssertionError("subscribe loop ended without an elicitation event")
 
 
-# ── Tests ───────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_ask_policy_approve_flow(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    Attach ASK policy, evaluate, approve → ALLOW.
+    Attach ASK policy, evaluate, approve â†’ ALLOW.
 
-    Full journey: create session → attach ``ask_on_os_tools`` policy
-    → trigger evaluate with a Bash tool call → observe pending
-    elicitation in the session snapshot → resolve with accept →
+    Full journey: create session â†’ attach ``ask_on_os_tools`` policy
+    â†’ trigger evaluate with a Bash tool call â†’ observe pending
+    elicitation in the session snapshot â†’ resolve with accept â†’
     evaluate returns ``POLICY_ACTION_ALLOW``. Proves the session-
     attached policy fires, parks a real server-side Future, and the
     URL-based resolve wakes it with the correct verdict.
@@ -287,11 +287,11 @@ async def test_ask_policy_refuse_flow(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    Attach ASK policy, evaluate, refuse → DENY.
+    Attach ASK policy, evaluate, refuse â†’ DENY.
 
     Same setup as the approve flow but resolves with ``decline``.
     The evaluate endpoint must collapse the ASK to
-    ``POLICY_ACTION_DENY`` — fail-closed. Proves the session-attached
+    ``POLICY_ACTION_DENY`` â€” fail-closed. Proves the session-attached
     ASK policy's refuse path terminates correctly and the DENY
     sentinel propagates.
     """

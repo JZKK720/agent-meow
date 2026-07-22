@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.tools.base import ToolContext
+from omnigent.tools.base import ToolContext
 
 
 @pytest.fixture()

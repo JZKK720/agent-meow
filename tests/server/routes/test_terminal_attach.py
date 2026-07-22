@@ -26,23 +26,23 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from agent_meow.entities import Conversation, SessionPermission
-from agent_meow.inner.terminal import TerminalInstance
-from agent_meow.runtime import (
+from omnigent.entities import Conversation, SessionPermission
+from omnigent.inner.terminal import TerminalInstance
+from omnigent.runtime import (
     _globals,
     set_runner_client,
     set_runner_router,
     set_runner_ws_factory,
 )
-from agent_meow.server.auth import (
+from omnigent.server.auth import (
     LEVEL_EDIT,
     LEVEL_OWNER,
     LEVEL_READ,
     RESERVED_USER_PUBLIC,
     UnifiedAuthProvider,
 )
-from agent_meow.server.routes.terminal_attach import create_terminal_attach_router
-from agent_meow.terminals import TerminalRegistry
+from omnigent.server.routes.terminal_attach import create_terminal_attach_router
+from omnigent.terminals import TerminalRegistry
 from tests.runner.helpers import make_test_terminal_instance
 
 
@@ -114,7 +114,7 @@ def _make_running_instance(name: str, session_key: str, tmp_path: Path) -> Termi
     Construct a :class:`TerminalInstance` with ``running=True``.
 
     The route only reads ``.running`` and the dict keys, so a stub
-    instance is sufficient — no real tmux involvement.
+    instance is sufficient â€” no real tmux involvement.
 
     :param name: Terminal name, e.g. ``"bash"``.
     :param session_key: Session key, e.g. ``"s1"``.
@@ -150,7 +150,7 @@ def server_registry(tmp_path: Path) -> Iterator[TerminalRegistry]:
     Install a fresh :class:`TerminalRegistry` as the server's
     runtime singleton for the duration of the test.
 
-    The route reads via :func:`~?agent_meow.runtime.get_terminal_registry`,
+    The route reads via :func:`~?omnigent.runtime.get_terminal_registry`,
     which dereferences the module-level singleton. Tests install
     their own registry and restore the prior value at teardown so
     they're isolated from each other and from any leftover state
@@ -223,7 +223,7 @@ async def client(app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
         yield c
 
 
-# ── WS attach: proxy to runner WS ─────────────────────────
+# â”€â”€ WS attach: proxy to runner WS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _FakeRunnerWSConn:
@@ -617,7 +617,7 @@ async def test_attach_terminal_runner_close_propagates_close_code(
     assert exc_info.value.code == 4404
 
 
-# ── WS attach: local fallback when no ws factory ─────────
+# â”€â”€ WS attach: local fallback when no ws factory â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_attach_terminal_local_fallback_missing_closes_4404(
@@ -672,13 +672,13 @@ async def test_attach_terminal_local_fallback_spawns_tmux(
         raise OSError("stop child path")
 
     exit_exc = RuntimeError("child exited")
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.pty.fork", fake_fork)
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.pty.fork", fake_fork)
     # Production resolves the absolute tmux path and builds the child env
     # in the parent; the child calls os.execve (no PATH search, explicit
-    # env) — patch execve, not execv/execvp.
-    monkeypatch.setattr("agent_meow.terminals.ws_bridge.os.execve", fake_execve)
+    # env) â€” patch execve, not execv/execvp.
+    monkeypatch.setattr("omnigent.terminals.ws_bridge.os.execve", fake_execve)
     monkeypatch.setattr(
-        "agent_meow.terminals.ws_bridge.os._exit",
+        "omnigent.terminals.ws_bridge.os._exit",
         lambda code: (_ for _ in ()).throw(exit_exc),
     )
 

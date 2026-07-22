@@ -1,6 +1,6 @@
 """
 Tests for the built-in ``enforce_sandbox`` policy
-(:mod:`~?agent_meow.policies.builtins.safety`).
+(:mod:`~?omnigent.policies.builtins.safety`).
 
 Covers:
 
@@ -8,7 +8,7 @@ Covers:
 - Custom sandbox type and network override.
 - Merge semantics: policy overrides win, agent fields not in the
   override are preserved.
-- Agent with no existing sandbox config — created from scratch.
+- Agent with no existing sandbox config â€” created from scratch.
 - Non-``__agent_start`` tool calls pass through.
 - Non-``tool_call`` events pass through.
 - ``write_paths`` / ``read_paths`` / ``env_passthrough`` overrides.
@@ -21,8 +21,8 @@ from typing import Any
 
 import pytest
 
-from agent_meow.policies.builtins.safety import enforce_sandbox
-from agent_meow.policies.schema import PolicyEvent
+from omnigent.policies.builtins.safety import enforce_sandbox
+from omnigent.policies.schema import PolicyEvent
 from tests.policies.builtins.helpers import tool_call_event as tc
 
 
@@ -48,7 +48,7 @@ def _agent_start_event(
     )
 
 
-# ── Default behaviour (linux_bwrap) ──────────────────────────────────────────
+# â”€â”€ Default behaviour (linux_bwrap) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_enforce_sandbox_default_forces_bwrap() -> None:
@@ -82,7 +82,7 @@ def test_enforce_sandbox_overrides_existing_type() -> None:
     assert sandbox["allow_network"] is True
 
 
-# ── Custom sandbox type ──────────────────────────────────────────────────────
+# â”€â”€ Custom sandbox type â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_enforce_sandbox_custom_type() -> None:
@@ -98,7 +98,7 @@ def test_enforce_sandbox_custom_type() -> None:
     assert sandbox["allow_network"] is False
 
 
-# ── Merge semantics ──────────────────────────────────────────────────────────
+# â”€â”€ Merge semantics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_enforce_sandbox_preserves_agent_write_paths() -> None:
@@ -151,7 +151,7 @@ def test_enforce_sandbox_override_env_passthrough() -> None:
     assert sandbox["env_passthrough"] == ["AWS_PROFILE"]
 
 
-# ── No existing sandbox ──────────────────────────────────────────────────────
+# â”€â”€ No existing sandbox â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_enforce_sandbox_creates_from_scratch() -> None:
@@ -170,7 +170,7 @@ def test_enforce_sandbox_creates_from_scratch() -> None:
     assert sandbox["allow_network"] is False
 
 
-# ── Non-__agent_start tools pass through ─────────────────────────────────────
+# â”€â”€ Non-__agent_start tools pass through â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_enforce_sandbox_ignores_other_tools() -> None:
@@ -202,7 +202,7 @@ def test_enforce_sandbox_ignores_non_tool_call_phases() -> None:
     assert "data" not in result
 
 
-# ── Agent metadata preserved ─────────────────────────────────────────────────
+# â”€â”€ Agent metadata preserved â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_enforce_sandbox_preserves_agent_metadata() -> None:
@@ -217,7 +217,7 @@ def test_enforce_sandbox_preserves_agent_metadata() -> None:
     assert args["harness"] == "codex"
 
 
-# ── Unknown sandbox fields filtered ─────────────────────────────────────────
+# â”€â”€ Unknown sandbox fields filtered â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_enforce_sandbox_filters_unknown_fields() -> None:
@@ -234,7 +234,7 @@ def test_enforce_sandbox_filters_unknown_fields() -> None:
     assert sandbox["type"] == "linux_bwrap"
 
 
-# ── Edge: empty arguments ────────────────────────────────────────────────────
+# â”€â”€ Edge: empty arguments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_enforce_sandbox_handles_missing_arguments() -> None:
@@ -255,7 +255,7 @@ def test_enforce_sandbox_handles_missing_arguments() -> None:
     assert result["data"]["arguments"]["sandbox"]["type"] == "linux_bwrap"
 
 
-# ── Multiple overrides compose correctly ─────────────────────────────────────
+# â”€â”€ Multiple overrides compose correctly â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(

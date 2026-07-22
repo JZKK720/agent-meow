@@ -29,13 +29,13 @@ from omnigent_client._sessions import Session as SessionSnapshot
 from omnigent_client._sessions import SessionsNamespace
 from omnigent_ui_sdk.terminal._host import TerminalHost
 
-from agent_meow.repl._repl import (
+from omnigent.repl._repl import (
     _refresh_subagent_tree,
     _SessionsChatReplAdapter,
     _should_discover_subagents,
 )
-from agent_meow.server.schemas import SessionStatusEvent
-from agent_meow.session_lifecycle import CLOSED_LABEL_KEY, CLOSED_LABEL_VALUE
+from omnigent.server.schemas import SessionStatusEvent
+from omnigent.session_lifecycle import CLOSED_LABEL_KEY, CLOSED_LABEL_VALUE
 
 # ── Host-level: chattability + closed status (B / F2 / F5) ─────────────────
 

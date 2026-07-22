@@ -1,10 +1,10 @@
-"""Tests for the shared CLI styling layer (``agent_meow.inner.ui``)."""
+"""Tests for the shared CLI styling layer (``omnigent.inner.ui``)."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_meow.inner import ui
+from omnigent.inner import ui
 
 
 def test_accent_is_brand_magenta() -> None:
@@ -14,7 +14,7 @@ def test_accent_is_brand_magenta() -> None:
 
 
 def test_show_banner_requires_a_tty() -> None:
-    """The banner is decoration — never drawn off a TTY."""
+    """The banner is decoration â€” never drawn off a TTY."""
 
     assert ui.show_banner(isatty=False, env={}) is False
     assert ui.show_banner(isatty=True, env={}) is True
@@ -46,7 +46,7 @@ def test_status_lines_go_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:
     ui.info("Using ~/.agent-meow")
     captured = capsys.readouterr()
     assert "Installing agent-meow" in captured.out
-    assert "✓ Verified agent-meow" in captured.out
+    assert "âœ“ Verified agent-meow" in captured.out
     assert captured.err == ""
 
 

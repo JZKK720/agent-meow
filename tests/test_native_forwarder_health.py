@@ -1,6 +1,6 @@
 """Tests for the process-local native-forwarder POST-failure record.
 
-``agent_meow/_native_forwarder_health.py`` is the small shared sink that lets a
+``omnigent/_native_forwarder_health.py`` is the small shared sink that lets a
 native forwarder report a connectivity failure to the harness idle-turn
 watchdog (issue #1119). These cover its record / recency / clear contract; the
 writer (forwarder retry loops) and reader (watchdog) integrations are tested in
@@ -13,7 +13,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from agent_meow import _native_forwarder_health as health
+from omnigent import _native_forwarder_health as health
 
 
 class _FakeClock:
@@ -49,7 +49,7 @@ def test_recent_post_failure_respects_recency_window(monkeypatch: pytest.MonkeyP
 
     Uses a controlled clock so the boundary is exercised over a realistic
     interval (record at t=1000, read 100s later) rather than a degenerate
-    zero-length window — pinning the actual ``elapsed > within_s`` comparison.
+    zero-length window â€” pinning the actual ``elapsed > within_s`` comparison.
     """
     clock = _FakeClock(start=1000.0)
     monkeypatch.setattr(health, "time", clock)
@@ -60,9 +60,9 @@ def test_recent_post_failure_respects_recency_window(monkeypatch: pytest.MonkeyP
         )
         # 100s elapse before any read.
         clock.now = 1100.0
-        # Window shorter than the elapsed gap → stale → suppressed.
+        # Window shorter than the elapsed gap â†’ stale â†’ suppressed.
         assert health.recent_post_failure(60.0) is None
-        # Window longer than the gap → still surfaced, unchanged by the
+        # Window longer than the gap â†’ still surfaced, unchanged by the
         # earlier stale read.
         assert health.recent_post_failure(240.0) is not None
     finally:

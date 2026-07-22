@@ -1,8 +1,8 @@
-"""Unit tests for PaaS bind-host + base-URL derivation (agent_meow.server.paas_env)."""
+"""Unit tests for PaaS bind-host + base-URL derivation (omnigent.server.paas_env)."""
 
 import pytest
 
-from agent_meow.server.paas_env import detect_base_url, resolve_bind_host
+from omnigent.server.paas_env import detect_base_url, resolve_bind_host
 
 # A minimal env that trips the Railway detection (any RAILWAY_-prefixed key).
 _RAILWAY_ENV = {"RAILWAY_PUBLIC_DOMAIN": "svc.up.railway.app"}
@@ -13,7 +13,7 @@ _RAILWAY_ENV = {"RAILWAY_PUBLIC_DOMAIN": "svc.up.railway.app"}
     [
         # Explicit host wins, untouched, on a non-PaaS env.
         ("192.0.2.10", {}, "192.0.2.10"),
-        # Unset → the supplied default.
+        # Unset â†’ the supplied default.
         (None, {}, "0.0.0.0"),
         # Bracketed IPv6 wildcard is unwrapped (a socket bind rejects "[::]").
         ("[::]", {}, "::"),
@@ -43,9 +43,9 @@ def test_resolve_bind_host(configured_host: str | None, environ: dict[str, str],
     [
         # Render gives a full https URL directly.
         ({"RENDER_EXTERNAL_URL": "https://svc.onrender.com"}, "https://svc.onrender.com"),
-        # Railway gives a bare host → https:// prefix added.
+        # Railway gives a bare host â†’ https:// prefix added.
         ({"RAILWAY_PUBLIC_DOMAIN": "svc.up.railway.app"}, "https://svc.up.railway.app"),
-        # Fly gives the app name → <app>.fly.dev.
+        # Fly gives the app name â†’ <app>.fly.dev.
         ({"FLY_APP_NAME": "myapp"}, "https://myapp.fly.dev"),
         # HF Spaces gives a bare host.
         ({"SPACE_HOST": "user-space.hf.space"}, "https://user-space.hf.space"),
@@ -70,7 +70,7 @@ def test_resolve_bind_host(configured_host: str | None, environ: dict[str, str],
         ),
         # Precedence: Fly beats HF when only those two are set.
         ({"FLY_APP_NAME": "myapp", "SPACE_HOST": "user-space.hf.space"}, "https://myapp.fly.dev"),
-        # No provider var → local fallback to the bind address.
+        # No provider var â†’ local fallback to the bind address.
         ({}, "http://0.0.0.0:8000"),
     ],
 )

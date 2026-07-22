@@ -4,7 +4,7 @@ Exercises the in-place agent-switch endpoint: validation (404 missing
 session, 400 sub-agent / no binding / unloadable bundle, 404 non-bindable
 target, 409 while busy) and the happy-path wiring (it clones the target,
 computes the same-family model/history/label deltas, and forwards them to
-``switch_conversation_agent``). Real-type store stubs — no MagicMock.
+``switch_conversation_agent``). Real-type store stubs â€” no MagicMock.
 """
 
 from __future__ import annotations
@@ -17,18 +17,18 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.testclient import TestClient
 
-from agent_meow.entities import Agent, Conversation, ConversationItem, MessageData, PagedList
-from agent_meow.errors import OmnigentError
-from agent_meow.server.routes import sessions as sessions_mod
-from agent_meow.server.routes.sessions import create_sessions_router
+from omnigent.entities import Agent, Conversation, ConversationItem, MessageData, PagedList
+from omnigent.errors import OmnigentError
+from omnigent.server.routes import sessions as sessions_mod
+from omnigent.server.routes.sessions import create_sessions_router
 
-# ── Stubs ────────────────────────────────────────────────────────
+# â”€â”€ Stubs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _AgentStore:
     """Agent store stub: get + list for the switch route.
 
-    :param agents: Pre-populated map of agent_id → Agent.
+    :param agents: Pre-populated map of agent_id â†’ Agent.
     """
 
     def __init__(self, agents: dict[str, Agent]) -> None:
@@ -47,7 +47,7 @@ class _AgentStore:
     ) -> PagedList[Agent]:
         """Return the built-in (session_id is None) agents.
 
-        :param limit: Max agents (ignored — stubs are small).
+        :param limit: Max agents (ignored â€” stubs are small).
         :returns: A PagedList of the template agents.
         """
         del after, before, order
@@ -58,8 +58,8 @@ class _AgentStore:
 class _ConversationStore:
     """Conversation store stub for the switch route.
 
-    :param conversations: Map of id → Conversation.
-    :param items_by_conv: Map of conv_id → items.
+    :param conversations: Map of id â†’ Conversation.
+    :param items_by_conv: Map of conv_id â†’ items.
     """
 
     def __init__(
@@ -148,7 +148,7 @@ class _ConversationStore:
 
 
 class _AgentCacheStub:
-    """Stub for ``get_agent_cache()`` — controls the bundle precheck.
+    """Stub for ``get_agent_cache()`` â€” controls the bundle precheck.
 
     :param raise_on_load: When True, ``load`` raises to simulate an
         unloadable target bundle (the route maps this to 400).
@@ -168,7 +168,7 @@ class _AgentCacheStub:
 
         :param agent_id: Agent id (unused).
         :param bundle_location: Bundle key (unused).
-        :param expand_env: Ignored — accepted to match the real
+        :param expand_env: Ignored â€” accepted to match the real
             ``AgentCache.load`` signature. Without it the
             route's keyword call would raise ``TypeError``.
         :returns: A sentinel object (the route ignores the value).
@@ -212,7 +212,7 @@ class _HarnessAgentCacheStub:
         return _LoadedAgentStub(self._harness_by_id[agent_id])
 
 
-# ── Helpers ──────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _conv(
@@ -312,7 +312,7 @@ def _patch_family_helpers(
 
 # The session's currently-bound agent is a session-scoped clone of the
 # claude-sdk built-in (shares its bundle_location). ``_BUILTIN_ORIGIN`` is
-# that built-in — what "switch back" resolves to, and the no-op target the
+# that built-in â€” what "switch back" resolves to, and the no-op target the
 # route now rejects (same bundle as the current agent). The switch *targets*
 # are built-ins with a DIFFERENT bundle.
 _CURRENT = _agent("ag_session_scoped", "claude (switch src)", "bundle/claude-sdk", "conv_src")
@@ -324,7 +324,7 @@ _BUILTIN_PI = _agent("ag_builtin_pi", "pi-native-ui", "bundle/pi", None)
 _BUILTIN_QWEN = _agent("ag_builtin_qwen", "qwen-native-ui", "bundle/qwen", None)
 
 
-# ── Tests ────────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -356,7 +356,7 @@ async def test_switch_same_family_native_carries_history(
             "ag_builtin_origin": _BUILTIN_ORIGIN,
         }
     )
-    labels = {"agent_meow.ui": "terminal", "agent_meow.wrapper": "claude-code-native-ui"}
+    labels = {"omnigent.ui": "terminal", "omnigent.wrapper": "claude-code-native-ui"}
     _patch_family_helpers(monkeypatch, same_family=True, native=True, labels=labels)
     client = TestClient(_build_app(conv_store, agent_store))
 
@@ -369,18 +369,18 @@ async def test_switch_same_family_native_carries_history(
     assert body["status"] == "idle"
     # Bound to a freshly cloned session-scoped agent, not the built-in itself.
     assert body["agent_id"].startswith("ag_") and body["agent_id"] != "ag_builtin_claude"
-    # 1 item returned — the in-place transcript is preserved (not copied/empty).
+    # 1 item returned â€” the in-place transcript is preserved (not copied/empty).
     assert len(body["items"]) == 1
 
     assert len(conv_store.switch_calls) == 1, "route must call switch exactly once"
     call = conv_store.switch_calls[0]
     assert call["conversation_id"] == "conv_src"
     assert call["new_agent_bundle_location"] == "bundle/claude-native"
-    # Same family → keep model settings AND carry native history (target native).
+    # Same family â†’ keep model settings AND carry native history (target native).
     assert call["copy_model_settings"] is True
     assert call["carry_history_into_native"] is True
     assert call["presentation_labels"] == labels
-    # The origin built-in shares the current agent's bundle → that's the
+    # The origin built-in shares the current agent's bundle â†’ that's the
     # built-in to offer for "Switch back" (NOT the switched-to target).
     assert call["previous_builtin_id"] == "ag_builtin_origin"
 
@@ -392,14 +392,14 @@ async def test_switch_cross_family_resets_model_but_carries_history(
     """A cross-family switch resets model settings but still carries history
     into a native target.
 
-    The model id is provider-bound so it must reset; history is NOT — the
+    The model id is provider-bound so it must reset; history is NOT â€” the
     switch clears ``external_session_id`` and the runner rebuilds the
     native transcript from this session's own agent-meow items, a conversion
     that doesn't depend on the source harness.
     """
     conv_store = _ConversationStore(conversations={"conv_src": _conv()})
     agent_store = _AgentStore({"ag_session_scoped": _CURRENT, "ag_builtin_codex": _BUILTIN_CODEX})
-    # native=True with same_family=False → model resets, history still carries.
+    # native=True with same_family=False â†’ model resets, history still carries.
     _patch_family_helpers(monkeypatch, same_family=False, native=True, labels={})
     client = TestClient(_build_app(conv_store, agent_store))
 
@@ -407,7 +407,7 @@ async def test_switch_cross_family_resets_model_but_carries_history(
 
     assert resp.status_code == 200, resp.text
     call = conv_store.switch_calls[0]
-    # Cross-family → reset model settings (a model id is provider-bound).
+    # Cross-family â†’ reset model settings (a model id is provider-bound).
     assert call["copy_model_settings"] is False
     # Native target carries history regardless of family: the runner
     # rebuilds the transcript from agent-meow items. False here would mean
@@ -418,27 +418,27 @@ async def test_switch_cross_family_resets_model_but_carries_history(
 @pytest.mark.parametrize(
     "target_agent,target_harness,expected_labels,expected_carry",
     [
-        # cursor-native has no resumable session file to rebuild → no carry.
+        # cursor-native has no resumable session file to rebuild â†’ no carry.
         (
             _BUILTIN_CURSOR,
             "cursor-native",
-            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "cursor-native-ui"},
+            {"omnigent.ui": "terminal", "omnigent.wrapper": "cursor-native-ui"},
             False,
         ),
-        # pi-native rebuilds its JSONL session file from the copied items →
+        # pi-native rebuilds its JSONL session file from the copied items â†’
         # carry history (parity with claude/codex native).
         (
             _BUILTIN_PI,
             "pi-native",
-            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "pi-native-ui"},
+            {"omnigent.ui": "terminal", "omnigent.wrapper": "pi-native-ui"},
             True,
         ),
         # qwen-native rebuilds qwen's on-disk chat recording from the copied
-        # items → carry history (parity with claude/codex/pi native).
+        # items â†’ carry history (parity with claude/codex/pi native).
         (
             _BUILTIN_QWEN,
             "qwen-native",
-            {"agent_meow.ui": "terminal", "agent_meow.wrapper": "qwen-native-ui"},
+            {"omnigent.ui": "terminal", "omnigent.wrapper": "qwen-native-ui"},
             True,
         ),
     ],
@@ -488,7 +488,7 @@ async def test_switch_cursor_pi_native_targets_carry_history_gating(
 @pytest.mark.asyncio
 async def test_switch_400_noop_same_bundle() -> None:
     """Switching to the built-in the session already runs (same bundle) is a
-    no-op and rejected with 400 — no store mutation.
+    no-op and rejected with 400 â€” no store mutation.
     """
     conv_store = _ConversationStore(conversations={"conv_src": _conv()})
     # _BUILTIN_ORIGIN shares the current clone's bundle_location.
@@ -514,7 +514,7 @@ async def test_switch_publishes_agent_changed_event(
     stream, carrying the cloned agent's id and the clean target-agent
     display name, so connected clients
     re-derive their binding-dependent state (the chat store's
-    ``isNativeTerminalSession`` gate) without a navigation. No event → a
+    ``isNativeTerminalSession`` gate) without a navigation. No event â†’ a
     bound web client keeps treating the session as the old harness and
     drops the first post-switch optimistic bubble on idle churn.
     """
@@ -526,7 +526,7 @@ async def test_switch_publishes_agent_changed_event(
 
     # Capture session-stream publishes by rebinding the module's
     # ``session_stream`` reference to a recorder (not patching ``publish``
-    # through the shared module singleton) — omnigent-testing rule 14.
+    # through the shared module singleton) â€” omnigent-testing rule 14.
     published: list[dict[str, object]] = []
 
     class _RecordingStream:
@@ -547,16 +547,16 @@ async def test_switch_publishes_agent_changed_event(
     # the in-place rebind; more than one would double the snapshot refetch.
     assert len(changed) == 1, f"expected exactly one agent_changed event, got {published}"
     event = changed[0]
-    # Published on the switched session's channel — a wrong id would deliver
+    # Published on the switched session's channel â€” a wrong id would deliver
     # the refresh signal to some other session's subscribers.
     assert event["_conversation_id"] == "conv_src"
     assert event["conversation_id"] == "conv_src"
     # agent_id must be the agent the store actually bound (the fresh
-    # clone) — that's the durable reference clients re-bind to.
+    # clone) â€” that's the durable reference clients re-bind to.
     call = conv_store.switch_calls[0]
     assert event["agent_id"] == call["new_agent_id"]
     # agent_name must be the clean target name, NOT the clone row's
-    # "<name> (switch ag_…)" disambiguation name — clients display it
+    # "<name> (switch ag_â€¦)" disambiguation name â€” clients display it
     # verbatim. The clone name leaking here is the web's
     # flash-of-ugly-name bug.
     assert event["agent_name"] == "claude-native-ui"
@@ -567,11 +567,11 @@ async def test_switch_publishes_agent_changed_event(
 async def test_switch_rejected_publishes_no_event(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A rejected switch (no-op same-bundle target, 400) publishes nothing —
+    """A rejected switch (no-op same-bundle target, 400) publishes nothing â€”
     clients must not refetch a snapshot for a binding that didn't change.
     """
     conv_store = _ConversationStore(conversations={"conv_src": _conv()})
-    # _BUILTIN_ORIGIN shares the current clone's bundle_location → 400.
+    # _BUILTIN_ORIGIN shares the current clone's bundle_location â†’ 400.
     agent_store = _AgentStore(
         {"ag_session_scoped": _CURRENT, "ag_builtin_origin": _BUILTIN_ORIGIN}
     )
@@ -623,7 +623,7 @@ async def test_switch_schedules_runner_resource_reset(
     assert resp.status_code == 200, resp.text
     # The reset must be scheduled (and run, since TestClient drains background
     # tasks after the response) for exactly this session. An empty list means
-    # the route stopped wiring the reset — the new agent's sandbox would never
+    # the route stopped wiring the reset â€” the new agent's sandbox would never
     # take effect on the cached primary env and a stale terminal could shadow
     # the rebuild.
     assert reset_calls == ["conv_src"]
@@ -635,7 +635,7 @@ class _RunnerClientStub:
     :param fail: When True, ``post`` raises ``httpx.ConnectError`` after
         recording the call, simulating a transport-level runner hiccup.
     :param status_code: HTTP status of the stubbed response, e.g. ``500``
-        for a runner-side reset failure — httpx does NOT raise on it, so
+        for a runner-side reset failure â€” httpx does NOT raise on it, so
         production must check it explicitly via ``raise_for_status``.
     """
 
@@ -669,7 +669,7 @@ async def test_switch_reset_publishes_changed_files_invalidated_after_reset(
 ) -> None:
     """After the post-switch runner reset succeeds, the route's background
     task publishes ``session.changed_files.invalidated`` so web clients
-    refetch filesystem state — including environment availability, which
+    refetch filesystem state â€” including environment availability, which
     flips the Files tab when the switch crosses an os_env boundary. The
     event must come AFTER the reset POST (and after ``agent_changed``):
     publishing before the reset would have clients refetch the OLD agent's
@@ -703,7 +703,7 @@ async def test_switch_reset_publishes_changed_files_invalidated_after_reset(
 
     assert resp.status_code == 200, resp.text
     # The real reset ran (TestClient drains background tasks) and hit the
-    # runner's dedicated endpoint — a different URL means the old env was
+    # runner's dedicated endpoint â€” a different URL means the old env was
     # never closed and the event below would advertise a stale refetch.
     assert runner.posts == ["/v1/sessions/conv_src/reset-state"]
     types = [e["type"] for e in published]
@@ -727,7 +727,7 @@ async def test_switch_reset_publishes_changed_files_invalidated_after_reset(
     [
         # Reset POST raises mid-flight (transport-level runner hiccup).
         "post_fails",
-        # Reset POST returns non-2xx — httpx does NOT raise on this; the
+        # Reset POST returns non-2xx â€” httpx does NOT raise on this; the
         # route must check the status itself or it would publish against
         # a runner that never closed the old env.
         "post_500",
@@ -743,10 +743,10 @@ async def test_switch_reset_failure_publishes_no_changed_files_event(
     """When the post-switch reset doesn't complete, NO
     ``session.changed_files.invalidated`` goes out: the runner's env cache
     is still the OLD agent's, so a triggered refetch would re-serve stale
-    availability. (``agent_changed`` still fires — the store commit
+    availability. (``agent_changed`` still fires â€” the store commit
     succeeded.)
 
-    :param getter_kind: Which failure shape to simulate —
+    :param getter_kind: Which failure shape to simulate â€”
         ``"post_fails"`` (reset POST raises), ``"post_500"`` (reset POST
         returns HTTP 500), or ``"no_client"`` (no runner client resolved).
     """
@@ -827,14 +827,14 @@ async def test_switch_404_target_not_bindable() -> None:
 
     resp = client.post("/v1/sessions/conv_src/switch-agent", json={"agent_id": "ag_other"})
 
-    # Session-scoped target → not bindable, mapped to 404, nothing mutated.
+    # Session-scoped target â†’ not bindable, mapped to 404, nothing mutated.
     assert resp.status_code == 404, resp.text
     assert conv_store.switch_calls == []
 
 
 @pytest.mark.asyncio
 async def test_switch_409_when_busy(monkeypatch: pytest.MonkeyPatch) -> None:
-    """409 when a turn is running — switching mid-turn is rejected."""
+    """409 when a turn is running â€” switching mid-turn is rejected."""
     conv_store = _ConversationStore(conversations={"conv_src": _conv()})
     agent_store = _AgentStore(
         {"ag_session_scoped": _CURRENT, "ag_builtin_claude": _BUILTIN_CLAUDE}
@@ -854,7 +854,7 @@ async def test_switch_409_when_busy(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.asyncio
 async def test_switch_400_unloadable_target_bundle(monkeypatch: pytest.MonkeyPatch) -> None:
-    """400 when the target bundle can't load — fails before deleting the old
+    """400 when the target bundle can't load â€” fails before deleting the old
     agent, so the session is left untouched.
     """
     conv_store = _ConversationStore(conversations={"conv_src": _conv()})
@@ -871,5 +871,5 @@ async def test_switch_400_unloadable_target_bundle(monkeypatch: pytest.MonkeyPat
     )
 
     assert resp.status_code == 400, resp.text
-    # Pre-commit failure → no switch attempted (old agent intact).
+    # Pre-commit failure â†’ no switch attempted (old agent intact).
     assert conv_store.switch_calls == []

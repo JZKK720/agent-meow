@@ -1,4 +1,4 @@
-"""Tests for :mod:`~?agent_meow.runner.cost_advisor` — the v3 cost advisor.
+"""Tests for :mod:`~?omnigent.runner.cost_advisor` â€” the v3 cost advisor.
 
 Covers:
 
@@ -28,19 +28,19 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.cost_plan import AdvisorVerdict, parse_verdict
-from agent_meow.entities.conversation import NON_CONTENT_ITEM_TYPES, parse_item_data
-from agent_meow.runner.cost_advisor import (
+from omnigent.cost_plan import AdvisorVerdict, parse_verdict
+from omnigent.entities.conversation import NON_CONTENT_ITEM_TYPES, parse_item_data
+from omnigent.runner.cost_advisor import (
     AdvisorConfig,
     maybe_run_advisor,
     parse_advisor_config,
     routing_decision_event,
 )
-from agent_meow.runner.identity import (
+from omnigent.runner.identity import (
     RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR,
     RUNNER_TUNNEL_TOKEN_HEADER,
 )
-from agent_meow.spec.types import AgentSpec, ExecutorSpec
+from omnigent.spec.types import AgentSpec, ExecutorSpec
 
 _TIERS_YAML: dict[str, Any] = {  # type: ignore[explicit-any]  # YAML-shaped config payload
     "mode": "optimize",
@@ -144,7 +144,7 @@ class _PatchCapture:
 
 def _client(transport: httpx.BaseTransport) -> httpx.AsyncClient:
     """Build a server client over a test transport."""
-    return httpx.AsyncClient(transport=transport, base_url="http://agent_meow.test")
+    return httpx.AsyncClient(transport=transport, base_url="http://omnigent.test")
 
 
 async def _run(
@@ -174,12 +174,12 @@ async def _run(
         )
 
 
-# ── Mode off / inert paths (zero HTTP traffic) ─────────────────────────────────
+# â”€â”€ Mode off / inert paths (zero HTTP traffic) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_mode_off_is_inert() -> None:
-    """No marker → ``None`` and zero HTTP traffic.
+    """No marker â†’ ``None`` and zero HTTP traffic.
 
     The raising transport makes any PATCH fail the test, proving the dark
     path is byte-identical to pre-advisor turns. The judge must also not
@@ -194,7 +194,7 @@ async def test_mode_off_is_inert() -> None:
 
 @pytest.mark.asyncio
 async def test_spec_none_is_inert() -> None:
-    """An unresolved spec (None) cannot opt in — no I/O, no judge."""
+    """An unresolved spec (None) cannot opt in â€” no I/O, no judge."""
     judge = _ScriptedJudge(_verdict())
     result = await _run(spec=None, judge=judge, transport=_raising_transport())
     assert result is None
@@ -229,7 +229,7 @@ async def test_conversational_verdict_skips_label_and_apply() -> None:
     assert judge.call_count == 1
 
 
-# ── Optimize mode: apply + persist + note ──────────────────────────────────────
+# â”€â”€ Optimize mode: apply + persist + note â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -244,7 +244,7 @@ async def test_optimize_applies_model_persists_applied_verdict_and_note() -> Non
         transport=httpx.MockTransport(capture.handler),
     )
     assert result is not None
-    # apply_model is the verdict model — this is what the runner stamps on
+    # apply_model is the verdict model â€” this is what the runner stamps on
     # the harness body; None here would mean the brain never switched.
     assert result.apply_model == "databricks-claude-opus-4-8"
     assert result.verdict.applied is True
@@ -277,7 +277,7 @@ async def test_optimize_user_pin_beats_advisor() -> None:
         user_model_override="databricks-claude-sonnet-4-6",  # the user's /model pin
     )
     assert result is not None
-    # Application is suppressed — the brain runs on the user's pin (the
+    # Application is suppressed â€” the brain runs on the user's pin (the
     # harness honors it), not the advisor's.
     assert result.apply_model is None
     assert result.note_item is None
@@ -297,19 +297,19 @@ async def test_optimize_non_claude_sdk_records_but_does_not_apply() -> None:
         spec=_orchestrator_spec(cost_optimize=_TIERS_YAML),
         judge=judge,
         transport=httpx.MockTransport(capture.handler),
-        harness="codex",  # not claude-sdk → advise-style labeling only
+        harness="codex",  # not claude-sdk â†’ advise-style labeling only
     )
     assert result is not None
     assert result.apply_model is None
     assert result.note_item is None
     parsed = parse_verdict(capture.requests[0]["labels"])
     assert parsed is not None
-    # Recorded but unapplied — the verdict exists for telemetry, the codex
+    # Recorded but unapplied â€” the verdict exists for telemetry, the codex
     # brain model is untouched.
     assert parsed.applied is False
 
 
-# ── Advise mode: shadow ─────────────────────────────────────────────────────────
+# â”€â”€ Advise mode: shadow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -344,7 +344,7 @@ async def test_override_on_escalates_advise_to_optimize() -> None:
         cost_control_mode_override="on",
     )
     assert result is not None
-    # on → optimize: an advise spec now applies. apply_model proves the
+    # on â†’ optimize: an advise spec now applies. apply_model proves the
     # override flipped the behavior, not just the label.
     assert result.apply_model == "databricks-claude-opus-4-8"
     parsed = parse_verdict(capture.requests[0]["labels"])
@@ -352,12 +352,12 @@ async def test_override_on_escalates_advise_to_optimize() -> None:
     assert parsed.applied is True
 
 
-# ── Degradation: failed persist is telemetry-only ────────────────────────────────
+# â”€â”€ Degradation: failed persist is telemetry-only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_failed_persist_applies_nothing() -> None:
-    """A failed label PATCH must NOT kill the turn — assert result is None."""
+    """A failed label PATCH must NOT kill the turn â€” assert result is None."""
     capture = _PatchCapture(status_code=403)  # multi-user reject
     judge = _ScriptedJudge(_verdict())
     result = await _run(
@@ -370,7 +370,7 @@ async def test_failed_persist_applies_nothing() -> None:
     assert result is None
 
 
-# ── Reserved-label authority header ─────────────────────────────────────────────
+# â”€â”€ Reserved-label authority header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -393,7 +393,7 @@ async def test_persist_carries_runner_tunnel_token(monkeypatch: pytest.MonkeyPat
 
 @pytest.mark.asyncio
 async def test_persist_omits_token_when_absent(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Without a tunnel token, the PATCH omits the header — single-user
+    """Without a tunnel token, the PATCH omits the header â€” single-user
     servers accept the write without it."""
     monkeypatch.delenv(RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR, raising=False)
     capture = _PatchCapture()
@@ -406,7 +406,7 @@ async def test_persist_omits_token_when_absent(monkeypatch: pytest.MonkeyPatch) 
     assert RUNNER_TUNNEL_TOKEN_HEADER not in capture.headers[0]
 
 
-# ── Config parsing ──────────────────────────────────────────────────────────────
+# â”€â”€ Config parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_advisor_config_absent_is_none() -> None:
@@ -480,11 +480,11 @@ async def test_default_judge_build_threads_brain_databricks_profile(
         captured.update(kwargs)
         return _NullJudge()
 
-    monkeypatch.setattr("agent_meow.runner.cost_advisor.build_llm_judge", _capture_build)
+    monkeypatch.setattr("omnigent.runner.cost_advisor.build_llm_judge", _capture_build)
     monkeypatch.setattr(
         # The profile resolver reads the user-level provider config; stub it
         # so the test is hermetic on any box.
-        "agent_meow.runner.cost_advisor._databricks_profile_for_spec",
+        "omnigent.runner.cost_advisor._databricks_profile_for_spec",
         lambda spec: "brain-profile",
     )
     async with _client(_raising_transport()) as client:
@@ -497,13 +497,13 @@ async def test_default_judge_build_threads_brain_databricks_profile(
             harness="claude-sdk",
         )
     assert result is None
-    # The brain's profile reached the judge builder — a missing key means
+    # The brain's profile reached the judge builder â€” a missing key means
     # the advisor stopped threading it and the judge falls back to ambient
     # credential resolution (the misroute regression).
     assert captured["databricks_profile"] == "brain-profile"
 
 
-# ── routing_decision_event: the turn-start transcript chip ───────────────────
+# â”€â”€ routing_decision_event: the turn-start transcript chip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_routing_decision_event_shape_applied() -> None:
@@ -524,7 +524,7 @@ def test_routing_decision_event_shape_applied() -> None:
     assert event["type"] == "response.output_item.done"
     item = event["item"]
     assert item["type"] == "routing_decision"
-    # Every render field is carried through verbatim — a dropped field
+    # Every render field is carried through verbatim â€” a dropped field
     # would render a chip missing its model, tier, or rationale.
     assert item["model"] == "databricks-claude-opus-4-8"
     assert item["tier"] == "expensive"
@@ -551,7 +551,7 @@ def test_routing_decision_event_shadow_carries_applied_false() -> None:
 
 def test_routing_decision_event_item_parses_as_routing_decision_data() -> None:
     """The emitted item validates against the real ``RoutingDecisionData``
-    model the AP server relay parses it with — so a field-name or type
+    model the AP server relay parses it with â€” so a field-name or type
     drift between the runner emitter and the entity model fails here, not
     silently at relay time where it would just drop the frame."""
     verdict = AdvisorVerdict(
@@ -575,5 +575,5 @@ def test_routing_decision_type_is_non_content() -> None:
     """The item type is in NON_CONTENT_ITEM_TYPES, so the agent loop's
     history filter never feeds it to the model. If it were removed from
     that set, the brain would start seeing (and answering) its own router
-    note — the exact "must not enter conversation history" constraint."""
+    note â€” the exact "must not enter conversation history" constraint."""
     assert "routing_decision" in NON_CONTENT_ITEM_TYPES

@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent_meow.runner.tool_dispatch import (
+from omnigent.runner.tool_dispatch import (
     _subagent_allowed_harnesses,
     _subagent_harness_override_from_args,
 )

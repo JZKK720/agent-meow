@@ -2,7 +2,7 @@
 """
 Smoke test for the E2B sandbox provider.
 
-Drives the REAL :class:`~?agent_meow.onboarding.sandboxes.e2b.E2BSandboxLauncher`
+Drives the REAL :class:`~?omnigent.onboarding.sandboxes.e2b.E2BSandboxLauncher`
 against a live E2B sandbox to validate every primitive the managed-host /
 CLI-bootstrap flows rely on: provision -> run (incl. the non-zero-exit
 ``CommandExitException`` path) -> put + read-back -> keep_alive ->
@@ -11,7 +11,7 @@ stream_exec (combined output) -> attach -> public egress -> terminate
 the launcher makes, end to end.
 
 By default it boots from E2B's stock ``base`` template, so it needs NO
-pre-built agent-meow host template — it validates the launcher's SDK wiring
+pre-built agent-meow host template â€” it validates the launcher's SDK wiring
 in isolation. Pass ``--template agent-meow-host`` (after ``e2b template
 build``; see deploy/e2b/README.md) to smoke the real host template too.
 
@@ -32,7 +32,7 @@ import time
 # The launcher lazy-imports the e2b SDK; surface a clean hint if it (or the
 # agent-meow package) isn't importable rather than a raw traceback.
 try:
-    from agent_meow.onboarding.sandboxes.e2b import (
+    from omnigent.onboarding.sandboxes.e2b import (
         E2BSandboxLauncher,
         resolve_max_lifetime_s,
     )
@@ -44,7 +44,7 @@ except ImportError as exc:  # pragma: no cover - environment guard
 
 def _check(failures: list[str], ok: bool, label: str) -> None:
     """Record and print one check result."""
-    print(f"    {'✓' if ok else '✗'} {label}", flush=True)
+    print(f"    {'âœ“' if ok else 'âœ—'} {label}", flush=True)
     if not ok:
         failures.append(label)
 
@@ -65,7 +65,7 @@ def main() -> int:
         return 2
 
     # A sentinel env var we inject at provision and read back from inside the
-    # sandbox — exercises the env-passthrough path (resolved from THIS process
+    # sandbox â€” exercises the env-passthrough path (resolved from THIS process
     # env by name, exactly like the server forwards its own environment).
     marker_name = "OMNIGENT_E2B_SMOKE_MARKER"
     marker_value = f"smoke-{int(time.time())}"
@@ -73,7 +73,7 @@ def main() -> int:
 
     launcher = E2BSandboxLauncher(template=args.template, env=[marker_name])
     name = f"smoke-{int(time.time())}"
-    print(f"▸ E2B launcher smoke  template={args.template}  tag={name}")
+    print(f"â–¸ E2B launcher smoke  template={args.template}  tag={name}")
 
     sandbox_id: str | None = None
     failures: list[str] = []
@@ -93,7 +93,7 @@ def main() -> int:
         _check(failures, marker_value in result.stdout, "injected env var visible inside sandbox")
 
         print("\n[4/8] run: non-zero exit (CommandExitException path)")
-        # E2B raises CommandExitException on non-zero exit — the launcher must
+        # E2B raises CommandExitException on non-zero exit â€” the launcher must
         # catch it and surface the code/streams rather than letting it escape.
         failed = launcher.run(sandbox_id, "echo to-stderr >&2; exit 7", check=False)
         _check(failures, failed.returncode == 7, "non-zero exit surfaced as returncode 7")
@@ -156,7 +156,7 @@ def main() -> int:
                 launcher.terminate(sandbox_id)
                 # A second terminate of an already-killed sandbox must be a no-op.
                 launcher.terminate(sandbox_id)
-                print(f"    ✓ terminated {sandbox_id} (and second call was a no-op)")
+                print(f"    âœ“ terminated {sandbox_id} (and second call was a no-op)")
             except Exception as exc:
                 print(f"    WARNING: cleanup failed for {sandbox_id}: {exc}")
         elif sandbox_id is not None:
@@ -166,9 +166,9 @@ def main() -> int:
     if failures:
         print("SMOKE TEST FAILED:")
         for f in failures:
-            print(f"  ✗ {f}")
+            print(f"  âœ— {f}")
         return 1
-    print("SMOKE TEST PASSED — every E2B launcher primitive works against a live sandbox.")
+    print("SMOKE TEST PASSED â€” every E2B launcher primitive works against a live sandbox.")
     return 0
 
 

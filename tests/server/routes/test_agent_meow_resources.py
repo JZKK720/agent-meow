@@ -10,15 +10,15 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server.app import create_app
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
-from agent_meow.stores.document_store.sqlalchemy_store import SqlAlchemyDocumentStore
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.image_store.sqlalchemy_store import SqlAlchemyImageStore
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server.app import create_app
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from omnigent.stores.document_store.sqlalchemy_store import SqlAlchemyDocumentStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.image_store.sqlalchemy_store import SqlAlchemyImageStore
 
 
 @pytest.fixture()

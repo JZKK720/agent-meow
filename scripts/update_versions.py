@@ -4,18 +4,18 @@ Bump the agent-meow project version across all packages in lockstep.
 The three distributions in this repo release together at a single
 version:
 
-- ``agent-meow``         — root ``pyproject.toml``
-- ``agent-meow-client``  — ``sdks/python-client/pyproject.toml``
-- ``agent-meow-ui-sdk``  — ``sdks/ui/pyproject.toml``
+- ``agent-meow``         â€” root ``pyproject.toml``
+- ``agent-meow-client``  â€” ``sdks/python-client/pyproject.toml``
+- ``agent-meow-ui-sdk``  â€” ``sdks/ui/pyproject.toml``
 
 Each declares its own ``[project].version`` and ``==``-pins its
-siblings — the lockstep contract that
-``.github/workflows/release-agent_meow.yml`` verifies at tag time. This
+siblings â€” the lockstep contract that
+``.github/workflows/release-omnigent.yml`` verifies at tag time. This
 script rewrites every one of those locations at once so they never
 drift.
 
 It edits ONLY the ``[project].version`` line and the sibling ``==``
-pins, matched by package name — never a blind version-string replace —
+pins, matched by package name â€” never a blind version-string replace â€”
 so unrelated version literals (host/runner wire-protocol versions,
 docstring examples, third-party dependency floors like
 ``databricks-mcp>=0.1.0``) are left untouched.
@@ -107,8 +107,8 @@ def packages(root: Path) -> list[Package]:
 # ``version = "..."`` on its own line (the [project].version field).
 _VERSION_LINE = re.compile(r'^version = "[^"]*"$', re.MULTILINE)
 
-# ``VERSION = "..."`` on its own line — the runtime constant in
-# ``agent_meow/version.py`` that mirrors the canonical [project].version.
+# ``VERSION = "..."`` on its own line â€” the runtime constant in
+# ``omnigent/version.py`` that mirrors the canonical [project].version.
 _VERSION_CONSTANT = re.compile(r'^VERSION = "[^"]*"$', re.MULTILINE)
 
 
@@ -168,8 +168,8 @@ def set_version(root: Path, new_version: str) -> list[Path]:
     """
     Rewrite every package's version + sibling pins to *new_version*.
 
-    Also rewrites the runtime ``VERSION`` constant in ``agent_meow/version.py``
-    so the value the runtime imports stays equal to ``[project].version`` —
+    Also rewrites the runtime ``VERSION`` constant in ``omnigent/version.py``
+    so the value the runtime imports stays equal to ``[project].version`` â€”
     the automated bump path must keep both in lockstep (the ``sync-version-py``
     pre-commit fixer only fires in the local dev flow).
 
@@ -226,7 +226,7 @@ def next_dev_version(released: str) -> str:
 
 def _read_version_constant(root: Path) -> str:
     """
-    Return the ``VERSION`` literal from ``agent_meow/version.py``.
+    Return the ``VERSION`` literal from ``omnigent/version.py``.
 
     :param root: Repo root.
     :returns: The quoted value of the ``VERSION`` assignment.
@@ -245,7 +245,7 @@ def check(root: Path, expect: str | None = None) -> str:
     """
     Verify every package agrees on the version and pins its siblings.
 
-    Also checks the runtime ``VERSION`` constant in ``agent_meow/version.py``
+    Also checks the runtime ``VERSION`` constant in ``omnigent/version.py``
     against the resolved version, so a bump that forgets it fails here rather
     than in the ``test_version_matches_pyproject`` backstop on the bot PR.
 
@@ -273,7 +273,7 @@ def check(root: Path, expect: str | None = None) -> str:
     constant = _read_version_constant(root)
     if Version(constant) != Version(resolved):
         raise ValueError(
-            f"agent_meow/version.py VERSION {constant!r} != [project].version {resolved!r}"
+            f"omnigent/version.py VERSION {constant!r} != [project].version {resolved!r}"
         )
     if expect is not None and Version(resolved) != Version(expect):
         raise ValueError(f"resolved version {resolved} != expected {expect}")

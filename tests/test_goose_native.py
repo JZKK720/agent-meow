@@ -5,7 +5,7 @@ from __future__ import annotations
 import click
 import pytest
 
-from agent_meow import goose_native as gn
+from omnigent import goose_native as gn
 
 
 def test_resolve_goose_executable_found() -> None:

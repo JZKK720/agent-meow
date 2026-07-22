@@ -13,7 +13,7 @@ This test drives a real ``agent-meow run --harness pi`` subprocess with:
 - a marker file the extension writes on ``session_start``.
 
 **Serial execution:** uses the session-scoped mock LLM server like the other
-``tests/e2e/agent_meow/`` pi rows — do not run under xdist against a shared mock.
+``tests/e2e/omnigent/`` pi rows â€” do not run under xdist against a shared mock.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ import pytest
 import yaml
 
 from tests.e2e._harness_probes import cli_unavailable_reason
-from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
 
 _EXTENSION_PATH = (
     Path(__file__).resolve().parents[2] / "resources" / "pi_extensions" / "e2e_marker_extension.js"
@@ -147,7 +147,7 @@ def test_pi_gateway_run_loads_global_extensions(
         f"pi gateway run failed; stdout:\n{result.stdout!r}\n\nstderr:\n{result.stderr!r}"
     )
     assert marker_path.is_file(), (
-        "Pi extension marker missing — gateway managed agent dir was not seeded "
+        "Pi extension marker missing â€” gateway managed agent dir was not seeded "
         f"from {fake_home / '.pi' / 'agent' / 'settings.json'!s}.\n"
         f"stdout:\n{result.stdout!r}\n\nstderr:\n{result.stderr!r}"
     )

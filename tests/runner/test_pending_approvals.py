@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.runner.pending_approvals`.
+"""Unit tests for :mod:`~?omnigent.runner.pending_approvals`.
 
 The runner's pending-approvals registry routes policy-ASK verdicts
 between two coroutines in the same process: the dispatch path
@@ -17,7 +17,7 @@ Future). Tests here pin the contract directly:
   ``response.elicitation_resolved`` on every exit path so the
   agent-meow server's sidebar index decrements in lockstep.
 
-These invariants drive the cross-session sidebar badge — a
+These invariants drive the cross-session sidebar badge â€” a
 regression in any of them leaves stuck or phantom prompts in the
 UI.
 """
@@ -29,7 +29,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.runner import pending_approvals
+from omnigent.runner import pending_approvals
 
 
 @pytest.fixture(autouse=True)
@@ -50,7 +50,7 @@ def _clean_pending_approvals() -> None:
 async def test_register_returns_fresh_future() -> None:
     """``register`` creates a new Future and stores it under the id."""
     fut = pending_approvals.register("elicit_1")
-    # Future must be pending immediately — if done(), the caller's
+    # Future must be pending immediately â€” if done(), the caller's
     # subsequent ``wait_for`` would return immediately with a bogus
     # value (likely None) and the user would never see the prompt.
     assert isinstance(fut, asyncio.Future)
@@ -90,7 +90,7 @@ async def test_resolve_already_done_returns_false() -> None:
 
     Once a Future is resolved (or timed out), the wait coroutine
     has already moved on. Setting the result again would raise
-    ``InvalidStateError`` — return False instead so resolve()
+    ``InvalidStateError`` â€” return False instead so resolve()
     stays idempotent.
     """
     fut = pending_approvals.register("elicit_dup")
@@ -104,14 +104,14 @@ async def test_cleanup_drops_entry() -> None:
     """``cleanup`` removes the entry so future resolves are no-ops."""
     pending_approvals.register("elicit_drop")
     pending_approvals.cleanup("elicit_drop")
-    # After cleanup, the id is unknown — resolve must report
+    # After cleanup, the id is unknown â€” resolve must report
     # no-delivery rather than reaching into a stale Future.
     assert pending_approvals.resolve("elicit_drop", True) is False
 
 
 @pytest.mark.asyncio
 async def test_cleanup_unknown_id_is_noop() -> None:
-    """Cleanup is idempotent — popping an unknown id does not raise."""
+    """Cleanup is idempotent â€” popping an unknown id does not raise."""
     # No exception is the entire assertion. If this raised,
     # the wait_for_user_approval helper's finally block would
     # fail to clean up on the already-resolved path.
@@ -122,7 +122,7 @@ async def test_cleanup_unknown_id_is_noop() -> None:
 async def test_wait_for_user_approval_returns_true_on_accept() -> None:
     """The wait helper returns True when resolved with approved=True.
 
-    Drives the full register → resolve → cleanup cycle through
+    Drives the full register â†’ resolve â†’ cleanup cycle through
     the public surface to catch any wiring regression.
     """
     publishes: list[tuple[str, dict[str, Any]]] = []
@@ -166,7 +166,7 @@ async def test_wait_for_user_approval_returns_false_on_timeout() -> None:
     """Timeout collapses to False, AND still publishes the resolved event.
 
     The resolved event on timeout is what clears the sidebar badge
-    when the user walked away — without it, the badge stays stuck
+    when the user walked away â€” without it, the badge stays stuck
     after the runner gives up. This is the runner-side leak the
     PR is fixing.
     """
@@ -182,7 +182,7 @@ async def test_wait_for_user_approval_returns_false_on_timeout() -> None:
         timeout_seconds=0.05,
     )
     # False = the caller treats the prompt as refused. True here
-    # would mean the timeout path silently dispatched the tool —
+    # would mean the timeout path silently dispatched the tool â€”
     # a much worse failure mode than a stuck badge.
     assert approved is False
     # Resolved event still fires from the finally block. If
@@ -236,14 +236,14 @@ async def test_wait_for_user_approval_default_budget_gates_until_verdict() -> No
     :func:`wait_for_user_approval` WITHOUT ``timeout_seconds``, so it falls
     back to :data:`pending_approvals._DEFAULT_WAIT_SECONDS`. That default was
     once 120s, which silently refused (``False``) any prompt the human didn't
-    answer within two minutes — the card "auto-resolved" and the agent moved
+    answer within two minutes â€” the card "auto-resolved" and the agent moved
     on. The default is now one day (matching the policy's ``ask_timeout``), so
-    the gate must KEEP blocking until a real verdict arrives; ONLY the verdict —
-    never the budget elapsing on its own — may release it.
+    the gate must KEEP blocking until a real verdict arrives; ONLY the verdict â€”
+    never the budget elapsing on its own â€” may release it.
 
     This exercises the exact default-budget path the real callers use (no
     ``timeout_seconds``) and asserts: (1) the gate is still parked after a
-    real delay, and (2) a human verdict — and only that — releases it with
+    real delay, and (2) a human verdict â€” and only that â€” releases it with
     the right value. A regression that shortens the default to anything
     inside the sleep window flips assertion (1); the companion drift-guard in
     ``tests/test_ask_timeout.py`` pins the exact one-day value so a 120s-style
@@ -259,16 +259,16 @@ async def test_wait_for_user_approval_default_budget_gates_until_verdict() -> No
             elicitation_id="elicit_default_budget",
             conversation_id="conv_default_budget",
             publish_event=_publish,
-            # NOTE: no timeout_seconds — drive the default budget, the exact
+            # NOTE: no timeout_seconds â€” drive the default budget, the exact
             # path the relay/MCP approval callers use.
         )
     )
-    # The gate must STILL be blocking after a real delay — it must not
+    # The gate must STILL be blocking after a real delay â€” it must not
     # auto-resolve on the default budget. (Pre-fix, a short/expired default
     # would have already returned False here.)
     await asyncio.sleep(0.2)
     assert not task.done(), (
-        "ASK gate auto-resolved on the default budget — it must keep gating "
+        "ASK gate auto-resolved on the default budget â€” it must keep gating "
         "until a human verdict, never refuse on its own."
     )
     assert pending_approvals.has_pending("conv_default_budget") is True
@@ -280,7 +280,7 @@ async def test_wait_for_user_approval_default_budget_gates_until_verdict() -> No
 
 
 # ---------------------------------------------------------------------------
-# has_pending — session is "awaiting human approval"
+# has_pending â€” session is "awaiting human approval"
 # ---------------------------------------------------------------------------
 #
 # ``has_pending(conversation_id)`` is read by the runner's message-ingest
@@ -301,7 +301,7 @@ async def test_has_pending_false_when_nothing_parked() -> None:
     """A session with no parked approval is not awaiting one.
 
     If this returned True spuriously, the ingest path would suppress
-    mid-turn injection for sessions that have no gate at all — silently
+    mid-turn injection for sessions that have no gate at all â€” silently
     breaking normal steering.
     """
     assert pending_approvals.has_pending("conv_none") is False
@@ -330,7 +330,7 @@ async def test_has_pending_true_while_parked_then_false_after_accept() -> None:
 
     pending_approvals.resolve("elicit_hp1", True)
     assert await wait_task is True
-    # Cleared on the verdict path — the gate is resolved, so messages may
+    # Cleared on the verdict path â€” the gate is resolved, so messages may
     # flow (drive a continuation) again.
     assert pending_approvals.has_pending("conv_hp1") is False
 
@@ -377,7 +377,7 @@ async def test_has_pending_counts_concurrent_parks() -> None:
 
     Parallel tool calls can each trip a checkpoint, so the session may
     hold more than one parked approval. The flag must stay True until the
-    LAST one resolves — a naive boolean (cleared by the first verdict)
+    LAST one resolves â€” a naive boolean (cleared by the first verdict)
     would reopen the gate while a sibling approval is still outstanding.
     """
     t1 = asyncio.create_task(
@@ -399,12 +399,12 @@ async def test_has_pending_counts_concurrent_parks() -> None:
     await asyncio.sleep(0.01)
     assert pending_approvals.has_pending("conv_multi") is True
 
-    # Resolve the first — the session is still awaiting the second.
+    # Resolve the first â€” the session is still awaiting the second.
     pending_approvals.resolve("elicit_multi_1", True)
     assert await t1 is True
     assert pending_approvals.has_pending("conv_multi") is True
 
-    # Resolve the second — now the gate is fully clear.
+    # Resolve the second â€” now the gate is fully clear.
     pending_approvals.resolve("elicit_multi_2", False)
     assert await t2 is False
     assert pending_approvals.has_pending("conv_multi") is False

@@ -1,4 +1,4 @@
-"""Tests for agent_meow.inner.egress.relay (TCP-to-Unix bridge)."""
+"""Tests for omnigent.inner.egress.relay (TCP-to-Unix bridge)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.inner.egress.relay import start_relay
+from omnigent.inner.egress.relay import start_relay
 
 
 def _pick_free_port() -> int:
@@ -108,7 +108,7 @@ def test_c1_start_relay_raises_when_port_already_bound(
     risk on macOS where there's no network namespace isolation).
 
     This is the LOAD-BEARING defense after the ``Proxy-Authorization``
-    mechanism was removed (S3) — the only thing preventing a same-
+    mechanism was removed (S3) â€” the only thing preventing a same-
     host attacker from MITM-ing helper egress is the relay refusing
     to start when something else already owns the port.
     """
@@ -135,7 +135,7 @@ async def test_s3_relay_forwards_plain_connection_without_proxy_auth(
 ) -> None:
     """
     S3: after the ``Proxy-Authorization`` mechanism was removed, the
-    relay must forward connections that carry no auth header — the
+    relay must forward connections that carry no auth header â€” the
     parent no longer embeds a token in the ``HTTP_PROXY`` URL so
     requiring one would block every legitimate helper request.
 
@@ -143,7 +143,7 @@ async def test_s3_relay_forwards_plain_connection_without_proxy_auth(
     had two tests that the relay REJECTED unauth'd connections with
     HTTP 407 and STRIPPED the auth header on forwarding; both
     behaviors were removed when the token left the system. See the
-    docstring at :func:`~?agent_meow.inner.egress.relay.start_relay`
+    docstring at :func:`~?omnigent.inner.egress.relay.start_relay`
     for why removing the token is strictly safer than keeping it
     (it leaked via argv to any same-UID process).
     """

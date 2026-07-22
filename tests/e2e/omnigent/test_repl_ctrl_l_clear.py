@@ -1,16 +1,16 @@
-"""Phase 0 characterization test — Ctrl+L clears the screen.
+"""Phase 0 characterization test â€” Ctrl+L clears the screen.
 
 Submits one prompt so the scrollback has identifiable text,
 presses ``Ctrl+L`` to clear the screen, then inspects the
 subsequent PTY render frame. The assertion looks for (a) the
 ANSI erase sequence that ``_clear_screen`` writes and (b) a
-follow-up turn that completes — proving the input area is still
+follow-up turn that completes â€” proving the input area is still
 present and responsive. Turn synchronization uses the visible
-``⠹ working`` line and the ``❯`` prompt rather than the
+``â ¹ working`` line and the ``â¯`` prompt rather than the
 truncated/CPR-suppressed ``state:`` badge (see test_repl_smoke).
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
-REPL pexpect suite — "Ctrl+L clear".
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
+REPL pexpect suite â€” "Ctrl+L clear".
 """
 
 from __future__ import annotations
@@ -18,19 +18,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
     submit_prompt,
 )
-from tests.e2e.agent_meow._repl_test_helpers import drain_for
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent._repl_test_helpers import drain_for
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 # Visible turn-synchronization markers (see test_repl_smoke).
 _RUNNING_MARKER = r"working"
-_COMPLETION_MARKER = r"❯ "
+_COMPLETION_MARKER = r"â¯ "
 
 _MODEL = "mock-model"
 _HARNESS = "openai-agents"
@@ -118,7 +118,7 @@ def test_repl_ctrl_l_clears_screen(
     observed: dict[str, Any] = {
         "exit_code": exit_code,
         "screen_clear_sequence_written": _SCREEN_CLEAR_SEQ in post_clear_drain,
-        "repl_still_alive_after_clear": "❯" in post_prompt_turn.stripped
+        "repl_still_alive_after_clear": "â¯" in post_prompt_turn.stripped
         and "say hi" in post_prompt_turn.stripped,
     }
     diffs = compare_snapshot("test_repl_ctrl_l_clear", observed)

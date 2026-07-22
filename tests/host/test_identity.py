@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.host.identity import load_or_create_host_identity
+from omnigent.host.identity import load_or_create_host_identity
 
 
 def test_create_identity_when_no_config(tmp_path: Path) -> None:

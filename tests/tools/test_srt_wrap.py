@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.tools._srt`.
+"""Unit tests for :mod:`~?omnigent.tools._srt`.
 
 The wrap helper is the shared sandbox-on-or-off contract used by
 both :class:`LocalPythonTool` and the MCP stdio transport. These
@@ -20,20 +20,20 @@ import shlex
 
 import pytest
 
-from agent_meow.tools._srt import is_srt_available, wrap_with_srt
+from omnigent.tools._srt import is_srt_available, wrap_with_srt
 
 
 def test_wrap_with_srt_passthrough_when_disabled() -> None:
     """
     ``sandbox_enabled=False`` passes the command through unchanged,
     regardless of whether srt is available. Callers get a plain
-    subprocess — no srt prefix.
+    subprocess â€” no srt prefix.
 
     What breaks if this fails: authors who set
     ``SandboxConfig(enabled=False)`` for ``LocalPythonTool``
     would still run inside srt's sandbox, violating their
     explicit opt-out. (Stdio MCPs no longer go through this
-    helper post-step-7 — see ``agent_meow/tools/mcp.py`` for
+    helper post-step-7 â€” see ``omnigent/tools/mcp.py`` for
     the rationale.)
     """
     cmd = ["python", "/tmp/foo.py", "--flag"]
@@ -45,7 +45,7 @@ def test_wrap_with_srt_passthrough_when_unavailable() -> None:
     """
     ``srt_available=False`` passes the command through regardless
     of the caller's sandbox preference. On machines without srt
-    installed, the subprocess runs unsandboxed — silently, by
+    installed, the subprocess runs unsandboxed â€” silently, by
     design, so dev boxes that haven't installed the sandbox
     runtime still function.
 
@@ -61,7 +61,7 @@ def test_wrap_with_srt_wraps_when_enabled_and_available() -> None:
     """
     ``sandbox_enabled=True`` AND ``srt_available=True`` produces the
     wrapped form ``srt -c <shlex.join(cmd)>``. The joined form
-    preserves embedded spaces and quotes — ``shlex.join`` is the
+    preserves embedded spaces and quotes â€” ``shlex.join`` is the
     project's standard because ``srt -c`` takes a single shell
     string (like ``bash -c``).
 
@@ -76,7 +76,7 @@ def test_wrap_with_srt_wraps_when_enabled_and_available() -> None:
     assert wrapped[:2] == ["srt", "-c"]
     assert len(wrapped) == 3
     # The third arg is the shell-quoted form of the original argv.
-    # shlex.split(wrapped[2]) must round-trip back to cmd — that's
+    # shlex.split(wrapped[2]) must round-trip back to cmd â€” that's
     # the invariant srt -c relies on.
     assert shlex.split(wrapped[2]) == cmd
 
@@ -84,7 +84,7 @@ def test_wrap_with_srt_wraps_when_enabled_and_available() -> None:
 def test_wrap_with_srt_includes_settings_file_when_provided() -> None:
     """
     When *settings_file* is supplied, the wrapped form includes
-    ``-s <path>`` between ``srt`` and ``-c`` — matching the
+    ``-s <path>`` between ``srt`` and ``-c`` â€” matching the
     :class:`LocalPythonTool` stateful-tool contract (each tool
     invocation writes a per-call settings JSON that whitelists
     the tool's ToolState directory for writes).
@@ -111,7 +111,7 @@ def test_wrap_with_srt_ignores_settings_file_when_passthrough() -> None:
     """
     ``settings_file`` has no effect when the function passes
     through (either sandbox disabled or srt unavailable). The
-    returned command must be exactly the input — the helper
+    returned command must be exactly the input â€” the helper
     shouldn't silently insert ``-s`` flags when it's otherwise
     declining to wrap.
 
@@ -133,7 +133,7 @@ def test_wrap_with_srt_ignores_settings_file_when_passthrough() -> None:
 
 def test_is_srt_available_returns_bool() -> None:
     """
-    :func:`is_srt_available` returns a concrete ``bool`` — not
+    :func:`is_srt_available` returns a concrete ``bool`` â€” not
     a truthy Path, not None when absent. Callers cache it in
     a ``bool`` field (``self._srt_available``) and rely on
     the exact type for mypy strict mode.
@@ -163,11 +163,11 @@ def test_wrap_with_srt_truth_table(
     expected_wrapped: bool,
 ) -> None:
     """
-    Exhaustive 2x2 of sandbox_enabled × srt_available. Only the
+    Exhaustive 2x2 of sandbox_enabled Ã— srt_available. Only the
     (True, True) cell wraps; every other cell passes through.
 
     This is the explicit truth table form of the individual tests
-    above — present so future changes to the on/off logic flip a
+    above â€” present so future changes to the on/off logic flip a
     single parametrize row rather than editing separate test
     functions in two places.
 

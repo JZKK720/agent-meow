@@ -6,12 +6,12 @@ attaches to that live TUI over a WebSocket, and the SPA's **Chat** view renders
 the SAME canonical transcript (``GET /v1/sessions/{id}/items``) the TUI prints.
 A native bridge forwards web-composer messages INTO the Claude process and
 forwards Claude's transcript back OUT as conversation items. This suite asserts
-that round-trips both ways and renders exactly once — the three properties the
+that round-trips both ways and renders exactly once â€” the three properties the
 native forwarder has historically regressed on.
 
 The LLM calls are served by the in-process mock LLM server rather than a real
 Anthropic endpoint. Before each test run a mock ``anthropic`` provider config is
-written to ``~/.agent_meow/config.yaml`` (see ``native_claude_mock_session`` in
+written to ``~/.omnigent/config.yaml`` (see ``native_claude_mock_session`` in
 ``conftest.py``), redirecting the runner's ``ANTHROPIC_BASE_URL`` to the mock
 server. Tokens are pre-generated and queued via content-based routing so the
 mock returns the expected assistant token for each turn regardless of how many
@@ -28,7 +28,7 @@ from playwright.sync_api import Page, expect
 
 from tests.e2e_ui.conftest import configure_mock_llm, reset_mock_llm, set_fallback_mock_llm
 
-# Reuse the custom-agent suite's helpers — both surfaces render from the same
+# Reuse the custom-agent suite's helpers â€” both surfaces render from the same
 # canonical transcript, so parity / dedup / ordering are asserted identically.
 from .test_message_render_parity import (
     _ASSISTANT,

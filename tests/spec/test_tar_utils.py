@@ -1,4 +1,4 @@
-"""Tests for agent_meow.spec.tar_utils."""
+"""Tests for omnigent.spec.tar_utils."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.spec.tar_utils import ExtractionError, extract_safe
+from omnigent.spec.tar_utils import ExtractionError, extract_safe
 
 
 def _create_tar(tmp_path: Path, members: dict[str, bytes | str]) -> Path:
@@ -123,7 +123,7 @@ def test_extract_rejects_special_file_types(
 def test_extract_rejects_special_member_alongside_valid_files(tmp_path: Path, dest: Path) -> None:
     """
     A bundle that mixes a valid ``config.yaml`` with a FIFO entry is
-    rejected wholesale — extraction must not partially succeed and
+    rejected wholesale â€” extraction must not partially succeed and
     leave the FIFO behind.
     """
     tar_path = tmp_path / "mixed.tar.gz"

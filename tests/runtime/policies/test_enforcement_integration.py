@@ -1,7 +1,7 @@
 """
 Integration tests for the full policy pipeline (Phase 5).
 
-Loads agent fixtures ported from agent_meow examples, builds
+Loads agent fixtures ported from omnigent examples, builds
 PolicyEngine via the real ``build_policy_engine``, and
 exercises every declared policy through the ``_enforce_policy``
 entry point that the workflow will use in later phases.
@@ -10,18 +10,18 @@ These tests DO touch the real persistence layer (SQLAlchemy
 store), DO run the parser + validator, and DO exercise the
 engine's composition semantics against real spec instances.
 They are the closest thing to full e2e coverage available
-before the workflow wiring lands — if a production agent
+before the workflow wiring lands â€” if a production agent
 declared any of the three fixture YAMLs, it would behave
 exactly as asserted here.
 
 Fixture parity with agent-meow example YAMLs:
 
-- ``tests/_fixtures/agents/policies-demo/`` ↔
-  ``agent_meow/examples/agent_with_policies.yaml``
-- ``tests/_fixtures/agents/rate-limited-search/`` ↔
-  ``agent_meow/examples/rate_limited_search_agent.yaml``
-- ``tests/_fixtures/agents/secure-research/`` ↔
-  ``agent_meow/examples/secure_research_agent.yaml``
+- ``tests/_fixtures/agents/policies-demo/`` â†”
+  ``omnigent/examples/agent_with_policies.yaml``
+- ``tests/_fixtures/agents/rate-limited-search/`` â†”
+  ``omnigent/examples/rate_limited_search_agent.yaml``
+- ``tests/_fixtures/agents/secure-research/`` â†”
+  ``omnigent/examples/secure_research_agent.yaml``
 
 Corresponding agent-meow test cases ported:
 - ``test_label_examples.py::test_first_db_query_allowed_but_escalates``
@@ -38,22 +38,22 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.runtime.policies import (
+from omnigent.policies.types import EvaluationContext
+from omnigent.runtime.policies import (
     _enforce_policy,
     build_policy_engine,
 )
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec import load
-from agent_meow.spec.types import (
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec import load
+from omnigent.spec.types import (
     Phase,
     PolicyAction,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
-# Fixtures directory — same parent as this file's repo root.
+# Fixtures directory â€” same parent as this file's repo root.
 _FIXTURES = Path(__file__).resolve().parents[2] / "_fixtures" / "agents"
 
 
@@ -65,7 +65,7 @@ def _load_engine(
     Parse an agent fixture and build a real PolicyEngine.
 
     Uses the same code path a production workflow would:
-    parse → build_policy_engine → engine ready to evaluate.
+    parse â†’ build_policy_engine â†’ engine ready to evaluate.
 
     :param fixture: Subdirectory name under
         ``tests/_fixtures/agents/``.
@@ -94,9 +94,9 @@ def _tool_ctx(
     )
 
 
-# ──────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # policies-demo fixture (agent_with_policies.yaml parity)
-# ──────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -127,7 +127,7 @@ async def test_policies_demo_denies_long_sleep(
         _tool_ctx("sleep", {"seconds": 8}),
     )
     assert result.action == PolicyAction.DENY
-    # Reason mentions the offending duration — operators
+    # Reason mentions the offending duration â€” operators
     # debugging a blocked tool can see what drove the block.
     assert "8" in result.reason
     # Deciding policy is the FunctionPolicy block_long_sleep.
@@ -140,7 +140,7 @@ async def test_policies_demo_taint_then_ask_shell(
 ) -> None:
     """Composition: web_search taints integrity to "0";
     subsequent run_shell matches `confirm_shell_after_taint`'s
-    condition → ASK. Demonstrates cross-phase label propagation
+    condition â†’ ASK. Demonstrates cross-phase label propagation
     driving a condition gate."""
     engine = _load_engine("policies-demo", conversation_store)
 
@@ -149,14 +149,14 @@ async def test_policies_demo_taint_then_ask_shell(
     assert r1.action == PolicyAction.ALLOW
     assert engine.labels["integrity"] == "0"
 
-    # Turn 2: run_shell → ASK because condition matches now.
+    # Turn 2: run_shell â†’ ASK because condition matches now.
     r2 = await _enforce_policy(
         engine,
         _tool_ctx("run_shell", {"cmd": "ls"}),
     )
     assert r2.action == PolicyAction.ASK
     assert r2.deciding_policy == "confirm_shell_after_taint"
-    # ASK does NOT apply any accumulated writes — critical
+    # ASK does NOT apply any accumulated writes â€” critical
     # property tested here at the e2e layer too.
     assert conversation_store.get_conversation(
         engine.conversation_id,
@@ -176,9 +176,9 @@ async def test_policies_demo_initial_label_seeded(
     assert engine.labels == {"integrity": "1"}
 
 
-# ──────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # rate-limited-search fixture
-# ──────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -187,7 +187,7 @@ async def test_rate_limited_search_first_three_allowed(
 ) -> None:
     """Ports agent-meow ``test_first_db_query_allowed_but_escalates``
     semantics. The first N calls pass; calls beyond the budget
-    ASK for approval (not DENY — lets the user extend the run
+    ASK for approval (not DENY â€” lets the user extend the run
     interactively)."""
     engine = _load_engine("rate-limited-search", conversation_store)
 
@@ -245,7 +245,7 @@ async def test_rate_limited_search_other_tools_not_gated(
             engine,
             _tool_ctx("web_search", {"q": "x"}),
         )
-    # A different tool passes — not gated by this policy.
+    # A different tool passes â€” not gated by this policy.
     r = await _enforce_policy(
         engine,
         _tool_ctx("summarize", {"text": "y"}),
@@ -253,9 +253,9 @@ async def test_rate_limited_search_other_tools_not_gated(
     assert r.action == PolicyAction.ALLOW
 
 
-# ──────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # secure-research fixture (full IFC scenario)
-# ──────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -280,7 +280,7 @@ async def test_secure_research_clean_agent_allows_shell(
         _tool_ctx("run_shell", {"cmd": "ls"}),
     )
     # All three enforcement policies skip: neither condition
-    # matches (integrity="1", confidentiality="0") → ALLOW.
+    # matches (integrity="1", confidentiality="0") â†’ ALLOW.
     assert r.action == PolicyAction.ALLOW
 
 
@@ -288,12 +288,12 @@ async def test_secure_research_clean_agent_allows_shell(
 async def test_secure_research_web_then_shell_asks(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Web search taints integrity → subsequent shell is
+    """Web search taints integrity â†’ subsequent shell is
     ASK (low-integrity enforcement). Ports a happy-path slice
     of agent-meow ``test_full_pipeline_happy_path``."""
     engine = _load_engine("secure-research", conversation_store)
 
-    # web_search: ALLOW + integrity→0.
+    # web_search: ALLOW + integrityâ†’0.
     r1 = await _enforce_policy(
         engine,
         _tool_ctx("web_search", {"q": "q"}),
@@ -314,7 +314,7 @@ async def test_secure_research_web_then_shell_asks(
 async def test_secure_research_doc_then_shell_asks(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Confidential read taints confidentiality →
+    """Confidential read taints confidentiality â†’
     subsequent shell is ASK (high-confidentiality
     enforcement). Mirror of the web-then-shell case on the
     other label axis."""
@@ -333,7 +333,7 @@ async def test_secure_research_doc_then_shell_asks(
     )
     assert r2.action == PolicyAction.ASK
     # High-confidentiality is the first ASKing policy in
-    # YAML order → it wins deciding_policy.
+    # YAML order â†’ it wins deciding_policy.
     assert r2.deciding_policy == "ask_high_confidentiality"
 
 
@@ -350,7 +350,7 @@ async def test_secure_research_both_taints_deny_shell(
 
     await _enforce_policy(engine, _tool_ctx("web_search", {"q": "x"}))
     await _enforce_policy(engine, _tool_ctx("read_internal_doc", {"id": "d"}))
-    # Now integrity=0 AND confidentiality=1 → DENY.
+    # Now integrity=0 AND confidentiality=1 â†’ DENY.
     r = await _enforce_policy(
         engine,
         _tool_ctx("run_shell", {"cmd": "ls"}),

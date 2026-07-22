@@ -1,11 +1,11 @@
-"""E2E test for ``agent-meow chat`` — local mode with mock LLM.
+"""E2E test for ``agent-meow chat`` â€” local mode with mock LLM.
 
 Verifies that ``agent-meow chat ./agent-dir/`` starts a server, opens the
 REPL, and the agent responds. Since the REPL is interactive, we
 test by directly calling the local mode components rather than
 launching the full CLI.
 
-Runs entirely against the mock LLM server — no real API key needed::
+Runs entirely against the mock LLM server â€” no real API key needed::
 
     pytest tests/e2e/test_chat_e2e.py -v
 """
@@ -19,7 +19,7 @@ from pathlib import Path
 import httpx
 import yaml as _yaml
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 from tests.e2e.conftest import (
     configure_mock_llm,
     find_free_port,
@@ -141,11 +141,11 @@ def test_chat_local_starts_server_and_agent_responds(
     request through the sessions API.
 
     **What breaks if this fails:**
-    - _start_local_server broken → server doesn't boot.
-    - Agent bundle not registered → agent lookup in GET /v1/agents fails.
-    - Agent config invalid → session turn fails.
+    - _start_local_server broken â†’ server doesn't boot.
+    - Agent bundle not registered â†’ agent lookup in GET /v1/agents fails.
+    - Agent config invalid â†’ session turn fails.
     """
-    from agent_meow.chat import (
+    from omnigent.chat import (
         _start_local_server,
         _stop_local_server,
         _wait_for_server,
@@ -155,7 +155,7 @@ def test_chat_local_starts_server_and_agent_responds(
     model = f"mock-chat-local-{uuid.uuid4().hex[:6]}"
     agent_name = f"chat-local-probe-{uuid.uuid4().hex[:6]}"
 
-    # Inline YAML agent — openai-agents harness wired to mock model so no
+    # Inline YAML agent â€” openai-agents harness wired to mock model so no
     # real LLM is needed. OPENAI_BASE_URL / OPENAI_API_KEY are injected
     # into os.environ before _start_local_server so the child subprocess
     # inherits them ({**os.environ, ...} in _start_local_server's child_env).
@@ -218,7 +218,7 @@ def test_chat_local_accepts_omnigent_yaml_file(
     The YAML path exercises the new ``materialize_bundle`` code
     path in :func:`_preregister_agent`: a file source wraps into
     a bundle directory, gets tarred, and the stored tarball
-    round-trips through :func:`~?agent_meow.spec.load` to a
+    round-trips through :func:`~?omnigent.spec.load` to a
     validated :class:`AgentSpec`.
 
     **What breaks if this fails:**
@@ -232,7 +232,7 @@ def test_chat_local_accepts_omnigent_yaml_file(
     :param mock_llm_server_url: Mock LLM server base URL.
     :param tmp_path: Per-test temp dir for the YAML fixture.
     """
-    from agent_meow.chat import (
+    from omnigent.chat import (
         _start_local_server,
         _stop_local_server,
         _wait_for_server,
@@ -282,8 +282,8 @@ def test_chat_local_accepts_omnigent_yaml_file(
 
         client = httpx.Client(base_url=base_url, timeout=30.0)
 
-        # Agent is registered under the YAML's ``name`` field —
-        # proves the materialize_bundle → tarball → load chain
+        # Agent is registered under the YAML's ``name`` field â€”
+        # proves the materialize_bundle â†’ tarball â†’ load chain
         # preserves the spec name end-to-end.
         session_id = _create_runner_bound_session_for_builtin(
             client,
@@ -297,7 +297,7 @@ def test_chat_local_accepts_omnigent_yaml_file(
         )
 
         # A full turn proves the spec the server rehydrates from
-        # the stored tarball also produces a runnable agent — not
+        # the stored tarball also produces a runnable agent â€” not
         # just a registered-but-broken one. This is the single
         # strongest regression guard for the bundling refactor.
         body = poll_session_until_terminal(
@@ -330,7 +330,7 @@ def test_chat_remote_pick_agent(
     - _pick_agent can't parse server agent listing response.
     - Agent name extraction broken.
     """
-    from agent_meow.chat import (
+    from omnigent.chat import (
         _pick_agent,
         _start_local_server,
         _stop_local_server,

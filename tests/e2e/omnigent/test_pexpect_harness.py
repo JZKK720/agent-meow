@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.e2e.agent_meow._pexpect_harness import ensure_repl_test_theme_env
+from tests.e2e.omnigent._pexpect_harness import ensure_repl_test_theme_env
 
 
 def test_ensure_repl_test_theme_env_seeds_isolated_home(tmp_path: Path) -> None:

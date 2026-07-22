@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_meow.entities.account import Account, AccountToken
+from omnigent.entities.account import Account, AccountToken
 
 # ── Account ───────────────────────────────────────────
 

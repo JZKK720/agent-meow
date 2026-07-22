@@ -20,8 +20,8 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.server.routes.sessions import _derive_terminal_launch_args_from_spec
-from agent_meow.spec.types import AgentSpec, ExecutorSpec
+from omnigent.server.routes.sessions import _derive_terminal_launch_args_from_spec
+from omnigent.spec.types import AgentSpec, ExecutorSpec
 
 
 def _spec_with_config(config: dict[str, str]) -> AgentSpec:

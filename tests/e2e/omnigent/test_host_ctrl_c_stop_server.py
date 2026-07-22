@@ -1,7 +1,7 @@
 """E2E coverage for the ``agent-meow host`` Ctrl+C stop-server prompt.
 
 ``agent-meow host ""`` (local mode) spawns a *detached* background local
-AP server (:func:`~?agent_meow.host.local_server.ensure_local_omnigent_server`) that
+AP server (:func:`~?omnigent.host.local_server.ensure_local_omnigent_server`) that
 intentionally outlives the foreground host daemon so sessions and the Web
 UI stay reachable across ``host`` / ``run``. Because users expect Ctrl+C
 to stop "everything", the connect command now prompts on a clean stop:
@@ -11,20 +11,20 @@ to stop "everything", the connect command now prompts on a clean stop:
 These tests drive the real CLI under a PTY, send a real SIGINT (Ctrl+C),
 and verify the branches against the *actual* server process:
 
-1. Answering ``y`` stops the detached server — its ``/health`` endpoint
+1. Answering ``y`` stops the detached server â€” its ``/health`` endpoint
    stops responding.
-2. Answering ``n`` leaves the server running — ``/health`` still answers
+2. Answering ``n`` leaves the server running â€” ``/health`` still answers
    200 after the host process has exited. The test then stops the
    stranded server itself so it does not leak past the test.
 3. When connect *reuses* a server it did not spawn (one already brought up
    by a prior daemon, via the real ``ensure_local_omnigent_server`` path), Ctrl+C
-   shows NO prompt and leaves that server running — connect must never
+   shows NO prompt and leaves that server running â€” connect must never
    offer to stop a server it didn't start.
 
 The detached server is the genuine production object (a real ``agent-meow
 server`` subprocess), so these tests fail loudly if the prompt is dropped,
 wired to the wrong default, fires for a reused server, or if ``y`` fails to
-actually terminate the server — none of which a mock-based test would catch.
+actually terminate the server â€” none of which a mock-based test would catch.
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ _EXIT_TIMEOUT = 30.0
 _HEALTH_POLL_TIMEOUT = 30.0
 
 # ``run_host_process`` prints this once the host tunnel is up and the local
-# server is confirmed reachable — our readiness signal that Ctrl+C will now
+# server is confirmed reachable â€” our readiness signal that Ctrl+C will now
 # land inside the asyncio run loop (not mid-server-spawn).
 _LISTENING_MARKER = "Listening for sessions"
 # The ``click.confirm`` prompt text emitted on a clean stop in local mode.
@@ -61,7 +61,7 @@ _STOPPED_MARKER = "Stopped the local server"
 _LEFT_RUNNING_MARKER = "Left the local server running"
 
 # Shared, interruptible sleep handle for bounded external-state polling (no
-# raw time.sleep — see omnigent-testing rule 13).
+# raw time.sleep â€” see omnigent-testing rule 13).
 _POLL_PAUSE = threading.Event()
 
 
@@ -95,7 +95,7 @@ def _spawn_connect(
     """
     Spawn ``agent-meow host ""`` (local mode) under a real PTY.
 
-    The empty positional argument selects local mode — connect spawns (or
+    The empty positional argument selects local mode â€” connect spawns (or
     reuses) the detached local agent-meow server and connects the foreground daemon
     to it. Databricks auth comes from the env (the ``--profile`` flag was
     removed from the agent-meow CLI).
@@ -139,7 +139,7 @@ def _server_healthy(port: int) -> bool:
 
     :param port: Loopback port the server bound, e.g. ``8000``.
     :returns: ``True`` when ``/health`` responds 200, ``False`` on any
-        non-200 or transport error (connection refused → server down).
+        non-200 or transport error (connection refused â†’ server down).
     """
     try:
         resp = httpx.get(f"http://127.0.0.1:{port}/health", timeout=2.0)
@@ -153,7 +153,7 @@ def _wait_for_health(port: int, *, expected: bool, timeout: float) -> bool:
     Poll ``/health`` until it reaches the expected up/down state.
 
     :param port: Loopback port the server bound.
-    :param expected: Target reachability — ``True`` waits for the server to
+    :param expected: Target reachability â€” ``True`` waits for the server to
         be up, ``False`` waits for it to go down.
     :param timeout: Max seconds to poll.
     :returns: ``True`` if the expected state was observed within *timeout*,
@@ -216,7 +216,7 @@ def _prespawn_persistent_server(
     compute (both subprocesses share the same env, so the signatures
     agree). That matching signature is what makes connect *reuse* this
     server (``spawned=False``) instead of treating it as config drift and
-    respawning — i.e. it reproduces "a server is already running that connect
+    respawning â€” i.e. it reproduces "a server is already running that connect
     did not start".
 
     :param omnigent_python: Python interpreter with agent-meow installed.
@@ -226,7 +226,7 @@ def _prespawn_persistent_server(
     :returns: ``(pid, port)`` of the running detached server.
     """
     code = (
-        "from agent_meow.host.local_server import ensure_local_omnigent_server;"
+        "from omnigent.host.local_server import ensure_local_omnigent_server;"
         "print(ensure_local_omnigent_server().url)"
     )
     proc = subprocess.run(
@@ -279,7 +279,7 @@ def test_host_ctrl_c_yes_stops_local_server(
 
         # Real SIGINT to the foreground host process group. The detached
         # server runs in its own session (start_new_session=True) so it does
-        # NOT receive this signal — only the prompt decides its fate.
+        # NOT receive this signal â€” only the prompt decides its fate.
         child.sendcontrol("c")
         child.expect(_PROMPT_MARKER, timeout=_PROMPT_TIMEOUT)
         child.send("y\r")
@@ -293,7 +293,7 @@ def test_host_ctrl_c_yes_stops_local_server(
         # was a no-op), /health would keep answering 200 here.
         assert _wait_for_health(port, expected=False, timeout=_HEALTH_POLL_TIMEOUT), (
             f"local server on port {port} was still healthy after answering "
-            f"'y' — the stop-server prompt did not actually stop it"
+            f"'y' â€” the stop-server prompt did not actually stop it"
         )
     finally:
         if server_pid > 0:
@@ -340,7 +340,7 @@ def test_host_ctrl_c_no_leaves_local_server_running(
         # the host process exited. If "no" accidentally stopped it (or the
         # default were inverted), /health would fail here.
         assert _server_healthy(port), (
-            f"local server on port {port} was stopped after answering 'n' — "
+            f"local server on port {port} was stopped after answering 'n' â€” "
             f"declining the prompt must leave the detached server running"
         )
     finally:
@@ -363,8 +363,8 @@ def test_host_ctrl_c_reused_server_shows_no_prompt(
 
     A server is brought up first via the real ``ensure_local_omnigent_server`` path
     (as a prior ``run`` / ``host`` daemon would), then ``connect ""``
-    reuses it. On Ctrl+C there must be no stop-server prompt — connect must
-    never offer to stop a server it didn't start — and the server must still
+    reuses it. On Ctrl+C there must be no stop-server prompt â€” connect must
+    never offer to stop a server it didn't start â€” and the server must still
     be running after connect exits.
 
     :param omnigent_python: Python interpreter fixture.
@@ -377,12 +377,12 @@ def test_host_ctrl_c_reused_server_shows_no_prompt(
     env = _connect_env(mock_credentials_env, home)
 
     # Bring the server up first, independently of connect, with a config
-    # signature that matches what connect will compute — so connect reuses it.
+    # signature that matches what connect will compute â€” so connect reuses it.
     server_pid, port = _prespawn_persistent_server(omnigent_python, omnigent_repo_root, env)
     child: pexpect.spawn | None = None
     try:
         child = _spawn_connect(omnigent_python, omnigent_repo_root, env)
-        # Connect attaches to the already-running server (same pid/port — it
+        # Connect attaches to the already-running server (same pid/port â€” it
         # reused it rather than spawning a new one).
         child.expect(_LISTENING_MARKER, timeout=_BOOT_TIMEOUT)
         reused_pid, reused_port = _read_local_server_record(home)
@@ -395,17 +395,17 @@ def test_host_ctrl_c_reused_server_shows_no_prompt(
         child.sendcontrol("c")
         # Connect must exit cleanly with NO prompt. If the prompt fired,
         # ``click.confirm`` would block on stdin (we send nothing), so we'd
-        # match the prompt marker instead of EOF — caught explicitly below.
+        # match the prompt marker instead of EOF â€” caught explicitly below.
         idx = child.expect([pexpect.EOF, _PROMPT_MARKER], timeout=_EXIT_TIMEOUT)
         assert idx == 0, (
-            "connect offered to stop a server it reused (did not spawn) — the "
+            "connect offered to stop a server it reused (did not spawn) â€” the "
             "stop-server prompt must only appear for a server connect started"
         )
 
         # The reused server is untouched and still serving.
         assert _server_healthy(port), (
             f"reused local server on port {port} went down after connect exited "
-            f"— connect must not stop a server it did not spawn"
+            f"â€” connect must not stop a server it did not spawn"
         )
     finally:
         _force_stop_server(server_pid)

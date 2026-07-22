@@ -6,7 +6,7 @@ Bug from kasey_uhlenhuth's report:
 
     Overlay builder must return Rich
     ``Group(*(Text.from_markup(line) for line in lines))``,
-    NOT ``Text.from_markup("\\n".join(lines))`` — the latter
+    NOT ``Text.from_markup("\\n".join(lines))`` â€” the latter
     renders raw markup tags as text. Not documented anywhere;
     only discoverable by reading the Ctrl+O implementation.
 
@@ -15,7 +15,7 @@ The fix is two-fold:
 1. The ``Overlay.builder`` docstring now explicitly recommends
    the ``Group`` pattern with an inline example, so future
    builder authors don't have to spelunk the reference
-   implementation in :mod:`~?agent_meow.repl._repl`.
+   implementation in :mod:`~?omnigent.repl._repl`.
 2. These tests pin the recommended pattern: a builder returning
    ``Group(*(Text.from_markup(line) for line in lines))`` is
    rendered correctly by the host's overlay-content pipeline,
@@ -29,7 +29,7 @@ What breaks if these fail:
   (e.g. ``Console.print`` stops walking Group children with
   markup parsing applied, dropping their style spans).
 - The Overlay docstring's recommended example is removed or
-  rewritten in a way that doesn't preserve the idiom shape —
+  rewritten in a way that doesn't preserve the idiom shape â€”
   re-introducing the kasey discoverability gap.
 """
 
@@ -52,11 +52,11 @@ def _render_via_pipeline(renderable: object, *, width: int = 60) -> str:
     the resulting ANSI string.
 
     Avoids spinning up an actual ``TerminalHost`` (which needs
-    a real TTY) — the builder contract is about what
+    a real TTY) â€” the builder contract is about what
     :class:`Console.print` does to the renderable, so testing
     that step in isolation is the right layer.
 
-    :param renderable: The object the builder would return —
+    :param renderable: The object the builder would return â€”
         a :class:`str`, :class:`Text`, :class:`Group`, etc.
     :param width: Pane width to render at, e.g. ``60``. Wide
         enough that the test inputs don't soft-wrap.
@@ -94,8 +94,8 @@ def _strip_ansi(text: str) -> str:
 
 def test_recommended_group_pattern_renders_each_line_styled() -> None:
     """
-    The documented multi-line pattern — ``Group`` of
-    ``Text.from_markup`` per line — produces ANSI output where
+    The documented multi-line pattern â€” ``Group`` of
+    ``Text.from_markup`` per line â€” produces ANSI output where
     each line's markup is parsed into style escapes and NO
     literal markup tags remain in the visible text.
 
@@ -117,10 +117,10 @@ def test_recommended_group_pattern_renders_each_line_styled() -> None:
 
     visible = _strip_ansi(rendered)
     # No raw markup leaked through. ``[bold]`` etc. should be
-    # gone — replaced by ANSI style escapes that survive in
+    # gone â€” replaced by ANSI style escapes that survive in
     # ``rendered`` but not in ``visible``.
     assert "[bold]" not in visible, (
-        f"Literal '[bold]' tag in visible output — markup parsing did not run. visible={visible!r}"
+        f"Literal '[bold]' tag in visible output â€” markup parsing did not run. visible={visible!r}"
     )
     assert "[/bold]" not in visible
     assert "[dim]" not in visible
@@ -141,7 +141,7 @@ def test_recommended_group_pattern_renders_each_line_styled() -> None:
         f"{len(nonempty_lines)}: {nonempty_lines!r}"
     )
 
-    # Style escapes ARE present in the raw rendered output —
+    # Style escapes ARE present in the raw rendered output â€”
     # confirming markup parsing actually ran. If we see ``[1m``
     # for bold, ``[2m`` for dim, ``[31m`` for red, the parser
     # did its job.
@@ -154,7 +154,7 @@ def test_overlay_builder_contract_documented() -> None:
     """
     The :class:`Overlay` class docstring documents the
     recommended multi-line pattern. Pins the doc fix from
-    kasey's bug report — a future docstring rewrite that drops
+    kasey's bug report â€” a future docstring rewrite that drops
     the example re-introduces the discoverability gap.
 
     Asserts the actual idiom shape is present, not just that
@@ -165,11 +165,11 @@ def test_overlay_builder_contract_documented() -> None:
     invocation shape callers are supposed to copy.
     """
     doc = Overlay.__doc__ or ""
-    # Match ``Group(*(...from_markup...))`` — the canonical
+    # Match ``Group(*(...from_markup...))`` â€” the canonical
     # idiom. ``re.DOTALL`` lets the example span the docstring's
     # line breaks. If the docstring switches to a different
     # pattern (or the example block is removed entirely), this
-    # fails — which is the desired behaviour: someone deleting
+    # fails â€” which is the desired behaviour: someone deleting
     # the example must update this test consciously, not by
     # accident.
     pattern = re.compile(r"Group\s*\(\s*\*\s*\(.*?\bfrom_markup\b", re.DOTALL)

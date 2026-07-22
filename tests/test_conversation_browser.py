@@ -6,26 +6,26 @@ import subprocess
 
 import pytest
 
-import agent_meow.conversation_browser as browser
+import omnigent.conversation_browser as browser
 
 
 @pytest.mark.parametrize(
     "url,expected",
     [
-        # Databricks workspace API mount → the recognizable /agent-meow SPA URL.
+        # Databricks workspace API mount â†’ the recognizable /agent-meow SPA URL.
         (
-            "https://e2-dogfood.staging.cloud.databricks.com/api/2.0/agent_meow",
-            "https://e2-dogfood.staging.cloud.databricks.com/agent_meow",
+            "https://e2-dogfood.staging.cloud.databricks.com/api/2.0/omnigent",
+            "https://e2-dogfood.staging.cloud.databricks.com/omnigent",
         ),
         # A trailing ``?o=<org>`` selector on the API base is dropped.
         (
-            "https://ws.databricks.com/api/2.0/agent_meow?o=123",
-            "https://ws.databricks.com/agent_meow",
+            "https://ws.databricks.com/api/2.0/omnigent?o=123",
+            "https://ws.databricks.com/omnigent",
         ),
         # Trailing slash on the API mount still maps cleanly.
         (
-            "https://ws.databricks.com/api/2.0/agent_meow/",
-            "https://ws.databricks.com/agent_meow",
+            "https://ws.databricks.com/api/2.0/omnigent/",
+            "https://ws.databricks.com/omnigent",
         ),
         # Non-Databricks URLs pass through unchanged (sans trailing slash).
         ("http://127.0.0.1:6767", "http://127.0.0.1:6767"),
@@ -49,9 +49,9 @@ def test_display_server_url_maps_databricks_api_mount(url: str, expected: str) -
 @pytest.mark.parametrize(
     "url,expected",
     [
-        ("https://ws.databricks.com/api/2.0/agent_meow", True),
-        ("https://ws.databricks.com/api/2.0/agent_meow/", True),
-        ("https://ws.databricks.com/agent_meow", False),  # the SPA URL, not the API mount
+        ("https://ws.databricks.com/api/2.0/omnigent", True),
+        ("https://ws.databricks.com/api/2.0/omnigent/", True),
+        ("https://ws.databricks.com/omnigent", False),  # the SPA URL, not the API mount
         ("http://127.0.0.1:6767", False),
         ("https://omnigent-02m5.onrender.com", False),
     ],
@@ -235,19 +235,19 @@ def test_open_conversation_link_warns_when_opener_raises_oserror(
 def test_conversation_url_maps_workspace_hosted_server_to_ui_mount(tmp_path, monkeypatch) -> None:
     """Workspace-hosted servers link to the SPA mount with the org selector.
 
-    The server base is the API proxy (``/api/2.0/agent-meow``) — linking
+    The server base is the API proxy (``/api/2.0/agent-meow``) â€” linking
     there returns JSON, not the web UI. The browser URL must land on
     ``/agent-meow`` and carry ``?o=<org>`` recorded by ``agent-meow
     login`` so multi-org workspaces open in the right one.
     """
-    from agent_meow.cli_auth import store_databricks_auth
-    from agent_meow.conversation_browser import conversation_url
+    from omnigent.cli_auth import store_databricks_auth
+    from omnigent.conversation_browser import conversation_url
 
     monkeypatch.setattr(
-        "agent_meow.cli_auth._token_file_path",
+        "omnigent.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
-    server = "https://example.databricks.com/api/2.0/agent_meow"
+    server = "https://example.databricks.com/api/2.0/omnigent"
     store_databricks_auth(
         server,
         "https://example.databricks.com",
@@ -256,33 +256,33 @@ def test_conversation_url_maps_workspace_hosted_server_to_ui_mount(tmp_path, mon
 
     url = conversation_url(server, "conv_abc123")
 
-    assert url == ("https://example.databricks.com/agent_meow/c/conv_abc123?o=2850744067564480")
+    assert url == ("https://example.databricks.com/omnigent/c/conv_abc123?o=2850744067564480")
 
 
 def test_conversation_url_workspace_hosted_without_org_record(tmp_path, monkeypatch) -> None:
-    """No recorded org id → SPA mount link without the ?o selector.
+    """No recorded org id â†’ SPA mount link without the ?o selector.
 
     Single-org workspaces resolve fine without it; inventing an org id
     would be worse than omitting it.
     """
-    from agent_meow.conversation_browser import conversation_url
+    from omnigent.conversation_browser import conversation_url
 
     monkeypatch.setattr(
-        "agent_meow.cli_auth._token_file_path",
+        "omnigent.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
 
-    url = conversation_url("https://example.databricks.com/api/2.0/agent_meow", "conv_abc123")
+    url = conversation_url("https://example.databricks.com/api/2.0/omnigent", "conv_abc123")
 
-    assert url == "https://example.databricks.com/agent_meow/c/conv_abc123"
+    assert url == "https://example.databricks.com/omnigent/c/conv_abc123"
 
 
 def test_conversation_url_plain_server_unchanged(tmp_path, monkeypatch) -> None:
     """Non-workspace servers keep the plain /c/<id> link shape."""
-    from agent_meow.conversation_browser import conversation_url
+    from omnigent.conversation_browser import conversation_url
 
     monkeypatch.setattr(
-        "agent_meow.cli_auth._token_file_path",
+        "omnigent.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
 

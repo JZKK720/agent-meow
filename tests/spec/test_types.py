@@ -1,8 +1,8 @@
 """
-Unit tests for :mod:`~?agent_meow.spec.types`.
+Unit tests for :mod:`~?omnigent.spec.types`.
 
 Currently focused on :class:`RetryPolicy` behaviors that the
-parser tests don't cover — JSON round-trip (Phase 1f wire
+parser tests don't cover â€” JSON round-trip (Phase 1f wire
 format), validation, and forwards/backwards compatibility of
 the JSON schema.
 """
@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from agent_meow.spec.types import ExecutorSpec, RetryPolicy
+from omnigent.spec.types import ExecutorSpec, RetryPolicy
 
 
 @pytest.mark.parametrize(
@@ -26,7 +26,7 @@ from agent_meow.spec.types import ExecutorSpec, RetryPolicy
             "claude-native",
         ),
         # Non-agent-meow executors carry their kind in `type` and have no
-        # config.harness — this is the `or self.type` fallback branch.
+        # config.harness â€” this is the `or self.type` fallback branch.
         # build_agent_bundle always injects config.harness, so only a
         # directly-constructed spec exercises this path.
         (ExecutorSpec(type="claude_sdk", config={}), "claude_sdk"),
@@ -67,7 +67,7 @@ def test_retry_policy_to_json_round_trips() -> None:
     payload = original.to_json()
     restored = RetryPolicy.from_json(payload)
     # Equality covers all six fields. If a field is dropped
-    # in either direction, equality fails — easier to debug
+    # in either direction, equality fails â€” easier to debug
     # than a per-field comparison.
     assert restored == original
 
@@ -92,7 +92,7 @@ def test_retry_policy_from_json_drops_unknown_keys_for_forwards_compat() -> None
     Pin: a future spec adds a field to :class:`RetryPolicy`,
     agent-meow serializes it, an older harness wrap (still on the
     previous version) reads the env var. The older wrap must
-    NOT crash on the unknown key — instead it ignores it and
+    NOT crash on the unknown key â€” instead it ignores it and
     uses the subset it understands.
 
     Regression: a naive ``RetryPolicy(**json.loads(payload))``
@@ -107,7 +107,7 @@ def test_retry_policy_from_json_drops_unknown_keys_for_forwards_compat() -> None
             "jitter": True,
             "timeout_per_request_s": 120.0,
             "retryable_status_codes": [429, 500, 502, 503, 504],
-            # Unknown — older wrap must drop without crashing.
+            # Unknown â€” older wrap must drop without crashing.
             "future_v2_field": "ignore me",
             "another_future": [1, 2, 3],
         }
@@ -122,7 +122,7 @@ def test_retry_policy_from_json_drops_unknown_keys_for_forwards_compat() -> None
 def test_retry_policy_from_json_uses_defaults_for_missing_fields() -> None:
     """Missing fields in the JSON payload fall back to dataclass defaults.
 
-    Pin: backwards compat — an older agent-meow serializing a partial
+    Pin: backwards compat â€” an older agent-meow serializing a partial
     payload (e.g. only ``max_retries``) is consumed by a
     newer wrap. The new fields take their dataclass defaults.
     """
@@ -130,7 +130,7 @@ def test_retry_policy_from_json_uses_defaults_for_missing_fields() -> None:
     restored = RetryPolicy.from_json(payload)
     # The one specified field was applied.
     assert restored.max_retries == 3
-    # Everything else matches the dataclass default — proves
+    # Everything else matches the dataclass default â€” proves
     # we didn't bake in a stale "default" elsewhere in the
     # parser.
     default = RetryPolicy()

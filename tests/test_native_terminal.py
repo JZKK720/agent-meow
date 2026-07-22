@@ -6,7 +6,7 @@ import click
 import httpx
 import pytest
 
-from agent_meow import native_terminal
+from omnigent import native_terminal
 
 
 @pytest.mark.asyncio

@@ -23,14 +23,14 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.runtime import get_caps
-from agent_meow.runtime.caps import RuntimeCaps
-from agent_meow.spec.types import FunctionPolicySpec, FunctionRef
+from omnigent.runtime import get_caps
+from omnigent.runtime.caps import RuntimeCaps
+from omnigent.spec.types import FunctionPolicySpec, FunctionRef
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
 
-_MAKE_FIXED = "agent_meow.policies.function.make_fixed_action_callable"
+_MAKE_FIXED = "omnigent.policies.function.make_fixed_action_callable"
 
 
 def _deny_spec(name: str, reason: str) -> FunctionPolicySpec:
@@ -102,7 +102,7 @@ def _install_policies(
         default_policies=policies,
     )
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions.get_caps",
+        "omnigent.server.routes.sessions.get_caps",
         lambda: patched_caps,
     )
 
@@ -134,7 +134,7 @@ async def _create_session(client: httpx.AsyncClient, agent_id: str) -> str:
     return resp.json()["id"]
 
 
-# ── Test 1: DENY + ASK on same phase — DENY wins ──────────────
+# â”€â”€ Test 1: DENY + ASK on same phase â€” DENY wins â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_deny_takes_precedence_over_ask(
@@ -174,7 +174,7 @@ async def test_deny_takes_precedence_over_ask(
     )
 
 
-# ── Test 2: Remove DENY, ASK fires ────────────────────────────
+# â”€â”€ Test 2: Remove DENY, ASK fires â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_ask_fires_when_deny_removed(
@@ -198,7 +198,7 @@ async def test_ask_fires_when_deny_removed(
     agent = await create_test_agent(client)
     session_id = await _create_session(client, agent["id"])
 
-    # Use LLM_RESPONSE phase — ASK on this phase is returned
+    # Use LLM_RESPONSE phase â€” ASK on this phase is returned
     # directly (no gate parking, which only applies to TOOL_CALL
     # and LLM_REQUEST).
     resp = await client.post(
@@ -222,7 +222,7 @@ async def test_ask_fires_when_deny_removed(
     )
 
 
-# ── Test 3: Two DENY policies, reason visible ─────────────────
+# â”€â”€ Test 3: Two DENY policies, reason visible â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_two_deny_policies_first_reason_visible(
@@ -233,7 +233,7 @@ async def test_two_deny_policies_first_reason_visible(
 
     The engine short-circuits on the first DENY in declaration
     order. The deciding policy's reason is carried in the verdict.
-    This tests that multiple DENY policies compose correctly — the
+    This tests that multiple DENY policies compose correctly â€” the
     second never fires because the first already short-circuited.
     """
     _install_policies(
@@ -255,7 +255,7 @@ async def test_two_deny_policies_first_reason_visible(
     assert body["result"] == "POLICY_ACTION_DENY", (
         f"Expected DENY with two DENY policies, got {body['result']}."
     )
-    # The first DENY in declaration order short-circuits — its reason
+    # The first DENY in declaration order short-circuits â€” its reason
     # is the one that surfaces.
     assert "Alpha deny reason" in body.get("reason", ""), (
         f"Expected the first DENY policy's reason; got {body.get('reason')!r}. "
@@ -263,7 +263,7 @@ async def test_two_deny_policies_first_reason_visible(
     )
 
 
-# ── Test 4: ALLOW + DENY — DENY still wins ────────────────────
+# â”€â”€ Test 4: ALLOW + DENY â€” DENY still wins â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_deny_overrides_allow(
@@ -273,7 +273,7 @@ async def test_deny_overrides_allow(
     """An ALLOW policy does not prevent a subsequent DENY from firing.
 
     The engine processes policies in order. An ALLOW result does
-    not short-circuit — it just means "this policy has no objection."
+    not short-circuit â€” it just means "this policy has no objection."
     A later DENY still fires and overrides. If this regresses, an
     attacker could bypass a DENY by prepending an ALLOW policy.
     """
@@ -295,7 +295,7 @@ async def test_deny_overrides_allow(
     body = resp.json()
     assert body["result"] == "POLICY_ACTION_DENY", (
         f"Expected DENY even with a preceding ALLOW, got {body['result']}. "
-        "ALLOW must not override a subsequent DENY — DENY always wins."
+        "ALLOW must not override a subsequent DENY â€” DENY always wins."
     )
     assert "Deny policy" in body.get("reason", ""), (
         f"Expected the DENY reason; got {body.get('reason')!r}"

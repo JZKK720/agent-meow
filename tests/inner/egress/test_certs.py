@@ -1,4 +1,4 @@
-"""Tests for agent_meow.inner.egress.certs — per-host certificate cache."""
+"""Tests for omnigent.inner.egress.certs â€” per-host certificate cache."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from pathlib import Path
 
 from cryptography import x509
 
-from agent_meow.inner.egress.ca import ensure_ca
-from agent_meow.inner.egress.certs import HostCertCache
+from omnigent.inner.egress.ca import ensure_ca
+from omnigent.inner.egress.certs import HostCertCache
 
 
 def test_host_cert_cache_generates_valid_cert(tmp_path: Path) -> None:

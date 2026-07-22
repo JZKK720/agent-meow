@@ -4,7 +4,7 @@ Drives a custom ``openai-agents`` agent ("echo_probe") through five real chat
 turns via the web composer and asserts two properties that historically
 regressed on the native forwarder:
 
-1. **Render parity with the TUI.** The terminal UI (``agent_meow/chat.py``) and
+1. **Render parity with the TUI.** The terminal UI (``omnigent/chat.py``) and
    the web SPA both render from the SAME canonical transcript,
    ``GET /v1/sessions/{id}/items``. So "renders exactly the same as the TUI"
    is checked by treating that transcript as ground truth: every per-turn
@@ -15,7 +15,7 @@ regressed on the native forwarder:
 
 2. **No duplicate rendering.** Each turn embeds a unique user marker and asks
    the agent to echo a unique assistant token. After the turn settles (working
-   shimmer gone) each marker must appear in EXACTLY ONE bubble — the classic
+   shimmer gone) each marker must appear in EXACTLY ONE bubble â€” the classic
    native-forwarder bug double-rendered a reply as both a streaming live
    preview and the committed bubble, which would push a token's bubble count
    to 2.
@@ -27,7 +27,7 @@ assistant blocks (the count is over bubbles containing the token, not over
 bubbles).
 
 The native CLI harnesses (claude-native, codex-native) are not covered here yet
-— see the note after ``test_custom_agent_message_render_parity``.
+â€” see the note after ``test_custom_agent_message_render_parity``.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ from playwright.sync_api import Page, expect
 
 from tests.e2e_ui.conftest import configure_mock_llm, reset_mock_llm, set_fallback_mock_llm
 
-_COMPOSER = "Ask the agent anything…"
+_COMPOSER = "Ask the agent anythingâ€¦"
 _USER = '[data-testid="message-bubble"][data-role="user"]'
 _ASSISTANT = '[data-testid="message-bubble"][data-role="assistant"]'
 _WORKING = '[data-testid="working-indicator"]'
@@ -103,7 +103,7 @@ def _ordered_message_items(base_url: str, session_id: str) -> list[dict[str, obj
 
     Filters ``GET /v1/sessions/{id}/items`` to ``type == "message"`` items
     with a ``user`` / ``assistant`` role, preserving the server's position
-    order — which is exactly the order the SPA renders bubbles and the TUI
+    order â€” which is exactly the order the SPA renders bubbles and the TUI
     prints lines.
 
     :param base_url: Spawned server base URL.
@@ -147,7 +147,7 @@ def _ordered_token_sequence(texts: list[str], tokens: list[str]) -> list[str]:
 
     Each text is expected to carry at most one of *tokens*. A text carrying
     none is skipped; a text carrying a token contributes that token. The
-    result is the observed order of tokens — directly comparable to the
+    result is the observed order of tokens â€” directly comparable to the
     expected per-turn order.
 
     :param texts: Ordered message texts (e.g. transcript assistant texts).
@@ -173,13 +173,13 @@ def _assert_no_duplicate_render(
     :param user_markers: Per-turn unique user markers, oldest first.
     :param assistant_tokens: Per-turn unique assistant tokens, oldest first.
     """
-    # Exactly one bubble per token — a second bubble means duplicate rendering
+    # Exactly one bubble per token â€” a second bubble means duplicate rendering
     # (e.g. a native live-preview that was never reconciled away).
     for marker in user_markers:
         expect(page.locator(_USER, has_text=marker)).to_have_count(1)
     for token in assistant_tokens:
         expect(page.locator(_ASSISTANT, has_text=token)).to_have_count(1)
-    # One user bubble per turn — no phantom/duplicated user echoes.
+    # One user bubble per turn â€” no phantom/duplicated user echoes.
     expect(page.locator(_USER)).to_have_count(len(user_markers))
 
     # DOM render order matches the turn order for both roles.
@@ -262,7 +262,7 @@ def _run_render_parity_journey(
     nonces = [uuid.uuid4().hex[:8] for _ in range(_TURNS)]
     all_turns = [(f"usr-{i + 1}-{nonces[i]}", f"ast-{i + 1}-{nonces[i]}") for i in range(_TURNS)]
 
-    # Set model fallback once — survives reset_mock_llm, handles any extra
+    # Set model fallback once â€” survives reset_mock_llm, handles any extra
     # LLM calls the agent makes that don't match the per-turn content queue.
     if mock_llm_server_url is not None and mock_model is not None:
         set_fallback_mock_llm(mock_llm_server_url, mock_model, "")
@@ -276,7 +276,7 @@ def _run_render_parity_journey(
         if mock_llm_server_url is not None:
             # Reset before each turn so only THIS turn's queue is active.
             # Without this, the openai-agents harness accumulates conversation
-            # history, making previous user markers appear in later requests —
+            # history, making previous user markers appear in later requests â€”
             # causing the earlier (now empty) queue to match first via
             # insertion-order tie-breaking and return no response.
             reset_mock_llm(mock_llm_server_url)

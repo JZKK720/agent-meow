@@ -1,4 +1,4 @@
-"""Unit tests for :class:`~?agent_meow.opencode_http_transport.OpenCodeHttpTransport`.
+"""Unit tests for :class:`~?omnigent.opencode_http_transport.OpenCodeHttpTransport`.
 
 Covers the payload builder + every transport method over an injected fake
 ``OpenCodeClient`` (the documented ``client_factory`` test seam), so the
@@ -12,14 +12,14 @@ from typing import Any
 
 import pytest
 
-from agent_meow.native_server_transport import (
+from omnigent.native_server_transport import (
     NativeLaunchConfig,
     NativePermissionDecision,
     NativePrompt,
 )
-from agent_meow.opencode_http_transport import OpenCodeHttpTransport, build_prompt_payload
+from omnigent.opencode_http_transport import OpenCodeHttpTransport, build_prompt_payload
 
-# ── build_prompt_payload + part/model helpers ──────────────────────────────
+# â”€â”€ build_prompt_payload + part/model helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_prompt_payload_text_only() -> None:
@@ -37,7 +37,7 @@ def test_build_prompt_payload_system_and_model_split() -> None:
 
 
 def test_build_prompt_payload_bare_model_id_is_dropped() -> None:
-    # No ``provider/model`` slash → not a valid opencode model object → omitted.
+    # No ``provider/model`` slash â†’ not a valid opencode model object â†’ omitted.
     assert "model" not in build_prompt_payload(NativePrompt(text="hi", model="just-a-name"))
 
 
@@ -52,7 +52,7 @@ def test_build_prompt_payload_image_and_file_attachments() -> None:
                 "filename": "a.pdf",
             },
             {"type": "input_file", "url": "data:text/plain;base64,CCCC"},
-            {"type": "input_image"},  # no url → skipped
+            {"type": "input_image"},  # no url â†’ skipped
         ),
     )
     parts = build_prompt_payload(prompt)["parts"]
@@ -64,7 +64,7 @@ def test_build_prompt_payload_image_and_file_attachments() -> None:
     assert sum(1 for p in parts if p["type"] == "file") == 3
 
 
-# ── transport methods over a fake client ────────────────────────────────────
+# â”€â”€ transport methods over a fake client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _FakeClient:
@@ -198,10 +198,10 @@ def test_build_tui_attach_command_uses_launch_server_url() -> None:
     assert "http://127.0.0.1:1234" in argv
     assert "ses_1" in argv
     assert "--foo" in argv
-    assert env == {}  # no server handle → empty terminal env
+    assert env == {}  # no server handle â†’ empty terminal env
 
 
 async def test_no_connection_coordinates_raises() -> None:
-    # No factory / server / bridge_dir → the client builder fails loud.
+    # No factory / server / bridge_dir â†’ the client builder fails loud.
     with pytest.raises(RuntimeError):
         await OpenCodeHttpTransport().abort("ses_1")

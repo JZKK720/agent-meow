@@ -1,4 +1,4 @@
-"""Tests for agent_meow.inner.egress.ca — CA generation and bundle creation."""
+"""Tests for omnigent.inner.egress.ca â€” CA generation and bundle creation."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 from cryptography import x509
 
-from agent_meow.inner.egress.ca import ensure_ca, ensure_ca_bundle
+from omnigent.inner.egress.ca import ensure_ca, ensure_ca_bundle
 
 
 def test_ensure_ca_generates_new_ca(tmp_path: Path) -> None:
@@ -38,7 +38,7 @@ def test_ensure_ca_reuses_existing(tmp_path: Path) -> None:
     cert2, key2 = ensure_ca(cache_dir=tmp_path)
     content2 = cert2.read_bytes()
 
-    # Same file, same content — no regeneration
+    # Same file, same content â€” no regeneration
     assert cert1 == cert2
     assert key1 == key2
     assert content1 == content2

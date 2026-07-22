@@ -15,10 +15,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-from agent_meow.inner.os_env import _assert_within_cwd, _handle_helper_request
-from agent_meow.inner.sandbox import SandboxPolicy
-from agent_meow.runner.resource_registry import SessionResourceRegistry
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+from omnigent.inner.os_env import _assert_within_cwd, _handle_helper_request
+from omnigent.inner.sandbox import SandboxPolicy
+from omnigent.runner.resource_registry import SessionResourceRegistry
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -369,7 +369,7 @@ def test_create_runner_app_propagates_per_session_workspace_false(
 
     :param tmp_path: Pytest-provided temporary directory.
     """
-    from agent_meow.runner.app import create_runner_app
+    from omnigent.runner.app import create_runner_app
 
     workspace = tmp_path / "project"
     workspace.mkdir()
@@ -394,7 +394,7 @@ def test_create_runner_app_defaults_to_per_session_workspace_true(
 
     :param tmp_path: Pytest-provided temporary directory.
     """
-    from agent_meow.runner.app import create_runner_app
+    from omnigent.runner.app import create_runner_app
 
     workspace = tmp_path / "project"
     workspace.mkdir()
@@ -419,7 +419,7 @@ def test_create_runner_app_defaults_to_per_session_workspace_true(
 @pytest.mark.anyio
 async def test_runner_auth_rejects_no_token() -> None:
     """Requests without an auth header are rejected with 401."""
-    from agent_meow.runner.app import create_runner_app
+    from omnigent.runner.app import create_runner_app
     from tests.runner.helpers import NullServerClient
 
     app = create_runner_app(
@@ -440,7 +440,7 @@ async def test_runner_auth_rejects_no_token() -> None:
 @pytest.mark.anyio
 async def test_runner_auth_rejects_wrong_token() -> None:
     """Requests with the wrong token are rejected with 401."""
-    from agent_meow.runner.app import create_runner_app
+    from omnigent.runner.app import create_runner_app
     from tests.runner.helpers import NullServerClient
 
     app = create_runner_app(
@@ -464,7 +464,7 @@ async def test_runner_auth_rejects_wrong_token() -> None:
 @pytest.mark.anyio
 async def test_runner_auth_accepts_correct_token() -> None:
     """Requests with the correct token pass through to the route."""
-    from agent_meow.runner.app import create_runner_app
+    from omnigent.runner.app import create_runner_app
     from tests.runner.helpers import NullServerClient
 
     app = create_runner_app(
@@ -490,7 +490,7 @@ async def test_runner_auth_accepts_correct_token() -> None:
 @pytest.mark.anyio
 async def test_runner_auth_health_exempt() -> None:
     """GET /health succeeds without any auth token."""
-    from agent_meow.runner.app import create_runner_app
+    from omnigent.runner.app import create_runner_app
     from tests.runner.helpers import NullServerClient
 
     app = create_runner_app(
@@ -511,7 +511,7 @@ async def test_runner_auth_health_exempt() -> None:
 @pytest.mark.anyio
 async def test_runner_no_auth_when_token_is_none() -> None:
     """When auth_token is None, no middleware is installed."""
-    from agent_meow.runner.app import create_runner_app
+    from omnigent.runner.app import create_runner_app
     from tests.runner.helpers import NullServerClient
 
     app = create_runner_app(

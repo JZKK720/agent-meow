@@ -16,11 +16,11 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from agent_meow.entities import DEFAULT_ENVIRONMENT_ID
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-from agent_meow.inner.os_env import create_os_environment
-from agent_meow.runner import create_runner_app
-from agent_meow.runner.resource_registry import SessionResourceRegistry
+from omnigent.entities import DEFAULT_ENVIRONMENT_ID
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+from omnigent.inner.os_env import create_os_environment
+from omnigent.runner import create_runner_app
+from omnigent.runner.resource_registry import SessionResourceRegistry
 from tests.runner.helpers import NullServerClient
 
 _SECRET = "TOP-SECRET-CREDENTIAL-do-not-leak"

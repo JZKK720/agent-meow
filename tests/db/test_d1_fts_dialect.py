@@ -21,7 +21,7 @@ import respx
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
-from agent_meow.db.utils import (
+from omnigent.db.utils import (
     _FTS_TABLE,
     _supports_fts5,
     delete_fts_by_conversation,

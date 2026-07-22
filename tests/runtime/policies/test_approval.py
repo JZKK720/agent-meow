@@ -3,27 +3,27 @@ Tests for :func:`_await_elicitation` and the verdict parser.
 
 Ports these agent-meow ``test_labels_and_policies.py`` cases:
 
-- ``test_label_policy_ask_approve`` — accept round-trip
+- ``test_label_policy_ask_approve`` â€” accept round-trip
   applies set_labels
-- ``test_label_policy_ask_handler_receives_tool_args`` —
+- ``test_label_policy_ask_handler_receives_tool_args`` â€”
   elicitation request carries the message + preview (our
   shape is :class:`ElicitationRequest` rather than raw
   tool_args)
-- ``test_label_policy_ask_deny`` — decline leaves no writes
-- ``test_ask_timeout`` — timeout → decline path
-- ``test_ask_user_denies_not_timeout_message`` — decline reason
+- ``test_label_policy_ask_deny`` â€” decline leaves no writes
+- ``test_ask_timeout`` â€” timeout â†’ decline path
+- ``test_ask_user_denies_not_timeout_message`` â€” decline reason
   distinguishable from timeout
-- ``test_no_handler_denies`` — missing verdict row → DENY
+- ``test_no_handler_denies`` â€” missing verdict row â†’ DENY
 
 Plus refactor-specific coverage:
 
 - Strict verdict parsing (only ``action == "accept"`` returns
-  True; everything else — ``decline`` / ``cancel`` / malformed /
-  missing field — returns False per POLICIES.md §13).
+  True; everything else â€” ``decline`` / ``cancel`` / malformed /
+  missing field â€” returns False per POLICIES.md Â§13).
 - Per-policy ask_timeout override via
   ``result.deciding_policy`` lookup.
 - Labels apply on accept, NOT on decline / cancel / timeout /
-  malformed (load-bearing §7.2 invariant).
+  malformed (load-bearing Â§7.2 invariant).
 - Emitted SSE event shape matches MCP elicitation spec
   (``response.elicitation_request`` with ``method =
   "elicitation/create"`` + ``params`` block carrying mode /
@@ -40,34 +40,34 @@ from typing import Any
 
 import pytest
 
-from agent_meow.errors import ElicitationDeclinedError
-from agent_meow.policies.function import FunctionPolicy
-from agent_meow.policies.types import ElicitationRequest, PolicyResult
-from agent_meow.runtime.policies.approval import (
+from omnigent.errors import ElicitationDeclinedError
+from omnigent.policies.function import FunctionPolicy
+from omnigent.policies.types import ElicitationRequest, PolicyResult
+from omnigent.runtime.policies.approval import (
     ELICITATION_PENDING_TOOL_NAME,
     _await_elicitation,
     _is_explicit_decline,
     _parse_verdict,
     _truncate,
 )
-from agent_meow.runtime.policies.approval import (
+from omnigent.runtime.policies.approval import (
     build_elicitation_params_json as _params_json,
 )
-from agent_meow.runtime.policies.approval import (
+from omnigent.runtime.policies.approval import (
     build_elicitation_request_event as _elicitation_request_event,
 )
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.types import (
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.types import (
     Phase,
     PhaseSelector,
     PolicyAction,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 from tests.runtime.policies.conftest import make_fixed_policy
 
-# ── Fixtures / helpers ────────────────────────────────
+# â”€â”€ Fixtures / helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _engine_with_policies(
@@ -93,7 +93,7 @@ def _ask_policy(
     ask_timeout: int | None = None,
     set_labels: dict[str, str] | None = None,
 ) -> FunctionPolicy:
-    """Build an ASKing FunctionPolicy — the typical ASK source."""
+    """Build an ASKing FunctionPolicy â€” the typical ASK source."""
     return make_fixed_policy(
         name=name,
         on=[PhaseSelector(phase=Phase.REQUEST)],
@@ -173,7 +173,7 @@ def _timing_out_park() -> Any:
 
 
 def _returns_none_park() -> Any:
-    """Park callback that returns None — cancelled or missing row."""
+    """Park callback that returns None â€” cancelled or missing row."""
 
     async def _park(elicitation_id: str, timeout_s: int) -> str | None:
         return None
@@ -181,7 +181,7 @@ def _returns_none_park() -> Any:
     return _park
 
 
-# ── _is_explicit_decline ──────────────────────────────
+# â”€â”€ _is_explicit_decline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -189,7 +189,7 @@ def _returns_none_park() -> Any:
     [
         ('{"action": "decline"}', True),
         ('{"action": "accept"}', False),
-        ('{"action": "cancel"}', False),  # cancel ≠ explicit decline
+        ('{"action": "cancel"}', False),  # cancel â‰  explicit decline
         ('{"action": "DECLINE"}', False),  # case-sensitive
         (None, False),
         ("not json", False),
@@ -202,7 +202,7 @@ def test_is_explicit_decline(raw: str | None, expected: bool) -> None:
     assert _is_explicit_decline(raw) is expected
 
 
-# ── _parse_verdict ─────────────────────────────────────
+# â”€â”€ _parse_verdict â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -211,17 +211,17 @@ def test_is_explicit_decline(raw: str | None, expected: bool) -> None:
         ('{"action": "accept"}', True),
         ('{"action": "decline"}', False),
         ('{"action": "cancel"}', False),
-        ('{"action": "ACCEPT"}', False),  # strict — case matters
+        ('{"action": "ACCEPT"}', False),  # strict â€” case matters
         ('{"action": "approved"}', False),  # not a valid action
         ('{"action": true}', False),  # wrong type
         ('{"action": null}', False),
         ("{}", False),  # missing action
-        ('{"approved": true}', False),  # legacy shape — must NOT pass
+        ('{"approved": true}', False),  # legacy shape â€” must NOT pass
         ("not json", False),
         ("", False),
         (None, False),
         ('[{"action": "accept"}]', False),  # non-dict root
-        # ``content`` is allowed but ignored for binary verdicts —
+        # ``content`` is allowed but ignored for binary verdicts â€”
         # ``action`` is the sole truth.
         ('{"action": "accept", "content": null}', True),
         ('{"action": "accept", "content": {"approved": true}}', True),
@@ -231,8 +231,8 @@ def test_is_explicit_decline(raw: str | None, expected: bool) -> None:
 def test_parse_verdict_strict(raw: str | None, expected: bool) -> None:
     """Strict verdict parser: only ``action == "accept"`` returns
     True. Everything else (decline, cancel, malformed, missing
-    field, legacy ``{"approved": ...}`` shape) returns False —
-    fail-closed per POLICIES.md §13.
+    field, legacy ``{"approved": ...}`` shape) returns False â€”
+    fail-closed per POLICIES.md Â§13.
 
     The ``approved`` case exists specifically to guard against
     silently accepting the legacy shape if a stale client (or a
@@ -242,7 +242,7 @@ def test_parse_verdict_strict(raw: str | None, expected: bool) -> None:
     assert _parse_verdict(raw) is expected
 
 
-# ── _truncate ──────────────────────────────────────────
+# â”€â”€ _truncate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_truncate_short_passes() -> None:
@@ -258,7 +258,7 @@ def test_truncate_long_clips_with_marker() -> None:
     assert clipped == "x" * 20 + " [truncated]"
 
 
-# ── ElicitationRequest serialization ──────────────────
+# â”€â”€ ElicitationRequest serialization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_params_json_serializes_all_fields() -> None:
@@ -266,7 +266,7 @@ def test_params_json_serializes_all_fields() -> None:
     canonical MCP-shape ``params`` block (mode/message/
     requestedSchema + extras). The renderer reads
     these from both the SSE event ``params`` block AND
-    the persisted ``pending_tool_calls.arguments`` column —
+    the persisted ``pending_tool_calls.arguments`` column â€”
     they must agree."""
     req = ElicitationRequest(
         message="needs review",
@@ -280,7 +280,7 @@ def test_params_json_serializes_all_fields() -> None:
     assert data == {
         "mode": "form",
         "message": "needs review",
-        # Empty {} for binary approve/reject — verdict lives
+        # Empty {} for binary approve/reject â€” verdict lives
         # in the consumer's MCP ``action`` field.
         "requestedSchema": {},
         "phase": "tool_call",
@@ -292,7 +292,7 @@ def test_params_json_serializes_all_fields() -> None:
 def test_elicitation_request_event_shape() -> None:
     """The SSE event payload has the canonical envelope
     (type/elicitation_id/method) and the MCP-shape params
-    block. Locks the wire contract — drift here would
+    block. Locks the wire contract â€” drift here would
     silently break MCP-compatible consumers."""
     req = ElicitationRequest(
         message="needs review",
@@ -327,7 +327,7 @@ def test_elicitation_request_event_url_mode(monkeypatch: pytest.MonkeyPatch) -> 
     This is the primary contract the frontend relies on to render a
     link instead of inline buttons.
     """
-    monkeypatch.setattr("agent_meow.runtime.policies.approval._ELICITATION_MODE", "url")
+    monkeypatch.setattr("omnigent.runtime.policies.approval._ELICITATION_MODE", "url")
     req = ElicitationRequest(
         message="approve shell?",
         phase="tool_call",
@@ -347,7 +347,7 @@ def test_elicitation_request_event_form_mode_explicit(monkeypatch: pytest.Monkey
     form mode and carries no ``url`` field even when session_id is
     provided.
     """
-    monkeypatch.setattr("agent_meow.runtime.policies.approval._ELICITATION_MODE", "form")
+    monkeypatch.setattr("omnigent.runtime.policies.approval._ELICITATION_MODE", "form")
     req = ElicitationRequest(
         message="approve?",
         phase="tool_call",
@@ -364,10 +364,10 @@ def test_elicitation_request_event_no_session_id_stays_form(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Without ``session_id`` (runner-side calls), the event always
-    uses form mode regardless of config — the runner doesn't serve
+    uses form mode regardless of config â€” the runner doesn't serve
     HTML pages.
     """
-    monkeypatch.setattr("agent_meow.runtime.policies.approval._ELICITATION_MODE", "url")
+    monkeypatch.setattr("omnigent.runtime.policies.approval._ELICITATION_MODE", "url")
     req = ElicitationRequest(
         message="approve?",
         phase="tool_call",
@@ -380,7 +380,7 @@ def test_elicitation_request_event_no_session_id_stays_form(
     assert "url" not in params
 
 
-# ── _await_elicitation — happy paths ──────────────────
+# â”€â”€ _await_elicitation â€” happy paths â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -410,7 +410,7 @@ async def test_accept_applies_labels(
         park=_accepting_park('{"action": "accept"}'),
     )
     assert accepted is True
-    # Labels landed — both hot cache and persisted.
+    # Labels landed â€” both hot cache and persisted.
     assert engine.labels == {"integrity": "0"}
     conv = conversation_store.get_conversation(engine.conversation_id)
     assert conv is not None
@@ -446,7 +446,7 @@ async def test_decline_raises_elicitation_declined_error(
             park=_accepting_park('{"action": "decline"}'),
         )
     assert exc_info.value.policy_name == "gate"
-    # No labels landed — §7.2 invariant preserved.
+    # No labels landed â€” Â§7.2 invariant preserved.
     assert engine.labels == {}
     conv = conversation_store.get_conversation(engine.conversation_id)
     assert conv is not None
@@ -459,7 +459,7 @@ async def test_cancel_does_not_apply_labels(
 ) -> None:
     """``cancel`` (user dismissed without an explicit
     decision) is treated identically to ``decline`` for
-    label-write semantics — no side effects."""
+    label-write semantics â€” no side effects."""
     policy = _ask_policy("gate", set_labels={"integrity": "0"})
     engine = _engine_with_policies(conversation_store, [policy])
     recorder = _Recorder()
@@ -488,7 +488,7 @@ async def test_timeout_does_not_apply_labels(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """Ports agent-meow ``test_ask_timeout``. Park raises
-    TimeoutError → helper returns False without applying
+    TimeoutError â†’ helper returns False without applying
     labels."""
     policy = _ask_policy("gate", set_labels={"integrity": "0"})
     engine = _engine_with_policies(conversation_store, [policy])
@@ -519,10 +519,10 @@ async def test_missing_verdict_row_denies(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """Ports agent-meow ``test_no_handler_denies``. Park
-    returns None (cancelled / missing row) → helper returns
+    returns None (cancelled / missing row) â†’ helper returns
     False. Covers the cancel-during-elicitation path where
     the pending row was advanced to ``cancelled`` by the
-    cancel handler (POLICIES.md §12)."""
+    cancel handler (POLICIES.md Â§12)."""
     policy = _ask_policy("gate", set_labels={"integrity": "0"})
     engine = _engine_with_policies(conversation_store, [policy])
     recorder = _Recorder()
@@ -547,9 +547,9 @@ async def test_missing_verdict_row_denies(
 async def test_malformed_verdict_denies(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """A verdict row with garbage ``output`` → helper returns
+    """A verdict row with garbage ``output`` â†’ helper returns
     False. The route stays a dumb pipe; verdict parsing
-    fail-closes here (POLICIES.md §13 malformed-verdict
+    fail-closes here (POLICIES.md Â§13 malformed-verdict
     rule)."""
     policy = _ask_policy("gate")
     engine = _engine_with_policies(conversation_store, [policy])
@@ -565,13 +565,13 @@ async def test_malformed_verdict_denies(
         policy_engine=engine,
         register=recorder.register,
         emit=recorder.emit,
-        # Garbage JSON → strict parser returns False.
+        # Garbage JSON â†’ strict parser returns False.
         park=_accepting_park("banana garbage"),
     )
     assert accepted is False
 
 
-# ── Register + emit payloads ──────────────────────────
+# â”€â”€ Register + emit payloads â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -614,7 +614,7 @@ async def test_registers_pending_row(
     assert args["phase"] == "tool_call"
     assert args["policy_name"] == "gate"
     assert args["content_preview"] == "ls -la"
-    # Empty schema for binary approve/reject — verdict lives
+    # Empty schema for binary approve/reject â€” verdict lives
     # in the consumer's MCP action.
     assert args["requestedSchema"] == {}
 
@@ -664,7 +664,7 @@ async def test_emits_elicitation_request_event(
     assert params["content_preview"] == "x"
 
 
-# ── Per-policy ask_timeout override ───────────────────
+# â”€â”€ Per-policy ask_timeout override â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -672,7 +672,7 @@ async def test_per_policy_ask_timeout_override_wins(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """When the deciding policy has its own ask_timeout,
-    that value is passed to the park callback — not the
+    that value is passed to the park callback â€” not the
     engine's default. Enables long-review policies (e.g.
     50 KB documents) without bumping the global default."""
     captured: dict[str, int] = {}
@@ -774,11 +774,11 @@ async def test_unknown_deciding_policy_falls_back_to_engine_timeout(
         emit=recorder.emit,
         park=_capturing_park,
     )
-    # Unknown name → engine default.
+    # Unknown name â†’ engine default.
     assert captured["timeout_s"] == 60
 
 
-# ── Content preview truncation ────────────────────────
+# â”€â”€ Content preview truncation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -786,9 +786,9 @@ async def test_content_preview_truncated_to_1024(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """Long content previews are clipped so the UI is not
-    swamped. 1024 is the chosen limit (POLICIES.md §7.2).
+    swamped. 1024 is the chosen limit (POLICIES.md Â§7.2).
     The truncated value rides through both the persisted
-    params JSON AND the SSE event params block — they
+    params JSON AND the SSE event params block â€” they
     derive from the same internal :class:`ElicitationRequest`
     so both stay in sync."""
     policy = _ask_policy("gate")
@@ -817,7 +817,7 @@ async def test_content_preview_truncated_to_1024(
     assert event_preview == preview
 
 
-# ── No set_labels on result ───────────────────────────
+# â”€â”€ No set_labels on result â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -825,12 +825,12 @@ async def test_accept_with_no_set_labels_is_noop(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """An ASK result carrying no set_labels (empty/None) on
-    accept does not touch the store — no pointless empty
+    accept does not touch the store â€” no pointless empty
     apply_label_writes call."""
     policy = _ask_policy("gate")
     engine = _engine_with_policies(conversation_store, [policy])
     recorder = _Recorder()
-    # Result has no set_labels — a policy that just wants
+    # Result has no set_labels â€” a policy that just wants
     # approval without writing state.
     result = _composed_ask(deciding_policy="gate", set_labels=None)
 
@@ -846,18 +846,18 @@ async def test_accept_with_no_set_labels_is_noop(
         park=_accepting_park('{"action": "accept"}'),
     )
     assert accepted is True
-    # Store unchanged — no spurious empty writes.
+    # Store unchanged â€” no spurious empty writes.
     conv = conversation_store.get_conversation(engine.conversation_id)
     assert conv is not None
     assert conv.labels == {}
 
 
-# ── Sentinel constant ─────────────────────────────────
+# â”€â”€ Sentinel constant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_elicitation_pending_tool_name_is_internal_sentinel() -> None:
     """The pending row's ``tool_name`` column carries an
-    internal sentinel (double-underscore prefix) — never an
+    internal sentinel (double-underscore prefix) â€” never an
     LLM-callable tool name. Locks the value so a rename
     breaks loud (the approval dispatcher's row-routing depends
     on this exact string)."""

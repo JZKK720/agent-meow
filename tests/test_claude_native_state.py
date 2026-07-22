@@ -2,7 +2,7 @@
 
 The state module persists per-conversation launch metadata (today
 just the cwd a session was created in) under
-``~/.agent_meow/claude-native/<hash>/launch.json`` so the resume
+``~/.omnigent/claude-native/<hash>/launch.json`` so the resume
 path can detect cwd mismatches that would otherwise make
 ``claude --resume`` exit immediately on launch.
 
@@ -20,14 +20,14 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.claude_native_state import (
+from omnigent.claude_native_state import (
     _state_dir_for_conversation_id,
     read_launch_state,
     redirect_launch_state,
     write_launch_state,
 )
 
-# ── Roundtrip and idempotence ─────────────────────────────────────
+# â”€â”€ Roundtrip and idempotence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_write_then_read_returns_recorded_path() -> None:
@@ -103,7 +103,7 @@ def test_write_different_value_keeps_existing(caplog: pytest.LogCaptureFixture) 
     # Force the `agent-meow` package logger to propagate so caplog's
     # root-attached handler captures warnings. Defensive: pollution
     # from a sibling test that runs ``setup_cli_logging`` (which sets
-    # ``agent_meow.propagate = False``) can leak into this xdist
+    # ``omnigent.propagate = False``) can leak into this xdist
     # worker if its cleanup fixture didn't run.
     logging.getLogger("agent-meow").propagate = True
     write_launch_state("conv_overwrite", "/home/me/repo")
@@ -156,7 +156,7 @@ def test_write_rejects_empty_string() -> None:
         write_launch_state("conv_empty", "")
 
 
-# ── Path-traversal safety ─────────────────────────────────────────
+# â”€â”€ Path-traversal safety â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_state_dir_for_conversation_id_is_under_root(
@@ -194,7 +194,7 @@ def test_state_dir_for_conversation_id_is_under_root(
         )
 
 
-# ── Malformed-state resilience ─────────────────────────────────────
+# â”€â”€ Malformed-state resilience â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_read_malformed_json_returns_none(
@@ -211,7 +211,7 @@ def test_read_malformed_json_returns_none(
     """
     import logging
 
-    # See test_write_different_value_keeps_existing — defensive
+    # See test_write_different_value_keeps_existing â€” defensive
     # restore of ``agent-meow`` logger propagation in case a sibling
     # test leaked ``propagate = False`` into this xdist worker.
     logging.getLogger("agent-meow").propagate = True
@@ -277,7 +277,7 @@ def test_read_empty_working_directory_field_returns_none(
     assert read_launch_state("conv_empty_wd") is None
 
 
-# ── State root override -------------------------------------------
+# â”€â”€ State root override -------------------------------------------
 
 
 def test_state_root_env_var_redirects_state(
@@ -291,7 +291,7 @@ def test_state_root_env_var_redirects_state(
     ``_isolate_claude_native_state`` fixture in ``tests/conftest.py``).
     If the override stopped working, every test that drives the
     wrapper would silently write to the developer's real
-    ``~/.agent_meow/``.
+    ``~/.omnigent/``.
     """
     redirect = tmp_path / "alt-state"
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(redirect))

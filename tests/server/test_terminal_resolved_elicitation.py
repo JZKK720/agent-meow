@@ -15,7 +15,7 @@ JSON round-trips of the same data so exact equality is the signal.
 
 These tests pin that contract and guard the regression that prompted it:
 a result must NEVER resolve a same-named prompt with a *different* input.
-That used to happen via a ``len(candidates) == 1`` fallback — approving
+That used to happen via a ``len(candidates) == 1`` fallback â€” approving
 ``Bash{ls}`` in the web UI un-parked it, then mirroring its own output
 found the lone remaining ``Bash{pwd}`` sibling and wrongly cleared it.
 
@@ -35,16 +35,16 @@ from typing import Any
 
 import pytest
 
-from agent_meow.entities.conversation import (
+from omnigent.entities.conversation import (
     ConversationItem,
     FunctionCallData,
     FunctionCallOutputData,
 )
-from agent_meow.server._elicitation_registry import (
+from omnigent.server._elicitation_registry import (
     _harness_parked_elicitations,
     _ParkedHarnessElicitation,
 )
-from agent_meow.server.routes import sessions as sessions_route
+from omnigent.server.routes import sessions as sessions_route
 
 SESSION = "conv_test"
 
@@ -124,12 +124,12 @@ def test_exact_input_match_resolves_only_that_prompt() -> None:
 
 def test_no_input_prompt_resolved_by_empty_mirrored_output() -> None:
     """
-    A prompt parked with no input (``tool_input=None`` — its hook payload
+    A prompt parked with no input (``tool_input=None`` â€” its hook payload
     carried no ``tool_input``) is resolved by its mirrored result, whose
     parsed arguments normalize to ``{}``. The park side spells "no input"
     as ``None`` and the mirror side as ``{}``; both canonicalize to ``{}``
-    so they compare equal. Without that, ``None == {}`` is ``False`` and —
-    with no count-based fallback — the prompt would orphan until the hook
+    so they compare equal. Without that, ``None == {}`` is ``False`` and â€”
+    with no count-based fallback â€” the prompt would orphan until the hook
     timeout.
     """
     a = _park("e_a", "Bash", None)
@@ -165,7 +165,7 @@ def test_lone_same_name_prompt_with_different_input_is_not_resolved(
     """
     a = _park("e_a", "Bash", {"command": "ls"})
 
-    with caplog.at_level(logging.DEBUG, logger="agent_meow.server.routes.sessions"):
+    with caplog.at_level(logging.DEBUG, logger="omnigent.server.routes.sessions"):
         sessions_route._signal_terminal_resolved_harness_elicitation(
             SESSION, "Bash", {"command": "pwd"}
         )

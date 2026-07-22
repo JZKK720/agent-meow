@@ -22,12 +22,12 @@ Local usage::
     OMNIGENT_E2E_ALLOW_DEV_BASE_URL=1 \
       uv run pytest tests/e2e_ui --ui-base-url http://127.0.0.1:5173
 
-``agent-meow server`` is documented at ``agent_meow/cli.py:server``:
+``agent-meow server`` is documented at ``omnigent/cli.py:server``:
 it spins up uvicorn with the agent-meow app and spawns an out-of-process
 runner that reconnects over the WebSocket tunnel. The fixture passes
 ``--database-uri`` and ``--artifact-location`` pointing at the
 pytest tmp dir so the test never touches the user's default
-``sqlite:///agent_meow.db`` / ``./artifacts``.
+``sqlite:///omnigent.db`` / ``./artifacts``.
 """
 
 from __future__ import annotations
@@ -118,7 +118,7 @@ _BUILD_OUTPUT = _REPO_ROOT / "agent-meow" / "server" / "static" / "web-ui"
 
 # ``agent-meow server --agent`` runs the spec through the strict
 # validator at registration time (no shim defaults applied), so the
-# YAML must carry an explicit ``executor`` block — otherwise the
+# YAML must carry an explicit ``executor`` block â€” otherwise the
 # server rejects with ``executor.config.harness: required when
 # executor.type is 'agent-meow'``. The model name (gpt-4o-mini) is a plain
 # (non-``databricks-``) name on purpose: the openai-agents harness then
@@ -126,7 +126,7 @@ _BUILD_OUTPUT = _REPO_ROOT / "agent-meow" / "server" / "static" / "web-ui"
 # in-process mock) rather than routing to the Databricks gateway, which
 # would need real credentials CI does not have. A ``databricks-``-prefixed
 # model forces Databricks DEFAULT-profile auth (see
-# agent_meow/runtime/workflow.py) and fails with DatabricksAuthError in CI.
+# omnigent/runtime/workflow.py) and fails with DatabricksAuthError in CI.
 _TEST_AGENT_YAML = """\
 name: hello_world
 prompt: You are a friendly assistant. Say hello and answer questions.
@@ -137,7 +137,7 @@ executor:
     harness: openai-agents
 
 # Required for PUT /filesystem/{path} seeding in UI tests (e.g. markdown
-# editor comments) — the runner returns 404 when os_env is absent.
+# editor comments) â€” the runner returns 404 when os_env is absent.
 os_env:
   type: caller_process
   cwd: .
@@ -151,7 +151,7 @@ def _build_hello_world_bundle() -> bytes:
 
     Uses a non-``config.yaml`` archive name so the bundle routes
     through the agent-meow compat adapter (which translates
-    ``executor.harness`` → ``executor.config.harness`` and sets
+    ``executor.harness`` â†’ ``executor.config.harness`` and sets
     ``executor.type: agent-meow``). Using ``config.yaml`` would
     go through the strict ``spec_version: 1`` parser which doesn't
     accept the shorthand.
@@ -183,13 +183,13 @@ _HEALTH_POLL_INTERVAL_S = 0.5
 
 # Switch-target built-ins for the Files-tab os_env-boundary test
 # (test_switch_agent_files_tab.py). The in-place switch dialog lists
-# BUILT-IN agents only (``session_id IS NULL`` — see
+# BUILT-IN agents only (``session_id IS NULL`` â€” see
 # ``switch_session_agent``), and built-ins can only be seeded at server
 # startup via ``OMNIGENT_BUILTIN_AGENT_DIRS``, so ``live_server`` writes
 # these two specs to disk and threads them through that env var. Both run
 # the same openai-agents harness as ``hello_world`` (same provider family
-# → the picker's ``forkSwitchPreservesHistory`` gate offers them); the
-# ONLY difference is os_env presence, which is the variable under test —
+# â†’ the picker's ``forkSwitchPreservesHistory`` gate offers them); the
+# ONLY difference is os_env presence, which is the variable under test â€”
 # the runner 404s the environment resource when os_env is absent, hiding
 # the web Files tab. The registered name is the spec file's stem.
 _FILES_PROBE_NO_ENV_AGENT_NAME = "files_probe_noenv"
@@ -239,7 +239,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         action="store_true",
         default=False,
         help=(
-            "Reuse whatever's already in agent_meow/server/static/web-ui/ "
+            "Reuse whatever's already in omnigent/server/static/web-ui/ "
             "instead of rebuilding. Fails if no build is present."
         ),
     )
@@ -520,7 +520,7 @@ def configure_mock_llm(
 
     Each dict in *responses* maps to a ``QueuedResponse`` on the mock
     server. The *key* determines which queue the responses are stored in
-    — the mock server routes each request to the queue whose key matches
+    â€” the mock server routes each request to the queue whose key matches
     the request's ``model`` field. When *match* is set, the queue fires
     whenever the user text contains that substring, regardless of model.
 
@@ -528,7 +528,7 @@ def configure_mock_llm(
     :param responses: List of response configs. Keys:
         ``text``, ``tool_calls``, ``block``, ``stream``,
         ``error``, ``status_code``.
-    :param key: Queue key — typically the model name baked into the
+    :param key: Queue key â€” typically the model name baked into the
         agent spec. Defaults to ``"default"`` (matches any model
         not assigned to a more specific queue).
     :param match: Optional substring to match against the user text for
@@ -565,7 +565,7 @@ def set_fallback_mock_llm(
 
     The fallback is returned when the regular queue for *key* is
     exhausted. Unlike regular entries, the fallback survives
-    :func:`reset_mock_llm` — use it for session-level queues that
+    :func:`reset_mock_llm` â€” use it for session-level queues that
     must return a valid response even when per-test resets clear the
     regular queue (e.g. the server-level policy-classifier LLM queue).
 
@@ -602,7 +602,7 @@ def _assert_pwa_build(build_output: Path) -> None:
 
     The standalone build must ship the installable-PWA assets, and the
     hand-rolled service worker must (a) embed the per-build fingerprint so its
-    bytes change every deploy — or the update prompt never fires — and (b) NOT
+    bytes change every deploy â€” or the update prompt never fires â€” and (b) NOT
     cache or serve the app shell: agent-meow is a cloud app, so a stale cached
     shell would white-screen users after every deploy.
     """
@@ -613,21 +613,21 @@ def _assert_pwa_build(build_output: Path) -> None:
     sw = (build_output / "sw.js").read_text(encoding="utf-8")
     if not build or build not in sw:
         pytest.fail(
-            "sw.js does not embed the version.json build fingerprint — the PWA "
+            "sw.js does not embed the version.json build fingerprint â€” the PWA "
             "update prompt would never fire on a JS-only deploy"
         )
-    # Installability-only contract — enforce the *dangerous* direction too, not
+    # Installability-only contract â€” enforce the *dangerous* direction too, not
     # just "the fingerprint is present". The service worker must NOT precache or
     # serve the app shell or intercept navigations; otherwise a deploy
     # white-screens users behind a stale shell. Strip line comments first so
     # prose that mentions these tokens can neither fake nor mask a regression.
     sw_code = re.sub(r"//[^\n]*", "", sw)
     if "index.html" in sw_code:
-        pytest.fail("sw.js references index.html — it must not cache or serve the app shell")
+        pytest.fail("sw.js references index.html â€” it must not cache or serve the app shell")
     shell_precache = re.search(r"(?:cache\.add|addAll|precache)[^\n]*\.(?:js|html)\b", sw_code)
     if shell_precache is not None:
         pytest.fail(
-            f"sw.js precaches an app-shell asset ({shell_precache.group(0)}) — "
+            f"sw.js precaches an app-shell asset ({shell_precache.group(0)}) â€” "
             "it must precache only version.json"
         )
     # The architecture rests on "navigations always hit the network". Enforce it
@@ -637,7 +637,7 @@ def _assert_pwa_build(build_output: Path) -> None:
     # behind a stale shell after each deploy.
     if re.search(r"request\.mode|NavigationRoute|navigationPreload", sw_code):
         pytest.fail(
-            "sw.js inspects navigation requests — navigations must always reach "
+            "sw.js inspects navigation requests â€” navigations must always reach "
             "the network (a stale cached shell white-screens users after a deploy)"
         )
     responders = sw_code.count("respondWith")
@@ -646,19 +646,19 @@ def _assert_pwa_build(build_output: Path) -> None:
             f"sw.js has {responders} respondWith() call(s); expected exactly 1 (the "
             "/version.json sentinel). Any other responder risks serving a stale shell."
         )
-    # The single respondWith must sit inside the `=== "/version.json"` block —
+    # The single respondWith must sit inside the `=== "/version.json"` block â€”
     # i.e. no `}` (block close) between the pathname check and the respondWith.
     if not re.search(r'"/version\.json"[^}]*?respondWith', sw_code, re.DOTALL):
         pytest.fail(
             "sw.js's respondWith() is not guarded by a `/version.json` pathname "
-            "check — the service worker must not serve the shell or intercept navigations"
+            "check â€” the service worker must not serve the shell or intercept navigations"
         )
 
 
 @pytest.fixture(scope="session")
 def built_spa(request: pytest.FixtureRequest) -> None:
     """
-    Build the web SPA into ``agent_meow/server/static/web-ui/``.
+    Build the web SPA into ``omnigent/server/static/web-ui/``.
 
     Vite's ``emptyOutDir: true`` (see ``web/vite.config.ts``)
     nukes the output directory before writing, so concurrent
@@ -669,7 +669,7 @@ def built_spa(request: pytest.FixtureRequest) -> None:
     double-building is harmless, but the lock keeps the static
     output consistent during the window the FastAPI app reads it).
 
-    :param request: pytest request — reads ``--ui-base-url`` /
+    :param request: pytest request â€” reads ``--ui-base-url`` /
         ``--ui-skip-build``.
     :returns: ``None``. Side effect is the populated build dir.
     """
@@ -705,18 +705,18 @@ def _spawn_runner_against_external_server(
     Used when ``--ui-base-url`` is set: the user owns the
     ``agent-meow server`` process (and its pre-registered ``hello_world``
     agent), but the runner-bound fixtures still need a runner id this
-    process controls. Mirrors :func:`~?agent_meow.cli._start_cli_runner_process`
+    process controls. Mirrors :func:`~?omnigent.cli._start_cli_runner_process`
     minus the click plumbing, then polls
     ``GET /v1/runners/{id}/status`` until the WS tunnel is up.
 
     The unauthenticated local server derives ``expected_runner_id``
     from the binding token via
-    :func:`~?agent_meow.runner.identity.token_bound_runner_id`, so we use
+    :func:`~?omnigent.runner.identity.token_bound_runner_id`, so we use
     the same derivation here rather than picking a human-friendly id.
     """
     import secrets
 
-    from agent_meow.runner.identity import token_bound_runner_id
+    from omnigent.runner.identity import token_bound_runner_id
 
     runner_tmp = tmp_path_factory.mktemp("e2e_ui_external_runner")
     log_path = runner_tmp / "runner.log"
@@ -731,9 +731,9 @@ def _spawn_runner_against_external_server(
         "OMNIGENT_RUNNER_PARENT_PID": str(os.getpid()),
         "RUNNER_SERVER_URL": base_url,
     }
-    log_handle = open(log_path, "w")  # noqa: SIM115 — closed in finally
+    log_handle = open(log_path, "w")  # noqa: SIM115 â€” closed in finally
     proc = subprocess.Popen(
-        [sys.executable, "-m", "agent_meow.runner._entry"],
+        [sys.executable, "-m", "omnigent.runner._entry"],
         env=env,
         stdout=log_handle,
         stderr=subprocess.STDOUT,
@@ -775,7 +775,7 @@ def _spawn_runner_against_external_server(
             f"Runner log at {log_path}:\n{log_text[-3000:]}"
         )
 
-    # No "pid" — there's no server process this fixture owns. Tests
+    # No "pid" â€” there's no server process this fixture owns. Tests
     # that depend on ``server_pid`` (only valid when this fixture spawns
     # the server too) will KeyError, which is the right failure shape.
     _server_state["runner_id"] = runner_id
@@ -824,10 +824,10 @@ def live_server(
         injected into the server's environment so the openai-agents
         harness hits the mock instead of a real provider.
     :param tmp_path_factory: Pytest temp path factory for the log,
-        the SQLite DB, and the artifact dir — all per-session, so
+        the SQLite DB, and the artifact dir â€” all per-session, so
         the test never reads from or writes to the user's default
-        ``./agent_meow.db`` / ``./artifacts``.
-    :param request: pytest request — reads ``--ui-base-url`` to
+        ``./omnigent.db`` / ``./artifacts``.
+    :param request: pytest request â€” reads ``--ui-base-url`` to
         bypass the spawn entirely.
     :returns: The server's base URL, e.g. ``"http://127.0.0.1:51234"``.
     :raises RuntimeError: If ``/health`` doesn't return 200 and
@@ -847,7 +847,7 @@ def live_server(
     artifact_dir.mkdir(parents=True, exist_ok=True)
     agent_yaml_path = server_tmp / "hello_world.yaml"
     agent_yaml_path.write_text(_TEST_AGENT_YAML)
-    # Built-in switch targets for the Files-tab os_env test — registered
+    # Built-in switch targets for the Files-tab os_env test â€” registered
     # by name from the file stem, so the filenames must match the
     # ``_FILES_PROBE_*_AGENT_NAME`` constants.
     builtin_dirs: list[str] = []
@@ -860,12 +860,12 @@ def live_server(
         builtin_dirs.append(str(probe_path))
     import secrets as _secrets
 
-    from agent_meow.runner.identity import token_bound_runner_id
+    from omnigent.runner.identity import token_bound_runner_id
 
     binding_token = _secrets.token_urlsafe(32)
     runner_id = token_bound_runner_id(binding_token)
-    # PYTHONPATH forces the subprocess to import agent_meow from
-    # the worktree, not whatever's pip-installed in .venv —
+    # PYTHONPATH forces the subprocess to import omnigent from
+    # the worktree, not whatever's pip-installed in .venv â€”
     # otherwise a branch with code changes would silently run
     # against stale code. Same trick the existing live_server
     # helper uses (tests/_helpers/live_server.py:160-167).
@@ -884,22 +884,22 @@ def live_server(
         # Strip any ambient Anthropic credentials so they don't leak in.
         "ANTHROPIC_API_KEY": "",
     }
-    log_handle = open(log_path, "w")  # noqa: SIM115 — handle lives for Popen lifetime; closed in finally
+    log_handle = open(log_path, "w")  # noqa: SIM115 â€” handle lives for Popen lifetime; closed in finally
     proc = subprocess.Popen(
         [
             sys.executable,
             # Equivalent of the unit tests' ``monkeypatch.setattr(presence,
             # "_LEAVE_GRACE_S", ...)``, but applied INSIDE this spawned
-            # interpreter — a monkeypatch in the test process can't reach a
+            # interpreter â€” a monkeypatch in the test process can't reach a
             # subprocess. ``-c`` patches the module global before the CLI
             # runs; the presence route reads it live at call time, so the
             # presence-leave assertion in test_collab_realtime clears in ~1s
             # instead of the prod 15s dwell (which only exists to absorb the
             # ingress' ~5-min stream recycle a test server never hits).
-            # Mirrors ``python -m agent-meow`` (agent_meow/__main__.py).
+            # Mirrors ``python -m agent-meow`` (omnigent/__main__.py).
             "-c",
-            "import agent_meow.server.presence as _p; _p._LEAVE_GRACE_S = 1.0; "
-            + "from agent_meow.cli import main; main()",
+            "import omnigent.server.presence as _p; _p._LEAVE_GRACE_S = 1.0; "
+            + "from omnigent.cli import main; main()",
             "server",
             "--host",
             "127.0.0.1",
@@ -937,7 +937,7 @@ def live_server(
         "OPENAI_API_KEY": "mock-key",
     }
     runner_proc = subprocess.Popen(
-        [sys.executable, "-m", "agent_meow.runner._entry"],
+        [sys.executable, "-m", "omnigent.runner._entry"],
         env=runner_env,
         stdout=runner_log_handle,
         stderr=subprocess.STDOUT,
@@ -945,7 +945,7 @@ def live_server(
 
     # Poll /health and the runner status until the server can
     # actually route a turn. Time-based polling mirrors
-    # tests/_helpers/live_server.py:start_live_server — the
+    # tests/_helpers/live_server.py:start_live_server â€” the
     # alternative (asyncio.Event signalling) doesn't apply because
     # the subprocess is opaque to this process.
     deadline = time.monotonic() + _HEALTH_TIMEOUT_S
@@ -1058,7 +1058,7 @@ def seeded_session(
     the fixture. This keeps the fixture order-independent, so sharding
     and test reordering can place the runner-killing test anywhere.
 
-    :param live_server: Spawned server fixture — its
+    :param live_server: Spawned server fixture â€” its
         ``OMNIGENT_RUNNER_ID`` and pre-registered agent are reused.
     :param tmp_path_factory: Pytest temp path factory (for a respawn log).
     :returns: ``(base_url, session_id)``. Tests typically navigate to
@@ -1146,7 +1146,7 @@ def _ensure_runner_online(
 
     The ``live_server`` runner is session-scoped and never restarted, so a
     test that SIGKILLs it (``test_stale_stream``) leaves any later test in
-    the same shard unable to bind sessions — ``PATCH /v1/sessions/{id}``
+    the same shard unable to bind sessions â€” ``PATCH /v1/sessions/{id}``
     rejects an offline runner with 400 "runner is not registered". When the
     runner is offline this respawns one under the same token-bound id so the
     binding succeeds. Idempotent: a no-op (returns ``None``) when the runner
@@ -1177,7 +1177,7 @@ def _ensure_runner_online(
     mock_url = str(_server_state.get("mock_llm_url", ""))
     runner_tmp = tmp_path_factory.mktemp("e2e_ui_respawn_runner")
     log_path = runner_tmp / "runner.log"
-    log_handle = open(log_path, "w")  # noqa: SIM115 — fd dup'd into child; closed below
+    log_handle = open(log_path, "w")  # noqa: SIM115 â€” fd dup'd into child; closed below
     env = {
         **os.environ,
         "PYTHONPATH": f"{_REPO_ROOT}{os.pathsep}{os.environ.get('PYTHONPATH', '')}",
@@ -1192,7 +1192,7 @@ def _ensure_runner_online(
         ),
     }
     proc = subprocess.Popen(
-        [sys.executable, "-m", "agent_meow.runner._entry"],
+        [sys.executable, "-m", "omnigent.runner._entry"],
         env=env,
         stdout=log_handle,
         stderr=subprocess.STDOUT,
@@ -1223,7 +1223,7 @@ def seeded_session_pair(
 
     For tests that exercise behavior across two distinct sessions the
     user switches between in the SPA (e.g. cross-session message
-    routing). Both bind to the single spawned runner — that is enough
+    routing). Both bind to the single spawned runner â€” that is enough
     to reproduce a client-side routing regression, which depends only
     on which session the SPA POSTs to, not on separate runners.
 
@@ -1275,7 +1275,7 @@ def extra_agent(live_server: str) -> Iterator[str]:
         yield live_server
     finally:
         # Session-scoped agents are cleaned up when the session is
-        # deleted — _register_agent_yaml creates a session as a side
+        # deleted â€” _register_agent_yaml creates a session as a side
         # effect. For now, agent cleanup is best-effort; the agent
         # will not interfere with other tests since the server is
         # session-scoped.
@@ -1293,7 +1293,7 @@ _TERMINAL_AGENT_NAME = "terminal_demo"
 # Ubuntu CI images do not need a separate zsh package.
 #
 # The prompt is explicit because the test relies on the LLM calling
-# ``sys_terminal_launch`` deterministically — generic phrasing ("you
+# ``sys_terminal_launch`` deterministically â€” generic phrasing ("you
 # can use these tools") leads to flaky "I can't access a shell"
 # refusals. It also writes a stable, unique file so the right-side file
 # browser has something deterministic to select and render.
@@ -1357,7 +1357,7 @@ def terminal_agent(live_server: str) -> Iterator[str]:
         yield live_server
     finally:
         # Session-scoped agents are cleaned up when the session is
-        # deleted — _register_agent_yaml creates a session as a side
+        # deleted â€” _register_agent_yaml creates a session as a side
         # effect. Best-effort cleanup.
         pass
 
@@ -1371,7 +1371,7 @@ def terminal_session(
     """Create a runner-bound session using the terminal-capable agent.
 
     Respawns the shared runner first if a prior test in the shard killed
-    it (``test_stale_stream``) — otherwise the runner-bind ``PATCH``
+    it (``test_stale_stream``) â€” otherwise the runner-bind ``PATCH``
     below 400s for every consumer that sorts after that test. Any runner
     this respawns is torn down with the fixture (same contract as
     :func:`seeded_session_pair`).
@@ -1507,8 +1507,8 @@ def _two_agent_chat_yaml(verification_code: str, question_code: str) -> str:
     """Build the two-agent Hitchhiker's Guide chat spec for one test run.
 
     A parent agent (Arthur) with an inline ``type: agent`` sub-agent
-    (Deep Thought) — the omnigent-flavored shape parsed by
-    ``agent_meow/inner/loader.py:_parse_tool``, same as the
+    (Deep Thought) â€” the omnigent-flavored shape parsed by
+    ``omnigent/inner/loader.py:_parse_tool``, same as the
     ``named-sub-agent-test`` e2e fixture. The parent is forbidden from
     answering the Ultimate Question itself, and both nonces appear ONLY
     in the sub-agent's prompt: if either code shows up in the parent's
@@ -1547,7 +1547,7 @@ prompt: |
   Crucially: you have exactly ONE Deep Thought. The system message may
   include an "Open sub-agents:" hint listing it; if your `deep_thought`
   sub-agent already exists, send follow-up questions to that SAME
-  sub-agent session via `sys_session_send` — NEVER spawn a second one.
+  sub-agent session via `sys_session_send` â€” NEVER spawn a second one.
 
 executor:
   model: gpt-4o-mini
@@ -1657,7 +1657,7 @@ def two_agent_chat_session(
 #
 # The mechanism is the nessie ``blast_radius`` policy with ``gate_pushes:
 # true``: a plain ``git push`` is "recoverable but outward", so the policy
-# returns ASK at the TOOL_CALL phase — before the command runs — which the
+# returns ASK at the TOOL_CALL phase â€” before the command runs â€” which the
 # runner forwards to ``POST /v1/sessions/{id}/policies/evaluate``. The server
 # parks the gate and publishes a ``response.elicitation_request`` the snapshot
 # replays in ``pendingElicitations``. The verdict travels back through
@@ -1666,7 +1666,7 @@ def two_agent_chat_session(
 # the ``os_env`` block (no explicit ``tools`` needed).
 #
 # The prompt is explicit (mirrors ``_TERMINAL_AGENT_YAML``) because the test
-# relies on the LLM emitting the gated tool call deterministically — the gate
+# relies on the LLM emitting the gated tool call deterministically â€” the gate
 # fires on the call, not on execution, so the push never has to succeed.
 # ---------------------------------------------------------------------------
 
@@ -1703,9 +1703,9 @@ guardrails:
     blast_radius:
       type: function
       function:
-        path: agent_meow.inner.nessie.policies.blast_radius
+        path: omnigent.inner.nessie.policies.blast_radius
         arguments:
-          # A plain `git push` is recoverable-but-outward → ASK (vs the
+          # A plain `git push` is recoverable-but-outward â†’ ASK (vs the
           # always-DENY catastrophic set). This is the prompt the UI renders.
           gate_pushes: true
 """
@@ -1722,7 +1722,7 @@ def approval_session(
     Same runner-respawn + bind contract as :func:`terminal_session`. The
     agent is registered through the strict ``config.yaml`` parser (it carries
     ``spec_version: 1`` + ``executor.config.harness``, plus the ``os_env`` and
-    ``guardrails`` blocks that path supports — see ``examples/polly``).
+    ``guardrails`` blocks that path supports â€” see ``examples/polly``).
 
     :param live_server: Spawned server fixture.
     :param mock_llm_server_url: Session-scoped mock LLM server URL; used to
@@ -1739,7 +1739,7 @@ def approval_session(
     # shared model name caused a race: the previous test's runner (making its
     # post-approval second LLM call) would steal the freshly-configured queue
     # from the next test. A unique model per fixture call eliminates that race
-    # entirely — no other request will ever use this model key.
+    # entirely â€” no other request will ever use this model key.
     approval_model = f"approval-probe-{_uuid.uuid4().hex[:8]}"
     # Substitute the unique model into the agent spec.
     agent_yaml_text = _APPROVAL_AGENT_YAML.replace("gpt-4o-mini", approval_model)
@@ -1810,7 +1810,7 @@ def _ui_defaults() -> None:
     SSE-friendly Playwright defaults applied to every test.
 
     The chat surface streams tokens, so the default 5s expect
-    timeout is too tight — first deltas can arrive 5–15s after
+    timeout is too tight â€” first deltas can arrive 5â€“15s after
     the POST under cold-start conditions. 15s is generous enough
     for streaming-text assertions without masking real hangs.
     """
@@ -1852,14 +1852,14 @@ def server_pid(live_server: str) -> int:
 #
 # ``custom_agent_session`` yields ``(base_url, session_id)`` for a session bound
 # to the shared ``live_server`` runner, ready to chat at ``/c/<session_id>``. It
-# registers a plain ``openai-agents`` agent (the ``echo_probe`` spec below) —
-# the same harness family as ``hello_world`` — fresh, so it stands in for "spin
+# registers a plain ``openai-agents`` agent (the ``echo_probe`` spec below) â€”
+# the same harness family as ``hello_world`` â€” fresh, so it stands in for "spin
 # up a different agent" without the multi-provider sprawl of the packaged
 # ``polly`` / ``debby`` examples.
 #
 # ``native_claude_session`` is the native-CLI counterpart: it spins up a real
-# ``claude-native`` ("Claude Code") wrapper session — the same terminal-first
-# spec ``agent-meow claude`` ships — and yields ``(base_url, session_id)``. The
+# ``claude-native`` ("Claude Code") wrapper session â€” the same terminal-first
+# spec ``agent-meow claude`` ships â€” and yields ``(base_url, session_id)``. The
 # runner auto-launches Claude Code in the session terminal on bind, including
 # the gateway auth it derives from the runner's own credentials and the
 # first-run trust/onboarding pre-accept, so no CLI client is needed. In CI the
@@ -1868,8 +1868,8 @@ def server_pid(live_server: str) -> int:
 # boots non-interactively. The native render-parity suite drives this fixture.
 #
 # ``native_codex_session`` is the sibling native-CLI fixture for the
-# ``codex-native`` ("Codex") wrapper: it spins up a real Codex wrapper session —
-# the same terminal-first spec ``agent-meow codex`` ships — and yields
+# ``codex-native`` ("Codex") wrapper: it spins up a real Codex wrapper session â€”
+# the same terminal-first spec ``agent-meow codex`` ships â€” and yields
 # ``(base_url, session_id)``. The runner auto-launches Codex in the session
 # terminal on bind (gateway auth derived from the runner's own credentials +
 # first-run pre-accept handled runner-side), exactly like the claude fixture.
@@ -1889,7 +1889,7 @@ name: {_CUSTOM_AGENT_NAME}
 prompt: |
   You are a precise echo assistant. The user sends a turn that ends with an
   instruction to reply with one exact token. Reply with that token verbatim
-  and nothing else — no preamble, no quotes, no trailing punctuation.
+  and nothing else â€” no preamble, no quotes, no trailing punctuation.
 
 executor:
   model: gpt-4o-mini
@@ -1917,7 +1917,7 @@ def _create_bundled_session(base_url: str, runner_id: str, yaml_text: str) -> st
     """Register a session-scoped agent from *yaml_text* and bind its session.
 
     The multipart ``POST /v1/sessions`` both registers the agent and creates
-    the session it is scoped to, returning that ``session_id`` directly — so
+    the session it is scoped to, returning that ``session_id`` directly â€” so
     no separate create call is needed.
 
     :param base_url: Spawned server base URL.
@@ -1978,9 +1978,9 @@ def _create_native_claude_session(
     """Register the ``claude-native`` wrapper agent and bind its session.
 
     Reuses the exact terminal-first spec ``agent-meow claude`` ships
-    (:func:`~?agent_meow.claude_native._materialize_claude_agent_spec`) so the
+    (:func:`~?omnigent.claude_native._materialize_claude_agent_spec`) so the
     fixture never drifts from production, and stamps the same wrapper /
-    terminal-first labels (``agent_meow.wrapper`` + ``agent_meow.ui = terminal``)
+    terminal-first labels (``omnigent.wrapper`` + ``omnigent.ui = terminal``)
     the CLI writes. The spec carries no ``spec_version``, so it is bundled
     under a ``*.yaml`` arcname to route through the agent-meow compat translator
     (which preserves ``executor.harness`` + ``terminals:``); a ``config.yaml``
@@ -1989,14 +1989,14 @@ def _create_native_claude_session(
     Binding the session to the runner triggers the runner's claude-native
     auto-bootstrap: it launches Claude Code in the session terminal, derives
     the gateway auth from its own credentials, and pre-accepts the first-run
-    trust/onboarding prompts — no CLI client required.
+    trust/onboarding prompts â€” no CLI client required.
 
     :param base_url: Spawned server base URL.
     :param runner_id: The token-bound runner id to bind.
     :param terminal_launch_args: Pass-through ``claude`` CLI args persisted on
         the session (``conversations.terminal_launch_args``); the runner threads
         them into the terminal launch before its own bridge/MCP/hook wiring (see
-        ``_build_claude_native_base_args`` in ``agent_meow/runner/app.py``). Used
+        ``_build_claude_native_base_args`` in ``omnigent/runner/app.py``). Used
         by the plan-mode fixture to pass ``["--permission-mode", "plan"]`` so
         Claude boots into plan mode and reaches for ``ExitPlanMode``. ``None``
         launches with the production defaults.
@@ -2005,13 +2005,13 @@ def _create_native_claude_session(
     import json as _json
     import tempfile
 
-    from agent_meow._wrapper_labels import (
+    from omnigent._wrapper_labels import (
         CLAUDE_NATIVE_WRAPPER_VALUE,
         UI_MODE_LABEL_KEY,
         UI_MODE_TERMINAL_VALUE,
         WRAPPER_LABEL_KEY,
     )
-    from agent_meow.claude_native import _materialize_claude_agent_spec
+    from omnigent.claude_native import _materialize_claude_agent_spec
 
     with tempfile.TemporaryDirectory() as _tmp:
         spec_path = _materialize_claude_agent_spec(Path(_tmp))
@@ -2020,7 +2020,7 @@ def _create_native_claude_session(
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         data = yaml_text.encode()
-        # Non-config.yaml arcname → agent-meow compat translator (the spec has
+        # Non-config.yaml arcname â†’ agent-meow compat translator (the spec has
         # no spec_version), matching the terminal_session fixture.
         info = tarfile.TarInfo("claude-native-ui.yaml")
         info.size = len(data)
@@ -2144,9 +2144,9 @@ def _create_native_codex_session(base_url: str, runner_id: str) -> str:
     """Register the ``codex-native`` wrapper agent and bind its session.
 
     Reuses the exact terminal-first spec ``agent-meow codex`` ships
-    (:func:`~?agent_meow.codex_native._materialize_codex_agent_spec`) so the
+    (:func:`~?omnigent.codex_native._materialize_codex_agent_spec`) so the
     fixture never drifts from production, and stamps the same wrapper /
-    terminal-first labels (``agent_meow.wrapper`` + ``agent_meow.ui = terminal``)
+    terminal-first labels (``omnigent.wrapper`` + ``omnigent.ui = terminal``)
     the CLI writes. The spec carries no ``spec_version``, so it is bundled
     under a ``*.yaml`` arcname to route through the agent-meow compat translator
     (which preserves ``executor.harness`` + ``terminals:``); a ``config.yaml``
@@ -2155,7 +2155,7 @@ def _create_native_codex_session(base_url: str, runner_id: str) -> str:
     Binding the session to the runner triggers the runner's codex-native
     auto-bootstrap: it launches Codex in the session terminal, derives the
     gateway auth from its own credentials, and pre-accepts the first-run
-    trust/onboarding prompts — no CLI client required. ``model=None`` lets the
+    trust/onboarding prompts â€” no CLI client required. ``model=None`` lets the
     configured provider's default model win (matching ``_build_codex_native_bundle``).
 
     :param base_url: Spawned server base URL.
@@ -2165,13 +2165,13 @@ def _create_native_codex_session(base_url: str, runner_id: str) -> str:
     import json as _json
     import tempfile
 
-    from agent_meow._wrapper_labels import (
+    from omnigent._wrapper_labels import (
         CODEX_NATIVE_WRAPPER_VALUE,
         UI_MODE_LABEL_KEY,
         UI_MODE_TERMINAL_VALUE,
         WRAPPER_LABEL_KEY,
     )
-    from agent_meow.codex_native import _materialize_codex_agent_spec
+    from omnigent.codex_native import _materialize_codex_agent_spec
 
     with tempfile.TemporaryDirectory() as _tmp:
         spec_path = _materialize_codex_agent_spec(Path(_tmp), model=None)
@@ -2180,7 +2180,7 @@ def _create_native_codex_session(base_url: str, runner_id: str) -> str:
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         data = yaml_text.encode()
-        # Non-config.yaml arcname → agent-meow compat translator (the spec has
+        # Non-config.yaml arcname â†’ agent-meow compat translator (the spec has
         # no spec_version), matching the terminal_session fixture.
         info = tarfile.TarInfo("codex-native-ui.yaml")
         info.size = len(data)
@@ -2195,7 +2195,7 @@ def _create_native_codex_session(base_url: str, runner_id: str) -> str:
     # _codex_session_workspace raises if neither the session's stored
     # ``workspace`` nor OMNIGENT_RUNNER_WORKSPACE is set. Pin it on THIS
     # session only (via metadata.workspace) rather than exporting
-    # OMNIGENT_RUNNER_WORKSPACE on the shared runner — a runner-wide value
+    # OMNIGENT_RUNNER_WORKSPACE on the shared runner â€” a runner-wide value
     # changes file-surface advertisement for every other session on the runner
     # (it regressed the mobile file-drawer suite). The repo root is the same cwd
     # claude falls back to, and is a valid dir on the runner's filesystem.
@@ -2251,7 +2251,7 @@ def native_codex_session(
 def _temp_omnigent_mock_config(
     mock_llm_server_url: str, harness: str
 ) -> Generator[None, None, None]:
-    """Temporarily write a mock provider config to ~/.agent_meow/config.yaml.
+    """Temporarily write a mock provider config to ~/.omnigent/config.yaml.
 
     The runner reads this at terminal-creation time, so it only needs to be
     in place between the PATCH that binds a session to the runner (which
@@ -2259,7 +2259,7 @@ def _temp_omnigent_mock_config(
     file (or removes it) on exit.
 
     :param mock_llm_server_url: Base URL of the mock LLM server, e.g.
-        ``"http://127.0.0.1:51235"``. No /v1 suffix — each SDK appends it.
+        ``"http://127.0.0.1:51235"``. No /v1 suffix â€” each SDK appends it.
     :param harness: ``"claude"`` or ``"codex"``.
     """
     config_dir = Path.home() / ".agent-meow"
@@ -2312,10 +2312,10 @@ def native_claude_mock_session(
     """A runner-bound claude-native session whose LLM backend depends on env.
 
     When ``LLM_API_KEY`` is set in the environment (local dev / CI with real
-    credentials), the existing ``~/.agent_meow/config.yaml`` is left untouched so
+    credentials), the existing ``~/.omnigent/config.yaml`` is left untouched so
     the runner boots Claude Code against the real gateway. When ``LLM_API_KEY``
     is absent, a mock anthropic provider config is written to
-    ``~/.agent_meow/config.yaml`` and restored on teardown.
+    ``~/.omnigent/config.yaml`` and restored on teardown.
 
     :param live_server: Spawned server fixture; its runner is reused.
     :param mock_llm_server_url: Session-scoped mock LLM server base URL.
@@ -2471,7 +2471,7 @@ def mocked_native_codex_goal_session(
 
     import secrets as _secrets
 
-    from agent_meow.runner.identity import token_bound_runner_id
+    from omnigent.runner.identity import token_bound_runner_id
 
     binding_token = _secrets.token_urlsafe(32)
     runner_id = token_bound_runner_id(binding_token)
@@ -2506,8 +2506,8 @@ def mocked_native_codex_goal_session(
             [
                 sys.executable,
                 "-c",
-                "import agent_meow.server.presence as _p; _p._LEAVE_GRACE_S = 1.0; "
-                + "from agent_meow.cli import main; main()",
+                "import omnigent.server.presence as _p; _p._LEAVE_GRACE_S = 1.0; "
+                + "from omnigent.cli import main; main()",
                 "server",
                 "--host",
                 "127.0.0.1",
@@ -2525,7 +2525,7 @@ def mocked_native_codex_goal_session(
             stderr=subprocess.STDOUT,
         )
         runner_proc = subprocess.Popen(
-            [sys.executable, "-m", "agent_meow.runner._entry"],
+            [sys.executable, "-m", "omnigent.runner._entry"],
             env=runner_env,
             stdout=runner_log_handle,
             stderr=subprocess.STDOUT,
@@ -2599,10 +2599,10 @@ def mocked_native_codex_goal_session(
 # ---------------------------------------------------------------------------
 # ``native_cursor_session`` is the sibling native-CLI fixture for the
 # ``cursor-native`` ("Cursor") wrapper: it spins up a real Cursor wrapper
-# session — the same terminal-first spec ``agent-meow cursor`` ships — and yields
+# session â€” the same terminal-first spec ``agent-meow cursor`` ships â€” and yields
 # ``(base_url, session_id)``. The runner auto-launches ``cursor-agent`` in the
 # session terminal on bind (``_auto_create_cursor_terminal`` in
-# ``agent_meow/runner/app.py``), exactly like the claude/codex fixtures.
+# ``omnigent/runner/app.py``), exactly like the claude/codex fixtures.
 #
 # Two things differ from claude/codex, both stemming from cursor-agent owning
 # its own auth/approval:
@@ -2630,19 +2630,19 @@ def _create_native_cursor_session(
     """Register the ``cursor-native`` wrapper agent and bind its session.
 
     Reuses the exact terminal-first spec ``agent-meow cursor`` ships
-    (:func:`~?agent_meow.cursor_native._materialize_cursor_agent_spec`) so the
+    (:func:`~?omnigent.cursor_native._materialize_cursor_agent_spec`) so the
     fixture never drifts from production, and stamps the same wrapper /
-    terminal-first labels (``agent_meow.wrapper`` + ``agent_meow.ui = terminal``)
+    terminal-first labels (``omnigent.wrapper`` + ``omnigent.ui = terminal``)
     the CLI writes. The spec carries no ``spec_version``, so it is bundled
     under a ``*.yaml`` arcname to route through the agent-meow compat translator
     (which preserves ``executor.harness`` + ``terminals:``); a ``config.yaml``
     arcname would hit the strict parser and reject it.
 
     Binding the session to the runner triggers the runner's cursor-native
-    auto-bootstrap (:func:`~?agent_meow.runner.app._auto_create_cursor_terminal`):
-    it launches ``cursor-agent`` in the session terminal — with the ``-f``
+    auto-bootstrap (:func:`~?omnigent.runner.app._auto_create_cursor_terminal`):
+    it launches ``cursor-agent`` in the session terminal â€” with the ``-f``
     force/trust arg threaded via ``terminal_launch_args`` so the unattended
-    tmux pane never blocks on Cursor's workspace-trust / per-tool prompts — and
+    tmux pane never blocks on Cursor's workspace-trust / per-tool prompts â€” and
     starts the forwarder that mirrors the TUI transcript back as conversation
     items.
 
@@ -2653,13 +2653,13 @@ def _create_native_cursor_session(
     import json as _json
     import tempfile
 
-    from agent_meow._wrapper_labels import (
+    from omnigent._wrapper_labels import (
         CURSOR_NATIVE_WRAPPER_VALUE,
         UI_MODE_LABEL_KEY,
         UI_MODE_TERMINAL_VALUE,
         WRAPPER_LABEL_KEY,
     )
-    from agent_meow.cursor_native import _materialize_cursor_agent_spec
+    from omnigent.cursor_native import _materialize_cursor_agent_spec
 
     with tempfile.TemporaryDirectory() as _tmp:
         spec_path = _materialize_cursor_agent_spec(Path(_tmp))
@@ -2668,7 +2668,7 @@ def _create_native_cursor_session(
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         data = yaml_text.encode()
-        # Non-config.yaml arcname → agent-meow compat translator (the spec has
+        # Non-config.yaml arcname â†’ agent-meow compat translator (the spec has
         # no spec_version), matching the terminal_session fixture.
         info = tarfile.TarInfo("cursor-native-ui.yaml")
         info.size = len(data)
@@ -2709,10 +2709,10 @@ def _create_native_goose_session(base_url: str, runner_id: str) -> str:
 
     Mirrors :func:`_create_native_cursor_session`: reuses the exact terminal-first
     spec ``agent-meow goose`` ships
-    (:func:`~?agent_meow.goose_native._materialize_goose_agent_spec`) and stamps the
+    (:func:`~?omnigent.goose_native._materialize_goose_agent_spec`) and stamps the
     same wrapper / terminal-first labels. Binding triggers the runner's
     goose-native auto-bootstrap
-    (:func:`~?agent_meow.runner.app._auto_create_goose_terminal`), which launches
+    (:func:`~?omnigent.runner.app._auto_create_goose_terminal`), which launches
     ``goose session`` in the session terminal and starts the forwarder that
     mirrors the TUI transcript back as conversation items. Goose's tool-approval
     gating is its own ``GOOSE_MODE`` (no ``-f`` equivalent), so no launch args.
@@ -2724,13 +2724,13 @@ def _create_native_goose_session(base_url: str, runner_id: str) -> str:
     import json as _json
     import tempfile
 
-    from agent_meow._wrapper_labels import (
+    from omnigent._wrapper_labels import (
         GOOSE_NATIVE_WRAPPER_VALUE,
         UI_MODE_LABEL_KEY,
         UI_MODE_TERMINAL_VALUE,
         WRAPPER_LABEL_KEY,
     )
-    from agent_meow.goose_native import _materialize_goose_agent_spec
+    from omnigent.goose_native import _materialize_goose_agent_spec
 
     with tempfile.TemporaryDirectory() as _tmp:
         spec_path = _materialize_goose_agent_spec(Path(_tmp))
@@ -2799,10 +2799,10 @@ def _create_native_kiro_session(base_url: str, runner_id: str) -> str:
 
     Mirrors :func:`_create_native_goose_session`: reuses the terminal-first spec
     ``agent-meow kiro`` ships
-    (:func:`~?agent_meow.kiro_native._materialize_kiro_agent_spec`) and stamps the
+    (:func:`~?omnigent.kiro_native._materialize_kiro_agent_spec`) and stamps the
     same wrapper / terminal-first labels. Binding triggers the runner's
     kiro-native auto-bootstrap
-    (:func:`~?agent_meow.runner.app._auto_create_kiro_terminal`), which launches the
+    (:func:`~?omnigent.runner.app._auto_create_kiro_terminal`), which launches the
     ``kiro-cli`` TUI in the session terminal and starts the forwarder that mirrors
     the TUI transcript back as conversation items.
 
@@ -2813,13 +2813,13 @@ def _create_native_kiro_session(base_url: str, runner_id: str) -> str:
     import json as _json
     import tempfile
 
-    from agent_meow._wrapper_labels import (
+    from omnigent._wrapper_labels import (
         KIRO_NATIVE_WRAPPER_VALUE,
         UI_MODE_LABEL_KEY,
         UI_MODE_TERMINAL_VALUE,
         WRAPPER_LABEL_KEY,
     )
-    from agent_meow.kiro_native import _materialize_kiro_agent_spec
+    from omnigent.kiro_native import _materialize_kiro_agent_spec
 
     with tempfile.TemporaryDirectory() as _tmp:
         spec_path = _materialize_kiro_agent_spec(Path(_tmp), model=None)
@@ -2888,10 +2888,10 @@ def _create_native_hermes_session(base_url: str, runner_id: str) -> str:
 
     Mirrors :func:`_create_native_goose_session`: reuses the exact terminal-first
     spec ``agent-meow hermes`` ships
-    (:func:`~?agent_meow.hermes_native._materialize_hermes_agent_spec`) and stamps the
+    (:func:`~?omnigent.hermes_native._materialize_hermes_agent_spec`) and stamps the
     same wrapper / terminal-first labels. Binding triggers the runner's
     hermes-native auto-bootstrap
-    (:func:`~?agent_meow.runner.app._auto_create_hermes_terminal`), which launches the
+    (:func:`~?omnigent.runner.app._auto_create_hermes_terminal`), which launches the
     ``hermes`` TUI in the session terminal and starts the forwarder that mirrors
     the TUI transcript back as conversation items.
 
@@ -2902,13 +2902,13 @@ def _create_native_hermes_session(base_url: str, runner_id: str) -> str:
     import json as _json
     import tempfile
 
-    from agent_meow._wrapper_labels import (
+    from omnigent._wrapper_labels import (
         HERMES_NATIVE_WRAPPER_VALUE,
         UI_MODE_LABEL_KEY,
         UI_MODE_TERMINAL_VALUE,
         WRAPPER_LABEL_KEY,
     )
-    from agent_meow.hermes_native import _materialize_hermes_agent_spec
+    from omnigent.hermes_native import _materialize_hermes_agent_spec
 
     with tempfile.TemporaryDirectory() as _tmp:
         spec_path = _materialize_hermes_agent_spec(Path(_tmp))
@@ -3017,8 +3017,8 @@ def native_cursor_approval_session(
 
     Identical to :func:`native_cursor_session` but omits the force/trust flag,
     so ``cursor-agent`` raises its real per-tool approval prompts. The runner-
-    side mirror (:mod:`~?agent_meow.cursor_native_permissions`) surfaces those as
-    web ``response.elicitation_request`` cards — what the approval-ordering test
+    side mirror (:mod:`~?omnigent.cursor_native_permissions`) surfaces those as
+    web ``response.elicitation_request`` cards â€” what the approval-ordering test
     drives. The first-run workspace-trust modal is dismissed by the executor's
     inject path on the first composer turn.
 

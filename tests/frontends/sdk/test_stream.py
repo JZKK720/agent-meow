@@ -1,4 +1,4 @@
-"""Unit tests for BlockStream — mock events → blocks."""
+"""Unit tests for BlockStream â€” mock events â†’ blocks."""
 
 from __future__ import annotations
 
@@ -67,7 +67,7 @@ def block_stream() -> BlockStream:
 
 @pytest.mark.asyncio()
 async def test_simple_text_response(block_stream: BlockStream) -> None:
-    """Simple text → ResponseStart, TextChunks, TextDone, ResponseEnd."""
+    """Simple text â†’ ResponseStart, TextChunks, TextDone, ResponseEnd."""
     session = FakeSession(
         [
             ResponseCreated(response=_make_response()),
@@ -162,7 +162,7 @@ async def test_message_done_without_deltas_yields_text_chunk(
     assert len(text_dones) == 1
     assert text_dones[0].full_text == "foo bar"
 
-    # TextChunk must precede TextDone — chunk announces, done closes.
+    # TextChunk must precede TextDone â€” chunk announces, done closes.
     chunk_idx = next(i for i, b in enumerate(blocks) if isinstance(b, TextChunk))
     done_idx = next(i for i, b in enumerate(blocks) if isinstance(b, TextDone))
     assert chunk_idx < done_idx
@@ -170,7 +170,7 @@ async def test_message_done_without_deltas_yields_text_chunk(
 
 @pytest.mark.asyncio()
 async def test_text_with_code_blocks(block_stream: BlockStream) -> None:
-    """Code fences in text → has_code_blocks=True."""
+    """Code fences in text â†’ has_code_blocks=True."""
     session = FakeSession(
         [
             ResponseCreated(response=_make_response()),
@@ -194,7 +194,7 @@ async def test_reasoning_streams_chunks_live(block_stream: BlockStream) -> None:
     section ends to dump a single panel.
 
     Contract: when chunks fire, the trailing :class:`ReasoningBlock`
-    is suppressed — emitting both would make renderers show the same
+    is suppressed â€” emitting both would make renderers show the same
     text twice (once streaming, once as a panel).
     """
     session = FakeSession(
@@ -216,7 +216,7 @@ async def test_reasoning_streams_chunks_live(block_stream: BlockStream) -> None:
     assert "ReasoningStartBlock" in types
     chunk_texts = [b.text for b in blocks if isinstance(b, ReasoningChunk)]
     assert chunk_texts, (
-        f"No ReasoningChunk emitted — reasoning would be invisible "
+        f"No ReasoningChunk emitted â€” reasoning would be invisible "
         f"during the section. Got: {types}"
     )
     # Both delta sources must reach the consumer (the executor maps
@@ -231,7 +231,7 @@ async def test_reasoning_streams_chunks_live(block_stream: BlockStream) -> None:
         f"ReasoningSummaryDelta payload missing from chunks. Joined: {joined!r}"
     )
 
-    # ReasoningBlock must be suppressed — chunks already covered it.
+    # ReasoningBlock must be suppressed â€” chunks already covered it.
     assert "ReasoningBlock" not in types, (
         f"ReasoningBlock leaked alongside chunks; renderers would "
         f"show the same text twice. Got: {types}"
@@ -245,7 +245,7 @@ async def test_consecutive_reasoning_blocks_are_separated(
     """
     Summarized thinking arrives as several thinking blocks (each a fresh
     ``ReasoningStarted``). A separator must be inserted between them, else
-    consecutive thought items render run together ("…item one.Item two").
+    consecutive thought items render run together ("â€¦item one.Item two").
     """
     session = FakeSession(
         [
@@ -280,7 +280,7 @@ async def test_reasoning_started_without_deltas_emits_block(
         [
             ResponseCreated(response=_make_response()),
             ReasoningStarted(),
-            # No deltas — straight to text.
+            # No deltas â€” straight to text.
             TextDelta(delta="Direct answer"),
             MessageDone(content=[]),
             ResponseCompleted(response=_make_response()),
@@ -304,7 +304,7 @@ async def test_interleaved_text_reasoning_text_closes_each_section(
     block_stream: BlockStream,
 ) -> None:
     """
-    Claude interleaved-thinking emits think→speak→think→speak inside ONE
+    Claude interleaved-thinking emits thinkâ†’speakâ†’thinkâ†’speak inside ONE
     response with no tool call between. Reasoning must close the open
     text section (symmetric with ``TextDelta`` closing reasoning), else
     the pre-reasoning text orphans and the final ``TextDone`` concatenates
@@ -349,12 +349,12 @@ async def test_reasoning_delta_without_started_emits_implicit_start(
     no preceding ``ReasoningStarted`` (the executor maps directly
     from ``codex/event`` to deltas). The block stream must
     synthesize a :class:`ReasoningStartBlock` on the first delta
-    so the formatter still gets its "thinking…" anchor.
+    so the formatter still gets its "thinkingâ€¦" anchor.
     """
     session = FakeSession(
         [
             ResponseCreated(response=_make_response()),
-            # No ReasoningStarted — straight into a delta.
+            # No ReasoningStarted â€” straight into a delta.
             ReasoningSummaryDelta(delta="$ ls /tmp\n"),
             TextDelta(delta="Result"),
             MessageDone(content=[]),
@@ -373,7 +373,7 @@ async def test_reasoning_delta_without_started_emits_implicit_start(
         None,
     )
     assert start_idx is not None, (
-        "Implicit ReasoningStartBlock missing — Codex-bridged deltas "
+        "Implicit ReasoningStartBlock missing â€” Codex-bridged deltas "
         "would arrive without a section header in the TUI."
     )
     assert chunk_idx is not None, "ReasoningChunk missing for the bridged delta."
@@ -382,7 +382,7 @@ async def test_reasoning_delta_without_started_emits_implicit_start(
 
 @pytest.mark.asyncio()
 async def test_tool_group_with_results(block_stream: BlockStream) -> None:
-    """ToolCall + ToolResult + next ResponseCreated → ToolGroup with output."""
+    """ToolCall + ToolResult + next ResponseCreated â†’ ToolGroup with output."""
     session = FakeSession(
         [
             ResponseCreated(response=_make_response(response_id="resp_1")),
@@ -537,7 +537,7 @@ async def test_text_chunk_flushing(block_stream: BlockStream) -> None:
 
 @pytest.mark.asyncio()
 async def test_empty_response(block_stream: BlockStream) -> None:
-    """Response with no text or tools → just start + end blocks."""
+    """Response with no text or tools â†’ just start + end blocks."""
     session = FakeSession(
         [
             ResponseCreated(response=_make_response()),
@@ -557,19 +557,19 @@ async def test_tool_call_dedupe_by_call_id_under_mcp_path(
 ) -> None:
     """
     Two ``ToolCall`` events with the same ``call_id`` yield only
-    ONE ``ToolGroup`` — the second occurrence is deduped.
+    ONE ``ToolGroup`` â€” the second occurrence is deduped.
 
     Why this matters: under the claude-sdk harness's MCP path,
     a single logical tool call surfaces as TWO ``ToolCall``
-    events with correlated ``call_id``s — an inline observed
+    events with correlated ``call_id``s â€” an inline observed
     event (``status="completed"``) emitted as the inner SDK
     parses the ``tool_use`` block, and a post-stream
     action_required event emitted when the SDK invokes the
     MCP-server handler. The adapter
-    (``agent_meow/runtime/harnesses/_executor_adapter.py``)
+    (``omnigent/runtime/harnesses/_executor_adapter.py``)
     threads the SDK's ``tool_use_id`` through both so they
     share a ``call_id``; this dedup is what keeps the REPL from
-    rendering ``⏵ tool_name`` twice.
+    rendering ``âµ tool_name`` twice.
 
     Without the dedup, the user sees the same call line printed
     twice (the 2026-04-28 duplicate-render bug). This test
@@ -579,7 +579,7 @@ async def test_tool_call_dedupe_by_call_id_under_mcp_path(
     session = FakeSession(
         [
             ResponseCreated(response=_make_response(response_id="resp_1")),
-            # Inline observed event — fires as the inner SDK
+            # Inline observed event â€” fires as the inner SDK
             # parses the tool_use block, BEFORE the SDK invokes
             # the MCP handler. status="completed" matches the
             # adapter's _OBSERVED_TOOL_CALL_STATUS.
@@ -590,7 +590,7 @@ async def test_tool_call_dedupe_by_call_id_under_mcp_path(
                 status="completed",
                 agent_name="agent",
             ),
-            # Post-stream action_required event — fires when the
+            # Post-stream action_required event â€” fires when the
             # SDK's MCP handler chains through ctx.dispatch_tool.
             # Same call_id (correlated via the adapter's
             # ``_pending_mcp_call_ids`` queue).
@@ -609,15 +609,15 @@ async def test_tool_call_dedupe_by_call_id_under_mcp_path(
     blocks = [b async for b in block_stream.stream(session, "test")]  # type: ignore[arg-type]
     tool_groups = [b for b in blocks if isinstance(b, ToolGroup)]
 
-    # Exactly one ToolGroup — the second ToolCall (same call_id)
+    # Exactly one ToolGroup â€” the second ToolCall (same call_id)
     # was deduped. If this fails with len == 2, the dedup at
     # ``_stream.py``'s ToolCall handler regressed and the REPL
-    # would render ``⏵ sys_terminal_launch`` twice.
+    # would render ``âµ sys_terminal_launch`` twice.
     assert len(tool_groups) == 1, (
         f"Expected exactly 1 ToolGroup after dedup; got "
         f"{len(tool_groups)}: {tool_groups!r}. If 2, the "
         f"call_id-based dedup in ``_stream.py``'s ToolCall "
-        f"branch is broken — the REPL will render the same "
+        f"branch is broken â€” the REPL will render the same "
         f"tool call twice."
     )
     assert tool_groups[0].executions[0].name == "sys_terminal_launch"
@@ -630,7 +630,7 @@ async def test_tool_call_distinct_call_ids_yield_separate_groups(
 ) -> None:
     """
     Two ``ToolCall`` events with DIFFERENT ``call_id``s yield
-    TWO separate ``ToolGroup``s — the dedup is keyed on
+    TWO separate ``ToolGroup``s â€” the dedup is keyed on
     ``call_id``, not on ``(name, args)``.
 
     Why this matters: an LLM can legitimately invoke the same
@@ -669,6 +669,6 @@ async def test_tool_call_distinct_call_ids_yield_separate_groups(
         f"Two ToolCalls with distinct call_ids should yield 2 "
         f"ToolGroups; got {len(tool_groups)}. If 1, the dedup "
         f"is incorrectly collapsing by (name, args) instead of "
-        f"by call_id — the second logical tool call would be "
+        f"by call_id â€” the second logical tool call would be "
         f"silently lost from the user's view."
     )

@@ -1,5 +1,5 @@
 """
-Round-trip invariant tests for the agent-meow ↔ AgentSpec
+Round-trip invariant tests for the agent-meow â†” AgentSpec
 adapter.
 
 Asserts
@@ -9,13 +9,13 @@ forward and reverse directions fails these tests the moment it
 appears.
 
 **Phase 1 dependency.** These tests import
-:func:`~?agent_meow.spec.agent_meow.agent_spec_to_agent_def`,
+:func:`~?omnigent.spec.omnigent.agent_spec_to_agent_def`,
 which is owned by the phase 1 worktree. Until phase 1 is merged
 into the branch this test runs against, the import fails at
-collection time — pytest reports a collection error naming the
+collection time â€” pytest reports a collection error naming the
 missing symbol. That is the intended gate: the round-trip test
 is written once and becomes meaningful the moment both
-directions coexist. No ``pytest.mark.skip`` — per the
+directions coexist. No ``pytest.mark.skip`` â€” per the
 omnigent-testing skill, skipped tests rot invisibly. The
 collection-time ImportError is the reviewer's signal to merge
 phase 1 first.
@@ -28,11 +28,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.spec.omnigent import (
+from omnigent.spec.omnigent import (
     agent_def_to_agent_spec,
     # NOTE: imported from the same module as the reverse
-    # direction — both functions ship in
-    # ``agent_meow/spec/agent_meow.py`` per the design. Phase 1
+    # direction â€” both functions ship in
+    # ``omnigent/spec/omnigent.py`` per the design. Phase 1
     # adds this symbol; phase 2 consumes it here.
     agent_spec_to_agent_def,
 )
@@ -41,7 +41,7 @@ from agent_meow.spec.omnigent import (
 @pytest.fixture()
 def hello_world_yaml(tmp_path: Path) -> Path:
     """
-    Minimal agent-meow YAML — name + prompt only. Round-trip
+    Minimal agent-meow YAML â€” name + prompt only. Round-trip
     checks that the adapter does not silently add or lose
     fields on the trivial case.
     """
@@ -106,7 +106,7 @@ def _roundtrip(yaml_path: Path) -> None:
     fields the bidirectional translator is contracted to preserve.
 
     **Lossy by design.** :class:`AgentSpec` does not model every
-    agent-meow :class:`FunctionTool` field — ``description``,
+    agent-meow :class:`FunctionTool` field â€” ``description``,
     ``input_schema``, ``output_schema``, ``scopes``, and
     ``catalog_path`` are dropped on the way to AgentSpec and not
     recovered on the way back. We compare on the structural fields
@@ -115,7 +115,7 @@ def _roundtrip(yaml_path: Path) -> None:
 
     :param yaml_path: Path to an agent-meow YAML fixture.
     """
-    from agent_meow.inner.loader import load_agent_def
+    from omnigent.inner.loader import load_agent_def
 
     original = load_agent_def(yaml_path)
     spec = agent_def_to_agent_spec(original)
@@ -128,7 +128,7 @@ def _roundtrip(yaml_path: Path) -> None:
     # :func:`_infer_harness_from_model` enriches ``harness`` from
     # an empty string to a concrete value when the YAML declares
     # only a model. That's intended behavior (mirrors pure
-    # agent-meow' CLI auto-pick) — the round-trip contract is
+    # agent-meow' CLI auto-pick) â€” the round-trip contract is
     # "every field the caller explicitly set must survive", not
     # "no field can gain a value".
     assert recovered.executor.model == original.executor.model
@@ -153,7 +153,7 @@ def test_roundtrip_hello_world_is_incomplete_for_omnigent(
 ) -> None:
     """
     A bare ``name`` + ``prompt`` YAML (no executor block) does
-    NOT round-trip — the synthesized AgentSpec has no harness or
+    NOT round-trip â€” the synthesized AgentSpec has no harness or
     model, which agent-meow' strict spec rejects on the way
     back. This is intentional: the agent-meow validator requires
     a harness when ``executor.type == "agent-meow"``, and that
@@ -165,14 +165,14 @@ def test_roundtrip_hello_world_is_incomplete_for_omnigent(
     be a deliberate decision with a reviewer; the test guards
     against silent drift.
     """
-    from agent_meow.errors import OmnigentError
-    from agent_meow.inner.loader import load_agent_def
+    from omnigent.errors import OmnigentError
+    from omnigent.inner.loader import load_agent_def
 
     original = load_agent_def(hello_world_yaml)
     spec = agent_def_to_agent_spec(original)
     with pytest.raises(OmnigentError) as exc_info:
         agent_spec_to_agent_def(spec)
-    # Error message names executor.model — confirms the failure
+    # Error message names executor.model â€” confirms the failure
     # is the documented missing-model branch, not some other gap.
     assert "executor.model" in str(exc_info.value)
 
@@ -183,7 +183,7 @@ def test_roundtrip_executor_block(executor_block_yaml: Path) -> None:
     unchanged.
 
     What breaks if this fails: harness / profile encoding
-    differs between the two directions — OmnigentExecutor
+    differs between the two directions â€” OmnigentExecutor
     would pick the wrong harness on the reverse trip.
     """
     _roundtrip(executor_block_yaml)

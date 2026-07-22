@@ -20,15 +20,15 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.host.frames import (
+from omnigent.host.frames import (
     HostCreateWorktreeFrame,
     HostHelloFrame,
     HostStatFrame,
     decode_host_frame,
 )
-from agent_meow.server.auth import RESERVED_USER_LOCAL
-from agent_meow.server.host_registry import HostConnection
-from agent_meow.stores.host_store import HostStore
+from omnigent.server.auth import RESERVED_USER_LOCAL
+from omnigent.server.host_registry import HostConnection
+from omnigent.stores.host_store import HostStore
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio

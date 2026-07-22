@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agent_meow.server.smart_routing import (
+from omnigent.server.smart_routing import (
     LLMRoutingClient,
     RoutingResult,
     _build_rubric,
@@ -22,7 +22,7 @@ from agent_meow.server.smart_routing import (
     route_turn,
 )
 
-# ── Stubs ───────────────────────────────────────────────────────────
+# â”€â”€ Stubs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -39,7 +39,7 @@ class _FakeMessageOutput:
 
 @dataclass
 class _FakeResponse:
-    """Minimal stub matching agent_meow.llms.types.Response."""
+    """Minimal stub matching omnigent.llms.types.Response."""
 
     output: list[_FakeMessageOutput]
 
@@ -70,7 +70,7 @@ class _FakeRoutingClient:
         return self._result
 
 
-# ── infer_models ────────────────────────────────────────────────────
+# â”€â”€ infer_models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_infer_models_claude_sdk() -> None:
@@ -79,7 +79,7 @@ def test_infer_models_claude_sdk() -> None:
     assert models is not None
     assert any("haiku" in m for m in models)
     assert any("opus" in m for m in models)
-    # Ordered cheapest → most powerful
+    # Ordered cheapest â†’ most powerful
     haiku_idx = next(i for i, m in enumerate(models) if "haiku" in m)
     opus_idx = next(i for i, m in enumerate(models) if "opus" in m)
     assert haiku_idx < opus_idx
@@ -101,7 +101,7 @@ def test_infer_models_openai_agents() -> None:
 
 
 def test_infer_models_pi() -> None:
-    """pi is multi-model — both Claude and GPT."""
+    """pi is multi-model â€” both Claude and GPT."""
     models = infer_models("pi")
     assert models is not None
     assert any("haiku" in m for m in models)
@@ -114,7 +114,7 @@ def test_infer_models_unknown_harness() -> None:
     assert infer_models(None) is None
 
 
-# ── _build_rubric ───────────────────────────────────────────────────
+# â”€â”€ _build_rubric â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_rubric_includes_all_models() -> None:
@@ -140,7 +140,7 @@ def test_build_rubric_shows_harness_names() -> None:
     assert "databricks-gpt-5-4-nano" in rubric
 
 
-# ── LLMRoutingClient ───────────────────────────────────────────────
+# â”€â”€ LLMRoutingClient â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -231,7 +231,7 @@ async def test_llm_routing_client_returns_none_on_error() -> None:
     assert result is None
 
 
-# ── fetch_runner_models ────────────────────────────────────────────
+# â”€â”€ fetch_runner_models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -296,7 +296,7 @@ async def test_fetch_runner_models_returns_none_on_empty_workers() -> None:
     assert result is None
 
 
-# ── route_turn (integration) ───────────────────────────────────────
+# â”€â”€ route_turn (integration) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -313,7 +313,7 @@ async def test_route_turn_uses_caps_routing_client() -> None:
     )
     caps = _FakeCaps(routing_client=_FakeRoutingClient(expected))
     with patch(
-        "agent_meow.runtime._globals._caps",
+        "omnigent.runtime._globals._caps",
         new=caps,
     ):
         model, v = await route_turn("claude-sdk", "hello")
@@ -326,7 +326,7 @@ async def test_route_turn_uses_caps_routing_client() -> None:
 async def test_route_turn_returns_none_when_no_client() -> None:
     caps = _FakeCaps(routing_client=None)
     with patch(
-        "agent_meow.runtime._globals._caps",
+        "omnigent.runtime._globals._caps",
         new=caps,
     ):
         model, _v = await route_turn("claude-sdk", "hello")
@@ -368,7 +368,7 @@ async def test_route_turn_uses_runner_catalog_when_available() -> None:
     mock_client.get = AsyncMock(return_value=mock_response)
 
     caps = _FakeCaps(routing_client=_FakeRoutingClient(expected))
-    with patch("agent_meow.runtime._globals._caps", new=caps):
+    with patch("omnigent.runtime._globals._caps", new=caps):
         model, _v = await route_turn(
             "claude-sdk",
             "complex task",
@@ -396,12 +396,12 @@ async def test_route_turn_falls_back_to_static_when_runner_unavailable() -> None
         harness="claude-sdk",
     )
     caps = _FakeCaps(routing_client=_FakeRoutingClient(expected))
-    with patch("agent_meow.runtime._globals._caps", new=caps):
+    with patch("omnigent.runtime._globals._caps", new=caps):
         model, _v = await route_turn(
             "claude-sdk",
             "hello",
             session_id="conv_123",
             runner_client=mock_client,
         )
-    # Still routes — fell back to static infer_models
+    # Still routes â€” fell back to static infer_models
     assert model == "databricks-claude-haiku-4-5"

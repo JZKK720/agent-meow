@@ -3,7 +3,7 @@ Unit tests for ``scripts/update_versions.py`` (the lockstep version bumper).
 
 The ``repo_copy`` fixture copies the repo's *real* ``pyproject.toml``
 files into a temp tree, so the regex anchors are exercised against the
-actual file formatting — a drift in either the script or the files
+actual file formatting â€” a drift in either the script or the files
 fails here.
 """
 
@@ -38,7 +38,7 @@ _PYPROJECTS = [
     "sdks/ui/pyproject.toml",
 ]
 # The runtime version constant is stamped/verified alongside the pyprojects.
-_VERSION_PY = "agent_meow/version.py"
+_VERSION_PY = "omnigent/version.py"
 
 
 @pytest.fixture
@@ -54,7 +54,7 @@ def repo_copy(tmp_path: Path) -> Path:
 
 def test_set_version_rewrites_every_location(repo_copy: Path) -> None:
     changed = update_versions.set_version(repo_copy, "9.9.9")
-    # Three pyprojects plus agent_meow/version.py.
+    # Three pyprojects plus omnigent/version.py.
     assert len(changed) == 4
     # root: version line + two sibling pins; SDKs: version line + one pin.
     assert (repo_copy / "pyproject.toml").read_text().count("9.9.9") == 3
@@ -67,7 +67,7 @@ def test_set_version_rewrites_every_location(repo_copy: Path) -> None:
 
 
 def test_set_version_updates_runtime_constant(repo_copy: Path) -> None:
-    """The bump path keeps agent_meow/version.py's VERSION in lockstep.
+    """The bump path keeps omnigent/version.py's VERSION in lockstep.
 
     This is the gap that would otherwise make the automated bot bump commit a
     stale constant and trip the ``test_version_matches_pyproject`` backstop.
@@ -84,7 +84,7 @@ def test_check_detects_version_py_drift(repo_copy: Path) -> None:
     update_versions.set_version(repo_copy, "9.9.9")
     version_py = repo_copy / _VERSION_PY
     version_py.write_text(version_py.read_text().replace('VERSION = "9.9.9"', 'VERSION = "9.9.8"'))
-    with pytest.raises(ValueError, match=r"agent_meow/version\.py VERSION"):
+    with pytest.raises(ValueError, match=r"omnigent/version\.py VERSION"):
         update_versions.check(repo_copy)
 
 
@@ -99,7 +99,7 @@ def test_set_version_fails_loud_when_constant_absent(repo_copy: Path) -> None:
 def test_set_version_preserves_unrelated_version_literals(repo_copy: Path) -> None:
     root_pyproject = repo_copy / "pyproject.toml"
     before = root_pyproject.read_text()
-    # Real third-party floor that shares the old version digits — must
+    # Real third-party floor that shares the old version digits â€” must
     # survive a bump untouched (anchored-on-name replacement, not blind).
     assert '"databricks-mcp>=0.1.0",' in before
     update_versions.set_version(repo_copy, "9.9.9")

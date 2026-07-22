@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.tools.builtins.agents`.
+"""Unit tests for :mod:`~?omnigent.tools.builtins.agents`.
 
 These tools are runner-dispatched (schema-only); tests verify schema
 shapes, name/description class methods, and that the base-class
@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins.agents import (
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins.agents import (
     SysAgentDownloadTool,
     SysAgentGetTool,
     SysAgentListTool,
@@ -19,7 +19,7 @@ from agent_meow.tools.builtins.agents import (
 _CTX = ToolContext(task_id="task_test", agent_id="agent_test")
 
 
-# ── SysAgentGetTool ──────────────────────────────────────
+# â”€â”€ SysAgentGetTool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSysAgentGetTool:
@@ -47,7 +47,7 @@ class TestSysAgentGetTool:
             tool.invoke("{}", _CTX)
 
 
-# ── SysAgentDownloadTool ─────────────────────────────────
+# â”€â”€ SysAgentDownloadTool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSysAgentDownloadTool:
@@ -77,7 +77,7 @@ class TestSysAgentDownloadTool:
             tool.invoke("{}", _CTX)
 
 
-# ── SysAgentListTool ─────────────────────────────────────
+# â”€â”€ SysAgentListTool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSysAgentListTool:

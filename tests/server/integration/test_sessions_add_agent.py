@@ -28,7 +28,7 @@ _REVIEW_MARKER = "review impl against designs/feature-x.md [marker-7f3a]"
 _CODEX_EXECUTOR: dict[str, Any] = {"type": "agent-meow", "config": {"harness": "codex"}}
 
 
-# ── Helpers ──────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def _create_parent_session(
@@ -92,7 +92,7 @@ async def _add_child_agent(
     return await client.post("/v1/sessions", json=payload)
 
 
-# ── Manual Add Agent API ─────────────────────────────────
+# â”€â”€ Manual Add Agent API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_add_agent_attaches_arbitrary_agent_as_child(
@@ -150,7 +150,7 @@ async def test_added_child_appears_in_parent_child_sessions(
     assert row["parent_session_id"] == parent["id"]
 
 
-# ── claude-native-ui child gets the wrapper label ────────
+# â”€â”€ claude-native-ui child gets the wrapper label â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_add_claude_native_child_applies_wrapper_label(
@@ -161,12 +161,12 @@ async def test_add_claude_native_child_applies_wrapper_label(
     claude-native wrapper label at create time.
 
     The runner routes a session down the Claude Code terminal path only
-    when its conversation carries ``agent_meow.wrapper`` =
+    when its conversation carries ``omnigent.wrapper`` =
     ``claude-code-native-ui``. For a user-added Claude Code child that
     label must be applied by ``_create_session_from_existing_agent``
     (the dialog can't persist labels before the runner connects), so
     even messages sent before the runner binds take the claude-native
-    path. The literals are asserted directly — they are the wire
+    path. The literals are asserted directly â€” they are the wire
     contract the runner keys on, so a drifted value must fail here.
 
     Host/workspace are intentionally left unset on the child: a
@@ -191,12 +191,12 @@ async def test_add_claude_native_child_applies_wrapper_label(
 
     rows = (await client.get(f"/v1/sessions/{parent['id']}/child_sessions")).json()["data"]
     row = next(r for r in rows if r["id"] == child_id)
-    # Both claude-native labels applied at create time — exact key/values
+    # Both claude-native labels applied at create time â€” exact key/values
     # (the wire contracts the runner + Web UI key on), not just presence:
-    #  - agent_meow.wrapper → runner routes the session to Claude Code.
-    #  - agent_meow.ui=terminal → AppShell renders it terminal-first.
-    assert row["labels"].get("agent_meow.wrapper") == "claude-code-native-ui"
-    assert row["labels"].get("agent_meow.ui") == "terminal"
+    #  - omnigent.wrapper â†’ runner routes the session to Claude Code.
+    #  - omnigent.ui=terminal â†’ AppShell renders it terminal-first.
+    assert row["labels"].get("omnigent.wrapper") == "claude-code-native-ui"
+    assert row["labels"].get("omnigent.ui") == "terminal"
     # The 3-segment "ui:" title still parses to the bound agent + label.
     assert row["tool"] == "claude-native-ui"
     assert row["session_name"] == "1"
@@ -234,7 +234,7 @@ async def test_add_agent_child_preserves_body_terminal_launch_args(
     assert snap.json()["terminal_launch_args"] == launch_args
 
 
-# ── Targeted message scoping ─────────────────────────────
+# â”€â”€ Targeted message scoping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_initial_task_is_scoped_to_the_added_child(
@@ -265,7 +265,7 @@ async def test_initial_task_is_scoped_to_the_added_child(
     assert _REVIEW_MARKER not in json.dumps(parent_items)
 
 
-# ── Child history / resources independently visible ──────
+# â”€â”€ Child history / resources independently visible â”€â”€â”€â”€â”€â”€
 
 
 async def test_added_child_history_and_resources_resolve_independently(
@@ -296,13 +296,13 @@ async def test_added_child_history_and_resources_resolve_independently(
     assert isinstance(res.json()["data"], list)
 
 
-# ── Available agents catalog (blocked — tripwire) ────────
+# â”€â”€ Available agents catalog (blocked â€” tripwire) â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.xfail(
     reason=(
         "No mounted GET /api/agents catalog route (documented in "
-        "agent_meow/server/API.md, not wired in app.py). Flips to XPASS "
+        "omnigent/server/API.md, not wired in app.py). Flips to XPASS "
         "when the route lands."
     ),
     strict=False,

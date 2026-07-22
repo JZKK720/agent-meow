@@ -1,4 +1,4 @@
-"""Phase 0 characterization test — terminal visibility in overview.
+"""Phase 0 characterization test â€” terminal visibility in overview.
 
 Migrated to mock LLM: uses canned tool-call responses to trigger
 ``sys_terminal_launch`` without real Databricks credentials.
@@ -12,7 +12,7 @@ pane renders the tmux ``attach`` instruction line.
 The supervisor runs the ``openai-agents`` harness (not the YAML's
 default ``open-responses``): under the mock LLM server, ``open-responses``
 fails to spawn on the runner (``harness_spawn_failed`` / ``runner_error``)
-so the terminal never launches — a mock-incompatibility analogous to the
+so the terminal never launches â€” a mock-incompatibility analogous to the
 documented ``claude-sdk`` case, not a stale marker. ``openai-agents`` is
 mock-compatible and exercises the same terminal-launch + overview path.
 
@@ -33,15 +33,15 @@ from typing import Any
 import pexpect
 import pytest
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     submit_prompt,
     wait_for_ready,
 )
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _MODEL = "mock-overview-terminal"
 _HARNESS = "openai-agents"
@@ -95,7 +95,7 @@ def test_repl_overview_terminal_visibility(
     """
     if not tmux_available:
         pytest.fail(
-            "tmux binary not found on PATH — terminal-tool tests "
+            "tmux binary not found on PATH â€” terminal-tool tests "
             "require tmux to be installed (``brew install tmux``)."
         )
 
@@ -134,21 +134,21 @@ def test_repl_overview_terminal_visibility(
         submit_prompt(child, _PROMPT)
         # Sync on the supervisor's FINAL reply text, which renders only after
         # sys_terminal_launch executed and registered the terminal as an
-        # overview target. (The old "• sys_terminal_launch (Nms)" completion
-        # line is retired — the tool-call now renders as
-        # "⏵ sys_terminal_launch({...})" — and that line carries ANSI between
+        # overview target. (The old "â€¢ sys_terminal_launch (Nms)" completion
+        # line is retired â€” the tool-call now renders as
+        # "âµ sys_terminal_launch({...})" â€” and that line carries ANSI between
         # the name and "(", so syncing on it is unreliable.)
         child.expect("launching the terminal", timeout=_COMPLETION_TIMEOUT)
-        # Open the overview (Ctrl+O; binding moved off Ctrl+G — Warp intercepts
+        # Open the overview (Ctrl+O; binding moved off Ctrl+G â€” Warp intercepts
         # Ctrl+G, see _repl.py "Why Ctrl+O and not Ctrl+G").
         child.sendcontrol("o")
-        # Wait for the sidebar to paint the terminal target ("💻 shell:probe").
+        # Wait for the sidebar to paint the terminal target ("ðŸ’» shell:probe").
         child.expect(_TERMINAL_LABEL, timeout=_EXPECT_TERMINAL_TIMEOUT)
-        # Tab cycles main → shell:probe so the terminal detail pane (the tmux
-        # attach instructions, "tmux -S <sock> attach …") renders.
+        # Tab cycles main â†’ shell:probe so the terminal detail pane (the tmux
+        # attach instructions, "tmux -S <sock> attach â€¦") renders.
         child.send("\t")
-        # Accumulate the detail pane. The status-bar clock ticks ~1×/s, so a
-        # drain that bails on a 0.3s idle gap is unreliable — force a
+        # Accumulate the detail pane. The status-bar clock ticks ~1Ã—/s, so a
+        # drain that bails on a 0.3s idle gap is unreliable â€” force a
         # fixed-duration read with an impossible-pattern expect.
         with contextlib.suppress(pexpect.TIMEOUT):
             child.expect("ZZZ_NEVER_MATCHES_DRAIN", timeout=_OVERVIEW_DRAIN_TIMEOUT)

@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.spec.types import LocalToolInfo, ToolRuntime
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.local_callable import LocalCallableTool, load_local_callable_tools
+from omnigent.spec.types import LocalToolInfo, ToolRuntime
+from omnigent.tools.base import ToolContext
+from omnigent.tools.local_callable import LocalCallableTool, load_local_callable_tools
 
 _TEST_CTX = ToolContext(task_id="task_test", agent_id="agent_test")
 _CALLABLE_LANGUAGE = "omnigent-python-callable"

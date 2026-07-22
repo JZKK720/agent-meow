@@ -9,11 +9,11 @@ from typing import Any
 
 import pytest
 
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins.download_file import DownloadFileTool
-from agent_meow.tools.builtins.list_files import ListFilesTool
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins.download_file import DownloadFileTool
+from omnigent.tools.builtins.list_files import ListFilesTool
 
-# ── Stubs ─────────────────────────────────────────────────
+# â”€â”€ Stubs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -111,7 +111,7 @@ class _FakeArtifactStore:
     """
     Stub artifact store for testing.
 
-    :param blobs: Pre-populated key → bytes mapping.
+    :param blobs: Pre-populated key â†’ bytes mapping.
     """
 
     def __init__(self, blobs: dict[str, bytes] | None = None) -> None:
@@ -146,7 +146,7 @@ def tool_ctx(tmp_path: Path) -> ToolContext:
     )
 
 
-# ── list_files tests ─────────────────────────────────────
+# â”€â”€ list_files tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_list_files_returns_metadata(
@@ -164,7 +164,7 @@ def test_list_files_returns_metadata(
         _FakeFile("file_2", "chart.png", 2048, "image/png", 2000, session_id="conv_alice"),
     ]
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore(files),
     )
 
@@ -190,7 +190,7 @@ def test_list_files_empty(
     :param tool_ctx: Tool execution context.
     """
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore([]),
     )
 
@@ -215,7 +215,7 @@ def test_list_files_respects_limit(
         for i in range(50)
     ]
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore(files),
     )
 
@@ -231,7 +231,7 @@ def test_list_files_excludes_other_sessions(
 ) -> None:
     """
     list_files only returns files belonging to the calling
-    conversation — files from other sessions are invisible.
+    conversation â€” files from other sessions are invisible.
 
     Regression test for file enumeration across sessions.
 
@@ -245,7 +245,7 @@ def test_list_files_excludes_other_sessions(
         _FakeFile("file_g", "global.txt", 300, "text/plain", 3000, session_id=None),
     ]
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore(files),
     )
 
@@ -259,7 +259,7 @@ def test_list_files_excludes_other_sessions(
     assert "file_g" in returned_ids, "Global (unscoped) files must be visible"
 
 
-# ── download_file tests ──────────────────────────────────
+# â”€â”€ download_file tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_download_file_saves_to_workspace(
@@ -274,7 +274,7 @@ def test_download_file_saves_to_workspace(
     """
     content = b"hello world"
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore(
             [
                 _FakeFile(
@@ -289,7 +289,7 @@ def test_download_file_saves_to_workspace(
         ),
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_artifact_store",
+        "omnigent.runtime.get_artifact_store",
         lambda: _FakeArtifactStore({"file_abc": content}),
     )
 
@@ -335,7 +335,7 @@ def test_download_file_confines_untrusted_filename_to_workspace(
     """
     content = b"payload"
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore(
             [
                 _FakeFile(
@@ -350,7 +350,7 @@ def test_download_file_confines_untrusted_filename_to_workspace(
         ),
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_artifact_store",
+        "omnigent.runtime.get_artifact_store",
         lambda: _FakeArtifactStore({"file_evil": content}),
     )
 
@@ -380,7 +380,7 @@ def test_download_file_basenames_store_filename(
     """
     content = b"report-bytes"
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore(
             [
                 _FakeFile(
@@ -395,7 +395,7 @@ def test_download_file_basenames_store_filename(
         ),
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_artifact_store",
+        "omnigent.runtime.get_artifact_store",
         lambda: _FakeArtifactStore({"file_nested": content}),
     )
 
@@ -421,11 +421,11 @@ def test_download_file_not_found(
     :param tool_ctx: Tool execution context.
     """
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore([]),
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_artifact_store",
+        "omnigent.runtime.get_artifact_store",
         lambda: _FakeArtifactStore({}),
     )
 
@@ -447,7 +447,7 @@ def test_download_file_missing_content(
     :param tool_ctx: Tool execution context.
     """
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore(
             [
                 _FakeFile(
@@ -462,7 +462,7 @@ def test_download_file_missing_content(
         ),
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_artifact_store",
+        "omnigent.runtime.get_artifact_store",
         lambda: _FakeArtifactStore({}),
     )
 
@@ -489,7 +489,7 @@ def test_download_file_rejects_cross_session_file(
     """
     content = b"secret data"
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore(
             [
                 _FakeFile(
@@ -504,7 +504,7 @@ def test_download_file_rejects_cross_session_file(
         ),
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_artifact_store",
+        "omnigent.runtime.get_artifact_store",
         lambda: _FakeArtifactStore({"file_bob": content}),
     )
 
@@ -528,7 +528,7 @@ def test_download_file_allows_global_file(
     """
     content = b"shared resource"
     monkeypatch.setattr(
-        "agent_meow.runtime.get_file_store",
+        "omnigent.runtime.get_file_store",
         lambda: _FakeFileStore(
             [
                 _FakeFile(
@@ -543,7 +543,7 @@ def test_download_file_allows_global_file(
         ),
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.get_artifact_store",
+        "omnigent.runtime.get_artifact_store",
         lambda: _FakeArtifactStore({"file_global": content}),
     )
 

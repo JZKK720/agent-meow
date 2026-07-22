@@ -1,13 +1,13 @@
 """
 Tests for ``_build_claude_sdk_spawn_env`` in
-``agent_meow/runtime/workflow.py``.
+``omnigent/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec.executor`` fields to
 ``HARNESS_CLAUDE_SDK_*`` env vars that the claude-sdk harness wrap reads
 at executor-construction time.  Mirrors the pattern of
 ``test_openai_agents_sdk_spawn_env.py`` for the openai-agents harness.
 
-This is a unit test — no subprocess spawn, no real claude CLI.
+This is a unit test â€” no subprocess spawn, no real claude CLI.
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from pathlib import Path
 import pytest
 import yaml as _yaml
 
-from agent_meow.runtime.workflow import _build_claude_sdk_spawn_env
-from agent_meow.spec.types import (
+from omnigent.runtime.workflow import _build_claude_sdk_spawn_env
+from omnigent.spec.types import (
     AgentSpec,
     ApiKeyAuth,
     DatabricksAuth,
@@ -32,7 +32,7 @@ def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     """
     Point OMNIGENT_CONFIG_HOME at an empty temp dir for every test in
     this file so tests that don't explicitly set up a global config are
-    not affected by the developer's real ``~/.agent_meow/config.yaml``.
+    not affected by the developer's real ``~/.omnigent/config.yaml``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory for the isolated config.
@@ -73,7 +73,7 @@ def _make_spec(
 
 def test_databricks_auth_sets_databricks_env_vars() -> None:
     """
-    ``executor.auth: {type: databricks, profile: …}`` sets
+    ``executor.auth: {type: databricks, profile: â€¦}`` sets
     ``HARNESS_CLAUDE_SDK_GATEWAY=true`` and
     ``HARNESS_CLAUDE_SDK_DATABRICKS_PROFILE``.
 
@@ -89,7 +89,7 @@ def test_databricks_auth_sets_databricks_env_vars() -> None:
 
 def test_api_key_auth_sets_helper_env_var() -> None:
     """
-    ``executor.auth: {type: api_key, api_key: …}`` sets
+    ``executor.auth: {type: api_key, api_key: â€¦}`` sets
     ``HARNESS_CLAUDE_SDK_API_KEY_HELPER`` to a printf shell command.
 
     Failure means the API key never reaches the Claude CLI's
@@ -130,7 +130,7 @@ def test_global_config_databricks_auth_applied_when_spec_has_no_auth(
 ) -> None:
     """
     When the spec declares no auth, ``_load_global_auth()`` is consulted
-    and a global ``auth: {type: databricks, profile: …}`` is applied.
+    and a global ``auth: {type: databricks, profile: â€¦}`` is applied.
 
     Failure means ``agent-meow setup`` auth configuration is silently
     ignored for claude-sdk agents (it was applied to openai-agents but
@@ -153,7 +153,7 @@ def test_global_config_not_applied_when_spec_has_legacy_profile(
 ) -> None:
     """
     When the spec uses a legacy ``executor.config["profile"]``, the global
-    config ``auth:`` block is not applied — spec-level auth always wins.
+    config ``auth:`` block is not applied â€” spec-level auth always wins.
 
     Failure means a YAML with ``executor.profile: oss`` gets silently
     overridden by the user's global api_key config.
@@ -183,7 +183,7 @@ def _ucode_state_without_model(monkeypatch: pytest.MonkeyPatch, *, model: str | 
     :param model: Per-agent ucode model, e.g. ``None`` to simulate a
         workspace that caches no model, or ``"databricks-claude-sonnet-4-6"``.
     """
-    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -197,11 +197,11 @@ def _ucode_state_without_model(monkeypatch: pytest.MonkeyPatch, *, model: str | 
         },
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow.get_workspace_url_for_profile",
+        "omnigent.runtime.workflow.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow.read_ucode_state",
+        "omnigent.runtime.workflow.read_ucode_state",
         lambda workspace_url: state,
     )
 

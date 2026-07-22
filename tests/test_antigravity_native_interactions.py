@@ -1,12 +1,12 @@
-"""Tests for the agy interaction bridge (detect → elicit → deliver loop).
+"""Tests for the agy interaction bridge (detect â†’ elicit â†’ deliver loop).
 
-These exercise :func:`~?agent_meow.antigravity_native_interactions.bridge_interaction`
+These exercise :func:`~?omnigent.antigravity_native_interactions.bridge_interaction`
 with fakes for its three injectable seams (``get_steps``,
 ``request_elicitation``, ``deliver``) so the timeout/re-read logic is unit-tested
 WITHOUT a live agy server.
 
 The load-bearing behaviour under test is the agy WAITING-interaction timeout
-gotcha (design §2.1, memory ``agy-rpc-interaction-bridge``): a WAITING step times
+gotcha (design Â§2.1, memory ``agy-rpc-interaction-bridge``): a WAITING step times
 out server-side and agy re-issues a FRESH WAITING step at a HIGHER ``stepIndex``.
 So the bridge must:
 
@@ -17,15 +17,15 @@ So the bridge must:
   re-surface the elicitation against it.
 
 Scenarios (from the plan's Step-1):
-- (a) happy path: question → result selects "2" → one ``deliver`` with the
+- (a) happy path: question â†’ result selects "2" â†’ one ``deliver`` with the
   freshest step's ids and ``askQuestion.responses[0].selectedOptionIds == ["2"]``.
 - (b) timeout/re-read: first ``deliver`` raises ``"input not registered"`` and a
-  NEW higher-index WAITING step is now present → second ``deliver`` targets the
+  NEW higher-index WAITING step is now present â†’ second ``deliver`` targets the
   NEW ``step_index``.
-- (c) permission accept → ``deliver`` called with ``{"permission": {"allow": True}}``.
+- (c) permission accept â†’ ``deliver`` called with ``{"permission": {"allow": True}}``.
 - (d) staleness-before-first-delivery: captured ``step_index=N`` but the freshest
-  WAITING at delivery time is ``N+1`` → delivery targets ``N+1``.
-- (e) elicitation returns ``None`` (timeout/cancel) → no ``deliver``, no crash.
+  WAITING at delivery time is ``N+1`` â†’ delivery targets ``N+1``.
+- (e) elicitation returns ``None`` (timeout/cancel) â†’ no ``deliver``, no crash.
 """
 
 from __future__ import annotations
@@ -34,14 +34,14 @@ from typing import Any
 
 import pytest
 
-from agent_meow.antigravity_native_interactions import (
+from omnigent.antigravity_native_interactions import (
     _freshest_waiting,
     agy_elicitation_id,
     bridge_interaction,
 )
-from agent_meow.antigravity_native_rpc import AntigravityRpcError
-from agent_meow.antigravity_native_steps import PendingInteraction
-from agent_meow.server.schemas import ElicitationRequestParams, ElicitationResult
+from omnigent.antigravity_native_rpc import AntigravityRpcError
+from omnigent.antigravity_native_steps import PendingInteraction
+from omnigent.server.schemas import ElicitationRequestParams, ElicitationResult
 
 _CASCADE = "test-cascade-id"
 _TRAJ = "test-trajectory-id"
@@ -59,7 +59,7 @@ def _question_step(
     Build a WAITING ask_question step dict at a given trajectory index.
 
     Mirrors the live RPC shape consumed by
-    :func:`~?agent_meow.antigravity_native_steps.pending_interaction`:
+    :func:`~?omnigent.antigravity_native_steps.pending_interaction`:
     ``status``, ``requestedInteraction.askQuestion``, and the
     ``metadata.sourceTrajectoryStepInfo`` ids.
 
@@ -277,7 +277,7 @@ def _elicitation_returner(
 
 @pytest.mark.asyncio
 async def test_happy_path_delivers_selected_option_to_fresh_step() -> None:
-    """Question resolved with option "2" → one delivery with that step's ids."""
+    """Question resolved with option "2" â†’ one delivery with that step's ids."""
     pending = _pending_question(step_index=3)
     waiting = _question_step(step_index=3)
     request, elicit_calls = _elicitation_returner(
@@ -358,7 +358,7 @@ async def test_input_not_registered_match_is_case_insensitive() -> None:
     Regression for Fix G: the race discriminator is matched case-INSENSITIVELY
     against agy's raw 500 body. A capitalized variant ('Input Not Registered for
     step 3') must still be treated as the timed-out-step race (re-read for a NEW
-    higher-index WAITING step and re-deliver), NOT misclassified as fatal — which
+    higher-index WAITING step and re-deliver), NOT misclassified as fatal â€” which
     would silently drop the human's verdict.
     """
     pending = _pending_question(step_index=3)
@@ -368,7 +368,7 @@ async def test_input_not_registered_match_is_case_insensitive() -> None:
         ElicitationResult(action="accept", content={"0": "Second"}),
         ElicitationResult(action="accept", content={"0": "Second"}),
     )
-    # Mixed-case message (note the capitalization) — must still match the race.
+    # Mixed-case message (note the capitalization) â€” must still match the race.
     deliver = _DeliverRecorder(
         errors=[AntigravityRpcError("Input Not Registered for step 3"), None]
     )
@@ -395,7 +395,7 @@ async def test_input_not_registered_match_is_case_insensitive() -> None:
 
 @pytest.mark.asyncio
 async def test_permission_accept_delivers_allow_true() -> None:
-    """Permission accepted → deliver payload ``{"permission": {"allow": True}}``."""
+    """Permission accepted â†’ deliver payload ``{"permission": {"allow": True}}``."""
     pending = _pending_permission(step_index=2)
     waiting = _permission_step(step_index=2)
     request, _ = _elicitation_returner(ElicitationResult(action="accept", content=None))
@@ -422,7 +422,7 @@ async def test_permission_accept_delivers_allow_true() -> None:
 
 @pytest.mark.asyncio
 async def test_permission_reject_delivers_allow_false_and_types_no() -> None:
-    """Permission rejected → deliver ``allow: False`` AND type option 4 ("No")."""
+    """Permission rejected â†’ deliver ``allow: False`` AND type option 4 ("No")."""
     pending = _pending_permission(step_index=2)
     waiting = _permission_step(step_index=2)
     request, _ = _elicitation_returner(ElicitationResult(action="decline", content=None))
@@ -506,7 +506,7 @@ async def test_no_tui_keystroke_when_nothing_delivered() -> None:
 
 @pytest.mark.asyncio
 async def test_freshest_waiting_overrides_stale_captured_index() -> None:
-    """Captured index N but freshest WAITING is N+1 → delivery targets N+1."""
+    """Captured index N but freshest WAITING is N+1 â†’ delivery targets N+1."""
     pending = _pending_question(step_index=5)  # captured at detection time
     fresher = _question_step(step_index=6)  # agy retried before the human answered
     request, _ = _elicitation_returner(ElicitationResult(action="accept", content={"0": "First"}))
@@ -532,7 +532,7 @@ async def test_freshest_waiting_overrides_stale_captured_index() -> None:
 
 @pytest.mark.asyncio
 async def test_elicitation_none_does_not_deliver() -> None:
-    """A None elicitation result (timeout/cancel) → no delivery, no crash."""
+    """A None elicitation result (timeout/cancel) â†’ no delivery, no crash."""
     pending = _pending_question(step_index=3)
     waiting = _question_step(step_index=3)
     request, _ = _elicitation_returner(None)
@@ -557,7 +557,7 @@ async def test_elicitation_none_does_not_deliver() -> None:
 
 @pytest.mark.asyncio
 async def test_no_fresh_waiting_step_skips_delivery() -> None:
-    """No WAITING step at delivery time (all timed out) → no delivery, no crash."""
+    """No WAITING step at delivery time (all timed out) â†’ no delivery, no crash."""
     pending = _pending_question(step_index=3)
     done = _question_step(step_index=3, status="CORTEX_STEP_STATUS_DONE")
     request, _ = _elicitation_returner(ElicitationResult(action="accept", content={"0": "Second"}))
@@ -601,7 +601,7 @@ def test_freshest_waiting_returns_highest_same_kind() -> None:
     """
     steps = [
         _question_step(step_index=2),
-        _permission_step(step_index=9),  # higher index, wrong kind → ignored
+        _permission_step(step_index=9),  # higher index, wrong kind â†’ ignored
         _question_step(step_index=4),
     ]
     fresh = _freshest_waiting(steps, kind="ask_question")
@@ -632,7 +632,7 @@ async def test_other_rpc_error_does_not_loop() -> None:
 
 @pytest.mark.asyncio
 async def test_retry_storm_is_bounded_by_max_retries() -> None:
-    """Every delivery 500s with a fresh retry step → loop stops at max_retries."""
+    """Every delivery 500s with a fresh retry step â†’ loop stops at max_retries."""
     pending = _pending_question(step_index=0)
 
     # get_steps always returns a fresh higher-index WAITING step; deliver always
@@ -668,7 +668,7 @@ async def test_retry_storm_is_bounded_by_max_retries() -> None:
 
 
 def test_elicitation_id_is_deterministic_and_index_sensitive() -> None:
-    """Same ids → same elicitation id; a different step_index → a different id."""
+    """Same ids â†’ same elicitation id; a different step_index â†’ a different id."""
     a = agy_elicitation_id(_CASCADE, _TRAJ, 3)
     b = agy_elicitation_id(_CASCADE, _TRAJ, 3)
     c = agy_elicitation_id(_CASCADE, _TRAJ, 4)

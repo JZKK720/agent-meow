@@ -10,12 +10,12 @@ import os
 import subprocess
 import sys
 
-from agent_meow.inner.sandbox import (
+from omnigent.inner.sandbox import (
     SandboxPolicy,
     create_exec_launcher,
     run_launcher,
 )
-from agent_meow.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
+from omnigent.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
 
 
 def _noop_policy() -> SandboxPolicy:
@@ -52,7 +52,7 @@ def test_run_launcher_emits_logger_checkpoints(caplog) -> None:
     erases the diagnostic signal the claude-sdk leg relies on to
     pinpoint a silent connect hang.
     """
-    with caplog.at_level(logging.INFO, logger="agent_meow.inner.sandbox"):
+    with caplog.at_level(logging.INFO, logger="omnigent.inner.sandbox"):
         rc = run_launcher(_noop_policy_arg(), sys.executable, ["-c", "pass"])
     assert rc == 0
 
@@ -99,7 +99,7 @@ def test_run_launcher_strips_runner_binding_token_from_target_env(monkeypatch) -
 
 def test_run_launcher_propagates_target_returncode(caplog) -> None:
     """``run_launcher`` returns the spawned target's exit code verbatim."""
-    with caplog.at_level(logging.INFO, logger="agent_meow.inner.sandbox"):
+    with caplog.at_level(logging.INFO, logger="omnigent.inner.sandbox"):
         rc = run_launcher(
             _noop_policy_arg(),
             sys.executable,
@@ -143,7 +143,7 @@ def test_run_launcher_wraps_target_with_strace_when_env_set(monkeypatch, caplog)
     trace=file`` to the spawned target's argv so the wrapper's stderr
     captures file-syscall denials (EACCES) from the sandbox.
     """
-    from agent_meow.inner import sandbox as sb
+    from omnigent.inner import sandbox as sb
 
     captured: list[list[str]] = []
 
@@ -162,7 +162,7 @@ def test_run_launcher_wraps_target_with_strace_when_env_set(monkeypatch, caplog)
     )
     monkeypatch.setenv("OMNIGENT_SANDBOX_STRACE", "1")
 
-    with caplog.at_level(logging.WARNING, logger="agent_meow.inner.sandbox"):
+    with caplog.at_level(logging.WARNING, logger="omnigent.inner.sandbox"):
         rc = sb.run_launcher(_noop_policy_arg(), "/bin/echo", ["hi"])
 
     assert rc == 0
@@ -180,7 +180,7 @@ def test_run_launcher_skips_strace_when_binary_missing(monkeypatch, caplog) -> N
     PATH, the wrapper must log a warning and run the target unwrapped
     rather than failing the spawn.
     """
-    from agent_meow.inner import sandbox as sb
+    from omnigent.inner import sandbox as sb
 
     captured: list[list[str]] = []
 
@@ -195,7 +195,7 @@ def test_run_launcher_skips_strace_when_binary_missing(monkeypatch, caplog) -> N
     monkeypatch.setattr(sb.shutil, "which", lambda name: None)
     monkeypatch.setenv("OMNIGENT_SANDBOX_STRACE", "1")
 
-    with caplog.at_level(logging.WARNING, logger="agent_meow.inner.sandbox"):
+    with caplog.at_level(logging.WARNING, logger="omnigent.inner.sandbox"):
         rc = sb.run_launcher(_noop_policy_arg(), "/bin/echo", ["hi"])
 
     assert rc == 0
@@ -218,7 +218,7 @@ def test_sandbox_policy_round_trips_spawn_env_allowlist() -> None:
     The policy crosses the parent/launcher boundary as JSON baked into
     the generated wrapper script; a field missing from ``to_jsonable``
     or ``from_jsonable`` silently decodes as ``None`` and the launcher
-    prune becomes a no-op — the sandbox would quietly lose its env
+    prune becomes a no-op â€” the sandbox would quietly lose its env
     containment layer.
     """
     policy = _noop_policy()
@@ -227,7 +227,7 @@ def test_sandbox_policy_round_trips_spawn_env_allowlist() -> None:
     decoded = SandboxPolicy.from_jsonable(policy.to_jsonable())
 
     assert decoded.spawn_env_allowlist == ["HOME", "PATH", "PI_CODING_AGENT_DIR"]
-    # Old payloads (no key) and unset policies must decode to None —
+    # Old payloads (no key) and unset policies must decode to None â€”
     # "no prune", not "prune everything".
     assert SandboxPolicy.from_jsonable(_noop_policy().to_jsonable()).spawn_env_allowlist is None
 
@@ -249,7 +249,7 @@ def test_sandbox_policy_round_trips_deny_unix_socket_paths() -> None:
     decoded = SandboxPolicy.from_jsonable(policy.to_jsonable())
 
     assert decoded.deny_unix_socket_paths == [Path("/tmp/inst/tmux.sock")]
-    # Old payloads (no key) and unset policies decode to None — "no
+    # Old payloads (no key) and unset policies decode to None â€” "no
     # deny", not an empty-but-present list.
     assert SandboxPolicy.from_jsonable(_noop_policy().to_jsonable()).deny_unix_socket_paths is None
 
@@ -260,14 +260,14 @@ def test_with_denied_unix_sockets_resolves_dedupes_and_is_pure() -> None:
 
     The terminal calls this once per instance with the single tmux
     socket, but the helper must be safe to chain (it sits next to the
-    other ``with_*`` policy builders) — so we assert it returns a fresh
+    other ``with_*`` policy builders) â€” so we assert it returns a fresh
     policy and leaves the source untouched, and that a repeated path
     collapses to one entry (a duplicate /dev/null mask is harmless but
     a duplicate seatbelt deny line is noise).
     """
     from pathlib import Path
 
-    from agent_meow.inner.sandbox import with_denied_unix_sockets
+    from omnigent.inner.sandbox import with_denied_unix_sockets
 
     policy = _noop_policy()
     sock = Path("/tmp/inst/tmux.sock")
@@ -275,7 +275,7 @@ def test_with_denied_unix_sockets_resolves_dedupes_and_is_pure() -> None:
     augmented = with_denied_unix_sockets(policy, [sock, sock])
 
     assert augmented.deny_unix_socket_paths == [sock.resolve(strict=False)]
-    # Source policy is not mutated — builders are chained off a shared
+    # Source policy is not mutated â€” builders are chained off a shared
     # base policy.
     assert policy.deny_unix_socket_paths is None
     assert augmented is not policy
@@ -287,7 +287,7 @@ def test_with_spawn_env_allowlist_sets_sorted_deduped_copy() -> None:
     policy unchanged rather than attaching an empty allowlist (which
     would prune EVERYTHING in the launcher).
     """
-    from agent_meow.inner.sandbox import with_spawn_env_allowlist
+    from omnigent.inner.sandbox import with_spawn_env_allowlist
 
     policy = _noop_policy()
 
@@ -298,7 +298,7 @@ def test_with_spawn_env_allowlist_sets_sorted_deduped_copy() -> None:
 
     augmented = with_spawn_env_allowlist(policy, ["PATH", "HOME", "PATH"])
     assert augmented.spawn_env_allowlist == ["HOME", "PATH"]
-    # The source policy is not mutated — executors reuse it across
+    # The source policy is not mutated â€” executors reuse it across
     # with_additional_* chains.
     assert policy.spawn_env_allowlist is None
 
@@ -310,7 +310,7 @@ def test_exec_launcher_prunes_inherited_env_to_spawn_allowlist(tmp_path) -> None
     Simulates the regression the field guards against: the launcher
     subprocess is spawned with the FULL host environment (plus a seeded
     ``FAKE_HOST_SECRET``). The real generated wrapper script must hand
-    the target only the allowlisted names — if the prune in
+    the target only the allowlisted names â€” if the prune in
     ``run_launcher`` is dropped, the secret shows up in the target's
     dumped environment and this test fails.
     """
@@ -336,7 +336,7 @@ def test_exec_launcher_prunes_inherited_env_to_spawn_allowlist(tmp_path) -> None
 
     assert result.returncode == 0, result
     child_env = json.loads(out_file.read_text())
-    # The seeded secret was pruned — the launcher enforced containment
+    # The seeded secret was pruned â€” the launcher enforced containment
     # even though its own environment carried the full host env.
     assert "FAKE_HOST_SECRET" not in child_env, sorted(child_env)
     # Allowlisted names still pass with their values intact (an empty
@@ -347,7 +347,7 @@ def test_exec_launcher_prunes_inherited_env_to_spawn_allowlist(tmp_path) -> None
 
 def test_exec_launcher_without_allowlist_keeps_inherited_env(tmp_path) -> None:
     """A policy with ``spawn_env_allowlist=None`` (spawner didn't opt
-    in) must NOT prune — existing launcher users (claude-sdk, terminal)
+    in) must NOT prune â€” existing launcher users (claude-sdk, terminal)
     deliberately pass rich environments at spawn time, and a prune-by-
     default would strip them and break those harnesses.
     """

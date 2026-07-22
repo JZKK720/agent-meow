@@ -3,7 +3,7 @@ PTY-driven e2e: ``agent-meow run --harness <harness>`` returns
 the LLM's reply through the new harness contract (mock LLM).
 
 Why this test exists: it covers the interactive CLI path that
-server integration tests miss — the CLI's spec-bundling pipeline
+server integration tests miss â€” the CLI's spec-bundling pipeline
 (turning ``--harness <harness>`` into an ``executor.harness:
 <harness>`` YAML, packaging it, posting to ``/api/agents``) and
 the REPL's SSE rendering (event consumption from the agent-meow server
@@ -39,7 +39,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _ANSI_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 _MARKER_TIMEOUT_S = 120.0
 
-# Mock-only model for the REPL repl test — keyed per harness so
+# Mock-only model for the REPL repl test â€” keyed per harness so
 # concurrent parametrize rows get isolated mock queues.
 _MOCK_MODEL_PREFIX = "mock-repl-harness"
 
@@ -96,7 +96,7 @@ def _read_until_marker(
     :param marker: Substring that must appear in the model's
         reply.
     :param forbidden_in_match: Text that must be excluded
-        before checking for the marker — typically the user's
+        before checking for the marker â€” typically the user's
         own prompt, which is echoed back.
     :param timeout_s: Total deadline before failing.
     :returns: The full ANSI-stripped buffer at success time.
@@ -138,7 +138,7 @@ def repl_env(mock_llm_server_url: str, tmp_path: Path) -> dict[str, str]:
     :param tmp_path: Isolated temp directory for OMNIGENT_CONFIG_HOME.
     :returns: Env mapping for ``pexpect.spawn``.
     """
-    from tests.e2e.agent_meow._pexpect_harness import ensure_repl_test_theme_env
+    from tests.e2e.omnigent._pexpect_harness import ensure_repl_test_theme_env
 
     config_home = tmp_path / "omnigent-config"
     config_home.mkdir()
@@ -150,7 +150,7 @@ def repl_env(mock_llm_server_url: str, tmp_path: Path) -> dict[str, str]:
         **os.environ,
         "OMNIGENT_CONFIG_HOME": str(config_home),
         # PYTHONPATH so the worktree wins over any sibling
-        # editable install of agent_meow.
+        # editable install of omnigent.
         "PYTHONPATH": (f"{_REPO_ROOT}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"),
         # Force ANSI on; we strip it per-assertion via _ANSI_RE.
         "TERM": "xterm-256color",
@@ -197,7 +197,7 @@ def test_repl_run_routes_harness_through_new_harness_contract(
        omnigent-YAML translator runs) and dispatches to
        the harness HTTP client via the step-5f branch.
     5. The mock LLM replies with ``XYZZY42`` which streams back
-       through SSE → the REPL's SDK client → terminal rendering.
+       through SSE â†’ the REPL's SDK client â†’ terminal rendering.
 
     The marker is XYZZY42 (not in the prompt) so the assertion
     checks the model's reply specifically, not the echoed prompt.
@@ -207,7 +207,7 @@ def test_repl_run_routes_harness_through_new_harness_contract(
         "Reply with EXACTLY 7 characters and nothing else: "
         "capital X, then capital Y, then capital Z, then "
         "capital Z, then capital Y, then digit 4, then digit "
-        "2 — joined with no separators. Your entire reply "
+        "2 â€” joined with no separators. Your entire reply "
         "must be those 7 characters in that order with no "
         "spaces, no dashes, no quotes, no commas, no "
         "newlines, and no surrounding text."
@@ -224,7 +224,7 @@ def test_repl_run_routes_harness_through_new_harness_contract(
         sys.executable,
         [
             "-m",
-            "agent_meow.cli",
+            "omnigent.cli",
             "run",
             "tests/resources/examples/hello_world.yaml",
             "--harness",
@@ -254,7 +254,7 @@ def test_repl_run_routes_harness_through_new_harness_contract(
             timeout_s=_MARKER_TIMEOUT_S,
         )
     finally:
-        # Best-effort clean shutdown — the REPL hangs in input
+        # Best-effort clean shutdown â€” the REPL hangs in input
         # mode after the one-shot prompt completes, so we have
         # to send /quit. Fall back to terminate() if it sticks.
         with contextlib.suppress(Exception):
@@ -264,7 +264,7 @@ def test_repl_run_routes_harness_through_new_harness_contract(
             child.terminate(force=True)
 
     # Sanity that Claude's reply actually rendered into the
-    # terminal — without this assertion a regression that
+    # terminal â€” without this assertion a regression that
     # silently swallowed all SSE deltas (e.g. the SDK client's
     # event mapper changing) might still leave the marker
     # visible elsewhere (a debug line, etc.).
@@ -275,7 +275,7 @@ def test_repl_pexpect_dependencies_are_present() -> None:
     """
     Sanity check that :mod:`pexpect` is importable.
 
-    Acts as a guard rail — if the prior ``importorskip`` at
+    Acts as a guard rail â€” if the prior ``importorskip`` at
     module load skipped the whole file, this test would also
     skip. Useful diagnostic for "the REPL test isn't running"
     cases on CI: the file collected, this test ran, but the
@@ -285,7 +285,7 @@ def test_repl_pexpect_dependencies_are_present() -> None:
     # matters.
     assert pexpect is not None
     # Sanity that ``agent-meow`` is importable from this
-    # worktree — if it isn't, the REPL spawn would fail with
+    # worktree â€” if it isn't, the REPL spawn would fail with
     # a confusing ``ModuleNotFoundError`` instead of a clean
     # skip on missing fixtures. ``shutil.which`` is irrelevant
     # because we invoke the module directly via ``-m``.

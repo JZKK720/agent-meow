@@ -1,15 +1,15 @@
 """Integration tests for the qwen agent fixture, with a mocked ACP subprocess.
 
-Drives :class:`~?agent_meow.inner.qwen_executor.QwenExecutor` end-to-end using the
+Drives :class:`~?omnigent.inner.qwen_executor.QwenExecutor` end-to-end using the
 same harness / model / system prompt as the real agent
-(``tests/resources/examples/qwen_perm_test.yaml`` — the permanent twin of the
+(``tests/resources/examples/qwen_perm_test.yaml`` â€” the permanent twin of the
 manual ``tmp/qwen_perm_test.yaml``). The ``qwen --acp`` subprocess is faked via
 a stub ``_send`` + the executor's notification queue, so no real ``qwen`` CLI or
 LLM is needed.
 
 Covers:
 - the agent fixture loads as a qwen + os_env spec,
-- a normal message → streamed response turn (with system-prompt folding),
+- a normal message â†’ streamed response turn (with system-prompt folding),
 - a mid-turn permission approval round-trip (accept), and
 - a mid-turn permission gated by a TOOL_CALL policy DENY.
 """
@@ -23,9 +23,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agent_meow.inner.executor import TextChunk, TurnComplete
-from agent_meow.inner.qwen_executor import QwenExecutor
-from agent_meow.spec._omnigent_compat import load_omnigent_yaml
+from omnigent.inner.executor import TextChunk, TurnComplete
+from omnigent.inner.qwen_executor import QwenExecutor
+from omnigent.spec._omnigent_compat import load_omnigent_yaml
 
 _AGENT_YAML = (
     Path(__file__).resolve().parents[1] / "resources" / "examples" / "qwen_perm_test.yaml"
@@ -100,7 +100,7 @@ def _make_fake_send(
 
     On the ``session/prompt`` request it enqueues ``queue_on_prompt`` (chunks
     and/or server-initiated requests qwen would emit mid-turn) then schedules
-    the prompt response to resolve with ``end_turn`` on the next loop tick — so
+    the prompt response to resolve with ``end_turn`` on the next loop tick â€” so
     queued items are processed before the turn completes. All sent messages
     (including the executor's permission replies) are recorded.
     """
@@ -178,7 +178,7 @@ async def test_normal_turn_streams_response_and_folds_system_prompt() -> None:
 
 @pytest.mark.asyncio
 async def test_turn_with_approval_accept_sends_allow_outcome() -> None:
-    """A mid-turn permission request is approved via elicitation → allow_once."""
+    """A mid-turn permission request is approved via elicitation â†’ allow_once."""
     ex = _executor_for_agent()
     ex._elicitation_handler = AsyncMock(return_value=True)  # type: ignore[attr-defined]
     loop = asyncio.get_event_loop()
@@ -330,7 +330,7 @@ async def test_turn_with_image_only_omits_empty_text_block() -> None:
     """An image-only message (no text, no system fold) sends just the image block."""
     ex = _executor_for_agent()
     ex._image_supported = True
-    ex._system_prompt_sent = True  # simulate a later turn — no system-prompt fold
+    ex._system_prompt_sent = True  # simulate a later turn â€” no system-prompt fold
     loop = asyncio.get_event_loop()
     fake_send, sent = _make_fake_send(ex, loop, queue_on_prompt=[_agent_message_chunk("ok")])
     ex._send = fake_send  # type: ignore[method-assign]

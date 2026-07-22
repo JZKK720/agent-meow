@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_meow.entities.permission import ResolvedAccess, SessionPermission
+from omnigent.entities.permission import ResolvedAccess, SessionPermission
 
 # ── SessionPermission ─────────────────────────────────
 

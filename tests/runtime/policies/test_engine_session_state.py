@@ -19,11 +19,11 @@ from typing import Any
 
 import pytest
 
-from agent_meow.llms.context_window import ModelPricing
-from agent_meow.policies.function import FunctionPolicy
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.types import (
+from omnigent.llms.context_window import ModelPricing
+from omnigent.policies.function import FunctionPolicy
+from omnigent.policies.types import EvaluationContext
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.types import (
     FunctionPolicySpec,
     FunctionRef,
     Phase,
@@ -31,7 +31,7 @@ from agent_meow.spec.types import (
     PolicyAction,
     StateUpdateAction,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 

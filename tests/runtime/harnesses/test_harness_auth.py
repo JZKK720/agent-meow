@@ -5,8 +5,8 @@ process (POSIX uses a uid-isolated Unix socket), so ``process_manager`` mints a
 per-spawn token, ships it to the harness via its private env, and presents it on
 every request. The scaffold rejects ``/v1`` requests whose bearer token does not
 match. The gate is keyed on ``app.state.harness_auth_token`` so it is inert when
-no token is configured (POSIX, or an app built directly in a test) — see
-``agent_meow/runtime/harnesses/_scaffold.py``.
+no token is configured (POSIX, or an app built directly in a test) â€” see
+``omnigent/runtime/harnesses/_scaffold.py``.
 
 This test builds the scaffold app directly (no ``/tmp`` socket manager), so it
 runs on every platform.

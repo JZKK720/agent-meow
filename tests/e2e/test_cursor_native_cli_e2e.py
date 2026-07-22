@@ -5,30 +5,30 @@ The cursor-native sibling of ``test_codex_native_cli_cwd_e2e`` /
 harness: ``agent-meow cursor`` launches the official ``cursor-agent`` TUI in a
 runner-owned tmux pane, and each web-UI turn is injected into that pane
 (bracketed paste + Enter) by
-:class:`~?agent_meow.inner.cursor_native_executor.CursorNativeExecutor`. The TUI's
+:class:`~?omnigent.inner.cursor_native_executor.CursorNativeExecutor`. The TUI's
 own conversation store is tailed by
-:mod:`~?agent_meow.cursor_native_forwarder`, which mirrors ``cursor-agent``'s
+:mod:`~?omnigent.cursor_native_forwarder`, which mirrors ``cursor-agent``'s
 replies back onto the agent-meow conversation as assistant items.
 
-These tests drive the full stack the way a user does — spawn ``agent-meow
+These tests drive the full stack the way a user does â€” spawn ``agent-meow
 cursor``, then talk to the session **through the server** (``POST
-/v1/sessions/{id}/events``, the web-UI path) — and assert on the persisted
+/v1/sessions/{id}/events``, the web-UI path) â€” and assert on the persisted
 assistant items:
 
-* **smoke** — inject a prompt that makes ``cursor-agent`` emit a unique marker
+* **smoke** â€” inject a prompt that makes ``cursor-agent`` emit a unique marker
   word, and confirm the marker comes back as an assistant item. This exercises
   CLI parse -> daemon runner spawn -> cursor terminal launch -> tmux injection
   -> ``cursor-agent`` turn -> forwarder mirror -> conversation store.
-* **cwd** — drop a marker file in the launch cwd and ask ``cursor-agent`` to
+* **cwd** â€” drop a marker file in the launch cwd and ask ``cursor-agent`` to
   read it. The file exists only in the launch directory (never in the runner's
   spec-bundle dir), so a correct answer proves both that the TUI launched in
   the launch cwd *and* that its built-in Read tool ran.
 
 Unlike the SDK ``cursor`` harness (``test_per_harness_cursor``), cursor-native
 authenticates from the **ambient ``cursor-agent login``** under ``$HOME/.cursor``
-— there is no ``CURSOR_API_KEY``. The TUI is launched with ``-f`` (Cursor's
+â€” there is no ``CURSOR_API_KEY``. The TUI is launched with ``-f`` (Cursor's
 force/trust flag) so it neither blocks on the per-directory "Workspace Trust"
-prompt nor on per-tool approval prompts — either of which would hang the pane.
+prompt nor on per-tool approval prompts â€” either of which would hang the pane.
 
 Environment requirements (why this is opt-in, not pure-CI)
 ----------------------------------------------------------
@@ -69,7 +69,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow.cursor_native_bridge import bridge_dir_for_session_id, kill_session
+from omnigent.cursor_native_bridge import bridge_dir_for_session_id, kill_session
 from tests.e2e._native_resume_helpers import (
     PtyHandle,
     cli_env,
@@ -86,7 +86,7 @@ from tests.e2e._native_resume_helpers import (
 # ``resume_test_server`` is provided by tests/e2e/conftest.py (the allow-list-
 # free server the CLI wrapper's self-spawned host daemon can register against).
 
-# Opt-in only — see module docstring. Binary presence is not a sufficient gate
+# Opt-in only â€” see module docstring. Binary presence is not a sufficient gate
 # (present-but-unauthenticated hangs the TUI), so require the explicit env var,
 # plus the two binaries the terminal-first harness needs on PATH.
 pytestmark = pytest.mark.skipif(
@@ -117,7 +117,7 @@ _COLD_RESUME_HINT = (
 )
 
 # A per-tool approval prompt surfaces only after cursor cold-starts, runs a
-# turn, and reaches the tool call — give it the same headroom as a reply.
+# turn, and reaches the tool call â€” give it the same headroom as a reply.
 _ELICITATION_TIMEOUT = 150.0
 
 
@@ -172,7 +172,7 @@ def test_cursor_native_cli_smoke(
     """A cursor-native turn driven through the server returns the model's reply.
 
     Spawns a backgrounded ``agent-meow cursor`` session, waits for its terminal
-    to register, injects (via ``/events`` — the web-UI path) a prompt asking
+    to register, injects (via ``/events`` â€” the web-UI path) a prompt asking
     ``cursor-agent`` to emit a unique marker word, and asserts the marker comes
     back as an assistant item. The marker is a fresh per-run nonce so a match
     cannot be coincidental and a parallel run cannot leak it.
@@ -183,7 +183,7 @@ def test_cursor_native_cli_smoke(
 
     :param resume_test_server: Base URL of the allow-list-free test server.
     :param tmp_path: Per-test temp dir; its ``pwd`` subdir is the launch cwd.
-    :param request: Pytest request — reads ``--profile`` for the test server.
+    :param request: Pytest request â€” reads ``--profile`` for the test server.
     """
     profile = request.config.getoption("--profile")
     assert profile, "this test requires --profile (e.g. --profile oss) for the test server"
@@ -247,7 +247,7 @@ def test_cursor_native_cli_runs_in_launch_cwd(
 
     :param resume_test_server: Base URL of the allow-list-free test server.
     :param tmp_path: Per-test temp dir; its ``pwd`` subdir is the launch cwd.
-    :param request: Pytest request — reads ``--profile`` for the test server.
+    :param request: Pytest request â€” reads ``--profile`` for the test server.
     """
     profile = request.config.getoption("--profile")
     assert profile, "this test requires --profile (e.g. --profile oss) for the test server"
@@ -290,7 +290,7 @@ def test_cursor_native_cli_runs_in_launch_cwd(
             except AssertionError as exc:
                 raise AssertionError(
                     f"`agent-meow cursor` did not return marker {marker!r} from "
-                    f"{_CWD_MARKER_FILE} — it did not run cursor-agent in its launch "
+                    f"{_CWD_MARKER_FILE} â€” it did not run cursor-agent in its launch "
                     "cwd (the wrapper-path cwd resolution regressed, likely the "
                     f"spec-bundle dir).\n\nCLI output tail:\n{handle.output()[-2000:]}"
                 ) from exc
@@ -407,7 +407,7 @@ def test_cursor_native_cli_exposes_omnigent_mcp_tools(
 
     :param resume_test_server: Base URL of the allow-list-free test server.
     :param tmp_path: Per-test temp dir; its ``pwd`` subdir is the launch cwd.
-    :param request: Pytest request — reads ``--profile`` for the test server.
+    :param request: Pytest request â€” reads ``--profile`` for the test server.
     """
     profile = request.config.getoption("--profile")
     if not profile:
@@ -592,7 +592,7 @@ def _poll_for_file_marker(path: Path, *, marker: str, timeout: float) -> None:
             pass
         time.sleep(0.5)
     raise AssertionError(
-        f"approved command did not produce {marker!r} in {path} within {timeout}s — "
+        f"approved command did not produce {marker!r} in {path} within {timeout}s â€” "
         "accepting the web elicitation did not drive the cursor TUI to run the command."
     )
 
@@ -608,15 +608,15 @@ def test_cursor_native_cli_tool_approval_surfaced_as_elicitation(
     **without** the ``-f`` force/trust flag, so ``cursor-agent`` shows its own
     per-tool approval prompt (the Workspace Trust gate is still auto-dismissed
     by the inject path's ``_settle_pane``). It then injects (via the server,
-    the web-UI path) a request to run a shell command cursor cannot auto-run —
-    a redirect, which the Cursor backend never auto-approves — and asserts the
+    the web-UI path) a request to run a shell command cursor cannot auto-run â€”
+    a redirect, which the Cursor backend never auto-approves â€” and asserts the
     runner-side TUI-mirror:
 
     1. the native prompt is surfaced to the web UI as a
        ``response.elicitation_request`` (it appears in
        ``SessionResponse.pending_elicitations``), and
     2. accepting it from the web (``type == "approval"``) drives the cursor TUI
-       to actually run the command — the marker file appears in the launch cwd.
+       to actually run the command â€” the marker file appears in the launch cwd.
 
     Without the runner-side TUI-mirror this fails at step 1: cursor blocks on
     its in-terminal prompt and nothing is ever published. This is the
@@ -624,7 +624,7 @@ def test_cursor_native_cli_tool_approval_surfaced_as_elicitation(
 
     :param resume_test_server: Base URL of the allow-list-free test server.
     :param tmp_path: Per-test temp dir; its ``pwd`` subdir is the launch cwd.
-    :param request: Pytest request — reads ``--profile`` for the test server.
+    :param request: Pytest request â€” reads ``--profile`` for the test server.
     """
     profile = request.config.getoption("--profile")
     assert profile, "this test requires --profile (e.g. --profile oss) for the test server"
@@ -716,13 +716,13 @@ def test_cursor_native_cli_same_cwd_launch_does_not_duplicate(
     launches from the same dir discover the SAME chat store. The forwarder's
     per-chat claim must let only ONE session (the earlier-launched one) mirror
     it; the later session yields. A marker injected into the FIRST session must
-    therefore surface in its transcript but NEVER in the second's — without the
+    therefore surface in its transcript but NEVER in the second's â€” without the
     claim, both forwarders mirror the one shared chat and the second session is
     a duplicate of the first. The e2e guard for the duplicate-session bug.
 
     :param resume_test_server: Base URL of the allow-list-free test server.
     :param tmp_path: Per-test temp dir; its ``pwd`` subdir is the shared cwd.
-    :param request: Pytest request — reads ``--profile`` for the test server.
+    :param request: Pytest request â€” reads ``--profile`` for the test server.
     """
     profile = request.config.getoption("--profile")
     assert profile, "this test requires --profile (e.g. --profile oss) for the test server"
@@ -741,7 +741,7 @@ def test_cursor_native_cli_same_cwd_launch_does_not_duplicate(
             wait_for_terminal_ready(
                 client, conversation_id=conv1, harness="cursor", timeout=_TERMINAL_READY_TIMEOUT
             )
-            # Second launch in the SAME cwd → a distinct conversation, same chat.
+            # Second launch in the SAME cwd â†’ a distinct conversation, same chat.
             second = spawn_cli_background(base, env=cli_env(profile=profile), cwd=str(pwd_dir))
             conv2 = wait_for_conversation_id(second, timeout=_CONV_ID_TIMEOUT)
             assert conv2 != conv1, "second launch reused the first conversation id"
@@ -755,7 +755,7 @@ def test_cursor_native_cli_same_cwd_launch_does_not_duplicate(
                 text=f"Reply with ONLY this exact word and nothing else: {marker}",
             )
 
-            # The marker must reach the FIRST session's transcript (mirroring works)…
+            # The marker must reach the FIRST session's transcript (mirroring works)â€¦
             deadline = time.monotonic() + _REPLY_TIMEOUT
             while time.monotonic() < deadline:
                 if marker in _items_text(client, conv1):
@@ -767,13 +767,13 @@ def test_cursor_native_cli_same_cwd_launch_does_not_duplicate(
                     f"forwarder did not mirror it.\n\nCLI tail:\n{first.output()[-1500:]}"
                 )
 
-            # …and must NEVER appear in the SECOND same-cwd session. Poll for a
+            # â€¦and must NEVER appear in the SECOND same-cwd session. Poll for a
             # while so a wrongly-mirroring second forwarder has every chance to
             # surface it before we conclude it correctly yielded.
             for _ in range(10):
                 assert marker not in _items_text(client, conv2), (
                     f"marker {marker!r} from session {conv1} also appeared in the "
-                    f"second same-cwd session {conv2} — both forwarders mirrored the "
+                    f"second same-cwd session {conv2} â€” both forwarders mirrored the "
                     "one cursor chat (the duplicate-session bug)."
                 )
                 time.sleep(2.0)

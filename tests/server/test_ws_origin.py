@@ -21,8 +21,8 @@ from fastapi import FastAPI, WebSocket
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
-from agent_meow.server.ws_origin import (
+from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from omnigent.server.ws_origin import (
     FORBIDDEN_ORIGIN_CLOSE_CODE,
     WebSocketOriginMiddleware,
     origin_allowed,

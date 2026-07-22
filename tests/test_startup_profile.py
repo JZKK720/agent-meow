@@ -6,7 +6,7 @@ import io
 
 import pytest
 
-from agent_meow._startup_profile import StartupProfiler
+from omnigent._startup_profile import StartupProfiler
 
 
 def test_startup_profiler_env_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:

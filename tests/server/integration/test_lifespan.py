@@ -1,9 +1,9 @@
 """Tests for the FastAPI app lifespan hook.
 
 Exercises the ``_lifespan`` context manager in
-``agent_meow.server.app`` to verify shutdown wiring for the
+``omnigent.server.app`` to verify shutdown wiring for the
 :class:`TerminalRegistry`. Per ``designs/OMNIGENT_TERMINAL_BRIDGE.md``
-§4.4, every live tmux session must be closed when the server's
+Â§4.4, every live tmux session must be closed when the server's
 lifespan exits.
 """
 
@@ -28,7 +28,7 @@ async def test_lifespan_shutdown_invokes_registry_shutdown(
     Spies on the registry's ``shutdown`` method and asserts it
     was called exactly once during the lifespan exit. Catches
     the failure mode where the shutdown hook regresses to
-    ``pass`` or skips the registry — every long-lived server
+    ``pass`` or skips the registry â€” every long-lived server
     would leak tmux subprocesses on restart.
 
     What breaks if this fails: deploy hosts accumulate orphan
@@ -37,12 +37,12 @@ async def test_lifespan_shutdown_invokes_registry_shutdown(
     up. We catch this here (in CI, in seconds) instead of in
     production after weeks of restarts.
 
-    Doesn't actually launch any terminals — that requires a
+    Doesn't actually launch any terminals â€” that requires a
     real tmux subprocess + real spec, which is overkill for
     verifying the *call*. The terminal-side cleanup behavior
     itself is covered by ``tests/terminals/test_registry.py``.
     """
-    from agent_meow.runtime import get_terminal_registry
+    from omnigent.runtime import get_terminal_registry
 
     registry = get_terminal_registry()
     real_shutdown = registry.shutdown
@@ -66,7 +66,7 @@ async def test_lifespan_shutdown_invokes_registry_shutdown(
     assert shutdown_calls == 1, (
         f"Expected registry.shutdown() to be called exactly once on "
         f"lifespan exit, got {shutdown_calls}. If 0, the shutdown "
-        f"hook is missing — every server restart will leak any tmux "
+        f"hook is missing â€” every server restart will leak any tmux "
         f"sessions registered during the previous lifetime."
     )
 
@@ -81,8 +81,8 @@ async def test_lifespan_starts_periodic_metrics_otel_publisher(
     If this wiring regresses, request/resource gauges stop exporting
     even though per-request duration histograms still work.
     """
-    from agent_meow.server import app as server_app
-    from agent_meow.server.performance_metrics import (
+    from omnigent.server import app as server_app
+    from omnigent.server.performance_metrics import (
         ServerMetricsOtelPublisher,
         ServerPerformanceMetrics,
     )

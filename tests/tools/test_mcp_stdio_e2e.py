@@ -1,7 +1,7 @@
 """End-to-end test for the stdio MCP transport on the runner.
 
 Spawns a real FastMCP subprocess (``tests/tools/fixtures/echo_stdio_mcp_server.py``)
-through :class:`~?agent_meow.runner.mcp_manager.RunnerMcpManager`, discovers
+through :class:`~?omnigent.runner.mcp_manager.RunnerMcpManager`, discovers
 its tool via real MCP stdio, and invokes the tool over the live subprocess.
 
 Post designs/RUNNER_MCP.md the runner owns MCP lifecycle, so this is
@@ -16,9 +16,9 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
-from agent_meow.runner.mcp_manager import RunnerMcpManager
-from agent_meow.spec.types import AgentSpec, MCPServerConfig
+from omnigent.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
+from omnigent.runner.mcp_manager import RunnerMcpManager
+from omnigent.spec.types import AgentSpec, MCPServerConfig
 
 _ECHO_SERVER = str(Path(__file__).parent / "fixtures" / "echo_stdio_mcp_server.py")
 _ENV_PROBE_SERVER = str(Path(__file__).parent / "fixtures" / "env_probe_stdio_mcp_server.py")
@@ -72,7 +72,7 @@ async def test_stdio_mcp_call_tool_round_trips_through_subprocess(
     """``call_tool`` round-trips through the live subprocess.
 
     The server prefixes input with ``"echo: "`` so a bare passthrough
-    of the request payload wouldn't match — the response must really
+    of the request payload wouldn't match â€” the response must really
     flow through the MCP server body and back.
     """
     manager = RunnerMcpManager()
@@ -101,7 +101,7 @@ async def test_stdio_mcp_shutdown_does_not_log_cancel_scope_error(
     "Attempted to exit cancel scope in a different task than it was
     entered in" during shutdown.
     """
-    caplog.set_level(logging.ERROR, logger="agent_meow.runner.mcp_manager")
+    caplog.set_level(logging.ERROR, logger="omnigent.runner.mcp_manager")
     manager = RunnerMcpManager()
     result = await manager.schemas_for(echo_mcp_spec)
     # Sanity: connect actually succeeded, so there is something to close.
@@ -122,7 +122,7 @@ async def test_stdio_mcp_subprocess_never_sees_runner_binding_token(
 
     A stdio MCP server command is spec-author-provided code.
     When ``config.env`` is non-empty the runner overlays it on
-    ``os.environ`` to spawn the subprocess — the exact branch that
+    ``os.environ`` to spawn the subprocess â€” the exact branch that
     leaked the runner tunnel binding token. This drives the real
     subprocess: the probe tool reports the token as ``"<unset>"`` (it
     was stripped) while the benign overlay var survives (the env was
@@ -133,7 +133,7 @@ async def test_stdio_mcp_subprocess_never_sees_runner_binding_token(
     """
     monkeypatch.setenv(RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR, "bug-binding-token-secret")
     # Non-empty ``config.env`` forces the ``dict(os.environ) | config.env``
-    # merge branch — the vulnerable path. The overlay marker proves the
+    # merge branch â€” the vulnerable path. The overlay marker proves the
     # subprocess still receives forwarded env (so the strip is targeted,
     # not a blanket wipe).
     spec = AgentSpec(
@@ -163,7 +163,7 @@ async def test_stdio_mcp_subprocess_never_sees_runner_binding_token(
         assert token_view == "<unset>", (
             f"binding token leaked into the MCP subprocess env: {token_view!r}"
         )
-        # Overlay survived — proves the env was forwarded, so the
+        # Overlay survived â€” proves the env was forwarded, so the
         # assertion above is about the secret specifically, not an
         # empty environment that would pass vacuously.
         assert overlay_view == "set:overlay-value", (

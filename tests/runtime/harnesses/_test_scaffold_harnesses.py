@@ -20,8 +20,8 @@ import os
 
 from fastapi import FastAPI
 
-from agent_meow.runtime.harnesses._scaffold import HarnessApp, TurnContext
-from agent_meow.server.schemas import (
+from omnigent.runtime.harnesses._scaffold import HarnessApp, TurnContext
+from omnigent.server.schemas import (
     CreateResponseRequest,
     ElicitationRequestParams,
     OutputItemDoneEvent,
@@ -235,7 +235,7 @@ class _FastHeartbeatHarness(HarnessApp):
         # margin that a slow CI box still sees at least one before
         # ``run_turn`` returns and ``_teardown_turn`` cancels the
         # heartbeat task.
-        from agent_meow.server.schemas import HeartbeatEvent
+        from omnigent.server.schemas import HeartbeatEvent
 
         while True:
             await asyncio.sleep(0.2)
@@ -414,7 +414,7 @@ class _WedgedFastHeartbeatHarness(HarnessApp):
     """
 
     async def _heartbeat_loop(self, ctx: TurnContext) -> None:
-        from agent_meow.server.schemas import HeartbeatEvent
+        from omnigent.server.schemas import HeartbeatEvent
 
         while True:
             await asyncio.sleep(0.2)

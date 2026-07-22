@@ -8,14 +8,14 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 
-from agent_meow.llms.errors import LLMErrorDetail, PermanentLLMError, RetryableLLMError
-from agent_meow.runtime.llm_retry import (
+from omnigent.llms.errors import LLMErrorDetail, PermanentLLMError, RetryableLLMError
+from omnigent.runtime.llm_retry import (
     classify_llm_error,
     compute_backoff_delay,
     detail_to_dict,
     execute_with_retry,
 )
-from agent_meow.spec.types import RetryPolicy
+from omnigent.spec.types import RetryPolicy
 
 
 @pytest.fixture()
@@ -59,7 +59,7 @@ def _make_http_status_error(status_code: int, body: str = "error") -> httpx.HTTP
     return httpx.HTTPStatusError("error", request=request, response=response)
 
 
-# ── classify_llm_error ───────────────────────────────────────────────
+# â”€â”€ classify_llm_error â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_classify_timeout_is_retryable(
@@ -72,7 +72,7 @@ def test_classify_timeout_is_retryable(
 
     result = classify_llm_error(exc, retryable_status_codes)
 
-    # Timeouts are always transient — must produce RetryableLLMError.
+    # Timeouts are always transient â€” must produce RetryableLLMError.
     # Failure would mean timeouts are treated as permanent, skipping retry.
     assert isinstance(result, RetryableLLMError)
     # Code must be "timeout" so SSE events can distinguish timeout retries.
@@ -90,7 +90,7 @@ def test_classify_retryable_http_status(
 
     result = classify_llm_error(exc, retryable_status_codes)
 
-    # 429 is in retryable_status_codes — must produce RetryableLLMError.
+    # 429 is in retryable_status_codes â€” must produce RetryableLLMError.
     # Failure would mean rate-limited requests are not retried.
     assert isinstance(result, RetryableLLMError)
     # Code must be the string form of the status code for SSE events.
@@ -108,7 +108,7 @@ def test_classify_non_retryable_http_status(
 
     result = classify_llm_error(exc, retryable_status_codes)
 
-    # 401 is not in retryable_status_codes — must produce PermanentLLMError.
+    # 401 is not in retryable_status_codes â€” must produce PermanentLLMError.
     # Failure would mean auth failures are retried, wasting time.
     assert isinstance(result, PermanentLLMError)
     # Code must be the string form of the status code.
@@ -126,7 +126,7 @@ def test_classify_unknown_exception(
 
     result = classify_llm_error(exc, retryable_status_codes)
 
-    # Generic exceptions are not retryable — must produce PermanentLLMError.
+    # Generic exceptions are not retryable â€” must produce PermanentLLMError.
     # Failure would mean unknown errors are retried indefinitely.
     assert isinstance(result, PermanentLLMError)
     assert result.code == "unknown_error"
@@ -139,8 +139,8 @@ def test_classify_connection_error_is_retryable(
     ``ConnectionError`` (tunnel disconnect, socket reset) must be retryable.
 
     The tunnel registry raises bare ``ConnectionError`` when the
-    runner WebSocket closes mid-request. This is transient — the
-    runner reconnects with backoff — so the retry loop must fire.
+    runner WebSocket closes mid-request. This is transient â€” the
+    runner reconnects with backoff â€” so the retry loop must fire.
     """
     exc = ConnectionError("tunnel closed before request completed")
 
@@ -150,7 +150,7 @@ def test_classify_connection_error_is_retryable(
     assert result.code == "connection_error"
 
 
-# ── compute_backoff_delay ────────────────────────────────────────────
+# â”€â”€ compute_backoff_delay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_compute_backoff_basic() -> None:
@@ -178,7 +178,7 @@ def test_compute_backoff_capped() -> None:
     """
     Backoff delay must be capped at backoff_max_s even when base*2^index exceeds it.
     """
-    # base=10, index=3 → 80, but max=5 should cap it.
+    # base=10, index=3 â†’ 80, but max=5 should cap it.
     delay = compute_backoff_delay(attempt_index=3, backoff_base_s=10.0, backoff_max_s=5.0)
 
     # Delay must never exceed backoff_max_s * 1.5 (max jitter).
@@ -188,7 +188,7 @@ def test_compute_backoff_capped() -> None:
     assert delay >= 5.0 * 0.5
 
 
-# ── execute_with_retry ───────────────────────────────────────────────
+# â”€â”€ execute_with_retry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_execute_with_retry_success_first_attempt(
@@ -202,7 +202,7 @@ def test_execute_with_retry_success_first_attempt(
 
     result = execute_with_retry(call_fn, retry_config_fast, on_retry)
 
-    # call_fn succeeds immediately — result must be the return value.
+    # call_fn succeeds immediately â€” result must be the return value.
     # Failure would mean the retry loop doesn't propagate success.
     assert result == "ok"
     # call_fn must be called exactly once (no unnecessary retries).
@@ -221,14 +221,14 @@ def test_execute_with_retry_retries_on_timeout(
     Timeout on first call must trigger one retry; second success is returned.
     """
     # Patch time.sleep to avoid real delays in tests.
-    monkeypatch.setattr("agent_meow.runtime.llm_retry.time.sleep", lambda _: None)
+    monkeypatch.setattr("omnigent.runtime.llm_retry.time.sleep", lambda _: None)
 
     call_fn = MagicMock(side_effect=[httpx.TimeoutException("timeout"), "recovered"])
     on_retry = MagicMock()
 
     result = execute_with_retry(call_fn, retry_config_fast, on_retry)
 
-    # Second call succeeds — result must be "recovered".
+    # Second call succeeds â€” result must be "recovered".
     # Failure would mean the retry loop doesn't return the recovery value.
     assert result == "recovered"
     # call_fn must be called twice: initial failure + one retry.
@@ -255,7 +255,7 @@ def test_execute_with_retry_permanent_error_no_retry(
     # PermanentLLMError must be raised, not RetryableLLMError.
     # Failure would mean non-retryable errors are silently retried.
     assert exc_info.value.code == "401"
-    # call_fn must be called exactly once — no retry on permanent errors.
+    # call_fn must be called exactly once â€” no retry on permanent errors.
     # Failure would mean wasted attempts on auth failures.
     assert call_fn.call_count == 1
     # on_retry must never fire for permanent errors.
@@ -271,7 +271,7 @@ def test_execute_with_retry_exhausted_raises(
     When all attempts fail with retryable errors, RetryableLLMError is raised.
     """
     # Patch time.sleep to avoid real delays in tests.
-    monkeypatch.setattr("agent_meow.runtime.llm_retry.time.sleep", lambda _: None)
+    monkeypatch.setattr("omnigent.runtime.llm_retry.time.sleep", lambda _: None)
 
     call_fn = MagicMock(
         side_effect=httpx.TimeoutException("timeout"),
@@ -285,7 +285,7 @@ def test_execute_with_retry_exhausted_raises(
     # Failure would mean the loop silently returns None or hangs.
     assert exc_info.value.code == "timeout"
     # Total tries = max_retries + 1 (initial + retries). With
-    # max_retries=3 → 4 tries.
+    # max_retries=3 â†’ 4 tries.
     # Failure would mean the loop exits early or retries beyond the limit.
     assert call_fn.call_count == retry_config_fast.max_retries + 1
     # on_retry fires between tries, so max_retries times.
@@ -293,7 +293,7 @@ def test_execute_with_retry_exhausted_raises(
     assert on_retry.call_count == retry_config_fast.max_retries
 
 
-# ── SSE retry event structure ────────────────────────────────────────
+# â”€â”€ SSE retry event structure â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_retry_event_structure_on_timeout(
@@ -307,7 +307,7 @@ def test_retry_event_structure_on_timeout(
     to ``on_retry`` when a timeout triggers a retry.
     """
     # Patch time.sleep to avoid real delays in tests.
-    monkeypatch.setattr("agent_meow.runtime.llm_retry.time.sleep", lambda _: None)
+    monkeypatch.setattr("omnigent.runtime.llm_retry.time.sleep", lambda _: None)
 
     call_fn = MagicMock(
         side_effect=[httpx.TimeoutException("timeout"), "ok"],
@@ -325,15 +325,15 @@ def test_retry_event_structure_on_timeout(
     assert len(captured_events) == 1
     event = captured_events[0]
 
-    # "type" must be "response.retry" — the SSE event discriminator.
+    # "type" must be "response.retry" â€” the SSE event discriminator.
     # Failure would break client-side event routing.
     assert event["type"] == "response.retry"
 
-    # "source" must be "llm" — distinguishes LLM retries from others.
+    # "source" must be "llm" â€” distinguishes LLM retries from others.
     # Failure would cause clients to misattribute the retry source.
     assert event["source"] == "llm"
 
-    # "attempt" must be 2 — next attempt number, 1-based.
+    # "attempt" must be 2 â€” next attempt number, 1-based.
     # First call is attempt 1, so the retry targets attempt 2.
     # Failure would mean attempt numbering is off-by-one.
     assert event["attempt"] == 2
@@ -372,7 +372,7 @@ def test_retry_event_structure_on_http_429(
     rate-limit response triggers a retry.
     """
     # Patch time.sleep to avoid real delays in tests.
-    monkeypatch.setattr("agent_meow.runtime.llm_retry.time.sleep", lambda _: None)
+    monkeypatch.setattr("omnigent.runtime.llm_retry.time.sleep", lambda _: None)
 
     exc = _make_http_status_error(429, body="rate limited")
     call_fn = MagicMock(side_effect=[exc, "ok"])
@@ -389,7 +389,7 @@ def test_retry_event_structure_on_http_429(
     assert len(captured_events) == 1
     event = captured_events[0]
 
-    # "error.code" must be "429" — the string form of the status code.
+    # "error.code" must be "429" â€” the string form of the status code.
     # Failure would mean HTTP status is not propagated correctly.
     assert event["error"]["code"] == "429"
 
@@ -410,7 +410,7 @@ def test_retry_event_structure_on_http_429(
     assert event["delay_seconds"] >= 0
 
 
-# ── detail_to_dict ───────────────────────────────────────────────────
+# â”€â”€ detail_to_dict â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_detail_to_dict_with_all_fields() -> None:
@@ -425,7 +425,7 @@ def test_detail_to_dict_with_all_fields() -> None:
 
     result = detail_to_dict(detail)
 
-    # All three fields are set — dict must contain all of them.
+    # All three fields are set â€” dict must contain all of them.
     # Failure would mean some fields are silently dropped.
     assert result == {
         "provider": "openai",
@@ -436,7 +436,7 @@ def test_detail_to_dict_with_all_fields() -> None:
 
 def test_detail_to_dict_with_none() -> None:
     """
-    detail_to_dict(None) must return None — no detail to serialize.
+    detail_to_dict(None) must return None â€” no detail to serialize.
     """
     result = detail_to_dict(None)
 
@@ -457,6 +457,6 @@ def test_detail_to_dict_with_empty_detail() -> None:
 
     result = detail_to_dict(detail)
 
-    # All fields are None → empty dict → collapsed to None.
+    # All fields are None â†’ empty dict â†’ collapsed to None.
     # Failure would mean empty dicts leak into the SSE event payload.
     assert result is None

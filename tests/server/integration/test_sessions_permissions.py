@@ -24,21 +24,21 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.host.frames import HostHelloFrame
-from agent_meow.runtime import session_stream
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server import presence
-from agent_meow.server.app import create_app
-from agent_meow.server.auth import LEVEL_EDIT, LEVEL_MANAGE, LEVEL_OWNER, LEVEL_READ
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.host.frames import HostHelloFrame
+from omnigent.runtime import session_stream
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server import presence
+from omnigent.server.app import create_app
+from omnigent.server.auth import LEVEL_EDIT, LEVEL_MANAGE, LEVEL_OWNER, LEVEL_READ
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.host_store import HostStore
-from agent_meow.stores.permission_store.sqlalchemy_store import (
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.host_store import HostStore
+from omnigent.stores.permission_store.sqlalchemy_store import (
     SqlAlchemyPermissionStore,
 )
 from tests.server.conftest import ControllableMockClient
@@ -71,7 +71,7 @@ def auth_app(
     :param db_uri: Test database URI.
     :param tmp_path: Pytest temporary directory fixture.
     """
-    from agent_meow.server.auth import UnifiedAuthProvider
+    from omnigent.server.auth import UnifiedAuthProvider
 
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     return create_app(
@@ -106,8 +106,8 @@ async def auth_client(
     ``conftest.py``: starts the harness process manager, yields the
     client, then tears down DBOS on exit.
     """
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()
@@ -139,7 +139,7 @@ def local_auth_app(
     :param db_uri: Test database URI.
     :param tmp_path: Pytest temporary directory fixture.
     """
-    from agent_meow.server.auth import UnifiedAuthProvider
+    from omnigent.server.auth import UnifiedAuthProvider
 
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     return create_app(
@@ -167,8 +167,8 @@ async def local_auth_client(
 
     Same lifecycle pattern as :func:`auth_client`.
     """
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()
@@ -192,7 +192,7 @@ def host_perm_app(
     Same shape as :func:`auth_app` but passes ``host_store`` so the
     host-launch authorization path in ``POST /v1/sessions`` is live.
     """
-    from agent_meow.server.auth import create_auth_provider
+    from omnigent.server.auth import create_auth_provider
 
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     return create_app(
@@ -218,8 +218,8 @@ async def host_perm_client(
     tmp_path: Path,
 ) -> AsyncIterator[httpx.AsyncClient]:
     """HTTP client for the host-enabled auth app (mirrors ``auth_client``)."""
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()

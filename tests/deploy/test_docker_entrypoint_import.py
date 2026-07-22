@@ -1,8 +1,8 @@
 """Guard: importing the OSS Docker entrypoint has no side effects.
 
 The Docker image runs ``python /app/entrypoint.py`` (see
-``deploy/docker/Dockerfile``), so all of the boot work — config load,
-Alembic migrations, store construction, ``create_app`` — lives behind
+``deploy/docker/Dockerfile``), so all of the boot work â€” config load,
+Alembic migrations, store construction, ``create_app`` â€” lives behind
 ``main()`` and must not fire at import time. This test enforces that:
 the module must import cleanly with ``DATABASE_URL`` unset and without
 ever touching the database (``sqlalchemy.create_engine`` is wired to
@@ -18,18 +18,18 @@ from typing import NoReturn
 
 import pytest
 
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.artifact_store.s3 import S3ArtifactStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.artifact_store.s3 import S3ArtifactStore
 
 _ENTRYPOINT_MODULE = "deploy.docker.entrypoint"
 _BOOT_MODULES = (
     "fastapi",
-    "agent_meow.db.utils",
-    "agent_meow.runtime",
-    "agent_meow.server.app",
-    "agent_meow.server.server_config",
-    "agent_meow.stores.agent_store.sqlalchemy_store",
-    "agent_meow.stores.artifact_store.local",
+    "omnigent.db.utils",
+    "omnigent.runtime",
+    "omnigent.server.app",
+    "omnigent.server.server_config",
+    "omnigent.stores.agent_store.sqlalchemy_store",
+    "omnigent.stores.artifact_store.local",
     "uvicorn",
 )
 
@@ -56,7 +56,7 @@ def _fresh_entrypoint_import(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         create_engine_calls.append(repr((args, kwargs)))
         raise AssertionError(
             "sqlalchemy.create_engine() must not be called while importing "
-            f"{_ENTRYPOINT_MODULE} — DB work belongs in main()/build_app()."
+            f"{_ENTRYPOINT_MODULE} â€” DB work belongs in main()/build_app()."
         )
 
     monkeypatch.setattr(sqlalchemy, "create_engine", _no_engine_at_import)
@@ -85,8 +85,8 @@ def test_entrypoint_imports_without_side_effects(
         assert module_name not in sys.modules
 
 
-# ── artifact-store resolution + selection ────────────────────────────────
-# OMNIGENT_ARTIFACT_URI=s3://… selects the remote S3ArtifactStore (durable on an
+# â”€â”€ artifact-store resolution + selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# OMNIGENT_ARTIFACT_URI=s3://â€¦ selects the remote S3ArtifactStore (durable on an
 # ephemeral/multi-replica deploy); anything else falls back to local. The URI is
 # validated up front (must be s3://), mirroring how DATABASE_URL picks the DB.
 
@@ -97,7 +97,7 @@ def _entrypoint_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     auth disabled so it doesn't mint accounts secrets, and no ambient
     artifact-store URI (each test sets it as needed)."""
     # Point config at an empty file so the resolver doesn't read the developer's
-    # ambient ~/.agent_meow/config.yaml (keeps the test hermetic; CI has none).
+    # ambient ~/.omnigent/config.yaml (keeps the test hermetic; CI has none).
     config_file = tmp_path / "config.yaml"
     config_file.write_text("{}\n")
     monkeypatch.setenv("OMNIGENT_CONFIG", str(config_file))

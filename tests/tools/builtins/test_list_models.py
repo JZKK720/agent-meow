@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.tools.builtins.list_models`."""
+"""Unit tests for :mod:`~?omnigent.tools.builtins.list_models`."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import json
 from typing import Any
 from unittest.mock import patch
 
-from agent_meow.spec.types import AgentSpec
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins.list_models import SysListModelsTool
+from omnigent.spec.types import AgentSpec
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins.list_models import SysListModelsTool
 
 
 def _make_spec() -> AgentSpec:
@@ -20,7 +20,7 @@ def _ctx() -> ToolContext:
     return ToolContext(task_id="task_test", agent_id="agent_test")
 
 
-# ── Schema ───────────────────────────────────────────────
+# â”€â”€ Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_schema_shape() -> None:
@@ -40,7 +40,7 @@ def test_name_and_description() -> None:
     assert len(SysListModelsTool.description()) > 0
 
 
-# ── Invoke ───────────────────────────────────────────────
+# â”€â”€ Invoke â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_invoke_returns_catalog(
@@ -58,7 +58,7 @@ def test_invoke_returns_catalog(
         },
     }
     with patch(
-        "agent_meow.model_catalog.catalog_for_spec",
+        "omnigent.model_catalog.catalog_for_spec",
         return_value=fake_catalog,
     ) as mock_catalog:
         tool = SysListModelsTool(spec=_make_spec())

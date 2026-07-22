@@ -15,7 +15,7 @@ endpoint drives the *same* resolution pipeline:
   ``decision.behavior``. This proves the URL endpoint resolves the
   ``_harness_elicitation_registry`` Future identically to the event
   path.
-- 404 on unknown session and 422 on a malformed verdict — boundary
+- 404 on unknown session and 422 on a malformed verdict â€” boundary
   validation.
 - cross-session guard: a verdict delivered under a
   *different* session must not resolve another session's Future.
@@ -41,19 +41,19 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.runtime import get_caps, session_stream
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.runtime.caps import RuntimeCaps
-from agent_meow.server.app import create_app
-from agent_meow.spec.types import FunctionPolicySpec, FunctionRef
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runtime import get_caps, session_stream
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.runtime.caps import RuntimeCaps
+from omnigent.server.app import create_app
+from omnigent.spec.types import FunctionPolicySpec, FunctionRef
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.permission_store.sqlalchemy_store import (
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.permission_store.sqlalchemy_store import (
     SqlAlchemyPermissionStore,
 )
 from tests.server.conftest import ControllableMockClient
@@ -62,7 +62,7 @@ from tests.server.helpers import create_test_agent
 pytestmark = pytest.mark.asyncio
 
 
-# ── Policy callable used by public /policies/evaluate coverage ─────
+# â”€â”€ Policy callable used by public /policies/evaluate coverage â”€â”€â”€â”€â”€
 
 
 def _ask_for_bash(event: dict[str, Any]) -> dict[str, Any]:
@@ -81,9 +81,9 @@ def _ask_for_bash(event: dict[str, Any]) -> dict[str, Any]:
     return {"result": "ALLOW"}
 
 
-# ── Auth-enabled fixtures (per-module, matching the convention in
-#    test_sessions_permissions.py — these are redefined per test
-#    module rather than promoted to conftest) ──────────────────
+# â”€â”€ Auth-enabled fixtures (per-module, matching the convention in
+#    test_sessions_permissions.py â€” these are redefined per test
+#    module rather than promoted to conftest) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -93,7 +93,7 @@ def auth_app(runtime_init: None, db_uri: str, tmp_path: Path) -> FastAPI:
 
     Mirrors the shared ``app`` fixture from ``conftest.py`` but adds
     a :class:`SqlAlchemyPermissionStore` and an auth provider so
-    access-control checks are live on the session routes — required
+    access-control checks are live on the session routes â€” required
     to exercise the cross-user gate on the resolve endpoint.
 
     :param runtime_init: Fixture that initializes the runtime with a
@@ -101,7 +101,7 @@ def auth_app(runtime_init: None, db_uri: str, tmp_path: Path) -> FastAPI:
     :param db_uri: Test database URI.
     :param tmp_path: Pytest temporary directory fixture.
     """
-    from agent_meow.server.auth import UnifiedAuthProvider
+    from omnigent.server.auth import UnifiedAuthProvider
 
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     return create_app(
@@ -135,8 +135,8 @@ async def auth_client(
     :param mock_llm: Controllable mock LLM (released on teardown).
     :param tmp_path: Pytest temporary directory fixture.
     """
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()
@@ -190,7 +190,7 @@ def _create_child_session(
     :param parent_id: Parent session id, e.g. ``"conv_parent"``.
     :param agent_id: Agent id inherited by the child.
     :param title: Sub-agent title in ``"<agent>:<name>"`` form, e.g.
-        ``"codex-child:approval"``. Must be unique per parent — the DB
+        ``"codex-child:approval"``. Must be unique per parent â€” the DB
         enforces ``(parent_conversation_id, title)`` uniqueness, so a
         fan-out test creating multiple children under one parent must
         pass distinct titles.
@@ -251,7 +251,7 @@ def _patch_default_policies(monkeypatch: pytest.MonkeyPatch, fn_path: str) -> No
         ],
     )
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions.get_caps",
+        "omnigent.server.routes.sessions.get_caps",
         lambda: patched_caps,
     )
 
@@ -438,7 +438,7 @@ async def _park_permission_hook_on(
     Subscribes to ``watch_session_id`` (the parent), then POSTs the
     PermissionRequest hook to ``hook_session_id`` (the child). Returns the
     in-flight hook task plus the full mirrored elicitation event observed
-    on the watched stream — so callers can assert the mirrored
+    on the watched stream â€” so callers can assert the mirrored
     ``params`` (``target_session_id``, ``ask_user_question``, etc.).
 
     :param client: Test HTTP client.
@@ -520,7 +520,7 @@ async def test_resolve_url_allow_round_trip(client: httpx.AsyncClient) -> None:
 
     resp = await hook_task
     assert resp.status_code == 200, resp.text
-    # The accept verdict must map to Claude's allow behavior — proves
+    # The accept verdict must map to Claude's allow behavior â€” proves
     # the ElicitationResult reached the parked Future intact.
     assert resp.json() == {
         "hookSpecificOutput": {
@@ -547,7 +547,7 @@ async def test_child_codex_elicitation_bubbles_to_parent_stream(
     :param client: The test HTTP client.
     :param db_uri: Test database URI.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     agent = await create_test_agent(client, "test-child-codex-bubble")
     parent_id = await _create_session(client, agent["id"])
@@ -639,7 +639,7 @@ async def test_child_policy_elicitation_bubbles_to_parent_stream(
     :param db_uri: Test database URI.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     _patch_default_policies(monkeypatch, f"{__name__}._ask_for_bash")
     agent = await create_test_agent(client, "test-child-policy-bubble")
@@ -719,7 +719,7 @@ async def test_child_mcp_elicitation_bubbles_to_parent_stream(
     ``mcp_elicitation`` event on the child session. The parent
     (Nessie) chat must receive the mirrored prompt with
     ``params.target_session_id`` so the user can answer it there, and
-    the resolved signal must mirror back up when the verdict lands —
+    the resolved signal must mirror back up when the verdict lands â€”
     otherwise the parent's card never appears (or never clears) for an
     MCP-driven sub-agent prompt. This guards the
     ``_MCP_ELICITATION_TYPE`` branch, which is a separate
@@ -729,7 +729,7 @@ async def test_child_mcp_elicitation_bubbles_to_parent_stream(
     :param client: The test HTTP client.
     :param db_uri: Test database URI.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     agent = await create_test_agent(client, "test-child-mcp-bubble")
     parent_id = await _create_session(client, agent["id"])
@@ -782,7 +782,7 @@ async def test_child_mcp_elicitation_bubbles_to_parent_stream(
 
         # Resolve via the child session (what the parent UI does with the
         # mirrored target_session_id). The MCP path resolves through the
-        # generic approval event → _resolve_elicitation, which mirrors the
+        # generic approval event â†’ _resolve_elicitation, which mirrors the
         # resolved signal back up to ancestors.
         verdict = await client.post(
             f"/v1/sessions/{child_id}/events",
@@ -819,14 +819,14 @@ async def test_child_claude_ask_user_question_bubbles_to_parent_stream(
     hook fires on the CHILD session. The parent (Nessie) chat must receive
     the mirrored prompt carrying both ``target_session_id`` AND the
     structured ``ask_user_question`` payload (questions + options) so the
-    parent UI renders the interactive picker — not just a text notice.
+    parent UI renders the interactive picker â€” not just a text notice.
     Resolving via the CHILD with the user's selections must release the
     worker and feed the selections back to Claude via ``decision.updatedInput``.
 
     :param client: The test HTTP client.
     :param db_uri: Test database URI.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     agent = await create_test_agent(client, "test-child-ask-user-question")
     parent_id = await _create_session(client, agent["id"])
@@ -877,7 +877,7 @@ async def test_child_claude_ask_user_question_bubbles_to_parent_stream(
         resp = await hook_task
         assert resp.status_code == 200, resp.text
         body = resp.json()
-        # accept → Claude "allow"; selections feed back via updatedInput.answers
+        # accept â†’ Claude "allow"; selections feed back via updatedInput.answers
         # so Claude skips its own TUI picker and returns the chosen answer.
         decision = body["hookSpecificOutput"]["decision"]
         assert decision["behavior"] == "allow"
@@ -906,7 +906,7 @@ async def test_child_claude_permission_bubbles_to_parent_and_declines(
     :param client: The test HTTP client.
     :param db_uri: Test database URI.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     agent = await create_test_agent(client, "test-child-claude-decline")
     parent_id = await _create_session(client, agent["id"])
@@ -932,7 +932,7 @@ async def test_child_claude_permission_bubbles_to_parent_and_declines(
 
         resp = await hook_task
         assert resp.status_code == 200, resp.text
-        # decline → Claude "deny": the gated Bash command must not run.
+        # decline â†’ Claude "deny": the gated Bash command must not run.
         assert resp.json()["hookSpecificOutput"]["decision"]["behavior"] == "deny"
     finally:
         if hook_task is not None and not hook_task.done():
@@ -949,7 +949,7 @@ class _InputRequiredRunnerClient:
     The first ``/mcp/execute`` POST returns an ``input_required``
     result (the external MCP server wants user input); the retry
     carrying ``inputResponses`` returns a successful tool output.
-    Raises on any third execute — the MRTR loop must make exactly
+    Raises on any third execute â€” the MRTR loop must make exactly
     two. Posts to other runner paths (e.g. the approval-event
     forward fired by the resolve endpoint) are acknowledged with an
     empty success body and not counted as executes.
@@ -1005,7 +1005,7 @@ class _InputRequiredRunnerClient:
             payload = {"result": {"output": "tool ran"}}
         else:
             raise AssertionError(
-                "runner execute called more than twice — the MRTR loop "
+                "runner execute called more than twice â€” the MRTR loop "
                 "should be exactly one input_required round plus one retry"
             )
         return httpx.Response(200, json=payload, request=httpx.Request("POST", url))
@@ -1024,7 +1024,7 @@ async def test_child_mcp_input_required_bubbles_to_parent_stream(
     ``_publish_and_wait_for_harness_elicitation`` when the runner
     reports an external MCP server's ``InputRequiredResult``. This is a
     separate origination path from the ``mcp_elicitation`` control
-    event covered above — a missed ``conversation_store`` wire here
+    event covered above â€” a missed ``conversation_store`` wire here
     means the prompt publishes only on the child and a Nessie parent
     chat never shows the card. Asserts the mirrored request carries
     ``target_session_id``, the resolved signal mirrors back up, and the
@@ -1034,7 +1034,7 @@ async def test_child_mcp_input_required_bubbles_to_parent_stream(
     :param db_uri: Test database URI.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     agent = await create_test_agent(client, "test-child-mrtr-bubble")
     parent_id = await _create_session(client, agent["id"])
@@ -1053,7 +1053,7 @@ async def test_child_mcp_input_required_bubbles_to_parent_stream(
         return runner_stub
 
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions._get_runner_client",
+        "omnigent.server.routes.sessions._get_runner_client",
         _fake_get_runner_client,
     )
 
@@ -1099,7 +1099,7 @@ async def test_child_mcp_input_required_bubbles_to_parent_stream(
         )
         assert verdict.status_code == 202, verdict.text
 
-        # The ancestor card must clear when the child resolves —
+        # The ancestor card must clear when the child resolves â€”
         # otherwise the parent chat shows a zombie approval forever.
         resolved_event = await parent_resolved
         assert resolved_event["elicitation_id"] == elicitation_id
@@ -1135,13 +1135,13 @@ async def test_two_children_elicitations_isolated_on_parent_stream(
     A fan-out parent can have multiple children blocked on approvals
     simultaneously. Each child's prompt must mirror to the parent with its
     OWN ``target_session_id``, and resolving one (via its child id) must
-    NOT resolve the other — the parent snapshot then shows exactly the
+    NOT resolve the other â€” the parent snapshot then shows exactly the
     still-pending one.
 
     :param client: The test HTTP client.
     :param db_uri: Test database URI.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     agent = await create_test_agent(client, "test-two-children-fanout")
     parent_id = await _create_session(client, agent["id"])
@@ -1240,7 +1240,7 @@ async def test_resolve_url_cancel_round_trip(client: httpx.AsyncClient) -> None:
     ``accept`` and ``decline``. It represents dismissing the prompt
     without an explicit choice, so the gated tool must not run.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     agent = await create_test_agent(client, "test-resolve-url-cancel")
     session_id = await _create_session(client, agent["id"])
@@ -1281,7 +1281,7 @@ async def test_resolve_url_rejects_invalid_action(client: httpx.AsyncClient) -> 
 
     The endpoint types its body as :class:`ElicitationResult`, so
     FastAPI validates the MCP ``action`` enum before any resolution
-    runs — a typo can't be silently treated as a non-accept.
+    runs â€” a typo can't be silently treated as a non-accept.
     """
     agent = await create_test_agent(client, "test-resolve-url-bad-action")
     session_id = await _create_session(client, agent["id"])
@@ -1343,7 +1343,7 @@ async def test_resolve_url_cross_user_forbidden(
     Alice owns the session; Bob's POST to its resolve URL is rejected
     by the ``LEVEL_EDIT`` access gate before any resolution runs. The
     unguessable elicitation id is a capability, but session-owner
-    access control is the outer fence — Bob must not get past it even
+    access control is the outer fence â€” Bob must not get past it even
     with a valid-looking id.
     """
     agent = await create_test_agent(auth_client, user="alice@example.com")
@@ -1355,11 +1355,11 @@ async def test_resolve_url_cross_user_forbidden(
         headers={"X-Forwarded-Email": "bob@example.com"},
     )
     # Non-owner is denied (403 forbidden, or 404 to avoid leaking
-    # existence — both are acceptable refusals).
+    # existence â€” both are acceptable refusals).
     assert resp.status_code in (403, 404), resp.text
 
 
-# ── GET /sessions/{id}/elicitations/{eid} (approval page) ────
+# â”€â”€ GET /sessions/{id}/elicitations/{eid} (approval page) â”€â”€â”€â”€
 
 
 async def test_elicitation_page_returns_pending_json(
@@ -1438,7 +1438,7 @@ async def test_elicitation_page_cross_user_forbidden(
     assert resp.status_code in (403, 404), resp.text
 
 
-# ── _mcp_input_required_response URL mode ─────────────
+# â”€â”€ _mcp_input_required_response URL mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_mrtr_response_url_mode(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1448,9 +1448,9 @@ def test_mrtr_response_url_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     ``mode: "url"`` and the approval page path.
     """
 
-    monkeypatch.setattr("agent_meow.server.routes.sessions._ELICITATION_MODE", "url")
+    monkeypatch.setattr("omnigent.server.routes.sessions._ELICITATION_MODE", "url")
 
-    from agent_meow.server.routes.sessions import _mcp_input_required_response
+    from omnigent.server.routes.sessions import _mcp_input_required_response
 
     resp = _mcp_input_required_response(
         rpc_id=1,
@@ -1472,9 +1472,9 @@ def test_mrtr_response_form_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     in form mode with no ``url`` field.
     """
 
-    monkeypatch.setattr("agent_meow.server.routes.sessions._ELICITATION_MODE", "form")
+    monkeypatch.setattr("omnigent.server.routes.sessions._ELICITATION_MODE", "form")
 
-    from agent_meow.server.routes.sessions import _mcp_input_required_response
+    from omnigent.server.routes.sessions import _mcp_input_required_response
 
     resp = _mcp_input_required_response(
         rpc_id=1,
@@ -1495,9 +1495,9 @@ def test_mrtr_response_no_session_id_stays_form(monkeypatch: pytest.MonkeyPatch)
     of the elicitation mode config.
     """
 
-    monkeypatch.setattr("agent_meow.server.routes.sessions._ELICITATION_MODE", "url")
+    monkeypatch.setattr("omnigent.server.routes.sessions._ELICITATION_MODE", "url")
 
-    from agent_meow.server.routes.sessions import _mcp_input_required_response
+    from omnigent.server.routes.sessions import _mcp_input_required_response
 
     resp = _mcp_input_required_response(
         rpc_id=1,

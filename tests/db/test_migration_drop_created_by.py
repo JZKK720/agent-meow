@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import command as alembic_command
 from alembic.config import Config
 
-from agent_meow.db.utils import clear_engine_cache, get_or_create_engine
+from omnigent.db.utils import clear_engine_cache, get_or_create_engine
 
 
 def _column_names(conn: sa.Connection, table: str) -> list[str]:
@@ -22,7 +22,7 @@ def _column_names(conn: sa.Connection, table: str) -> list[str]:
 
 def _alembic_cfg(uri: str) -> Config:
     cfg = Config()
-    cfg.set_main_option("script_location", "agent_meow/db/migrations")
+    cfg.set_main_option("script_location", "omnigent/db/migrations")
     cfg.set_main_option("sqlalchemy.url", uri)
     return cfg
 
@@ -42,7 +42,7 @@ def test_created_by_present_after_full_migration(tmp_path: Path) -> None:
             cols = _column_names(conn, "conversation_items")
         assert "created_by" in cols, (
             "conversation_items.created_by should exist after upgrading to "
-            "head — i1a2b3c4d5e6 re-adds it after b9c0d1e2f3a4's drop."
+            "head â€” i1a2b3c4d5e6 re-adds it after b9c0d1e2f3a4's drop."
         )
     finally:
         clear_engine_cache()
@@ -52,7 +52,7 @@ def test_created_by_present_after_add_migration(tmp_path: Path) -> None:
     """
     Upgrading to e1c4a7b2f309 (the add migration) creates the column.
 
-    This pins the add step so that b9c0d1e2f3a4's drop is meaningful —
+    This pins the add step so that b9c0d1e2f3a4's drop is meaningful â€”
     if the add never ran, the drop would be a no-op and the head test
     would pass vacuously.
     """
@@ -63,7 +63,7 @@ def test_created_by_present_after_add_migration(tmp_path: Path) -> None:
     with engine.connect() as conn:
         cols = _column_names(conn, "conversation_items")
     assert "created_by" in cols, (
-        "e1c4a7b2f309 must add created_by to conversation_items — "
+        "e1c4a7b2f309 must add created_by to conversation_items â€” "
         "without this the drop migration is a no-op."
     )
     engine.dispose()

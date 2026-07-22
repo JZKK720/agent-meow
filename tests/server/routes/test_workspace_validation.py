@@ -1,8 +1,8 @@
 """
-Tests for ``agent_meow.server.routes._workspace_validation``.
+Tests for ``omnigent.server.routes._workspace_validation``.
 
 Drives the validator with a fake host that auto-replies to
-``host.stat`` frames with controlled outcomes — covers each of the
+``host.stat`` frames with controlled outcomes â€” covers each of the
 seven validation steps from
 ``designs/SESSION_WORKSPACE_SELECTION.md`` without spinning up a
 live host process.
@@ -16,13 +16,13 @@ from typing import Any
 
 import pytest
 
-from agent_meow.host.frames import (
+from omnigent.host.frames import (
     HostHelloFrame,
     HostStatFrame,
     decode_host_frame,
 )
-from agent_meow.server.host_registry import HostRegistry
-from agent_meow.server.routes._workspace_validation import (
+from omnigent.server.host_registry import HostRegistry
+from omnigent.server.routes._workspace_validation import (
     WorkspaceValidationError,
     validate_workspace,
 )
@@ -83,7 +83,7 @@ async def host_setup() -> AsyncIterator[tuple[HostRegistry, _FakeWebSocket, asyn
     ws = _FakeWebSocket()
     conn = registry.register(
         host_id=_HOST_ID,
-        ws=ws,  # type: ignore[arg-type] — duck-typed
+        ws=ws,  # type: ignore[arg-type] â€” duck-typed
         hello=_hello_frame(),
         owner=None,
     )
@@ -153,7 +153,7 @@ def _set_stat(
 
     :param registry: Registry returned by the ``host_setup`` fixture.
     :param path: Input path the validator will send (matches the
-        ``HostStatFrame.path`` field exactly — the validator never
+        ``HostStatFrame.path`` field exactly â€” the validator never
         rewrites paths before sending).
     :param exists: Value for the reply's ``exists`` field.
     :param type_: Value for ``type``. Defaults to ``"directory"``.
@@ -173,7 +173,7 @@ def _set_stat(
     }
 
 
-# ── Step 0: host online check ────────────────────────────
+# â”€â”€ Step 0: host online check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_offline_host_rejected() -> None:
@@ -196,7 +196,7 @@ async def test_offline_host_rejected() -> None:
     assert "is offline" in exc_info.value.message
 
 
-# ── Step 4: workspace stat ──────────────────────────────
+# â”€â”€ Step 4: workspace stat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_workspace_must_exist(
@@ -211,7 +211,7 @@ async def test_workspace_must_exist(
     UI surface where the user can correct it.
     """
     registry, _, _ = host_setup
-    # No stat reply registered → fixture's default returns exists:false.
+    # No stat reply registered â†’ fixture's default returns exists:false.
     with pytest.raises(WorkspaceValidationError) as exc_info:
         await validate_workspace(
             host_registry=registry,
@@ -251,7 +251,7 @@ async def test_relative_cwd_skips_boundary_check(
     Verify a relative ``os_env.cwd`` (``"."``) imposes no boundary.
 
     The validator must accept any existing workspace directory when
-    the agent's cwd is relative — the picker UI is unrestricted in
+    the agent's cwd is relative â€” the picker UI is unrestricted in
     this case (designs/SESSION_WORKSPACE_SELECTION.md "Three path
     types, one picker"). A boundary check on relative cwds would
     reject every legitimate pick.
@@ -268,7 +268,7 @@ async def test_relative_cwd_skips_boundary_check(
     assert canonical == "/tmp/scratch"
 
 
-# ── Steps 2/3/5: boundary check ─────────────────────────
+# â”€â”€ Steps 2/3/5: boundary check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_absolute_cwd_boundary_must_exist(
@@ -284,7 +284,7 @@ async def test_absolute_cwd_boundary_must_exist(
     """
     registry, _, _ = host_setup
     _set_stat(registry, "/Users/corey/foo", canonical="/Users/corey/foo")
-    # Boundary path NOT registered → exists:false.
+    # Boundary path NOT registered â†’ exists:false.
     with pytest.raises(WorkspaceValidationError) as exc_info:
         await validate_workspace(
             host_registry=registry,
@@ -303,7 +303,7 @@ async def test_workspace_outside_boundary_rejected(
     Verify a workspace outside the agent's boundary is rejected.
 
     User picks ``/tmp/scratch`` for an agent declaring
-    ``cwd: /Users/corey/universe`` — runtime would let the agent
+    ``cwd: /Users/corey/universe`` â€” runtime would let the agent
     operate outside its declared scope. Boundary check on
     canonicalized paths prevents this.
     """
@@ -335,7 +335,7 @@ async def test_workspace_inside_boundary_accepted(
     Verify a workspace inside the boundary returns the canonical path.
 
     Pairs with the rejection test above to pin both directions of
-    the contract: outside → reject, inside → accept-with-canonical.
+    the contract: outside â†’ reject, inside â†’ accept-with-canonical.
     """
     registry, _, _ = host_setup
     _set_stat(
@@ -367,18 +367,18 @@ async def test_symlink_escape_rejected_via_canonical_paths(
     Setup: agent boundary ``/Users/corey/foo``; user picks
     ``/Users/corey/foo/link``; the symlink resolves to ``/etc``.
     The host returns ``canonical_path: "/etc"`` for the workspace
-    stat. Boundary check operates on canonicals, so ``/etc`` ⊄
-    ``/Users/corey/foo`` → reject.
+    stat. Boundary check operates on canonicals, so ``/etc`` âŠ„
+    ``/Users/corey/foo`` â†’ reject.
 
     Without this guarantee, a user could "smuggle" a workspace
-    out of the boundary via a symlink — the agent would end up
+    out of the boundary via a symlink â€” the agent would end up
     cd'd into a directory it wasn't supposed to operate in.
     """
     registry, _, _ = host_setup
     _set_stat(
         registry,
         "/Users/corey/foo/link",
-        canonical="/etc",  # symlink target — escapes the boundary
+        canonical="/etc",  # symlink target â€” escapes the boundary
     )
     _set_stat(
         registry,
@@ -393,7 +393,7 @@ async def test_symlink_escape_rejected_via_canonical_paths(
             spec_cwd="/Users/corey/foo",
         )
     # Error message references the user's input path, not the
-    # canonical — the user picked /link and that's what makes
+    # canonical â€” the user picked /link and that's what makes
     # sense to them.
     assert "/Users/corey/foo/link" in exc_info.value.message
     assert "outside the agent's required path" in exc_info.value.message
@@ -408,7 +408,7 @@ async def test_symlink_inside_boundary_accepted(
 
     Pairs with the symlink-escape test: when the link target is
     inside the boundary, the canonical (target) is what gets
-    stored — not the symlink path.
+    stored â€” not the symlink path.
     """
     registry, _, _ = host_setup
     _set_stat(
@@ -429,11 +429,11 @@ async def test_symlink_inside_boundary_accepted(
         spec_cwd="/Users/corey/foo",
     )
     # The stored value is the realpath the host returned, not the
-    # symlinked input — see designs/... "Why this is better".
+    # symlinked input â€” see designs/... "Why this is better".
     assert canonical == "/Users/corey/foo/sub"
 
 
-# ── Step 6: ./subdir presence ───────────────────────────
+# â”€â”€ Step 6: ./subdir presence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_subdir_must_exist_under_workspace(
@@ -452,7 +452,7 @@ async def test_subdir_must_exist_under_workspace(
         "/Users/corey/projects",
         canonical="/Users/corey/projects",
     )
-    # Subdir not registered → exists:false.
+    # Subdir not registered â†’ exists:false.
     with pytest.raises(WorkspaceValidationError) as exc_info:
         await validate_workspace(
             host_registry=registry,
@@ -494,7 +494,7 @@ async def test_subdir_present_accepted(
     assert canonical == "/Users/corey/projects"
 
 
-# ── Input shape ────────────────────────────────────────
+# â”€â”€ Input shape â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_relative_workspace_rejected(
@@ -527,7 +527,7 @@ async def test_tilde_workspace_rejected(
     The server doesn't resolve ``~`` (only the host does, via
     host.stat). Allowing a tilde here would mean we'd ship it
     through to host.stat and store the host-resolved canonical
-    path — but the absolute-path requirement is also a hard input
+    path â€” but the absolute-path requirement is also a hard input
     contract from the API spec.
     """
     registry, _, _ = host_setup
@@ -541,7 +541,7 @@ async def test_tilde_workspace_rejected(
     assert "absolute path" in exc_info.value.message
 
 
-# ── Host failure handling ────────────────────────────────
+# â”€â”€ Host failure handling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_host_stat_failure_surfaced(
@@ -552,7 +552,7 @@ async def test_host_stat_failure_surfaced(
     error rather than treated as success.
 
     A silent treat-failure-as-success would land sessions in the
-    DB with no workspace — they'd fail on every launch.
+    DB with no workspace â€” they'd fail on every launch.
     """
     registry, _, _ = host_setup
     registry._stat_replies_for_test["/Users/corey/foo"] = {  # type: ignore[attr-defined]
@@ -572,7 +572,7 @@ async def test_host_stat_failure_surfaced(
     assert "I/O error" in exc_info.value.message
 
 
-# ── Tilde-prefixed boundary ──────────────────────────────
+# â”€â”€ Tilde-prefixed boundary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_tilde_boundary_passed_through_to_host(

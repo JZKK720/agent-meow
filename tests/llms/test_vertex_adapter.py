@@ -2,8 +2,8 @@
 
 import pytest
 
-from agent_meow.errors import OmnigentError
-from agent_meow.llms.adapters.vertex import _build_vertex_url, _resolve_vertex_params
+from omnigent.errors import OmnigentError
+from omnigent.llms.adapters.vertex import _build_vertex_url, _resolve_vertex_params
 
 
 def test_resolve_raises_when_no_params() -> None:
@@ -93,7 +93,7 @@ def test_build_vertex_url_structure() -> None:
 
 def test_get_base_url_raises() -> None:
     """VertexAdapter._get_base_url always raises — Vertex requires connection_params."""
-    from agent_meow.llms.adapters.vertex import VertexAdapter
+    from omnigent.llms.adapters.vertex import VertexAdapter
 
     adapter = VertexAdapter()
     with pytest.raises(OmnigentError, match="requires"):

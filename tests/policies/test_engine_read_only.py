@@ -19,11 +19,11 @@ from typing import Any
 
 import pytest
 
-from agent_meow.entities import ConversationItem, PagedList
-from agent_meow.policies.base import Policy
-from agent_meow.policies.types import EvaluationContext, PolicyResult
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.types import (
+from omnigent.entities import ConversationItem, PagedList
+from omnigent.policies.base import Policy
+from omnigent.policies.types import EvaluationContext, PolicyResult
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.types import (
     FunctionPolicySpec,
     Phase,
     PolicyAction,

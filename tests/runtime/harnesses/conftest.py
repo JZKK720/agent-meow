@@ -6,17 +6,17 @@ the production ``agent-meow`` package AND the test fixture harness
 at ``tests.runtime.harnesses._test_harness``.
 
 pytest's :data:`pyproject.toml` ``pythonpath = ["."]`` adds the
-project root to ``sys.path`` of the test process — but
+project root to ``sys.path`` of the test process â€” but
 :func:`asyncio.create_subprocess_exec` only inherits the OS env
 (``PYTHONPATH``), not the parent's ``sys.path`` mutations. Without
 this fixture the runner subprocess starts with no project root on
-its path and fails to import either ``agent_meow.runtime.harnesses._runner``
+its path and fails to import either ``omnigent.runtime.harnesses._runner``
 or the test harness module.
 
 The fixture is autouse-scoped to this directory, so every spawn
 in these tests inherits a PYTHONPATH that includes the project
 root. Setting it via :func:`monkeypatch.setenv` keeps the
-modification scoped to one test — other test modules that don't
+modification scoped to one test â€” other test modules that don't
 care about PYTHONPATH are unaffected.
 """
 
@@ -28,7 +28,7 @@ from pathlib import Path
 import pytest
 
 # Project root: three parents up from this conftest
-# (tests/runtime/harnesses/conftest.py → repo root).
+# (tests/runtime/harnesses/conftest.py â†’ repo root).
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 

@@ -2,15 +2,15 @@
 Tests for validator-layer handling of the guardrails block.
 
 Phase 0 scope: the parser (see ``test_policy_parser.py``) does
-all the §13 spec-load rejections loudly. This file covers the
-small remaining surface — that ``validate()`` accepts a
+all the Â§13 spec-load rejections loudly. This file covers the
+small remaining surface â€” that ``validate()`` accepts a
 well-formed ``AgentSpec`` with guardrails attached, and
 doesn't regress existing validation when the new field is
 absent.
 
 Runtime-layer cross-field checks (``function.path``
 resolvability, label key cross-references) are deferred to
-the phase that owns the runtime object — Phase 4 for
+the phase that owns the runtime object â€” Phase 4 for
 FunctionPolicy path resolution.
 """
 
@@ -20,8 +20,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.spec.parser import parse
-from agent_meow.spec.validator import validate
+from omnigent.spec.parser import parse
+from omnigent.spec.validator import validate
 
 
 @pytest.fixture()
@@ -39,7 +39,7 @@ def _write_config(agent_dir: Path, config_yaml: str) -> Path:
 
 def test_validate_passes_without_guardrails(agent_dir: Path) -> None:
     """Existing validator path still green when `guardrails:`
-    is absent — regression guard for the AgentSpec extension."""
+    is absent â€” regression guard for the AgentSpec extension."""
     _write_config(
         agent_dir,
         """
@@ -53,7 +53,7 @@ executor:
     result = validate(parse(agent_dir))
     # Empty errors list means valid; no assertion-depth
     # concerns here because ``.errors`` IS the value under
-    # test — not a proxy for it.
+    # test â€” not a proxy for it.
     assert result.errors == []
     assert result.valid is True
 
@@ -79,7 +79,7 @@ guardrails:
       type: function
       on: [tool_call:web_search]
       function:
-        path: agent_meow.policies.function.make_fixed_action_callable
+        path: omnigent.policies.function.make_fixed_action_callable
         arguments:
           action: allow
           set_labels:
@@ -88,7 +88,7 @@ guardrails:
     block_canada:
       type: function
       function:
-        path: agent_meow.policies.builtins.prompt.prompt_policy
+        path: omnigent.policies.builtins.prompt.prompt_policy
         arguments:
           prompt: Deny if user mentions Canada.
     rate_limit:
@@ -101,7 +101,7 @@ guardrails:
 """,
     )
     spec = parse(agent_dir)
-    # Sanity: the parse produced the guardrails we expect —
+    # Sanity: the parse produced the guardrails we expect â€”
     # if this assertion fails, the validator failure below
     # would be hiding a parser bug.
     assert spec.guardrails is not None
@@ -109,7 +109,7 @@ guardrails:
 
     result = validate(spec)
     # If this breaks, it means `validate()` grew a new check
-    # that rejects a shape the parser accepts — investigate
+    # that rejects a shape the parser accepts â€” investigate
     # which rule, and decide whether to reject earlier (in
     # the parser) or relax the validator.
     assert result.errors == [], (
@@ -118,8 +118,8 @@ guardrails:
 
 
 def test_validate_passes_with_empty_guardrails_block(agent_dir: Path) -> None:
-    """``guardrails: {}`` → validator still green. The block
-    is allowed to be empty (no labels / no policies) —
+    """``guardrails: {}`` â†’ validator still green. The block
+    is allowed to be empty (no labels / no policies) â€”
     agents may opt into guardrails incrementally."""
     _write_config(
         agent_dir,
@@ -143,7 +143,7 @@ guardrails: {}
 
 
 def test_validate_does_not_create_errors_on_policy_names(agent_dir: Path) -> None:
-    """Policy names come from YAML keys — YAML parsing already
+    """Policy names come from YAML keys â€” YAML parsing already
     dedupes silently. Validator should not raise new errors
     tied to names; if this test starts failing, someone added
     a names-related validator rule without updating the
@@ -188,7 +188,7 @@ def test_validate_rejects_local_tool_colliding_with_builtin(
     reserved_name: str,
 ) -> None:
     """A user-authored local tool cannot use a name that
-    collides with a reserved builtin (POLICIES.md §15.8).
+    collides with a reserved builtin (POLICIES.md Â§15.8).
 
     (``request_approval`` is no longer reserved: policy ASKs
     surface as MCP-shape elicitations, not synthetic
@@ -216,7 +216,7 @@ executor:
     spec = parse(tmp_path)
     result = validate(spec)
     assert not result.valid
-    # Exactly ONE collision error — not "at least one", which
+    # Exactly ONE collision error â€” not "at least one", which
     # would let a runaway rule firing N times pass silently.
     # If more errors appear, either another rule is also
     # flagging or our check is too eager.
@@ -237,7 +237,7 @@ def test_validate_accepts_local_tool_named_request_approval(
     to prevent user tools from shadowing the framework's
     emission. Under the elicitation refactor, ASKs surface as
     ``response.elicitation_request`` SSE events with a
-    distinct ``elicitation_id`` correlation key — no
+    distinct ``elicitation_id`` correlation key â€” no
     function_call, no reserved name. User specs are now free
     to declare a tool called ``request_approval``.
 
@@ -275,7 +275,7 @@ executor:
 def test_validate_accepts_non_colliding_local_tool(
     tmp_path: Path,
 ) -> None:
-    """Control for the above — a uniquely-named local tool
+    """Control for the above â€” a uniquely-named local tool
     passes. Without this, a bug that flagged every local
     tool as a collision would be undetectable from the
     positive test alone."""

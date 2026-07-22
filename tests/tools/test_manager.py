@@ -1,4 +1,4 @@
-"""Tests for agent_meow.tools.manager (ToolManager)."""
+"""Tests for omnigent.tools.manager (ToolManager)."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from typing import Any
 
 import pytest
 
-from agent_meow.errors import OmnigentError
-from agent_meow.spec.types import (
+from omnigent.errors import OmnigentError
+from omnigent.spec.types import (
     AgentSpec,
     BuiltinToolConfig,
     LLMConfig,
@@ -21,10 +21,10 @@ from agent_meow.spec.types import (
     ToolRuntime,
     ToolsConfig,
 )
-from agent_meow.tools import ToolManager
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.client_specified import ClientSideTool, ClientSideToolSpec
-from agent_meow.tools.mcp import clear_discovery_cache
+from omnigent.tools import ToolManager
+from omnigent.tools.base import ToolContext
+from omnigent.tools.client_specified import ClientSideTool, ClientSideToolSpec
+from omnigent.tools.mcp import clear_discovery_cache
 
 _TEST_CTX = ToolContext(task_id="task_test", agent_id="agent_test")
 
@@ -35,7 +35,7 @@ _TEST_CTX = ToolContext(task_id="task_test", agent_id="agent_test")
 # whenever ``async_enabled`` is True (the default in
 # ``_make_spec``). Filtered out in tests that assert on
 # *specific* tool sets so these don't alter the other checks.
-# Adding a tool here requires a deliberate decision — this is
+# Adding a tool here requires a deliberate decision â€” this is
 # a hard-coded allowlist, not a filter on ``_register_*``.
 # ``check_task`` was dropped per design step 11.
 _ALWAYS_PRESENT_TOOLS: frozenset[str] = frozenset(
@@ -44,7 +44,7 @@ _ALWAYS_PRESENT_TOOLS: frozenset[str] = frozenset(
         "sys_call_async",
         "sys_read_inbox",
         "sys_cancel_async",
-        # ``load_skill`` is always registered — it discovers
+        # ``load_skill`` is always registered â€” it discovers
         # host-scope skills at init time even when the agent
         # has no bundled skills.
         "load_skill",
@@ -82,7 +82,7 @@ def _non_lifecycle_schemas(
     tool (``sys_cancel_task``).
 
     Tests that assert "no tools registered" or "only tool X"
-    should filter out the lifecycle tools — they're part of
+    should filter out the lifecycle tools â€” they're part of
     every ToolManager but orthogonal to whatever the test is
     actually checking.
 
@@ -169,7 +169,7 @@ def _make_spec(
     )
 
 
-# ── Registry dispatch ─────────────────────────────────
+# â”€â”€ Registry dispatch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_registry_dispatches_to_load_skill(
@@ -227,7 +227,7 @@ def test_registry_unknown_tool_returns_error(
     assert "load_skill" in result
 
 
-# ── get_tool_schemas ──────────────────────────────────
+# â”€â”€ get_tool_schemas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_schemas_include_load_skill_when_skills_exist(
@@ -241,7 +241,7 @@ def test_schemas_include_load_skill_when_skills_exist(
     The enumeration is the discovery mechanism for harnesses with no
     native skill loader (openai-agents-sdk, and the in-process loop):
     they receive ``load_skill`` via ``request.tools`` and learn which
-    skills exist from its description alone — they do not depend on the
+    skills exist from its description alone â€” they do not depend on the
     prompt's skill listing. If the enumeration regressed, those harnesses
     could call ``load_skill`` but wouldn't know any skill names to pass.
     """
@@ -320,7 +320,7 @@ def test_schemas_isolate_a_failing_tool(
 
     mgr._tools["boom"] = _BoomTool()  # type: ignore[assignment]
 
-    with caplog.at_level(logging.WARNING, logger="agent_meow.tools.manager"):
+    with caplog.at_level(logging.WARNING, logger="omnigent.tools.manager"):
         schemas = mgr.get_tool_schemas()
 
     names = {s["function"]["name"] for s in schemas}
@@ -359,7 +359,7 @@ def test_client_schemas_isolate_a_failing_tool(
 
     mgr._tools["boom"] = _BoomClientTool(ClientSideToolSpec(name="boom", schema={}))
 
-    with caplog.at_level(logging.WARNING, logger="agent_meow.tools.manager"):
+    with caplog.at_level(logging.WARNING, logger="omnigent.tools.manager"):
         schemas = mgr.get_client_tool_schemas()
 
     names = {s["function"]["name"] for s in schemas}
@@ -372,21 +372,21 @@ def test_session_reads_registered_but_writes_gated_without_opt_in() -> None:
     """
     Read-only session discovery (``sys_session_get_history`` /
     ``sys_session_list`` / ``sys_session_get_info``) is registered for
-    **every** agent, even one that declares no sub-agents — so a
+    **every** agent, even one that declares no sub-agents â€” so a
     user-added agent can read its session-mates for context. The
     mutating session tools (``sys_session_send`` /
     ``sys_session_close`` / ``sys_session_create`` /
     ``sys_session_share``) are NOT registered without an opt-in
     (``tools.agents`` or top-level ``spawn: true``). A regression that
     registered the writes by default would expose the child-session
-    spawn surface — and, for share, the ability to expose the session
-    to a third party or ``__public__`` — to every custom agent.
+    spawn surface â€” and, for share, the ability to expose the session
+    to a third party or ``__public__`` â€” to every custom agent.
     """
     mgr = ToolManager(_make_spec([]))
     names = {s["function"]["name"] for s in mgr.get_tool_schemas()}
     assert "sys_session_get_history" in names
     assert "sys_session_list" in names
-    # get_info is a read like peek/list — always available so any agent
+    # get_info is a read like peek/list â€” always available so any agent
     # can inspect a session it can access. If absent, the registration
     # in _register_sub_agent_tools regressed and the orchestrator can't
     # check session status.
@@ -399,7 +399,7 @@ def test_session_reads_registered_but_writes_gated_without_opt_in() -> None:
     # regression registering it by default would let any prompt-injected
     # agent expose its session (incl. via __public__).
     assert "sys_session_share" not in names
-    # Model awareness pairs with the dispatch grant — without send there
+    # Model awareness pairs with the dispatch grant â€” without send there
     # is no args.model to pick, so the listing tool must stay gated too.
     assert "sys_list_models" not in names
     # The read-only sys_agent_get/list/download stay always-on.
@@ -410,7 +410,7 @@ def test_session_reads_registered_but_writes_gated_without_opt_in() -> None:
 def test_spawn_flag_registers_write_tools_without_sub_agents() -> None:
     """
     Top-level ``spawn: true`` registers the spawn writes without any
-    declared sub-agents — the opt-in for agents that author a config
+    declared sub-agents â€” the opt-in for agents that author a config
     locally and launch it via ``sys_session_create(config_path=...)``.
     If this gate arm regressed, ``spawn: true`` in YAML would have no
     runtime effect and the author-and-launch flow would be impossible
@@ -423,7 +423,7 @@ def test_spawn_flag_registers_write_tools_without_sub_agents() -> None:
     assert "sys_session_create" in names
     # The dispatch grant brings model awareness along with it.
     assert "sys_list_models" in names
-    # Sharing is DECOUPLED from spawn — its own `share:` flag governs it,
+    # Sharing is DECOUPLED from spawn â€” its own `share:` flag governs it,
     # so `spawn: true` alone (share defaulting to `none`) does NOT
     # register it. A regression coupling them would re-expose sharing to
     # every spawn-capable agent.
@@ -468,7 +468,7 @@ def test_declared_agents_grant_send_close_but_not_create() -> None:
     Declaring ``tools.agents`` permits spawning ONLY the specified
     sub-agent list: ``sys_session_send`` (named mode over the declared
     enum) and ``sys_session_close`` register, but ``sys_session_create``
-    does NOT — launching arbitrary agents (by id or custom bundle)
+    does NOT â€” launching arbitrary agents (by id or custom bundle)
     requires the separate ``spawn: true`` grant. If create leaked in
     here, a spec that whitelisted two sub-agent types could launch any
     accessible agent or upload arbitrary bundles.
@@ -485,7 +485,7 @@ def test_declared_agents_grant_send_close_but_not_create() -> None:
     assert "sys_session_create" not in names
     # Model awareness rides the same grant as send.
     assert "sys_list_models" in names
-    # Declaring sub-agents does NOT enable sharing — that is the separate
+    # Declaring sub-agents does NOT enable sharing â€” that is the separate
     # `share:` flag's job, decoupled from the spawn/agents grant.
     assert "sys_session_share" not in names
 
@@ -493,7 +493,7 @@ def test_declared_agents_grant_send_close_but_not_create() -> None:
 def test_share_non_public_registers_share_tool_without_public() -> None:
     """
     ``agent_session_sharing: non-public`` alone (no spawn / declared
-    agents) registers ``sys_session_share`` — proving the flag is
+    agents) registers ``sys_session_share`` â€” proving the flag is
     independently sufficient AND does not drag in the spawn-lifecycle
     tools. The advertised ``user_id`` schema must NOT mention
     ``__public__``, so the model is not offered a grantee the runner
@@ -503,7 +503,7 @@ def test_share_non_public_registers_share_tool_without_public() -> None:
     mgr = ToolManager(AgentSpec(spec_version=1, agent_session_sharing=SharePolicy.NON_PUBLIC))
     schemas = {s["function"]["name"]: s for s in mgr.get_tool_schemas()}
     assert "sys_session_share" in schemas
-    # Sharing is decoupled from spawn — none of the spawn writes ride along.
+    # Sharing is decoupled from spawn â€” none of the spawn writes ride along.
     assert "sys_session_send" not in schemas
     assert "sys_session_close" not in schemas
     assert "sys_session_create" not in schemas
@@ -517,7 +517,7 @@ def test_share_non_public_registers_share_tool_without_public() -> None:
 def test_share_public_registers_share_tool_advertising_public() -> None:
     """
     ``agent_session_sharing: public`` registers ``sys_session_share``
-    and the advertised ``user_id`` schema DOES mention ``__public__`` —
+    and the advertised ``user_id`` schema DOES mention ``__public__`` â€”
     the only tier where anonymous-read grants are permitted. If
     ``allow_public`` weren't threaded from the flag into the tool, the
     public option would be hidden (or, worse, advertised under
@@ -569,14 +569,14 @@ def test_session_get_info_schema_has_optional_session_id() -> None:
     )
     params = schema["function"]["parameters"]
     assert set(params["properties"]) == {"session_id"}
-    # No required fields — session_id is optional by design.
+    # No required fields â€” session_id is optional by design.
     assert params["required"] == []
 
 
 def test_agent_read_tools_registered_for_every_agent() -> None:
     """
     ``sys_agent_get`` and ``sys_agent_download`` are registered for
-    **every** agent — they are global, permission-bounded reads of any
+    **every** agent â€” they are global, permission-bounded reads of any
     accessible session's agent/bundle, like the session reads. If they
     regress out of registration, an orchestrator can't inspect or fork
     agents it can see.
@@ -597,7 +597,7 @@ def test_agent_read_tools_registered_for_every_agent() -> None:
     assert list_schema["function"]["parameters"]["properties"] == {}
 
 
-# ── MCP integration ──────────────────────────────────────
+# â”€â”€ MCP integration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_shutdown_safe_without_start() -> None:
@@ -658,7 +658,7 @@ def test_shutdown_skips_pre_resolved_os_env() -> None:
 
 def test_shutdown_calls_tool_shutdown() -> None:
     """``shutdown()`` calls ``shutdown()`` on every registered tool."""
-    from agent_meow.tools.base import Tool
+    from omnigent.tools.base import Tool
 
     class _TrackingTool(Tool):
         shut_down = False
@@ -686,7 +686,7 @@ def test_shutdown_calls_tool_shutdown() -> None:
     assert tracker.shut_down
 
 
-# ── Client-specified tools ────────────────────────────────
+# â”€â”€ Client-specified tools â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_client_side_spec(name: str) -> ClientSideToolSpec:
@@ -710,7 +710,7 @@ def test_client_tools_registered_in_schemas() -> None:
     Client-specified tools appear in get_tool_schemas() alongside
     built-in tools without calling start().
 
-    A failure here means the LLM never sees client tools — the
+    A failure here means the LLM never sees client tools â€” the
     client_tool_specs constructor arg is not being wired up.
     """
     spec = _make_spec()
@@ -723,12 +723,12 @@ def test_client_tools_registered_in_schemas() -> None:
     )
 
     # Filter out the always-present lifecycle tool
-    # (sys_cancel_task) — orthogonal to the client-tool
+    # (sys_cancel_task) â€” orthogonal to the client-tool
     # registration being tested.
     schemas = _non_lifecycle_schemas(mgr)
     names = [s["function"]["name"] for s in schemas]
 
-    # Both client tools appear in schemas — 2 registered, 2 returned
+    # Both client tools appear in schemas â€” 2 registered, 2 returned
     assert len(schemas) == 2, (
         f"Expected 2 schemas (2 client tools), got {len(schemas)}. "
         "If 0, client_tool_specs are not being registered."
@@ -780,7 +780,7 @@ def test_client_tool_shadows_skill_tool(
     A client tool with the same name as a skill tool overwrites the
     skill tool (last registered wins, with a warning).
 
-    This ensures the override behavior is intentional — clients can
+    This ensures the override behavior is intentional â€” clients can
     replace spec-defined tools at request time.
     """
     spec = _make_spec(skills=[skill_no_resources])
@@ -791,14 +791,14 @@ def test_client_tool_shadows_skill_tool(
     )
 
     schemas = mgr.get_tool_schemas()
-    # Only one 'load_skill' — client version overwrote built-in
+    # Only one 'load_skill' â€” client version overwrote built-in
     names = [s["function"]["name"] for s in schemas]
     assert names.count("load_skill") == 1, (
         f"Expected exactly one 'load_skill' (client overwrite), got {names.count('load_skill')}."
     )
 
     # The registered tool is the client's ClientSideTool, not LoadSkillTool
-    from agent_meow.tools.client_specified import ClientSideTool
+    from omnigent.tools.client_specified import ClientSideTool
 
     assert isinstance(mgr._tools["load_skill"], ClientSideTool), (
         "Expected ClientSideTool after client override, "
@@ -819,7 +819,7 @@ def test_client_tools_none_equivalent_to_empty() -> None:
     assert _non_lifecycle_schemas(mgr_empty) == []
 
 
-# ── Spec-declared client tools (runtime: client) ──────────
+# â”€â”€ Spec-declared client tools (runtime: client) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _spec_with_local(
@@ -831,7 +831,7 @@ def _spec_with_local(
     Build an :class:`AgentSpec` with a single local-tool entry.
 
     Mirrors the per-entry ``runtime`` field that
-    :class:`LocalToolInfo` (and only :class:`LocalToolInfo` —
+    :class:`LocalToolInfo` (and only :class:`LocalToolInfo` â€”
     builtins are intrinsically server-side) carries. Server-runtime
     entries declare a fake ``path``/``language`` so the existing
     loaders skip them gracefully when ``workdir`` is ``None``;
@@ -898,7 +898,7 @@ def test_is_client_side_tool_false_for_default_server_local_tool() -> None:
 
     Claim: the default runtime ``SERVER`` preserves the existing
     server-side dispatch path. Failure would mean every local tool
-    is treated as client-side regardless of its declared runtime —
+    is treated as client-side regardless of its declared runtime â€”
     catastrophic regression of the existing path.
 
     Note: the manager is created with ``workdir=None`` so the
@@ -922,7 +922,7 @@ def test_spec_client_local_tool_schema_still_visible_to_llm() -> None:
     and can call it.
 
     Claim: marking a tool ``runtime: client`` does not hide its
-    schema from the LLM — it only changes the dispatch path.
+    schema from the LLM â€” it only changes the dispatch path.
     Failure would mean the LLM never learns the tool exists and
     can't invoke it, defeating the feature.
     """
@@ -960,7 +960,7 @@ def test_spec_client_local_tool_in_get_client_tool_schemas() -> None:
     instances.
 
     Claim: sub-agents launched via SpawnTool inherit spec-declared
-    client tools the same way they inherit request-supplied ones —
+    client tools the same way they inherit request-supplied ones â€”
     both go through ``get_client_tool_schemas``. Failure would mean
     sub-agents lose the spec-declared client tool surface.
     """
@@ -986,7 +986,7 @@ def test_spec_client_and_request_client_coexist() -> None:
     Spec-declared and request-supplied client tools both register
     and both are reported as client-side.
 
-    Claim: the two paths are additive — a single ToolManager can
+    Claim: the two paths are additive â€” a single ToolManager can
     expose tools from both sources, and ``is_client_side_tool``
     returns True for both. Failure would mean one path overrides
     or hides the other, breaking the integration story.
@@ -1052,7 +1052,7 @@ def test_client_tool_invalid_name_raises(
         )
 
 
-# ── Local tool registration ──────────────────────────
+# â”€â”€ Local tool registration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _write_local_tool(
@@ -1066,7 +1066,7 @@ def _write_local_tool(
 
     :param workdir: Agent image root directory.
     :param filename: File name, e.g. ``"web_fetch.py"``.
-    :param schema_name: The ``@tool``-decorated function's name —
+    :param schema_name: The ``@tool``-decorated function's name â€”
         becomes the LLM-facing tool name.
     """
     py_dir = workdir / "tools" / "python"
@@ -1125,7 +1125,7 @@ def test_local_tools_skipped_without_workdir() -> None:
         language="python",
     )
     spec = _make_spec(local_tools=[info])
-    # workdir=None (default) — should not raise.
+    # workdir=None (default) â€” should not raise.
     mgr = ToolManager(spec)
     # Excluding the always-present lifecycle tool
     # (sys_cancel_task), no tools should register when workdir
@@ -1136,7 +1136,7 @@ def test_local_tools_skipped_without_workdir() -> None:
     )
 
 
-# ── web_search builtin: Databricks model does not emit web_search_preview ───
+# â”€â”€ web_search builtin: Databricks model does not emit web_search_preview â”€â”€â”€
 
 
 def test_web_search_does_not_emit_web_search_preview_for_databricks_model() -> None:
@@ -1162,6 +1162,6 @@ def test_web_search_does_not_emit_web_search_preview_for_databricks_model() -> N
     schema = tool.get_schema()
     assert schema.get("type") != "web_search_preview", (
         f'web_search emitted {{"type": "web_search_preview"}} for '
-        f"databricks-gpt-5-4 — Databricks does not support this tool type "
+        f"databricks-gpt-5-4 â€” Databricks does not support this tool type "
         f"and rejects the request with HTTP 400. Got schema: {schema!r}"
     )

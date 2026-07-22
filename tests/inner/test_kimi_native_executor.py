@@ -15,13 +15,13 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow import kimi_native_bridge
-from agent_meow.inner.kimi_native_executor import (
+from omnigent import kimi_native_bridge
+from omnigent.inner.kimi_native_executor import (
     KimiNativeExecutor,
     _content_to_text,
     _latest_user_text,
 )
-from agent_meow.kimi_native_bridge import (
+from omnigent.kimi_native_bridge import (
     APPROVE_KEY,
     BRIDGE_DIR_ENV_VAR,
     DENY_KEY,
@@ -91,7 +91,7 @@ class TestPastePayload:
         assert _paste_payload_bytes("a\tb\x1b\x07c") == b"a\tbc"
 
     def test_unicode_passthrough(self) -> None:
-        assert _paste_payload_bytes("café") == "café".encode()
+        assert _paste_payload_bytes("cafÃ©") == "cafÃ©".encode()
 
 
 class TestBridge:
@@ -143,7 +143,7 @@ class TestApprovalKeystroke:
     def test_injects_digit_and_enter_when_menu_present(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        sent = self._stub_tmux(monkeypatch, pane="▶ 1. Approve once\n  3. Reject")
+        sent = self._stub_tmux(monkeypatch, pane="â–¶ 1. Approve once\n  3. Reject")
         assert inject_approval_keystroke(tmp_path, key=APPROVE_KEY) is True
         assert sent == [
             ("send-keys", "-t", "main", APPROVE_KEY),
@@ -153,26 +153,26 @@ class TestApprovalKeystroke:
     def test_deny_key_selects_reject(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        sent = self._stub_tmux(monkeypatch, pane="▶ 1. Approve once\n  3. Reject")
+        sent = self._stub_tmux(monkeypatch, pane="â–¶ 1. Approve once\n  3. Reject")
         assert inject_approval_keystroke(tmp_path, key=DENY_KEY) is True
         assert sent[0] == ("send-keys", "-t", "main", DENY_KEY)
 
     def test_skips_when_menu_absent(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Prompt already answered in the terminal → marker gone → no keystroke.
-        sent = self._stub_tmux(monkeypatch, pane="● Hello! How can I help?")
+        # Prompt already answered in the terminal â†’ marker gone â†’ no keystroke.
+        sent = self._stub_tmux(monkeypatch, pane="â— Hello! How can I help?")
         assert inject_approval_keystroke(tmp_path, key=APPROVE_KEY) is False
         assert sent == []
 
     def test_skips_when_tui_exited(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        sent = self._stub_tmux(monkeypatch, pane="▶ 1. Approve once", alive=False)
+        sent = self._stub_tmux(monkeypatch, pane="â–¶ 1. Approve once", alive=False)
         assert inject_approval_keystroke(tmp_path, key=APPROVE_KEY) is False
         assert sent == []
 
 
 class TestSettlePaneReadiness:
     """``_settle_pane`` must recognize the real kimi TUI chrome so it returns on
-    the first capture — a wrong marker silently burns the full readiness timeout
-    on every web→TUI injection (the original web→TUI latency bug)."""
+    the first capture â€” a wrong marker silently burns the full readiness timeout
+    on every webâ†’TUI injection (the original webâ†’TUI latency bug)."""
 
     def test_marker_matches_live_kimi_footer(self) -> None:
         # Footer chrome captured verbatim from a live K2.7 session.
@@ -208,12 +208,12 @@ class TestSettlePaneReadiness:
 
 class TestRegistration:
     def test_harness_is_registered(self) -> None:
-        from agent_meow.runtime.harnesses import _HARNESS_MODULES
+        from omnigent.runtime.harnesses import _HARNESS_MODULES
 
-        assert _HARNESS_MODULES["kimi-native"] == "agent_meow.inner.kimi_native_harness"
+        assert _HARNESS_MODULES["kimi-native"] == "omnigent.inner.kimi_native_harness"
 
     def test_harness_is_allowlisted(self) -> None:
-        from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+        from omnigent.spec._omnigent_compat import OMNIGENT_HARNESSES
 
         assert "kimi-native" in OMNIGENT_HARNESSES
 
@@ -221,13 +221,13 @@ class TestRegistration:
         # kimi-native launches the kimi TUI in an agent-meow terminal (like
         # claude/codex/cursor-native), so the runner must treat it as a native
         # terminal harness.
-        from agent_meow.harness_aliases import is_native_harness
+        from omnigent.harness_aliases import is_native_harness
 
         assert is_native_harness("kimi-native") is True
         assert is_native_harness("native-kimi") is True
 
     def test_native_coding_agent_record(self) -> None:
-        from agent_meow.native_coding_agents import native_coding_agent_for_harness
+        from omnigent.native_coding_agents import native_coding_agent_for_harness
 
         agent = native_coding_agent_for_harness("kimi-native")
         assert agent is not None
@@ -237,6 +237,6 @@ class TestRegistration:
     def test_distinct_from_headless_kimi_harness(self) -> None:
         # The bare ``kimi`` harness is the headless SDK path; ``kimi-native`` is
         # the TUI path. They must resolve to different harness modules.
-        from agent_meow.runtime.harnesses import _HARNESS_MODULES
+        from omnigent.runtime.harnesses import _HARNESS_MODULES
 
         assert _HARNESS_MODULES["kimi"] != _HARNESS_MODULES["kimi-native"]

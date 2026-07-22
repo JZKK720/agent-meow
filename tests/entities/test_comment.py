@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_meow.entities.comment import Comment, CommentsFingerprint
+from omnigent.entities.comment import Comment, CommentsFingerprint
 
 # ── Comment ───────────────────────────────────────────
 

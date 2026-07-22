@@ -1,4 +1,4 @@
-"""Phase 0 characterization test — pi harness, one-shot prompt.
+"""Phase 0 characterization test â€” pi harness, one-shot prompt.
 
 Runs ``agent-meow run hello_world.yaml --harness pi --model
 <mock-model> -p "..."`` as a real subprocess against the mock LLM
@@ -13,14 +13,14 @@ cleanliness, assistant text length).
   agent-meow tools with ``pi.registerTool()``).
 - The ``pi`` CLI binary disappears from PATH or its
   ``--mode rpc`` subcommand changes its startup contract.
-- ``agent_meow.cli._run_agent`` for the ``-p`` one-shot path
+- ``omnigent.cli._run_agent`` for the ``-p`` one-shot path
   stops printing assistant text to stdout on turn complete.
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
 per-harness suite.
 
 **Serial execution note:** These tests are designed for serial
-execution — do NOT run them under pytest-xdist or any parallel
+execution â€” do NOT run them under pytest-xdist or any parallel
 runner that shares the mock LLM server process. Each test uses a
 UUID-keyed model name, so concurrent tests use separate queues and
 queue cross-contamination is impossible even without ``reset_mock_llm``.
@@ -48,8 +48,8 @@ from typing import Any
 import pytest
 
 from tests.e2e._harness_probes import cli_unavailable_reason
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
 
 _HARNESS = "pi"
 _PROMPT = "say hi in 5 words"
@@ -61,7 +61,7 @@ _MIN_ASSISTANT_CHARS = 4
 
 # Subprocess timeout. Pi spawns a JS subprocess with its own
 # init path and registers tools via the generated extension
-# before accepting the first turn — slower than openai-agents,
+# before accepting the first turn â€” slower than openai-agents,
 # comparable to claude-sdk. 180s matches the other slow-harness
 # tests.
 _RUN_TIMEOUT_SEC = 180
@@ -143,7 +143,7 @@ def test_per_harness_pi_one_shot(
     }
 
     # Full stderr surfaced on failure so CI logs show WHY the run
-    # went wrong — stderr here is opaque unless we dump it.
+    # went wrong â€” stderr here is opaque unless we dump it.
     diffs = compare_snapshot("test_per_harness_pi", observed)
     assert diffs == [], (
         "Snapshot mismatch for pi run:\n"

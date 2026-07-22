@@ -1,8 +1,8 @@
 """Unit tests for TCP transport helper functions (no subprocess spawning).
 
-Tests the pure-logic helpers in ``agent_meow.runner.transports.tcp``:
+Tests the pure-logic helpers in ``omnigent.runner.transports.tcp``:
 socket probing, port allocation, client factory, and subprocess
-configuration — all without launching real uvicorn.
+configuration â€” all without launching real uvicorn.
 """
 
 from __future__ import annotations
@@ -13,14 +13,14 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from agent_meow.runner.transports.tcp import (
+from omnigent.runner.transports.tcp import (
     RunnerTCPSubprocess,
     _is_tcp_listening,
     _pick_free_port,
     create_tcp_client,
 )
 
-# ── _is_tcp_listening ───────────────────────────────────
+# â”€â”€ _is_tcp_listening â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_is_tcp_listening_returns_false_when_refused() -> None:
@@ -44,11 +44,11 @@ def test_is_tcp_listening_returns_true_when_connected() -> None:
 
 def test_is_tcp_listening_returns_false_on_os_error() -> None:
     """OSError (e.g. network unreachable) is caught gracefully."""
-    with patch("agent_meow.runner.transports.tcp.socket.create_connection", side_effect=OSError):
+    with patch("omnigent.runner.transports.tcp.socket.create_connection", side_effect=OSError):
         assert _is_tcp_listening("192.0.2.1", 9999) is False
 
 
-# ── _pick_free_port ─────────────────────────────────────
+# â”€â”€ _pick_free_port â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_pick_free_port_returns_valid_port() -> None:
@@ -64,7 +64,7 @@ def test_pick_free_port_returns_different_ports() -> None:
     assert len(ports) >= 2
 
 
-# ── create_tcp_client ───────────────────────────────────
+# â”€â”€ create_tcp_client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -101,7 +101,7 @@ async def test_create_tcp_client_without_auth_headers() -> None:
         await client.aclose()
 
 
-# ── RunnerTCPSubprocess config ──────────────────────────
+# â”€â”€ RunnerTCPSubprocess config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_runner_tcp_subprocess_base_url() -> None:

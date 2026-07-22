@@ -3,23 +3,23 @@ Tests for the client-side elicitation wiring.
 
 Covers:
 
-- :func:`omnigent_client._sse._parse_event` —
+- :func:`omnigent_client._sse._parse_event` â€”
   ``response.elicitation_request`` events parse to
   :class:`ElicitationRequest` with the MCP-shape ``params``
   block surfaced as flat fields on the dataclass.
-- :func:`omnigent_client._sse._parse_output_item` — regular
+- :func:`omnigent_client._sse._parse_output_item` â€” regular
   ``function_call`` items still parse to :class:`ToolCall`
   (guards against accidental re-introduction of a
   reserved-name carve-out).
 - :func:`omnigent_client._responses._handle_elicitation_request`
-  — calls the registered hook, POSTs the verdict to the
+  â€” calls the registered hook, POSTs the verdict to the
   elicitation's dedicated resolve URL, and fail-closes when no hook
   is registered.
-- REPL ``_make_elicitation_prompt`` — renders the elicitation
+- REPL ``_make_elicitation_prompt`` â€” renders the elicitation
   and returns ``True`` / ``False`` based on the user's y/n
   answer.
 
-Real HTTP is stubbed via a minimal ``_FakeHttpClient`` — these
+Real HTTP is stubbed via a minimal ``_FakeHttpClient`` â€” these
 tests exercise the SDK's branching logic, not the server.
 """
 
@@ -105,12 +105,12 @@ class _FakeResponse:
 
 class _FakeHttpClient:
     """
-    Minimal async HTTP stub — records POSTs without opening
+    Minimal async HTTP stub â€” records POSTs without opening
     a socket.
 
     Only ``post`` is exercised by the elicitation flow; PATCH
     is not used here, and any other method would raise
-    ``AttributeError`` on access — fail-loud rather than
+    ``AttributeError`` on access â€” fail-loud rather than
     silently hitting the real server.
     """
 
@@ -137,7 +137,7 @@ class _FakeHttpClient:
         return _FakeResponse(status_code=202)
 
 
-# ── SSE parse: response.elicitation_request ────────────────
+# â”€â”€ SSE parse: response.elicitation_request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_sse_parses_elicitation_request_event() -> None:
@@ -177,7 +177,7 @@ def test_sse_elicitation_request_tolerates_missing_extras() -> None:
     ``requestedSchema``; producer extras (``phase``,
     ``policy_name``, ``content_preview``) may be absent. The
     parser must coerce missing extras to empty string rather
-    than raising — defensive shape keeps a stray protocol skew
+    than raising â€” defensive shape keeps a stray protocol skew
     from crashing the whole stream.
     """
     raw = {
@@ -202,7 +202,7 @@ def test_sse_elicitation_request_tolerates_missing_extras() -> None:
 def test_sse_elicitation_request_skips_when_id_missing() -> None:
     """
     Without an ``elicitation_id`` there's no correlation key
-    for the reply POST — the parser returns None and logs
+    for the reply POST â€” the parser returns None and logs
     rather than fabricating an id. Forward-compat: an upstream
     that emits the event with a different correlation surface
     won't crash the stream; it just gets dropped.
@@ -254,17 +254,17 @@ def test_sse_parses_regular_function_call_as_toolcall() -> None:
     }
     event = _sse._parse_output_item(raw)
     assert isinstance(event, ToolCall)
-    # The name is now just data — no special semantics.
+    # The name is now just data â€” no special semantics.
     assert event.name == "request_approval"
 
 
-# ── _handle_elicitation_request: hook + POST wiring ────────
+# â”€â”€ _handle_elicitation_request: hook + POST wiring â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_hook_accept_posts_accept_action() -> None:
     """
-    A hook that returns ``True`` → SDK POSTs ``{"action": "accept"}``
+    A hook that returns ``True`` â†’ SDK POSTs ``{"action": "accept"}``
     to the elicitation's dedicated resolve URL
     ``/v1/sessions/{session_id}/elicitations/{elicitation_id}/resolve``
     (URL-based elicitation).
@@ -311,7 +311,7 @@ async def test_hook_accept_posts_accept_action() -> None:
     assert call["url"] == (
         "http://localhost:8000/v1/sessions/conv_1/elicitations/elicit_accept/resolve"
     )
-    # Verdict body is the bare MCP ElicitResult — the elicitation id
+    # Verdict body is the bare MCP ElicitResult â€” the elicitation id
     # rides in the URL path, not the body.
     assert call["json"] == {"action": "accept"}
 
@@ -319,9 +319,9 @@ async def test_hook_accept_posts_accept_action() -> None:
 @pytest.mark.asyncio
 async def test_hook_decline_posts_decline_action() -> None:
     """
-    Hook returns ``False`` → SDK POSTs ``{"action": "decline"}`` to
+    Hook returns ``False`` â†’ SDK POSTs ``{"action": "decline"}`` to
     the elicitation's resolve URL. Server treats this identically to
-    timeout / cancel — the parked workflow wakes and the enforcement
+    timeout / cancel â€” the parked workflow wakes and the enforcement
     site short-circuits with a DENY sentinel.
     """
     http = _FakeHttpClient()
@@ -356,10 +356,10 @@ async def test_hook_decline_posts_decline_action() -> None:
 @pytest.mark.asyncio
 async def test_no_hook_fails_closed() -> None:
     """
-    No hook registered → SDK resolves the elicitation with
-    ``{"action": "decline"}``. POLICIES.md §7.2: an unhandled
+    No hook registered â†’ SDK resolves the elicitation with
+    ``{"action": "decline"}``. POLICIES.md Â§7.2: an unhandled
     elicitation must DENY. Silently swallowing it would stall the
-    parked workflow until ``ask_timeout`` expired — declining
+    parked workflow until ``ask_timeout`` expired â€” declining
     fail-closed is the right default.
     """
     http = _FakeHttpClient()
@@ -390,7 +390,7 @@ async def test_no_hook_fails_closed() -> None:
 @pytest.mark.asyncio
 async def test_hook_exception_fails_closed() -> None:
     """
-    Hook raises → SDK catches, logs, resolves the elicitation with
+    Hook raises â†’ SDK catches, logs, resolves the elicitation with
     ``{"action": "decline"}``. A buggy elicitation handler must not
     crash the stream or stall the workflow; fail-closed keeps the
     invariant.
@@ -428,7 +428,7 @@ async def test_hook_exception_fails_closed() -> None:
 async def test_hook_accepts_sync_callable() -> None:
     """
     Hooks can be sync or async. A sync ``def hook(ctx) -> bool``
-    must work too — the client awaits only when the return is
+    must work too â€” the client awaits only when the return is
     awaitable.
     """
     http = _FakeHttpClient()
@@ -460,9 +460,9 @@ async def test_hook_accepts_sync_callable() -> None:
     assert http.post_calls[0]["json"] == {"action": "accept"}
 
 
-# ── REPL elicitation prompt wiring ────────────────────────
+# â”€â”€ REPL elicitation prompt wiring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
-# The REPL's flow doesn't call ``input()`` — that path fought
+# The REPL's flow doesn't call ``input()`` â€” that path fought
 # prompt_toolkit's ``patch_stdout`` (characters vanishing
 # mid-type, auto-delete jank). Instead, the hook creates an
 # :class:`asyncio.Future` that the main input loop resolves
@@ -473,24 +473,24 @@ async def test_hook_accepts_sync_callable() -> None:
 
 def _load_repl_module() -> Any:
     """
-    Reload ``agent_meow.repl._repl`` so these tests see the
+    Reload ``omnigent.repl._repl`` so these tests see the
     edited source. Multiple tests in this file touch the
     module; a stale import cache would silently test the old
     API.
 
-    :returns: The freshly-reloaded ``agent_meow.repl._repl``
+    :returns: The freshly-reloaded ``omnigent.repl._repl``
         module.
     """
     import importlib
 
-    import agent_meow.repl._repl as repl_mod
+    import omnigent.repl._repl as repl_mod
 
     importlib.reload(repl_mod)
     return repl_mod
 
 
 class _FakeHost:
-    """TerminalHost stub — records everything the hook prints."""
+    """TerminalHost stub â€” records everything the hook prints."""
 
     def __init__(self) -> None:
         """Initialize with an empty output log."""
@@ -500,14 +500,14 @@ class _FakeHost:
         """Record the item.
 
         :param item: Whatever the hook handed to
-            ``host.output(...)`` — usually a Rich
+            ``host.output(...)`` â€” usually a Rich
             :class:`Text` instance, sometimes a plain string.
         """
         self.outputs.append(item)
 
 
 class _FakeFmt:
-    """Formatter stub — the hook reads style names off it."""
+    """Formatter stub â€” the hook reads style names off it."""
 
     warning = "yellow"
     muted = "dim"
@@ -527,7 +527,7 @@ def _make_ctx(
 
     Producer extras (phase / policy_name / content_preview)
     are required dataclass fields, so the tests must supply
-    every one — empty strings stand in for "not applicable"
+    every one â€” empty strings stand in for "not applicable"
     where the test doesn't care.
 
     :param elicitation_id: Unique id; tests use synthetic
@@ -535,9 +535,9 @@ def _make_ctx(
         to keep the values readable in failure messages.
     :param message: Human-readable prompt the renderer should
         display.
-    :param policy_name: Producer extra — deciding ASK policy.
-    :param phase: Producer extra — phase that produced the ASK.
-    :param content_preview: Producer extra — truncated content
+    :param policy_name: Producer extra â€” deciding ASK policy.
+    :param phase: Producer extra â€” phase that produced the ASK.
+    :param content_preview: Producer extra â€” truncated content
         snapshot.
     :param response_id: Audit-only response id; the hook never
         posts on behalf of this id (the elicitation_id is the
@@ -562,7 +562,7 @@ async def test_repl_hook_renders_and_awaits_future() -> None:
     The hook writes the elicitation preview to the host,
     creates a pending future on the shared
     :class:`_ApprovalState`, and awaits it. It must NOT touch
-    stdin — previously calling :func:`input` inside a thread
+    stdin â€” previously calling :func:`input` inside a thread
     fought ``patch_stdout``.
 
     We drive the future manually to assert the shape without
@@ -592,7 +592,7 @@ async def test_repl_hook_renders_and_awaits_future() -> None:
 async def test_repl_state_resolve_on_refuse() -> None:
     """
     Resolving the future with REFUSE must yield ``False``
-    from the hook — the fail-closed path for POLICIES.md §13.
+    from the hook â€” the fail-closed path for POLICIES.md Â§13.
     The SDK collapses ``False`` to MCP ``"decline"`` when
     POSTing.
     """
@@ -643,7 +643,7 @@ async def test_repl_state_cancel_refuses_closed() -> None:
 def test_repl_state_replaces_stale_future() -> None:
     """
     If a second elicitation arrives while a prior one is still
-    pending (defense-in-depth — the server should only park
+    pending (defense-in-depth â€” the server should only park
     one at a time, but bugs happen), the prior future is
     resolved fail-closed and a fresh one is installed.
     """
@@ -665,7 +665,7 @@ def test_repl_state_replaces_stale_future() -> None:
     asyncio.run(_body())
 
 
-# ── Three-way verdict parser ─────────────────────────────
+# â”€â”€ Three-way verdict parser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # The parser is the precise seam between user keystrokes and
 # the elicitation state. It must: (a) accept the short forms
@@ -698,7 +698,7 @@ def test_repl_state_replaces_stale_future() -> None:
         ("n", "REFUSE"),
         ("no", "REFUSE"),
         ("anything else", "REFUSE"),
-        ("yolo", "REFUSE"),  # near-miss — explicit refusal
+        ("yolo", "REFUSE"),  # near-miss â€” explicit refusal
     ],
 )
 def test_repl_parse_approval_input(text: str, expected: str) -> None:
@@ -714,7 +714,7 @@ def test_repl_parse_approval_input(text: str, expected: str) -> None:
     assert verdict.name == expected
 
 
-# ── Session auto-approve cache ────────────────────────────
+# â”€â”€ Session auto-approve cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -731,7 +731,7 @@ async def test_repl_always_caches_and_auto_approves() -> None:
     Second elicitation for the same pair: hook checks the
     cache FIRST, returns True immediately, and prints a muted
     ``auto-approved`` audit line. Critically: no
-    ``⚠ approval required`` banner is rendered — the whole
+    ``âš  approval required`` banner is rendered â€” the whole
     point of caching is zero UI friction once you've said yes.
     """
     repl_mod = _load_repl_module()
@@ -739,7 +739,7 @@ async def test_repl_always_caches_and_auto_approves() -> None:
     state = repl_mod._ApprovalState()
     prompt_fn = repl_mod._make_elicitation_prompt(host, _FakeFmt(), state)
 
-    # First elicitation — prompts, user says "always".
+    # First elicitation â€” prompts, user says "always".
     ctx1 = _make_ctx(
         elicitation_id="c1",
         message="",
@@ -762,7 +762,7 @@ async def test_repl_always_caches_and_auto_approves() -> None:
     # Cache now has the pair.
     assert state.is_pre_approved("always_ask_on_input", "request")
 
-    # Second elicitation — same pair. Must auto-approve
+    # Second elicitation â€” same pair. Must auto-approve
     # without rendering the banner.
     ctx2 = _make_ctx(
         elicitation_id="c2",
@@ -779,7 +779,7 @@ async def test_repl_always_caches_and_auto_approves() -> None:
     assert await task2 is True
 
     # Outputs added by elicitation #2: ONLY the muted
-    # auto-approve audit line — no banner, no
+    # auto-approve audit line â€” no banner, no
     # policy/reason/preview lines. Banner would be
     # ``approval required``, which must not appear for the
     # second elicitation.
@@ -796,7 +796,7 @@ async def test_repl_always_caches_and_auto_approves() -> None:
 @pytest.mark.asyncio
 async def test_repl_always_is_scoped_to_policy_and_phase() -> None:
     """
-    The cache key is ``(policy_name, phase)`` — a different
+    The cache key is ``(policy_name, phase)`` â€” a different
     policy OR a different phase still prompts. Granularity
     prevents a blanket "always" from accidentally approving a
     different gate the user never consented to.
@@ -807,9 +807,9 @@ async def test_repl_always_is_scoped_to_policy_and_phase() -> None:
     state.remember_always("policy_a", "request")
 
     assert state.is_pre_approved("policy_a", "request") is True
-    # Different policy — still prompts.
+    # Different policy â€” still prompts.
     assert state.is_pre_approved("policy_b", "request") is False
-    # Same policy, different phase — still prompts.
+    # Same policy, different phase â€” still prompts.
     assert state.is_pre_approved("policy_a", "tool_call") is False
 
 
@@ -817,7 +817,7 @@ def test_repl_once_does_not_populate_cache() -> None:
     """
     APPROVE_ONCE must leave the cache empty. Otherwise the
     next elicitation would silently auto-approve, which is
-    NOT what the user asked for — "once" means once.
+    NOT what the user asked for â€” "once" means once.
     """
     repl_mod = _load_repl_module()
 

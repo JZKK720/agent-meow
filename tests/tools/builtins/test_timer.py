@@ -20,13 +20,13 @@ import json
 
 import pytest
 
-from agent_meow.spec import AgentSpec
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins.timer import (
+from omnigent.spec import AgentSpec
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins.timer import (
     SysTimerCancelTool,
     SysTimerSetTool,
 )
-from agent_meow.tools.manager import ToolManager
+from omnigent.tools.manager import ToolManager
 
 # Stub :class:`ToolContext` for the validation paths below. All the
 # parametrized invalid-argument tests hit early-exit error branches

@@ -12,7 +12,7 @@ import logging
 
 import pytest
 
-from agent_meow.testing.guardrails import (
+from omnigent.testing.guardrails import (
     DEV_PORTS,
     TestGuardrailError,
     base_url_violation,
@@ -32,11 +32,11 @@ def _guardrail_warnings(records: list[logging.LogRecord]) -> list[str]:
     return [
         r.getMessage()
         for r in records
-        if r.name == "agent_meow.testing.guardrails" and "TEST GUARDRAIL:" in r.getMessage()
+        if r.name == "omnigent.testing.guardrails" and "TEST GUARDRAIL:" in r.getMessage()
     ]
 
 
-# ── pass case ────────────────────────────────────────────
+# â”€â”€ pass case â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_clean_environment_emits_no_warning(caplog: pytest.LogCaptureFixture) -> None:
@@ -74,7 +74,7 @@ def test_looks_like_test_db_accepts_throwaway_uris(db_uri: str) -> None:
     "db_uri",
     [
         "",
-        "sqlite:////home/alice/.agent_meow/chat.db",
+        "sqlite:////home/alice/.omnigent/chat.db",
         "sqlite:///testing.db",
         "sqlite:///test123.db",
         "sqlite:///contest.db",
@@ -103,7 +103,7 @@ def test_looks_like_pytest_via_flag() -> None:
     assert looks_like_pytest({"PYTEST_CURRENT_TEST": "x::y (call)"}) is True
 
 
-# ── each violation emits a warning ───────────────────────
+# â”€â”€ each violation emits a warning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_non_test_process_warns(
@@ -116,7 +116,7 @@ def test_non_test_process_warns(
     simulate a non-test process, then confirm the violation is logged and
     warn mode still returns rather than raising.
     """
-    from agent_meow.testing import guardrails
+    from omnigent.testing import guardrails
 
     monkeypatch.setattr(guardrails, "_imported_modules", frozenset)
     with caplog.at_level(logging.WARNING):
@@ -134,7 +134,7 @@ def test_real_db_warns(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING):
         check_test_environment(
             env=_TEST_ENV,
-            db_uri="sqlite:////home/alice/.agent_meow/chat.db",
+            db_uri="sqlite:////home/alice/.omnigent/chat.db",
             warn_only=True,
         )
     warnings = _guardrail_warnings(caplog.records)
@@ -169,7 +169,7 @@ def test_multiple_violations_each_warn(caplog: pytest.LogCaptureFixture) -> None
     with caplog.at_level(logging.WARNING):
         violations = check_test_environment(
             env=_TEST_ENV,
-            db_uri="sqlite:////home/alice/.agent_meow/chat.db",
+            db_uri="sqlite:////home/alice/.omnigent/chat.db",
             base_url="http://localhost:8000",
             warn_only=True,
         )
@@ -178,7 +178,7 @@ def test_multiple_violations_each_warn(caplog: pytest.LogCaptureFixture) -> None
     assert len(warnings) == 2
 
 
-# ── warn_only=True never raises ──────────────────────────
+# â”€â”€ warn_only=True never raises â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_warn_only_never_raises() -> None:
@@ -187,7 +187,7 @@ def test_warn_only_never_raises() -> None:
     # check has its best shot at a violation; warn mode must still return.
     violations = check_test_environment(
         env={},
-        db_uri="sqlite:////home/alice/.agent_meow/chat.db",
+        db_uri="sqlite:////home/alice/.omnigent/chat.db",
         base_url="http://localhost:6767",
         warn_only=True,
     )
@@ -197,14 +197,14 @@ def test_warn_only_never_raises() -> None:
     assert any("6767" in v for v in violations)
 
 
-# ── hard-fail mode (warn_only=False) ─────────────────────
+# â”€â”€ hard-fail mode (warn_only=False) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_hard_fail_raises_on_violation() -> None:
     with pytest.raises(TestGuardrailError) as exc:
         check_test_environment(
             env=_TEST_ENV,
-            db_uri="sqlite:////home/alice/.agent_meow/chat.db",
+            db_uri="sqlite:////home/alice/.omnigent/chat.db",
             warn_only=False,
         )
     assert "TEST GUARDRAIL:" in str(exc.value)
@@ -230,7 +230,7 @@ def test_escape_hatch_downgrades_hard_fail_to_warning(
     with caplog.at_level(logging.WARNING):
         violations = check_test_environment(
             env=env,
-            db_uri="sqlite:////home/alice/.agent_meow/chat.db",
+            db_uri="sqlite:////home/alice/.omnigent/chat.db",
             warn_only=False,
         )
     assert any("does not look like a test DB" in v for v in violations)
@@ -245,7 +245,7 @@ def test_escape_hatch_message_only_for_hard_fail_suppression(
     with caplog.at_level(logging.WARNING):
         check_test_environment(
             env=env,
-            db_uri="sqlite:////home/alice/.agent_meow/chat.db",
+            db_uri="sqlite:////home/alice/.omnigent/chat.db",
             warn_only=True,
         )
         check_test_environment(env=env, db_uri=_TMP_DB, warn_only=False)

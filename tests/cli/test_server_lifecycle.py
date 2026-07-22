@@ -10,8 +10,8 @@ import pytest
 from click import ClickException
 from click.testing import CliRunner
 
-from agent_meow.cli import _HostDaemonRecord, _SessionPagesResult, cli
-from agent_meow.host.local_server import LocalServerInfo, LocalServerStartup
+from omnigent.cli import _HostDaemonRecord, _SessionPagesResult, cli
+from omnigent.host.local_server import LocalServerInfo, LocalServerStartup
 
 
 def _record(
@@ -19,7 +19,7 @@ def _record(
 ) -> _HostDaemonRecord:
     """Build a real daemon record for stubbing the registry.
 
-    :param target: Daemon target — ``"local"`` or a server URL.
+    :param target: Daemon target â€” ``"local"`` or a server URL.
     :param mode: ``"local"`` or ``"server"``.
     :param pid: Recorded daemon PID, e.g. ``999999``.
     :returns: A populated :class:`_HostDaemonRecord`.
@@ -34,16 +34,16 @@ def _record(
     )
 
 
-# ── server status ──────────────────────────────────────────────────
+# â”€â”€ server status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_server_status_not_running(monkeypatch: pytest.MonkeyPatch) -> None:
     """``server status`` reports not-running when no background server is recorded."""
     monkeypatch.setattr(
-        "agent_meow.cli.local_server_status",
+        "omnigent.cli.local_server_status",
         lambda: LocalServerInfo(running=False, pid=None, port=None, url=None),
     )
-    monkeypatch.setattr("agent_meow.cli._find_daemon_record", lambda target: None)
+    monkeypatch.setattr("omnigent.cli._find_daemon_record", lambda target: None)
 
     result = CliRunner().invoke(cli, ["server", "status"])
 
@@ -54,13 +54,13 @@ def test_server_status_not_running(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_server_status_running_reports_details(monkeypatch: pytest.MonkeyPatch) -> None:
     """``server status`` prints url/pid/port, the live-session count, and daemon-attached state."""
     monkeypatch.setattr(
-        "agent_meow.cli.local_server_status",
+        "omnigent.cli.local_server_status",
         lambda: LocalServerInfo(running=True, pid=4321, port=8123, url="http://127.0.0.1:8123"),
     )
-    # A record exists → "host daemon attached: yes".
-    monkeypatch.setattr("agent_meow.cli._find_daemon_record", lambda target: _record())
+    # A record exists â†’ "host daemon attached: yes".
+    monkeypatch.setattr("omnigent.cli._find_daemon_record", lambda target: _record())
     monkeypatch.setattr(
-        "agent_meow.cli._fetch_session_pages",
+        "omnigent.cli._fetch_session_pages",
         lambda **kwargs: _SessionPagesResult(sessions=[], error=None),
     )
 
@@ -69,25 +69,25 @@ def test_server_status_running_reports_details(monkeypatch: pytest.MonkeyPatch) 
     assert result.exit_code == 0, result.output
     assert "http://127.0.0.1:8123" in result.output
     assert "pid 4321" in result.output
-    assert "live sessions: 0" in result.output  # empty fetch → 0 live sessions
+    assert "live sessions: 0" in result.output  # empty fetch â†’ 0 live sessions
     assert "host daemon attached: yes" in result.output
 
 
 def test_server_status_json(monkeypatch: pytest.MonkeyPatch) -> None:
     """``server status --json`` emits the structured fields incl. the log path."""
     monkeypatch.setattr(
-        "agent_meow.cli.local_server_status",
+        "omnigent.cli.local_server_status",
         lambda: LocalServerInfo(
             running=True,
             pid=4321,
             port=8123,
             url="http://127.0.0.1:8123",
-            log_path=Path("/tmp/.agent_meow/logs/server/local-server-ab12.log"),
+            log_path=Path("/tmp/.omnigent/logs/server/local-server-ab12.log"),
         ),
     )
-    monkeypatch.setattr("agent_meow.cli._find_daemon_record", lambda target: None)
+    monkeypatch.setattr("omnigent.cli._find_daemon_record", lambda target: None)
     monkeypatch.setattr(
-        "agent_meow.cli._fetch_session_pages",
+        "omnigent.cli._fetch_session_pages",
         lambda **kwargs: _SessionPagesResult(sessions=[], error=None),
     )
 
@@ -99,7 +99,7 @@ def test_server_status_json(monkeypatch: pytest.MonkeyPatch) -> None:
         "pid": 4321,
         "port": 8123,
         "url": "http://127.0.0.1:8123",
-        "log_path": "/tmp/.agent_meow/logs/server/local-server-ab12.log",
+        "log_path": "/tmp/.omnigent/logs/server/local-server-ab12.log",
         "live_sessions": 0,
         "daemon_attached": False,
     }
@@ -108,7 +108,7 @@ def test_server_status_json(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_server_status_text_reports_log_path(monkeypatch: pytest.MonkeyPatch) -> None:
     """``server status`` (text) names the running server's captured log file."""
     monkeypatch.setattr(
-        "agent_meow.cli.local_server_status",
+        "omnigent.cli.local_server_status",
         lambda: LocalServerInfo(
             running=True,
             pid=4321,
@@ -117,9 +117,9 @@ def test_server_status_text_reports_log_path(monkeypatch: pytest.MonkeyPatch) ->
             log_path=Path.home() / ".agent-meow" / "logs" / "server" / "local-server-ab12.log",
         ),
     )
-    monkeypatch.setattr("agent_meow.cli._find_daemon_record", lambda target: None)
+    monkeypatch.setattr("omnigent.cli._find_daemon_record", lambda target: None)
     monkeypatch.setattr(
-        "agent_meow.cli._fetch_session_pages",
+        "omnigent.cli._fetch_session_pages",
         lambda **kwargs: _SessionPagesResult(sessions=[], error=None),
     )
 
@@ -127,21 +127,21 @@ def test_server_status_text_reports_log_path(monkeypatch: pytest.MonkeyPatch) ->
 
     assert result.exit_code == 0, result.output
     assert "running at http://127.0.0.1:8123" in result.output
-    assert "log: ~/.agent_meow/logs/server/local-server-ab12.log" in result.output
+    assert "log: ~/.omnigent/logs/server/local-server-ab12.log" in result.output
 
 
 def test_server_status_session_count_failure_is_graceful(monkeypatch: pytest.MonkeyPatch) -> None:
     """A failed session fetch leaves the count unknown rather than erroring the command."""
     monkeypatch.setattr(
-        "agent_meow.cli.local_server_status",
+        "omnigent.cli.local_server_status",
         lambda: LocalServerInfo(running=True, pid=1, port=8123, url="http://127.0.0.1:8123"),
     )
-    monkeypatch.setattr("agent_meow.cli._find_daemon_record", lambda target: None)
+    monkeypatch.setattr("omnigent.cli._find_daemon_record", lambda target: None)
 
     def _boom(**kwargs: object) -> _SessionPagesResult:
         raise ClickException("server unreachable")
 
-    monkeypatch.setattr("agent_meow.cli._fetch_session_pages", _boom)
+    monkeypatch.setattr("omnigent.cli._fetch_session_pages", _boom)
 
     result = CliRunner().invoke(cli, ["server", "status"])
 
@@ -150,13 +150,13 @@ def test_server_status_session_count_failure_is_graceful(monkeypatch: pytest.Mon
     assert "live sessions:" not in result.output  # count omitted on fetch failure
 
 
-# ── server start ───────────────────────────────────────────────────
+# â”€â”€ server start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_server_start_spawns(monkeypatch: pytest.MonkeyPatch) -> None:
     """``server start`` reports the URL and exact log file of a spawned server."""
     monkeypatch.setattr(
-        "agent_meow.cli.ensure_local_omnigent_server",
+        "omnigent.cli.ensure_local_omnigent_server",
         lambda: LocalServerStartup(
             url="http://127.0.0.1:8123",
             spawned=True,
@@ -169,14 +169,14 @@ def test_server_start_spawns(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.exit_code == 0, result.output
     assert "Started background server at http://127.0.0.1:8123" in result.output
     # The exact captured-log file is surfaced so the detached server isn't a
-    # black box — collapsed to ``~`` for readability.
-    assert "log: ~/.agent_meow/logs/server/local-server-ab12.log" in result.output
+    # black box â€” collapsed to ``~`` for readability.
+    assert "log: ~/.omnigent/logs/server/local-server-ab12.log" in result.output
 
 
 def test_server_start_reuses(monkeypatch: pytest.MonkeyPatch) -> None:
     """``server start`` reports reuse and the reused server's log file."""
     monkeypatch.setattr(
-        "agent_meow.cli.ensure_local_omnigent_server",
+        "omnigent.cli.ensure_local_omnigent_server",
         lambda: LocalServerStartup(
             url="http://127.0.0.1:8123",
             spawned=False,
@@ -190,7 +190,7 @@ def test_server_start_reuses(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "already running at http://127.0.0.1:8123" in result.output
     # Even a reused server (one this invocation didn't spawn) names its log,
     # read back from the sidecar.
-    assert "log: ~/.agent_meow/logs/server/local-server-cd34.log" in result.output
+    assert "log: ~/.omnigent/logs/server/local-server-cd34.log" in result.output
 
 
 def test_server_start_omits_log_when_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -201,7 +201,7 @@ def test_server_start_omits_log_when_unknown(monkeypatch: pytest.MonkeyPatch) ->
     a bogus or empty ``log:`` line.
     """
     monkeypatch.setattr(
-        "agent_meow.cli.ensure_local_omnigent_server",
+        "omnigent.cli.ensure_local_omnigent_server",
         lambda: LocalServerStartup(url="http://127.0.0.1:8123", spawned=False, log_path=None),
     )
 
@@ -211,27 +211,27 @@ def test_server_start_omits_log_when_unknown(monkeypatch: pytest.MonkeyPatch) ->
     assert "log:" not in result.output
 
 
-# ── server stop ────────────────────────────────────────────────────
+# â”€â”€ server stop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_server_stop_stops_server_and_local_daemon(monkeypatch: pytest.MonkeyPatch) -> None:
     """``server stop`` terminates the local daemon, then stops the background server."""
     monkeypatch.setattr(
-        "agent_meow.cli.local_server_url_if_healthy", lambda: "http://127.0.0.1:8123"
+        "omnigent.cli.local_server_url_if_healthy", lambda: "http://127.0.0.1:8123"
     )
     local_record = _record()
     monkeypatch.setattr(
-        "agent_meow.cli._find_daemon_record",
+        "omnigent.cli._find_daemon_record",
         lambda target: local_record if target == "local" else None,
     )
     terminated: list[_HostDaemonRecord] = []
     monkeypatch.setattr(
-        "agent_meow.cli._terminate_daemon",
+        "omnigent.cli._terminate_daemon",
         lambda record, *, force: terminated.append(record),
     )
     stop_server = Mock()
-    monkeypatch.setattr("agent_meow.cli.stop_local_omnigent_server", stop_server)
-    monkeypatch.setattr("agent_meow.cli.stop_untracked_local_server", lambda: None)
+    monkeypatch.setattr("omnigent.cli.stop_local_omnigent_server", stop_server)
+    monkeypatch.setattr("omnigent.cli.stop_untracked_local_server", lambda: None)
 
     result = CliRunner().invoke(cli, ["server", "stop"])
 
@@ -243,11 +243,11 @@ def test_server_stop_stops_server_and_local_daemon(monkeypatch: pytest.MonkeyPat
 
 def test_server_stop_no_server_running(monkeypatch: pytest.MonkeyPatch) -> None:
     """``server stop`` reports nothing running when no background server exists."""
-    monkeypatch.setattr("agent_meow.cli.local_server_url_if_healthy", lambda: None)
-    monkeypatch.setattr("agent_meow.cli._find_daemon_record", lambda target: None)
+    monkeypatch.setattr("omnigent.cli.local_server_url_if_healthy", lambda: None)
+    monkeypatch.setattr("omnigent.cli._find_daemon_record", lambda target: None)
     stop_server = Mock()
-    monkeypatch.setattr("agent_meow.cli.stop_local_omnigent_server", stop_server)
-    monkeypatch.setattr("agent_meow.cli.stop_untracked_local_server", lambda: None)
+    monkeypatch.setattr("omnigent.cli.stop_local_omnigent_server", stop_server)
+    monkeypatch.setattr("omnigent.cli.stop_untracked_local_server", lambda: None)
 
     result = CliRunner().invoke(cli, ["server", "stop"])
 
@@ -256,24 +256,24 @@ def test_server_stop_no_server_running(monkeypatch: pytest.MonkeyPatch) -> None:
     stop_server.assert_called_once_with()  # idempotent: still clears any stale pidfile
 
 
-# ── top-level stop ─────────────────────────────────────────────────
+# â”€â”€ top-level stop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_stop_terminates_all_daemons_and_server(monkeypatch: pytest.MonkeyPatch) -> None:
     """``stop`` terminates every daemon and stops the background server."""
     records = [_record("local"), _record("https://example.com", mode="server")]
-    monkeypatch.setattr("agent_meow.cli._list_daemon_records", lambda: records)
+    monkeypatch.setattr("omnigent.cli._list_daemon_records", lambda: records)
     terminated: list[_HostDaemonRecord] = []
     monkeypatch.setattr(
-        "agent_meow.cli._terminate_daemon",
+        "omnigent.cli._terminate_daemon",
         lambda record, *, force: terminated.append(record),
     )
     monkeypatch.setattr(
-        "agent_meow.cli.local_server_url_if_healthy", lambda: "http://127.0.0.1:8123"
+        "omnigent.cli.local_server_url_if_healthy", lambda: "http://127.0.0.1:8123"
     )
     stop_server = Mock()
-    monkeypatch.setattr("agent_meow.cli.stop_local_omnigent_server", stop_server)
-    monkeypatch.setattr("agent_meow.cli.stop_untracked_local_server", lambda: None)
+    monkeypatch.setattr("omnigent.cli.stop_local_omnigent_server", stop_server)
+    monkeypatch.setattr("omnigent.cli.stop_untracked_local_server", lambda: None)
 
     result = CliRunner().invoke(cli, ["stop"])
 
@@ -285,10 +285,10 @@ def test_stop_terminates_all_daemons_and_server(monkeypatch: pytest.MonkeyPatch)
 
 def test_stop_nothing_running(monkeypatch: pytest.MonkeyPatch) -> None:
     """``stop`` reports nothing to stop when no daemons or server exist."""
-    monkeypatch.setattr("agent_meow.cli._list_daemon_records", list)
-    monkeypatch.setattr("agent_meow.cli.local_server_url_if_healthy", lambda: None)
-    monkeypatch.setattr("agent_meow.cli.stop_local_omnigent_server", Mock())
-    monkeypatch.setattr("agent_meow.cli.stop_untracked_local_server", lambda: None)
+    monkeypatch.setattr("omnigent.cli._list_daemon_records", list)
+    monkeypatch.setattr("omnigent.cli.local_server_url_if_healthy", lambda: None)
+    monkeypatch.setattr("omnigent.cli.stop_local_omnigent_server", Mock())
+    monkeypatch.setattr("omnigent.cli.stop_untracked_local_server", lambda: None)
 
     result = CliRunner().invoke(cli, ["stop"])
 
@@ -299,16 +299,16 @@ def test_stop_nothing_running(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_stop_surfaces_failures_and_suggests_force(monkeypatch: pytest.MonkeyPatch) -> None:
     """A stubborn daemon makes ``stop`` exit nonzero and suggest ``--force``."""
     records = [_record("local"), _record("https://example.com", mode="server")]
-    monkeypatch.setattr("agent_meow.cli._list_daemon_records", lambda: records)
+    monkeypatch.setattr("omnigent.cli._list_daemon_records", lambda: records)
 
     def _terminate(record: _HostDaemonRecord, *, force: bool) -> None:
         if record.target == "local":
             raise ClickException(f"daemon {record.pid} did not exit")
 
-    monkeypatch.setattr("agent_meow.cli._terminate_daemon", _terminate)
-    monkeypatch.setattr("agent_meow.cli.local_server_url_if_healthy", lambda: None)
-    monkeypatch.setattr("agent_meow.cli.stop_local_omnigent_server", Mock())
-    monkeypatch.setattr("agent_meow.cli.stop_untracked_local_server", lambda: None)
+    monkeypatch.setattr("omnigent.cli._terminate_daemon", _terminate)
+    monkeypatch.setattr("omnigent.cli.local_server_url_if_healthy", lambda: None)
+    monkeypatch.setattr("omnigent.cli.stop_local_omnigent_server", Mock())
+    monkeypatch.setattr("omnigent.cli.stop_untracked_local_server", lambda: None)
 
     result = CliRunner().invoke(cli, ["stop"])
 
@@ -326,12 +326,12 @@ def test_stop_clears_stale_legacy_host_pid(
     Uses a dead PID so termination falls straight through to record deletion.
     """
     host_pid = tmp_path / "host.pid"
-    # 2147483647 is not a real PID, so _pid_alive() is False → delete-only path.
+    # 2147483647 is not a real PID, so _pid_alive() is False â†’ delete-only path.
     host_pid.write_text("2147483647\nhttps://stale.example\n")
-    monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", host_pid)
-    monkeypatch.setattr("agent_meow.cli.local_server_url_if_healthy", lambda: None)
-    monkeypatch.setattr("agent_meow.cli.stop_local_omnigent_server", Mock())
-    monkeypatch.setattr("agent_meow.cli.stop_untracked_local_server", lambda: None)
+    monkeypatch.setattr("omnigent.cli._HOST_PID_PATH", host_pid)
+    monkeypatch.setattr("omnigent.cli.local_server_url_if_healthy", lambda: None)
+    monkeypatch.setattr("omnigent.cli.stop_local_omnigent_server", Mock())
+    monkeypatch.setattr("omnigent.cli.stop_untracked_local_server", lambda: None)
 
     first = CliRunner().invoke(cli, ["stop"])
     assert first.exit_code == 0, first.output
@@ -346,12 +346,12 @@ def test_stop_reports_untracked_orphan_server(monkeypatch: pytest.MonkeyPatch) -
 
     Reproduces the reported symptom: no daemons, no pidfile-tracked server,
     yet a live server lingers on :6767. The off-switch must stop it (via
-    :func:`stop_untracked_local_server`) and say so — not "Nothing to stop."
+    :func:`stop_untracked_local_server`) and say so â€” not "Nothing to stop."
     """
-    monkeypatch.setattr("agent_meow.cli._list_daemon_records", list)
-    monkeypatch.setattr("agent_meow.cli.local_server_url_if_healthy", lambda: None)
-    monkeypatch.setattr("agent_meow.cli.stop_local_omnigent_server", Mock())
-    monkeypatch.setattr("agent_meow.cli.stop_untracked_local_server", lambda: 93359)
+    monkeypatch.setattr("omnigent.cli._list_daemon_records", list)
+    monkeypatch.setattr("omnigent.cli.local_server_url_if_healthy", lambda: None)
+    monkeypatch.setattr("omnigent.cli.stop_local_omnigent_server", Mock())
+    monkeypatch.setattr("omnigent.cli.stop_untracked_local_server", lambda: 93359)
 
     result = CliRunner().invoke(cli, ["stop"])
 
@@ -365,15 +365,15 @@ def test_server_stop_finds_untracked_orphan_when_pidfile_lost(
 ) -> None:
     """``server stop`` reports success when only an untracked orphan is found.
 
-    The pidfile is gone (``local_server_url_if_healthy`` → ``None``), but a
+    The pidfile is gone (``local_server_url_if_healthy`` â†’ ``None``), but a
     live server is still on :6767. Previously this printed "No background
     server is running" while the server kept running; now the orphan sweep
     catches it.
     """
-    monkeypatch.setattr("agent_meow.cli.local_server_url_if_healthy", lambda: None)
-    monkeypatch.setattr("agent_meow.cli._find_daemon_record", lambda target: None)
-    monkeypatch.setattr("agent_meow.cli.stop_local_omnigent_server", Mock())
-    monkeypatch.setattr("agent_meow.cli.stop_untracked_local_server", lambda: 93359)
+    monkeypatch.setattr("omnigent.cli.local_server_url_if_healthy", lambda: None)
+    monkeypatch.setattr("omnigent.cli._find_daemon_record", lambda target: None)
+    monkeypatch.setattr("omnigent.cli.stop_local_omnigent_server", Mock())
+    monkeypatch.setattr("omnigent.cli.stop_untracked_local_server", lambda: 93359)
 
     result = CliRunner().invoke(cli, ["server", "stop"])
 

@@ -16,7 +16,7 @@ session.
 
 The prompt asks the supervisor to start worker session alpha and
 run a trivial calculation, so the session tools fire during the
-turn — a reply that doesn't mention the worker would mean the
+turn â€” a reply that doesn't mention the worker would mean the
 supervisor handled it directly, bypassing the feature under test.
 """
 
@@ -24,11 +24,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.e2e.agent_meow._example_helpers import (
+from tests.e2e.omnigent._example_helpers import (
     assert_completed_one_shot,
     run_one_shot,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _PROMPT = "Start worker session alpha and ask it to calculate 2 + 2."
 

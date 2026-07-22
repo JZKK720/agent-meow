@@ -1,4 +1,4 @@
-"""Tests for agent_meow.inner.egress.proxy — MITM proxy with rule enforcement."""
+"""Tests for omnigent.inner.egress.proxy â€” MITM proxy with rule enforcement."""
 
 from __future__ import annotations
 
@@ -12,14 +12,14 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.inner.credential_proxy import (
+from omnigent.inner.credential_proxy import (
     SYNTHETIC_CREDENTIAL_PREFIX,
     CredentialRewriteRule,
 )
-from agent_meow.inner.egress.ca import ensure_ca, ensure_ca_bundle
-from agent_meow.inner.egress.certs import HostCertCache
-from agent_meow.inner.egress.proxy import EgressProxy
-from agent_meow.inner.egress.rules import parse_rules
+from omnigent.inner.egress.ca import ensure_ca, ensure_ca_bundle
+from omnigent.inner.egress.certs import HostCertCache
+from omnigent.inner.egress.proxy import EgressProxy
+from omnigent.inner.egress.rules import parse_rules
 
 
 @pytest.fixture()
@@ -146,7 +146,7 @@ async def test_proxy_allows_connect_to_permitted_host(
 
     try:
         reader, writer = await asyncio.open_connection("127.0.0.1", port)
-        # CONNECT to allowed host — the host check passes
+        # CONNECT to allowed host â€” the host check passes
         request = b"CONNECT allowed.example.com:443 HTTP/1.1\r\nHost: allowed.example.com\r\n\r\n"
         writer.write(request)
         await writer.drain()
@@ -162,7 +162,7 @@ async def test_proxy_allows_connect_to_permitted_host(
         writer.close()
 
         # Host is allowed, so we get a 200 (even though TLS will fail
-        # since there's no real server — we just verify the CONNECT
+        # since there's no real server â€” we just verify the CONNECT
         # was accepted)
         assert b"200" in response
     finally:
@@ -170,14 +170,14 @@ async def test_proxy_allows_connect_to_permitted_host(
 
 
 # ---------------------------------------------------------------------------
-# S2 — destination-IP block (``_assert_destination_allowed``)
+# S2 â€” destination-IP block (``_assert_destination_allowed``)
 # ---------------------------------------------------------------------------
 
 
 def _stub_getaddrinfo_to(ip: str) -> callable:
     """Return a ``loop.getaddrinfo`` replacement that resolves any host
     to a single ``(AF_INET / AF_INET6, SOCK_STREAM, ...)`` record for
-    *ip* — lets us unit-test the destination check without DNS or
+    *ip* â€” lets us unit-test the destination check without DNS or
     network reachability.
     """
     import ipaddress as _ip
@@ -239,7 +239,7 @@ async def test_s2_assert_destination_blocks_cgnat_alibaba_imds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Alibaba Cloud IMDS at ``100.100.100.200`` sits in RFC 6598
-    CGNAT — ``is_private`` is False but ``is_global`` is False. This
+    CGNAT â€” ``is_private`` is False but ``is_global`` is False. This
     test locks in the ``not is_global`` check; regressing to the old
     ``is_private`` check would let Alibaba metadata leak through.
     """
@@ -260,7 +260,7 @@ async def test_s2_assert_destination_blocks_azure_wireserver(
 ) -> None:
     """Azure WireServer at ``168.63.129.16`` is a publicly-routable
     IP (``is_global=True``, ``is_private=False``) but is routed only
-    inside the Azure tenant — it leaks instance metadata and serves
+    inside the Azure tenant â€” it leaks instance metadata and serves
     as the guest-agent / boot DNS anchor. The proxy MUST refuse it
     by default via the ``_CLOUD_TRAP_NETWORKS`` denylist; otherwise
     a wildcard rule with a DNS-rebound subdomain would let an agent
@@ -283,7 +283,7 @@ async def test_s2_assert_destination_allows_global_address(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A normal globally-routable IP (``93.184.216.34`` = example.com)
-    must pass — proves the check isn't accidentally deny-all.
+    must pass â€” proves the check isn't accidentally deny-all.
     """
     cert_path, key_path, _ = ca_paths
     proxy = EgressProxy(parse_rules(["GET *.example.com/**"]), cert_path, key_path)
@@ -301,7 +301,7 @@ async def test_s2_assert_destination_skips_check_when_opt_in(
 ) -> None:
     """With ``block_private_destinations=False`` (the auditable opt-
     in for intranet workloads), even the hardcoded cloud-trap list
-    is bypassed. The opt-in is global by design — see the
+    is bypassed. The opt-in is global by design â€” see the
     ``egress_allow_private_destinations`` docstring in
     ``OSEnvSandboxSpec``.
 
@@ -336,7 +336,7 @@ async def test_s2_assert_destination_returns_pinned_ip_for_global(
     the hostname (the DNS-rebinding window this method closes).
 
     Regression guard: the pre-fix method returned ``None``, so the
-    connect path performed a second, independent ``getaddrinfo`` —
+    connect path performed a second, independent ``getaddrinfo`` â€”
     asserting the concrete IP comes back here proves the pin contract.
     """
     cert_path, key_path, _ = ca_paths
@@ -346,7 +346,7 @@ async def test_s2_assert_destination_returns_pinned_ip_for_global(
     monkeypatch.setattr(loop, "getaddrinfo", _stub_getaddrinfo_to("93.184.216.34"))
 
     pinned = await proxy._assert_destination_allowed("example.com", 443)
-    # The returned IP must be the validated address, byte-for-byte —
+    # The returned IP must be the validated address, byte-for-byte â€”
     # this is what the caller pins the TCP connection to. A None or a
     # different value would mean the connect path re-resolves and the
     # rebinding defense is defeated.
@@ -363,7 +363,7 @@ async def test_s2_assert_destination_fails_closed_on_dns_error(
 
     This is the core DNS-rebinding fix: the pre-fix code caught
     ``gaierror`` and returned (fail open), after which the connect
-    path re-resolved the hostname — letting an attacker who fails the
+    path re-resolved the hostname â€” letting an attacker who fails the
     first lookup return a private IP on the second. Failing closed
     here removes that bypass. If this test passes against code that
     ``return``s on ``gaierror``, the fix has regressed.
@@ -475,7 +475,7 @@ async def test_s2_dns_rebinding_fail_then_loopback_is_blocked_e2e(
     # The loopback origin must never be reached. The marker appearing
     # is the literal DNS-rebinding exploit succeeding.
     assert marker not in response, (
-        "Private loopback destination was reached despite the block — "
+        "Private loopback destination was reached despite the block â€” "
         "DNS-rebinding bypass has regressed."
     )
     # Exactly one resolution: the connect path did not perform a second,
@@ -484,12 +484,12 @@ async def test_s2_dns_rebinding_fail_then_loopback_is_blocked_e2e(
     assert lookup_count == 1, (
         f"Expected exactly 1 DNS resolution (fail-closed, no re-resolve), "
         f"got {lookup_count}. 2 means the connect path re-resolved the "
-        f"hostname after the guard — the rebinding bypass is back."
+        f"hostname after the guard â€” the rebinding bypass is back."
     )
 
 
 # ---------------------------------------------------------------------------
-# S4 — per-helper Proxy-Authorization (cross-helper isolation)
+# S4 â€” per-helper Proxy-Authorization (cross-helper isolation)
 # ---------------------------------------------------------------------------
 
 
@@ -510,7 +510,7 @@ async def test_s4_proxy_returns_407_without_proxy_authorization(
     reject every inbound connection that doesn't carry the matching
     ``Proxy-Authorization`` header. The check fires BEFORE rule
     enforcement so a same-UID prober can't distinguish "wrong token"
-    from "rule mismatch" from "would-have-been-allowed" — they all
+    from "rule mismatch" from "would-have-been-allowed" â€” they all
     look like 407.
     """
     cert_path, key_path, _ = ca_paths
@@ -662,19 +662,19 @@ def test_s4_strip_proxy_auth_removes_only_that_header() -> None:
     assert b"c2VjcmV0" not in stripped
     assert b"Authorization: Bearer real-app-token" in stripped, (
         "Stripping clobbered the application's Authorization header "
-        "— the prefix match is too loose."
+        "â€” the prefix match is too loose."
     )
     assert b"Host: example.com" in stripped
     assert b"User-Agent: ua/1.0" in stripped
 
 
 def test_s4_check_proxy_auth_is_case_insensitive_on_header_name() -> None:
-    """HTTP header field names are case-insensitive (RFC 9110 §5.1).
+    """HTTP header field names are case-insensitive (RFC 9110 Â§5.1).
     Standards-compliant clients (notably ``urllib`` on some Python
     builds) emit ``proxy-authorization:`` rather than the
     title-cased form. The check MUST accept both.
     """
-    # Bypass the constructor's CA-cache path machinery — we're not
+    # Bypass the constructor's CA-cache path machinery â€” we're not
     # exercising any TLS, just the static auth-header parser. The
     # cache lazily reads the paths only on cert mint.
     proxy = EgressProxy.__new__(EgressProxy)
@@ -709,7 +709,7 @@ async def test_relay_response_returns_zero_and_none_on_clean_eof() -> None:
     reader = asyncio.StreamReader()
     reader.feed_eof()
 
-    # Reuse an existing event-loop reader pair as a sink — we never
+    # Reuse an existing event-loop reader pair as a sink â€” we never
     # call write because ``data`` is empty, so the writer is just a
     # passive sink. Open a localhost socket pair for a real writer.
     server_started = asyncio.Event()
@@ -750,7 +750,7 @@ async def test_http_empty_upstream_yields_502(
     """Plain HTTP: upstream that closes without sending bytes -> 502.
 
     Regression guard for the dominant CI flake on this proxy's e2e
-    suite — ``curl: (52) Empty reply from server`` was the most
+    suite â€” ``curl: (52) Empty reply from server`` was the most
     visible symptom. Without this branch the client would receive a
     torn TCP connection (or an empty HTTP stream) indistinguishable
     from a hard proxy block. We assert the proxy synthesises a real
@@ -759,7 +759,7 @@ async def test_http_empty_upstream_yields_502(
     """
     cert_path, key_path, _ = ca_paths
 
-    # Tiny upstream that accepts and immediately closes — simulates
+    # Tiny upstream that accepts and immediately closes â€” simulates
     # a misbehaving server that drops the connection before writing
     # any HTTP bytes.
     async def _silent(_r: asyncio.StreamReader, w: asyncio.StreamWriter) -> None:
@@ -805,7 +805,7 @@ async def test_http_empty_upstream_yields_502(
         # in practice the kernel often sends a RST that the reader
         # raises as ``ConnectionResetError``. Either is correct here;
         # what matters is that the cause string is present and not
-        # ``None`` — proving the 502 path is the empty-upstream
+        # ``None`` â€” proving the 502 path is the empty-upstream
         # branch and not, say, a 502 from a failed connect.
         assert b"cause=" in response, (
             f"502 body MUST carry the diagnostic ``cause=`` label so "
@@ -835,14 +835,14 @@ async def test_handle_connect_passes_protocol_to_start_tls_directly(
     Bytes that arrived between ``start_tls`` returning and the swap
     were delivered to the *original* (plaintext) protocol and lost
     to the new reader, hanging the inner ``readline()`` until its
-    30 s timeout — surfacing as ``http.client.RemoteDisconnected``
+    30 s timeout â€” surfacing as ``http.client.RemoteDisconnected``
     on the client.
 
     This test stubs ``loop.start_tls`` and asserts the protocol
     argument is a ``StreamReaderProtocol`` (i.e. our pre-created
     reader-protocol), proving we no longer pass the plaintext
     protocol and rely on a post-handshake swap. Faster and more
-    deterministic than a full TLS round trip — and any future
+    deterministic than a full TLS round trip â€” and any future
     refactor that re-introduces the swap pattern will fail this.
     """
     cert_path, key_path, _ = ca_paths
@@ -853,7 +853,7 @@ async def test_handle_connect_passes_protocol_to_start_tls_directly(
 
     async def _fake_start_tls(_transport, protocol, _ssl_ctx, **_kw):
         captured_protocols.append(protocol)
-        raise ssl.SSLError("stubbed — short-circuit handshake")
+        raise ssl.SSLError("stubbed â€” short-circuit handshake")
 
     loop = asyncio.get_event_loop()
     # Resolve the allowed upstream to a global IP so the fail-closed
@@ -874,7 +874,7 @@ async def test_handle_connect_passes_protocol_to_start_tls_directly(
         )
         await writer.drain()
         # Drain the 200 Connection Established and then wait for the
-        # handler to invoke start_tls — the fake raises so the handler
+        # handler to invoke start_tls â€” the fake raises so the handler
         # returns immediately and the connection is closed.
         with contextlib.suppress(Exception):
             await asyncio.wait_for(writer.wait_closed(), timeout=5)
@@ -897,7 +897,7 @@ async def test_handle_connect_passes_protocol_to_start_tls_directly(
 
 
 # ---------------------------------------------------------------------------
-# S5 — parser-differential hostname canonicalization
+# S5 â€” parser-differential hostname canonicalization
 #
 # Defense against the libc/Python parser differential disclosed in
 # Anthropic Claude Code's sandbox-runtime (fixed in 0.0.43). Python's
@@ -921,14 +921,14 @@ def _trap_getaddrinfo(label: str) -> object:
     """Build a ``loop.getaddrinfo`` replacement that fails the test
     if invoked. Used as a tripwire to prove the host reject runs
     BEFORE ``_assert_destination_allowed`` would have done the DNS
-    lookup — DNS resolution is itself the exfil channel for this
+    lookup â€” DNS resolution is itself the exfil channel for this
     parser-differential bug, so a reject that ALSO leaks the lookup
     is not a fix.
     """
 
     async def _fail(host: str, _port: int, **_kw: object) -> list[object]:
         pytest.fail(
-            f"{label}: getaddrinfo called for host={host!r} — the "
+            f"{label}: getaddrinfo called for host={host!r} â€” the "
             f"proxy must reject smuggled hosts BEFORE any DNS lookup, "
             f"because the lookup itself leaks data to the attacker's "
             f"nameserver via subdomain labels."
@@ -940,7 +940,7 @@ def _trap_getaddrinfo(label: str) -> object:
 # Each smuggled hostname pairs with the CONNECT-target form
 # (``host:port``) and (where applicable) the URL form
 # (``http://host/...``). Whitespace / control chars that would
-# terminate the request-line token are excluded — those can't
+# terminate the request-line token are excluded â€” those can't
 # physically reach the proxy past ``readline().split()`` parsing;
 # they're covered at the rule-layer instead.
 _CONNECT_SMUGGLED_HOST_VECTORS = [
@@ -998,7 +998,7 @@ async def test_s5_connect_rejects_unsafe_host_before_dns(
         assert b"403 Forbidden" in response, (
             f"CONNECT with smuggled host {smuggled_host!r} MUST be 403'd. Got: {response[:200]!r}"
         )
-        # Generic body — no oracle distinguishing "invalid host" from
+        # Generic body â€” no oracle distinguishing "invalid host" from
         # "host not allowed" for a probing attacker.
         assert b"forbidden character" in response, (
             f"403 body should identify the rejection class without "
@@ -1051,7 +1051,7 @@ async def test_s5_http_rejects_unsafe_host_before_dns(
 
 
 # ---------------------------------------------------------------------------
-# S6 — request-line smuggling on the CONNECT (MITM) path
+# S6 â€” request-line smuggling on the CONNECT (MITM) path
 #
 # The CONNECT handler enforces its path/method allow-list against a
 # parse of the inner (MITM-decrypted) request line, but historically
@@ -1060,7 +1060,7 @@ async def test_s5_http_rejects_unsafe_host_before_dns(
 # ``\r``/``\t``/``\v``/``\f`` as whitespace. A sandboxed agent that
 # controls the inner HTTP bytes could embed a bare ``\r`` so the proxy
 # saw one (method, path) while a lenient upstream parsed a different,
-# smuggled request line — collapsing a fine-grained egress rule
+# smuggled request line â€” collapsing a fine-grained egress rule
 # (e.g. ``GET host/repos/myorg/**``) to "any method, any path" on an
 # already-allow-listed host. The fix rejects control bytes in the inner
 # request line AND re-serializes the forwarded request line from the
@@ -1141,7 +1141,7 @@ async def test_s6_connect_rejects_control_byte_in_inner_request_line(
     cert_path, key_path, bundle_path = ca_paths
     host = "allowed.example.com"
 
-    # Recording TLS upstream — if the proxy ever forwarded the smuggled
+    # Recording TLS upstream â€” if the proxy ever forwarded the smuggled
     # request, the request line would land here. We assert it does not.
     received: list[bytes] = []
 
@@ -1194,7 +1194,7 @@ async def test_s6_connect_rejects_control_byte_in_inner_request_line(
             f"403. Got: {response[:200]!r}"
         )
         assert received == [], (
-            f"Smuggled request line MUST NOT reach the upstream — the "
+            f"Smuggled request line MUST NOT reach the upstream â€” the "
             f"control byte has to be rejected before forwarding. "
             f"Upstream received: {received!r}"
         )
@@ -1210,7 +1210,7 @@ async def test_s6_connect_reserializes_request_line_to_upstream(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The forwarded request line is re-serialized from the parsed
-    (method, path), not echoed verbatim — so the upstream receives
+    (method, path), not echoed verbatim â€” so the upstream receives
     exactly what the policy authorized.
 
     We send a deliberately messy-but-benign request line (extra spaces,
@@ -1368,7 +1368,7 @@ async def test_upstream_ca_pinned_at_construction_not_reread_per_request(
     vulnerability. The probe completes a real MITM TLS tunnel to an
     allow-listed host and sends an inner GET. DNS
     for that host is stubbed to fail, so the proxy reaches the upstream
-    connect and returns ``502`` — proving ``_forward_https`` ran all the
+    connect and returns ``502`` â€” proving ``_forward_https`` ran all the
     way to the upstream open (which requires the upstream SSL context to
     have been built successfully).
 
@@ -1378,7 +1378,7 @@ async def test_upstream_ca_pinned_at_construction_not_reread_per_request(
     vulnerable code (``ssl.create_default_context(cafile=...)`` on every
     request), the now-missing file raises ``FileNotFoundError`` inside
     ``_forward_https``, the handler aborts, and the client sees a torn
-    tunnel (no inner status) — so this test would fail. Deleting the
+    tunnel (no inner status) â€” so this test would fail. Deleting the
     file stands in for the agent mutating the sandbox-writable copy the
     vulnerable controller passed in: if the proxy re-reads it per
     request, the agent's change takes effect.
@@ -1389,7 +1389,7 @@ async def test_upstream_ca_pinned_at_construction_not_reread_per_request(
         parse_rules([f"GET {upstream_host}/**"]),
         cert_path,
         key_path,
-        # The configured bundle — the proxy must read this exactly once,
+        # The configured bundle â€” the proxy must read this exactly once,
         # here, and never again. The test deletes it mid-flight below.
         upstream_ca_bundle=bundle_path,
         # Skip the private-destination guard so the destination check
@@ -1446,7 +1446,7 @@ async def test_upstream_ca_pinned_at_construction_not_reread_per_request(
             f"serve the request (got status={after.status!r} error={after.error!r}). "
             f"This means _forward_https re-read the now-missing cafile per "
             f"request (FileNotFoundError tore the tunnel) instead of reusing "
-            f"the context pinned in __init__ — regression: the upstream trust "
+            f"the context pinned in __init__ â€” regression: the upstream trust "
             f"anchor is sourced from a mutable, per-request file read."
         )
     finally:
@@ -1454,7 +1454,7 @@ async def test_upstream_ca_pinned_at_construction_not_reread_per_request(
 
 
 # ---------------------------------------------------------------------------
-# Credential-proxy rewrite (secretless credential_proxy) — real round trips
+# Credential-proxy rewrite (secretless credential_proxy) â€” real round trips
 # through the plain-HTTP proxy path with a local capturing upstream.
 # ---------------------------------------------------------------------------
 
@@ -1518,7 +1518,7 @@ async def _proxied_http_get(
     :param upstream_port: Port of the local capturing upstream.
     :param authorization: The raw ``Authorization`` value the sandbox
         would send (carrying a synthetic placeholder), or ``None`` to
-        send a bare request with no ``Authorization`` header — the
+        send a bare request with no ``Authorization`` header â€” the
         swap-on-access client shape.
     :returns: The raw response bytes the client received from the proxy.
     """
@@ -1560,7 +1560,7 @@ async def test_credential_rewrite_swaps_bearer_and_token(
     """The proxy swaps a synthetic bearer/token placeholder for the real secret.
 
     A failure means the rewrite didn't fire (upstream would see the
-    synthetic, never the real value) — i.e. the secretless proxy isn't
+    synthetic, never the real value) â€” i.e. the secretless proxy isn't
     actually authenticating the upstream call.
     """
     cert_path, key_path, _ = ca_paths
@@ -1598,7 +1598,7 @@ async def test_credential_rewrite_swaps_bearer_and_token(
     assert b"200 OK" in response, f"Request did not complete through proxy: {response[:200]!r}"
     assert len(captured) == 1, "Upstream should have received exactly one request"
     # The upstream MUST receive the REAL secret, formatted per the rule's
-    # scheme — proving the synthetic→real swap happened at the proxy.
+    # scheme â€” proving the syntheticâ†’real swap happened at the proxy.
     assert captured[0].authorization == expected_upstream
     # And the synthetic placeholder must NOT have leaked upstream.
     assert synthetic not in (captured[0].authorization or "")
@@ -1647,14 +1647,14 @@ async def test_credential_rewrite_swaps_basic_password(
         await upstream.wait_closed()
 
     assert b"200 OK" in response, f"Request did not complete: {response[:200]!r}"
-    # Exactly one upstream request — the proxy forwarded once, not 0
+    # Exactly one upstream request â€” the proxy forwarded once, not 0
     # (dropped) or >1 (retried/duplicated).
     assert len(captured) == 1
     received = captured[0].authorization or ""
     assert received.startswith("Basic ")
     decoded = base64.b64decode(received.split(" ", 1)[1]).decode()
     # The real token reaches upstream in the password field, behind the
-    # configured username — the synthetic must be gone.
+    # configured username â€” the synthetic must be gone.
     assert decoded == "x-access-token:gho_realtoken"
     assert synthetic not in decoded
 
@@ -1668,7 +1668,7 @@ async def test_credential_rewrite_rejects_synthetic_on_wrong_host(
     This is the leak guard: a compromised sandbox must not be able to
     relay its synthetic placeholder to an attacker-controlled host. If the
     binding check regressed, the proxy would forward the request and the
-    upstream would receive a (swapped) real secret — a credential
+    upstream would receive a (swapped) real secret â€” a credential
     exfiltration. The test asserts the request is 403'd and the upstream
     is never contacted.
     """
@@ -1709,7 +1709,7 @@ async def test_credential_rewrite_rejects_synthetic_on_wrong_host(
     assert b"403 Forbidden" in response, (
         f"Synthetic bound to api.github.com MUST be refused on 127.0.0.1. Got: {response[:200]!r}"
     )
-    # The upstream must NEVER have been reached — no swapped secret leaked.
+    # The upstream must NEVER have been reached â€” no swapped secret leaked.
     assert captured == []
 
 
@@ -1756,7 +1756,7 @@ async def test_credential_rewrite_passes_through_non_synthetic(
     assert b"200 OK" in response
     # Exactly one forwarded request (not dropped, not duplicated).
     assert len(captured) == 1
-    # Non-synthetic header forwarded verbatim — no accidental rewrite.
+    # Non-synthetic header forwarded verbatim â€” no accidental rewrite.
     assert captured[0].authorization == "Bearer a-users-own-real-token"
 
 
@@ -1766,7 +1766,7 @@ async def test_credential_rewrite_injects_on_access_without_header(
 ) -> None:
     """Swap-on-access: a bare request to a bound host gets the real credential.
 
-    This is the default model — the entry injected nothing into the
+    This is the default model â€” the entry injected nothing into the
     sandbox (``synthetic=None``), so the request arrives with no
     ``Authorization`` header and the proxy attaches the real credential on
     the way out. If injection regressed, the upstream would receive no
@@ -1805,7 +1805,7 @@ async def test_credential_rewrite_injects_on_access_without_header(
 
     assert b"200 OK" in response, f"Request did not complete: {response[:200]!r}"
     assert len(captured) == 1
-    # The proxy synthesized the Authorization header from the rule — the
+    # The proxy synthesized the Authorization header from the rule â€” the
     # client sent none.
     assert captured[0].authorization == "Bearer real-secret-value"
 
@@ -1866,8 +1866,8 @@ async def test_forwarded_request_is_single_shot_connection_close(
     """A keep-alive client request reaches the upstream as ``Connection: close``.
 
     End-to-end proof that ``_force_connection_close`` is wired into the
-    forward path: the client asks for keep-alive, but the upstream — the
-    real network peer the proxy talks to — must receive exactly one
+    forward path: the client asks for keep-alive, but the upstream â€” the
+    real network peer the proxy talks to â€” must receive exactly one
     ``Connection: close`` so it closes after the response and the relay
     gets a prompt EOF. A regression here reintroduces the git-over-proxy
     hang.
@@ -1951,7 +1951,7 @@ async def test_stop_cancels_in_flight_connection_handlers(
         # loop they would still be pending here (and leak past the loop as
         # "Task was destroyed but it is pending"). They finish done-not-
         # cancelled because _handle_client's finally swallows the injected
-        # CancelledError while closing the writer — but they only got to run
+        # CancelledError while closing the writer â€” but they only got to run
         # that cleanup because stop() cancelled them.
         assert all(t.done() for t in parked)
     finally:

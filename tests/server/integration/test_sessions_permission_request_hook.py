@@ -11,16 +11,16 @@ once the UI verdict arrives.
 Tests cover three round-trips:
 
 - Allow: the UI resolves the elicitation via a session
-  ``approval`` event → endpoint returns
+  ``approval`` event â†’ endpoint returns
   ``decision.behavior == "allow"``.
-- Deny: same path but the UI declines → ``decision.behavior == "deny"``.
-- Timeout: nobody resolves the elicitation → endpoint returns
+- Deny: same path but the UI declines â†’ ``decision.behavior == "deny"``.
+- Timeout: nobody resolves the elicitation â†’ endpoint returns
   ``200`` with empty body so Claude defers to its TUI prompt
   (fail-ask).
 
 Uses the shared ``client`` fixture from ``tests/server/conftest.py``
-(real stores + mock LLM) so the tests exercise the real route →
-``_harness_elicitation_registry`` → SSE-publish pipeline.
+(real stores + mock LLM) so the tests exercise the real route â†’
+``_harness_elicitation_registry`` â†’ SSE-publish pipeline.
 """
 
 from __future__ import annotations
@@ -35,13 +35,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
-from agent_meow.codex_native_elicitation import codex_elicitation_id
-from agent_meow.runtime import session_stream
-from agent_meow.server._elicitation_registry import (
+from omnigent.codex_native_elicitation import codex_elicitation_id
+from omnigent.runtime import session_stream
+from omnigent.server._elicitation_registry import (
     _harness_pre_resolved_elicitations,
     _PreResolvedHarnessElicitation,
 )
-from agent_meow.server.routes import sessions as sessions_route
+from omnigent.server.routes import sessions as sessions_route
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
@@ -149,25 +149,25 @@ async def test_permission_request_hook_allow_round_trip(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    UI approves Claude's permission request → endpoint returns
+    UI approves Claude's permission request â†’ endpoint returns
     ``decision.behavior == "allow"`` in the Claude hookSpecificOutput
     shape.
 
     Failure modes this catches: the SSE event is never emitted (UI
     never sees the request, can't approve); the elicitation registry
     doesn't park the future (verdict comes in but the endpoint never
-    wakes); the verdict→decision mapping returns the wrong literal.
+    wakes); the verdictâ†’decision mapping returns the wrong literal.
     """
     agent = await create_test_agent(client, "test-permission-allow")
     session_id = await _create_session(client, agent["id"])
     payload = await _claude_permission_payload()
 
-    # Fire the hook POST and the verdict event concurrently — the hook
+    # Fire the hook POST and the verdict event concurrently â€” the hook
     # parks on the registry, the verdict resolves it. Subscribing to
     # the session stream is how we learn the elicitation id.
     drain_task = asyncio.create_task(_drain_until_elicitation(session_id))
     # Give the subscriber a moment to register before the publisher
-    # fires (publish is broadcast-to-current-subscribers — pre-subscribe
+    # fires (publish is broadcast-to-current-subscribers â€” pre-subscribe
     # events are lost).
     await asyncio.sleep(0.05)
     hook_task = asyncio.create_task(
@@ -196,12 +196,12 @@ async def test_permission_request_hook_accepts_kimi_namespaced_elicitation_id(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    A kimi-native hook supplies ``_omnigent_elicitation_id = elicit_kimi_…`` on
+    A kimi-native hook supplies ``_omnigent_elicitation_id = elicit_kimi_â€¦`` on
     every POST (stable re-attach id). The shared endpoint must accept any
-    ``elicit_<harness>_`` namespace — not just ``elicit_claude_`` — or it 400s
+    ``elicit_<harness>_`` namespace â€” not just ``elicit_claude_`` â€” or it 400s
     and the approval card is NEVER published.
 
-    Regression: the id regex was hard-coded to ``^elicit_claude_…$``, so every
+    Regression: the id regex was hard-coded to ``^elicit_claude_â€¦$``, so every
     kimi approval POST was rejected and no card surfaced in the web UI.
     """
     agent = await create_test_agent(client, "test-permission-kimi-id")
@@ -234,9 +234,9 @@ async def test_cursor_permission_request_hook_allow_round_trip(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    cursor-native TUI prompt → web ApprovalCard → accept → verdict.
+    cursor-native TUI prompt â†’ web ApprovalCard â†’ accept â†’ verdict.
 
-    The runner-side mirror (``agent_meow.cursor_native_permissions``) POSTs a
+    The runner-side mirror (``omnigent.cursor_native_permissions``) POSTs a
     detected cursor TUI approval prompt to
     ``/hooks/cursor-permission-request``; the route publishes a
     ``response.elicitation_request`` (phase ``pre_tool_use``, policy
@@ -291,9 +291,9 @@ async def test_qwen_permission_request_hook_allow_round_trip(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    qwen-native TUI ``can_use_tool`` → web ApprovalCard → accept → verdict.
+    qwen-native TUI ``can_use_tool`` â†’ web ApprovalCard â†’ accept â†’ verdict.
 
-    The runner-side mirror (``agent_meow.qwen_native_permissions``) reads a
+    The runner-side mirror (``omnigent.qwen_native_permissions``) reads a
     ``can_use_tool`` control request off qwen's ``--json-file`` and POSTs it to
     the generic ``/hooks/native-permission-request`` (shared with hermes-/goose-
     native) with ``agent="qwen"`` + ``policy_name="qwen_native_permission"``; the
@@ -345,9 +345,9 @@ async def test_cursor_permission_request_hook_stamps_ask_user_question_extra(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    cursor ``AskQuestion`` → the structured ``ask_user_question`` extra is
+    cursor ``AskQuestion`` â†’ the structured ``ask_user_question`` extra is
     published on the elicitation params (uncapped), so the web UI renders the
-    interactive form from it rather than parsing the ≤1024-char content_preview.
+    interactive form from it rather than parsing the â‰¤1024-char content_preview.
 
     Catches: a multi-question payload silently dropped (web falls back to the
     raw approve/reject card); the extra not surviving the params round-trip.
@@ -417,14 +417,14 @@ async def test_top_level_elicitations_route_is_not_mounted(
     - HTTP (``client`` fixture, same app): the live response is
       ``404`` *or* ``405``. The status varies by environment because
       ``create_app`` mounts a catch-all SPA at ``/`` only when a local
-      web-ui build exists at ``agent_meow/server/static/web-ui/index.html``
+      web-ui build exists at ``omnigent/server/static/web-ui/index.html``
       (a gitignored dev artifact, absent on main/CI/fresh clones).
       With no build the unmatched POST is a plain ``404``; with the
       build present Starlette's ``StaticFiles`` matches the path but
       rejects the non-GET method with ``405``. Either way no handler
       ran. A re-mounted legacy route would instead run its handler and
       return ``400`` (missing ``response_id`` for this body), ``501``,
-      or ``2xx`` — never ``404``/``405`` — so both assertions still
+      or ``2xx`` â€” never ``404``/``405`` â€” so both assertions still
       bite.
     """
     assert not any(
@@ -445,7 +445,7 @@ async def test_permission_request_hook_deny_round_trip(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    UI declines Claude's permission request → endpoint returns
+    UI declines Claude's permission request â†’ endpoint returns
     ``decision.behavior == "deny"``.
 
     Mirrors the allow test but the verdict carries
@@ -487,7 +487,7 @@ async def test_permission_request_hook_allow_all_edits_round_trip(
     This is the web equivalent of Claude Code's native shift+tab
     "auto-accept edits" toggle. Failure modes this catches: the gate
     doesn't recognize ``Edit`` as an edit tool (button never offered);
-    the verdict→decision mapping drops ``updatedPermissions`` (the
+    the verdictâ†’decision mapping drops ``updatedPermissions`` (the
     session never switches mode, so the button silently degrades to a
     plain Approve); the ``setMode`` entry has the wrong field
     names/values (Claude Code ignores it).
@@ -508,7 +508,7 @@ async def test_permission_request_hook_allow_all_edits_round_trip(
     )
 
     event = await drain_task
-    # The UI hint is stamped only for edit tools — it drives the
+    # The UI hint is stamped only for edit tools â€” it drives the
     # "Accept & allow all edits" button.
     assert event["params"]["allow_all_edits"] is True
 
@@ -542,7 +542,7 @@ async def test_permission_request_hook_no_allow_all_edits_for_non_edit_tool(
     ``allow_all_edits``, and a plain accept produces a decision with
     no ``updatedPermissions``.
 
-    Guards the user's core concern — the option must never surface
+    Guards the user's core concern â€” the option must never surface
     where switching to ``acceptEdits`` would be a no-op (acceptEdits
     only auto-approves Edit/Write/MultiEdit/NotebookEdit, not Bash).
     """
@@ -560,7 +560,7 @@ async def test_permission_request_hook_no_allow_all_edits_for_non_edit_tool(
     )
 
     event = await drain_task
-    # No hint for Bash — the button is gated off client-side.
+    # No hint for Bash â€” the button is gated off client-side.
     assert "allow_all_edits" not in event["params"]
 
     verdict = await _post_approval(client, session_id, event["elicitation_id"], "accept")
@@ -585,7 +585,7 @@ async def test_permission_request_hook_spoofed_allow_all_edits_on_non_edit_tool_
     verdict site instead of trusting the client's content flag. Without
     that re-check, a crafted approval payload could flip the session
     into ``acceptEdits`` on a prompt the affordance was never offered
-    for — the exact gating bypass this guards. (The UI never sends this;
+    for â€” the exact gating bypass this guards. (The UI never sends this;
     the test forges the payload directly.)
     """
     agent = await create_test_agent(client, "test-permission-spoofed-edits")
@@ -616,7 +616,7 @@ async def test_permission_request_hook_spoofed_allow_all_edits_on_non_edit_tool_
     assert resp.status_code == 200, resp.text
     decision = resp.json()["hookSpecificOutput"]["decision"]
     assert decision["behavior"] == "allow"
-    # Server ignores the spoofed flag — no mode switch for a non-edit tool.
+    # Server ignores the spoofed flag â€” no mode switch for a non-edit tool.
     assert "updatedPermissions" not in decision
 
 
@@ -625,13 +625,13 @@ async def test_permission_request_hook_edit_plain_accept_has_no_mode_switch(
 ) -> None:
     """
     Edit-tool prompt accepted via plain Approve (no
-    ``allow_all_edits`` flag) → decision is a plain ``allow`` with no
+    ``allow_all_edits`` flag) â†’ decision is a plain ``allow`` with no
     ``updatedPermissions``.
 
     Regression guard: the ``setMode`` update must be opt-in per click.
     If the endpoint emitted it for every edit-tool accept, clicking
     plain Approve would silently switch the whole session into
-    auto-accept-edits — exactly the surprise this gating avoids.
+    auto-accept-edits â€” exactly the surprise this gating avoids.
     """
     agent = await create_test_agent(client, "test-permission-edit-plain")
     session_id = await _create_session(client, agent["id"])
@@ -647,9 +647,9 @@ async def test_permission_request_hook_edit_plain_accept_has_no_mode_switch(
     )
 
     event = await drain_task
-    # The hint is present (Write is an edit tool)…
+    # The hint is present (Write is an edit tool)â€¦
     assert event["params"]["allow_all_edits"] is True
-    # …but a plain accept (no content flag) must not carry it through.
+    # â€¦but a plain accept (no content flag) must not carry it through.
     verdict = await _post_approval(client, session_id, event["elicitation_id"], "accept")
     assert verdict.status_code == 202, verdict.text
 
@@ -664,7 +664,7 @@ async def _claude_webfetch_payload(url: str = "https://github.com/cli/cli") -> d
     """
     Build a Claude PermissionRequest hook body for a WebFetch call.
 
-    :param url: The URL WebFetch wants to fetch — its host scopes the
+    :param url: The URL WebFetch wants to fetch â€” its host scopes the
         persistent "don't ask again" rule.
     :returns: JSON-serializable PermissionRequest payload for WebFetch.
     """
@@ -743,7 +743,7 @@ async def test_permission_request_hook_remember_tool_wide_fallback(
     """
     Non-WebFetch tool (Bash): the ``remember_scope`` carries only the
     tool (no host), and accepting with ``content.remember`` installs a
-    TOOL-WIDE allow rule — an ``addRules`` entry with ``toolName`` and
+    TOOL-WIDE allow rule â€” an ``addRules`` entry with ``toolName`` and
     no ``ruleContent``.
 
     Same fallback path a WebFetch with a missing/unparseable URL takes:
@@ -779,7 +779,7 @@ async def test_permission_request_hook_remember_tool_wide_fallback(
     assert resp.status_code == 200, resp.text
     decision = resp.json()["hookSpecificOutput"]["decision"]
     assert decision["behavior"] == "allow"
-    # No ``ruleContent`` → the rule matches the whole tool.
+    # No ``ruleContent`` â†’ the rule matches the whole tool.
     assert decision["updatedPermissions"] == [
         {
             "type": "addRules",
@@ -796,7 +796,7 @@ async def test_permission_request_hook_remember_not_offered_for_edit_tool(
     """
     Edit tools take the ``acceptEdits``/``setMode`` path, NOT a
     persistent allow rule, so the endpoint must not stamp
-    ``remember_scope`` for them — and a forged ``content.remember`` on
+    ``remember_scope`` for them â€” and a forged ``content.remember`` on
     an edit-tool prompt must NOT produce an ``addRules`` decision.
 
     Server-side eligibility guard (mirrors the ``allow_all_edits``
@@ -834,7 +834,7 @@ async def test_permission_request_hook_remember_not_offered_for_edit_tool(
     assert resp.status_code == 200, resp.text
     decision = resp.json()["hookSpecificOutput"]["decision"]
     assert decision["behavior"] == "allow"
-    # Server ignores the spoofed flag — no allow rule for an edit tool.
+    # Server ignores the spoofed flag â€” no allow rule for an edit tool.
     # (No allow_all_edits flag was sent either, so no setMode update,
     # leaving the decision a plain allow with no permission updates.)
     assert "updatedPermissions" not in decision
@@ -844,7 +844,7 @@ async def test_permission_request_hook_webfetch_plain_accept_has_no_rule(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    WebFetch accepted via plain Approve (no ``remember`` flag) → a plain
+    WebFetch accepted via plain Approve (no ``remember`` flag) â†’ a plain
     ``allow`` with no ``updatedPermissions``.
 
     Regression guard: the allow rule must be opt-in per click. A plain
@@ -865,9 +865,9 @@ async def test_permission_request_hook_webfetch_plain_accept_has_no_rule(
     )
 
     event = await drain_task
-    # The hint is present (WebFetch is remember-eligible)…
+    # The hint is present (WebFetch is remember-eligible)â€¦
     assert event["params"]["remember_scope"]["tool"] == "WebFetch"
-    # …but a plain accept (no content flag) must not carry it through.
+    # â€¦but a plain accept (no content flag) must not carry it through.
     verdict = await _post_approval(client, session_id, event["elicitation_id"], "accept")
     assert verdict.status_code == 202, verdict.text
 
@@ -890,7 +890,7 @@ async def test_permission_request_hook_remember_webfetch_no_host_tool_wide(
 
     Guards the WebFetch branch of the tool-wide fallback specifically:
     domain rules are HTTP(S)-oriented, so an ``ftp://`` URL can't be
-    scoped to a domain — but the user can still stop the per-call
+    scoped to a domain â€” but the user can still stop the per-call
     prompting for WebFetch as a whole.
     """
     agent = await create_test_agent(client, "test-permission-remember-webfetch-toolwide")
@@ -907,7 +907,7 @@ async def test_permission_request_hook_remember_webfetch_no_host_tool_wide(
     )
 
     event = await drain_task
-    # No host could be derived → tool-wide scope (tool only, no host).
+    # No host could be derived â†’ tool-wide scope (tool only, no host).
     assert event["params"]["remember_scope"] == {"tool": "WebFetch"}
 
     verdict = await _post_approval(
@@ -923,7 +923,7 @@ async def test_permission_request_hook_remember_webfetch_no_host_tool_wide(
     assert resp.status_code == 200, resp.text
     decision = resp.json()["hookSpecificOutput"]["decision"]
     assert decision["behavior"] == "allow"
-    # No ``ruleContent`` → the rule matches every WebFetch call.
+    # No ``ruleContent`` â†’ the rule matches every WebFetch call.
     assert decision["updatedPermissions"] == [
         {
             "type": "addRules",
@@ -946,15 +946,15 @@ async def test_permission_request_hook_forwards_cwd_and_permission_mode(
     ``permission_mode`` lets the UI badge the card with the mode
     Claude is in (``"default"`` / ``"acceptEdits"`` / ``"plan"``).
 
-    Note: ``tool_use_id`` is intentionally absent — the fixtures omit
+    Note: ``tool_use_id`` is intentionally absent â€” the fixtures omit
     it because Claude Code's PermissionRequest payload doesn't carry one
     (the id is only minted when the tool call is emitted, AFTER
     the permission check). With no id, the terminal-resolved fast path
     correlates a mirrored tool result to a parked prompt by exact
     ``(tool_name, tool_input)`` (see
-    :func:`~?agent_meow.server.routes.sessions._signal_terminal_resolved_harness_elicitation`),
+    :func:`~?omnigent.server.routes.sessions._signal_terminal_resolved_harness_elicitation`),
     and the web UI clears a card strictly by ``elicitation_id`` on the
-    server's ``response.elicitation_resolved`` event — never by a
+    server's ``response.elicitation_resolved`` event â€” never by a
     "first pending" heuristic.
     """
     agent = await create_test_agent(client, "test-permission-extras")
@@ -1070,7 +1070,7 @@ async def test_permission_request_hook_substitutes_ask_user_question_answers(
     plus an ``answers`` field populated from the verdict content.
 
     Without this, the form selection is recorded server-side but
-    Claude never sees it — the LLM keeps blocking on the TUI
+    Claude never sees it â€” the LLM keeps blocking on the TUI
     picker even though the user already answered via the web UI.
     """
     agent = await create_test_agent(client, "test-permission-aqu-substitute")
@@ -1116,7 +1116,7 @@ async def test_permission_request_hook_substitutes_ask_user_question_answers(
             "data": {
                 "elicitation_id": event["elicitation_id"],
                 "action": "accept",
-                # Flat MCP ``ElicitResult.content`` shape — each question
+                # Flat MCP ``ElicitResult.content`` shape â€” each question
                 # text is one top-level field; single-select is a string,
                 # multi-select is a ``list[str]``.
                 "content": {
@@ -1146,7 +1146,7 @@ async def test_permission_request_hook_no_updated_input_without_answers(
     """
     Approving an AskUserQuestion elicitation WITHOUT content (e.g.
     a bare ``{"action": "accept"}`` verdict) must NOT add an empty
-    ``updatedInput`` to the decision — Claude would interpret that
+    ``updatedInput`` to the decision â€” Claude would interpret that
     as "the user picked nothing" and the LLM would see an empty
     answer set. Bare-accept should fall through to the TUI picker.
     """
@@ -1188,7 +1188,7 @@ async def test_permission_request_hook_surfaces_option_preview(
     When an AskUserQuestion option carries a ``preview`` field,
     the server's structured extraction surfaces it verbatim on
     the published elicitation params. Without this passthrough
-    the UI can't render the <pre> preview block — the
+    the UI can't render the <pre> preview block â€” the
     structured-extra helper was dropping ``preview`` even though
     Claude included it on the wire.
     """
@@ -1209,7 +1209,7 @@ async def test_permission_request_hook_surfaces_option_preview(
                     {
                         "label": "Single",
                         "description": "One pane",
-                        # No preview on this option — must NOT appear
+                        # No preview on this option â€” must NOT appear
                         # in the structured payload.
                     },
                 ],
@@ -1248,7 +1248,7 @@ async def test_permission_request_hook_surfaces_exit_plan_mode_input(
     web UI can render a dedicated plan-review card.
 
     Critical: ``content_preview`` is hard-capped at 1024 chars and
-    real plans blow well past it — the structured extra is the only
+    real plans blow well past it â€” the structured extra is the only
     untruncated source. The input shape also varies across Claude
     Code builds (``plan`` markdown, ``allowedPrompts``, future
     fields), so the endpoint must pass every field through without
@@ -1259,7 +1259,7 @@ async def test_permission_request_hook_surfaces_exit_plan_mode_input(
     payload = await _claude_permission_payload(tool_name="ExitPlanMode")
     # ExitPlanMode fires while Claude is in plan mode.
     payload["permission_mode"] = "plan"
-    # Plan markdown longer than the 1024-char content_preview cap —
+    # Plan markdown longer than the 1024-char content_preview cap â€”
     # proves the structured extra is NOT subject to the truncation.
     long_plan = "# Migration plan\n\n" + ("- step: do the thing\n" * 100)
     assert len(long_plan) > 1024
@@ -1286,8 +1286,8 @@ async def test_permission_request_hook_surfaces_exit_plan_mode_input(
 
     event = await drain_task
     params = event["params"]
-    # The whole native tool_input — plan, allowedPrompts, and the
-    # unknown field — must ride through verbatim. A missing key or a
+    # The whole native tool_input â€” plan, allowedPrompts, and the
+    # unknown field â€” must ride through verbatim. A missing key or a
     # truncated plan means the endpoint filtered/capped the extra.
     assert params["exit_plan_mode"] == payload["tool_input"], params
     # Plan cards are eligible for the "auto-accept edits" affordance
@@ -1302,7 +1302,7 @@ async def test_permission_request_hook_surfaces_exit_plan_mode_input(
     assert resp.status_code == 200, resp.text
     # A plain accept ("Yes, manually approve edits") pins the session
     # to the prompting ``default`` mode rather than trusting whatever
-    # mode Claude's plan-exit restores — every subsequent edit must
+    # mode Claude's plan-exit restores â€” every subsequent edit must
     # prompt. ``auto`` here would mean the auto-mode branch fired
     # without the allow_all_edits flag.
     assert resp.json()["hookSpecificOutput"]["decision"] == {
@@ -1317,7 +1317,7 @@ async def test_permission_request_hook_exit_plan_mode_auto_accept_round_trip(
     """
     Accepting an ExitPlanMode prompt with ``allow_all_edits: true``
     in the verdict content returns ``behavior: allow`` PLUS a
-    ``setMode → auto`` permission update — the plan card's "Yes, and
+    ``setMode â†’ auto`` permission update â€” the plan card's "Yes, and
     use auto mode" option: exit plan mode and continue in Claude's
     ``auto`` mode (NOT the narrower ``acceptEdits`` the edit-tool
     affordance uses).
@@ -1377,11 +1377,11 @@ async def test_permission_request_hook_decline_forwards_feedback_message(
     """
     Declining with ``content.feedback`` (the plan card's "Reject with
     feedback" flow) returns ``behavior: deny`` plus the feedback as
-    ``decision.message`` — Claude Code surfaces it as the denial
+    ``decision.message`` â€” Claude Code surfaces it as the denial
     reason, so the model stays in plan mode and revises toward the
     feedback instead of guessing why the plan was refused.
 
-    (The bare-decline shape — no ``message`` key — is covered by
+    (The bare-decline shape â€” no ``message`` key â€” is covered by
     ``test_permission_request_hook_deny_round_trip``.)
     """
     agent = await create_test_agent(client, "test-permission-epm-feedback")
@@ -1407,7 +1407,7 @@ async def test_permission_request_hook_decline_forwards_feedback_message(
             "data": {
                 "elicitation_id": event["elicitation_id"],
                 "action": "decline",
-                "content": {"feedback": "Too risky — split it into two phases."},
+                "content": {"feedback": "Too risky â€” split it into two phases."},
             },
         },
     )
@@ -1420,7 +1420,7 @@ async def test_permission_request_hook_decline_forwards_feedback_message(
     # the user's revision guidance never reached Claude.
     assert decision == {
         "behavior": "deny",
-        "message": "Too risky — split it into two phases.",
+        "message": "Too risky â€” split it into two phases.",
     }
 
 
@@ -1432,7 +1432,7 @@ async def test_permission_request_hook_omits_structured_extras_for_other_tools(
     the ``ask_user_question`` / ``exit_plan_mode`` extras on their
     elicitation params. Without this guard the UI would attempt to
     render an interactive form (or a plan-review card) for a Bash
-    permission prompt — wrong shape, wrong UX.
+    permission prompt â€” wrong shape, wrong UX.
     """
     agent = await create_test_agent(client, "test-permission-aqu-absent")
     session_id = await _create_session(client, agent["id"])
@@ -1462,7 +1462,7 @@ async def test_permission_request_hook_timeout_returns_empty_body(
 ) -> None:
     """
     When no verdict arrives within the wait budget, the endpoint
-    returns ``200`` with an empty body — Claude Code's HTTP hook
+    returns ``200`` with an empty body â€” Claude Code's HTTP hook
     contract treats that as "defer to the TUI prompt" (fail-ask).
 
     Without this contract: an unattended UI would block Claude's
@@ -1497,7 +1497,7 @@ async def test_permission_request_hook_timeout_clears_pending_index(
 ) -> None:
     """
     The pending-elicitations index is decremented when the hook
-    times out — Claude's fail-ask fallback (user answers in the
+    times out â€” Claude's fail-ask fallback (user answers in the
     TUI instead of the web UI) is the ONLY signal the agent-meow server
     gets that the prompt is done.
 
@@ -1508,10 +1508,10 @@ async def test_permission_request_hook_timeout_clears_pending_index(
 
     Asserts on the index state directly because the path the user
     reported is exactly "I answered in Claude, the badge never
-    cleared" — i.e. the visible artifact is the index value
+    cleared" â€” i.e. the visible artifact is the index value
     flowing through ``GET /v1/sessions``.
     """
-    from agent_meow.runtime import pending_elicitations, session_stream
+    from omnigent.runtime import pending_elicitations, session_stream
 
     monkeypatch.setattr(
         sessions_route,
@@ -1665,8 +1665,8 @@ async def test_permission_request_hook_clears_index_on_client_disconnect(
 ) -> None:
     """
     When the upstream client (Claude) closes its HTTP connection
-    mid-park, the hook returns the fail-ask shape promptly — without
-    waiting the full timeout — and the elicitation drops from the
+    mid-park, the hook returns the fail-ask shape promptly â€” without
+    waiting the full timeout â€” and the elicitation drops from the
     pending index after the re-park grace elapses with no retry.
 
     A severed connection is ambiguous (TUI answered vs proxy cut an
@@ -1675,14 +1675,14 @@ async def test_permission_request_hook_clears_index_on_client_disconnect(
 
     The disconnect is simulated by patching the polling helper rather
     than wiring a real TCP teardown through the in-process ASGI
-    transport — deterministic, no transport-layer timing dependence.
+    transport â€” deterministic, no transport-layer timing dependence.
     """
-    from agent_meow.runtime import pending_elicitations, session_stream
+    from omnigent.runtime import pending_elicitations, session_stream
 
     async def _disconnect_immediately(_request: Any) -> None:
         # One short yield so the future-watcher in the asyncio.wait
         # set sees the disconnect task complete after the hook has
-        # published the SSE event — same ordering the real socket
+        # published the SSE event â€” same ordering the real socket
         # close would produce.
         await asyncio.sleep(0.01)
 
@@ -1692,7 +1692,7 @@ async def test_permission_request_hook_clears_index_on_client_disconnect(
         _disconnect_immediately,
     )
     # Pin the timeout high so the test fails fast if the disconnect
-    # race regresses — without the patch the hook would park here
+    # race regresses â€” without the patch the hook would park here
     # for 300s rather than returning on the disconnect signal.
     monkeypatch.setattr(
         sessions_route,
@@ -1735,7 +1735,7 @@ async def test_permission_request_hook_clears_index_on_client_disconnect(
     # arrived.
     assert resp.status_code == 200, resp.text
     assert resp.content == b"", f"expected empty body on disconnect, got {resp.content!r}"
-    # 1 = the disconnect did NOT clear the index synchronously — the
+    # 1 = the disconnect did NOT clear the index synchronously â€” the
     # prompt stays visible through the grace so a hook retry can
     # re-park it. 0 here would mean the deferred clear regressed to
     # the old immediate wipe (blocked sub-agents go invisible again).
@@ -1769,7 +1769,7 @@ async def test_permission_hook_repark_within_grace_keeps_card_pending(
     blocked: the old code cleared the card the moment the long-poll was
     severed, while the prompt lived on in an unattended tmux pane.
     """
-    from agent_meow.runtime import pending_elicitations, session_stream
+    from omnigent.runtime import pending_elicitations, session_stream
 
     disconnect_calls = 0
 
@@ -1825,7 +1825,7 @@ async def test_permission_hook_repark_within_grace_keeps_card_pending(
     capture_task = asyncio.create_task(_capture_resolved())
     await asyncio.sleep(0.05)
 
-    # First long-poll: severed by the disconnect fake → fail-ask.
+    # First long-poll: severed by the disconnect fake â†’ fail-ask.
     first = await client.post(
         f"/v1/sessions/{session_id}/hooks/permission-request",
         json=payload,
@@ -1836,7 +1836,7 @@ async def test_permission_hook_repark_within_grace_keeps_card_pending(
     deferred_tasks = set(sessions_route._deferred_elicitation_clear_tasks)
     assert len(deferred_tasks) == 1, (
         f"expected one deferred clear after the severed poll, got "
-        f"{len(deferred_tasks)} — disconnect regressed to immediate wipe, or leaked tasks."
+        f"{len(deferred_tasks)} â€” disconnect regressed to immediate wipe, or leaked tasks."
     )
 
     # Retry re-parks the SAME id while the grace is still running.
@@ -1886,10 +1886,10 @@ async def test_permission_hook_verdict_during_gap_honored_on_repark(
     A web verdict that lands between a severed long-poll and its retry
     is handed to the retry via the pre-resolved tombstone.
 
-    Without it the retry would re-publish and fail-ask later — the
+    Without it the retry would re-publish and fail-ask later â€” the
     user's click silently dropped, the sub-agent still blocked.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     async def _disconnect_immediately(_request: Any) -> None:
         """
@@ -1983,7 +1983,7 @@ async def test_permission_hook_rejects_reattach_id_owned_by_other_session(
     A re-attach id currently parked by another session is rejected.
 
     Cross-session guard: session B must not be able to adopt session
-    A's live elicitation id — doing so would overwrite A's owner
+    A's live elicitation id â€” doing so would overwrite A's owner
     registration and let B's approval flow resolve A's prompt.
     """
     agent = await create_test_agent(client, "test-permission-id-collision")
@@ -2103,7 +2103,7 @@ async def test_codex_pending_elicitation_survives_session_snapshot_refresh(
     :param client: Test HTTP client.
     :returns: None.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-codex-pending-refresh")
@@ -2688,7 +2688,7 @@ async def test_codex_elicitation_hook_timeout_clears_pending_index(
     Claude hook: return an empty body and decrement the pending
     elicitation index once the re-park grace elapses with no retry.
     """
-    from agent_meow.runtime import pending_elicitations, session_stream
+    from omnigent.runtime import pending_elicitations, session_stream
 
     monkeypatch.setattr(
         sessions_route,
@@ -2733,7 +2733,7 @@ async def test_codex_elicitation_hook_timeout_clears_pending_index(
 
     assert resp.status_code == 200, resp.text
     assert resp.content == b""
-    # Deferred clear — the index drops only after the grace passes
+    # Deferred clear â€” the index drops only after the grace passes
     # with no re-park, so wait for the resolved event first.
     await drain_task
     assert pending_elicitations.count_for(session_id) == 0
@@ -2749,7 +2749,7 @@ async def test_permission_request_hook_validates_tool_name(
 
     Without this guard, a malformed payload from Claude Code would
     hang the hook for the full timeout and the UI would render a
-    ``response.elicitation_request`` with an empty preview — neither
+    ``response.elicitation_request`` with an empty preview â€” neither
     useful nor diagnosable.
     """
     agent = await create_test_agent(client, "test-permission-validate")
@@ -2775,7 +2775,7 @@ async def test_permission_hook_finally_emits_elicitation_resolved_on_timeout(
     ``response.elicitation_resolved`` SSE event (in addition to
     clearing the cross-session index). Multi-tab web UI clients
     rely on the SSE event to flip their copy of the
-    ``ApprovalCard`` — without it, every tab the user hasn't
+    ``ApprovalCard`` â€” without it, every tab the user hasn't
     actively interacted with would hold the prompt as pending
     until the user refreshes.
 
@@ -2783,7 +2783,7 @@ async def test_permission_hook_finally_emits_elicitation_resolved_on_timeout(
     chat-store consumer is the visible artifact for the
     multi-tab path.
     """
-    from agent_meow.runtime import pending_elicitations, session_stream
+    from omnigent.runtime import pending_elicitations, session_stream
 
     monkeypatch.setattr(
         sessions_route,
@@ -2829,7 +2829,7 @@ async def test_permission_hook_finally_emits_elicitation_resolved_on_timeout(
         f"learn the prompt is dead."
     )
     # And the original request matches the resolved one (single
-    # round trip — the id from the request must be the same id
+    # round trip â€” the id from the request must be the same id
     # cleared at the end).
     requested = [e for e in captured if e.get("type") == "response.elicitation_request"]
     assert len(requested) == 1
@@ -2845,14 +2845,14 @@ async def test_approval_dispatch_publishes_elicitation_resolved(
     a ``response.elicitation_resolved`` SSE event after resolving
     the harness future. Tabs other than the one that submitted
     the verdict rely on this signal to flip their card from
-    pending to resolved — without it, the second tab would stay
+    pending to resolved â€” without it, the second tab would stay
     frozen on the original prompt until refresh.
 
     Triggers the harness-future branch by registering an
     elicitation through the real ``PermissionRequest`` hook, then
     delivering an ``approval`` verdict from the test side.
     """
-    from agent_meow.runtime import pending_elicitations, session_stream
+    from omnigent.runtime import pending_elicitations, session_stream
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-approval-dispatch-emits-resolved")
@@ -2892,7 +2892,7 @@ async def test_approval_dispatch_publishes_elicitation_resolved(
     await drain_task
 
     resolved = [e for e in captured if e.get("type") == "response.elicitation_resolved"]
-    # The dispatch path AND the hook's finally each publish — both
+    # The dispatch path AND the hook's finally each publish â€” both
     # are idempotent on consumers. At least one must fire.
     assert len(resolved) >= 1, (
         f"expected approval dispatch to publish elicitation_resolved, "
@@ -2914,7 +2914,7 @@ async def _subscribe_into(
 
     A single long-lived subscriber (vs. :func:`_drain_until_elicitation`,
     which returns on the first elicitation) lets a test observe the
-    *absence* of a later event — here, that an unrelated tool result did
+    *absence* of a later event â€” here, that an unrelated tool result did
     NOT publish a ``response.elicitation_resolved`` for a pending prompt.
 
     :param session_id: Session to subscribe to.
@@ -2941,7 +2941,7 @@ async def _wait_for_event(
     Used with :func:`_subscribe_into` so the test reads ids out of the
     same subscriber that also watches for the absence of later events
     (a second `subscribe` could miss a publish that landed before it
-    registered — publish is broadcast-to-current-subscribers).
+    registered â€” publish is broadcast-to-current-subscribers).
 
     :param sink: Event list a subscriber task is appending into.
     :param predicate: ``Callable[[dict], bool]`` selecting the event.
@@ -2969,7 +2969,7 @@ async def _post_external_conversation_item(
     Forward one claude-native transcript item through the public route.
 
     Mirrors what ``claude_native_forwarder`` POSTs for an observed
-    ``function_call`` / ``function_call_output`` — the path that lands
+    ``function_call`` / ``function_call_output`` â€” the path that lands
     in :func:`_publish_external_conversation_item`.
 
     :param client: Test HTTP client.
@@ -3023,7 +3023,7 @@ async def test_non_gated_tool_output_does_not_resolve_pending_elicitation(
     index still counts it. Fails if forwarded tool observations start
     resolving pending permissions again.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-1594-non-gated")
@@ -3036,7 +3036,7 @@ async def test_non_gated_tool_output_does_not_resolve_pending_elicitation(
     # Let the subscriber register before any publish (broadcast-only).
     await asyncio.sleep(0.05)
 
-    # Park a gated Bash approval — nobody answers it.
+    # Park a gated Bash approval â€” nobody answers it.
     bash_payload = await _claude_permission_payload(tool_name="Bash")
     hook_task = asyncio.create_task(
         client.post(
@@ -3120,7 +3120,7 @@ async def test_gated_tool_output_resolves_pending_elicitation(
 ) -> None:
     """
     The gated tool's OWN ``function_call_output`` resolves its pending
-    permission prompt promptly — the terminal-resolved fast path that
+    permission prompt promptly â€” the terminal-resolved fast path that
     fixes the reported "stuck for minutes" bug.
 
     Scenario (claude-native, the reported config): the
@@ -3135,11 +3135,11 @@ async def test_gated_tool_output_resolves_pending_elicitation(
 
     Asserts: ``response.elicitation_resolved`` for the Bash prompt is
     published, the pending index drops to 0, and the parked hook POST
-    returns ``200`` with an empty body (fail-ask — Claude already has
+    returns ``200`` with an empty body (fail-ask â€” Claude already has
     its TUI answer). Positive counterpart to
     ``test_non_gated_tool_output_does_not_resolve_pending_elicitation``.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-terminal-resolved")
@@ -3149,7 +3149,7 @@ async def test_gated_tool_output_resolves_pending_elicitation(
     capture_task = asyncio.create_task(_subscribe_into(session_id, captured))
     await asyncio.sleep(0.05)
 
-    # Park a gated Bash approval — nobody answers it via the web UI.
+    # Park a gated Bash approval â€” nobody answers it via the web UI.
     bash_payload = await _claude_permission_payload(tool_name="Bash")
     hook_task = asyncio.create_task(
         client.post(
@@ -3169,7 +3169,7 @@ async def test_gated_tool_output_resolves_pending_elicitation(
 
     # The user answered in the TUI; Claude runs the gated Bash and the
     # forwarder mirrors its tool_use then tool_result. Same tool name AND
-    # input as the parked prompt → correlated to this prompt.
+    # input as the parked prompt â†’ correlated to this prompt.
     bash_call_id = "toolu_bash_resolved"
     fc = await _post_external_conversation_item(
         client,
@@ -3196,7 +3196,7 @@ async def test_gated_tool_output_resolves_pending_elicitation(
     assert fco.status_code < 300, fco.text
 
     # The mirrored result resolves the prompt: elicitation_resolved fires,
-    # the parked hook POST returns 200 empty body (fail-ask), index → 0.
+    # the parked hook POST returns 200 empty body (fail-ask), index â†’ 0.
     resolved = await _wait_for_event(
         captured,
         lambda e: (
@@ -3224,16 +3224,16 @@ async def test_tool_output_resolves_only_the_matching_same_name_prompt(
 ) -> None:
     """
     With two same-named prompts parked, a tool result clears only the
-    one whose input matches — not the other, and not both.
+    one whose input matches â€” not the other, and not both.
 
     Guards the correlation's input disambiguation. Claude blocks
     per-prompt so two outstanding ``Bash`` approvals is rare, but a
     parallel gated batch can park two at once; a mirrored result for one
     specific command must resolve exactly that prompt. Without input
     matching the fast path would fall back to resolving an arbitrary
-    same-named prompt — the kind of mis-resolution this guards against.
+    same-named prompt â€” the kind of mis-resolution this guards against.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-terminal-resolved-match")
@@ -3336,7 +3336,7 @@ async def test_pre_permission_tool_call_does_not_deny_permission_hook(
     order: hook publishes approval, the transcript forwards ``Edit``,
     then the web UI accepts. The final hook response must still allow.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     agent = await create_test_agent(client, "test-permission-edit-pre-call")
@@ -3429,7 +3429,7 @@ async def test_hook_returns_verdict_when_disconnect_poll_swallows_its_cancel(
     disconnect-watcher task and awaits it. Starlette's
     ``is_disconnected()`` runs inside a pre-cancelled anyio cancel
     scope, and a cancel landing in that window is coalesced with the
-    scope's own cancellation and swallowed — the watcher survives and
+    scope's own cancellation and swallowed â€” the watcher survives and
     the old unbounded ``await race_task`` wedged the request for the
     gate's full timeout (24h on this path), hanging CI workers. The
     stub watcher below swallows its cancel deterministically; the hook
@@ -3483,11 +3483,11 @@ async def test_hook_returns_verdict_when_disconnect_poll_swallows_its_cancel(
             resp = await hook_task
         assert resp.status_code == 200, resp.text
         assert resp.json()["hookSpecificOutput"]["decision"] == {"behavior": "allow"}
-        # Prove the scenario actually exercised the swallow path — if the
+        # Prove the scenario actually exercised the swallow path â€” if the
         # watcher was never cancelled (or its cancel propagated), this
         # test silently degrades into a plain allow round-trip.
         assert swallowed_cancel.is_set(), (
-            "watcher never saw (and swallowed) a cancellation — the gate "
+            "watcher never saw (and swallowed) a cancellation â€” the gate "
             "cleanup did not cancel the disconnect watcher"
         )
     finally:
@@ -3520,12 +3520,12 @@ async def test_codex_hook_repark_after_disconnect_keeps_card_pending(
     A re-POSTed codex envelope re-parks the SAME elicitation after a cut.
 
     Codex ids are deterministic per (session, method, rpc id), so the
-    forwarder's retry needs no payload changes — this pins the server
+    forwarder's retry needs no payload changes â€” this pins the server
     half of that contract: the deferred clear no-ops on the re-park,
     the card stays pending, and the verdict resolves the retried poll
     in Codex's JSON-RPC result shape.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     disconnect_calls = 0
 
@@ -3567,7 +3567,7 @@ async def test_codex_hook_repark_after_disconnect_keeps_card_pending(
     deferred_tasks = set(sessions_route._deferred_elicitation_clear_tasks)
     assert len(deferred_tasks) == 1, (
         f"expected one deferred clear after the severed poll, got "
-        f"{len(deferred_tasks)} — disconnect regressed to immediate wipe, or leaked tasks."
+        f"{len(deferred_tasks)} â€” disconnect regressed to immediate wipe, or leaked tasks."
     )
 
     drain_task = asyncio.create_task(_drain_until_elicitation(session_id))
@@ -3579,7 +3579,7 @@ async def test_codex_hook_repark_after_disconnect_keeps_card_pending(
         )
     )
     event = await drain_task
-    # Same envelope → same deterministic id → the SAME elicitation
+    # Same envelope â†’ same deterministic id â†’ the SAME elicitation
     # re-parks instead of minting a second card.
     assert event["params"]["codex_request_id"] == 12
 
@@ -3603,7 +3603,7 @@ async def test_codex_hook_repark_after_disconnect_keeps_card_pending(
     assert verdict.status_code == 202, verdict.text
     resp = await hook_task
     assert resp.status_code == 200, resp.text
-    # The retried poll carries the verdict in Codex's result shape —
+    # The retried poll carries the verdict in Codex's result shape â€”
     # exactly what the forwarder relays back over JSON-RPC.
     assert resp.json() == {"action": "accept", "content": {"ok": "yes"}, "_meta": None}
     pending_elicitations.reset_for_tests()
@@ -3619,9 +3619,9 @@ async def test_codex_hook_gap_verdict_returned_on_repost(
     Codex's JSON-RPC result shape.
 
     Without it the retry would re-publish the prompt and fail-ask
-    later — the click dropped, the codex sub-agent still blocked.
+    later â€” the click dropped, the codex sub-agent still blocked.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     async def _disconnect_immediately(_request: Any) -> None:
         """
@@ -3683,7 +3683,7 @@ async def test_codex_hook_gap_verdict_returned_on_repost(
     pending_elicitations.reset_for_tests()
 
 
-# ── Antigravity elicitation hook tests ──────────────────────────────────────
+# â”€â”€ Antigravity elicitation hook tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_antigravity_elicitation_hook_accept_round_trip(
@@ -3697,7 +3697,7 @@ async def test_antigravity_elicitation_hook_accept_round_trip(
     event resolves it, and the hook returns the raw
     ``ElicitationResult`` (action + content + _meta) so the bridge can
     deliver the answer to agy.  This is simpler than the codex hook:
-    the endpoint does NOT build a JSON-RPC envelope — the bridge does
+    the endpoint does NOT build a JSON-RPC envelope â€” the bridge does
     that with ``to_interaction_payload``.
 
     :param client: Test HTTP client.
@@ -3799,7 +3799,7 @@ async def test_antigravity_elicitation_hook_timeout_returns_empty_200(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from agent_meow.runtime import pending_elicitations, session_stream
+    from omnigent.runtime import pending_elicitations, session_stream
 
     monkeypatch.setattr(
         sessions_route,

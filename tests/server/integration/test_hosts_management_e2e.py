@@ -21,14 +21,14 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-from agent_meow.runner.transports.ws_tunnel.registry import TunnelRegistry
-from agent_meow.server.host_registry import HostRegistry, RunnerExitReports
-from agent_meow.server.routes.hosts import create_hosts_router
-from agent_meow.server.routes.runner_tunnel import create_runner_tunnel_router
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runner.transports.ws_tunnel.registry import TunnelRegistry
+from omnigent.server.host_registry import HostRegistry, RunnerExitReports
+from omnigent.server.routes.hosts import create_hosts_router
+from omnigent.server.routes.runner_tunnel import create_runner_tunnel_router
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.host_store import HostStore
+from omnigent.stores.host_store import HostStore
 
 pytestmark = pytest.mark.asyncio
 
@@ -226,7 +226,7 @@ async def test_list_hosts_stale_host_reported_offline(
     from sqlalchemy import update
     from sqlalchemy.orm import Session
 
-    from agent_meow.db.db_models import SqlHost
+    from omnigent.db.db_models import SqlHost
 
     stale_time = int(time.time()) - 600
     with Session(host_store._engine) as session:

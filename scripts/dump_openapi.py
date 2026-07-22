@@ -2,7 +2,7 @@
 
 The agent-meow server runs on FastAPI 0.135.x, which emits OpenAPI
 3.1. OpenAPI 3.2 (released September 2025) introduced first-class
-support for sequential media types — specifically, the
+support for sequential media types â€” specifically, the
 ``itemSchema`` keyword for describing each item in a streaming
 response on a ``text/event-stream`` content entry. We need 3.2's
 ``itemSchema`` so the SSE routes describe their per-event shape
@@ -10,7 +10,7 @@ correctly to consuming SDK / docs tooling.
 
 This script:
 
-1. Imports :func:`agent_meow.server.app.create_app` and instantiates
+1. Imports :func:`omnigent.server.app.create_app` and instantiates
    it against in-memory store stubs (no DB needed).
 2. Calls ``app.openapi()`` to get the FastAPI-generated 3.1 dict.
 3. Bumps the top-level ``openapi`` field to ``"3.2.0"``.
@@ -23,7 +23,7 @@ This script:
 6. Writes the result to ``openapi.json`` at the repo root.
 
 Run with no arguments to (re)generate the file. Pass ``--check``
-in CI to verify the on-disk file is up to date — non-zero exit
+in CI to verify the on-disk file is up to date â€” non-zero exit
 means a developer changed the spec without regenerating.
 
 Usage::
@@ -60,12 +60,12 @@ def _fips_safe_md5(*args: Any, **kwargs: Any) -> Any:
 
 hashlib.md5 = _fips_safe_md5
 
-from pydantic import TypeAdapter  # noqa: E402 — must follow md5 patch
+from pydantic import TypeAdapter  # noqa: E402 â€” must follow md5 patch
 
-# ── Module-level constants (rule 34) ──────────────────────────────
+# â”€â”€ Module-level constants (rule 34) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 # Output path. The spec lives at the repo root so external tooling
-# (Stoplight, openapi-generator, redocly, …) can pick it up via a
+# (Stoplight, openapi-generator, redocly, â€¦) can pick it up via a
 # stable URL relative to the project. Pinned absolute via
 # ``Path(__file__).resolve().parent.parent`` so the script works
 # regardless of CWD.
@@ -87,21 +87,21 @@ _SSE_ROUTES: list[tuple[str, str]] = [
     ("/v1/sessions/{session_id}/stream", "get"),
 ]
 
-# ── Document-level enrichment ─────────────────────────────────────
+# â”€â”€ Document-level enrichment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # FastAPI emits accurate per-operation schemas but none of the
 # document-level metadata an integrator needs: no ``servers``, no auth
 # description, no ``info.description``, and only bare snake_case tags.
 # We inject that connective tissue here so the published reference
 # (rendered by Scalar on the agent-meow website) is usable for building
-# an integration. Keeping it in this script — rather than scattering it
-# across the route decorators — confines presentation concerns to the
+# an integration. Keeping it in this script â€” rather than scattering it
+# across the route decorators â€” confines presentation concerns to the
 # spec-generation layer, and the drift test
 # (``tests/server/test_openapi_drift.py``) guards the result.
 
 # Self-hosted base URL. ``agent-meow server`` binds 127.0.0.1:6767 by
 # default (see ``_DEFAULT_LOCAL_PORT`` in
-# ``agent_meow/host/local_server.py``).
+# ``omnigent/host/local_server.py``).
 _SERVERS: list[dict[str, str]] = [
     {
         "url": "http://127.0.0.1:6767",
@@ -111,14 +111,14 @@ _SERVERS: list[dict[str, str]] = [
 
 # Markdown prose shown at the top of the rendered reference. Covers
 # what the API is, the self-hosted base URL, and the deployment-driven
-# auth model (there is no bearer/API-key scheme — see
-# ``agent_meow/server/auth.py``).
+# auth model (there is no bearer/API-key scheme â€” see
+# ``omnigent/server/auth.py``).
 _INFO_DESCRIPTION: str = """\
 agent-meow is an open-source meta-harness for building and running AI \
 agents. This is the REST API exposed by the agent-meow server: use it to \
 create and drive **sessions**, manage **agents**, **hosts**, and \
 **runners**, attach **contextual policies**, post **comments**, and work \
-with session **resources** — files, terminals, and sandboxed \
+with session **resources** â€” files, terminals, and sandboxed \
 environments.
 
 ## Base URL
@@ -131,10 +131,10 @@ default (`agent-meow server`); point the base URL at your own deployment.
 There is no API-key or bearer-token scheme. Identity is supplied by the \
 deployment's configured auth provider (`OMNIGENT_AUTH_PROVIDER`):
 
-- **Trusted proxy header** (default) — an upstream proxy injects an \
+- **Trusted proxy header** (default) â€” an upstream proxy injects an \
 identity header (`X-Forwarded-Email`, configurable). Single-user local \
 runtimes fall back to a reserved `local` user.
-- **Session cookie** — a signed session cookie minted after an \
+- **Session cookie** â€” a signed session cookie minted after an \
 interactive OIDC or accounts login. It is named `ap_session` over HTTP \
 (the advertised local default) and `__Host-ap_session` under HTTPS, where \
 the `__Host-` prefix guards against subdomain cookie-tossing.
@@ -149,13 +149,13 @@ according to your deployment.
 schema documented below.
 """
 
-# Auth representations. agent-meow has no bearer/API-key scheme — identity
+# Auth representations. agent-meow has no bearer/API-key scheme â€” identity
 # arrives via a trusted-proxy header or a signed session cookie,
 # selected by ``OMNIGENT_AUTH_PROVIDER``. We model both as OpenAPI
 # ``apiKey`` schemes so SDK generators and the reference can surface
 # them. We deliberately do NOT assert a top-level ``security``
 # requirement: the active scheme is deployment-specific, and public
-# endpoints (``/health``, ``/api/version``) require none — the prose in
+# endpoints (``/health``, ``/api/version``) require none â€” the prose in
 # :data:`_INFO_DESCRIPTION` carries the human-facing explanation.
 _SECURITY_SCHEMES: dict[str, dict[str, str]] = {
     "proxyHeaderAuth": {
@@ -174,7 +174,7 @@ _SECURITY_SCHEMES: dict[str, dict[str, str]] = {
         # Named to match the advertised HTTP server. The ``__Host-``
         # prefix requires HTTPS (browsers drop it on plain HTTP), so the
         # cookie is ``ap_session`` for the default local deployment and
-        # ``__Host-ap_session`` only under HTTPS — see ``secure_cookies``
+        # ``__Host-ap_session`` only under HTTPS â€” see ``secure_cookies``
         # in ``accounts_config.py`` / ``oidc.py``.
         "name": "ap_session",
         "description": (
@@ -204,7 +204,7 @@ _TAGS: list[dict[str, str]] = [
         "name": "sessions",
         "x-displayName": "Sessions",
         "description": (
-            "Create, inspect, fork, and drive agent sessions — the core "
+            "Create, inspect, fork, and drive agent sessions â€” the core "
             "unit of work. Covers session items and events, agent "
             "binding, permissions, labels, and child sessions. The "
             "files, terminals, and sandboxed environments attached to a "
@@ -251,7 +251,7 @@ _TAGS: list[dict[str, str]] = [
         "name": "session_policies",
         "x-displayName": "Session Policies",
         "description": (
-            "Contextual policies scoped to a single session — list, create, update, and remove."
+            "Contextual policies scoped to a single session â€” list, create, update, and remove."
         ),
     },
     {
@@ -290,7 +290,7 @@ _SYSTEM_ROUTES: list[tuple[str, str]] = [
 ]
 
 # HTTP methods that denote an operation object inside a path item
-# (everything else under a path — ``parameters``, ``servers``, … — is
+# (everything else under a path â€” ``parameters``, ``servers``, â€¦ â€” is
 # not an operation and must be skipped when retagging).
 _HTTP_METHODS: frozenset[str] = frozenset(
     {"get", "put", "post", "delete", "patch", "options", "head", "trace"},
@@ -298,7 +298,7 @@ _HTTP_METHODS: frozenset[str] = frozenset(
 
 # Path prefix whose operations form the dedicated "Session Resources"
 # group. The sessions router is mounted with ``tags=["sessions"]`` in
-# app.py, so every session route — including the resource subtree —
+# app.py, so every session route â€” including the resource subtree â€”
 # inherits that single tag. We split this subtree (files, terminals,
 # sandboxed environments) into its own section in the published
 # reference rather than fracturing the router.
@@ -309,7 +309,7 @@ def _build_app_with_stub_stores() -> Any:
     """
     Build a FastAPI app with stub stores sufficient for OpenAPI generation.
 
-    ``app.openapi()`` walks the route table and Pydantic models — it
+    ``app.openapi()`` walks the route table and Pydantic models â€” it
     does not call any store methods. We use the SQLite-backed
     implementations against an on-disk temporary database. The temp
     file is best-effort cleaned up by the caller's filesystem.
@@ -318,17 +318,17 @@ def _build_app_with_stub_stores() -> Any:
     """
     import tempfile
 
-    from agent_meow.runtime.agent_cache import AgentCache
-    from agent_meow.server.app import create_app
-    from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-    from agent_meow.stores.artifact_store.local import LocalArtifactStore
-    from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-    from agent_meow.stores.conversation_store.sqlalchemy_store import (
+    from omnigent.runtime.agent_cache import AgentCache
+    from omnigent.server.app import create_app
+    from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+    from omnigent.stores.artifact_store.local import LocalArtifactStore
+    from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+    from omnigent.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
-    from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-    from agent_meow.stores.host_store import HostStore
-    from agent_meow.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
+    from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+    from omnigent.stores.host_store import HostStore
+    from omnigent.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
 
     # On-disk SQLite (mkdtemp ensures uniqueness so concurrent
     # invocations don't collide).
@@ -365,12 +365,12 @@ def _server_stream_event_schema() -> dict[str, Any]:
 
     :returns: A dict with two keys:
 
-        * ``"root"`` — the discriminated-union schema (the value
+        * ``"root"`` â€” the discriminated-union schema (the value
           assigned to ``components.schemas.ServerStreamEvent``).
-        * ``"definitions"`` — the per-variant component schemas
+        * ``"definitions"`` â€” the per-variant component schemas
           (merged into ``components.schemas``).
     """
-    from agent_meow.server.schemas import ServerStreamEvent
+    from omnigent.server.schemas import ServerStreamEvent
 
     adapter: TypeAdapter[ServerStreamEvent] = TypeAdapter(ServerStreamEvent)
     schema = adapter.json_schema(ref_template="#/components/schemas/{model}")
@@ -394,7 +394,7 @@ def _rewrite_sse_route(
     event in the stream is described as one item. We rename the key.
 
     No-op if the route doesn't exist (e.g. a renamed endpoint that
-    fell off the inventory) — the caller's job is to keep
+    fell off the inventory) â€” the caller's job is to keep
     :data:`_SSE_ROUTES` accurate.
 
     :param paths: The OpenAPI ``paths`` map; mutated in place.
@@ -409,9 +409,9 @@ def _rewrite_sse_route(
     sse_entry = content.get("text/event-stream")
     if sse_entry is None:
         return
-    # Rename ``schema`` → ``itemSchema``. The value (a ``$ref``) is
+    # Rename ``schema`` â†’ ``itemSchema``. The value (a ``$ref``) is
     # untouched because the union schema applies to each event
-    # equally — itemSchema is "validate this against every item
+    # equally â€” itemSchema is "validate this against every item
     # in the stream" per the 3.2 spec.
     if "schema" in sse_entry:
         sse_entry["itemSchema"] = sse_entry.pop("schema")
@@ -424,7 +424,7 @@ def _tag_system_routes(paths: dict[str, Any]) -> None:
     FastAPI leaves ``/health``, ``/api/version``, ``/v1/info``, and
     ``/v1/me`` untagged. Without a tag they render in an unlabeled
     "default" bucket in the reference; tagging them groups the lot
-    under "System". Only fills in a tag where none exists — never
+    under "System". Only fills in a tag where none exists â€” never
     overrides one FastAPI already set.
 
     No-op for any ``(path, method)`` not present, so
@@ -460,7 +460,7 @@ def _retag_session_resources(paths: dict[str, Any]) -> None:
                 op["tags"] = ["session_resources"]
 
 
-# ── reStructuredText docstring → Markdown ─────────────────────────
+# â”€â”€ reStructuredText docstring â†’ Markdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # FastAPI uses each route handler's docstring verbatim as the OpenAPI
 # operation ``description``. Our docstrings are Sphinx/reST: ``:param
@@ -476,7 +476,7 @@ def _retag_session_resources(paths: dict[str, Any]) -> None:
 #     parameter become a Markdown ``**Parameters**`` bullet list;
 #   * ``:returns:`` becomes a ``**Returns:**`` line, ``:raises:`` a
 #     ``**Raises**`` bullet list;
-#   * framework-internal params (``request``/``response``/…) are dropped;
+#   * framework-internal params (``request``/``response``/â€¦) are dropped;
 #   * inline ``:role:`X``` roles collapse to `` `X` `` and reST double
 #     backticks (`` ``X`` ``) normalize to Markdown single backticks.
 
@@ -485,11 +485,11 @@ def _retag_session_resources(paths: dict[str, Any]) -> None:
 _RST_PARAM = re.compile(r"^:(?:param|parameter|arg|argument|keyword|kwarg)\s+(\S+)\s*:\s*(.*)$")
 _RST_RETURNS = re.compile(r"^:returns?\s*:\s*(.*)$")
 _RST_RAISES = re.compile(r"^:raises?\s+([^:]+?)\s*:\s*(.*)$")
-# Any other reST field marker (``:rtype:``, ``:type x:``, …) — dropped.
+# Any other reST field marker (``:rtype:``, ``:type x:``, â€¦) â€” dropped.
 _RST_OTHER_FIELD = re.compile(r"^:[a-zA-Z][\w ]*:")
-# Inline cross-reference role, e.g. ``:class:`Foo``` → `` `Foo` ``.
+# Inline cross-reference role, e.g. ``:class:`Foo``` â†’ `` `Foo` ``.
 _RST_ROLE = re.compile(r":[a-zA-Z]+:`([^`]+)`")
-# reST inline literal (double backtick) → Markdown code span (single).
+# reST inline literal (double backtick) â†’ Markdown code span (single).
 # Non-greedy + DOTALL so a literal may span lines and contain nested
 # single backticks (e.g. a role left inside it); the replacement flattens
 # those so the resulting code span is valid.
@@ -557,7 +557,7 @@ def _parse_rst_doc(desc: str) -> tuple[str, list[tuple[str, str | None, str]]]:
             fields.append(cur)
             continue
         if in_fields and _RST_OTHER_FIELD.match(line):
-            cur = ("drop", None, [])  # unknown field (e.g. :rtype:) — discard
+            cur = ("drop", None, [])  # unknown field (e.g. :rtype:) â€” discard
             fields.append(cur)
             continue
         if in_fields:
@@ -622,11 +622,11 @@ def _reformat_doc(
     if prose_md:
         sections.append(prose_md)
     if body_params:
-        sections.append("**Parameters**\n\n" + "\n".join(f"- `{n}` — {t}" for n, t in body_params))
+        sections.append("**Parameters**\n\n" + "\n".join(f"- `{n}` â€” {t}" for n, t in body_params))
     if returns:
         sections.append(f"**Returns:** {returns}")
     if raises:
-        sections.append("**Raises**\n\n" + "\n".join(f"- `{e}` — {t}" for e, t in raises))
+        sections.append("**Raises**\n\n" + "\n".join(f"- `{e}` â€” {t}" for e, t in raises))
     return "\n\n".join(sections)
 
 
@@ -707,7 +707,7 @@ def _normalize_inline_descriptions(node: Any) -> None:
 
     Walks the whole document and converts inline ``:role:`X``` roles and
     reST double-backtick literals to Markdown `` `X` `` in every
-    ``description`` string — covering responses, ``info``, tags and
+    ``description`` string â€” covering responses, ``info``, tags and
     security schemes that the structured passes don't rewrite.
 
     :param node: Any spec fragment; mutated in place.
@@ -728,8 +728,8 @@ def _enrich_spec(spec: dict[str, Any]) -> None:
     Inject document-level metadata for docs / SDK tooling.
 
     Adds ``info.description``, ``servers``, top-level ``tags`` with
-    human-readable descriptions, and ``components.securitySchemes`` —
-    none of which FastAPI emits — tags the untagged utility routes, and
+    human-readable descriptions, and ``components.securitySchemes`` â€”
+    none of which FastAPI emits â€” tags the untagged utility routes, and
     rewrites reST docstrings (operations, parameters, and component
     schemas) as Markdown.
     Mutates ``spec`` in place. See the module-level enrichment
@@ -765,7 +765,7 @@ def generate_spec() -> dict[str, Any]:
     """
     app = _build_app_with_stub_stores()
     spec = app.openapi()
-    # Bump the OpenAPI version literal — we don't change any
+    # Bump the OpenAPI version literal â€” we don't change any
     # 3.1-only constructs because FastAPI's emitted shape is also
     # valid 3.2.x (3.2 is JSON-Schema-aligned and largely additive
     # over 3.1).
@@ -779,7 +779,7 @@ def generate_spec() -> dict[str, Any]:
     schemas["ServerStreamEvent"] = union["root"]
     for name, definition in union["definitions"].items():
         # Don't clobber a same-named schema FastAPI already
-        # synthesized — the union's per-variant defs include
+        # synthesized â€” the union's per-variant defs include
         # ``ResponseObject`` (referenced from terminal events), and
         # FastAPI also emits one. Keep FastAPI's version; the
         # serialized shape is identical for our models.
@@ -813,7 +813,7 @@ def main() -> int:
         "--check",
         action="store_true",
         help=(
-            "CI mode — exit 1 if the on-disk openapi.json differs from "
+            "CI mode â€” exit 1 if the on-disk openapi.json differs from "
             "the generated spec. Use to fail PRs that change the spec "
             "without regenerating."
         ),

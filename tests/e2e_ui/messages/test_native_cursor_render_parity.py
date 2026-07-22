@@ -4,11 +4,11 @@ The native ``cursor-native`` ("Cursor") wrapper is terminal-first: a real
 ``cursor-agent`` CLI runs in the session terminal, the SPA's **Terminal** view
 attaches to that live TUI over a WebSocket, and the SPA's **Chat** view renders
 the SAME canonical transcript (``GET /v1/sessions/{id}/items``) the TUI prints.
-A native forwarder (:mod:`~?agent_meow.cursor_native_forwarder`) tails
+A native forwarder (:mod:`~?omnigent.cursor_native_forwarder`) tails
 ``cursor-agent``'s own chat store and mirrors the transcript back OUT as
 conversation items; web-composer messages are injected INTO the TUI's tmux pane
-by :class:`~?agent_meow.inner.cursor_native_executor.CursorNativeExecutor`. This
-suite asserts that round-trips both ways and renders exactly once — the same
+by :class:`~?omnigent.inner.cursor_native_executor.CursorNativeExecutor`. This
+suite asserts that round-trips both ways and renders exactly once â€” the same
 three properties the codex/claude native forwarders are pinned against
 (:mod:`tests.e2e_ui.messages.test_native_codex_render_parity`):
 
@@ -17,19 +17,19 @@ three properties the codex/claude native forwarders are pinned against
    also appear in the canonical transcript, in the same order, exactly once.
 
 2. **A TUI-originated message surfaces in the web UI.** A turn is typed directly
-   into the Cursor TUI (the embedded xterm in the Terminal view) — never through
+   into the Cursor TUI (the embedded xterm in the Terminal view) â€” never through
    the composer. The forwarder must mirror it back out as a user item +
    assistant reply, so switching to Chat shows both as bubbles.
 
-3. **No duplicate rendering.** Every marker/token — composer- and TUI-originated
-   alike — must land in EXACTLY ONE bubble and one transcript entry.
+3. **No duplicate rendering.** Every marker/token â€” composer- and TUI-originated
+   alike â€” must land in EXACTLY ONE bubble and one transcript entry.
 
 How this differs from the claude/codex render-parity suites
 -----------------------------------------------------------
 Claude Code and Codex derive their model auth from the runner's own Databricks
 gateway credentials (CI exchanges Databricks OAuth before pytest), so those
 suites run unconditionally in CI. ``cursor-agent`` has **no Databricks-gateway
-path** — it talks only to Cursor's backend and authenticates from the ambient
+path** â€” it talks only to Cursor's backend and authenticates from the ambient
 ``cursor-agent login`` (``$HOME/.cursor``) or an ambient ``CURSOR_API_KEY``.
 Because CI does not provision a Cursor account by default, this suite is **gated
 to skip** when ``cursor-agent`` is absent or no usable Cursor login is present
@@ -41,15 +41,15 @@ workspace-trust / per-tool approval prompts.
 
 CI coverage without a Cursor account
 ------------------------------------
-Because the live test above skips wherever Cursor is not logged in — i.e. on
-every PR — :func:`test_native_cursor_mirror_renders_without_live_agent` covers
+Because the live test above skips wherever Cursor is not logged in â€” i.e. on
+every PR â€” :func:`test_native_cursor_mirror_renders_without_live_agent` covers
 the same agent-meow-owned half (the forwarder mirroring cursor's transcript OUT as
 conversation items the SPA renders as bubbles) with no live ``cursor-agent`` and
 no LLM. ``cursor-agent`` has no OpenAI-compatible / custom-endpoint shim (see
-``agent_meow.inner.cursor_harness``), so it cannot be pointed at the mock LLM the
+``omnigent.inner.cursor_harness``), so it cannot be pointed at the mock LLM the
 custom-agent suites use; instead this test seeds a cursor chat store and runs the
-real :func:`~?agent_meow.cursor_native_forwarder.forward_cursor_store_to_session`
-against the spawned server, so the mirror→server→web path runs on every PR.
+real :func:`~?omnigent.cursor_native_forwarder.forward_cursor_store_to_session`
+against the spawned server, so the mirrorâ†’serverâ†’web path runs on every PR.
 """
 
 from __future__ import annotations
@@ -70,9 +70,9 @@ import httpx
 import pytest
 from playwright.sync_api import Page, expect
 
-from agent_meow import cursor_native_forwarder as fwd
+from omnigent import cursor_native_forwarder as fwd
 
-# Reuse the custom-agent suite's helpers — both surfaces render from the same
+# Reuse the custom-agent suite's helpers â€” both surfaces render from the same
 # canonical transcript, so parity / dedup / ordering are asserted identically.
 from .test_message_render_parity import (
     _ASSISTANT,
@@ -107,7 +107,7 @@ def _cursor_unavailable_reason() -> str | None:
     """Return a skip reason when the cursor-native prerequisites are absent.
 
     cursor-native needs (1) the ``cursor-agent`` binary on PATH and (2) a usable
-    Cursor login — either an ambient ``CURSOR_API_KEY`` or a prior
+    Cursor login â€” either an ambient ``CURSOR_API_KEY`` or a prior
     ``cursor-agent login`` whose state lives under ``$HOME/.cursor``. Either
     missing is a clean **skip** (CI does not provision a Cursor account), so the
     e2e-ui shards stay green while the suite runs for real wherever Cursor is
@@ -133,7 +133,7 @@ def _cursor_unavailable_reason() -> str | None:
 
 # Gate the LIVE render-parity test (it drives a real cursor-agent TUI) on a
 # usable Cursor login. This is a per-test mark, NOT a module-level ``pytestmark``,
-# so the store-stub mirror test below — which needs no live agent — still runs in
+# so the store-stub mirror test below â€” which needs no live agent â€” still runs in
 # CI on every PR. See ``test_native_cursor_mirror_renders_without_live_agent``.
 _requires_live_cursor = pytest.mark.skipif(
     _cursor_unavailable_reason() is not None,
@@ -168,14 +168,14 @@ def _type_into_tui(page: Page, text: str) -> None:
     """Type *text* into the embedded Cursor TUI and submit with Enter.
 
     Drives the real TUI exactly as a user would: focus the xterm input,
-    type the prompt, press Enter. This is the OUT direction — the message
+    type the prompt, press Enter. This is the OUT direction â€” the message
     originates in the terminal, not the web composer.
 
     :param page: The Playwright page, on the connected Terminal view.
     :param text: The single-line prompt to type into the TUI.
     """
     # Scope to the active terminal-view (not page-level) so the lookup can't
-    # focus a stray textarea from another terminal widget — matches the shell
+    # focus a stray textarea from another terminal widget â€” matches the shell
     # E2E test pattern.
     xterm_input = page.locator(_TERMINAL_VIEW).last.locator(_XTERM_INPUT)
     expect(xterm_input).to_be_attached(timeout=30_000)
@@ -185,7 +185,7 @@ def _type_into_tui(page: Page, text: str) -> None:
     page.keyboard.type(text, delay=15)
     # Let cursor-agent's composer fully register the typed text before Enter.
     # Unlike Codex's, it debounces input, so an Enter pressed in the same tick
-    # as the last character can fire before the text is committed — the
+    # as the last character can fire before the text is committed â€” the
     # composer then submits empty / stale and the turn is never sent. A short
     # settle pause makes the submission reliable.
     page.wait_for_timeout(1500)
@@ -202,7 +202,7 @@ def _wait_marker_in_transcript(
     has accepted and stored it). This MUST complete before the test leaves the
     Terminal view: switching views tears down the embedded xterm's WebSocket,
     and cursor-agent's composer commits a submission slightly slower than
-    Codex's — switching too early can drop the in-flight Enter keystroke before
+    Codex's â€” switching too early can drop the in-flight Enter keystroke before
     it reaches the tmux pane, so the turn is never sent. Waiting on the
     transcript (not a fixed sleep) keeps this deterministic.
 
@@ -224,7 +224,7 @@ def _wait_marker_in_transcript(
             return
         time.sleep(2.0)
     raise AssertionError(
-        f"marker {marker!r} never reached the transcript within {timeout_ms}ms — "
+        f"marker {marker!r} never reached the transcript within {timeout_ms}ms â€” "
         f"the TUI-typed turn was not submitted/forwarded for {session_id}."
     )
 
@@ -291,13 +291,13 @@ def test_native_cursor_message_render_parity(
         "TUI turn %d: typing into xterm (marker=%s token=%s)", tui_index, tui_marker, tui_token
     )
     _type_into_tui(page, _turn_prompt(tui_index, tui_marker, tui_token))
-    # Stay on the Terminal view until the forwarder has mirrored this turn —
+    # Stay on the Terminal view until the forwarder has mirrored this turn â€”
     # leaving it tears down the xterm WS and can drop the just-pressed Enter
     # before cursor-agent's (slower-than-Codex) composer commits it.
     _wait_marker_in_transcript(base_url, session_id, tui_token, timeout_ms=_NATIVE_TURN_TIMEOUT_MS)
 
     # Back in Chat, the forwarder must have mirrored the TUI turn OUT as a user
-    # item + assistant reply — both render as bubbles, exactly once.
+    # item + assistant reply â€” both render as bubbles, exactly once.
     _ensure_chat_view(page)
     expect(page.locator(_ASSISTANT, has_text=tui_token).first).to_be_visible(
         timeout=_NATIVE_TURN_TIMEOUT_MS
@@ -317,13 +317,13 @@ def _seed_cursor_store(store_path: Path, user_marker: str, assistant_token: str)
     """Write a minimal cursor-agent chat store: one user turn and its reply.
 
     Reproduces the content-addressed ``blobs`` layout a live ``cursor-agent``
-    writes — ``id`` is a content hash, ``data`` is the message JSON — so the real
+    writes â€” ``id`` is a content hash, ``data`` is the message JSON â€” so the real
     forwarder reads it exactly as it would a live chat. The user text carries
-    cursor's ``<user_query>…</user_query>`` framing (the forwarder unwraps it).
+    cursor's ``<user_query>â€¦</user_query>`` framing (the forwarder unwraps it).
 
     The 64-char ``sha256`` blob ids are load-bearing: they make the forwarder's
     ``cursor:<blob_id>`` 71 chars, so this drives the response_id cap through the
-    real POST path — the exact field that overflowed ``conversation_items``'
+    real POST path â€” the exact field that overflowed ``conversation_items``'
     ``VARCHAR(64)`` and wedged the mirror in production.
 
     :param store_path: Destination ``store.db`` path.
@@ -371,13 +371,13 @@ async def _mirror_seeded_store(
     """Run the real forwarder against *store_path* until both seeds are mirrored.
 
     Drives :func:`forward_cursor_store_to_session` exactly as the runner does
-    (``headers={}``, ``auth=None`` — the e2e server runs with auth disabled),
+    (``headers={}``, ``auth=None`` â€” the e2e server runs with auth disabled),
     polling the canonical items API until the user marker and assistant token are
     both persisted, then cancelling the forwarder. The caller stubs
     ``_discover_store`` / ``_chat_claimed_by_other`` so the forwarder binds the
     seeded store without scanning ``~/.cursor`` or launching ``cursor-agent``.
 
-    :raises AssertionError: If the seeds never reach the transcript in time —
+    :raises AssertionError: If the seeds never reach the transcript in time â€”
         i.e. the forwarder failed to mirror (e.g. a wedged / rejected POST).
     """
     task = asyncio.create_task(
@@ -407,7 +407,7 @@ async def _mirror_seeded_store(
                 await asyncio.sleep(0.1)
         raise AssertionError(
             f"forwarder did not mirror the seeded store into session {session_id} "
-            f"within {timeout_s}s — marker/token never reached the transcript."
+            f"within {timeout_s}s â€” marker/token never reached the transcript."
         )
     finally:
         task.cancel()
@@ -419,7 +419,7 @@ def _run_coro_in_thread(coro) -> None:
     """Run *coro* to completion in a dedicated event loop on a worker thread.
 
     The e2e test body runs under pytest-playwright's sync API, which already
-    holds a running event loop on the test thread — so ``asyncio.run`` raises
+    holds a running event loop on the test thread â€” so ``asyncio.run`` raises
     "cannot be called from a running event loop". Driving the forwarder
     coroutine in its own thread + loop sidesteps that and re-raises any failure
     (e.g. the mirror-timeout ``AssertionError``) on the caller's thread.
@@ -451,16 +451,16 @@ def test_native_cursor_mirror_renders_without_live_agent(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cursor's forwarder mirrors its chat store into the web chat — in CI.
+    """Cursor's forwarder mirrors its chat store into the web chat â€” in CI.
 
     The live render-parity test above needs a real ``cursor-agent`` + Cursor
-    login, so it skips on every PR. This covers the SAME agent-meow-owned path —
+    login, so it skips on every PR. This covers the SAME agent-meow-owned path â€”
     the forwarder mirroring cursor's transcript OUT as conversation items the SPA
-    renders as bubbles — with no live agent and no LLM: seed a cursor chat store,
+    renders as bubbles â€” with no live agent and no LLM: seed a cursor chat store,
     run the real ``forward_cursor_store_to_session`` against the spawned server,
     and assert the content streams through to the web chat (one user + one
     assistant bubble, once each, matching the canonical transcript). Guards the
-    mirror→server→web path the response_id-truncation fix lives on.
+    mirrorâ†’serverâ†’web path the response_id-truncation fix lives on.
     """
     base_url, session_id = seeded_session
     store_path = tmp_path / "store.db"
@@ -472,8 +472,8 @@ def test_native_cursor_mirror_renders_without_live_agent(
     _seed_cursor_store(store_path, user_marker, assistant_token)
 
     # Bind the seeded store directly: stub discovery (no ~/.cursor scan, no live
-    # cursor-agent) and the sibling-claim guard. Everything else — the read,
-    # item build, capped response_id, and POST — runs for real.
+    # cursor-agent) and the sibling-claim guard. Everything else â€” the read,
+    # item build, capped response_id, and POST â€” runs for real.
     monkeypatch.setattr(fwd, "_discover_store", lambda workspace, launch_ms: store_path)
     monkeypatch.setattr(fwd, "_chat_claimed_by_other", lambda *args, **kwargs: False)
     _run_coro_in_thread(
@@ -496,5 +496,5 @@ def test_native_cursor_mirror_renders_without_live_agent(
     expect(page.locator(_USER, has_text=user_marker).first).to_be_visible(timeout=30_000)
     expect(page.locator(_USER, has_text=user_marker)).to_have_count(1)
     expect(page.locator(_ASSISTANT, has_text=assistant_token)).to_have_count(1)
-    # …and match the canonical transcript the TUI renders from, once and in order.
+    # â€¦and match the canonical transcript the TUI renders from, once and in order.
     _assert_transcript_parity(base_url, session_id, [user_marker], [assistant_token])

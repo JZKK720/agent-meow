@@ -19,14 +19,14 @@ therefore pre-creates the target file directly inside
 
 Two scenarios are tested:
 
-- ``test_non_git_create_file`` — agent creates a new file; the changes
+- ``test_non_git_create_file`` â€” agent creates a new file; the changes
   endpoint must show it with status ``"created"``.
-- ``test_non_git_edit_file`` — agent overwrites a pre-existing file that
+- ``test_non_git_edit_file`` â€” agent overwrites a pre-existing file that
   was seeded into the workspace root; the changes endpoint must show
   it with status ``"modified"``.
 
 Note: ``sys_os_shell`` side-effects (e.g. ``rm``) are intentionally not
-tracked — shell commands cannot be reliably attributed to a single session
+tracked â€” shell commands cannot be reliably attributed to a single session
 in a shared workspace, so delete-via-shell has no E2E coverage here.
 
 Usage::
@@ -75,7 +75,7 @@ _DEFAULT_ENV = "default"
 _CHANGES_TIMEOUT_S: float = 30.0
 
 
-# ── URL builders ──────────────────────────────────────────────────────────────
+# â”€â”€ URL builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _changes_url(session_id: str) -> str:
@@ -87,7 +87,7 @@ def _changes_url(session_id: str) -> str:
     return f"/v1/sessions/{session_id}/resources/environments/{_DEFAULT_ENV}/changes"
 
 
-# ── Module-scoped fixtures ────────────────────────────────────────────────────
+# â”€â”€ Module-scoped fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture(scope="module")
@@ -97,7 +97,7 @@ def non_git_workspace() -> Iterator[Path]:
     Created under the OS temp root so it is never inside the repo
     checkout.  The ``agent-meow server`` subprocess is started with this
     directory as its CWD so the runner adopts it as its workspace root
-    via ``Path.cwd()`` — no env-var override of the server is needed.
+    via ``Path.cwd()`` â€” no env-var override of the server is needed.
 
     :returns: Path to the empty temp workspace.
     """
@@ -121,7 +121,7 @@ def non_git_runner_id() -> str:
 
     :returns: Runner id string, e.g. ``"runner_token_abc123..."``.
     """
-    from agent_meow.runner.identity import token_bound_runner_id
+    from omnigent.runner.identity import token_bound_runner_id
 
     if "runner_id" not in _non_git_runner_state:
         token = secrets.token_urlsafe(32)
@@ -174,7 +174,7 @@ def non_git_server(
         [
             sys.executable,
             "-m",
-            "agent_meow.cli",
+            "omnigent.cli",
             "server",
             "--port",
             str(port),
@@ -197,7 +197,7 @@ def non_git_server(
     runner_log = tmp_path_factory.mktemp("e2e_ng_runner_logs") / "runner.log"
     runner_log_handle = open(runner_log, "w")  # noqa: SIM115
     runner_proc = subprocess.Popen(
-        [sys.executable, "-m", "agent_meow.runner._entry"],
+        [sys.executable, "-m", "omnigent.runner._entry"],
         env={
             **env,
             "OMNIGENT_RUNNER_ID": non_git_runner_id,
@@ -278,7 +278,7 @@ def non_git_client(non_git_server: str) -> Iterator[httpx.Client]:
         yield client
 
 
-# ── Shared helpers ────────────────────────────────────────────────────────────
+# â”€â”€ Shared helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _build_mock_workspace_writer_bundle(mock_llm_base_url: str) -> bytes:
@@ -367,7 +367,7 @@ def _poll_changes_for_file(
     return None
 
 
-# ── Tests ─────────────────────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_non_git_create_file(
@@ -386,10 +386,10 @@ def test_non_git_create_file(
 
     Failure modes this catches:
     - ``record_change`` not called after ``sys_os_write`` in
-      ``_execute_os_env_tool`` → file never appears in the changes listing.
+      ``_execute_os_env_tool`` â†’ file never appears in the changes listing.
     - ``AgentEditFilesystemRegistry`` not selected (git registry used
       instead of the non-git one because the server CWD is a git dir)
-      → changes only appear via ``git status``, not ``record_change``;
+      â†’ changes only appear via ``git status``, not ``record_change``;
       the ``AgentEditFilesystemRegistry`` path is untested.
 
     :param non_git_client: HTTP client pointed at the non-git server.
@@ -449,7 +449,7 @@ def test_non_git_create_file(
         "_execute_os_env_tool, or AgentEditFilesystemRegistry is not being "
         "used (check that the server CWD is a non-git directory)."
     )
-    # Status must be "created" — the file did not exist before this session.
+    # Status must be "created" â€” the file did not exist before this session.
     assert entry["status"] == "created", (
         f"Expected status 'created' for a newly written file, "
         f"got {entry['status']!r}. "
@@ -482,8 +482,8 @@ def test_non_git_edit_file(
 
     Failure modes this catches:
     - ``_write_impl`` returning ``{"created": False}`` not being detected
-      → recorded as ``"created"`` instead of ``"modified"``.
-    - ``record_change`` not called at all → file never appears.
+      â†’ recorded as ``"created"`` instead of ``"modified"``.
+    - ``record_change`` not called at all â†’ file never appears.
 
     :param non_git_client: HTTP client pointed at the non-git server.
     :param non_git_runner_id: Runner id registered by the fixture.
@@ -548,7 +548,7 @@ def test_non_git_edit_file(
         f"{_CHANGES_TIMEOUT_S}s. "
         "record_change() may not have been called after sys_os_write."
     )
-    # Status must be "modified" — the file pre-existed in the session workspace.
+    # Status must be "modified" â€” the file pre-existed in the session workspace.
     assert entry["status"] == "modified", (
         f"Expected status 'modified' for an overwritten pre-existing file, "
         f"got {entry['status']!r}. "

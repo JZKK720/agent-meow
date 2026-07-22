@@ -1,4 +1,4 @@
-"""Phase 0 characterization test — Ctrl+R reverse-incremental search.
+"""Phase 0 characterization test â€” Ctrl+R reverse-incremental search.
 
 Migrated to mock LLM: uses canned responses for the LLM turns so the
 test is deterministic and requires no real Databricks credentials.
@@ -10,20 +10,20 @@ the input area, and (c) pressing Enter accepts the match back into
 the input buffer.
 
 **What breaks if this fails:**
-- ``agent_meow.cli`` removes the ``@kb.add("c-r")`` binding that
+- ``omnigent.cli`` removes the ``@kb.add("c-r")`` binding that
   delegates to prompt-toolkit's
   ``start_reverse_incremental_search``.
-- ``agent_meow.cli`` forgets to bind Enter while searching to
+- ``omnigent.cli`` forgets to bind Enter while searching to
   prompt-toolkit's ``accept_search``, so the surfaced match
   cannot be selected.
 - ``SearchToolbar`` stops rendering its default
-  ``"I-search backward: "`` prompt — breaks the "search mode
+  ``"I-search backward: "`` prompt â€” breaks the "search mode
   activated" observation.
 - The input-area buffer's history search loses the submitted
   prompts, so a substring match has nothing to surface.
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
-REPL pexpect suite — "Ctrl+R reverse-search".
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
+REPL pexpect suite â€” "Ctrl+R reverse-search".
 """
 
 from __future__ import annotations
@@ -31,16 +31,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     submit_prompt,
 )
-from tests.e2e.agent_meow._repl_test_helpers import drain_for
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent._repl_test_helpers import drain_for
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _MODEL = "mock-ctrl-r-model"
 _HARNESS = "openai-agents"
@@ -116,14 +116,14 @@ def test_repl_ctrl_r_reverse_search(
         # toolbar state text: under pexpect the prompt-toolkit CPR
         # handshake can suppress ``state: sleeping`` even when the
         # REPL is ready.
-        child.expect(r"❯ ", timeout=_BOOT_TIMEOUT)
+        child.expect(r"â¯ ", timeout=_BOOT_TIMEOUT)
         submit_prompt(child, _PROMPT)
         await_turn_complete(
             child,
             running_timeout=_RUNNING_TIMEOUT,
             completion_timeout=_COMPLETION_TIMEOUT,
             running_marker=r"working",
-            completion_pattern=r"❯ ",
+            completion_pattern=r"â¯ ",
         )
         # Enter reverse-search mode. prompt-toolkit swaps the
         # input area focus to the search toolbar and redraws
@@ -162,7 +162,7 @@ def test_repl_ctrl_r_reverse_search(
                 running_timeout=_RUNNING_TIMEOUT,
                 completion_timeout=_COMPLETION_TIMEOUT,
                 running_marker=r"working",
-                completion_pattern=r"❯ ",
+                completion_pattern=r"â¯ ",
             )
             accepted_search_submits = True
         except Exception:
@@ -183,13 +183,13 @@ def test_repl_ctrl_r_reverse_search(
 
     observed: dict[str, Any] = {
         "exit_code": exit_code,
-        # Proof that Ctrl+R put the REPL into search mode — the
+        # Proof that Ctrl+R put the REPL into search mode â€” the
         # SearchToolbar paints "I-search backward: " only while
         # an incremental search is active.
         "search_toolbar_visible": _SEARCH_PROMPT_MARKER in combined_stripped,
         # The matched history entry should surface in the input
         # area. Searching for the unique token confirms the
-        # entry was found — not just that search was started.
+        # entry was found â€” not just that search was started.
         "needle_surfaced": _NEEDLE in search_stripped,
         # After pressing Enter, the SearchToolbar should disappear,
         # and the matched entry should still be present in the normal

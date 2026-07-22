@@ -1,14 +1,14 @@
 """
 Tests for ``_build_antigravity_spawn_env`` in
-``agent_meow/runtime/workflow.py``.
+``omnigent/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec.executor`` fields to ``HARNESS_ANTIGRAVITY_*``
 env vars the antigravity harness wrap reads at first-turn time. Auth is
-Gemini-native (a direct API key, or Vertex AI) — the SDK has no
+Gemini-native (a direct API key, or Vertex AI) â€” the SDK has no
 OpenAI-compatible base_url, so there is deliberately no gateway / Databricks
 path here.
 
-Unit test — no subprocess spawn, no real httpx.
+Unit test â€” no subprocess spawn, no real httpx.
 """
 
 from __future__ import annotations
@@ -20,13 +20,13 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
-from agent_meow.errors import ErrorCode, OmnigentError
-from agent_meow.runtime import workflow as wf
-from agent_meow.runtime.workflow import (
+from omnigent.errors import ErrorCode, OmnigentError
+from omnigent.runtime import workflow as wf
+from omnigent.runtime.workflow import (
     _build_antigravity_spawn_env,
     configure_agent_harness_with_provider,
 )
-from agent_meow.spec.types import (
+from omnigent.spec.types import (
     AgentSpec,
     ApiKeyAuth,
     DatabricksAuth,
@@ -108,7 +108,7 @@ def test_api_key_auth_threads_key_only() -> None:
     )
     assert env["HARNESS_ANTIGRAVITY_API_KEY"] == "ag-secret"
     # The SDK's LocalAgentConfig has no base_url field, so a gateway URL would
-    # be silently inert — the builder must not emit it.
+    # be silently inert â€” the builder must not emit it.
     assert "HARNESS_ANTIGRAVITY_GATEWAY_BASE_URL" not in env
 
 
@@ -118,7 +118,7 @@ def test_global_auth_is_not_adopted_when_spec_has_no_auth(
     """The legacy global ``auth:`` key is NEVER adopted by antigravity.
 
     The global block carries the OpenAI/gateway key the other SDK harnesses
-    inherit (an ``sk-…`` key); the Gemini-native SDK can't use it, so shipping
+    inherit (an ``sk-â€¦`` key); the Gemini-native SDK can't use it, so shipping
     it as ``HARNESS_ANTIGRAVITY_API_KEY`` would guarantee an auth failure /
     mis-billing. With no spec auth, no stored block, and no ambient Gemini key,
     the builder must emit no key at all (the wrap then uses ambient/Vertex
@@ -149,7 +149,7 @@ def test_databricks_auth_ignored_with_warning(caplog: pytest.LogCaptureFixture) 
         env = _build_antigravity_spawn_env(
             _make_spec(model="gemini-3-pro", auth=DatabricksAuth(profile="dev"))
         )
-    # No Databricks profile var — antigravity has no Databricks/gateway path.
+    # No Databricks profile var â€” antigravity has no Databricks/gateway path.
     assert "HARNESS_ANTIGRAVITY_DATABRICKS_PROFILE" not in env
     assert "HARNESS_ANTIGRAVITY_API_KEY" not in env
     # The user is told their Databricks auth was ignored rather than silently
@@ -161,7 +161,7 @@ def test_legacy_profile_is_ignored() -> None:
     """An ``executor.config['profile']`` does not produce any Databricks var."""
     env = _build_antigravity_spawn_env(_make_spec(model="gemini-3-pro", profile="my-profile"))
     assert "HARNESS_ANTIGRAVITY_DATABRICKS_PROFILE" not in env
-    # Only the model var — a legacy profile is meaningless for this harness.
+    # Only the model var â€” a legacy profile is meaningless for this harness.
     assert env == {"HARNESS_ANTIGRAVITY_MODEL": "gemini-3-pro"}
 
 
@@ -208,7 +208,7 @@ def test_stored_gemini_key_used_when_spec_has_no_auth(
     monkeypatch: pytest.MonkeyPatch, _isolate_global_config: Path
 ) -> None:
     """A Gemini key registered via ``agent-meow setup`` (the ``antigravity:``
-    block) flows when the spec declares no auth — so a user need not export it
+    block) flows when the spec declares no auth â€” so a user need not export it
     in every shell."""
     monkeypatch.setenv("GEMINI_KEY_SRC", "AIza_stored_123")
     _write_antigravity_config(_isolate_global_config, "env:GEMINI_KEY_SRC")
@@ -222,7 +222,7 @@ def test_spec_api_key_auth_wins_over_stored_key(
     """An explicit api-key auth on the spec takes precedence over the stored key.
 
     Failure means a per-agent ``executor.auth`` is silently overridden by the
-    machine-wide default — the spec must always win.
+    machine-wide default â€” the spec must always win.
     """
     monkeypatch.setenv("GEMINI_KEY_SRC", "AIza_stored_123")
     _write_antigravity_config(_isolate_global_config, "env:GEMINI_KEY_SRC")
@@ -286,7 +286,7 @@ def test_ambient_gemini_key_wins_over_global_openai_auth(
 
     This is the core credential-safety guarantee: with no spec auth and no stored
     ``antigravity:`` block, a present global ``auth:`` (the OpenAI/gateway
-    ``sk-…`` key) must not short-circuit the user's ambient Gemini key. Against
+    ``sk-â€¦`` key) must not short-circuit the user's ambient Gemini key. Against
     the old global-``auth:`` fallback the builder would have shipped
     ``sk-openai-global`` instead of the real Gemini key.
     """

@@ -1,8 +1,8 @@
 """E2E: /model command in the agent-meow REPL under pexpect.
 
 Migrated to mock LLM: drives ``/model`` against a mock ``agent-meow run``
-REPL and asserts the slash-command surface — show / set / show-after-set
-/ reset — matches the design's contract end-to-end. No real Databricks
+REPL and asserts the slash-command surface â€” show / set / show-after-set
+/ reset â€” matches the design's contract end-to-end. No real Databricks
 credentials required.
 """
 
@@ -10,12 +10,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     submit_prompt,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _MODEL = "mock-repl-model"
 _HARNESS = "openai-agents"
@@ -42,7 +42,7 @@ def test_repl_model_command_show_set_reset(
 
     Uses the mock LLM server so no real Databricks credentials are
     needed. The /model slash commands are handled entirely within the
-    REPL process — no LLM turn is required to test the UI state machine.
+    REPL process â€” no LLM turn is required to test the UI state machine.
 
     Asserts each transition:
 
@@ -78,13 +78,13 @@ def test_repl_model_command_show_set_reset(
         # toolbar state text: under pexpect the prompt-toolkit CPR
         # handshake can suppress ``state: sleeping`` even when the
         # REPL is ready.
-        child.expect(r"❯ ", timeout=_BOOT_TIMEOUT)
+        child.expect(r"â¯ ", timeout=_BOOT_TIMEOUT)
 
         # No-arg /model renders the active-credential readout:
-        #   "Active:  <model | (no model pinned …)>  ·  <provider>  ·  <source>"
+        #   "Active:  <model | (no model pinned â€¦)>  Â·  <provider>  Â·  <source>"
         # (this replaced the legacy "model: (agent default)" line; see
-        # _build_model_readout_lines in agent_meow/repl/_repl.py). With no
-        # in-session override yet, the model slot reads "no model pinned" —
+        # _build_model_readout_lines in omnigent/repl/_repl.py). With no
+        # in-session override yet, the model slot reads "no model pinned" â€”
         # ``--model`` sets the routing model, not the /model session override
         # the readout tracks (``session.model_override``).
         _submit_slash_command(child, "/model")
@@ -98,10 +98,10 @@ def test_repl_model_command_show_set_reset(
         # Nudge a fresh prompt to confirm the input buffer is clear before
         # the next slash command.
         child.send("\r")
-        child.expect(r"❯ ", timeout=10)
+        child.expect(r"â¯ ", timeout=10)
 
         # After the set, the readout's model slot shows the override (prior
-        # occurrences — the set confirmation — are already consumed, so the
+        # occurrences â€” the set confirmation â€” are already consumed, so the
         # next match is the fresh readout line).
         _submit_slash_command(child, "/model")
         child.expect("Active:", timeout=10)

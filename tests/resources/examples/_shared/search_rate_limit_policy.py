@@ -9,12 +9,12 @@ The callable follows the Service Policies V0 contract:
 
 Gates on the agent-facing tool name ``search_web`` rather than
 ``web_search`` because the latter is a reserved agent-meow built-in (see
-``agent_meow/tools/builtins/__init__.py:BUILTIN_NAMES``); the example
+``omnigent/tools/builtins/__init__.py:BUILTIN_NAMES``); the example
 YAML names its local search tool ``search_web`` to avoid the
 collision.
 """
 
-from agent_meow.policies.schema import PolicyEvent, PolicyResponse
+from omnigent.policies.schema import PolicyEvent, PolicyResponse
 
 # Agent-facing tool name the YAML declares (``tools.search_web``).
 # Kept as a module constant so a future YAML rename only touches

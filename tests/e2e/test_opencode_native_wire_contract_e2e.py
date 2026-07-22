@@ -1,18 +1,18 @@
 """End-to-end test: the OpenCode-native client speaks to a REAL ``opencode serve``.
 
-The opencode-native harness's HTTP+SSE client (``agent_meow.opencode_native_client``)
+The opencode-native harness's HTTP+SSE client (``omnigent.opencode_native_client``)
 is hand-shaped from the pinned OpenCode OpenAPI (vendored at
-``agent_meow/opencode/openapi-1.17.7.json``), so the rest of the suite exercises it
+``omnigent/opencode/openapi-1.17.7.json``), so the rest of the suite exercises it
 only against in-process fakes. This test boots a real ``opencode serve`` via the
-PR's own :class:`~?agent_meow.opencode_native_app_server.OpenCodeNativeServer` and
+PR's own :class:`~?omnigent.opencode_native_app_server.OpenCodeNativeServer` and
 drives the provider-independent endpoints the harness relies on, validating the
-wire contract against the actual binary — the one thing the fakes cannot prove.
+wire contract against the actual binary â€” the one thing the fakes cannot prove.
 
 Environment requirements (why this is opt-in, not pure-CI)
 ----------------------------------------------------------
 * **Opt-in only**: set ``OMNIGENT_E2E_OPENCODE_NATIVE=1`` and have a pinned
   ``opencode`` (>=1.17.7,<1.18.0) on ``PATH``. Unlike the codex/claude native
-  e2es this needs **no** interactive login or model credential — session
+  e2es this needs **no** interactive login or model credential â€” session
   create/list, the SSE ``/event`` stream, permissions, fork and abort are all
   provider-independent. The gate just keeps it off CI runners without the binary.
 * Run it with::
@@ -32,7 +32,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.opencode_native_app_server import (
+from omnigent.opencode_native_app_server import (
     OpenCodeNativeServer,
     OpenCodeVersionError,
 )
@@ -45,7 +45,7 @@ pytestmark = pytest.mark.skipif(
     ),
 )
 
-# Keys the typed client parses off a created session — assert the real server
+# Keys the typed client parses off a created session â€” assert the real server
 # still emits the shape OpenCodeSession.from_payload depends on.
 _REQUIRED_SESSION_KEYS = {"id", "directory", "title"}
 
@@ -54,7 +54,7 @@ async def test_opencode_native_wire_contract_against_real_server() -> None:
     """A real ``opencode serve`` answers every endpoint the harness drives.
 
     Covers: server boot + version pin, session create/get (+404), message
-    list, permission list, the SSE ``/event`` stream framing, fork and abort —
+    list, permission list, the SSE ``/event`` stream framing, fork and abort â€”
     the provider-independent surface the SSE forwarder and executor depend on.
     """
     tmp = Path(tempfile.mkdtemp(prefix="opencode-e2e-"))
@@ -73,7 +73,7 @@ async def test_opencode_native_wire_contract_against_real_server() -> None:
         assert server.version is not None
         client = server.client()
         try:
-            # create_session — and the parsed shape the forwarder relies on.
+            # create_session â€” and the parsed shape the forwarder relies on.
             session = await client.create_session({"title": "omnigent-e2e"})
             assert session.id, "created session has no id"
             assert set(session.raw) >= _REQUIRED_SESSION_KEYS, (

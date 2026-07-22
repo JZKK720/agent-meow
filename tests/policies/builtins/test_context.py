@@ -1,16 +1,16 @@
-"""Unit tests for agent_meow.policies.builtins.context."""
+"""Unit tests for omnigent.policies.builtins.context."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_meow.policies.builtins.context import (
+from omnigent.policies.builtins.context import (
     _TASK_SWITCH_HISTORY_KEY,
     _strip_code_fences,
     detect_task_switch,
 )
 
-# ── helpers ──────────────────────────────────────────────────────────────────
+# â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _event(
@@ -26,7 +26,7 @@ def _event(
     }
 
 
-# ── _strip_code_fences ───────────────────────────────────────────────────────
+# â”€â”€ _strip_code_fences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_strip_code_fences_plain_json() -> None:
@@ -44,7 +44,7 @@ def test_strip_code_fences_bare_fence() -> None:
     assert _strip_code_fences('```\n{"v":"x"}\n```') == '{"v":"x"}'
 
 
-# ── non-gated phases abstain ─────────────────────────────────────────────────
+# â”€â”€ non-gated phases abstain â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -56,12 +56,12 @@ async def test_non_request_phases_abstain() -> None:
         assert result is None, f"expected None for phase={phase}"
 
 
-# ── accumulation (below min_turns) ───────────────────────────────────────────
+# â”€â”€ accumulation (below min_turns) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_first_message_accumulates_no_history() -> None:
-    """First message (history empty) → ALLOW and writes message into state."""
+    """First message (history empty) â†’ ALLOW and writes message into state."""
     policy = detect_task_switch(min_turns=1)
     result = await policy(_event("fix the login bug", history=[]))
     assert result is not None
@@ -75,10 +75,10 @@ async def test_first_message_accumulates_no_history() -> None:
 async def test_below_min_turns_accumulates_without_classifying() -> None:
     """With min_turns=2, two messages accumulate before classification fires."""
     policy = detect_task_switch(min_turns=2)
-    # Message 1 — history empty
+    # Message 1 â€” history empty
     r1 = await policy(_event("first task", history=[]))
     assert r1["result"] == "ALLOW"
-    # Message 2 — one prior message, still below min_turns=2
+    # Message 2 â€” one prior message, still below min_turns=2
     r2 = await policy(_event("second message", history=["first task"]))
     assert r2["result"] == "ALLOW"
     # Both must have stored the new message into state
@@ -94,7 +94,7 @@ async def test_empty_message_abstains() -> None:
     assert await policy(_event("   ")) is None
 
 
-# ── no llm_client abstains ───────────────────────────────────────────────────
+# â”€â”€ no llm_client abstains â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -102,12 +102,12 @@ async def test_no_llm_client_abstains_after_min_turns() -> None:
     """When min_turns is satisfied but llm_client is absent, fail-open (None)."""
     policy = detect_task_switch(min_turns=1)
     event = _event("brand new topic", history=["fix the login bug"])
-    # no llm_client key → abstain
+    # no llm_client key â†’ abstain
     result = await policy(event)
     assert result is None
 
 
-# ── CONTINUATION path (mocked llm_client) ───────────────────────────────────
+# â”€â”€ CONTINUATION path (mocked llm_client) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _MockLLMClient:
@@ -147,7 +147,7 @@ async def test_continuation_updates_history_and_allows() -> None:
     assert client.calls == 1
 
 
-# ── TASK_SWITCH path ─────────────────────────────────────────────────────────
+# â”€â”€ TASK_SWITCH path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -187,7 +187,7 @@ async def test_task_switch_deny_returns_deny_and_resets_window() -> None:
     assert updates[_TASK_SWITCH_HISTORY_KEY] == ["write me a poem"]
 
 
-# ── code-fence robustness ────────────────────────────────────────────────────
+# â”€â”€ code-fence robustness â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -213,7 +213,7 @@ async def test_fenced_json_response_is_parsed() -> None:
     assert result["result"] == "ALLOW"
 
 
-# ── min_turns boundary ────────────────────────────────────────────────────────
+# â”€â”€ min_turns boundary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio

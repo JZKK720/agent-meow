@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-import agent_meow.harness_plugins as hp
-from agent_meow.harness_install_spec import HarnessInstallSpec
+import omnigent.harness_plugins as hp
+from omnigent.harness_install_spec import HarnessInstallSpec
 
 
 class _EntryPoint:
@@ -43,10 +43,10 @@ def test_community_harness_contribution_is_merged(monkeypatch: pytest.MonkeyPatc
         return hp.HarnessContribution(
             name="omnigent-foo",
             valid_harnesses=frozenset({"foo"}),
-            harness_modules={"foo": "agent_meow.community.harness.foo.inner.foo_harness"},
+            harness_modules={"foo": "omnigent.community.harness.foo.inner.foo_harness"},
             aliases={"foo-code": "foo"},
             model_env_keys={"foo": "HARNESS_FOO_MODEL"},
-            spawn_env_builders={"foo": "agent_meow.community.harness.foo.plugin:build_spawn_env"},
+            spawn_env_builders={"foo": "omnigent.community.harness.foo.plugin:build_spawn_env"},
             harness_labels={"foo": "Foo"},
         )
 
@@ -54,10 +54,10 @@ def test_community_harness_contribution_is_merged(monkeypatch: pytest.MonkeyPatc
 
     assert "foo" in hp.valid_harnesses()
     assert hp.harness_aliases()["foo-code"] == "foo"
-    assert hp.harness_modules()["foo-code"] == "agent_meow.community.harness.foo.inner.foo_harness"
+    assert hp.harness_modules()["foo-code"] == "omnigent.community.harness.foo.inner.foo_harness"
     assert hp.model_env_keys()["foo"] == "HARNESS_FOO_MODEL"
     assert (
-        hp.spawn_env_builders()["foo"] == "agent_meow.community.harness.foo.plugin:build_spawn_env"
+        hp.spawn_env_builders()["foo"] == "omnigent.community.harness.foo.plugin:build_spawn_env"
     )
     assert {"id": "foo", "label": "Foo"} in hp.harness_catalog()
 
@@ -84,14 +84,14 @@ def test_community_harness_rejects_builtin_collision(monkeypatch: pytest.MonkeyP
         return hp.HarnessContribution(
             name="omnigent-evil",
             valid_harnesses=frozenset({"claude-sdk"}),
-            harness_modules={"claude-sdk": "agent_meow.community.harness.evil.inner.evil_harness"},
+            harness_modules={"claude-sdk": "omnigent.community.harness.evil.inner.evil_harness"},
         )
 
     _install_entry_points(monkeypatch, _EntryPoint("evil", _contribution))
 
     state = hp.plugin_state()
     assert "evil" in state.load_errors
-    assert hp.harness_modules()["claude-sdk"] == "agent_meow.inner.claude_sdk_harness"
+    assert hp.harness_modules()["claude-sdk"] == "omnigent.inner.claude_sdk_harness"
 
 
 def test_community_harness_rejects_alias_collision_with_builtin(
@@ -101,7 +101,7 @@ def test_community_harness_rejects_alias_collision_with_builtin(
         return hp.HarnessContribution(
             name="omnigent-evil",
             valid_harnesses=frozenset({"foo"}),
-            harness_modules={"foo": "agent_meow.community.harness.evil.inner.foo_harness"},
+            harness_modules={"foo": "omnigent.community.harness.evil.inner.foo_harness"},
             aliases={"claude-sdk": "foo"},
         )
 
@@ -119,14 +119,14 @@ def test_community_harness_rejects_community_collision(
         return hp.HarnessContribution(
             name="omnigent-foo",
             valid_harnesses=frozenset({"foo"}),
-            harness_modules={"foo": "agent_meow.community.harness.foo.inner.foo_harness"},
+            harness_modules={"foo": "omnigent.community.harness.foo.inner.foo_harness"},
         )
 
     def _second() -> hp.HarnessContribution:
         return hp.HarnessContribution(
             name="omnigent-bar",
             valid_harnesses=frozenset({"foo"}),
-            harness_modules={"foo": "agent_meow.community.harness.bar.inner.foo_harness"},
+            harness_modules={"foo": "omnigent.community.harness.bar.inner.foo_harness"},
         )
 
     _install_entry_points(
@@ -137,7 +137,7 @@ def test_community_harness_rejects_community_collision(
 
     state = hp.plugin_state()
     assert "bar" in state.load_errors
-    assert hp.harness_modules()["foo"] == "agent_meow.community.harness.foo.inner.foo_harness"
+    assert hp.harness_modules()["foo"] == "omnigent.community.harness.foo.inner.foo_harness"
 
 
 def test_community_harness_rejects_native_terminal_metadata(
@@ -147,7 +147,7 @@ def test_community_harness_rejects_native_terminal_metadata(
         return hp.HarnessContribution(
             name="omnigent-foo",
             valid_harnesses=frozenset({"foo-native"}),
-            harness_modules={"foo-native": "agent_meow.community.harness.foo.inner.foo_harness"},
+            harness_modules={"foo-native": "omnigent.community.harness.foo.inner.foo_harness"},
             native_harnesses=frozenset({"foo-native"}),
         )
 
@@ -165,7 +165,7 @@ def test_community_harness_readiness_uses_install_metadata(
         return hp.HarnessContribution(
             name="omnigent-foo",
             valid_harnesses=frozenset({"foo"}),
-            harness_modules={"foo": "agent_meow.community.harness.foo.inner.foo_harness"},
+            harness_modules={"foo": "omnigent.community.harness.foo.inner.foo_harness"},
             aliases={"foo-code": "foo"},
             install_specs={
                 "foo": HarnessInstallSpec(
@@ -180,7 +180,7 @@ def test_community_harness_readiness_uses_install_metadata(
 
     _install_entry_points(monkeypatch, _EntryPoint("foo", _contribution))
 
-    from agent_meow.onboarding import harness_readiness as readiness
+    from omnigent.onboarding import harness_readiness as readiness
 
     monkeypatch.setattr(readiness.shutil, "which", lambda _binary: None)
     assert readiness.harness_is_configured("foo") is False
@@ -203,12 +203,12 @@ def test_community_namespace_imports_external_harness_package(
 
     monkeypatch.syspath_prepend(str(package_root))
 
-    import agent_meow.community as community
-    import agent_meow.community.harness as harnesses
+    import omnigent.community as community
+    import omnigent.community.harness as harnesses
 
     importlib.reload(community)
     importlib.reload(harnesses)
-    sys.modules.pop("agent_meow.community.harness.foo", None)
+    sys.modules.pop("omnigent.community.harness.foo", None)
 
-    module = importlib.import_module("agent_meow.community.harness.foo")
+    module = importlib.import_module("omnigent.community.harness.foo")
     assert module.VALUE == "ok"

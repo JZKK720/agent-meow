@@ -1,5 +1,5 @@
 """
-Unit tests for :mod:`~?agent_meow.runtime.pending_elicitations`.
+Unit tests for :mod:`~?omnigent.runtime.pending_elicitations`.
 
 The pending-elicitations index is a per-conversation set of
 outstanding elicitation ids that powers the sidebar's "needs
@@ -7,14 +7,14 @@ attention" badge. Tests here pin its core invariants directly:
 
 * :func:`record_publish` only acts on
   ``response.elicitation_request`` events and silently ignores
-  every other type — it sits on the hot SSE publish path.
+  every other type â€” it sits on the hot SSE publish path.
 * :func:`resolve` removes ids, is idempotent, and cleans up
   empty conversation sets so :func:`count_for` returns ``0``
   cleanly.
 * :func:`counts_for` is a one-pass batch lookup that includes
   every requested id (0 for untracked).
 
-The wire-up between :func:`~?agent_meow.runtime.session_stream.publish`
+The wire-up between :func:`~?omnigent.runtime.session_stream.publish`
 and the index lives in
 :file:`tests/runtime/test_session_stream.py`; this file tests the
 module in isolation.
@@ -26,7 +26,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.runtime import pending_elicitations
+from omnigent.runtime import pending_elicitations
 
 
 @pytest.fixture(autouse=True)
@@ -71,12 +71,12 @@ def _elicit_event(elicitation_id: str, tool_name: str | None = None) -> dict[str
 def test_record_publish_increments_count_for_elicitation_event() -> None:
     """
     An elicitation_request event with a valid id increments
-    the per-conversation count by one — this is the primary
+    the per-conversation count by one â€” this is the primary
     "session needs attention" signal.
     """
     pending_elicitations.record_publish("conv_a", _elicit_event("elicit_1"))
     # The session now has one outstanding prompt; the sidebar
-    # should render a badge of "1" — anything other than 1 here
+    # should render a badge of "1" â€” anything other than 1 here
     # means the publish-time increment isn't taking.
     assert pending_elicitations.count_for("conv_a") == 1
 
@@ -92,7 +92,7 @@ def test_record_publish_is_idempotent_on_repeat_publish() -> None:
     """
     pending_elicitations.record_publish("conv_a", _elicit_event("elicit_1"))
     pending_elicitations.record_publish("conv_a", _elicit_event("elicit_1"))
-    # Still 1 — if 2, the index is using a list/Counter and
+    # Still 1 â€” if 2, the index is using a list/Counter and
     # the sidebar would over-badge sessions on republish.
     assert pending_elicitations.count_for("conv_a") == 1
 
@@ -119,7 +119,7 @@ def test_record_publish_tracks_multiple_distinct_ids() -> None:
         {"type": "response.output_text.delta", "delta": "hi"},
         {"type": "session.status", "status": "running"},
         {"type": "response.completed"},
-        # Defensive — an event payload missing the type field at
+        # Defensive â€” an event payload missing the type field at
         # all should be silently ignored, not crash.
         {"elicitation_id": "elicit_x"},
     ],
@@ -128,14 +128,14 @@ def test_record_publish_ignores_non_elicitation_events(event: dict[str, Any]) ->
     """
     Non-elicitation events do not touch the index.
 
-    record_publish sits on the hot publish path — every text
+    record_publish sits on the hot publish path â€” every text
     delta, status, and tool event flows through it. Only
     ``response.elicitation_request`` events should mutate state.
     """
     pending_elicitations.record_publish("conv_a", event)
     # The conversation should never appear in the index for
     # non-elicitation events. count_for returning > 0 here
-    # would mean the type filter is broken — every text delta
+    # would mean the type filter is broken â€” every text delta
     # would inflate the sidebar badge.
     assert pending_elicitations.count_for("conv_a") == 0
 
@@ -151,7 +151,7 @@ def test_record_publish_ignores_invalid_elicitation_id(bad_id: Any) -> None:
     The index keys on the id string; a non-string or empty
     value can't be matched by ``resolve`` later, so tracking it
     would create a permanent phantom entry. Drop loudly via
-    return rather than raising — the SSE publish path must
+    return rather than raising â€” the SSE publish path must
     not throw.
     """
     event: dict[str, Any] = {
@@ -159,7 +159,7 @@ def test_record_publish_ignores_invalid_elicitation_id(bad_id: Any) -> None:
         "elicitation_id": bad_id,
     }
     pending_elicitations.record_publish("conv_a", event)
-    # Index unchanged — a phantom entry here would render a
+    # Index unchanged â€” a phantom entry here would render a
     # badge the user can never clear.
     assert pending_elicitations.count_for("conv_a") == 0
 
@@ -168,7 +168,7 @@ def test_resolve_removes_outstanding_id() -> None:
     """
     Resolving a tracked id drops the per-session count back to zero.
 
-    This is what fires when the user accepts/rejects in the UI —
+    This is what fires when the user accepts/rejects in the UI â€”
     the agent-meow server's approval dispatch calls
     :func:`resolve` and the sidebar badge should clear on the
     next poll.
@@ -189,7 +189,7 @@ def test_resolve_is_idempotent_on_unknown_id() -> None:
     multi-replica mode, the id may live on a different
     replica). The function must accept unknown ids silently.
     """
-    # No tracked state — resolve must not raise.
+    # No tracked state â€” resolve must not raise.
     pending_elicitations.resolve("conv_a", "elicit_never_tracked")
     assert pending_elicitations.count_for("conv_a") == 0
 
@@ -204,7 +204,7 @@ def test_resolve_drops_empty_conversation_set() -> None:
     """
     pending_elicitations.record_publish("conv_a", _elicit_event("elicit_1"))
     pending_elicitations.resolve("conv_a", "elicit_1")
-    # Probe internals via the public API — count is 0 either way,
+    # Probe internals via the public API â€” count is 0 either way,
     # but check the dict directly to confirm the key was popped.
     # If the key is still present (empty set), memory leaks
     # accumulate one entry per resolved conversation forever.
@@ -232,10 +232,10 @@ def test_counts_for_returns_zero_for_untracked_sessions() -> None:
     Batch lookup includes every requested id in the result,
     even ones with no tracked elicitations.
 
-    The list_sessions handler relies on this — it iterates the
+    The list_sessions handler relies on this â€” it iterates the
     full page of sessions and looks up each id by key. A
     missing entry in the result would either KeyError or
-    silently default — both surprising.
+    silently default â€” both surprising.
     """
     pending_elicitations.record_publish("conv_a", _elicit_event("elicit_1"))
     counts = pending_elicitations.counts_for(["conv_a", "conv_b", "conv_c"])
@@ -254,7 +254,7 @@ def test_counts_for_handles_empty_input() -> None:
     """
     pending_elicitations.record_publish("conv_a", _elicit_event("elicit_1"))
     counts = pending_elicitations.counts_for([])
-    # Empty input → empty output. If this returns the full
+    # Empty input â†’ empty output. If this returns the full
     # index, the route layer would over-report counts for
     # sessions the caller didn't ask about.
     assert counts == {}
@@ -283,7 +283,7 @@ def test_record_publish_clears_index_on_elicitation_resolved_event() -> None:
     publish chokepoint clears the matching index entry.
 
     The runner emits this event from the ``finally`` block of its
-    own approval wait — that's the only signal the agent-meow server gets
+    own approval wait â€” that's the only signal the agent-meow server gets
     when the runner's Future was cancelled / timed out without a
     UI verdict. If the type filter doesn't match this event, the
     badge stays stuck after the runner gives up.
@@ -306,7 +306,7 @@ def test_record_publish_clears_index_on_elicitation_resolved_event() -> None:
 def test_record_publish_handles_resolved_event_for_unknown_id() -> None:
     """
     A ``response.elicitation_resolved`` event for an id that was
-    never tracked is a silent no-op — the runner can fire-and-
+    never tracked is a silent no-op â€” the runner can fire-and-
     forget at every Future cleanup without coordinating with the
     agent-meow server's view of what's currently tracked.
     """
@@ -317,7 +317,7 @@ def test_record_publish_handles_resolved_event_for_unknown_id() -> None:
             "elicitation_id": "elicit_never_seen",
         },
     )
-    # 0 and no exception — if this raised, the runner's
+    # 0 and no exception â€” if this raised, the runner's
     # fire-and-forget contract would be broken.
     assert pending_elicitations.count_for("conv_a") == 0
 
@@ -329,7 +329,7 @@ def test_snapshot_for_returns_full_event_payloads() -> None:
     callers can replay them into the UI's block stream.
 
     Catches a regression where the index drops the params payload
-    and only retains the id — that would render an empty
+    and only retains the id â€” that would render an empty
     ApprovalCard with no prompt text.
     """
     event_one = {
@@ -359,7 +359,7 @@ def test_snapshot_for_returns_empty_for_untracked_session() -> None:
     """
     Sessions with no outstanding prompts return an empty list, not
     a KeyError. The route handler reads the snapshot unconditionally
-    on every ``GET /v1/sessions/{id}`` — raising would break the
+    on every ``GET /v1/sessions/{id}`` â€” raising would break the
     snapshot for every session.
     """
     assert pending_elicitations.snapshot_for("conv_nonexistent") == []
@@ -375,14 +375,14 @@ def test_pending_session_ids_tracks_publish_and_resolve() -> None:
     forever; a missing id would hide a child's pending prompt from
     ancestor snapshots.
     """
-    # Empty index → empty list; this is the common steady state the
+    # Empty index â†’ empty list; this is the common steady state the
     # snapshot route uses to skip the descendant walk entirely.
     assert pending_elicitations.pending_session_ids() == []
     pending_elicitations.record_publish("conv_a", _elicit_event("elicit_1"))
     pending_elicitations.record_publish("conv_b", _elicit_event("elicit_2"))
     assert sorted(pending_elicitations.pending_session_ids()) == ["conv_a", "conv_b"]
     pending_elicitations.resolve("conv_a", "elicit_1")
-    # conv_a's only prompt resolved → its id must drop out, otherwise
+    # conv_a's only prompt resolved â†’ its id must drop out, otherwise
     # every snapshot of conv_a's tree keeps paying the DB walk.
     assert pending_elicitations.pending_session_ids() == ["conv_b"]
 
@@ -428,7 +428,7 @@ def test_project_for_peek_form_mode_surfaces_prompt_and_fields() -> None:
     This is what ``sys_session_get_history`` appends so a parent agent
     sees that a sub-agent is parked awaiting input, *and* what it's being
     asked. If ``fields`` is missing or ``prompt`` is ``None`` the
-    parent learns the sub-agent is blocked but not on what — a weaker
+    parent learns the sub-agent is blocked but not on what â€” a weaker
     signal than the index actually holds.
     """
     event = {
@@ -448,7 +448,7 @@ def test_project_for_peek_form_mode_surfaces_prompt_and_fields() -> None:
     # message / function_call items in the same peek list.
     assert item["type"] == "pending_elicitation"
     assert item["elicitation_id"] == "elicit_bio"
-    # prompt is the human-facing message — proves the params.message
+    # prompt is the human-facing message â€” proves the params.message
     # made it through, not a None/empty placeholder.
     assert item["prompt"] == "Answer 3 questions on human biology"
     # fields lists the schema's property keys in order; a missing key
@@ -485,7 +485,7 @@ def test_project_for_peek_omits_fields_when_no_properties(params: dict[str, Any]
     item = pending_elicitations.project_for_peek(event)
     assert item["type"] == "pending_elicitation"
     assert item["prompt"] == params["message"]
-    # No fields key — not an empty list. ``"fields" in item`` being
+    # No fields key â€” not an empty list. ``"fields" in item`` being
     # True here means the empty-properties guard regressed.
     assert "fields" not in item
 
@@ -561,7 +561,7 @@ def test_set_elicitation_observer_none_clears_registration() -> None:
 
     pending_elicitations.set_elicitation_observer(_observer)
     pending_elicitations.record_publish("conv_a", _elicit_event("elicit_1"))
-    # Confirms observer is wired before clearing — otherwise the
+    # Confirms observer is wired before clearing â€” otherwise the
     # later assertion is vacuous.
     assert received == ["conv_a"]
 
@@ -662,7 +662,7 @@ def test_snapshot_for_returns_independent_copies() -> None:
 
     The index stores arbitrary event dicts whose ``params`` block
     is itself a dict. A shallow copy would leak nested
-    mutations — e.g. ``snap[0]["params"]["message"] = "x"`` would
+    mutations â€” e.g. ``snap[0]["params"]["message"] = "x"`` would
     mutate the index's stored event. ``deepcopy`` is required.
     """
     event = {
@@ -672,9 +672,9 @@ def test_snapshot_for_returns_independent_copies() -> None:
     }
     pending_elicitations.record_publish("conv_a", event)
     snap1 = pending_elicitations.snapshot_for("conv_a")
-    # Top-level reassignment — caught by a shallow copy.
+    # Top-level reassignment â€” caught by a shallow copy.
     snap1[0]["params"] = {"message": "tampered-top-level"}
-    # Nested in-place mutation — only caught by deep copy. This
+    # Nested in-place mutation â€” only caught by deep copy. This
     # is the exact pattern the review comment flagged: shallow
     # ``dict(event)`` would let this corrupt the index.
     snap1_again = pending_elicitations.snapshot_for("conv_a")

@@ -1,7 +1,7 @@
-"""Tests for ``agent_meow/onboarding/antigravity_auth.py`` — the Gemini key store.
+"""Tests for ``omnigent/onboarding/antigravity_auth.py`` â€” the Gemini key store.
 
 Isolate config + secret store to a tmp dir (file backend) and assert the
-read/resolve/configured helpers — including the soft resolution that returns
+read/resolve/configured helpers â€” including the soft resolution that returns
 ``None`` on a dangling reference instead of raising.
 """
 
@@ -12,9 +12,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.onboarding import antigravity_auth, extra_install
-from agent_meow.onboarding import secrets as secret_store
-from agent_meow.onboarding.antigravity_auth import (
+from omnigent.onboarding import antigravity_auth, extra_install
+from omnigent.onboarding import secrets as secret_store
+from omnigent.onboarding.antigravity_auth import (
     ANTIGRAVITY_SECRET_NAME,
     antigravity_api_key_configured,
     antigravity_api_key_ref,
@@ -110,7 +110,7 @@ def test_settings_shape() -> None:
     }
 
 
-# ── SDK-extra detection + install (the optional ``antigravity`` extra) ────────
+# â”€â”€ SDK-extra detection + install (the optional ``antigravity`` extra) â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_antigravity_sdk_installed_true_when_spec_found(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -148,7 +148,7 @@ def test_antigravity_sdk_installed_false_when_namespace_absent(
 
 
 def test_antigravity_install_command_prefers_uv(monkeypatch: pytest.MonkeyPatch) -> None:
-    """With ``uv`` on PATH, the install runs ``uv pip install`` — no index URL."""
+    """With ``uv`` on PATH, the install runs ``uv pip install`` â€” no index URL."""
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: "/usr/bin/uv")
     cmd = antigravity_install_command()
@@ -157,7 +157,7 @@ def test_antigravity_install_command_prefers_uv(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_antigravity_install_command_falls_back_to_pip(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Without ``uv``, it falls back to this interpreter's pip — still no index."""
+    """Without ``uv``, it falls back to this interpreter's pip â€” still no index."""
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: None)
     cmd = antigravity_install_command()

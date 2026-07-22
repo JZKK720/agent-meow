@@ -2,7 +2,7 @@
 End-to-end proof that policies declared in an agent-meow YAML
 are enforced by the agent-meow workflow under agent-meow mode.
 
-The adapter in :mod:`~?agent_meow.spec.agent-meow` lifts the
+The adapter in :mod:`~?omnigent.spec.agent-meow` lifts the
 YAML's ``policies:`` block into
 :attr:`AgentSpec.guardrails.policies`; the agent-meow runtime
 builds a :class:`PolicyEngine` over those specs and enforces at
@@ -18,21 +18,21 @@ agent-meow' :class:`FunctionPolicy` dispatcher can't invoke
 (it passes ``(ctx, context)`` where ``ctx`` is an
 :class:`EvaluationContext` dataclass, not a dict). This test
 uses the omnigent-shaped
-``agent_meow._e2e_policy_callables.block_on_sentinel``
-callable — an arity-1 callable matching agent-meow'
-convention — so the test proves the translator + engine
+``omnigent._e2e_policy_callables.block_on_sentinel``
+callable â€” an arity-1 callable matching agent-meow'
+convention â€” so the test proves the translator + engine
 integration works and isn't muddied by a separate callable-
 portability gap. That gap is tracked in ``TODO_omnigent_coverage.md``.
 
 **What breaks if this test fails:**
 
 - The adapter stops lifting policies into
-  ``guardrails.policies`` → the engine sees zero policies and
+  ``guardrails.policies`` â†’ the engine sees zero policies and
   the sentinel-blocked prompt gets an assistant reply.
 - The runtime stops reading ``guardrails`` from specs
   synthesized via the agent-meow adapter.
 - The DENY sentinel format changes (``[Denied by policy: ...]``
-  → something else) without the hook point being updated.
+  â†’ something else) without the hook point being updated.
 """
 
 from __future__ import annotations
@@ -44,11 +44,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _TIMEOUT_SEC = 180
 
-# Run against openai-agents + mock-model only — the policy-engine
+# Run against openai-agents + mock-model only â€” the policy-engine
 # paths under test are harness-agnostic; openai-agents is the most
 # reliable harness for mock-LLM e2e (no CLI binary required and
 # honors OPENAI_BASE_URL directly).
@@ -56,7 +56,7 @@ _HARNESS_HARNESS_MODELS = [("openai-agents", "mock-model")]
 _HARNESS_IDS = ["openai-agents"]
 
 # Sentinel token that the ``block_on_sentinel`` policy callable
-# in ``agent_meow/_e2e_policy_callables.py`` DENYs on. The token
+# in ``omnigent/_e2e_policy_callables.py`` DENYs on. The token
 # is deliberately unlikely to appear in model output; a real LLM
 # could otherwise generate it incidentally and mask a true
 # regression.
@@ -64,7 +64,7 @@ _BLOCK_TOKEN = "BLOCK_THIS_TOKEN"
 
 # The standard DENY sentinel text the agent-meow workflow
 # stamps into the response when a policy returns DENY. See
-# :func:`~?agent_meow.runtime.workflow._build_deny_sentinel` —
+# :func:`~?omnigent.runtime.workflow._build_deny_sentinel` â€”
 # all four enforcement hook points use the same shape so this
 # single substring catches INPUT / TOOL_CALL / TOOL_RESULT /
 # OUTPUT DENYs alike.
@@ -83,14 +83,14 @@ def policy_enforcement_yaml_factory(tmp_path: Path) -> Callable[[str, str], Path
     without each fixture invocation requiring a separate pytest
     parametrize layer.
 
-    The YAML is deliberately minimal — only a ``name``,
-    ``prompt``, ``executor``, and single-entry ``policies`` —
+    The YAML is deliberately minimal â€” only a ``name``,
+    ``prompt``, ``executor``, and single-entry ``policies`` â€”
     so a regression surfaces here rather than via incidental
     interactions with other fields. The callable
     (``block_on_sentinel``) is already on ``agent-meow`` and
     matches the agent-meow FunctionPolicy calling convention.
 
-    :param tmp_path: Pytest's per-test temp dir — the YAML is
+    :param tmp_path: Pytest's per-test temp dir â€” the YAML is
         single-use so there's no need to track it across runs.
     :returns: ``(harness, model) -> Path`` factory.
     """
@@ -110,7 +110,7 @@ def policy_enforcement_yaml_factory(tmp_path: Path) -> Callable[[str, str], Path
                 "block_sentinel_input": {
                     "type": "function",
                     "on": ["request"],
-                    "handler": ("agent_meow._e2e_policy_callables.block_on_sentinel"),
+                    "handler": ("omnigent._e2e_policy_callables.block_on_sentinel"),
                 },
             },
         }
@@ -132,20 +132,20 @@ def test_policy_denies_input_containing_sentinel(
 ) -> None:
     """
     ``agent-meow run <yaml> -p "<sentinel>..."`` produces
-    the DENY-by-policy sentinel in output — proof that the
+    the DENY-by-policy sentinel in output â€” proof that the
     translator lifted the YAML's ``policies:`` into
     ``AgentSpec.guardrails.policies`` AND the agent-meow
     workflow enforced it at INPUT.
 
     The policy fires before any LLM call, so no mock response
-    needs to be pre-configured — the mock server is only
+    needs to be pre-configured â€” the mock server is only
     reachable if the policy incorrectly returns ALLOW.
 
     :param omnigent_python: Shared interpreter fixture.
-    :param omnigent_repo_root: Subprocess cwd — the YAML's
+    :param omnigent_repo_root: Subprocess cwd â€” the YAML's
         callable import path resolves relative to
         PYTHONPATH, which conftest anchors at the repo root +
-        agent_meow.
+        omnigent.
     :param mock_credentials_env: Mock-LLM env vars.
     :param policy_enforcement_yaml_factory: Builder for the
         harness-specific agent-meow YAML.
@@ -187,10 +187,10 @@ def test_policy_denies_input_containing_sentinel(
     # returns DENY (see ``_build_deny_sentinel``). A passing
     # assistant reply here would mean either (a) the policy
     # wasn't wired into the spec at all, or (b) the engine
-    # ran but returned ALLOW — both are real regressions.
+    # ran but returned ALLOW â€” both are real regressions.
     assert _DENY_MARKER_PREFIX in result.stdout, (
         f"Policy DENY marker {_DENY_MARKER_PREFIX!r} missing from "
-        f"stdout — the policy didn't fire or the sentinel was "
+        f"stdout â€” the policy didn't fire or the sentinel was "
         f"never surfaced.\n"
         f"stdout tail:\n{result.stdout[-2500:]}\n"
         f"stderr tail:\n{result.stderr[-1500:]}"
@@ -200,7 +200,7 @@ def test_policy_denies_input_containing_sentinel(
     # Asserting it proves we're catching OUR policy (not a
     # different DENY that happens to include the prefix). The
     # reason is built from the callable's return value, so this
-    # also exercises the dict→PolicyResult coercion.
+    # also exercises the dictâ†’PolicyResult coercion.
     assert _BLOCK_TOKEN in result.stdout, (
         f"DENY sentinel appeared but didn't carry the policy's "
         f"reason (the sentinel token {_BLOCK_TOKEN!r}). Either "
@@ -230,7 +230,7 @@ def tool_ban_yaml_factory(tmp_path: Path) -> Callable[[str, str], Path]:
 
     - ``OmnigentExecutor._make_tool_executor_bridge``
       invoking ``context.enforce_tool_call_policy(...)`` before
-      dispatching user FunctionTool calls — bridge + hook
+      dispatching user FunctionTool calls â€” bridge + hook
       integration.
     - The DENY-sentinel appearing as tool output back to the
       inner harness, which the LLM then renders in its final
@@ -268,7 +268,7 @@ def tool_ban_yaml_factory(tmp_path: Path) -> Callable[[str, str], Path]:
                     "type": "function",
                     "on": ["tool_call:calculate"],
                     "function": {
-                        "path": "agent_meow.policies.function.make_fixed_action_callable",
+                        "path": "omnigent.policies.function.make_fixed_action_callable",
                         "arguments": {
                             "action": "deny",
                             "reason": _TOOL_BAN_REASON_SENTINEL,
@@ -300,7 +300,7 @@ def test_policy_denies_tool_call_by_name(
     ``agent-meow run <yaml> -p "<arithmetic prompt>"``
     intercepts the LLM's ``calculate`` tool call, returns the
     DENY sentinel as tool output, and the final assistant reply
-    reflects that — proving end-to-end that:
+    reflects that â€” proving end-to-end that:
 
     1. The translator expanded ``on: [tool_call] + match_tools:
        [calculate]`` into a PhaseSelector that narrows by tool
@@ -310,7 +310,7 @@ def test_policy_denies_tool_call_by_name(
        dispatching the user's FunctionTool callable.
     3. On DENY, the bridge returned the sentinel to the inner
        harness as tool output instead of invoking the real
-       ``tests.resources.examples._shared.tool_functions.calculate`` — the bypass of
+       ``tests.resources.examples._shared.tool_functions.calculate`` â€” the bypass of
        the harness-internal tool dispatch is what closes Gap 6.
     4. The LLM saw the sentinel, did not retry (prompt instructs
        it to stop), and produced a final assistant reply that
@@ -318,7 +318,7 @@ def test_policy_denies_tool_call_by_name(
 
     What breaks if this fails:
 
-    - The ``match_tools`` → PhaseSelector expansion regressed
+    - The ``match_tools`` â†’ PhaseSelector expansion regressed
       (policy fires as wildcard or never fires).
     - The OmnigentExecutor bridge stopped calling
       ``enforce_tool_call_policy`` before tool dispatch.
@@ -330,11 +330,11 @@ def test_policy_denies_tool_call_by_name(
 
     The mock LLM is configured to issue a ``calculate`` tool call
     on the first turn, then acknowledge the denial on the second
-    turn — this deterministically exercises the TOOL_CALL
+    turn â€” this deterministically exercises the TOOL_CALL
     enforcement path without a real gateway.
 
     :param omnigent_python: Shared interpreter fixture.
-    :param omnigent_repo_root: Subprocess cwd — conftest's
+    :param omnigent_repo_root: Subprocess cwd â€” conftest's
         PYTHONPATH anchors at repo root so
         ``tests.resources.examples._shared.tool_functions.calculate`` resolves during
         YAML load.
@@ -345,7 +345,7 @@ def test_policy_denies_tool_call_by_name(
     :param harness: The harness identifier.
     :param model: The model identifier.
     """
-    # Turn 1: LLM emits a calculate tool call → policy intercepts
+    # Turn 1: LLM emits a calculate tool call â†’ policy intercepts
     # and returns DENY sentinel as tool output.
     # Turn 2: LLM sees DENY sentinel and acknowledges the denial.
     configure_mock_llm(
@@ -383,7 +383,7 @@ def test_policy_denies_tool_call_by_name(
         timeout=_TIMEOUT_SEC,
     )
 
-    # Exit 0 — the full pipeline completed (spec translation,
+    # Exit 0 â€” the full pipeline completed (spec translation,
     # executor construction, harness boot, one LLM call + one
     # tool call that was intercepted, one LLM continuation that
     # produced the final reply).
@@ -397,18 +397,18 @@ def test_policy_denies_tool_call_by_name(
     # not an acknowledgment of the block.
     assert "denied" in result.stdout.lower(), (
         f"Final assistant reply did not acknowledge the denial. "
-        f"TOOL_CALL enforcement likely did not fire — the "
+        f"TOOL_CALL enforcement likely did not fire â€” the "
         f"calculate tool was invoked and the LLM saw a real "
         f"result.\nstdout tail:\n{result.stdout[-2500:]}"
     )
 
-    # The real product (443242686) must NOT appear — its presence
+    # The real product (443242686) must NOT appear â€” its presence
     # would mean the calculate tool actually ran. The DENY path
     # must short-circuit dispatch. The model cannot produce this
     # value without the tool, so any leak is unambiguous. Strip
     # commas first so a "443,242,686"-formatted leak still trips.
     assert "443242686" not in result.stdout.replace(",", ""), (
-        f"The real product '443242686' leaked into the output — the "
+        f"The real product '443242686' leaked into the output â€” the "
         f"calculate tool ran despite the DENY policy. Enforcement is "
         f"bypassing dispatch incorrectly.\n"
         f"stdout tail:\n{result.stdout[-2500:]}"

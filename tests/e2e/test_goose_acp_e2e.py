@@ -2,7 +2,7 @@
 
 The chat-first sibling of ``test_goose_native_cli_e2e``. The ``goose`` harness
 runs Block's Goose over the Agent Client Protocol (``goose acp``):
-:class:`~?agent_meow.inner.goose_executor.GooseExecutor` spawns the subprocess,
+:class:`~?omnigent.inner.goose_executor.GooseExecutor` spawns the subprocess,
 streams ``agent_message_chunk`` updates as chat text, and routes Goose's mid-turn
 ``session/request_permission`` through agent-meow's TOOL_CALL policy + human-consent
 elicitation (the same bridges the runner's ExecutorAdapter installs). This test
@@ -13,8 +13,8 @@ elicitation handler, the tool running on approval, and token usage on completion
 Environment requirements (why this is opt-in, not pure-CI)
 ----------------------------------------------------------
 * **Opt-in only**: set ``OMNIGENT_E2E_GOOSE=1`` to run. Needs a configured Goose
-  provider — ``GOOSE_PROVIDER`` + ``GOOSE_MODEL`` and the provider's key in the
-  environment (e.g. ``ANTHROPIC_API_KEY``) — plus the ``goose`` binary on PATH.
+  provider â€” ``GOOSE_PROVIDER`` + ``GOOSE_MODEL`` and the provider's key in the
+  environment (e.g. ``ANTHROPIC_API_KEY``) â€” plus the ``goose`` binary on PATH.
   The test runs in an isolated ``$HOME`` so it never reads or writes the
   developer's real ``~/.config/goose`` (provider comes from env; the per-tool
   grant Goose may persist lands in the temp HOME and is discarded).
@@ -33,8 +33,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.inner.executor import ExecutorError, TextChunk, TurnComplete
-from agent_meow.inner.goose_executor import GooseExecutor
+from omnigent.inner.executor import ExecutorError, TextChunk, TurnComplete
+from omnigent.inner.goose_executor import GooseExecutor
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("OMNIGENT_E2E_GOOSE") != "1"

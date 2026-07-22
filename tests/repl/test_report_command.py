@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 import pytest
 from omnigent_ui_sdk import RichBlockFormatter
 
-from agent_meow.repl._repl import (
+from omnigent.repl._repl import (
     COMMANDS,
     _build_github_issue_url,
     handle_slash_command,

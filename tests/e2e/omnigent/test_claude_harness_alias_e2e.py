@@ -1,18 +1,18 @@
-"""E2E test — ``--harness claude-sdk`` alias works end-to-end.
+"""E2E test â€” ``--harness claude-sdk`` alias works end-to-end.
 
 Runs ``agent-meow run hello_world.yaml --harness claude-sdk -p <prompt>``
 as a real subprocess and verifies it exits 0 with non-trivial assistant output.
 This proves the "claude" alias is canonicalized to "claude-sdk" through the
-full CLI → harness → LLM path.
+full CLI â†’ harness â†’ LLM path.
 
-No ``--llm-api-key`` needed — the claude-sdk harness reads credentials
+No ``--llm-api-key`` needed â€” the claude-sdk harness reads credentials
 from ``~/.databrickscfg`` via the profile named in the global config's
 ``auth:`` block (the supported replacement for the removed ``--profile``
 CLI flag).
 
 Run with:
 
-    pytest tests/e2e/agent_meow/test_claude_harness_alias_e2e.py -v --profile oss
+    pytest tests/e2e/omnigent/test_claude_harness_alias_e2e.py -v --profile oss
 """
 
 from __future__ import annotations
@@ -84,8 +84,8 @@ def _clean_env(profile: str) -> dict[str, str]:
         env.pop(var, None)
     env["DATABRICKS_CONFIG_PROFILE"] = profile
     # The agent-meow CLI no longer accepts ``--profile``; write the
-    # supported replacement — an ``auth:`` block in an isolated
-    # ``OMNIGENT_CONFIG_HOME`` — so the spawned CLI routes the
+    # supported replacement â€” an ``auth:`` block in an isolated
+    # ``OMNIGENT_CONFIG_HOME`` â€” so the spawned CLI routes the
     # claude-sdk harness through this Databricks profile.
     config_home = Path(tempfile.mkdtemp(prefix="omnigent-alias-config-"))
     (config_home / "config.yaml").write_text(
@@ -105,7 +105,7 @@ def test_run_with_claude_alias_produces_output(
     """``agent-meow run --harness claude-sdk`` exits 0 with assistant text.
 
     Proves the "claude" alias is canonicalized through the full
-    CLI → agent-meow server → harness spawn → LLM call → output path.
+    CLI â†’ agent-meow server â†’ harness spawn â†’ LLM call â†’ output path.
 
     :param request: Pytest request for --profile flag access.
     """

@@ -1,4 +1,4 @@
-"""Tests for :mod:`~?agent_meow.onboarding.sandboxes.openshell`."""
+"""Tests for :mod:`~?omnigent.onboarding.sandboxes.openshell`."""
 
 from __future__ import annotations
 
@@ -12,15 +12,15 @@ from typing import Any
 import click
 import pytest
 
-from agent_meow.onboarding.sandboxes.base import DEFAULT_HOST_IMAGE
-from agent_meow.onboarding.sandboxes.openshell import (
+from omnigent.onboarding.sandboxes.base import DEFAULT_HOST_IMAGE
+from omnigent.onboarding.sandboxes.openshell import (
     HOST_IMAGE_ENV_VAR,
     SANDBOX_ENV_PASSTHROUGH_ENV_VAR,
     OpenShellSandboxLauncher,
     _OpenShellClient,
 )
 
-# ── Shared fakes ────────────────────────────────────────────
+# â”€â”€ Shared fakes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -40,7 +40,7 @@ class _FakeExecChunk:
     data: bytes
 
 
-# ── Launcher-level fake (the _OpenShellClient wrapper) ──────
+# â”€â”€ Launcher-level fake (the _OpenShellClient wrapper) â”€â”€â”€â”€â”€â”€
 #
 # The launcher tests monkeypatch ``launcher._openshell`` to return this
 # recorder, exercising the launcher's logic without the SDK.
@@ -96,7 +96,7 @@ class _FakeOpenShellAPI:
         self.closed = True
 
 
-# ── Launcher behavior ───────────────────────────────────────
+# â”€â”€ Launcher behavior â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_provision_creates_sandbox(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -328,10 +328,10 @@ def test_exec_foreground_ctrl_c_kills_remote(monkeypatch: pytest.MonkeyPatch) ->
     assert any("kill $(cat" in command[2] for _name, command, _stdin in fake.exec_calls)
 
 
-# ── _OpenShellClient wrapper against a faked SDK ────────────
+# â”€â”€ _OpenShellClient wrapper against a faked SDK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # These exercise the real wrapper (spec building, name->id mapping,
-# error translation) by injecting a stub `openshell` SDK — the SDK is
+# error translation) by injecting a stub `openshell` SDK â€” the SDK is
 # an optional dependency the test env does not install, and real
 # sandboxes only exist behind a live gateway.
 
@@ -502,7 +502,7 @@ def test_client_execute_maps_name_to_id(sdk: _SDKState) -> None:
 
     client.execute("petname-new", ["echo", "hi"])
 
-    # Cached from create — no extra get() needed; exec keyed by id.
+    # Cached from create â€” no extra get() needed; exec keyed by id.
     assert sdk.execs[-1][0] == "id-1"
     assert sdk.got == []
 

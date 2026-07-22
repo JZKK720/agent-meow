@@ -3,7 +3,7 @@ Cross-backend behavioral parity tests for the spawn-time sandboxes.
 
 These tests assert the observable contract every active sandbox
 backend must uphold, run through the live
-:func:`~?agent_meow.inner.os_env.create_os_environment` path so they
+:func:`~?omnigent.inner.os_env.create_os_environment` path so they
 exercise the helper subprocess end-to-end. They are parametrized
 over the active backend on the current host
 (:func:`tests.inner.sandbox.conftest.active_sandbox_type`):
@@ -14,7 +14,7 @@ over the active backend on the current host
 
 A regression that violates the contract on either backend fails the
 *same* test on the platform that runs the broken backend. The tests
-do not branch on ``sys.platform`` — the fixture handles skip/run.
+do not branch on ``sys.platform`` â€” the fixture handles skip/run.
 
 Tests intentionally check **observable** properties (exit codes,
 stdout/stderr text, host filesystem state) and never reach into
@@ -33,8 +33,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-from agent_meow.inner.os_env import create_os_environment
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+from omnigent.inner.os_env import create_os_environment
 from tests.inner.sandbox.conftest import run_async
 
 # ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ def test_sandbox_blocks_shell_write_outside_cwd(
     appeared at the target path).
 
     Failure here means the backend leaked write access to an
-    arbitrary host path — either by binding too much (bwrap) or by
+    arbitrary host path â€” either by binding too much (bwrap) or by
     emitting too broad an ``allow file-write*`` rule (seatbelt).
     """
     workspace = tmp_path / "workspace"
@@ -137,7 +137,7 @@ def test_sandbox_empty_write_paths_blocks_cwd_writes_but_allows_tmpdir(
     With ``write_paths`` unset (the documented backend default), cwd
     is read-only but the scratch ``$TMPDIR`` is still writable.
 
-    The "you wanted hermetic, here's hermetic" contract — flipping
+    The "you wanted hermetic, here's hermetic" contract â€” flipping
     cwd to writable would silently undo the user's explicit choice
     of an active sandbox backend.
     """
@@ -154,7 +154,7 @@ def test_sandbox_empty_write_paths_blocks_cwd_writes_but_allows_tmpdir(
     finally:
         os_env.close()
     assert blocked["exit_code"] != 0, (
-        "Write to cwd succeeded under the default (write_paths=None) — cwd should be RO."
+        "Write to cwd succeeded under the default (write_paths=None) â€” cwd should be RO."
     )
     assert allowed["exit_code"] == 0
     assert allowed["stdout"] == "ok"
@@ -164,7 +164,7 @@ def test_sandbox_empty_write_paths_blocks_cwd_writes_but_allows_tmpdir(
 # ---------------------------------------------------------------------------
 # S5: HOME-anchored sensitive subpath denial + read_paths dotfile masking.
 #
-# These are *behavioral* tests — they spawn a real sandboxed helper and
+# These are *behavioral* tests â€” they spawn a real sandboxed helper and
 # attempt the read so a regression where the profile says "deny" but the
 # kernel doesn't enforce it (wrong SBPL syntax, wrong path
 # canonicalisation, wrong bwrap mount shape) fails here. The
@@ -183,13 +183,13 @@ def test_sandbox_blocks_home_library_when_home_read_granted_without_optin(
 ) -> None:
     """
     S5 (darwin_seatbelt): granting ``$HOME`` in ``read_paths`` does
-    NOT silently expose ``$HOME/Library`` — the kernel denies reads
+    NOT silently expose ``$HOME/Library`` â€” the kernel denies reads
     under it even though a broader allow covers the subtree.
 
     Spawns a real sandboxed helper, drops a known secret into
     ``$HOME/Library/Preferences/<file>``, and verifies the helper
     cannot read the secret content. A control read of a non-Library
-    path under the same HOME grant succeeds — proves the deny is
+    path under the same HOME grant succeeds â€” proves the deny is
     targeted and didn't accidentally lock down everything.
 
     Skipped on Linux because the macOS-specific ``$HOME/Library``
@@ -250,11 +250,11 @@ def test_sandbox_blocks_home_library_when_home_read_granted_without_optin(
     assert "OMNI_S5_COOKIES_SECRET=must-never-leak" not in (
         cookies_read.get("stdout", "") + cookies_read.get("stderr", "")
     ), (
-        "$HOME/Library/Cookies was readable — the Library deny is too "
+        "$HOME/Library/Cookies was readable â€” the Library deny is too "
         "narrow (should cover all of Library, not specific subdirs)."
     )
     assert "OMNI_S5_DOCUMENTS_OK=visible-control-string" in documents_read.get("stdout", ""), (
-        "$HOME/Documents control read failed — the Library deny is too "
+        "$HOME/Documents control read failed â€” the Library deny is too "
         "broad and locked down the rest of HOME as a side effect. "
         f"stdout={documents_read.get('stdout')!r} stderr={documents_read.get('stderr')!r}"
     )
@@ -269,7 +269,7 @@ def test_sandbox_allows_home_library_when_explicit_optin(
 ) -> None:
     """
     S5 (darwin_seatbelt): explicitly naming ``$HOME/Library`` (or a
-    subtree under it) in ``read_paths`` opts the operator in — the
+    subtree under it) in ``read_paths`` opts the operator in â€” the
     default-deny is suppressed and reads under Library succeed.
 
     This is the escape hatch for legitimate workloads
@@ -316,7 +316,7 @@ def test_sandbox_blocks_credential_dotfiles_under_granted_read_path(
 ) -> None:
     """
     S5 (cross-platform): granting a directory in ``read_paths`` does
-    NOT expose dotfile-shaped credentials inside it — the dotfile
+    NOT expose dotfile-shaped credentials inside it â€” the dotfile
     masker walks every ``read_paths`` root, not just ``cwd``.
 
     Pre-fix behaviour: the dotfile masker was cwd-only, so
@@ -355,15 +355,15 @@ def test_sandbox_blocks_credential_dotfiles_under_granted_read_path(
     assert "OMNI_S5_AWS_SECRET_LEAK_CANARY" not in (
         aws_read.get("stdout", "") + aws_read.get("stderr", "")
     ), (
-        ".aws/credentials under a read_paths grant was readable — the "
+        ".aws/credentials under a read_paths grant was readable â€” the "
         "dotfile masker did not walk the read_paths root. "
         f"stdout={aws_read.get('stdout')!r} stderr={aws_read.get('stderr')!r}"
     )
     assert "OMNI_S5_SSH_SECRET_LEAK_CANARY" not in (
         ssh_read.get("stdout", "") + ssh_read.get("stderr", "")
-    ), ".ssh/id_ed25519 under a read_paths grant was readable — same regression as the .aws case."
+    ), ".ssh/id_ed25519 under a read_paths grant was readable â€” same regression as the .aws case."
     assert "OMNI_S5_NON_DOTFILE_OK=visible-control" in code_read.get("stdout", ""), (
-        "Non-dotfile under the granted read_paths root was unreadable — "
+        "Non-dotfile under the granted read_paths root was unreadable â€” "
         "the dotfile masker is too broad and masked code/app.py too. "
         f"stdout={code_read.get('stdout')!r} stderr={code_read.get('stderr')!r}"
     )
@@ -376,7 +376,7 @@ def test_sandbox_allows_dotfile_under_read_path_when_allowlisted(
 ) -> None:
     """
     S5 (cross-platform): the ``cwd_allow_hidden`` opt-in extends to
-    ``read_paths`` roots — naming a dotfile basename in
+    ``read_paths`` roots â€” naming a dotfile basename in
     ``cwd_allow_hidden`` lets the helper read that dotfile under any
     granted root, while OTHER dotfiles in the same tree stay masked.
 
@@ -398,7 +398,7 @@ def test_sandbox_allows_dotfile_under_read_path_when_allowlisted(
     workspace.mkdir()
     # ``cwd_allow_hidden`` replaces the default ``[".venv"]`` rather
     # than merging with it (spec-self-containment), so we have to
-    # re-include ``.venv`` here — without it the masker hides the
+    # re-include ``.venv`` here â€” without it the masker hides the
     # repo's ``.venv`` and the helper subprocess can't ``execvp``
     # its own Python interpreter.
     spec = active_sandbox_spec_factory(
@@ -417,13 +417,13 @@ def test_sandbox_allows_dotfile_under_read_path_when_allowlisted(
     assert "OMNI_S5_AWS_OPTIN_VISIBLE=allowlisted-content" in aws_read.get("stdout", ""), (
         ".aws was in cwd_allow_hidden but the helper couldn't read "
         ".aws/credentials. The allowlist is not being applied to "
-        "read_paths roots — operator opt-in is broken. "
+        "read_paths roots â€” operator opt-in is broken. "
         f"stdout={aws_read.get('stdout')!r} stderr={aws_read.get('stderr')!r}"
     )
     assert "OMNI_S5_SSH_STILL_MASKED=must-never-leak" not in (
         ssh_read.get("stdout", "") + ssh_read.get("stderr", "")
     ), (
-        ".ssh was NOT on the allowlist but the helper could read it — "
+        ".ssh was NOT on the allowlist but the helper could read it â€” "
         "the allowlist filter is silently allowing everything."
     )
 
@@ -500,7 +500,7 @@ def test_sandbox_allow_network_false_blocks_outbound_connect(
       ``connect(2)`` returns EPERM regardless of routing.
 
     The shared assertion is "a Python TCP connect to a routable
-    public IP fails". We pick ``1.1.1.1:443`` (Cloudflare DNS) —
+    public IP fails". We pick ``1.1.1.1:443`` (Cloudflare DNS) â€”
     it's globally reachable when network is allowed, so a clean
     "connected" return value proves the deny didn't engage.
     """
@@ -548,7 +548,7 @@ def _shell_quote(value: str) -> str:
     Quote *value* for safe inclusion in a POSIX shell command line.
 
     ``shlex.quote`` would do the job but pulls in a stdlib import we
-    don't need elsewhere — the cases here are constrained to
+    don't need elsewhere â€” the cases here are constrained to
     single-quoted strings with embedded newlines, so single-quoting
     plus a re-quote on any embedded quote works fine.
 
@@ -617,7 +617,7 @@ def test_sandbox_helper_inherits_explicit_env_passthrough(
     stripped at the same time.
 
     End-to-end counterpart of the unit test in
-    :mod:`tests.inner.test_os_env`: confirms the spec → policy →
+    :mod:`tests.inner.test_os_env`: confirms the spec â†’ policy â†’
     spawn-env plumbing actually carries user-declared passthroughs
     through to the helper without widening the allowlist as a side
     effect.
@@ -710,7 +710,7 @@ def test_sandbox_start_in_scratch_workspace_remains_readable(
     """
     Even when the helper starts in scratch, the workspace cwd is
     still bound for reads. Without this, ``start_in_scratch`` would
-    trade write ergonomics for read access — agents would lose
+    trade write ergonomics for read access â€” agents would lose
     every absolute-path read into the project tree.
     """
     (tmp_path / "README.md").write_text("hello-from-workspace")

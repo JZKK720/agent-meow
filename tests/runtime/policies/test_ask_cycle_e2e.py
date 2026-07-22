@@ -1,18 +1,18 @@
 """
-End-to-end ASK cycle tests — engine + elicitation helper
+End-to-end ASK cycle tests â€” engine + elicitation helper
 composed in the same sequence the workflow uses.
 
 Each test runs the canonical cycle:
 
-1. ``engine.evaluate(ctx)`` → ASK result with accumulated
+1. ``engine.evaluate(ctx)`` â†’ ASK result with accumulated
    label writes.
 2. Caller hands the result to :func:`_await_elicitation`
    with stub register / emit / park callbacks.
-3. Verdict drives labels-apply-or-drop per §7.2.
+3. Verdict drives labels-apply-or-drop per Â§7.2.
 4. Next ``engine.evaluate(ctx)`` sees the post-elicitation
    state.
 
-This is the complete ASK-cycle contract — wires the engine
+This is the complete ASK-cycle contract â€” wires the engine
 and elicitation helper together the same way ``_run_agent_loop``
 does in production.
 """
@@ -24,22 +24,22 @@ from typing import Any
 
 import pytest
 
-from agent_meow.errors import ElicitationDeclinedError
-from agent_meow.policies.function import FunctionPolicy
-from agent_meow.policies.types import EvaluationContext, PolicyResult
-from agent_meow.runtime.policies import _await_elicitation
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.types import (
+from omnigent.errors import ElicitationDeclinedError
+from omnigent.policies.function import FunctionPolicy
+from omnigent.policies.types import EvaluationContext, PolicyResult
+from omnigent.runtime.policies import _await_elicitation
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.types import (
     Phase,
     PhaseSelector,
     PolicyAction,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 from tests.runtime.policies.conftest import make_fixed_policy
 
-# ── Harness ────────────────────────────────────────────
+# â”€â”€ Harness â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _ElicitationHarness:
@@ -73,7 +73,7 @@ class _ElicitationHarness:
         :param elicitation_id: The id assigned by the helper,
             e.g. ``"elicit_abc123"``.
         :param task_id: Parked workflow id (unused).
-        :param params_json: JSON-encoded params block — what
+        :param params_json: JSON-encoded params block â€” what
             the production registration would persist on the
             ``pending_tool_calls.arguments`` column.
         """
@@ -82,7 +82,7 @@ class _ElicitationHarness:
 
     def emit(self, event: dict[str, Any]) -> None:
         """
-        Record the SSE event — tests inspect the
+        Record the SSE event â€” tests inspect the
         ``response.elicitation_request`` shape for spec parity.
 
         :param event: The event dict the helper publishes.
@@ -153,7 +153,7 @@ def _ask_policy(
     set_labels: dict[str, str] | None = None,
     reason: str = "approval required",
 ) -> FunctionPolicy:
-    """Build an ASKing FunctionPolicy — the typical ASK source."""
+    """Build an ASKing FunctionPolicy â€” the typical ASK source."""
     return make_fixed_policy(
         name=name,
         on=[PhaseSelector(phase=phase, tool_name=tool_name)],
@@ -182,7 +182,7 @@ def _build_engine(
     )
 
 
-# ── Happy path: ASK → approve → labels land ──────────
+# â”€â”€ Happy path: ASK â†’ approve â†’ labels land â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -210,7 +210,7 @@ async def test_ask_cycle_approve_lands_labels(
     assert result.set_labels == {"approved_once": "true"}
     # Post-approval hot cache reflects the write.
     assert engine.labels == {"approved_once": "true"}
-    # Persisted — next workflow replay sees the same state.
+    # Persisted â€” next workflow replay sees the same state.
     conv = conversation_store.get_conversation(engine.conversation_id)
     assert conv is not None
     assert conv.labels == {"approved_once": "true"}
@@ -220,7 +220,7 @@ async def test_ask_cycle_approve_lands_labels(
 async def test_ask_cycle_decline_drops_labels(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """ASK → decline → labels DROPPED. Load-bearing §7.2
+    """ASK â†’ decline â†’ labels DROPPED. Load-bearing Â§7.2
     invariant: a denied ASK must leave no trace. If this
     regresses, users could effectively approve operations
     by denying them."""
@@ -251,8 +251,8 @@ async def test_ask_cycle_decline_drops_labels(
 async def test_ask_cycle_cancel_drops_labels(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """ASK → cancel → labels DROPPED. Per MCP semantics,
-    ``cancel`` is a non-accept verdict — the §7.2 fail-closed
+    """ASK â†’ cancel â†’ labels DROPPED. Per MCP semantics,
+    ``cancel`` is a non-accept verdict â€” the Â§7.2 fail-closed
     invariant treats it identically to ``decline``."""
     policy = _ask_policy(
         "confirm_dangerous",
@@ -275,7 +275,7 @@ async def test_ask_cycle_cancel_drops_labels(
 async def test_ask_cycle_timeout_drops_labels(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """ASK → timeout → labels DROPPED. Timeout path yields
+    """ASK â†’ timeout â†’ labels DROPPED. Timeout path yields
     same side-effect-free outcome as explicit decline."""
     policy = _ask_policy(
         "gate",
@@ -297,7 +297,7 @@ async def test_ask_cycle_timeout_drops_labels(
     assert conv.labels == {}
 
 
-# ── Multi-policy ASK composition cycle ────────────────
+# â”€â”€ Multi-policy ASK composition cycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -306,8 +306,8 @@ async def test_ask_cycle_multiple_askers_combined_approval(
 ) -> None:
     """When multiple policies ASK on the same phase, one
     combined approval resolves them all. On approve, every
-    ASKing policy's set_labels lands. Proves §4 ASK
-    composition + §7.2 single-approval-per-phase."""
+    ASKing policy's set_labels lands. Proves Â§4 ASK
+    composition + Â§7.2 single-approval-per-phase."""
     p1 = _ask_policy("first", set_labels={"a": "1"})
     p2 = _ask_policy("second", set_labels={"b": "2"})
     p3 = _ask_policy("third", set_labels={"c": "3"})
@@ -329,7 +329,7 @@ async def test_ask_cycle_multiple_askers_combined_approval(
     assert "first:" in result.reason
     assert "second:" in result.reason
     assert "third:" in result.reason
-    # All three policies' set_labels landed — single
+    # All three policies' set_labels landed â€” single
     # approval authorized every write.
     assert engine.labels == {"a": "1", "b": "2", "c": "3"}
 
@@ -339,7 +339,7 @@ async def test_ask_cycle_multiple_askers_combined_decline(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """Same multi-policy scenario with a decline. NONE of
-    the labels land — all-or-nothing semantics."""
+    the labels land â€” all-or-nothing semantics."""
     p1 = _ask_policy("first", set_labels={"a": "1"})
     p2 = _ask_policy("second", set_labels={"b": "2"})
     engine = _build_engine(conversation_store, [p1, p2])
@@ -355,7 +355,7 @@ async def test_ask_cycle_multiple_askers_combined_decline(
     assert engine.labels == {}
 
 
-# ── State flows across ASK cycles ─────────────────────
+# â”€â”€ State flows across ASK cycles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -364,15 +364,15 @@ async def test_approved_labels_visible_in_next_evaluation(
 ) -> None:
     """After an approval applies `integrity: 0`, a later
     condition-gated policy can read that state and fire
-    accordingly. Demonstrates ASK → label → condition-driven
-    downstream behavior — the core IFC loop through ASK."""
+    accordingly. Demonstrates ASK â†’ label â†’ condition-driven
+    downstream behavior â€” the core IFC loop through ASK."""
     # First policy ASKs, writes integrity=0 on approve.
     taint = _ask_policy(
         "confirm_taint",
         set_labels={"integrity": "0"},
     )
     # Second policy fires UNCONDITIONALLY on run_shell (no
-    # tool narrowing on our selector → matches every
+    # tool narrowing on our selector â†’ matches every
     # run_shell invocation) with a condition-gate on
     # integrity=0. Only enforces after taint is established.
     shell_guard = make_fixed_policy(
@@ -396,7 +396,7 @@ async def test_approved_labels_visible_in_next_evaluation(
     assert engine.labels["integrity"] == "0"
 
     # Second cycle: same ctx, now shell_guard's condition
-    # matches → DENY short-circuits before the ASKing
+    # matches â†’ DENY short-circuits before the ASKing
     # policy fires.
     result2 = await engine.evaluate(ctx)
     assert result2.action == PolicyAction.DENY
@@ -408,7 +408,7 @@ async def test_declined_ask_does_not_poison_next_evaluation(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """After a DECLINED ASK, the label state must stay
-    clean — a subsequent re-evaluation sees the original
+    clean â€” a subsequent re-evaluation sees the original
     context and can ASK again (or ALLOW)."""
     policy = _ask_policy("retry_gate", set_labels={"dangerous": "1"})
     engine = _build_engine(conversation_store, [policy])
@@ -433,7 +433,7 @@ async def test_declined_ask_does_not_poison_next_evaluation(
     assert engine.labels == {"dangerous": "1"}
 
 
-# ── Emitted elicitation event shape verification ──────
+# â”€â”€ Emitted elicitation event shape verification â”€â”€â”€â”€â”€â”€
 
 
 def _assert_mcp_elicitation_shape(
@@ -466,9 +466,9 @@ async def test_emitted_elicitation_request_matches_mcp_shape(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """Emitted SSE event matches MCP's elicitation primitive
-    byte-for-byte. See ``agent_meow/runtime/policies/approval.py``
+    byte-for-byte. See ``omnigent/runtime/policies/approval.py``
     ``_elicitation_request_event`` and
-    ``designs/SERVER_HARNESS_CONTRACT.md`` §"Universal API
+    ``designs/SERVER_HARNESS_CONTRACT.md`` Â§"Universal API
     additions"."""
     policy = _ask_policy(
         "confirm_write",
@@ -515,7 +515,7 @@ async def test_registered_params_json_matches_emitted_params(
 
     await _run_ask_cycle(engine, ctx, harness)
 
-    # Exactly one register call per elicitation — if 0, the
+    # Exactly one register call per elicitation â€” if 0, the
     # helper skipped registration (the approval dispatcher would
     # then 404 on the verdict event). If >1, we'd be writing
     # duplicate pending rows for a single ASK, confusing the
@@ -523,6 +523,6 @@ async def test_registered_params_json_matches_emitted_params(
     assert len(harness.registered_params_json) == 1
     persisted_params = json.loads(harness.registered_params_json[0])
     # Persisted params block must be byte-equivalent to what
-    # the consumer was shown on the SSE stream — debugger /
+    # the consumer was shown on the SSE stream â€” debugger /
     # replayer guarantee.
     assert persisted_params == harness.emitted_events[0]["params"]

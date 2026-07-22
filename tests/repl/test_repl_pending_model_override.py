@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agent_meow.repl._repl import _SessionsChatReplAdapter
+from omnigent.repl._repl import _SessionsChatReplAdapter
 
 pytestmark = pytest.mark.asyncio
 

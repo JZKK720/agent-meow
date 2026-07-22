@@ -1,4 +1,4 @@
-"""Tests for SQLAlchemy ORM models (agent_meow/db/db_models.py).
+"""Tests for SQLAlchemy ORM models (omnigent/db/db_models.py).
 
 Verifies that each ORM model can be instantiated, persisted, read back,
 and that relationships, defaults, nullable columns, and constraints
@@ -12,7 +12,7 @@ import time
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from agent_meow.db.db_models import (
+from omnigent.db.db_models import (
     SqlAccountToken,
     SqlAgent,
     SqlComment,
@@ -26,9 +26,9 @@ from agent_meow.db.db_models import (
     SqlUser,
     SqlUserDailyCost,
 )
-from agent_meow.db.utils import get_or_create_engine, make_managed_session_maker
+from omnigent.db.utils import get_or_create_engine, make_managed_session_maker
 
-# ── helpers ───────────────────────────────────────────
+# â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _now() -> int:
@@ -88,7 +88,7 @@ def _make_item(
     )
 
 
-# ── SqlAgent ──────────────────────────────────────────
+# â”€â”€ SqlAgent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlAgent:
@@ -159,7 +159,7 @@ class TestSqlAgent:
                 session.add(a2)
 
 
-# ── SqlFile ───────────────────────────────────────────
+# â”€â”€ SqlFile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlFile:
@@ -203,7 +203,7 @@ class TestSqlFile:
             assert loaded.content_type is None
 
 
-# ── SqlUser ───────────────────────────────────────────
+# â”€â”€ SqlUser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlUser:
@@ -253,7 +253,7 @@ class TestSqlUser:
                 session.add(SqlUser(id="dup@example.com", is_admin=True))
 
 
-# ── SqlAccountToken ───────────────────────────────────
+# â”€â”€ SqlAccountToken â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlAccountToken:
@@ -318,7 +318,7 @@ class TestSqlAccountToken:
                 session.add(token)
 
 
-# ── SqlConversation ───────────────────────────────────
+# â”€â”€ SqlConversation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlConversation:
@@ -417,7 +417,7 @@ class TestSqlConversation:
             assert session.get(SqlConversation, "conv_child2") is None
 
 
-# ── SqlConversationItem ───────────────────────────────
+# â”€â”€ SqlConversationItem â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlConversationItem:
@@ -495,7 +495,7 @@ class TestSqlConversationItem:
             assert [it.position for it in items] == [0, 1, 2, 3, 4]
 
 
-# ── SqlConversationLabel ──────────────────────────────
+# â”€â”€ SqlConversationLabel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlConversationLabel:
@@ -547,7 +547,7 @@ class TestSqlConversationLabel:
             assert len(labels) == 2
 
 
-# ── SqlSessionPermission ─────────────────────────────
+# â”€â”€ SqlSessionPermission â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlSessionPermission:
@@ -590,7 +590,7 @@ class TestSqlSessionPermission:
                 session.add(perm)
 
 
-# ── SqlComment ────────────────────────────────────────
+# â”€â”€ SqlComment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlComment:
@@ -654,7 +654,7 @@ class TestSqlComment:
             assert loaded.created_by is None
 
 
-# ── SqlPolicy ─────────────────────────────────────────
+# â”€â”€ SqlPolicy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlPolicy:
@@ -667,7 +667,7 @@ class TestSqlPolicy:
             name="cost-guard",
             created_at=_now(),
             type="python",
-            handler="agent_meow.policies.cost_guard:handler",
+            handler="omnigent.policies.cost_guard:handler",
             enabled=True,
         )
         with managed() as session:
@@ -710,7 +710,7 @@ class TestSqlPolicy:
                 session.add(p2)
 
 
-# ── SqlHost ───────────────────────────────────────────
+# â”€â”€ SqlHost â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlHost:
@@ -782,7 +782,7 @@ class TestSqlHost:
                 session.add(h2)
 
 
-# ── SqlUserDailyCost ──────────────────────────────────
+# â”€â”€ SqlUserDailyCost â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSqlUserDailyCost:

@@ -6,8 +6,8 @@ from typing import Any
 
 import httpx
 
-import agent_meow.opencode_native_forwarder as fwd_mod
-from agent_meow.opencode_native_client import OpenCodeEvent
+import omnigent.opencode_native_forwarder as fwd_mod
+from omnigent.opencode_native_client import OpenCodeEvent
 
 _SESSION = "ses_1"
 

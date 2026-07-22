@@ -1,23 +1,23 @@
 """
-Tests for :mod:`~?agent_meow.repl._resume_picker` — the
+Tests for :mod:`~?omnigent.repl._resume_picker` â€” the
 stderr/stdin interactive picker that ports legacy ``--resume`` to
 AP mode.
 
 Three layers:
 
 1. **Pure picker** (:func:`pick_conversation`) driven with
-   ``StringIO`` and real pseudo-terminals — covers selection,
+   ``StringIO`` and real pseudo-terminals â€” covers selection,
    navigation, cancellation, and invalid input. No SDK / store
    involvement.
 2. **Store-backed convenience**
    (:func:`pick_conversation_from_store`) against a real
    :class:`SqlAlchemyConversationStore` /
-   :class:`SqlAlchemyAgentStore` — covers the agent-id scoping
+   :class:`SqlAlchemyAgentStore` â€” covers the agent-id scoping
    and the empty-list / unknown-agent paths the one-shot CLI
    relies on.
 3. The SDK-backed convenience (:func:`pick_conversation_from_sdk`)
    is exercised by the chat REPL's e2e flow rather than mocked
-   here — same reason the SDK-side ``write_session_log`` isn't
+   here â€” same reason the SDK-side ``write_session_log`` isn't
    double-tested in ``test_session_log.py``.
 """
 
@@ -30,8 +30,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.entities import ConversationItem, MessageData
-from agent_meow.repl._resume_picker import (
+from omnigent.entities import ConversationItem, MessageData
+from omnigent.repl._resume_picker import (
     _extract_text_from_content_blocks,
     _last_message_preview_from_dicts,
     _last_message_preview_from_entities,
@@ -39,8 +39,8 @@ from agent_meow.repl._resume_picker import (
     pick_conversation,
     pick_conversation_from_store,
 )
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -49,7 +49,7 @@ from agent_meow.stores.conversation_store.sqlalchemy_store import (
 class _FakeConversation:
     """
     Minimal stand-in for the SDK's :class:`Conversation` /
-    the store's ``Conversation`` entity — the picker only reads
+    the store's ``Conversation`` entity â€” the picker only reads
     ``id``, ``title``, and ``created_at`` off the rows.
     """
 
@@ -90,7 +90,7 @@ def _convs(n: int) -> list[_FakeConversation]:
     ]
 
 
-# ── 1. Pure picker ───────────────────────────────────────
+# â”€â”€ 1. Pure picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_pick_conversation_returns_selected_id() -> None:
@@ -372,7 +372,7 @@ def test_pick_conversation_tty_esc_cancels() -> None:
 
 def test_pick_conversation_q_cancels() -> None:
     """
-    Typing ``q`` returns ``None`` — the cancel signal the
+    Typing ``q`` returns ``None`` â€” the cancel signal the
     callers (chat / one-shot) use to fall through to a fresh
     conversation.
     """
@@ -408,10 +408,10 @@ def test_pick_conversation_eof_cancels() -> None:
     """
     EOF on stdin (``readline()`` returns ``""``) cancels rather
     than looping forever. Important when the picker's stdin is
-    a closed pipe — without this the legacy picker would spin.
+    a closed pipe â€” without this the legacy picker would spin.
     """
     out = io.StringIO()
-    in_ = io.StringIO()  # empty — readline returns "" immediately
+    in_ = io.StringIO()  # empty â€” readline returns "" immediately
     selected = pick_conversation(_convs(2), agent_name="x", out=out, in_=in_)
     assert selected is None, (
         f"EOF on stdin should cancel and return None, got "
@@ -439,7 +439,7 @@ def test_pick_conversation_invalid_input_reprompts() -> None:
     """
     Garbage input (``hello``) prints "Invalid selection." and
     re-reads. Followed by a valid row number, the picker
-    eventually returns that row — proving the loop didn't
+    eventually returns that row â€” proving the loop didn't
     abort on the first bad input.
     """
     conversations = _convs(2)
@@ -456,7 +456,7 @@ def test_pick_conversation_out_of_range_reprompts() -> None:
     """
     A row number that's a valid integer but out-of-bounds
     (``99`` when only 2 rows are visible) is rejected the same
-    way as garbage input — print "Invalid selection." and
+    way as garbage input â€” print "Invalid selection." and
     re-read. Without this guard the picker would IndexError.
     """
     conversations = _convs(2)
@@ -469,7 +469,7 @@ def test_pick_conversation_out_of_range_reprompts() -> None:
         f"raised IndexError instead, the bounds check on the "
         f"selection branch is missing."
     )
-    # Same printed-error contract as the garbage-input case —
+    # Same printed-error contract as the garbage-input case â€”
     # if this assertion fails, the bounds branch is silently
     # re-prompting (confusing UX) instead of telling the user why.
     assert "Invalid selection." in out.getvalue()
@@ -515,7 +515,7 @@ def test_pick_conversation_page_local_number_is_invalid_on_page_two() -> None:
     conversations = _convs(15)
     out = io.StringIO()
     # ``n`` advances to page 2 (rows 11-15). ``1`` is now out of
-    # range — must reprompt. ``11`` then selects page 2's first
+    # range â€” must reprompt. ``11`` then selects page 2's first
     # row to confirm the picker recovered cleanly.
     in_ = io.StringIO("n\n1\n11\n")
     selected = pick_conversation(conversations, agent_name="x", out=out, in_=in_)
@@ -539,14 +539,14 @@ def test_pick_conversation_renders_preview_lines_when_provided() -> None:
     Renders for both user-role and assistant-role previews so the
     glyph mapping is exercised; rows whose previews are ``None``
     (fetch failed or empty conversation) collapse to a single
-    muted ``…`` placeholder rather than an empty cell.
+    muted ``â€¦`` placeholder rather than an empty cell.
     """
     convs = _convs(3)
     previews = {
         convs[0].id: _Preview(role="user", text="My favorite number is 17"),
         convs[1].id: _Preview(role="assistant", text="Here's the patch you asked"),
-        # convs[2].id intentionally absent → preview lookup
-        # returns None → row 3's preview line shows the ``…``
+        # convs[2].id intentionally absent â†’ preview lookup
+        # returns None â†’ row 3's preview line shows the ``â€¦``
         # placeholder.
     }
     out = io.StringIO()
@@ -557,7 +557,7 @@ def test_pick_conversation_renders_preview_lines_when_provided() -> None:
     # Both preview texts must reach the user. Substring match
     # rather than exact line match because Rich's list layout
     # may wrap long previews across multiple lines on narrow
-    # widths — what matters is the user-visible content showed up.
+    # widths â€” what matters is the user-visible content showed up.
     assert "My favorite number is 17" in rendered, (
         f"Row 1's user preview did not appear in the rendered "
         f"output. Either the preview line wasn't added or "
@@ -567,7 +567,7 @@ def test_pick_conversation_renders_preview_lines_when_provided() -> None:
     assert "Here's the patch you asked" in rendered, (
         f"Row 2's assistant preview did not appear in the rendered output. Output:\n{rendered!r}"
     )
-    assert "…" in rendered, (
+    assert "â€¦" in rendered, (
         f"Missing preview placeholder for rows with no latest-message preview. "
         f"Output:\n{rendered!r}"
     )
@@ -576,7 +576,7 @@ def test_pick_conversation_renders_preview_lines_when_provided() -> None:
 def test_pick_conversation_no_preview_lines_when_dict_omitted() -> None:
     """
     Pure picker callers (no ``previews`` arg) keep the slim
-    compact list layout — preview lines are opt-in.
+    compact list layout â€” preview lines are opt-in.
 
     Without this contract, every caller would pay for an extra
     line per item even when they have no preview data to show.
@@ -588,7 +588,7 @@ def test_pick_conversation_no_preview_lines_when_dict_omitted() -> None:
     in_ = io.StringIO("q\n")
     pick_conversation(convs, agent_name="x", out=out, in_=in_)
     rendered = out.getvalue()
-    assert "…" not in rendered, (
+    assert "â€¦" not in rendered, (
         f"Picker rendered preview placeholders with no previews dict provided. "
         f"Output:\n{rendered!r}"
     )
@@ -606,7 +606,7 @@ def test_last_message_preview_from_dicts_finds_latest_message() -> None:
     extractable text, (c) preserves role from the first match.
     """
     items = [
-        # Newest: assistant text — should be the chosen preview.
+        # Newest: assistant text â€” should be the chosen preview.
         {
             "type": "message",
             "role": "assistant",
@@ -616,7 +616,7 @@ def test_last_message_preview_from_dicts_finds_latest_message() -> None:
         {"type": "function_call", "name": "Bash", "arguments": "{}"},
         # Skipped: message with no text content.
         {"type": "message", "role": "user", "content": []},
-        # Older user message — wouldn't be the chosen one even
+        # Older user message â€” wouldn't be the chosen one even
         # if the assistant message above weren't present.
         {
             "type": "message",
@@ -702,8 +702,8 @@ def test_last_message_preview_from_entities_skips_meta_messages() -> None:
 
 def test_last_message_preview_from_dicts_returns_none_for_empty() -> None:
     """
-    No message items → no preview. Equivalent to "conversation
-    has only tool calls" — picker shows the ``…`` placeholder
+    No message items â†’ no preview. Equivalent to "conversation
+    has only tool calls" â€” picker shows the ``â€¦`` placeholder
     for these rows.
     """
     items = [
@@ -715,7 +715,7 @@ def test_last_message_preview_from_dicts_returns_none_for_empty() -> None:
 
 def test_extract_text_from_content_blocks_truncates_long_text() -> None:
     """
-    Long preview text gets truncated with a trailing ``…`` so
+    Long preview text gets truncated with a trailing ``â€¦`` so
     one verbose conversation doesn't crowd out every other row's
     preview. The legacy picker did the same (``_normalise_resume_preview_text``
     in cli.py); same UX here.
@@ -723,10 +723,10 @@ def test_extract_text_from_content_blocks_truncates_long_text() -> None:
     long_text = "a" * 200
     out = _extract_text_from_content_blocks([{"type": "input_text", "text": long_text}])
     # Should be exactly _PREVIEW_DISPLAY_CHARS (60) chars
-    # ending in ``…`` — the truncate cuts at chars-1 then
+    # ending in ``â€¦`` â€” the truncate cuts at chars-1 then
     # appends the ellipsis.
     assert len(out) == 60
-    assert out.endswith("…")
+    assert out.endswith("â€¦")
 
 
 def test_extract_text_from_content_blocks_collapses_whitespace() -> None:
@@ -742,7 +742,7 @@ def test_extract_text_from_content_blocks_collapses_whitespace() -> None:
     assert out == "first line second line third"
 
 
-# ── 2. Store-backed convenience ──────────────────────────
+# â”€â”€ 2. Store-backed convenience â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_pick_conversation_from_store_unknown_agent_returns_none(
@@ -821,7 +821,7 @@ def test_pick_conversation_from_store_finds_session_scoped_agent_by_name(
     assert "resume me" in out.getvalue()
 
 
-# ── Runtime badge ─────────────────────────────────────────
+# â”€â”€ Runtime badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -846,12 +846,12 @@ def test_runtime_badge_claude_native() -> None:
     """
     Sessions stamped with the claude-native wrapper label render
     ``[claude]``. Verifies the literal-string pair matches the
-    server-side label — a typo here would silently route every
+    server-side label â€” a typo here would silently route every
     session to ``[chat]`` in the cross-agent picker.
     """
-    from agent_meow.repl._resume_picker import _runtime_badge
+    from omnigent.repl._resume_picker import _runtime_badge
 
-    row = _BadgeRow(labels={"agent_meow.wrapper": "claude-code-native-ui"})
+    row = _BadgeRow(labels={"omnigent.wrapper": "claude-code-native-ui"})
     assert _runtime_badge(row) == "[claude]"
 
 
@@ -861,9 +861,9 @@ def test_runtime_badge_codex_native() -> None:
     ``[codex]`` so the cross-agent picker identifies the terminal UI
     owner before dispatch.
     """
-    from agent_meow.repl._resume_picker import _runtime_badge
+    from omnigent.repl._resume_picker import _runtime_badge
 
-    row = _BadgeRow(labels={"agent_meow.wrapper": "codex-native-ui"})
+    row = _BadgeRow(labels={"omnigent.wrapper": "codex-native-ui"})
     assert _runtime_badge(row) == "[codex]"
 
 
@@ -871,7 +871,7 @@ def test_runtime_badge_codex_native() -> None:
     "labels",
     [
         {},
-        {"agent_meow.wrapper": "some-other-wrapper"},
+        {"omnigent.wrapper": "some-other-wrapper"},
         {"unrelated": "x"},
         # Defensive: legacy fakes without a ``labels`` attribute
         # surface as ``None`` (handled via ``getattr`` in production).
@@ -886,13 +886,13 @@ def test_runtime_badge_non_claude_native(labels: dict[str, str] | None) -> None:
     doesn't know about), and the no-labels-attribute case (legacy
     test rows). All three must NOT raise.
     """
-    from agent_meow.repl._resume_picker import _runtime_badge
+    from omnigent.repl._resume_picker import _runtime_badge
 
     row = _BadgeRow(labels=labels)
     assert _runtime_badge(row) == "[chat]"
 
 
-# ── Cross-agent picker entry point ────────────────────────
+# â”€â”€ Cross-agent picker entry point â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _FakeSessionsNamespace:
@@ -922,7 +922,7 @@ class _FakeConversationsNamespace:
     async def list_items(self, *args: object, **kwargs: object) -> list[object]:
         """
         Stub for the picker's preview prefetch. Empty list means
-        every row renders ``"…"`` in the preview line, which is
+        every row renders ``"â€¦"`` in the preview line, which is
         fine for these tests.
 
         :param args: Ignored.
@@ -953,11 +953,11 @@ async def test_cross_agent_picker_lists_without_agent_id_filter() -> None:
     """
     import io
 
-    from agent_meow.repl._resume_picker import pick_conversation_cross_agent_from_sdk
+    from omnigent.repl._resume_picker import pick_conversation_cross_agent_from_sdk
 
-    client = _FakeAPClient(rows=[])  # empty list → picker prints "no prior"
+    client = _FakeAPClient(rows=[])  # empty list â†’ picker prints "no prior"
     out = io.StringIO()
-    # Empty stdin → readline returns "" → picker cancels cleanly.
+    # Empty stdin â†’ readline returns "" â†’ picker cancels cleanly.
     result = await pick_conversation_cross_agent_from_sdk(client, out=out, in_=io.StringIO(""))
     assert result is None
     # Verify the picker hit the cross-agent code path on the Sessions API
@@ -979,13 +979,13 @@ async def test_cross_agent_picker_selection_returns_id_with_runtime_badge_render
     """
     import io
 
-    from agent_meow.repl._resume_picker import pick_conversation_cross_agent_from_sdk
+    from omnigent.repl._resume_picker import pick_conversation_cross_agent_from_sdk
 
     rows = [
         _BadgeRow(
             id="conv_one",
             title="claude session",
-            labels={"agent_meow.wrapper": "claude-code-native-ui"},
+            labels={"omnigent.wrapper": "claude-code-native-ui"},
         ),
         _BadgeRow(id="conv_two", title="chat session", labels={}),
     ]
@@ -996,11 +996,11 @@ async def test_cross_agent_picker_selection_returns_id_with_runtime_badge_render
         client, out=out, in_=io.StringIO("2\n")
     )
     rendered = out.getvalue()
-    # Both badges show up — claude-native first row, chat for the rest.
+    # Both badges show up â€” claude-native first row, chat for the rest.
     assert "[claude]" in rendered
     assert "[chat]" in rendered
     # The selection routed correctly. If this fails, the picker's
-    # index→id mapping in the cross-agent path is off.
+    # indexâ†’id mapping in the cross-agent path is off.
     assert selected == "conv_two"
 
 
@@ -1013,20 +1013,20 @@ async def test_wrapper_label_picker_filters_and_lists_without_agent_filter(
     empty) and filter to only rows carrying the wrapper label."""
     import io
 
-    from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
+    from omnigent.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     rows = [
         _BadgeRow(
             id="conv_claude_1",
             title="claude one",
-            labels={"agent_meow.wrapper": "claude-code-native-ui"},
+            labels={"omnigent.wrapper": "claude-code-native-ui"},
         ),
         _BadgeRow(id="conv_chat", title="chat one", labels={}),
         _BadgeRow(
             id="conv_claude_2",
             title="claude two",
-            labels={"agent_meow.wrapper": "claude-code-native-ui"},
+            labels={"omnigent.wrapper": "claude-code-native-ui"},
         ),
     ]
     client = _FakeAPClient(rows=rows)
@@ -1055,7 +1055,7 @@ async def test_wrapper_label_picker_filters_and_lists_without_agent_filter(
     assert "Workspace" not in rendered
 
 
-# ── Workspace metadata ───────────────────────────────────────
+# â”€â”€ Workspace metadata â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_render_workspace_cell_no_state_returns_none(
@@ -1069,10 +1069,10 @@ def test_render_workspace_cell_no_state_returns_none(
     metadata segment for legacy sessions / sessions created on
     another machine / non-wrapper sessions.
     """
-    from agent_meow.repl._resume_picker import _render_workspace_cell
+    from omnigent.repl._resume_picker import _render_workspace_cell
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
-    row = _BadgeRow(id="conv_no_state", labels={"agent_meow.wrapper": "x"})
+    row = _BadgeRow(id="conv_no_state", labels={"omnigent.wrapper": "x"})
     cell = _render_workspace_cell(row, current_cwd=tmp_path.resolve())
     assert cell is None
 
@@ -1083,28 +1083,28 @@ def test_render_workspace_cell_matching_cwd_no_flag(
 ) -> None:
     """
     A row whose recorded cwd matches the current cwd renders
-    without the ``↪ cd`` flag.
+    without the ``â†ª cd`` flag.
 
     The recorded path is still shown so the metadata communicates
     *where* the session was started; only the action-required
     hint is suppressed.
     """
-    from agent_meow.claude_native_state import write_launch_state
-    from agent_meow.repl._resume_picker import _render_workspace_cell
+    from omnigent.claude_native_state import write_launch_state
+    from omnigent.repl._resume_picker import _render_workspace_cell
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.chdir(tmp_path)
     write_launch_state("conv_match", str(tmp_path.resolve()))
-    row = _BadgeRow(id="conv_match", labels={"agent_meow.wrapper": "claude-code-native-ui"})
+    row = _BadgeRow(id="conv_match", labels={"omnigent.wrapper": "claude-code-native-ui"})
 
     cell = _render_workspace_cell(row, current_cwd=tmp_path.resolve())
     assert cell is not None
     plain = cell.plain
     assert str(tmp_path.resolve()) in plain
-    # The flag MUST NOT be rendered when the paths match —
+    # The flag MUST NOT be rendered when the paths match â€”
     # otherwise the picker would prompt the user to chdir to a
     # directory they're already in.
-    assert "↪" not in plain, f"matching-cwd row must not render the chdir flag; got {plain!r}"
+    assert "â†ª" not in plain, f"matching-cwd row must not render the chdir flag; got {plain!r}"
 
 
 def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
@@ -1113,14 +1113,14 @@ def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
 ) -> None:
     """
     A row whose recorded cwd differs from the current cwd renders
-    with the ``↪ cd`` flag.
+    with the ``â†ª cd`` flag.
 
     This is the row-level cue that a chdir prompt will fire if
-    this row is picked — without it the user has no way to
+    this row is picked â€” without it the user has no way to
     anticipate the prompt.
     """
-    from agent_meow.claude_native_state import write_launch_state
-    from agent_meow.repl._resume_picker import _render_workspace_cell
+    from omnigent.claude_native_state import write_launch_state
+    from omnigent.repl._resume_picker import _render_workspace_cell
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     recorded = tmp_path / "recorded"
@@ -1128,16 +1128,16 @@ def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
     current = tmp_path / "current"
     current.mkdir()
     write_launch_state("conv_mismatch", str(recorded.resolve()))
-    row = _BadgeRow(id="conv_mismatch", labels={"agent_meow.wrapper": "claude-code-native-ui"})
+    row = _BadgeRow(id="conv_mismatch", labels={"omnigent.wrapper": "claude-code-native-ui"})
 
     cell = _render_workspace_cell(row, current_cwd=current.resolve())
     assert cell is not None
     plain = cell.plain
     assert str(recorded.resolve()) in plain
-    # ``↪`` (no-break-space) ``cd`` is the literal flag string. A
+    # ``â†ª`` (no-break-space) ``cd`` is the literal flag string. A
     # regression that drops it would silently turn the picker into
     # the no-flag UX even when paths differ.
-    assert "↪" in plain and "cd" in plain, (
+    assert "â†ª" in plain and "cd" in plain, (
         f"mismatched-cwd row must render the chdir flag; got {plain!r}"
     )
 
@@ -1157,8 +1157,8 @@ def test_workspace_metadata_appears_in_wrapper_picker_list(
     ``show_workspace=True`` somewhere between the wrapper picker
     entry point and item rendering is caught.
     """
-    from agent_meow.claude_native_state import write_launch_state
-    from agent_meow.repl._resume_picker import pick_conversation
+    from omnigent.claude_native_state import write_launch_state
+    from omnigent.repl._resume_picker import pick_conversation
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     workspace = tmp_path / "ws-marker"
@@ -1168,7 +1168,7 @@ def test_workspace_metadata_appears_in_wrapper_picker_list(
     row = _BadgeRow(
         id="conv_ws",
         title="with ws",
-        labels={"agent_meow.wrapper": "claude-code-native-ui"},
+        labels={"omnigent.wrapper": "claude-code-native-ui"},
     )
 
     out = io.StringIO()
@@ -1185,7 +1185,7 @@ def test_workspace_metadata_appears_in_wrapper_picker_list(
     workspace_text = str(workspace.resolve())
     assert "Workspace" not in rendered
     assert workspace_text in rendered, (
-        "Workspace metadata missing — ``show_workspace=True`` was "
+        "Workspace metadata missing â€” ``show_workspace=True`` was "
         "either dropped on the way to item rendering or item "
         "rendering regressed."
     )
@@ -1205,8 +1205,8 @@ def test_render_workspace_cell_codex_native_uses_codex_state(
     :param tmp_path: Temporary state root and workspace.
     :returns: None.
     """
-    from agent_meow.codex_native_state import write_launch_state
-    from agent_meow.repl._resume_picker import _render_workspace_cell
+    from omnigent.codex_native_state import write_launch_state
+    from omnigent.repl._resume_picker import _render_workspace_cell
 
     monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(tmp_path / "codex-state"))
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "claude-state"))
@@ -1216,14 +1216,14 @@ def test_render_workspace_cell_codex_native_uses_codex_state(
     row = _BadgeRow(
         id="conv_codex_ws",
         title="codex ws",
-        labels={"agent_meow.wrapper": "codex-native-ui"},
+        labels={"omnigent.wrapper": "codex-native-ui"},
     )
 
     cell = _render_workspace_cell(row, current_cwd=tmp_path.resolve())
 
     assert cell is not None
     assert str(workspace.resolve()) in cell.plain
-    assert "↪" in cell.plain and "cd" in cell.plain
+    assert "â†ª" in cell.plain and "cd" in cell.plain
 
 
 def test_workspace_metadata_omits_unrecorded_workspace_segment(
@@ -1238,13 +1238,13 @@ def test_workspace_metadata_omits_unrecorded_workspace_segment(
     showing workspace metadata for rows where the wrapper actually
     recorded a cwd.
     """
-    from agent_meow.repl._resume_picker import pick_conversation
+    from omnigent.repl._resume_picker import pick_conversation
 
     monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     row = _BadgeRow(
         id="conv_without_ws",
         title="without ws",
-        labels={"agent_meow.wrapper": "claude-code-native-ui"},
+        labels={"omnigent.wrapper": "claude-code-native-ui"},
     )
 
     out = io.StringIO()
@@ -1259,4 +1259,4 @@ def test_workspace_metadata_omits_unrecorded_workspace_segment(
     rendered = out.getvalue()
     assert selected == "conv_without_ws"
     assert "Workspace" not in rendered
-    assert "—" not in rendered
+    assert "â€”" not in rendered

@@ -1,4 +1,4 @@
-"""Tests for ``fetch_all_items`` in ``agent_meow/runtime/workflow.py``.
+"""Tests for ``fetch_all_items`` in ``omnigent/runtime/workflow.py``.
 
 ``fetch_all_items`` drains a conversation by paginating ``list_items`` until
 ``has_more`` is False, advancing the cursor to each page's ``last_id``. That
@@ -9,9 +9,9 @@ here with a store stub that hands back controlled pages.
 
 from __future__ import annotations
 
-from agent_meow.entities.conversation import ConversationItem, MessageData
-from agent_meow.entities.pagination import PagedList
-from agent_meow.runtime.workflow import fetch_all_items
+from omnigent.entities.conversation import ConversationItem, MessageData
+from omnigent.entities.pagination import PagedList
+from omnigent.runtime.workflow import fetch_all_items
 
 
 def _item(item_id: str) -> ConversationItem:

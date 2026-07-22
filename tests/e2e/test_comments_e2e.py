@@ -31,7 +31,7 @@ from typing import Any
 import httpx
 import yaml
 
-from agent_meow.server.auth import LEVEL_READ
+from omnigent.server.auth import LEVEL_READ
 
 # ---------------------------------------------------------------------------
 # Constants

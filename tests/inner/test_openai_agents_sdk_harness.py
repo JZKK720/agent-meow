@@ -1,7 +1,7 @@
 """
 Tests for the ``harness: openai-agents`` wrap shape.
 
-Mirror of the other harness wrap tests — verifies the wrap module
+Mirror of the other harness wrap tests â€” verifies the wrap module
 has the same shape (registry entry, FastAPI app routes, env-var-
 driven lazy executor construction). Does NOT exercise the real
 ``openai-agents`` SDK; the inner ``OpenAIAgentsSDKExecutor.__init__``
@@ -18,8 +18,8 @@ from unittest.mock import patch
 
 import pytest
 
-from agent_meow.inner import openai_agents_sdk_harness
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
+from omnigent.inner import openai_agents_sdk_harness
+from omnigent.runtime.harnesses import _HARNESS_MODULES
 
 
 def test_harness_module_registered_in_module_registry() -> None:
@@ -33,7 +33,7 @@ def test_harness_module_registered_in_module_registry() -> None:
     package is ``openai-agents`` and the executor class is
     ``OpenAIAgentsSDKExecutor``.
     """
-    assert _HARNESS_MODULES.get("openai-agents") == "agent_meow.inner.openai_agents_sdk_harness"
+    assert _HARNESS_MODULES.get("openai-agents") == "omnigent.inner.openai_agents_sdk_harness"
 
 
 def test_create_app_returns_fastapi_with_required_routes() -> None:
@@ -52,7 +52,7 @@ def test_create_app_returns_fastapi_with_required_routes() -> None:
     app = openai_agents_sdk_harness.create_app()
     paths = {route.path for route in app.routes}  # type: ignore[attr-defined]
     # Session-keyed harness API: liveness probe + single
-    # discriminated-event endpoint per §The Harness API Subset.
+    # discriminated-event endpoint per Â§The Harness API Subset.
     assert "/health" in paths
     assert "/v1/sessions/{conversation_id}/events" in paths
 
@@ -63,7 +63,7 @@ def test_executor_factory_reads_databricks_profile_env(
     """``HARNESS_OPENAI_AGENTS_DATABRICKS_PROFILE`` + ``_MODEL`` thread through.
 
     Locks in the canonical env-var contract the parametrized
-    harness wrap e2e (``test_harness_wrap_e2e.py``) sets — and
+    harness wrap e2e (``test_harness_wrap_e2e.py``) sets â€” and
     that the AP-side spawn-env builder
     (``_build_openai_agents_sdk_spawn_env`` in workflow.py)
     emits. Single canonical spelling, no ``DATABRICKS=true``
@@ -103,7 +103,7 @@ def test_executor_factory_reads_databricks_profile_env(
         captured["gateway_auth_command"] = gateway_auth_command
 
     with patch(
-        "agent_meow.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
+        "omnigent.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
         _fake_init,
     ):
         openai_agents_sdk_harness._build_openai_agents_sdk_executor()
@@ -130,7 +130,7 @@ def test_executor_factory_use_responses_default_true(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
+        "omnigent.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
         _fake_init,
     ):
         openai_agents_sdk_harness._build_openai_agents_sdk_executor()
@@ -163,7 +163,7 @@ def test_executor_factory_databricks_kimi_defaults_to_chat_completions(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
+        "omnigent.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
         _fake_init,
     ):
         openai_agents_sdk_harness._build_openai_agents_sdk_executor()
@@ -216,7 +216,7 @@ def test_executor_factory_non_gpt_databricks_defaults_to_chat_completions(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
+        "omnigent.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
         _fake_init,
     ):
         openai_agents_sdk_harness._build_openai_agents_sdk_executor()
@@ -242,7 +242,7 @@ def test_executor_factory_databricks_kimi_respects_truthy_use_responses_env(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
+        "omnigent.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
         _fake_init,
     ):
         openai_agents_sdk_harness._build_openai_agents_sdk_executor()
@@ -280,7 +280,7 @@ def test_use_responses_env_var_truthy_parsing(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
+        "omnigent.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
         _fake_init,
     ):
         openai_agents_sdk_harness._build_openai_agents_sdk_executor()
@@ -312,7 +312,7 @@ def test_executor_factory_no_env_returns_blank_config(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
+        "omnigent.inner.openai_agents_sdk_harness.OpenAIAgentsSDKExecutor.__init__",
         _fake_init,
     ):
         openai_agents_sdk_harness._build_openai_agents_sdk_executor()

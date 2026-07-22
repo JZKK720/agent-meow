@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.entities import Conversation
-from agent_meow.errors import ErrorCode, OmnigentError
-from agent_meow.runner.routing import RunnerRouter, runner_dispatch_harness
-from agent_meow.runner.transports.ws_tunnel.frames import HelloFrame
-from agent_meow.runner.transports.ws_tunnel.registry import TunnelRegistry
-from agent_meow.spec import AgentSpec, ExecutorSpec, LLMConfig
+from omnigent.entities import Conversation
+from omnigent.errors import ErrorCode, OmnigentError
+from omnigent.runner.routing import RunnerRouter, runner_dispatch_harness
+from omnigent.runner.transports.ws_tunnel.frames import HelloFrame
+from omnigent.runner.transports.ws_tunnel.registry import TunnelRegistry
+from omnigent.spec import AgentSpec, ExecutorSpec, LLMConfig
 
 
 class _FakeWebSocket:

@@ -27,7 +27,7 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.host.frames import (
+from omnigent.host.frames import (
     HostCreateWorktreeFrame,
     HostHelloFrame,
     HostLaunchRunnerFrame,
@@ -35,18 +35,18 @@ from agent_meow.host.frames import (
     HostStatFrame,
     decode_host_frame,
 )
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server.app import create_app
-from agent_meow.server.auth import RESERVED_USER_LOCAL
-from agent_meow.server.host_registry import HostConnection
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server.app import create_app
+from omnigent.server.auth import RESERVED_USER_LOCAL
+from omnigent.server.host_registry import HostConnection
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.host_store import HostStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.host_store import HostStore
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio

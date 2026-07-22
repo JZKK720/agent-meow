@@ -1,4 +1,4 @@
-"""Tests for ``agent_meow/inner/copilot_harness.py`` — the ``harness: copilot`` wrap.
+"""Tests for ``omnigent/inner/copilot_harness.py`` â€” the ``harness: copilot`` wrap.
 
 The wrap reads ``HARNESS_COPILOT_*`` env vars and constructs a
 :class:`CopilotExecutor` lazily. Constructing the executor does NOT import the
@@ -13,8 +13,8 @@ import json
 
 import pytest
 
-from agent_meow.inner import copilot_harness as ch
-from agent_meow.inner.copilot_executor import CopilotExecutor
+from omnigent.inner import copilot_harness as ch
+from omnigent.inner.copilot_executor import CopilotExecutor
 
 
 @pytest.fixture(autouse=True)
@@ -94,7 +94,7 @@ def test_build_executor_threads_os_env_bundle_dir_and_ambient_token(
 def test_create_app_exposes_executor_adapter_routes() -> None:
     app = ch.create_app()
     paths = {getattr(r, "path", "") for r in app.routes}
-    # The ExecutorAdapter wires the harness HTTP contract — assert the real
+    # The ExecutorAdapter wires the harness HTTP contract â€” assert the real
     # endpoints exist, not merely that the object has a ``routes`` attribute.
     assert "/health" in paths
     assert any("/v1/sessions/" in p and p.endswith("/events") for p in paths)

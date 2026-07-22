@@ -1,17 +1,17 @@
 """
 Server-side wake delivery for the sub-agent block notifier.
 
-These tests exercise the *server* half of the feature —
-:func:`~?agent_meow.server.routes.sessions.configure_subagent_block_notifier`
-plus the ``_wake_parent_for_blocked_child`` delivery it wires — driven
+These tests exercise the *server* half of the feature â€”
+:func:`~?omnigent.server.routes.sessions.configure_subagent_block_notifier`
+plus the ``_wake_parent_for_blocked_child`` delivery it wires â€” driven
 through the real
-:func:`~?agent_meow.runtime.pending_elicitations.record_publish` chokepoint
+:func:`~?omnigent.runtime.pending_elicitations.record_publish` chokepoint
 (the single point every elicitation publish funnels through). Only the
 two boundaries the wake *reuses* are stubbed: ``_get_runner_client``
 (runner resolution) and ``_dispatch_session_event_to_runner`` (the
 existing, separately-tested forward). What is asserted is purely the new
-code: that a child block resolves the parent, formats a ``[System: …]``
-message, and delivers it to the parent session — and that it is a no-op
+code: that a child block resolves the parent, formats a ``[System: â€¦]``
+message, and delivers it to the parent session â€” and that it is a no-op
 when no runner is bound (so it can never desync store/harness state).
 
 A real :class:`SqlAlchemyConversationStore` is used (no mocked
@@ -29,11 +29,11 @@ from typing import Any
 import pytest
 import pytest_asyncio
 
-from agent_meow.entities.conversation import Conversation
-from agent_meow.runtime import pending_elicitations, subagent_block_notifier
-from agent_meow.server.routes import sessions as sessions_module
-from agent_meow.server.schemas import SessionEventInput
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.entities.conversation import Conversation
+from omnigent.runtime import pending_elicitations, subagent_block_notifier
+from omnigent.server.routes import sessions as sessions_module
+from omnigent.server.schemas import SessionEventInput
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -42,7 +42,7 @@ async def _instant_sleep(_seconds: float) -> None:
     """
     No-op stand-in for the notifier's ``_sleep`` retry backoff.
 
-    Patched over :func:`~?agent_meow.runtime.subagent_block_notifier._sleep`
+    Patched over :func:`~?omnigent.runtime.subagent_block_notifier._sleep`
     (the module's own helper, not the global ``asyncio.sleep``) so the
     bounded wake retry adds no real wall-clock wait in these tests.
 
@@ -131,10 +131,10 @@ async def test_record_publish_delivers_wake_message_to_parent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A child block delivers a ``[System: …]`` wake to its parent session.
+    A child block delivers a ``[System: â€¦]`` wake to its parent session.
 
-    Drives the full server wiring: ``record_publish`` → observer →
-    notifier → ``_wake_parent_for_blocked_child`` → dispatch. Asserts
+    Drives the full server wiring: ``record_publish`` â†’ observer â†’
+    notifier â†’ ``_wake_parent_for_blocked_child`` â†’ dispatch. Asserts
     the dispatch targeted the *parent* (not the child) with a notice
     naming the child and carrying the approval reason.
     """
@@ -190,7 +190,7 @@ async def test_record_publish_delivers_wake_message_to_parent(
         # timeout is only a stuck-test guard).
         await asyncio.wait_for(fired.wait(), timeout=2.0)
 
-        # Exactly one wake, to the PARENT session (owner-scoped) — never the
+        # Exactly one wake, to the PARENT session (owner-scoped) â€” never the
         # child. A child target would mean the parent never learns of the block.
         assert len(delivered) == 1
         call = delivered[0]
@@ -225,12 +225,12 @@ async def test_record_publish_no_wake_when_no_runner_bound(
     """
     With no runner bound to the parent, the wake is a no-op (but retried).
 
-    A message event for an unbound parent must NOT be dispatched —
+    A message event for an unbound parent must NOT be dispatched â€”
     forwarding one would desync conversation store and harness state. The
     wake resolves the runner, sees ``None``, logs, and reports failure so
     the notifier releases its debounce. Because an unbound parent is the
     transient-miss case the notifier retries, the runner lookup runs once
-    per attempt (``1 + _WAKE_RETRIES``) — and no attempt dispatches.
+    per attempt (``1 + _WAKE_RETRIES``) â€” and no attempt dispatches.
     """
     # No-op the backoff so the bounded retry doesn't add real wall-clock
     # sleeps (rule 14: patch the module's _sleep, not global asyncio.sleep).
@@ -276,7 +276,7 @@ async def test_record_publish_no_wake_when_no_runner_bound(
     # instead of forwarding an item the harness would never see. A non-empty
     # list would mean a None runner_client slipped past the guard.
     assert dispatched == []
-    # The runner lookup ran once per bounded attempt — confirming the
+    # The runner lookup ran once per bounded attempt â€” confirming the
     # server-layer retry actually re-tries the unroutable parent rather than
     # giving up after the first miss.
     assert lookups == expected_attempts

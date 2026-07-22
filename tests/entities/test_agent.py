@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_meow.entities.agent import Agent
+from omnigent.entities.agent import Agent
 
 
 def test_agent_minimal() -> None:

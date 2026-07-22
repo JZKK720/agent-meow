@@ -30,7 +30,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow.entities.session_resources import terminal_resource_id
+from omnigent.entities.session_resources import terminal_resource_id
 from tests._helpers.compat import apply_runner_env, compat_runner_cwd, runner_executable
 from tests.e2e.helpers import POLL_INTERVAL_S
 
@@ -72,7 +72,7 @@ def _spawn_host_daemon(
             [
                 runner_executable(),
                 "-m",
-                "agent_meow.host._daemon_entry",
+                "omnigent.host._daemon_entry",
                 "--server",
                 live_server,
             ],
@@ -151,7 +151,7 @@ def _ordered_message_items(
 
     Filters ``GET /v1/sessions/{id}/items`` to ``type == "message"`` items
     with a ``user`` / ``assistant`` role, preserving the server's position
-    order — which is exactly the order the web UI renders bubbles in.
+    order â€” which is exactly the order the web UI renders bubbles in.
 
     :param client: HTTP client pointed at the test server.
     :param session_id: Session/conversation id, e.g. ``"conv_abc123"``.
@@ -261,7 +261,7 @@ def _poll_for_assistant_marker(
                     return text
         time.sleep(POLL_INTERVAL_S)
     raise AssertionError(
-        f"No assistant message containing {marker!r} within {timeout}s — "
+        f"No assistant message containing {marker!r} within {timeout}s â€” "
         "the codex-native message was not answered."
     )
 
@@ -278,7 +278,7 @@ def _poll_for_assistant_reply(
     A liveness gate: it confirms the turn ran to a reply (so the image
     attachment did not crash the turn) and that the forwarder has mirrored
     the user message into the durable items, which the caller then
-    inspects. It deliberately does NOT assert on the reply's content —
+    inspects. It deliberately does NOT assert on the reply's content â€”
     naming the test image's color does not distinguish a natively-delivered
     image from a base64-serialized one (the model answers in both cases),
     so the freeze regression is caught by the user-text check at the call
@@ -303,7 +303,7 @@ def _poll_for_assistant_reply(
                     return text
         time.sleep(POLL_INTERVAL_S)
     raise AssertionError(
-        f"No assistant reply within {timeout}s — the image-bearing turn "
+        f"No assistant reply within {timeout}s â€” the image-bearing turn "
         "never completed (the attachment may have crashed the turn)."
     )
 
@@ -350,7 +350,7 @@ def _init_repo_with_marker_file(repo: Path, marker: str) -> None:
     Initialize a git repo containing a single committed marker file.
 
     The marker file is committed so it materializes in any git worktree
-    checked out from the branch — but it never exists in the runner's
+    checked out from the branch â€” but it never exists in the runner's
     spec-bundle extraction dir. A Codex agent that can read it back is
     therefore proof the terminal launched in the worktree, not the
     bundle dir.
@@ -373,7 +373,7 @@ def _init_repo_with_marker_file(repo: Path, marker: str) -> None:
     ]
     # ``git init`` then ``checkout -b`` rather than ``init -b main`` so the
     # opt-in test runs on Git older than 2.28 (no ``init -b`` flag). The
-    # branch name is cosmetic — the worktree is cut from a fresh API branch.
+    # branch name is cosmetic â€” the worktree is cut from a fresh API branch.
     subprocess.run([*git_base, "init"], cwd=repo, check=True)
     subprocess.run([*git_base, "checkout", "-b", "main"], cwd=repo, check=True)
     subprocess.run([*git_base, "add", _CWD_MARKER_FILE], cwd=repo, check=True)
@@ -463,7 +463,7 @@ def _assert_codex_reads_cwd_marker(
     )
     event.raise_for_status()
     # _poll_for_assistant_marker returns only once the marker appears and
-    # raises AssertionError on timeout — re-raise with the cwd-focused
+    # raises AssertionError on timeout â€” re-raise with the cwd-focused
     # context so a failure points at the workspace resolution, not a generic
     # "no reply" timeout.
     try:
@@ -475,7 +475,7 @@ def _assert_codex_reads_cwd_marker(
         )
     except AssertionError as exc:
         raise AssertionError(
-            f"Codex did not return marker {marker!r} from {_CWD_MARKER_FILE} — "
+            f"Codex did not return marker {marker!r} from {_CWD_MARKER_FILE} â€” "
             "its cwd is likely the spec bundle dir, not the session workspace."
         ) from exc
 
@@ -529,8 +529,8 @@ def test_codex_native_builtin_session_can_be_created(
     session_data = session_resp.json()
     assert session_data["agent_id"] == agent_id
     labels = session_data.get("labels", {})
-    assert labels.get("agent_meow.wrapper") == "codex-native-ui", (
-        f"Expected wrapper label 'codex-native-ui', got {labels.get('agent_meow.wrapper')!r}"
+    assert labels.get("omnigent.wrapper") == "codex-native-ui", (
+        f"Expected wrapper label 'codex-native-ui', got {labels.get('omnigent.wrapper')!r}"
     )
 
 
@@ -579,10 +579,10 @@ def test_codex_native_builtin_session_round_trip(
         # The host-spawned auto-create must register the Codex TUI as a
         # streamable terminal resource (``terminal_codex_main``). Without
         # it the chat works (forwarder-driven) but the web UI has no
-        # terminal to attach to — the bug this change fixes. Checked before
+        # terminal to attach to â€” the bug this change fixes. Checked before
         # the message round-trip: the terminal is created at session
         # creation, independent of any turn. The poll raises a descriptive
-        # AssertionError if the resource never appears — that IS the check.
+        # AssertionError if the resource never appears â€” that IS the check.
         _poll_for_terminal_resource(
             http_client,
             session_id=session_id,
@@ -622,7 +622,7 @@ def test_codex_native_builtin_session_round_trip(
         # the ``thread/resume`` backfill); on a fresh thread the live
         # ``userMessage`` event can stream past before the subscription
         # lands, so it was recovered only via the later backfill and landed
-        # AFTER the assistant reply — inverting the web bubbles, since AP
+        # AFTER the assistant reply â€” inverting the web bubbles, since AP
         # assigns position by POST arrival order and the UI renders strictly
         # in that order. ``_ensure_user_message_posted`` in
         # ``codex_native_forwarder`` recovers the missed user message before
@@ -636,7 +636,7 @@ def test_codex_native_builtin_session_round_trip(
         first_assistant = roles.index("assistant")
         assert first_user < first_assistant, (
             f"user message must precede the assistant reply in persisted order, "
-            f"got roles={roles} — the codex forwarder inverted the turn."
+            f"got roles={roles} â€” the codex forwarder inverted the turn."
         )
         # The user message also survived the mirror (not dropped to empty):
         # the prompt text carries the marker, so its presence proves the
@@ -680,7 +680,7 @@ def test_codex_native_user_message_streams_before_assistant_delta(
     the first assistant delta.
 
     The durable ``items`` API (asserted in
-    ``test_codex_native_builtin_session_round_trip``) cannot catch this —
+    ``test_codex_native_builtin_session_round_trip``) cannot catch this â€”
     it never contains the transient deltas. This asserts the live SSE
     event order the web UI actually renders from. With the
     ``item/started`` recovery removed (leaving only the ``item/completed``
@@ -711,9 +711,9 @@ def test_codex_native_user_message_streams_before_assistant_delta(
             """
             Record SSE ``event:`` types in arrival order off the live stream.
 
-            Sets ``connected`` on the first event — the stream's
+            Sets ``connected`` on the first event â€” the stream's
             ``session.heartbeat`` ready-ack, emitted right after the
-            subscriber slot registers — so the caller posts the turn only
+            subscriber slot registers â€” so the caller posts the turn only
             once the subscription is live (the stream replays no history).
             Sets ``both_seen`` once both the user-consumed event and an
             assistant text delta have arrived, so the caller waits
@@ -779,7 +779,7 @@ def test_codex_native_user_message_streams_before_assistant_delta(
         assert consumed_idx < first_delta_idx, (
             "assistant text delta streamed BEFORE the user message "
             f"(consumed at index {consumed_idx}, first delta at {first_delta_idx}) "
-            "— the web UI would render the reply above the question. "
+            "â€” the web UI would render the reply above the question. "
             f"event order: {event_types}"
         )
     finally:
@@ -810,8 +810,8 @@ def test_codex_native_worktree_session_runs_in_worktree(
     A codex-native worktree session runs Codex inside the worktree.
 
     Regression for the bug where codex-native resolved its terminal cwd
-    from ``ResolvedSpec.workdir`` — the runner's spec-bundle extraction
-    dir (``runner-specs-<id>/ag_<id>-v<ver>``) — instead of the session
+    from ``ResolvedSpec.workdir`` â€” the runner's spec-bundle extraction
+    dir (``runner-specs-<id>/ag_<id>-v<ver>``) â€” instead of the session
     workspace. Worktree sessions therefore launched Codex in a temp dir
     with no ``.git`` and never touched the worktree, while claude-native
     worked because it reads ``OMNIGENT_RUNNER_WORKSPACE`` directly.
@@ -857,7 +857,7 @@ def test_codex_native_worktree_session_runs_in_worktree(
         workspace = session.json().get("workspace")
         assert workspace is not None, "session has no workspace"
         assert workspace != str(repo), (
-            f"workspace {workspace!r} equals the source repo — no worktree "
+            f"workspace {workspace!r} equals the source repo â€” no worktree "
             "was created for the branch."
         )
         assert "-worktrees" in workspace, (
@@ -871,7 +871,7 @@ def test_codex_native_worktree_session_runs_in_worktree(
         )
 
         # The marker lives only in the repo/worktree, never in the spec
-        # bundle dir. Its presence proves Codex's cwd is the worktree —
+        # bundle dir. Its presence proves Codex's cwd is the worktree â€”
         # the exact behavior this fix restores.
         _assert_codex_reads_cwd_marker(http_client, session_id=session_id, marker=marker)
     finally:
@@ -901,8 +901,8 @@ def test_codex_native_session_uses_workspace_dir_without_worktree(
     ``test_codex_native_worktree_session_runs_in_worktree``: a host
     session created with just a ``workspace`` (no ``git``) must launch
     Codex in that workspace, not the runner's spec-bundle dir. Same
-    bug class — ``ResolvedSpec.workdir`` (bundle dir) wrongly winning
-    over the session workspace — would strand Codex in the temp bundle
+    bug class â€” ``ResolvedSpec.workdir`` (bundle dir) wrongly winning
+    over the session workspace â€” would strand Codex in the temp bundle
     dir here too.
 
     Golden path: write a marker file into the workspace dir -> create a
@@ -948,7 +948,7 @@ def test_codex_native_session_uses_workspace_dir_without_worktree(
             f"workspace {resolved!r} looks like a worktree path, but no git branch was requested."
         )
 
-        # Marker is only in the workspace dir — reading it proves cwd.
+        # Marker is only in the workspace dir â€” reading it proves cwd.
         _assert_codex_reads_cwd_marker(http_client, session_id=session_id, marker=marker)
     finally:
         daemon.send_signal(signal.SIGTERM)
@@ -975,8 +975,8 @@ def test_codex_native_image_routed_natively_not_as_base64_text(
     An image reaches Codex as a native image item, not base64-in-text.
 
     Regression for the web-UI freeze. ``CodexNativeExecutor`` used to
-    ``json.dumps`` an ``input_image`` block — base64 ``image_url`` data URI
-    and all — into the turn's *text* input. Codex echoed that multi-KB
+    ``json.dumps`` an ``input_image`` block â€” base64 ``image_url`` data URI
+    and all â€” into the turn's *text* input. Codex echoed that multi-KB
     base64 string back as the ``userMessage``; the forwarder mirrored it
     into the durable user-message text, and the web UI hung rendering one
     giant unbroken token. The fix routes image/file blocks through
@@ -985,11 +985,11 @@ def test_codex_native_image_routed_natively_not_as_base64_text(
 
     The regression discriminator is the **persisted user-message text**: it
     must not contain a ``data:`` / ``base64,`` URI. Under the old code the
-    serialized image block put the full data URI into that text — exactly
+    serialized image block put the full data URI into that text â€” exactly
     the blob that froze the UI. (Verified by reintroducing the old
     serialization: this assertion turns red, the durable user text then
     holding ``data:image/png;base64,...``.) The assistant-reply poll is only
-    a liveness gate — naming the image's color does not by itself prove
+    a liveness gate â€” naming the image's color does not by itself prove
     native delivery, since the model answers under both code paths.
 
     :param live_server: Test server URL.
@@ -998,7 +998,7 @@ def test_codex_native_image_routed_natively_not_as_base64_text(
     :returns: None.
     """
     assert _TEST_IMAGE_PATH.exists(), (
-        f"Test image missing at {_TEST_IMAGE_PATH}; restore it from git — "
+        f"Test image missing at {_TEST_IMAGE_PATH}; restore it from git â€” "
         "its absence is a broken setup, not a skip."
     )
     workspace = tmp_path / "codex_ws"
@@ -1059,11 +1059,11 @@ def test_codex_native_image_routed_natively_not_as_base64_text(
         messages = _ordered_message_items(http_client, session_id=session_id)
         user_text = " ".join(_user_text(item) for item in messages if item.get("role") == "user")
         assert user_text, (
-            "no user-message text persisted — the prompt should still appear "
+            "no user-message text persisted â€” the prompt should still appear "
             "as the user bubble even when an image is attached."
         )
         assert "base64," not in user_text and "data:image" not in user_text, (
-            "a base64 data URI leaked into the rendered user-message text — "
+            "a base64 data URI leaked into the rendered user-message text â€” "
             "the image block was serialized into text instead of routed as a "
             f"native image item. user text was: {user_text[:200]!r}..."
         )
@@ -1108,14 +1108,14 @@ def test_codex_native_image_only_persists_user_bubble_and_does_not_bleed(
     with no text, so the server drains the correct pending entry and folds
     the image in by ``file_id``.
 
-    Sequence — turn 1: image only; turn 2: text only. Assertions:
+    Sequence â€” turn 1: image only; turn 2: text only. Assertions:
 
     - The first persisted message is a ``user`` item carrying an
       ``input_image`` block (the image bubble exists and precedes the
-      reply — symptom 1).
+      reply â€” symptom 1).
     - Exactly one user message carries an image, and it is turn 1's; turn
       2's user message carries the marker text and **no** image block (the
-      image did not bleed across turns — symptom 2).
+      image did not bleed across turns â€” symptom 2).
 
     :param live_server: Test server URL.
     :param http_client: HTTP client pointed at the test server.
@@ -1123,7 +1123,7 @@ def test_codex_native_image_only_persists_user_bubble_and_does_not_bleed(
     :returns: None.
     """
     assert _TEST_IMAGE_PATH.exists(), (
-        f"Test image missing at {_TEST_IMAGE_PATH}; restore it from git — "
+        f"Test image missing at {_TEST_IMAGE_PATH}; restore it from git â€” "
         "its absence is a broken setup, not a skip."
     )
     workspace = tmp_path / "codex_ws"
@@ -1187,17 +1187,17 @@ def test_codex_native_image_only_persists_user_bubble_and_does_not_bleed(
         user_items = [m for m in messages if m.get("role") == "user"]
 
         # Symptom 1: the image-only turn produced a durable user bubble, and
-        # it is the first message overall — so it renders ABOVE the reply,
+        # it is the first message overall â€” so it renders ABOVE the reply,
         # not below it. With the bug there was no user item at all and the
         # first message was the assistant reply.
         assert messages, "no messages persisted at all"
         assert messages[0].get("role") == "user", (
-            "first persisted message is not the user's — the image-only user "
+            "first persisted message is not the user's â€” the image-only user "
             f"bubble was not persisted before the reply. roles="
             f"{[m.get('role') for m in messages]}"
         )
         assert "input_image" in _content_types(messages[0]), (
-            "the first user message carries no image block — the image-only "
+            "the first user message carries no image block â€” the image-only "
             f"message was not persisted with its image. content_types="
             f"{_content_types(messages[0])}"
         )
@@ -1218,7 +1218,7 @@ def test_codex_native_image_only_persists_user_bubble_and_does_not_bleed(
             f"{[_user_text(u) for u in user_items]}"
         )
         assert "input_image" not in _content_types(text_user_items[0]), (
-            "the later text-only message absorbed the earlier image — the "
+            "the later text-only message absorbed the earlier image â€” the "
             "image-only turn's pending entry leaked and was folded into the "
             f"next message. content_types={_content_types(text_user_items[0])}"
         )
@@ -1253,7 +1253,7 @@ def test_codex_native_web_model_effort_override_survives_turn(
     ``thread/settings/update`` request (whose ``ThreadSettingsUpdateParams``
     carries ``model`` / ``effort``) ahead of a bare ``turn/start``.
 
-    The original fix tried to send ``model``/``effort`` ON ``turn/start`` —
+    The original fix tried to send ``model``/``effort`` ON ``turn/start`` â€”
     where the app-server schema does not accept them. If those fields are
     rejected by the real app-server (``client.request`` raises ->
     ``ExecutorError``), *every web turn after a picker change fails*. This
@@ -1261,13 +1261,13 @@ def test_codex_native_web_model_effort_override_survives_turn(
     reasoning effort via ``PATCH /v1/sessions`` (exactly what the SPA does),
     then sends a turn and asserts it runs to a reply. A reply proves the
     app-server accepted the ``thread/settings/update`` the override path
-    emits — i.e. the catastrophic "every web turn fails" mode is gone.
+    emits â€” i.e. the catastrophic "every web turn fails" mode is gone.
 
     The exact RPC shape (``thread/settings/update`` precedes a bare
     ``turn/start``, with overrides omitted when unset and invalid effort
     dropped) is pinned deterministically by
     ``tests/inner/test_codex_native_executor.py``; this is the live
-    counterpart that the unit fake cannot provide — that the override is
+    counterpart that the unit fake cannot provide â€” that the override is
     *honored*, not rejected.
 
     The target model defaults to the session's own running model (always a
@@ -1298,7 +1298,7 @@ def test_codex_native_web_model_effort_override_survives_turn(
 
         # Turn 1 establishes the native thread on its launch-pinned model,
         # so the override below is a genuine mid-session change (the only
-        # path that must ride thread/settings/update — a fresh thread could
+        # path that must ride thread/settings/update â€” a fresh thread could
         # otherwise be launch-pinned).
         _send_user_text(
             http_client,
@@ -1317,7 +1317,7 @@ def test_codex_native_web_model_effort_override_survives_turn(
         current_model = session_data.get("model_override") or session_data.get("llm_model")
         target_model = os.environ.get("OMNIGENT_E2E_CODEX_SWITCH_MODEL") or current_model
         assert target_model, (
-            "could not resolve a model to override with — the session reported "
+            "could not resolve a model to override with â€” the session reported "
             f"neither model_override nor llm_model: {session_data!r}"
         )
 
@@ -1344,7 +1344,7 @@ def test_codex_native_web_model_effort_override_survives_turn(
             http_client, session_id=session_id, marker=switched_marker, timeout=180.0
         )
         assert switched_marker in text, (
-            f"override turn produced no marker {switched_marker!r} — the web "
+            f"override turn produced no marker {switched_marker!r} â€” the web "
             "model/effort pick broke the turn. response: "
             f"{text!r}"
         )

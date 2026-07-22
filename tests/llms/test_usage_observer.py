@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.llms._usage_observer`.
+"""Unit tests for :mod:`~?omnigent.llms._usage_observer`.
 
 Covers the observer registry contract (add/remove/exception-isolation)
 and the auto-recorder that activates when ``OMNIGENT_TOKEN_USAGE_JSON``
@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.llms import _usage_observer
+from omnigent.llms import _usage_observer
 
 
 @pytest.fixture(autouse=True)
@@ -33,7 +33,7 @@ def _reset_state() -> Any:
     _usage_observer._CURRENT_NODEID = None
 
 
-# ── Recording (auto-recorder behavior) ──────────────────────────────
+# â”€â”€ Recording (auto-recorder behavior) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_notify_records_under_current_test(
@@ -122,7 +122,7 @@ def test_notify_skips_zero_payload(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
     assert list(tmp_path.glob("tokens*.json")) == []
 
 
-# ── Output path (filename suffix logic) ─────────────────────────────
+# â”€â”€ Output path (filename suffix logic) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_output_path_includes_xdist_worker_and_pid(
@@ -153,7 +153,7 @@ def test_output_path_unset_returns_none(monkeypatch: pytest.MonkeyPatch) -> None
     assert _usage_observer._output_path() is None
 
 
-# ── write-through writer ───────────────────────────────────────────
+# â”€â”€ write-through writer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_notify_writes_file_through_without_exit_hooks(
@@ -207,7 +207,7 @@ def test_records_survive_sigkill(tmp_path: Path) -> None:
     target = tmp_path / "tokens.json"
     script = (
         "import os, signal\n"
-        "from agent_meow.llms import _usage_observer\n"
+        "from omnigent.llms import _usage_observer\n"
         "_usage_observer.notify(model='m', input_tokens=7, output_tokens=3, total_tokens=10)\n"
         "os.kill(os.getpid(), signal.SIGKILL)\n"
     )
@@ -234,7 +234,7 @@ def test_records_survive_sigkill(tmp_path: Path) -> None:
     assert payload["by_test"]["<no-test>"]["total_tokens"] == 10
 
 
-# ── Subprocess attribution via the current-test sidecar ─────────────
+# â”€â”€ Subprocess attribution via the current-test sidecar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_set_current_test_publishes_and_clears_sidecar(
@@ -295,7 +295,7 @@ def test_subprocess_attributes_usage_to_parent_test_via_sidecar(tmp_path: Path) 
     target = tmp_path / "tokens.json"
     (tmp_path / "tokens-current-test-main.txt").write_text("tests/e2e/test_x.py::test_y")
     script = (
-        "from agent_meow.llms import _usage_observer\n"
+        "from omnigent.llms import _usage_observer\n"
         "_usage_observer.notify(model='m', input_tokens=7, output_tokens=3, total_tokens=10)\n"
     )
     env = {**os.environ, _usage_observer._ENV_VAR: str(target)}
@@ -317,7 +317,7 @@ def test_subprocess_attributes_usage_to_parent_test_via_sidecar(tmp_path: Path) 
     assert "<no-test>" not in payload["by_test"]
 
 
-# ── Observer registry contract (unchanged from PR-B) ────────────────
+# â”€â”€ Observer registry contract (unchanged from PR-B) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_add_observer_remove_unsubscribes(
@@ -365,7 +365,7 @@ def test_notify_isolates_observer_exceptions(monkeypatch: pytest.MonkeyPatch) ->
     assert good_called
 
 
-# ── End-to-end through Client.responses.create ──────────────────────
+# â”€â”€ End-to-end through Client.responses.create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -374,8 +374,8 @@ async def test_client_notify_records_with_active_test(
 ) -> None:
     """``Client().responses.create()`` runs through :func:`notify` and
     lands in the auto-recorder when the env var is set."""
-    from agent_meow.llms.client import Client, _ResponsesNamespace
-    from agent_meow.llms.types import MessageOutput, OutputText, Response, Usage
+    from omnigent.llms.client import Client, _ResponsesNamespace
+    from omnigent.llms.types import MessageOutput, OutputText, Response, Usage
 
     monkeypatch.setenv(_usage_observer._ENV_VAR, str(tmp_path / "tokens.json"))
     fake = Response(
@@ -395,7 +395,7 @@ async def test_client_notify_records_with_active_test(
     assert _usage_observer._RECORDS["test_nonstream"]["total_tokens"] == 15
 
 
-# ── Thread safety ───────────────────────────────────────────────────
+# â”€â”€ Thread safety â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_concurrent_notifies_do_not_lose_updates(
@@ -449,7 +449,7 @@ def test_concurrent_notifies_do_not_lose_updates(
     assert payload["totals"]["calls"] == threads * iters
 
 
-# ── notify_from_dict ─────────────────────────────────────────────
+# â”€â”€ notify_from_dict â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_notify_from_dict_unpacks_usage(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -478,7 +478,7 @@ def test_notify_from_dict_none_usage_is_noop(
 def test_notify_from_dict_empty_dict_is_noop(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """notify_from_dict({}) resolves to notify(..., 0, 0, 0) — records stay empty."""
+    """notify_from_dict({}) resolves to notify(..., 0, 0, 0) â€” records stay empty."""
     monkeypatch.setenv(_usage_observer._ENV_VAR, str(tmp_path / "tokens.json"))
     _usage_observer.set_current_test("test_empty")
     _usage_observer.notify_from_dict(model="m", usage={})
@@ -494,7 +494,7 @@ def test_notify_from_dict_non_dict_is_noop(
     assert _usage_observer._RECORDS == {}
 
 
-# ── Double remove is idempotent ──────────────────────────────────
+# â”€â”€ Double remove is idempotent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_observer_remove_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> None:

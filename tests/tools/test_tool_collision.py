@@ -1,7 +1,7 @@
-"""Tests for G27 — tool name collisions fail loud at agent image load.
+"""Tests for G27 â€” tool name collisions fail loud at agent image load.
 
 The collision-detection logic itself lives in
-``agent_meow.tools.local.load_local_python_tools``; these tests
+``omnigent.tools.local.load_local_python_tools``; these tests
 exercise it through the loader's public interface with realistic
 agent-image directory layouts.
 """
@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.spec.types import LocalToolInfo
-from agent_meow.tools.local import LocalToolLoadError, load_local_python_tools
+from omnigent.spec.types import LocalToolInfo
+from omnigent.tools.local import LocalToolLoadError, load_local_python_tools
 
 
 def _write_tool(py_dir: Path, filename: str, func_name: str) -> None:

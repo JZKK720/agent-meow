@@ -42,15 +42,15 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.inner.credential_proxy import SYNTHETIC_CREDENTIAL_PREFIX
-from agent_meow.inner.datamodel import (
+from omnigent.inner.credential_proxy import SYNTHETIC_CREDENTIAL_PREFIX
+from omnigent.inner.datamodel import (
     CredentialProxyEntry,
     CredentialProxySpec,
     CredentialSourceSpec,
     OSEnvSandboxSpec,
     OSEnvSpec,
 )
-from agent_meow.inner.os_env import create_os_environment
+from omnigent.inner.os_env import create_os_environment
 from tests.inner.sandbox.conftest import run_async
 
 _PUBLIC_HOST_FOR_EGRESS = "example.com"

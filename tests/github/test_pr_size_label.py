@@ -45,7 +45,7 @@ def test_lock_files_are_generated(filename: str) -> None:
 
 @pytest.mark.parametrize(
     "filename",
-    ["agent_meow/runtime/workflow.py", "docs/uv.lock.md", "src/package-lock.json.bak"],
+    ["omnigent/runtime/workflow.py", "docs/uv.lock.md", "src/package-lock.json.bak"],
 )
 def test_source_files_are_not_generated(filename: str) -> None:
     assert not module.is_generated(filename)
@@ -53,7 +53,7 @@ def test_source_files_are_not_generated(filename: str) -> None:
 
 def test_total_changes_excludes_generated() -> None:
     files = [
-        {"filename": "agent_meow/a.py", "additions": 30, "deletions": 10},
+        {"filename": "omnigent/a.py", "additions": 30, "deletions": 10},
         {"filename": "uv.lock", "additions": 5000, "deletions": 4000},
         {"filename": "web/package-lock.json", "additions": 800, "deletions": 0},
     ]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate ``_CURSOR_BASE_MODELS`` for ``agent_meow/cursor_native.py``.
+"""Generate ``_CURSOR_BASE_MODELS`` for ``omnigent/cursor_native.py``.
 
-The cursor-native web picker needs *base* model ids — the namespace that (a)
+The cursor-native web picker needs *base* model ids â€” the namespace that (a)
 launches via ``cursor-agent --model <id>``, (b) injects via ``/model <id>`` in
 the TUI, and (c) is what ``meta.lastUsedModel`` reports back to the web mirror.
 ``cursor-agent models`` (== ``--list-models``) instead prints ~80 *compound*
@@ -13,7 +13,7 @@ This script derives the base-id catalog from that output: it strips the trailing
 effort/thinking group to recover the base id, applies ``_BASE_ID_OVERRIDES`` for
 the irregular claude spellings, drops ``_DENYLIST_PREFIXES`` (prefix-collision /
 unoffered tiers), derives a clean display name, and carries the ``(default)``
-tag. ``(current)`` is ignored — it is per-session state, not a catalog property.
+tag. ``(current)`` is ignored â€” it is per-session state, not a catalog property.
 
 Usage::
 
@@ -21,7 +21,7 @@ Usage::
     python scripts/gen_cursor_models.py        # shells out to ``cursor-agent models``
 
 Re-run when cursor ships new models and paste the printed literal into
-``agent_meow/cursor_native.py`` (between the ``# >>> generated`` markers). Review
+``omnigent/cursor_native.py`` (between the ``# >>> generated`` markers). Review
 the diff: a brand-new model with a *new* irregular spelling needs a one-line
 ``_BASE_ID_OVERRIDES`` entry, and the script warns when it sees an unmapped
 claude reordering so the gap never lands silently.

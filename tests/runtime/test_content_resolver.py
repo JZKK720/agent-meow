@@ -1,4 +1,4 @@
-"""Tests for agent_meow.runtime.content_resolver."""
+"""Tests for omnigent.runtime.content_resolver."""
 
 from __future__ import annotations
 
@@ -8,14 +8,14 @@ from typing import Any
 
 import pytest
 
-from agent_meow.entities import ConversationItem, StoredFile
-from agent_meow.entities.conversation import (
+from omnigent.entities import ConversationItem, StoredFile
+from omnigent.entities.conversation import (
     FunctionCallData,
     MessageData,
 )
-from agent_meow.runtime.content_resolver import resolve_content_references
+from omnigent.runtime.content_resolver import resolve_content_references
 
-# ── Fake stores ──────────────────────────────────────────────────────
+# â”€â”€ Fake stores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -61,7 +61,7 @@ class FakeArtifactStore:
         return self.blobs[key]
 
 
-# ── Helpers ──────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_conversation_item(
@@ -171,7 +171,7 @@ def artifact_store() -> FakeArtifactStore:
     )
 
 
-# ── Tests ────────────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_text_only_message_passes_through(
@@ -219,7 +219,7 @@ def test_input_image_file_id_resolved_to_data_uri(
         artifact_store,  # type: ignore[arg-type]
     )
 
-    # Result is a copy — original must not be modified.
+    # Result is a copy â€” original must not be modified.
     # Failure would mean in-place mutation corrupts conversation store.
     assert result[0] is not item
     assert isinstance(result[0].data, MessageData)
@@ -231,13 +231,13 @@ def test_input_image_file_id_resolved_to_data_uri(
     # Image block: file_id replaced with data: URI.
     img_block = blocks[1]
     expected_b64 = base64.b64encode(PNG_BYTES).decode("ascii")
-    # file_id must be removed — it's a local reference the LLM can't use.
+    # file_id must be removed â€” it's a local reference the LLM can't use.
     # Failure would mean the LLM receives a meaningless file_id.
     assert "file_id" not in img_block
     # image_url must be a data: URI with the correct content type.
     # Failure would mean the LLM receives an invalid image reference.
     assert img_block["image_url"] == (f"data:image/png;base64,{expected_b64}")
-    # detail field must be preserved — it controls provider image resolution.
+    # detail field must be preserved â€” it controls provider image resolution.
     # Failure would mean the client's detail preference is lost.
     assert img_block["detail"] == "auto"
     # Block type must be preserved for downstream translation layers.
@@ -291,7 +291,7 @@ def test_image_url_passes_through_unchanged(
 ) -> None:
     """
     input_image with image_url (no file_id) must pass through
-    unchanged — URLs are never fetched server-side (SSRF protection).
+    unchanged â€” URLs are never fetched server-side (SSRF protection).
     """
     item = _make_conversation_item(
         [
@@ -308,7 +308,7 @@ def test_image_url_passes_through_unchanged(
         artifact_store,  # type: ignore[arg-type]
     )
 
-    # No file_id in any block — original item returned as-is.
+    # No file_id in any block â€” original item returned as-is.
     # Failure would mean URL-only messages are unnecessarily copied.
     assert result[0] is item
 
@@ -319,7 +319,7 @@ def test_inline_file_data_passes_through_unchanged(
 ) -> None:
     """
     input_file with file_data (no file_id) must pass through
-    unchanged — content is already inline.
+    unchanged â€” content is already inline.
     """
     item = _make_conversation_item(
         [
@@ -336,7 +336,7 @@ def test_inline_file_data_passes_through_unchanged(
         artifact_store,  # type: ignore[arg-type]
     )
 
-    # No file_id — original item returned.
+    # No file_id â€” original item returned.
     assert result[0] is item
 
 
@@ -346,7 +346,7 @@ def test_non_message_items_pass_through(
 ) -> None:
     """
     Non-message items (function_call, function_call_output) must
-    pass through unchanged — only message content blocks are scanned.
+    pass through unchanged â€” only message content blocks are scanned.
     """
     fc_item = _make_function_call_item()
     result = resolve_content_references(
@@ -367,7 +367,7 @@ def test_missing_file_id_raises_value_error(
 ) -> None:
     """
     Referencing a file_id that doesn't exist in the file store
-    must raise ValueError — fail loud, no silent dropping.
+    must raise ValueError â€” fail loud, no silent dropping.
     """
     item = _make_conversation_item(
         [
@@ -391,7 +391,7 @@ def test_original_item_not_mutated(
     artifact_store: FakeArtifactStore,
 ) -> None:
     """
-    The original ConversationItem must not be mutated — the resolver
+    The original ConversationItem must not be mutated â€” the resolver
     returns copies for modified items.
     """
     original_content = [
@@ -405,7 +405,7 @@ def test_original_item_not_mutated(
         artifact_store,  # type: ignore[arg-type]
     )
 
-    # Original content must still contain file_id — not mutated.
+    # Original content must still contain file_id â€” not mutated.
     # Failure would mean the resolver modifies conversation store data.
     assert isinstance(item.data, MessageData)
     assert item.data.content[0]["file_id"] == "file_img"
@@ -418,7 +418,7 @@ def test_unknown_block_type_with_file_id_resolved(
 ) -> None:
     """
     An unrecognized block type (e.g. input_audio) with file_id must
-    still have its file_id resolved — the resolver resolves file_id
+    still have its file_id resolved â€” the resolver resolves file_id
     on any block type, not just known ones.
     """
     item = _make_conversation_item(
@@ -535,7 +535,7 @@ def test_resolution_field_varies_by_block_type(
     assert "file_id" not in block
 
 
-# ── Cache tests ─────────────────────────────────────────────────────
+# â”€â”€ Cache tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_cache_avoids_redundant_artifact_fetch(
@@ -550,7 +550,7 @@ def test_cache_avoids_redundant_artifact_fetch(
     cache: dict[str, str] = {}
     item = _make_conversation_item([{"type": "input_image", "file_id": "file_img"}])
 
-    # First call — populates cache.
+    # First call â€” populates cache.
     resolve_content_references(
         [item],
         file_store,
@@ -564,7 +564,7 @@ def test_cache_avoids_redundant_artifact_fetch(
     # Cached value is the raw base64, not a data: URI.
     assert cache["file_img"] == expected_b64
 
-    # Sabotage the artifact store — if the cache is working, the
+    # Sabotage the artifact store â€” if the cache is working, the
     # resolver won't call artifact_store.get() again.
     artifact_store.blobs = {}
 
@@ -587,7 +587,7 @@ def test_cache_none_disables_caching(
 ) -> None:
     """
     Passing ``cache=None`` (the default) must still resolve
-    correctly — caching is optional.
+    correctly â€” caching is optional.
     """
     item = _make_conversation_item([{"type": "input_image", "file_id": "file_img"}])
 
@@ -595,7 +595,7 @@ def test_cache_none_disables_caching(
         [item],
         file_store,
         artifact_store,  # type: ignore[arg-type]
-        # Explicit None — no cache.
+        # Explicit None â€” no cache.
         None,
     )
 
@@ -605,7 +605,7 @@ def test_cache_none_disables_caching(
     assert img_block["image_url"] == f"data:image/png;base64,{expected_b64}"
 
 
-# ── Error handling tests ────────────────────────────────────────────
+# â”€â”€ Error handling tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_assistant_message_file_id_resolved(
@@ -614,7 +614,7 @@ def test_assistant_message_file_id_resolved(
 ) -> None:
     """
     An assistant message in conversation history with file_id must
-    have that reference resolved — the content resolver scans all
+    have that reference resolved â€” the content resolver scans all
     message roles, not just user messages.
 
     Catches bugs where role-based filtering causes assistant messages
@@ -634,7 +634,7 @@ def test_assistant_message_file_id_resolved(
         artifact_store,  # type: ignore[arg-type]
     )
 
-    # Must be a copy — assistant message was modified.
+    # Must be a copy â€” assistant message was modified.
     assert result[0] is not item
     assert isinstance(result[0].data, MessageData)
     file_block = result[0].data.content[1]
@@ -655,7 +655,7 @@ def test_deleted_file_raises_clear_error(
     """
     When a file is deleted between request validation and agent loop
     execution, the error message must clearly indicate the file was
-    deleted — not a generic "not found".
+    deleted â€” not a generic "not found".
     """
     item = _make_conversation_item([{"type": "input_image", "file_id": "file_nonexistent"}])
 
@@ -667,20 +667,20 @@ def test_deleted_file_raises_clear_error(
         )
 
 
-# ── _resolve_content_type tests ───────────────────────────────────────
+# â”€â”€ _resolve_content_type tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_content_type_uses_stored_type() -> None:
     """Stored content_type is used when it's not the generic fallback."""
-    from agent_meow.runtime.content_resolver import _resolve_content_type
+    from omnigent.runtime.content_resolver import _resolve_content_type
 
     assert _resolve_content_type("text/markdown", "test.md") == "text/markdown"
     assert _resolve_content_type("application/pdf", "report.pdf") == "application/pdf"
 
 
 def test_resolve_content_type_ignores_octet_stream() -> None:
-    """application/octet-stream is treated as unresolved — falls through to filename."""
-    from agent_meow.runtime.content_resolver import _resolve_content_type
+    """application/octet-stream is treated as unresolved â€” falls through to filename."""
+    from omnigent.runtime.content_resolver import _resolve_content_type
 
     result = _resolve_content_type("application/octet-stream", "readme.md")
     assert result == "text/markdown", f"Expected text/markdown, got {result}"
@@ -688,7 +688,7 @@ def test_resolve_content_type_ignores_octet_stream() -> None:
 
 def test_resolve_content_type_falls_back_to_extra_map() -> None:
     """Extensions missing from mimetypes use the _EXTRA_MIME_TYPES fallback."""
-    from agent_meow.runtime.content_resolver import _resolve_content_type
+    from omnigent.runtime.content_resolver import _resolve_content_type
 
     # These extensions are NOT in Python 3.10's mimetypes module
     # (except .ts, which mimetypes maps to video/mp2t).
@@ -696,7 +696,7 @@ def test_resolve_content_type_falls_back_to_extra_map() -> None:
     assert _resolve_content_type(None, "config.yml") == "text/yaml"
     assert _resolve_content_type(None, "main.go") == "text/x-go"
     # .ts is mapped by mimetypes to video/mp2t (MPEG transport stream)
-    # and .rs to application/rls-services+xml — both wrong for source
+    # and .rs to application/rls-services+xml â€” both wrong for source
     # code. Our _EXTRA_MIME_TYPES map takes priority.
     assert _resolve_content_type(None, "app.ts") == "text/typescript"
     assert _resolve_content_type(None, "app.tsx") == "text/typescript"
@@ -708,14 +708,14 @@ def test_resolve_content_type_falls_back_to_extra_map() -> None:
 
 def test_resolve_content_type_no_filename_uses_fallback() -> None:
     """When neither stored type nor filename is available, falls back to octet-stream."""
-    from agent_meow.runtime.content_resolver import _resolve_content_type
+    from omnigent.runtime.content_resolver import _resolve_content_type
 
     assert _resolve_content_type(None, None) == "application/octet-stream"
 
 
 def test_resolve_content_type_known_extension_uses_mimetypes() -> None:
     """Standard extensions (e.g. .pdf, .html) use mimetypes.guess_type."""
-    from agent_meow.runtime.content_resolver import _resolve_content_type
+    from omnigent.runtime.content_resolver import _resolve_content_type
 
     # .pdf and .html are universally known by mimetypes.
     result = _resolve_content_type(None, "report.pdf")
@@ -726,7 +726,7 @@ def test_resolve_content_type_known_extension_uses_mimetypes() -> None:
 
 def test_resolve_content_type_case_insensitive() -> None:
     """Extension matching is case-insensitive."""
-    from agent_meow.runtime.content_resolver import _resolve_content_type
+    from omnigent.runtime.content_resolver import _resolve_content_type
 
     assert _resolve_content_type(None, "README.MD") == "text/markdown"
     assert _resolve_content_type(None, "config.YAML") == "text/yaml"
@@ -767,7 +767,7 @@ def test_content_resolver_uses_filename_for_mime(
     )
 
 
-# ── _safe_file_data_mime + end-to-end downgrade behaviour ────────────
+# â”€â”€ _safe_file_data_mime + end-to-end downgrade behaviour â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -791,7 +791,7 @@ def test_safe_file_data_mime_passthrough(passthrough_mime: str) -> None:
     what the OpenAI Responses API will accept on file_data; that's a
     deliberate decision, not an accidental one.
     """
-    from agent_meow.runtime.content_resolver import _safe_file_data_mime
+    from omnigent.runtime.content_resolver import _safe_file_data_mime
 
     assert _safe_file_data_mime(passthrough_mime) == passthrough_mime
 
@@ -811,7 +811,7 @@ def test_safe_file_data_mime_passthrough(passthrough_mime: str) -> None:
         "text/x-kotlin",
         "text/x-haskell",
         "text/x-julia",
-        # JSONL / ndjson / ipynb — application/x-* variants the
+        # JSONL / ndjson / ipynb â€” application/x-* variants the
         # Responses API treats the same way as exotic text MIMEs.
         "application/jsonl",
         "application/x-ndjson",
@@ -826,7 +826,7 @@ def test_safe_file_data_mime_collapses_unrecognised_text(rejected_mime: str) -> 
     block's ``filename`` field still carries the original extension
     for the model.
     """
-    from agent_meow.runtime.content_resolver import _safe_file_data_mime
+    from omnigent.runtime.content_resolver import _safe_file_data_mime
 
     assert _safe_file_data_mime(rejected_mime) == "text/plain"
 
@@ -838,7 +838,7 @@ def test_safe_file_data_mime_leaves_non_text_alone() -> None:
     "this image/audio/binary type is unsafe" would mislead providers.
     Pass them through and let the provider validate.
     """
-    from agent_meow.runtime.content_resolver import _safe_file_data_mime
+    from omnigent.runtime.content_resolver import _safe_file_data_mime
 
     assert _safe_file_data_mime("image/png") == "image/png"
     assert _safe_file_data_mime("audio/mpeg") == "audio/mpeg"
@@ -920,7 +920,7 @@ def test_resolve_image_file_keeps_specific_mime(
     )
 
 
-# ── Attachment upload limits ──────────────────────────────────────────
+# â”€â”€ Attachment upload limits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -940,7 +940,7 @@ def test_resolve_image_file_keeps_specific_mime(
 )
 def test_attachment_upload_limit_allowed_types(content_type: str, expected_mb: int) -> None:
     """Images, PDF, and text-like types get their per-type byte cap."""
-    from agent_meow.runtime.content_resolver import attachment_upload_limit
+    from omnigent.runtime.content_resolver import attachment_upload_limit
 
     assert attachment_upload_limit(content_type) == expected_mb * 1024 * 1024
 
@@ -958,15 +958,15 @@ def test_attachment_upload_limit_allowed_types(content_type: str, expected_mb: i
     ],
 )
 def test_attachment_upload_limit_rejects_unsupported_types(content_type: str) -> None:
-    """Office/binary/media types are not uploadable (None ⇒ caller 415s)."""
-    from agent_meow.runtime.content_resolver import attachment_upload_limit
+    """Office/binary/media types are not uploadable (None â‡’ caller 415s)."""
+    from omnigent.runtime.content_resolver import attachment_upload_limit
 
     assert attachment_upload_limit(content_type) is None
 
 
 def test_attachment_upload_limits_are_under_global_ceiling() -> None:
     """Every per-type limit stays within the global request-size backstop."""
-    from agent_meow.runtime.content_resolver import (
+    from omnigent.runtime.content_resolver import (
         MAX_ATTACHMENT_UPLOAD_BYTES,
         MAX_IMAGE_UPLOAD_BYTES,
         MAX_PDF_UPLOAD_BYTES,
@@ -992,7 +992,7 @@ def test_attachment_upload_limits_are_under_global_ceiling() -> None:
 def test_attachment_text_type_for_extension_recognised(filename: str, expected: str) -> None:
     """Known text/code extensions resolve to a text-like MIME (the fallback
     used when the declared MIME mislabels them as binary)."""
-    from agent_meow.runtime.content_resolver import attachment_text_type_for_extension
+    from omnigent.runtime.content_resolver import attachment_text_type_for_extension
 
     assert attachment_text_type_for_extension(filename) == expected
 
@@ -1004,16 +1004,16 @@ def test_attachment_text_type_for_extension_recognised(filename: str, expected: 
 def test_attachment_text_type_for_extension_rejects_binary(filename: str | None) -> None:
     """Real binaries (and missing/unknown extensions) get no text fallback,
     so they stay rejected even if the declared MIME is wrong."""
-    from agent_meow.runtime.content_resolver import attachment_text_type_for_extension
+    from omnigent.runtime.content_resolver import attachment_text_type_for_extension
 
     assert attachment_text_type_for_extension(filename) is None
 
 
 def test_text_code_extensions_resolve_to_allowed_text() -> None:
     """Every declared text/code extension resolves to a text-like type that
-    has an upload limit — so the route's extension fallback admits it (no 415),
+    has an upload limit â€” so the route's extension fallback admits it (no 415),
     regardless of the browser-reported MIME."""
-    from agent_meow.runtime.content_resolver import (
+    from omnigent.runtime.content_resolver import (
         _TEXT_CODE_EXTENSIONS,
         attachment_text_type_for_extension,
         attachment_upload_limit,
@@ -1027,13 +1027,13 @@ def test_text_code_extensions_resolve_to_allowed_text() -> None:
 
 def test_client_server_attachment_extension_parity() -> None:
     """The web client's TEXT_CODE_EXTENSIONS must all be accepted server-side,
-    even when the browser reports a non-text MIME — the parity contract the two
+    even when the browser reports a non-text MIME â€” the parity contract the two
     share. Guards against the client gate admitting a file the upload route then
     415s (the divergence Polly flagged)."""
     import re
     from pathlib import Path
 
-    from agent_meow.runtime.content_resolver import (
+    from omnigent.runtime.content_resolver import (
         _resolve_content_type,
         attachment_text_type_for_extension,
         attachment_upload_limit,

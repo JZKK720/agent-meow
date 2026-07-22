@@ -1,5 +1,5 @@
 """
-Tests for ``_build_copilot_spawn_env`` in ``agent_meow/runtime/workflow.py``.
+Tests for ``_build_copilot_spawn_env`` in ``omnigent/runtime/workflow.py``.
 
 The spawn-env builder maps ``spec`` fields to the ``HARNESS_COPILOT_*`` env
 vars the copilot harness wrap reads at first-turn time. Like the cursor builder,
@@ -8,8 +8,8 @@ to ``HARNESS_COPILOT_GITHUB_TOKEN`` (the GitHub token), a stored ``copilot:``
 block or an ambient ``GH_TOKEN`` is the no-auth fallback, and a ``DatabricksAuth``
 profile is deliberately ignored. Mirrors ``test_cursor_spawn_env.py``.
 
-This is a unit test — no subprocess spawn. End-to-end verification of the
-spawn-env → wrap → executor path lives in the harness e2e tests.
+This is a unit test â€” no subprocess spawn. End-to-end verification of the
+spawn-env â†’ wrap â†’ executor path lives in the harness e2e tests.
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.runtime.workflow import _build_copilot_spawn_env
-from agent_meow.spec.types import (
+from omnigent.runtime.workflow import _build_copilot_spawn_env
+from omnigent.spec.types import (
     AgentSpec,
     ApiKeyAuth,
     DatabricksAuth,

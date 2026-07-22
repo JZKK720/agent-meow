@@ -1,4 +1,4 @@
-"""Tests for agent_meow.pi_native_credentials (native Pi provider wiring)."""
+"""Tests for omnigent.pi_native_credentials (native Pi provider wiring)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow import pi_native_credentials as creds
+from omnigent import pi_native_credentials as creds
 
 
 def _databricks_config() -> dict[str, object]:
@@ -21,14 +21,14 @@ def _databricks_config() -> dict[str, object]:
 
 
 def test_resolves_databricks_default_to_anthropic_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A Databricks default → Pi anthropic-messages gateway provider.
+    """A Databricks default â†’ Pi anthropic-messages gateway provider.
 
     The Databricks profile is marked default for the anthropic/openai surfaces
     (not ``pi`` directly), so the resolver must fall back to the Anthropic
-    surface — which Pi speaks natively — and build a gateway provider with a
+    surface â€” which Pi speaks natively â€” and build a gateway provider with a
     bearer-token refresh command.
     """
-    from agent_meow.inner import databricks_executor
+    from omnigent.inner import databricks_executor
 
     def _host(profile: str | None) -> str:
         return "https://wkspc.example.com/"
@@ -48,8 +48,8 @@ def test_resolves_databricks_default_to_anthropic_gateway(monkeypatch: pytest.Mo
 
 
 def test_databricks_unresolvable_host_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No host for the profile → fall back to Pi's own login (None)."""
-    from agent_meow.inner import databricks_executor
+    """No host for the profile â†’ fall back to Pi's own login (None)."""
+    from omnigent.inner import databricks_executor
 
     def _no_host(profile: str | None) -> None:
         return None
@@ -59,7 +59,7 @@ def test_databricks_unresolvable_host_returns_none(monkeypatch: pytest.MonkeyPat
 
 
 def test_key_provider_resolves_to_inline_family() -> None:
-    """A key-kind provider with an anthropic family → inline Pi provider."""
+    """A key-kind provider with an anthropic family â†’ inline Pi provider."""
     config = {
         "providers": {
             "anthropic": {
@@ -84,18 +84,18 @@ def test_key_provider_resolves_to_inline_family() -> None:
 
 
 def test_subscription_default_returns_none() -> None:
-    """A subscription (CLI-login) default isn't reusable by Pi → None."""
+    """A subscription (CLI-login) default isn't reusable by Pi â†’ None."""
     config = {"providers": {"claude": {"kind": "subscription", "default": True, "cli": "claude"}}}
     assert creds.resolve_pi_native_provider(config_loader=lambda: config) is None
 
 
 def test_no_providers_returns_none() -> None:
-    """No configured providers → None (Pi uses its own login)."""
+    """No configured providers â†’ None (Pi uses its own login)."""
     assert creds.resolve_pi_native_provider(config_loader=dict) is None
 
 
 def test_malformed_config_returns_none() -> None:
-    """A loader that raises must not break launch — resolve to None."""
+    """A loader that raises must not break launch â€” resolve to None."""
 
     def _boom() -> dict[str, object]:
         raise RuntimeError("bad config")
@@ -104,11 +104,11 @@ def test_malformed_config_returns_none() -> None:
 
 
 def test_unresolvable_secret_falls_back_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A provider whose secret can't resolve → None, not a hard launch failure.
+    """A provider whose secret can't resolve â†’ None, not a hard launch failure.
 
     A key-kind default whose ``api_key`` references an env var absent from the
     runner env makes ``entry.family()`` raise during resolution (not during the
-    config load). The contract is "any resolution failure → fall back to Pi's
+    config load). The contract is "any resolution failure â†’ fall back to Pi's
     own login", so the resolver must swallow it and return ``None`` rather than
     let the exception fail the Pi terminal launch.
     """
@@ -186,7 +186,7 @@ def test_provider_launch_returns_env_and_args(tmp_path: Path) -> None:
 
 
 def test_openai_chat_wire_api_resolves_to_completions(monkeypatch: pytest.MonkeyPatch) -> None:
-    """An OpenAI family with wire_api: chat → openai-completions API.
+    """An OpenAI family with wire_api: chat â†’ openai-completions API.
 
     This tests the fix for the DeepInfra bug where pi-native was ignoring
     the wire_api setting and always using openai-responses. Providers like
@@ -224,7 +224,7 @@ def test_openai_chat_wire_api_resolves_to_completions(monkeypatch: pytest.Monkey
 
 
 def test_openai_responses_wire_api_default() -> None:
-    """An OpenAI family without wire_api (or wire_api: responses) → openai-responses API.
+    """An OpenAI family without wire_api (or wire_api: responses) â†’ openai-responses API.
 
     When wire_api is not set or set to "responses", the default behavior
     should be to use the OpenAI Responses API.
@@ -251,7 +251,7 @@ def test_openai_responses_wire_api_default() -> None:
 
 
 def test_openai_responses_wire_api_explicit() -> None:
-    """An OpenAI family with wire_api: responses → openai-responses API.
+    """An OpenAI family with wire_api: responses â†’ openai-responses API.
 
     When wire_api is explicitly set to "responses", it should use the
     OpenAI Responses API.
@@ -318,7 +318,7 @@ timeout_ms = 5000
 def test_cli_config_databricks_resolves_to_anthropic_gateway(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A cli-config Databricks default → Pi anthropic-messages gateway provider.
+    """A cli-config Databricks default â†’ Pi anthropic-messages gateway provider.
 
     The bug this fixes: previously the resolver returned ``None`` for
     ``cli-config``, silently dropping Pi to its own login. Now it reads the
@@ -367,7 +367,7 @@ def test_cli_config_databricks_respects_model_override(
 def test_cli_config_missing_codex_table_returns_none(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A cli-config entry whose codex table is absent → None (graceful fallback)."""
+    """A cli-config entry whose codex table is absent â†’ None (graceful fallback)."""
     # config.toml exists but defines no [model_providers.Databricks] table.
     _write_codex_config(tmp_path, 'model_provider = "Databricks"\n')
     monkeypatch.setenv("HOME", str(tmp_path))
@@ -377,7 +377,7 @@ def test_cli_config_missing_codex_table_returns_none(
 def test_cli_config_non_databricks_gateway_returns_none(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A cli-config provider that is NOT a Databricks gateway → None.
+    """A cli-config provider that is NOT a Databricks gateway â†’ None.
 
     Gateway detection is by base_url shape (``*.ai-gateway.*databricks*``), so a
     generic custom provider pointing elsewhere falls back to Pi's own login
@@ -411,7 +411,7 @@ def test_cli_config_databricks_warns_on_unresolvable(
     monkeypatch.setenv("HOME", str(tmp_path))
     import logging
 
-    with caplog.at_level(logging.INFO, logger="agent_meow.pi_native_credentials"):
+    with caplog.at_level(logging.INFO, logger="omnigent.pi_native_credentials"):
         assert (
             creds.resolve_pi_native_provider(config_loader=_cli_config_databricks_config) is None
         )
@@ -455,7 +455,7 @@ _LOOKALIKE_GATEWAY_URLS = [
 def test_cli_config_lookalike_gateway_returns_none(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, gateway_url: str
 ) -> None:
-    """A look-alike (non-Databricks) gateway URL → None, never forwards the token.
+    """A look-alike (non-Databricks) gateway URL â†’ None, never forwards the token.
 
     The old detector matched the "databricks" and "ai-gateway" substrings
     anywhere in the full base_url, so these look-alikes all passed and the code
@@ -497,15 +497,15 @@ def test_real_gateway_still_resolves_after_hardening(
     )
 
 
-# ── Cross-surface selection: a cli-config Databricks gateway must be reachable
-#    and selectable for pi (the bug: the old pi filter excluded all cli-config) ──
+# â”€â”€ Cross-surface selection: a cli-config Databricks gateway must be reachable
+#    and selectable for pi (the bug: the old pi filter excluded all cli-config) â”€â”€
 
 
 def _cli_config_databricks_pinned_pi() -> dict[str, object]:
     """A config where the cli-config Databricks gateway is pinned ``default: [openai, pi]``.
 
     Alongside an anthropic key that defaults only the anthropic surface, the
-    Databricks gateway explicitly claims the pi scope — which the parser now
+    Databricks gateway explicitly claims the pi scope â€” which the parser now
     accepts for a Databricks cli-config gateway. ``resolve_pi_native_provider``
     must select the gateway (its explicit pi default wins the shared
     selection), NOT api.anthropic.com.
@@ -537,7 +537,7 @@ def test_explicit_pi_pin_selects_cli_config_databricks_over_anthropic_key(
     """An explicit ``default: pi`` on a cli-config Databricks gateway wins for pi.
 
     Even with an anthropic key present (its own anthropic-surface default), the
-    Databricks gateway pinned to the pi scope must be the pi selection — proving
+    Databricks gateway pinned to the pi scope must be the pi selection â€” proving
     the parser accepts ``default: [openai, pi]`` for a Databricks cli-config AND
     the shared selection routes pi to it (base_url is the gateway's /anthropic
     surface, NOT api.anthropic.com).
@@ -606,7 +606,7 @@ args = ["%s", "sk-static"]
 """,
     )
     monkeypatch.setenv("HOME", str(tmp_path))
-    # codex-databricks here points at a non-Databricks proxy → not pi-consumable.
+    # codex-databricks here points at a non-Databricks proxy â†’ not pi-consumable.
     assert creds.resolve_pi_native_provider(config_loader=_cli_config_databricks_config) is None
 
 
@@ -683,7 +683,7 @@ def test_model_override_beats_databricks_default(monkeypatch: pytest.MonkeyPatch
     so the rendered ``models.json`` selects the requested model rather than the
     ``databricks-claude-sonnet-4-6`` default.
     """
-    from agent_meow.inner import databricks_executor
+    from omnigent.inner import databricks_executor
 
     monkeypatch.setattr(
         databricks_executor,

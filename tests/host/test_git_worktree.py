@@ -1,7 +1,7 @@
 """Tests for host-side git worktree operations.
 
-Exercises ``agent_meow.host.git_worktree`` against real ``git`` in a
-temp repository — the operations run actual ``git worktree add`` /
+Exercises ``omnigent.host.git_worktree`` against real ``git`` in a
+temp repository â€” the operations run actual ``git worktree add`` /
 ``remove`` / ``branch -D`` so a regression in argv construction, repo-
 root resolution, or removal ordering fails loud here.
 """
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.host.git_worktree import (
+from omnigent.host.git_worktree import (
     CreatedWorktree,
     WorktreeError,
     create_worktree,
@@ -159,7 +159,7 @@ def test_create_worktree_resolves_repo_root_from_subdir(git_repo: Path) -> None:
     sub = git_repo / "src"
     sub.mkdir()
     created = create_worktree(repo_path=str(sub), branch_name="wip")
-    # Sibling of the repo ROOT, not of the picked subdir — proves
+    # Sibling of the repo ROOT, not of the picked subdir â€” proves
     # rev-parse --show-toplevel is used rather than the raw repo_path.
     assert created.worktree_path == str(git_repo.parent / "myrepo-worktrees" / "wip")
 
@@ -169,9 +169,9 @@ def test_create_worktree_from_linked_worktree_anchors_at_main_repo(git_repo: Pat
 
     Resolving the repo root naively (``rev-parse --show-toplevel``) from a
     linked worktree would nest the new worktree under it
-    (``…/feature-a-worktrees/feature-b``). ``_main_work_tree`` resolves to
+    (``â€¦/feature-a-worktrees/feature-b``). ``_main_work_tree`` resolves to
     the main checkout so worktrees stay siblings
-    (``…/myrepo-worktrees/feature-b``) — the fork-resume picker prefills a
+    (``â€¦/myrepo-worktrees/feature-b``) â€” the fork-resume picker prefills a
     worktree as the source session's workspace, so this is the common path.
     """
     # First worktree, created off the main repo.
@@ -193,7 +193,7 @@ def test_create_worktree_from_linked_worktree_anchors_at_main_repo(git_repo: Pat
 
 def test_create_worktree_from_base_branch(git_repo: Path) -> None:
     """A worktree branches from the explicit base ref's tip, not HEAD."""
-    # Advance develop with its own commit so it differs from main —
+    # Advance develop with its own commit so it differs from main â€”
     # otherwise the test would pass even if base_branch were ignored
     # (both would resolve to the same single commit).
     _git(git_repo, "checkout", "-q", "-b", "develop")
@@ -206,7 +206,7 @@ def test_create_worktree_from_base_branch(git_repo: Path) -> None:
         repo_path=str(git_repo), branch_name="from-develop", base_branch="develop"
     )
     assert _current_branch(Path(created.worktree_path)) == "from-develop"
-    # Points at develop's tip, not main's — proves base_branch routed
+    # Points at develop's tip, not main's â€” proves base_branch routed
     # the new branch to develop rather than falling back to HEAD.
     assert _rev_parse(Path(created.worktree_path)) == _rev_parse(git_repo, "develop")
     assert _rev_parse(Path(created.worktree_path)) != _rev_parse(git_repo, "main")
@@ -235,12 +235,12 @@ def test_create_worktree_option_like_base_branch_not_executed(
     the ``--end-of-options`` argv terminators together keep such a value
     from creating a worktree. A regression that let ``"-f"`` through as a
     flag would build a worktree from the wrong base (and force-create it)
-    instead of failing — so the assertion below would see a linked
+    instead of failing â€” so the assertion below would see a linked
     worktree appear.
     """
     with pytest.raises(WorktreeError):
         create_worktree(repo_path=str(git_repo), branch_name="from-flag", base_branch=option_like)
-    # Still only the main work tree — no linked worktree was added, proving
+    # Still only the main work tree â€” no linked worktree was added, proving
     # git treated the value as a (rejected) rev rather than a flag that
     # would have run `worktree add`. If `-f` were parsed as --force, the
     # count would be 2.
@@ -261,7 +261,7 @@ def test_create_worktree_existing_branch_no_worktree_fails(git_repo: Path) -> No
     """A branch that exists WITHOUT a worktree is still rejected by the pre-check.
 
     Proves the pre-check keys off branch existence, not directory
-    occupancy — creating a worktree for a plain pre-existing branch
+    occupancy â€” creating a worktree for a plain pre-existing branch
     would otherwise hit git's raw error.
     """
     _git(git_repo, "branch", "preexisting")
@@ -289,7 +289,7 @@ def test_remove_worktree_deletes_dir_and_branch(git_repo: Path) -> None:
     # Directory gone (git worktree remove --force ran)...
     assert not Path(created.worktree_path).exists()
     # ...and the branch deleted (git branch -D ran, after the worktree
-    # was removed — git would refuse otherwise).
+    # was removed â€” git would refuse otherwise).
     assert not _branch_exists(git_repo, "feature/login")
 
 
@@ -300,7 +300,7 @@ def test_remove_worktree_keeps_branch_when_flag_false(git_repo: Path) -> None:
         worktree_path=created.worktree_path, branch="feature/keep", delete_branch=False
     )
     assert not Path(created.worktree_path).exists()
-    # Branch survives — only the checkout directory was removed.
+    # Branch survives â€” only the checkout directory was removed.
     assert _branch_exists(git_repo, "feature/keep")
 
 

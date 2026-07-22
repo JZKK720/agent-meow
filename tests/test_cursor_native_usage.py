@@ -20,7 +20,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow import cursor_native_usage as usage
+from omnigent import cursor_native_usage as usage
 
 # A representative cursor ``stop``-hook payload (live-captured field set).
 _TURN1 = {
@@ -127,7 +127,7 @@ class TestRecordUsageCli:
             [
                 sys.executable,
                 "-m",
-                "agent_meow.cursor_native_usage",
+                "omnigent.cursor_native_usage",
                 "record-usage",
                 "--bridge-dir",
                 str(tmp_path),
@@ -156,7 +156,7 @@ class TestUsageAccumulator:
         acc = usage._UsageAccumulator()
         line = usage.normalize_hook_payload(_TURN1)
         assert acc.add_line(line) is True  # type: ignore[arg-type]
-        assert acc.add_line(line) is False  # type: ignore[arg-type] — same gen id, ignored
+        assert acc.add_line(line) is False  # type: ignore[arg-type] â€” same gen id, ignored
         assert acc.output_tokens == 5  # not doubled
 
     def test_latest_model_wins(self) -> None:
@@ -405,7 +405,7 @@ class TestForwardLoop:
         second = _CtxRecordingClient()
         await _run_loop_until(monkeypatch, tmp_path, _idle_posts, client=second)
         await asyncio.sleep(0.1)
-        # Exactly one re-post — the single already-seen turn, not a loop.
+        # Exactly one re-post â€” the single already-seen turn, not a loop.
         assert len(_idle_posts(second)) == 1
 
     async def test_failed_post_is_not_persisted(
@@ -421,6 +421,6 @@ class TestForwardLoop:
             monkeypatch, tmp_path, lambda c: len(c.posts) >= 1, client=_FailingClient()
         )
         assert len(client.posts) >= 1  # it tried
-        # A failed flush must NOT advance persisted state — the turn stays unseen
+        # A failed flush must NOT advance persisted state â€” the turn stays unseen
         # so the next poll retries it (no silent loss).
         assert usage._read_usage_state(tmp_path).seen == set()

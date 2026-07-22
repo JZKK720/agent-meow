@@ -7,7 +7,7 @@ Covers:
   executor block, function-type tools).
 - Fail-loud behavior on unsupported concepts (policies,
   ``os_env``, MCP tools, ``cancellable_function`` tools).
-- Dispatch detection in :func:`~?agent_meow.spec.load`:
+- Dispatch detection in :func:`~?omnigent.spec.load`:
   agent-meow YAMLs route to the adapter; agent-meow YAMLs
   (identified by ``spec_version``) use the existing parser.
 
@@ -28,19 +28,19 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
-from agent_meow.spec import load
-from agent_meow.spec.omnigent import (
+from omnigent.errors import OmnigentError
+from omnigent.spec import load
+from omnigent.spec.omnigent import (
     OMNIGENT_EXECUTOR_TYPE,
     OMNIGENT_TOOL_LANGUAGE,
     agent_def_to_agent_spec,
 )
-from agent_meow.spec.types import AgentSpec
+from omnigent.spec.types import AgentSpec
 
 if TYPE_CHECKING:
-    from agent_meow.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import AgentDef
 
-# ── Fixtures ─────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -172,12 +172,12 @@ def mcp_tool_yaml(tmp_path: Path) -> Path:
     agent-meow YAML with a stdio MCP-type tool.
 
     Translated to an ``MCPServerConfig(transport="stdio",
-    command=..., args=...)`` by the adapter — the
+    command=..., args=...)`` by the adapter â€” the
     subprocess is later srt-wrapped (when available) by
-    :class:`~?agent_meow.tools.mcp.McpServerConnection`.
+    :class:`~?omnigent.tools.mcp.McpServerConnection`.
 
     Includes ``executor.harness`` so the synthesized AgentSpec
-    passes :mod:`~?agent_meow.spec.validator` — the adapter runs
+    passes :mod:`~?omnigent.spec.validator` â€” the adapter runs
     validation after translation and bails loud on missing
     required fields.
     """
@@ -189,7 +189,7 @@ def mcp_tool_yaml(tmp_path: Path) -> Path:
             "glean": {
                 "type": "mcp",
                 "command": ".venv/bin/python",
-                "args": ["-m", "agent_meow.inner.databricks_mcps.glean"],
+                "args": ["-m", "omnigent.inner.databricks_mcps.glean"],
             },
         },
     }
@@ -227,7 +227,7 @@ def mcp_http_tool_yaml(tmp_path: Path) -> Path:
 @pytest.fixture()
 def mcp_databricks_server_yaml(tmp_path: Path) -> Path:
     """
-    agent-meow YAML with the ``databricks_server`` MCP shape —
+    agent-meow YAML with the ``databricks_server`` MCP shape â€”
     agent-meow has no resolver for it, so the adapter rejects.
     """
     config = {
@@ -252,7 +252,7 @@ def cancellable_tool_yaml(tmp_path: Path) -> Path:
     """
     agent-meow YAML declaring a legacy ``cancellable_function``
     tool. Used to verify the adapter REJECTS this shape post-step
-    (c) — the runner protocol was retired in favor of plain
+    (c) â€” the runner protocol was retired in favor of plain
     callables dispatched via ``sys_call_async``.
     """
     config = {
@@ -297,7 +297,7 @@ def omnigent_spec_dir(tmp_path: Path) -> Path:
     return tmp_path
 
 
-# ── Translation: direct agent_def_to_agent_spec ──────────────
+# â”€â”€ Translation: direct agent_def_to_agent_spec â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_agent_def_to_agent_spec_hello_world(
@@ -308,18 +308,18 @@ def test_agent_def_to_agent_spec_hello_world(
     AgentSpec with name, instructions, spec_version=1, and
     executor.type='agent-meow'.
 
-    What breaks if this fails: the baseline phase 2 dispatch —
+    What breaks if this fails: the baseline phase 2 dispatch â€”
     ``agent-meow chat hello_world.yaml`` can't produce a valid spec
     without this path working.
     """
-    from agent_meow.inner.loader import load_agent_def
+    from omnigent.inner.loader import load_agent_def
 
     agent_def = load_agent_def(hello_world_yaml)
     spec = agent_def_to_agent_spec(agent_def)
 
     assert isinstance(spec, AgentSpec)
     assert spec.name == "hello_world"
-    # prompt → instructions verbatim.
+    # prompt â†’ instructions verbatim.
     assert spec.instructions == "You are a friendly assistant. Say hello."
     # spec_version is synthesized to the current agent-meow
     # schema version (no spec_version in agent-meow YAMLs).
@@ -368,7 +368,7 @@ def test_agent_def_to_agent_spec_executor_block(
     so every non-trivial agent-meow YAML routes to the wrong
     harness (or fails).
     """
-    from agent_meow.inner.loader import load_agent_def
+    from omnigent.inner.loader import load_agent_def
 
     agent_def = load_agent_def(executor_block_yaml)
     spec = agent_def_to_agent_spec(agent_def)
@@ -391,7 +391,7 @@ def test_agent_def_to_agent_spec_unknown_model_raises(
 ) -> None:
     """
     A YAML with a model that has no known harness prefix raises an
-    error — every agent must resolve to a named harness.
+    error â€” every agent must resolve to a named harness.
 
     :param tmp_path: Pytest-provided temporary directory.
     """
@@ -423,7 +423,7 @@ def test_agent_def_to_agent_spec_function_tool(
     the tool callable on the reverse trip, so the harness starts
     without its tools.
     """
-    from agent_meow.inner.loader import load_agent_def
+    from omnigent.inner.loader import load_agent_def
 
     agent_def = load_agent_def(function_tools_yaml)
     spec = agent_def_to_agent_spec(agent_def)
@@ -453,8 +453,8 @@ def test_agent_def_to_agent_spec_translates_catalog_path_tool(tmp_path: Path) ->
 
     :param tmp_path: Pytest temporary directory for the YAML fixture.
     """
-    from agent_meow.inner.loader import load_agent_def
-    from agent_meow.spec.types import ToolRuntime
+    from omnigent.inner.loader import load_agent_def
+    from omnigent.spec.types import ToolRuntime
 
     yaml_path = tmp_path / "uc.yaml"
     yaml_path.write_text(
@@ -502,7 +502,7 @@ def test_function_tool_parameters_derived_from_callable_signature(
     ``parameters`` block. Without this fallback, agent-meow
     YAMLs that point at plain Python functions ship to the LLM
     with empty parameters and the model invokes the tool with
-    zero arguments — surfacing as
+    zero arguments â€” surfacing as
     ``TypeError: <fn>() missing 1 required positional argument``
     when the harness dispatches the call.
 
@@ -515,12 +515,12 @@ def test_function_tool_parameters_derived_from_callable_signature(
         ``input_schema:`` block from YAML (the prior buggy
         behaviour); plain Python tools become unusable under
         agent-meow mode.
-      - The schema-derivation helper changes its output shape —
+      - The schema-derivation helper changes its output shape â€”
         e.g. drops ``required`` for keyword-only-with-default
         params, or starts emitting required entries for
         defaulted ones.
     """
-    from agent_meow.inner.loader import load_agent_def
+    from omnigent.inner.loader import load_agent_def
 
     agent_def = load_agent_def(function_tools_yaml)
     spec = agent_def_to_agent_spec(agent_def)
@@ -529,7 +529,7 @@ def test_function_tool_parameters_derived_from_callable_signature(
     assert tool.name == "get_current_time"
     # The fallback runs ``_schema_from_callable`` against
     # ``get_current_time``'s ``(timezone_name: str = "UTC")``
-    # signature. ``timezone_name`` has a default → not required,
+    # signature. ``timezone_name`` has a default â†’ not required,
     # but still must appear under ``properties``.
     assert tool.parameters is not None, (
         "parameters must be populated from the callable signature; "
@@ -543,14 +543,14 @@ def test_function_tool_parameters_derived_from_callable_signature(
         f"got properties={properties!r}"
     )
     assert properties["timezone_name"] == {"type": "string"}
-    # Defaulted param → not required.
+    # Defaulted param â†’ not required.
     required = tool.parameters.get("required", [])
     assert "timezone_name" not in required, (
         f"defaulted param leaked into 'required'; got {required!r}"
     )
 
 
-# ── Fail-loud: each unsupported concept gets its own test ─────
+# â”€â”€ Fail-loud: each unsupported concept gets its own test â”€â”€â”€â”€â”€
 
 
 def test_load_omnigent_yaml_missing_package_raises_with_install_hint(
@@ -561,7 +561,7 @@ def test_load_omnigent_yaml_missing_package_raises_with_install_hint(
     When the ``agent-meow`` package is not importable (e.g. agent-
     plane pip-installed standalone without the sibling agent-meow
     source on PYTHONPATH), loading an agent-meow YAML must surface
-    a friendly :class:`OmnigentError` with an install hint —
+    a friendly :class:`OmnigentError` with an install hint â€”
     not a bare ``ModuleNotFoundError`` from deep in the import
     machinery.
 
@@ -580,7 +580,7 @@ def test_load_omnigent_yaml_missing_package_raises_with_install_hint(
     import sys
 
     for mod_name in list(sys.modules):
-        if mod_name == "agent-meow" or mod_name.startswith("agent_meow."):
+        if mod_name == "agent-meow" or mod_name.startswith("omnigent."):
             monkeypatch.delitem(sys.modules, mod_name, raising=False)
 
     from collections.abc import Sequence
@@ -588,7 +588,7 @@ def test_load_omnigent_yaml_missing_package_raises_with_install_hint(
     from types import ModuleType
 
     class _OmnigentBlocker:
-        """Meta-path finder that refuses to resolve agent_meow."""
+        """Meta-path finder that refuses to resolve omnigent."""
 
         def find_spec(
             self,
@@ -597,7 +597,7 @@ def test_load_omnigent_yaml_missing_package_raises_with_install_hint(
             target: ModuleType | None = None,
         ) -> ModuleSpec | None:
             del path, target
-            if fullname == "agent-meow" or fullname.startswith("agent_meow."):
+            if fullname == "agent-meow" or fullname.startswith("omnigent."):
                 # Pretend the package doesn't exist at all.
                 raise ModuleNotFoundError(
                     f"No module named {fullname!r}",
@@ -630,28 +630,28 @@ def test_load_policies_yaml_lifts_into_guardrails(policies_yaml: Path) -> None:
     at runtime via the standard :class:`PolicyEngine`.
 
     What breaks if this fails: policies in an agent-meow YAML
-    either silently disappear (unsafe — agent runs without the
+    either silently disappear (unsafe â€” agent runs without the
     author's declared guardrails) or fail spec-load (regression
     to the pre-lift rejection path).
     """
-    from agent_meow.spec.types import FunctionPolicySpec
+    from omnigent.spec.types import FunctionPolicySpec
 
     spec = load(policies_yaml)
     assert spec.guardrails is not None
     assert spec.guardrails.policies is not None
-    # Exactly one policy survived — anything else would mean the
+    # Exactly one policy survived â€” anything else would mean the
     # translator accidentally duplicated or dropped.
     assert len(spec.guardrails.policies) == 1
     policy = spec.guardrails.policies[0]
     assert isinstance(policy, FunctionPolicySpec)
     assert policy.name == "block_foo"
-    # on: is ignored for function policies — callable self-selects.
+    # on: is ignored for function policies â€” callable self-selects.
     assert policy.on is None
     # The author's dotted callable path travels under the shim's
     # ``target`` argument so legacy ``(content, phase)`` callables
     # get adapted at policy-build time.
     assert policy.function is not None
-    assert policy.function.path == "agent_meow.spec._omnigent_legacy_shim.build"
+    assert policy.function.path == "omnigent.spec._omnigent_legacy_shim.build"
     assert policy.function.arguments == {
         "target": "tests.resources.examples._shared.tool_functions.block_long_sleep",
     }
@@ -664,8 +664,8 @@ def test_load_os_env_yaml_carries_through_top_level_field(
     A top-level ``os_env:`` block on an agent-meow YAML
     translates into an :class:`OSEnvSpec` dataclass stashed on
     ``AgentSpec.os_env`` (the native top-level field). The
-    dataclass flows by reference — no hand-rolled dict
-    serialization — because ``AgentSpec`` is never persisted
+    dataclass flows by reference â€” no hand-rolled dict
+    serialization â€” because ``AgentSpec`` is never persisted
     to disk on this path.
 
     What breaks if this fails: the adapter either regresses to
@@ -674,11 +674,11 @@ def test_load_os_env_yaml_carries_through_top_level_field(
     sub-agents has no concrete parent to resolve against and
     sub-agents boot without filesystem access.
     """
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     spec = load(os_env_yaml)
 
-    # The dataclass itself is what the adapter carries — a plain
+    # The dataclass itself is what the adapter carries â€” a plain
     # dict would mean the serializer re-appeared and the round
     # trip bakes in copy-overhead we don't need.
     assert isinstance(spec.os_env, OSEnvSpec), (
@@ -698,7 +698,7 @@ def test_load_mcp_stdio_yaml_translates_to_mcp_server(mcp_tool_yaml: Path) -> No
     agent-meow YAMLs declaring a subprocess MCP tool translate to
     a native ``MCPServerConfig(transport="stdio", ...)`` entry on
     ``AgentSpec.mcp_servers``. At runtime
-    :class:`~?agent_meow.tools.mcp.McpServerConnection` spawns the
+    :class:`~?omnigent.tools.mcp.McpServerConnection` spawns the
     subprocess, srt-wrapped when available.
 
     What breaks if this fails: the adapter regresses to the
@@ -715,7 +715,7 @@ def test_load_mcp_stdio_yaml_translates_to_mcp_server(mcp_tool_yaml: Path) -> No
     # Command + args carry through verbatim so the subprocess
     # spawn matches what legacy agent-meow ran.
     assert mcp.command == ".venv/bin/python"
-    assert mcp.args == ["-m", "agent_meow.inner.databricks_mcps.glean"]
+    assert mcp.args == ["-m", "omnigent.inner.databricks_mcps.glean"]
     # HTTP fields must stay None / empty on the stdio branch.
     assert mcp.url is None
     assert mcp.headers == {}
@@ -738,7 +738,7 @@ def test_load_mcp_http_yaml_translates_to_mcp_server(mcp_http_tool_yaml: Path) -
     assert mcp.name == "github"
     assert mcp.transport == "http"
     assert mcp.url == "https://mcp.example.com/sse"
-    # Headers carry through — provider-auth headers like
+    # Headers carry through â€” provider-auth headers like
     # Authorization must survive translation.
     assert mcp.headers == {"Authorization": "Bearer tok_xyz"}
     # Stdio fields stay empty on the http branch.
@@ -749,8 +749,8 @@ def test_load_mcp_http_yaml_translates_to_mcp_server(mcp_http_tool_yaml: Path) -
 
 def test_mcp_stdio_yaml_reverse_trip_recovers_mcp_tool(mcp_tool_yaml: Path) -> None:
     """
-    Forward + reverse round-trip: YAML → AgentSpec (with
-    MCPServerConfig) → AgentDef (with MCPTool). The reverse
+    Forward + reverse round-trip: YAML â†’ AgentSpec (with
+    MCPServerConfig) â†’ AgentDef (with MCPTool). The reverse
     path is what :meth:`OmnigentExecutor.from_spec` calls
     when wrapping an agent-meow spec for an agent-meow
     harness; a missing reverse translation drops every MCP
@@ -761,11 +761,11 @@ def test_mcp_stdio_yaml_reverse_trip_recovers_mcp_tool(mcp_tool_yaml: Path) -> N
     ``unsupported concept``) or silently drops the MCP tool
     (LLM sees no MCP tool, never calls it, agent returns
     "I don't have that tool"). Covers the exact regression
-    the live E2E test under tests/e2e/agent_meow/ guards
+    the live E2E test under tests/e2e/omnigent/ guards
     against.
     """
-    from agent_meow.inner.tools import MCPTool
-    from agent_meow.spec.omnigent import agent_spec_to_agent_def
+    from omnigent.inner.tools import MCPTool
+    from omnigent.spec.omnigent import agent_spec_to_agent_def
 
     spec = load(mcp_tool_yaml)
     agent_def = agent_spec_to_agent_def(spec)
@@ -778,19 +778,19 @@ def test_mcp_stdio_yaml_reverse_trip_recovers_mcp_tool(mcp_tool_yaml: Path) -> N
     # Transport fields round-trip: command + args must match the
     # originally-declared subprocess, not some lossy approximation.
     assert tool.command == ".venv/bin/python"
-    assert tool.args == ["-m", "agent_meow.inner.databricks_mcps.glean"]
+    assert tool.args == ["-m", "omnigent.inner.databricks_mcps.glean"]
 
 
 def test_load_mcp_databricks_server_yaml_raises(mcp_databricks_server_yaml: Path) -> None:
     """
     agent-meow MCP tools using the ``databricks_server=<name>``
-    shape fail loud — agent-meow' MCPServerConfig doesn't
+    shape fail loud â€” agent-meow' MCPServerConfig doesn't
     resolve named Databricks servers. The translator needs a
     concrete ``url`` or ``command`` to emit a functional config.
 
     What breaks if this fails: specs with
     ``databricks_server: unity-catalog`` would silently translate
-    to an MCPServerConfig with neither url nor command — the
+    to an MCPServerConfig with neither url nor command â€” the
     validator would then reject the spec at load, but with a
     less-helpful message than the pinpoint fail here.
     """
@@ -813,7 +813,7 @@ def test_load_cancellable_function_yaml_rejected_post_step_c(
 
     What breaks if this fails: either the adapter regresses to
     silently accept runner instances (the bug that motivated
-    step (c) — non-callable runner instances tripped the
+    step (c) â€” non-callable runner instances tripped the
     LocalCallableTool loader at runtime), or the migration
     hint disappears and users hit a confusing internal
     ``TypeError`` instead.
@@ -822,7 +822,7 @@ def test_load_cancellable_function_yaml_rejected_post_step_c(
         load(cancellable_tool_yaml)
 
 
-# ── Dispatch detection in agent_meow.spec.load ──────────────
+# â”€â”€ Dispatch detection in omnigent.spec.load â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_load_omnigent_yaml_routes_to_adapter(
@@ -881,7 +881,7 @@ def test_load_yaml_with_spec_version_not_routed_to_adapter(
     This case currently still fails (agent-meow YAML specs are
     directories, not files), but the dispatch MUST pick the
     non-agent-meow branch so the resulting error is an
-    agent-meow "dest is required" / parser error — NOT an
+    agent-meow "dest is required" / parser error â€” NOT an
     agent-meow adapter error. The assertion below verifies the
     error shape is NOT an omnigent-adapter error.
 
@@ -892,7 +892,7 @@ def test_load_yaml_with_spec_version_not_routed_to_adapter(
     config = {
         "spec_version": 1,
         "name": "hybrid",
-        "prompt": "Looks omnigent-y but is agent_meow.",
+        "prompt": "Looks omnigent-y but is omnigent.",
     }
     path = tmp_path / "hybrid.yaml"
     path.write_text(yaml.dump(config))
@@ -902,32 +902,32 @@ def test_load_yaml_with_spec_version_not_routed_to_adapter(
     # ``config.yaml``, not a single YAML file. ``load()`` rejects with
     # an actionable diagnostic. If detection were wrong, we'd get an
     # omnigent-adapter error (e.g. "missing system-prompt key")
-    # instead — the assertion below pins the agent-meow shape.
+    # instead â€” the assertion below pins the agent-meow shape.
     with pytest.raises(OmnigentError, match="spec_version"):
         load(path)
 
 
-# ── os_env propagation ───────────────────────────────────────
+# â”€â”€ os_env propagation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_cancellable_function_parameters_forward_trip_preserves_input_schema() -> None:
     """
     Forward: a :class:`CancellableFunctionTool` is rejected with
-    a clear migration message — the runner protocol was retired
+    a clear migration message â€” the runner protocol was retired
     in step (c) in favor of plain callables dispatched via
     ``sys_call_async``.
 
     **What breaks if this fails**: the adapter silently translates
-    runner-protocol tools (the bug that motivated step (c) — the
+    runner-protocol tools (the bug that motivated step (c) â€” the
     instance is non-callable, so ``LocalCallableTool`` trips at
     runtime with a confusing ``TypeError``). The fail-loud here
     catches the regression at translation time with an actionable
     message.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.inner.tools import CancellableFunctionTool
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import ExecutorSpec as OmniExecutorSpec
+    from omnigent.inner.tools import CancellableFunctionTool
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     seconds_schema = {
         "type": "object",
@@ -966,17 +966,17 @@ def test_function_tool_parameters_round_trip_preserves_input_schema(
     Step (c) made plain callables the only supported function-tool
     shape on the agent-meow path. Schema preservation matters because the
     inner harness's ``tool_schema()`` falls back to introspecting
-    the callable when ``input_schema`` is absent — fine for
+    the callable when ``input_schema`` is absent â€” fine for
     well-typed functions, but fragile for tools with non-trivial
     parameter shapes (Pydantic models, optional fields, etc.).
     Pinning the round-trip catches regressions where the
     translator drops ``parameters`` somewhere along the way.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.inner.tools import FunctionTool
-    from agent_meow.spec import omnigent as spec_omni
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import ExecutorSpec as OmniExecutorSpec
+    from omnigent.inner.tools import FunctionTool
+    from omnigent.spec import omnigent as spec_omni
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     seconds_schema = {
         "type": "object",
@@ -1010,12 +1010,12 @@ def test_function_tool_parameters_round_trip_preserves_input_schema(
     tool_info = spec.local_tools[0]
     assert tool_info.name == "sleep"
     assert tool_info.parameters == seconds_schema, (
-        "FunctionTool lost its input_schema on the forward trip — "
+        "FunctionTool lost its input_schema on the forward trip â€” "
         "the reverse trip will rebuild a no-args tool and the LLM will emit "
         "empty-argument tool calls."
     )
 
-    # Reverse trip — stub the dotted-path resolver since
+    # Reverse trip â€” stub the dotted-path resolver since
     # ``_stub_callable`` is a closure (not module-level) and
     # `_recover_callable_path` would have used the real qualname.
     monkeypatch.setattr(
@@ -1040,7 +1040,7 @@ class _StubCancellableRunner:
     """
 
     def start(self, args: dict[str, Any], on_complete: Any) -> None:
-        """Stub — never actually called by the tests above."""
+        """Stub â€” never actually called by the tests above."""
         raise NotImplementedError
 
 
@@ -1051,7 +1051,7 @@ _stub_runner_instance = _StubCancellableRunner()
 
 def test_os_env_round_trips_through_translator() -> None:
     """
-    ``AgentDef`` → ``AgentSpec`` → ``AgentDef`` preserves the
+    ``AgentDef`` â†’ ``AgentSpec`` â†’ ``AgentDef`` preserves the
     :class:`OSEnvSpec` dataclass by reference through the
     top-level ``AgentSpec.os_env`` field.
 
@@ -1061,15 +1061,15 @@ def test_os_env_round_trips_through_translator() -> None:
     without FS access) or crash (hand-rolled dict conversion
     reintroduced and lost a field).
     """
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         AgentDef,
         OSEnvSandboxSpec,
         OSEnvSpec,
     )
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         ExecutorSpec as OmniExecutorSpec,
     )
-    from agent_meow.spec.omnigent import (
+    from omnigent.spec.omnigent import (
         agent_def_to_agent_spec,
         agent_spec_to_agent_def,
     )
@@ -1097,7 +1097,7 @@ def test_os_env_round_trips_through_translator() -> None:
 
     spec = agent_def_to_agent_spec(original)
     # Reverse trip stores the dataclass by reference on the
-    # top-level field — not in executor.config.
+    # top-level field â€” not in executor.config.
     assert spec.os_env is original_os_env
     assert "os_env" not in spec.executor.config
 
@@ -1110,25 +1110,25 @@ def test_inline_agent_tool_inherit_resolves_to_parent_os_env() -> None:
     """
     An inline :class:`AgentTool` that declares
     ``os_env: "inherit"`` picks up the parent's concrete
-    :class:`OSEnvSpec` at translation time — agent-meow spawns
+    :class:`OSEnvSpec` at translation time â€” agent-meow spawns
     each sub-agent as an independent task with no live parent
     to consult at runtime.
 
     What breaks if this fails: ``coding_supervisor.yaml``-style
     sub-agents (``claude_worker: os_env: inherit``) boot with
     no OS environment and can't run shell/file tools against
-    the repo. The whole point of ``os_env: inherit`` — matching
-    legacy agent-meow semantics — silently breaks.
+    the repo. The whole point of ``os_env: inherit`` â€” matching
+    legacy agent-meow semantics â€” silently breaks.
     """
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         AgentDef,
         OSEnvSpec,
     )
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         ExecutorSpec as OmniExecutorSpec,
     )
-    from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.tools import AgentTool
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     parent_os_env = OSEnvSpec(type="caller_process", cwd=".")
     parent = AgentDef(
@@ -1160,7 +1160,7 @@ def test_inline_agent_tool_inherit_resolves_to_parent_os_env() -> None:
     # Parent still carries the original os_env by reference on
     # the top-level field.
     assert spec.os_env is parent_os_env
-    # The single sub-agent inherited it — ``inherit`` resolved
+    # The single sub-agent inherited it â€” ``inherit`` resolved
     # at translation time.
     assert len(spec.sub_agents) == 1
     sub = spec.sub_agents[0]
@@ -1172,19 +1172,19 @@ def test_inline_agent_tool_inherit_resolves_to_parent_os_env() -> None:
 def test_inline_agent_tool_concrete_os_env_not_overridden_by_parent() -> None:
     """
     An inline AgentTool that declares its own concrete
-    :class:`OSEnvSpec` is preserved — the ``inherit`` fallback
+    :class:`OSEnvSpec` is preserved â€” the ``inherit`` fallback
     only fires when the tool uses the string sentinel. Explicit
     always wins, same as the ``profile`` propagation rule.
     """
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         AgentDef,
         OSEnvSpec,
     )
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         ExecutorSpec as OmniExecutorSpec,
     )
-    from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.tools import AgentTool
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     parent_os_env = OSEnvSpec(type="caller_process", cwd=".")
     child_os_env = OSEnvSpec(type="caller_process", cwd="/tmp/sandbox")
@@ -1209,7 +1209,7 @@ def test_inline_agent_tool_concrete_os_env_not_overridden_by_parent() -> None:
     spec = agent_def_to_agent_spec(parent)
 
     sub = spec.sub_agents[0]
-    # The sub-agent's own os_env wins — parent's is NOT used.
+    # The sub-agent's own os_env wins â€” parent's is NOT used.
     assert sub.os_env is child_os_env
     assert sub.os_env is not parent_os_env
 
@@ -1217,22 +1217,22 @@ def test_inline_agent_tool_concrete_os_env_not_overridden_by_parent() -> None:
 def test_inline_agent_tool_inherit_with_no_parent_os_env_yields_none() -> None:
     """
     ``os_env: inherit`` with no parent os_env resolves to
-    ``None`` — matches legacy agent-meow behavior when the
+    ``None`` â€” matches legacy agent-meow behavior when the
     parent itself declares nothing. The sub-spec's
     ``executor.config`` omits the ``os_env`` key entirely so
     the forward trip rebuilds an ``AgentDef`` with
-    ``os_env=None`` (no FS access — same as the
+    ``os_env=None`` (no FS access â€” same as the
     commented-out ``coding_supervisor.yaml`` state the user
     experienced before this feature landed).
     """
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         AgentDef,
     )
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         ExecutorSpec as OmniExecutorSpec,
     )
-    from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.tools import AgentTool
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="supervisor",
@@ -1263,7 +1263,7 @@ def test_inline_agent_tool_inherit_with_no_parent_os_env_yields_none() -> None:
     )
 
 
-# ── instructions: field (cross-format parity) ────────────────
+# â”€â”€ instructions: field (cross-format parity) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_instructions_field_resolved_path_wins_over_prompt() -> None:
@@ -1271,7 +1271,7 @@ def test_instructions_field_resolved_path_wins_over_prompt() -> None:
     When an agent-meow YAML declares both ``prompt:`` and
     ``instructions: <path>``, the resolved instructions content
     wins on the AgentSpec. Translator precedence rule from
-    agent_meow/spec/agent_meow.py.
+    omnigent/spec/omnigent.py.
 
     What breaks if this fails: a user who writes
     ``instructions: AGENTS.md`` to point at a long external
@@ -1279,8 +1279,8 @@ def test_instructions_field_resolved_path_wins_over_prompt() -> None:
     compat, ends up with the placeholder instead of the real
     instructions.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     agent_def = AgentDef(
         name="instr-precedence",
@@ -1294,11 +1294,11 @@ def test_instructions_field_resolved_path_wins_over_prompt() -> None:
 def test_instructions_field_falls_back_to_prompt_when_unset() -> None:
     """
     When ``instructions:`` is absent (None), the translator falls
-    back to ``prompt:`` — preserves backward compat for every
+    back to ``prompt:`` â€” preserves backward compat for every
     agent-meow YAML written before the field existed.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     agent_def = AgentDef(name="prompt-only", prompt="just the prompt")
     spec = agent_def_to_agent_spec(agent_def)
@@ -1313,7 +1313,7 @@ def test_instructions_yaml_loads_through_full_pipeline(tmp_path: Path) -> None:
     spec whose ``instructions`` field carries the file's
     contents.
     """
-    from agent_meow.spec._omnigent_compat import load_omnigent_yaml
+    from omnigent.spec._omnigent_compat import load_omnigent_yaml
 
     yaml_path = tmp_path / "agent.yaml"
     yaml_path.write_text(
@@ -1329,7 +1329,7 @@ def test_instructions_yaml_loads_through_full_pipeline(tmp_path: Path) -> None:
     assert spec.instructions == "FROM AGENTS DOT MD"
 
 
-# ── Terminals threading (OMNIGENT_TERMINAL_BRIDGE §6.1) ────────────
+# â”€â”€ Terminals threading (OMNIGENT_TERMINAL_BRIDGE Â§6.1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_terminals_thread_through_translator() -> None:
@@ -1337,7 +1337,7 @@ def test_terminals_thread_through_translator() -> None:
     A top-level ``AgentDef.terminals`` dict is preserved under
     ``AgentSpec.terminals``. This is the load-bearing path that
     makes ``terminals:`` declarations in agent-meow YAML reach the
-    AP-side ``sys_terminal_*`` tools — the whole feature from
+    AP-side ``sys_terminal_*`` tools â€” the whole feature from
     ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` collapses if this breaks.
 
     What breaks if this fails: agent-meow YAMLs that declare
@@ -1346,16 +1346,16 @@ def test_terminals_thread_through_translator() -> None:
     register ``sys_terminal_*``, and the LLM gets a "tool not
     available" error mid-conversation.
     """
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         AgentDef,
         OSEnvSandboxSpec,
         OSEnvSpec,
         TerminalEnvSpec,
     )
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         ExecutorSpec as OmniExecutorSpec,
     )
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     bash_terminal = TerminalEnvSpec(
         command="bash",
@@ -1392,7 +1392,7 @@ def test_terminals_thread_through_translator() -> None:
     assert spec.terminals is not None
     assert set(spec.terminals.keys()) == {"bash", "claude"}
     # The TerminalEnvSpec dataclasses themselves are passed by
-    # reference — tools mutate via spec.terminals[name] and would
+    # reference â€” tools mutate via spec.terminals[name] and would
     # break if the translator deep-copied.
     assert spec.terminals["bash"] is bash_terminal
     assert spec.terminals["claude"] is claude_terminal
@@ -1403,16 +1403,16 @@ def test_terminals_none_when_parent_has_no_terminals() -> None:
     A parent without a ``terminals`` block produces
     ``AgentSpec.terminals=None`` (not ``{}``). The
     :class:`SysTerminalLaunchTool` checks
-    ``self._spec.terminals is None`` to short-circuit — an empty
+    ``self._spec.terminals is None`` to short-circuit â€” an empty
     dict would fail the ``is None`` check but still render the
     same "no terminals declared" semantics with a confusingly
     different error message.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import (
         ExecutorSpec as OmniExecutorSpec,
     )
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="no_terminals",
@@ -1437,7 +1437,7 @@ def test_inline_agent_tool_inherits_parent_terminals() -> None:
 
     Before: this test pinned the opposite behavior ("inline
     sub-agents must NOT inherit terminals"). That made the
-    supervisor pattern broken end-to-end — a parent that wanted
+    supervisor pattern broken end-to-end â€” a parent that wanted
     to delegate "open a shell and run X" to a worker had no way
     to grant the worker the launch capability, so workers
     either hallucinated tool calls or fell back to the
@@ -1449,25 +1449,25 @@ def test_inline_agent_tool_inherits_parent_terminals() -> None:
     ``parent_terminals=agent_def.terminals`` into the
     sub-spec's ``AgentSpec.terminals``. Each sub-agent runs
     in its OWN conversation, so its tmux sessions land in a
-    separate ``TerminalRegistry`` — there's no cross-agent
+    separate ``TerminalRegistry`` â€” there's no cross-agent
     session leak (the registry is keyed by ``conversation_id``).
     Sharing the terminal CONFIG (``bash: command bash``) is
     fine; what's isolated is the per-conversation session set
     those launches produce.
 
-    What breaks if this regresses: same as before — the
+    What breaks if this regresses: same as before â€” the
     sub-agent's ``ToolManager`` short-circuits the
     ``sys_terminal_*`` registration (see
-    ``agent_meow/tools/manager.py:426``) and the sub-agent has
+    ``omnigent/tools/manager.py:426``) and the sub-agent has
     no way to launch a terminal even though the parent has one
     configured. The supervisor pattern stops working again.
     """
-    from agent_meow.inner.datamodel import AgentDef, TerminalEnvSpec
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import AgentDef, TerminalEnvSpec
+    from omnigent.inner.datamodel import (
         ExecutorSpec as OmniExecutorSpec,
     )
-    from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.tools import AgentTool
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="supervisor",
@@ -1499,13 +1499,13 @@ def test_inline_agent_tool_inherits_parent_terminals() -> None:
         "sys_terminal_* and the sub-agent has a path to launch."
     )
     assert "bash" in sub.terminals
-    # Verify it's a clone, not the same dict — mutations on
+    # Verify it's a clone, not the same dict â€” mutations on
     # the sub-spec mustn't leak back into the parent's
     # declaration.
     assert sub.terminals is not spec.terminals
 
 
-# ── Harness auto-pick (Gap 1) ─────────────────────────────────
+# â”€â”€ Harness auto-pick (Gap 1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -1528,7 +1528,7 @@ def test_harness_auto_picks_from_model_prefix(
     When an agent-meow YAML declares a model but no harness,
     the adapter fills in the right harness by matching the
     model prefix against
-    :data:`~?agent_meow.spec.agent_meow._HARNESS_FOR_MODEL_PREFIX`.
+    :data:`~?omnigent.spec.omnigent._HARNESS_FOR_MODEL_PREFIX`.
 
     Mirrors the auto-pick pure agent-meow' CLI does at
     ``create_executor`` time, so YAMLs that relied on the
@@ -1540,9 +1540,9 @@ def test_harness_auto_picks_from_model_prefix(
     ``executor.config.harness: required`` error at spec-load,
     blocking the entire agent-meow path.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import ExecutorSpec as OmniExecutorSpec
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     agent_def = AgentDef(
         name="auto_pick_probe",
@@ -1561,12 +1561,12 @@ def test_harness_auto_picks_from_model_prefix(
 def test_harness_auto_pick_doesnt_override_explicit_declaration() -> None:
     """
     When the YAML explicitly declares a harness, auto-pick must
-    NOT override it. Explicit always wins — same precedence
+    NOT override it. Explicit always wins â€” same precedence
     rule as the profile and os_env fallbacks.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import ExecutorSpec as OmniExecutorSpec
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     agent_def = AgentDef(
         name="explicit_probe",
@@ -1580,23 +1580,23 @@ def test_harness_auto_pick_doesnt_override_explicit_declaration() -> None:
     spec = agent_def_to_agent_spec(agent_def)
     assert spec.executor.config["harness"] == "openai-agents", (
         "Explicit harness in the YAML was overridden by auto-pick "
-        "— auto-pick must only fill in *missing* harness values."
+        "â€” auto-pick must only fill in *missing* harness values."
     )
 
 
 def test_harness_auto_pick_unknown_model_raises() -> None:
     """
     A model string that doesn't match any harness prefix raises
-    at translation time — every agent must resolve to a named
+    at translation time â€” every agent must resolve to a named
     harness.
 
     :raises OmnigentError: With a message explaining that the
         model could not be mapped to a harness.
     """
-    from agent_meow.errors import OmnigentError
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.errors import OmnigentError
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import ExecutorSpec as OmniExecutorSpec
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     agent_def = AgentDef(
         name="unknown_probe",
@@ -1608,7 +1608,7 @@ def test_harness_auto_pick_unknown_model_raises() -> None:
         agent_def_to_agent_spec(agent_def)
 
 
-# ── Parent-to-inline harness propagation (Gap 2) ───────────
+# â”€â”€ Parent-to-inline harness propagation (Gap 2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_inline_agent_tool_without_executor_inherits_parent_harness() -> None:
@@ -1627,10 +1627,10 @@ def test_inline_agent_tool_without_executor_inherits_parent_harness() -> None:
     with ``sub_agents[...].executor.config.harness: required``
     before any LLM request.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import ExecutorSpec as OmniExecutorSpec
+    from omnigent.inner.tools import AgentTool
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="supervisor",
@@ -1662,10 +1662,10 @@ def test_inline_agent_tool_explicit_harness_wins_over_parent() -> None:
     When the inline AgentTool declares its own harness, parent
     inheritance must NOT override it. Explicit always wins.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import ExecutorSpec as OmniExecutorSpec
+    from omnigent.inner.tools import AgentTool
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="supervisor",
@@ -1697,10 +1697,10 @@ def test_inline_agent_tool_falls_through_to_model_auto_pick() -> None:
     When neither the child NOR the parent declares a harness,
     the adapter's model-prefix auto-pick still fires.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
-    from agent_meow.inner.tools import AgentTool
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import ExecutorSpec as OmniExecutorSpec
+    from omnigent.inner.tools import AgentTool
+    from omnigent.spec.omnigent import agent_def_to_agent_spec
 
     parent = AgentDef(
         name="supervisor",
@@ -1725,7 +1725,7 @@ def test_inline_agent_tool_falls_through_to_model_auto_pick() -> None:
     )
 
 
-# ── Policy translation (agent-meow YAML → GuardrailsSpec) ────
+# â”€â”€ Policy translation (agent-meow YAML â†’ GuardrailsSpec) â”€â”€â”€â”€
 #
 # These tests exercise the raw-YAML-based translator
 # (:func:`_translate_guardrails_yaml` and its dispatch helpers).
@@ -1736,22 +1736,22 @@ def test_inline_agent_tool_falls_through_to_model_auto_pick() -> None:
 # shape the runtime :class:`PolicyEngine` needs.
 #
 # The ``AgentDef`` side is built manually (not through
-# :func:`~?agent_meow.loader.load_agent_def`) because the loader
+# :func:`~?omnigent.loader.load_agent_def`) because the loader
 # compiles label-policy YAML into synthetic FunctionPolicy
-# callables — for translator unit tests we want to bypass that
+# callables â€” for translator unit tests we want to bypass that
 # and drive the translator directly.
 
 
 class _AgentDefYamlPair(NamedTuple):
     """
-    Two-value bundle for policy-translator tests — an
+    Two-value bundle for policy-translator tests â€” an
     :class:`AgentDef` and the raw YAML dict it was built from.
 
     Kept as a :class:`typing.NamedTuple` rather than a dataclass
     (per the project's "one opaque value" exception in the no-tuple-
     return rule) so existing callsites can keep ``agent_def,
     raw_yaml = _build_agent_def_with_raw_yaml(...)`` destructuring
-    — the pair is conceptually a single "spec fixture" handed to
+    â€” the pair is conceptually a single "spec fixture" handed to
     ``agent_def_to_agent_spec(raw_yaml=...)``.
     """
 
@@ -1772,7 +1772,7 @@ def _build_agent_def_with_raw_yaml(
     The two objects are the shape production callers pass to
     :func:`agent_def_to_agent_spec`: an AgentDef parsed by the
     agent-meow loader (here stubbed with an empty ``policies``
-    registry so the fail-loud path is irrelevant — the real
+    registry so the fail-loud path is irrelevant â€” the real
     translator consumes ``raw_yaml`` for policy fields anyway)
     and the raw YAML dict read alongside.
 
@@ -1786,8 +1786,8 @@ def _build_agent_def_with_raw_yaml(
     :returns: Tuple of (AgentDef with a valid executor, raw
         YAML dict suitable for the ``raw_yaml`` kwarg).
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import ExecutorSpec as OmniExecutorSpec
 
     agent_def = AgentDef(
         name="polled",
@@ -1819,19 +1819,19 @@ def test_function_policy_routes_callable_through_legacy_shim() -> None:
 
     The indirection exists so author callables written with the
     legacy agent-meow ``(content, phase)`` convention keep
-    working under agent-meow' ``(ctx, context)`` convention —
-    see ``agent_meow.spec._omnigent_legacy_shim``. The shim
+    working under agent-meow' ``(ctx, context)`` convention â€”
+    see ``omnigent.spec._omnigent_legacy_shim``. The shim
     is a runtime no-op for omnigent-native callables, so
     routing everything through it is safe.
 
     What breaks if this fails: either the translator regresses
     to emitting the raw callable path (legacy callables silently
-    stop working — e.g. ``block_long_sleep`` lets every sleep
+    stop working â€” e.g. ``block_long_sleep`` lets every sleep
     through), or the shim target gets mangled and the
     ``importlib.import_module`` call inside ``build()`` can't
     find the author's callable.
     """
-    from agent_meow.spec.types import FunctionPolicySpec
+    from omnigent.spec.types import FunctionPolicySpec
 
     agent_def, raw_yaml = _build_agent_def_with_raw_yaml(
         policies={
@@ -1850,16 +1850,16 @@ def test_function_policy_routes_callable_through_legacy_shim() -> None:
     assert isinstance(policy, FunctionPolicySpec)
     assert policy.name == "block_sleep"
     assert policy.function is not None
-    # Factory path is the shim — exact string so a typo in the
+    # Factory path is the shim â€” exact string so a typo in the
     # translator can't route to some other builder silently.
-    assert policy.function.path == "agent_meow.spec._omnigent_legacy_shim.build"
+    assert policy.function.path == "omnigent.spec._omnigent_legacy_shim.build"
     # The author's original callable travels in factory arguments under
     # the ``target`` key; no ``factory_kwargs`` because the YAML didn't
     # declare ``factory_params``.
     assert policy.function.arguments == {
         "target": "tests.resources.examples._shared.tool_functions.block_long_sleep",
     }
-    # on: is ignored for function policies — callable self-selects.
+    # on: is ignored for function policies â€” callable self-selects.
     assert policy.on is None
 
 
@@ -1872,10 +1872,10 @@ def test_function_policy_with_factory_params_routes_through_legacy_shim() -> Non
 
     What breaks if this fails: factory kwargs silently vanish
     and closure-state policies (rate limits, budgets, etc.)
-    revert to their defaults — the policy still loads but
+    revert to their defaults â€” the policy still loads but
     enforces nothing useful.
     """
-    from agent_meow.spec.types import FunctionPolicySpec
+    from omnigent.spec.types import FunctionPolicySpec
 
     agent_def, raw_yaml = _build_agent_def_with_raw_yaml(
         policies={
@@ -1895,7 +1895,7 @@ def test_function_policy_with_factory_params_routes_through_legacy_shim() -> Non
     policy = spec.guardrails.policies[0]
     assert isinstance(policy, FunctionPolicySpec)
     assert policy.function is not None
-    assert policy.function.path == "agent_meow.spec._omnigent_legacy_shim.build"
+    assert policy.function.path == "omnigent.spec._omnigent_legacy_shim.build"
     # Both the original target AND the factory kwargs are
     # preserved byte-for-byte on the arguments dict.
     assert policy.function.arguments == {
@@ -1915,10 +1915,10 @@ def test_function_policy_callable_alias_resolves_identically_to_handler() -> Non
 
     What breaks if this fails: loading any old-format YAML raises
     ``"function policies require a function: field"`` and the agent
-    refuses to start — the user has no path to run their agent without
+    refuses to start â€” the user has no path to run their agent without
     manually editing every stored YAML.
     """
-    from agent_meow.spec.types import FunctionPolicySpec
+    from omnigent.spec.types import FunctionPolicySpec
 
     agent_def, raw_yaml = _build_agent_def_with_raw_yaml(
         policies={
@@ -1937,7 +1937,7 @@ def test_function_policy_callable_alias_resolves_identically_to_handler() -> Non
     assert isinstance(policy, FunctionPolicySpec)
     assert policy.name == "block_sleep"
     assert policy.function is not None
-    assert policy.function.path == "agent_meow.spec._omnigent_legacy_shim.build"
+    assert policy.function.path == "omnigent.spec._omnigent_legacy_shim.build"
     assert policy.function.arguments == {
         "target": "tests.resources.examples._shared.tool_functions.block_long_sleep",
     }
@@ -1952,7 +1952,7 @@ def test_function_policy_callable_alias_with_factory_params() -> None:
     factory kwargs (e.g. ``read_all: true``) silently lose their
     configuration and revert to defaults.
     """
-    from agent_meow.spec.types import FunctionPolicySpec
+    from omnigent.spec.types import FunctionPolicySpec
 
     agent_def, raw_yaml = _build_agent_def_with_raw_yaml(
         policies={
@@ -1972,7 +1972,7 @@ def test_function_policy_callable_alias_with_factory_params() -> None:
     policy = spec.guardrails.policies[0]
     assert isinstance(policy, FunctionPolicySpec)
     assert policy.function is not None
-    assert policy.function.path == "agent_meow.spec._omnigent_legacy_shim.build"
+    assert policy.function.path == "omnigent.spec._omnigent_legacy_shim.build"
     assert policy.function.arguments == {
         "target": "tests.resources.examples._shared.rate_limit_policy.max_tool_calls_per_turn",
         "factory_kwargs": {"limit": 5},
@@ -1991,8 +1991,8 @@ def test_databricks_slash_model_without_profile_leaves_connection_none() -> None
     (no ``--profile`` flag) suddenly get a spec-load error because the
     translator tries to resolve a profile that was never set.
     """
-    from agent_meow.inner.datamodel import AgentDef
-    from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
+    from omnigent.inner.datamodel import AgentDef
+    from omnigent.inner.datamodel import ExecutorSpec as OmniExecutorSpec
 
     agent_def = AgentDef(
         name="slash_model_no_profile",
@@ -2005,7 +2005,7 @@ def test_databricks_slash_model_without_profile_leaves_connection_none() -> None
     )
     spec = agent_def_to_agent_spec(agent_def, raw_yaml=None)
     assert spec.llm is not None
-    # No profile → no connection injection; adapter auto-resolves at call time.
+    # No profile â†’ no connection injection; adapter auto-resolves at call time.
     assert spec.llm.connection is None
 
 
@@ -2016,7 +2016,7 @@ def test_labels_and_schema_merge() -> None:
     :attr:`GuardrailsSpec.labels` as :class:`LabelDef` entries.
 
     What breaks if this fails: the workflow runs with the wrong
-    schema — initial value lost or the label missing entirely.
+    schema â€” initial value lost or the label missing entirely.
     """
     agent_def, raw_yaml = _build_agent_def_with_raw_yaml(
         labels={"confidentiality": "0", "integrity": "1"},
@@ -2064,7 +2064,7 @@ def test_no_policies_no_guardrails_block() -> None:
     """
     An agent-meow YAML without any policies/labels/ask_timeout
     produces a spec with ``guardrails=None``, matching the
-    zero-policy case documented in POLICIES.md §10.
+    zero-policy case documented in POLICIES.md Â§10.
 
     What breaks if this fails: agent-meow would instantiate a
     non-trivial :class:`PolicyEngine` for a guardrail-free spec,
@@ -2082,17 +2082,17 @@ def test_executor_extra_field_propagates_to_llm_config() -> None:
     produces an :class:`AgentSpec` whose ``llm.extra`` carries
     those kwargs byte-for-byte.
 
-    The downstream chain (``OmnigentExecutor.run_turn`` →
-    ``OmniExecutorConfig.extra`` → ``cfg.extra.get("max_turns")``
+    The downstream chain (``OmnigentExecutor.run_turn`` â†’
+    ``OmniExecutorConfig.extra`` â†’ ``cfg.extra.get("max_turns")``
     in the per-harness executor) then reads these kwargs at
     runtime. This field is not part of the agent-meow
-    ``ExecutorSpec`` dataclass — the loader drops it — so we
+    ``ExecutorSpec`` dataclass â€” the loader drops it â€” so we
     read it from the raw YAML here.
 
     What breaks if this fails: agent authors lose the ability to
     override per-harness knobs (``max_turns``, ``temperature``,
     ``parallel_tool_calls``, etc.) through the agent-meow path, even
-    though those knobs work fine via legacy agent_meow. Makes
+    though those knobs work fine via legacy omnigent. Makes
     agent-meow mode a downgrade rather than a compatible integration.
     """
     agent_def, raw_yaml = _build_agent_def_with_raw_yaml()
@@ -2125,7 +2125,7 @@ def test_use_responses_false_propagates_to_executor_config() -> None:
     ``spec.executor.config["use_responses"]`` as ``False`` after
     ``agent_def_to_agent_spec``.
 
-    The inner ``ExecutorSpec`` dataclass (``agent_meow.inner.datamodel``)
+    The inner ``ExecutorSpec`` dataclass (``omnigent.inner.datamodel``)
     has no ``use_responses`` field, so the agent-meow YAML loader silently
     drops it. We must read it from the raw YAML dict and carry it forward
     explicitly.
@@ -2134,7 +2134,7 @@ def test_use_responses_false_propagates_to_executor_config() -> None:
     ``spec.executor.config.get("use_responses")`` is ``None``, so it skips
     setting ``HARNESS_OPENAI_AGENTS_USE_RESPONSES``. The harness subprocess
     then defaults to ``use_responses=True`` (Responses API), which Databricks
-    does not support for models like Kimi K2 — the REPL shows no response.
+    does not support for models like Kimi K2 â€” the REPL shows no response.
     """
     agent_def, raw_yaml = _build_agent_def_with_raw_yaml()
     raw_yaml["executor"] = {
@@ -2151,7 +2151,7 @@ def test_use_responses_true_propagates_to_executor_config() -> None:
     ``use_responses: true`` similarly propagates as ``True``.
 
     Complement of ``test_use_responses_false_propagates_to_executor_config``
-    — verifies both boolean values are preserved exactly, not coerced.
+    â€” verifies both boolean values are preserved exactly, not coerced.
     """
     agent_def, raw_yaml = _build_agent_def_with_raw_yaml()
     raw_yaml["executor"] = {
@@ -2188,7 +2188,7 @@ def test_unknown_policy_type_rejected_with_clear_message() -> None:
 
     What breaks if this fails: the translator either silently
     drops the policy or produces an error deep in the
-    downstream parser — authors can't tell which YAML key broke.
+    downstream parser â€” authors can't tell which YAML key broke.
     """
     agent_def, raw_yaml = _build_agent_def_with_raw_yaml(
         policies={
@@ -2203,7 +2203,7 @@ def test_unknown_policy_type_rejected_with_clear_message() -> None:
     assert "regex" in str(exc_info.value)
 
 
-# ── Self-clone sub-agent (`tools.<name>: self` and `spec: self`) ──
+# â”€â”€ Self-clone sub-agent (`tools.<name>: self` and `spec: self`) â”€â”€
 
 
 def test_self_clone_string_shorthand_loader_produces_selfagent_tool(
@@ -2216,11 +2216,11 @@ def test_self_clone_string_shorthand_loader_produces_selfagent_tool(
 
     What breaks if this fails: the translator's isinstance
     dispatch can't find a self-clone branch and the sub-agent
-    silently becomes a default-everything AgentTool — the
+    silently becomes a default-everything AgentTool â€” the
     cloned-from-parent behavior is lost.
     """
-    from agent_meow.inner.loader import load_agent_def
-    from agent_meow.inner.tools import SelfAgentTool
+    from omnigent.inner.loader import load_agent_def
+    from omnigent.inner.tools import SelfAgentTool
 
     yaml_path = tmp_path / "agent.yaml"
     yaml_path.write_text(
@@ -2257,8 +2257,8 @@ def test_self_clone_dict_form_loader_produces_selfagent_tool(
     translator would build a default sub-agent instead of
     cloning the parent.
     """
-    from agent_meow.inner.loader import load_agent_def
-    from agent_meow.inner.tools import SelfAgentTool
+    from omnigent.inner.loader import load_agent_def
+    from omnigent.inner.tools import SelfAgentTool
 
     yaml_path = tmp_path / "agent.yaml"
     yaml_path.write_text(
@@ -2297,11 +2297,11 @@ def test_self_clone_dict_form_rejects_conflicting_overrides(
 
     What breaks if this fails: silently ignoring an override
     field would let an author write a partial-override-on-clone
-    that doesn't actually do anything — confusing UX. The error
+    that doesn't actually do anything â€” confusing UX. The error
     message names the conflicting field so the author can fix
     the YAML.
     """
-    from agent_meow.inner.loader import load_agent_def
+    from omnigent.inner.loader import load_agent_def
 
     yaml_path = tmp_path / "agent.yaml"
     yaml_path.write_text(
@@ -2317,7 +2317,7 @@ def test_self_clone_dict_form_rejects_conflicting_overrides(
                     "subtask": {
                         "type": "agent",
                         "spec": "self",
-                        # Conflicting field — should fail loudly:
+                        # Conflicting field â€” should fail loudly:
                         "prompt": "I want my own prompt.",
                     },
                 },
@@ -2338,7 +2338,7 @@ def test_agent_def_to_agent_spec_self_clone_propagates_parent_config(
 ) -> None:
     """
     Translating an agent-meow YAML with ``tools.subtask: self``
-    produces a sub-agent spec that's a clone of the parent —
+    produces a sub-agent spec that's a clone of the parent â€”
     same model, harness, instructions, executor type. The
     parent's ``tools.agents`` lists the sub-agent's name so the
     LLM can dispatch to it via ``sys_session_send(agent="subtask",
@@ -2347,10 +2347,10 @@ def test_agent_def_to_agent_spec_self_clone_propagates_parent_config(
     What breaks if this fails: the LLM either can't see the
     sub-agent (it's missing from ``tools.agents``) OR the
     sub-agent runs with default-everything rather than
-    inheriting the parent's harness/model/prompt — both render
+    inheriting the parent's harness/model/prompt â€” both render
     self-clone unusable in practice.
     """
-    from agent_meow.inner.loader import load_agent_def
+    from omnigent.inner.loader import load_agent_def
 
     yaml_path = tmp_path / "agent.yaml"
     yaml_path.write_text(
@@ -2375,7 +2375,7 @@ def test_agent_def_to_agent_spec_self_clone_propagates_parent_config(
     agent_def = load_agent_def(yaml_path)
     spec = agent_def_to_agent_spec(agent_def)
 
-    # Parent surface — sub-agent listed for sys_session_send dispatch.
+    # Parent surface â€” sub-agent listed for sys_session_send dispatch.
     assert spec.tools.agents == ["subtask"]
     assert len(spec.sub_agents) == 1
 
@@ -2397,7 +2397,7 @@ def test_agent_def_to_agent_spec_self_clone_recursion_guard(
     tmp_path: Path,
 ) -> None:
     """
-    The cloned sub-spec does NOT carry its own self-clone tool —
+    The cloned sub-spec does NOT carry its own self-clone tool â€”
     parser-time recursion is bounded to one level via
     :func:`_self_agent_tool_to_sub_spec`'s strip-then-recurse
     pattern.
@@ -2412,7 +2412,7 @@ def test_agent_def_to_agent_spec_self_clone_recursion_guard(
     workflow ``max_iterations``, not by this guard. This test
     pins the parse-time invariant only.
     """
-    from agent_meow.inner.loader import load_agent_def
+    from omnigent.inner.loader import load_agent_def
 
     yaml_path = tmp_path / "agent.yaml"
     yaml_path.write_text(
@@ -2449,14 +2449,14 @@ def test_compat_yaml_executor_auth_is_not_dropped(tmp_path: Path) -> None:
     with ``executor.auth = None``, causing it to fall through to the
     global config default (wrong credentials silently).
 
-    Uses ``load_omnigent_yaml`` — the real production entry point — so
+    Uses ``load_omnigent_yaml`` â€” the real production entry point â€” so
     the ``raw_yaml`` dict is passed through correctly (same as the real
     CLI path does).
 
     :param tmp_path: Temporary directory for the test YAML.
     """
-    from agent_meow.spec._omnigent_compat import load_omnigent_yaml
-    from agent_meow.spec.types import DatabricksAuth
+    from omnigent.spec._omnigent_compat import load_omnigent_yaml
+    from omnigent.spec.types import DatabricksAuth
 
     yaml_path = tmp_path / "agent_with_auth.yaml"
     yaml_path.write_text(
@@ -2475,7 +2475,7 @@ def test_compat_yaml_executor_auth_is_not_dropped(tmp_path: Path) -> None:
 
     spec = load_omnigent_yaml(yaml_path)
 
-    # auth must survive the compat translation — not silently dropped.
+    # auth must survive the compat translation â€” not silently dropped.
     assert isinstance(spec.executor.auth, DatabricksAuth), (
         "executor.auth was not parsed from the compat YAML; "
         "the agent would silently fall through to global config credentials."
@@ -2485,16 +2485,16 @@ def test_compat_yaml_executor_auth_is_not_dropped(tmp_path: Path) -> None:
 
 def test_compat_yaml_executor_api_key_auth_is_not_dropped(tmp_path: Path) -> None:
     """
-    ``executor.auth: {type: api_key, …}`` in an omnigent-compat YAML is
+    ``executor.auth: {type: api_key, â€¦}`` in an omnigent-compat YAML is
     preserved on the resulting :class:`ExecutorSpec`.
 
-    Uses ``load_omnigent_yaml`` — the real production entry point — so
+    Uses ``load_omnigent_yaml`` â€” the real production entry point â€” so
     the ``raw_yaml`` dict is passed through correctly.
 
     :param tmp_path: Temporary directory for the test YAML.
     """
-    from agent_meow.spec._omnigent_compat import load_omnigent_yaml
-    from agent_meow.spec.types import ApiKeyAuth
+    from omnigent.spec._omnigent_compat import load_omnigent_yaml
+    from omnigent.spec.types import ApiKeyAuth
 
     yaml_path = tmp_path / "agent_api_key.yaml"
     yaml_path.write_text(

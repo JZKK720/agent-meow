@@ -1,8 +1,8 @@
-"""Tests for :mod:`~?agent_meow.onboarding.gemini_auth`.
+"""Tests for :mod:`~?omnigent.onboarding.gemini_auth`.
 
-Covers both real ``agy`` token formats — macOS ``oauth_creds.json``
+Covers both real ``agy`` token formats â€” macOS ``oauth_creds.json``
 (``access_token`` / ``refresh_token``) and Linux
-``antigravity-cli/antigravity-oauth-token`` (``{auth_method, token}``) — and the
+``antigravity-cli/antigravity-oauth-token`` (``{auth_method, token}``) â€” and the
 dual-path default that recognizes a logged-in user on either platform. The
 Linux shape was confirmed live against agy 1.0.10 on k3s.
 """
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.onboarding import gemini_auth as ga
+from omnigent.onboarding import gemini_auth as ga
 
 
 def _write(path: Path, payload: object) -> Path:
@@ -34,7 +34,7 @@ def test_macos_oauth_creds_format_detected(tmp_path: Path) -> None:
 
 def test_linux_antigravity_token_format_detected(tmp_path: Path) -> None:
     """The Linux ``antigravity-oauth-token`` shape (``{auth_method, token}``) is a
-    usable login — the real agy 1.0.10 Linux format (verified on k3s). The old
+    usable login â€” the real agy 1.0.10 Linux format (verified on k3s). The old
     ``access_token``/``refresh_token``-only check missed this and falsely read
     the deploy target as not-logged-in.
     """
@@ -61,7 +61,7 @@ def test_refresh_token_only_detected(tmp_path: Path) -> None:
 
 def test_flat_token_survives_nondict_token_field(tmp_path: Path) -> None:
     """A valid top-level ``access_token`` is honored even when a sibling
-    ``token`` field is a (non-dict) string — the nested-scan guard must not
+    ``token`` field is a (non-dict) string â€” the nested-scan guard must not
     shadow the flat credential.
     """
     creds = _write(
@@ -106,7 +106,7 @@ def test_default_checks_both_platform_paths(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """With no explicit path, detection succeeds when EITHER platform location
-    carries a token — so a logged-in Linux host (token only at
+    carries a token â€” so a logged-in Linux host (token only at
     ``antigravity-cli/antigravity-oauth-token``, no ``oauth_creds.json``) is
     recognized. This is the deploy-target case the old single-path check broke.
     """
@@ -114,16 +114,16 @@ def test_default_checks_both_platform_paths(
     linux = tmp_path / "antigravity-cli" / "antigravity-oauth-token"
     monkeypatch.setattr(ga, "GEMINI_OAUTH_CRED_PATHS", (macos, linux))
 
-    # Neither present → not logged in.
+    # Neither present â†’ not logged in.
     assert ga.gemini_auth_has_credential() is False
     assert ga.gemini_login_detected() is False
 
-    # Only the Linux-format token present → logged in.
+    # Only the Linux-format token present â†’ logged in.
     _write(linux, {"auth_method": "oauth", "token": {"access_token": "ya29.linux"}})
     assert ga.gemini_auth_has_credential() is True
     assert ga.gemini_login_detected() is True
 
-    # Symmetrically: only the macOS-format file present → logged in.
+    # Symmetrically: only the macOS-format file present â†’ logged in.
     linux.unlink()
     _write(macos, {"access_token": "ya29.macos"})
     assert ga.gemini_login_detected() is True

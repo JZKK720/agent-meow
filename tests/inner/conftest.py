@@ -175,7 +175,7 @@ _OPENAI_CYBER_POLICY_HARNESSES = frozenset({"openai-agents", "codex"})
 @pytest.fixture(autouse=True)
 def _capture_codex_executor_diag(caplog: pytest.LogCaptureFixture) -> None:
     """Lower threshold so codex executor diag logs appear in junit failure reports."""
-    caplog.set_level(logging.INFO, logger="agent_meow.inner.codex_executor")
+    caplog.set_level(logging.INFO, logger="omnigent.inner.codex_executor")
 
 
 @pytest.fixture(autouse=True)

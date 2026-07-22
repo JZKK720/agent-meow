@@ -6,7 +6,7 @@ Reproduces the user-reported scenario verbatim:
 
 1. Spawn ``agent-meow run examples/rate_limited_search_agent.yaml``
    under a real PTY (Databricks routing via the credentials env).
-2. Send a prompt that asks for 4 web searches — the policy ALLOWs
+2. Send a prompt that asks for 4 web searches â€” the policy ALLOWs
    the first 3 and ASKs on the 4th.
 3. Wait for the ``approval required`` banner.
 4. Type ``y`` to approve.
@@ -19,8 +19,8 @@ Reproduces the user-reported scenario verbatim:
 Regression target: an earlier bug had the approval event route
 making a synchronous call from inside an async FastAPI handler.
 The blocking call raised ``RuntimeError`` from inside the event
-loop, which bubbled to the global handler → 500 ``internal_error``
-→ SDK logged ``POST elicitation verdict failed`` → parked workflow
+loop, which bubbled to the global handler â†’ 500 ``internal_error``
+â†’ SDK logged ``POST elicitation verdict failed`` â†’ parked workflow
 only recovered when its 30s ``ask_timeout`` fired, by which point
 the verdict had been classified as refused. The user saw a
 ``[Denied by policy: ...]`` sentinel even though they typed ``y``.
@@ -32,7 +32,7 @@ already used by the PATCH ``/v1/responses`` route in
 
 What breaks if this test fails:
   - The route regresses to calling sync DBOS APIs from the
-    async handler — every TOOL_CALL ASK approval 500s.
+    async handler â€” every TOOL_CALL ASK approval 500s.
   - The ``asyncio.to_thread`` wrappers are removed.
   - Some path leaks ``POST approval event failed`` into
     the user's buffer (the SDK's warning about a failed
@@ -44,7 +44,7 @@ from __future__ import annotations
 import io
 from pathlib import Path
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
@@ -56,7 +56,7 @@ _YAML_REL = "tests/resources/examples/rate_limited_search_agent.yaml"
 # Override the YAML's ``databricks-claude-sonnet-4`` model + auto-
 # picked claude-sdk harness with openai-agents + a Databricks
 # OpenAI-compatible model. The bug reproduces regardless of
-# harness — it lives in the AP-side approval event route — and
+# harness â€” it lives in the AP-side approval event route â€” and
 # openai-agents has the most reliable ``-p`` / REPL paths under
 # the e2e fixtures' test-profile credentials.
 _MODEL = "mock-model"
@@ -110,7 +110,7 @@ def test_run_omnigent_rate_limit_approval_round_trip(
     The mock LLM is configured to issue 4 ``search_web`` tool
     calls (octopus, cat, dog, elephant) in sequence so the
     rate-limit policy triggers on the 4th, exercising the full
-    ASK → approve → run approval flow deterministically.
+    ASK â†’ approve â†’ run approval flow deterministically.
 
     :param omnigent_python: Path to the worktree's
         ``.venv/bin/python``.
@@ -121,12 +121,12 @@ def test_run_omnigent_rate_limit_approval_round_trip(
     :param mock_llm_server_url: Mock server URL for configuring
         response queues.
     """
-    from tests.e2e.agent_meow.conftest import configure_mock_llm
+    from tests.e2e.omnigent.conftest import configure_mock_llm
 
     # Issue 4 search_web tool calls in sequence (3 allowed, 4th hits ASK).
     # After each tool result the mock server needs another response.
-    # Sequence: call 1 → call 2 → call 3 → call 4 (ASK fires here,
-    # approval is typed by the test, then call 4 runs) → final text.
+    # Sequence: call 1 â†’ call 2 â†’ call 3 â†’ call 4 (ASK fires here,
+    # approval is typed by the test, then call 4 runs) â†’ final text.
     configure_mock_llm(
         mock_llm_server_url,
         [
@@ -192,20 +192,20 @@ def test_run_omnigent_rate_limit_approval_round_trip(
     child.logfile_read = captured
 
     try:
-        # Wait for the ``❯`` prompt marker rather than
+        # Wait for the ``â¯`` prompt marker rather than
         # ``state: sleeping``. The bottom-toolbar status line
         # depends on prompt-toolkit's CPR probe completing,
-        # which doesn't always paint under pexpect — the ❯
+        # which doesn't always paint under pexpect â€” the â¯
         # marker is what the user actually sees before typing
         # so it's the right boot-ready signal. (Same workaround
         # documented in ``test_repl_inline_tool_streaming.py``.)
-        child.expect(r"❯ ", timeout=_BOOT_TIMEOUT)
+        child.expect(r"â¯ ", timeout=_BOOT_TIMEOUT)
 
         submit_prompt(child, _FOUR_SEARCH_PROMPT)
 
         # Wait for the approval banner. The exact ``approval
-        # required · tool_call`` substring is rendered by
-        # :func:`~?agent_meow.repl._repl._make_elicitation_prompt`'s
+        # required Â· tool_call`` substring is rendered by
+        # :func:`~?omnigent.repl._repl._make_elicitation_prompt`'s
         # banner output. Anchor on a stable substring rather
         # than the full Unicode-prefixed line so a future
         # styling tweak doesn't false-positive break the test.
@@ -217,7 +217,7 @@ def test_run_omnigent_rate_limit_approval_round_trip(
         # session). ``y`` parses as :class:`_ApprovalVerdict.APPROVE_ONCE`.
         submit_prompt(child, "y")
 
-        # The verdict-echo line ``› approved`` is written
+        # The verdict-echo line ``â€º approved`` is written
         # synchronously by ``on_input`` before resolving the
         # verdict future. Anchoring here proves the ``y`` was
         # treated as a verdict (not a normal message) AND that
@@ -228,7 +228,7 @@ def test_run_omnigent_rate_limit_approval_round_trip(
         # The fix path: the route returns 202, the parked
         # workflow wakes immediately, and the 4th tool call
         # executes. The result panel for "elephant" is the
-        # cleanest unique signal — it wasn't in any of the
+        # cleanest unique signal â€” it wasn't in any of the
         # first three calls and only appears if the 4th call
         # was actually dispatched.
         child.expect("elephant", timeout=_POST_APPROVAL_TIMEOUT)
@@ -246,7 +246,7 @@ def test_run_omnigent_rate_limit_approval_round_trip(
     # the route handler regressed to calling sync DBOS APIs
     # from the async path.
     assert "POST approval event failed" not in combined, (
-        "REPL buffer contains 'POST approval event failed' — "
+        "REPL buffer contains 'POST approval event failed' â€” "
         "the approval event route returned 500 instead of 202. "
         "Most likely the route reverted to making a blocking call "
         "from the async handler; wrap it in asyncio.to_thread.\n"
@@ -255,7 +255,7 @@ def test_run_omnigent_rate_limit_approval_round_trip(
 
     # Belt-and-suspenders: the denial sentinel must not appear.
     # Pre-fix, the approved verdict timed out and got reclassified
-    # as refused → ``[Denied by policy: ...]`` on the elephant
+    # as refused â†’ ``[Denied by policy: ...]`` on the elephant
     # call. After fix, only the result panel appears.
     assert "Denied by policy" not in combined, (
         "REPL rendered a 'Denied by policy' sentinel even though the "
@@ -266,7 +266,7 @@ def test_run_omnigent_rate_limit_approval_round_trip(
 
     # Sanity: the 'approved' echo line that the REPL writes
     # right after the user types 'y' (see
-    # ``_repl.py::on_input``'s ``› approved`` output) must be
+    # ``_repl.py::on_input``'s ``â€º approved`` output) must be
     # in the buffer. If absent, the REPL's verdict-routing
     # logic regressed and the 'y' was treated as a normal
     # message instead of an approval.

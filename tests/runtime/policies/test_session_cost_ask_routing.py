@@ -16,12 +16,12 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.policies.schema import SESSION_COST_ASK_APPROVED_STATE_KEY
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.runtime.policies.builder import build_policy_engine
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.parser import parse
-from agent_meow.spec.types import (
+from omnigent.policies.schema import SESSION_COST_ASK_APPROVED_STATE_KEY
+from omnigent.policies.types import EvaluationContext
+from omnigent.runtime.policies.builder import build_policy_engine
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.parser import parse
+from omnigent.spec.types import (
     FunctionPolicySpec,
     FunctionRef,
     Phase,
@@ -29,7 +29,7 @@ from agent_meow.spec.types import (
     StateUpdate,
     StateUpdateAction,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -39,7 +39,7 @@ _COST_POLICY = FunctionPolicySpec(
     name="session_cost_guard",
     on=None,  # the function self-selects the tool_call phase
     function=FunctionRef(
-        path="agent_meow.policies.builtins.cost.cost_budget",
+        path="omnigent.policies.builtins.cost.cost_budget",
         arguments={"max_cost_usd": 1000.0, "ask_thresholds_usd": [0.05]},
     ),
 )
@@ -162,7 +162,7 @@ async def test_subagent_approval_visible_to_same_engine_no_reask(
     The approval write routes to the ROOT store, but the live engine evaluates
     against its own in-memory session_state (seeded from the root at
     construction). If that hot copy isn't updated on approve, the very next
-    tool call re-ASKs at the same threshold — so this guards
+    tool call re-ASKs at the same threshold â€” so this guards
     ``_record_root_cost_ask_approved`` mirroring the op into ``_session_state``.
     """
     parent = conversation_store.create_conversation()
@@ -184,7 +184,7 @@ async def test_subagent_approval_visible_to_same_engine_no_reask(
     assert await _evaluate_bash(engine) == PolicyAction.ASK
     # The approval the user grants in response to that ASK.
     engine.apply_state_updates([_set_approved(0.05)])
-    # The same engine's next call must NOT re-ASK — the in-memory state now
+    # The same engine's next call must NOT re-ASK â€” the in-memory state now
     # carries the approval even though it was persisted to the root.
     assert await _evaluate_bash(engine) == PolicyAction.ALLOW
 
@@ -195,7 +195,7 @@ async def test_subagent_without_parent_approval_still_asks(
     tmp_path,
 ) -> None:
     """Control: with NO parent approval, the sub-agent's over-threshold spend
-    DOES ASK — so the inheritance test above can't pass vacuously.
+    DOES ASK â€” so the inheritance test above can't pass vacuously.
     """
     parent = conversation_store.create_conversation()
     child = conversation_store.create_conversation(
@@ -223,12 +223,12 @@ async def test_subagent_gate_sees_parent_spend_not_just_own(
 
     The budget is session-wide: the parent already spent $0.06 (over the $0.05
     checkpoint) and the sub-agent has spent nothing of its own. The sub-agent's
-    gate must seed from the whole-tree total and ASK — otherwise (the bug) it
+    gate must seed from the whole-tree total and ASK â€” otherwise (the bug) it
     would gate on its own $0 subtree, ALLOW, and let the session keep spending
     past the budget while the orchestrator parent is parked.
 
     If the gating seed reverts to the per-node subtree, the sub-agent sees $0,
-    this returns ALLOW, and the assertion fails — so the test is non-vacuous.
+    this returns ALLOW, and the assertion fails â€” so the test is non-vacuous.
     """
     parent = conversation_store.create_conversation()
     child = conversation_store.create_conversation(

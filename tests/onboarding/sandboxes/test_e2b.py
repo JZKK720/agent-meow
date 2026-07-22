@@ -1,4 +1,4 @@
-"""Tests for :mod:`~?agent_meow.onboarding.sandboxes.e2b`."""
+"""Tests for :mod:`~?omnigent.onboarding.sandboxes.e2b`."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 import click
 import pytest
 
-from agent_meow.onboarding.sandboxes.base import SandboxCapabilityError
-from agent_meow.onboarding.sandboxes.e2b import (
+from omnigent.onboarding.sandboxes.base import SandboxCapabilityError
+from omnigent.onboarding.sandboxes.e2b import (
     _HOBBY_FALLBACK_LIFETIME_S,
     DEFAULT_E2B_TEMPLATE,
     SANDBOX_ENV_PASSTHROUGH_ENV_VAR,
@@ -22,10 +22,10 @@ from agent_meow.onboarding.sandboxes.e2b import (
     resolve_max_lifetime_s,
 )
 
-# ── Fake e2b SDK ────────────────────────────────────────────
+# â”€â”€ Fake e2b SDK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # The SDK is an optional dependency the test env may not install, and
-# real Sandbox objects only exist server-side — so these are hand-rolled
+# real Sandbox objects only exist server-side â€” so these are hand-rolled
 # stubs injected via sys.modules, resolving the launcher's function-local
 # `from e2b import ...` / `from e2b.exceptions import ...`.
 
@@ -88,10 +88,10 @@ class _State:
     set_timeout_raises: bool = False
     create_raises: BaseException | None = None
     # When set, create() rejects (like E2B's 400) any timeout above this many
-    # seconds, reporting the cap in hours — drives the clamp-and-retry test.
+    # seconds, reporting the cap in hours â€” drives the clamp-and-retry test.
     reject_timeout_over: int | None = None
     handle_killed: bool = False
-    # When set, a background command's wait() raises this — drives the
+    # When set, a background command's wait() raises this â€” drives the
     # stream transport-error path.
     stream_wait_raises: BaseException | None = None
 
@@ -217,7 +217,7 @@ def sdk(monkeypatch: pytest.MonkeyPatch) -> _State:
     return state
 
 
-# ── prepare ─────────────────────────────────────────────────
+# â”€â”€ prepare â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_prepare_requires_api_key(sdk: _State, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -234,7 +234,7 @@ def test_prepare_raises_install_hint_when_sdk_missing(monkeypatch: pytest.Monkey
         E2BSandboxLauncher().prepare()
 
 
-# ── provision ───────────────────────────────────────────────
+# â”€â”€ provision â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_provision_uses_default_template_and_max_timeout(sdk: _State) -> None:
@@ -242,7 +242,7 @@ def test_provision_uses_default_template_and_max_timeout(sdk: _State) -> None:
     assert sdk.create_kwargs["template"] == DEFAULT_E2B_TEMPLATE
     assert sdk.create_kwargs["timeout"] == resolve_max_lifetime_s()
     assert sdk.create_kwargs["metadata"] == {"omnigent-name": "managed-x"}
-    # No env configured → nothing injected.
+    # No env configured â†’ nothing injected.
     assert sdk.create_kwargs["envs"] is None
 
 
@@ -282,7 +282,7 @@ def test_provision_incompatible_template_points_at_build(sdk: _State) -> None:
 
 def test_provision_missing_template_points_at_build(sdk: _State) -> None:
     # A missing/unbuilt template is a PLAIN SandboxException ("404: template
-    # '…' not found"), not TemplateException — the most common first-run
+    # 'â€¦' not found"), not TemplateException â€” the most common first-run
     # failure must still surface the build hint.
     sdk.create_raises = _SandboxException("404: template 'agent-meow-host' not found")
     with pytest.raises(click.ClickException, match="e2b template build"):
@@ -304,7 +304,7 @@ def test_provision_sandbox_error_surfaces_reason(sdk: _State) -> None:
 
 
 def test_provision_clamps_lifetime_when_account_cap_rejects(sdk: _State) -> None:
-    # E2B rejects (HTTP 400) — not clamps — a lifetime above the account cap
+    # E2B rejects (HTTP 400) â€” not clamps â€” a lifetime above the account cap
     # (e.g. Hobby's 1h vs the 24h default). provision must retry clamped to it.
     sdk.reject_timeout_over = 3600  # 1h cap
     assert E2BSandboxLauncher().provision("x") == "sb-e2b-1"
@@ -330,8 +330,8 @@ def test_provision_reraises_when_cap_not_below_request(sdk: _State) -> None:
 
 
 def test_provision_clamp_retry_also_failing_surfaces_error(sdk: _State) -> None:
-    # First create rejects over-cap (→ clamp), and the clamped retry also
-    # fails — provision must surface a ClickException after exactly 2 attempts.
+    # First create rejects over-cap (â†’ clamp), and the clamped retry also
+    # fails â€” provision must surface a ClickException after exactly 2 attempts.
     sdk.create_raises = _SandboxException("400: Timeout cannot be greater than 1 hours")
     with pytest.raises(click.ClickException, match="E2B sandbox creation failed"):
         E2BSandboxLauncher().provision("x")
@@ -344,7 +344,7 @@ def test_provision_clamp_retry_also_failing_surfaces_error(sdk: _State) -> None:
         ("400: Timeout cannot be greater than 1 hours", 3600),  # regex path
         ("400: Timeout cannot be greater than 24 hours", 24 * 3600),  # regex path
         ("Timeout cannot be greater than", _HOBBY_FALLBACK_LIFETIME_S),  # unparsed fallback
-        ("404: template 'x' not found", None),  # unrelated → re-raise
+        ("404: template 'x' not found", None),  # unrelated â†’ re-raise
     ],
 )
 def test_lifetime_cap_from_error_branches(message: str, expected: int | None) -> None:
@@ -370,7 +370,7 @@ def test_resolve_max_lifetime_rejects_non_numeric(monkeypatch: pytest.MonkeyPatc
         resolve_max_lifetime_s()
 
 
-# ── run ─────────────────────────────────────────────────────
+# â”€â”€ run â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_run_returns_separate_streams_and_exit_code(sdk: _State) -> None:
@@ -402,7 +402,7 @@ def test_run_wraps_command_in_login_bash(sdk: _State) -> None:
     assert sdk.run_calls[0]["cmd"].startswith("bash -lc ")
 
 
-# ── put ─────────────────────────────────────────────────────
+# â”€â”€ put â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_put_writes_bytes(sdk: _State, tmp_path: Path) -> None:
@@ -412,7 +412,7 @@ def test_put_writes_bytes(sdk: _State, tmp_path: Path) -> None:
     assert sdk.written == [("/tmp/wheels.tgz", b"binary\x00data")]
 
 
-# ── attach ──────────────────────────────────────────────────
+# â”€â”€ attach â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_attach_accepts_running_sandbox(sdk: _State) -> None:
@@ -431,7 +431,7 @@ def test_resolve_missing_sandbox_is_friendly(sdk: _State) -> None:
         E2BSandboxLauncher().run("gone", "echo hi")
 
 
-# ── keep_alive ──────────────────────────────────────────────
+# â”€â”€ keep_alive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_keep_alive_extends_to_max(sdk: _State) -> None:
@@ -445,7 +445,7 @@ def test_keep_alive_soft_fails(sdk: _State) -> None:
     assert sdk.set_timeouts == []
 
 
-# ── terminate ───────────────────────────────────────────────
+# â”€â”€ terminate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_terminate_kills_sandbox(sdk: _State) -> None:
@@ -459,7 +459,7 @@ def test_terminate_swallows_not_found(sdk: _State) -> None:
     assert sdk.killed == []
 
 
-# ── streaming ───────────────────────────────────────────────
+# â”€â”€ streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_stream_exec_combines_output_and_returns_stable_iterator(sdk: _State) -> None:
@@ -578,7 +578,7 @@ def test_provision_caches_handle_so_run_skips_connect(sdk: _State) -> None:
     assert sdk.connect_calls == []
 
 
-# ── wheel install + capability surface ──────────────────────
+# â”€â”€ wheel install + capability surface â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_wheel_install_command_overlays_wheels(sdk: _State) -> None:

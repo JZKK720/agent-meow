@@ -19,7 +19,7 @@ YAML usage::
           limit: 15
 """
 
-from agent_meow.policies.schema import PolicyCallable, PolicyEvent, PolicyResponse
+from omnigent.policies.schema import PolicyCallable, PolicyEvent, PolicyResponse
 
 
 def max_tool_calls_per_turn(limit: int = 10) -> PolicyCallable:

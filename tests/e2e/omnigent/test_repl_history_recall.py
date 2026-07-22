@@ -1,14 +1,14 @@
-"""Phase 0 characterization test — Up-arrow history recall.
+"""Phase 0 characterization test â€” Up-arrow history recall.
 
 Submits two distinguishable prompts, then presses the Up arrow
 and asserts the previous prompt's text repopulates the input
 area. The assertion looks for the recalled prompt in the
-rendered PTY buffer *after* Up is pressed — prompt-toolkit
+rendered PTY buffer *after* Up is pressed â€” prompt-toolkit
 paints the input window with the recalled entry on the next
 render tick.
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
-REPL pexpect suite — "History recall".
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
+REPL pexpect suite â€” "History recall".
 """
 
 from __future__ import annotations
@@ -16,20 +16,20 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     submit_prompt,
 )
-from tests.e2e.agent_meow._repl_test_helpers import drain_for
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent._repl_test_helpers import drain_for
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 # Visible turn-synchronization markers (see test_repl_smoke).
 _RUNNING_MARKER = r"working"
-_COMPLETION_MARKER = r"❯ "
+_COMPLETION_MARKER = r"â¯ "
 
 _MODEL = "mock-model"
 _HARNESS = "openai-agents"

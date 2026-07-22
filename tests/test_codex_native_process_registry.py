@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow import codex_native_process_registry as registry
+from omnigent import codex_native_process_registry as registry
 
 fcntl = pytest.importorskip("fcntl")
 

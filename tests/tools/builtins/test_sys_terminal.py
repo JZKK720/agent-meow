@@ -1,14 +1,14 @@
 """
 Unit tests for the ``sys_terminal_*`` tool family.
 
-Per ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` §8.2, these tests use the
+Per ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` Â§8.2, these tests use the
 established ``tests/tools/builtins/test_terminal.py`` pattern from
 the deleted legacy suite: monkeypatch
 ``_globals._terminal_registry`` to inject a fresh
 :class:`TerminalRegistry`, construct tools directly, drive them
 via ``tool.invoke()``. The tests run real tmux subprocesses
 (skipped if tmux is not on PATH) so they cover the full
-spawn → send → read → close round-trip.
+spawn â†’ send â†’ read â†’ close round-trip.
 """
 
 from __future__ import annotations
@@ -22,16 +22,16 @@ from typing import Any
 
 import pytest
 
-from agent_meow.entities.conversation import MessageData
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from agent_meow.runtime import _globals
-from agent_meow.spec.types import AgentSpec
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.entities.conversation import MessageData
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
+from omnigent.runtime import _globals
+from omnigent.spec.types import AgentSpec
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.terminals.registry import TerminalRegistry
-from agent_meow.tools.base import Tool, ToolContext
-from agent_meow.tools.builtins.sys_terminal import (
+from omnigent.terminals.registry import TerminalRegistry
+from omnigent.tools.base import Tool, ToolContext
+from omnigent.tools.builtins.sys_terminal import (
     SysTerminalCloseTool,
     SysTerminalLaunchTool,
     SysTerminalListTool,
@@ -40,7 +40,7 @@ from agent_meow.tools.builtins.sys_terminal import (
 )
 
 # Skip the entire module when tmux is unavailable. Every test
-# launches a real tmux session — there's no faking that with
+# launches a real tmux session â€” there's no faking that with
 # mocks because the production code shells out to ``tmux`` via
 # ``asyncio.create_subprocess_exec``.
 pytestmark = pytest.mark.skipif(
@@ -49,7 +49,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-# ── Fixtures ──────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture
@@ -58,7 +58,7 @@ def registry(monkeypatch: pytest.MonkeyPatch) -> TerminalRegistry:
 
     Monkeypatches ``_globals._terminal_registry`` so
     ``get_terminal_registry()`` finds it. Auto-reverses on test
-    teardown — each test gets a clean registry.
+    teardown â€” each test gets a clean registry.
 
     :param monkeypatch: Pytest's monkeypatch fixture.
     :returns: The newly-installed :class:`TerminalRegistry`.
@@ -72,7 +72,7 @@ def registry(monkeypatch: pytest.MonkeyPatch) -> TerminalRegistry:
 def ctx(tmp_path: Path) -> ToolContext:
     """A :class:`ToolContext` with a real per-test workspace.
 
-    :param tmp_path: Pytest's tmpdir — used as the workspace.
+    :param tmp_path: Pytest's tmpdir â€” used as the workspace.
     :returns: A :class:`ToolContext` suitable for terminal tools.
     """
     return ToolContext(
@@ -90,7 +90,7 @@ def _make_spec(
 ) -> AgentSpec:
     """Construct a minimal :class:`AgentSpec` for tool wiring tests.
 
-    :param terminals: Optional terminals map. ``None`` → no
+    :param terminals: Optional terminals map. ``None`` â†’ no
         terminals declared (use only when testing the
         unknown-terminal error path).
     :param os_env: Optional os_env. ``None`` means the spec
@@ -114,7 +114,7 @@ async def cleanup_registry(registry: TerminalRegistry) -> AsyncIterator[None]:
     the value of the fixture is the side-effect on teardown.
 
     :param registry: The registry fixture (drives the cleanup).
-    :yields: ``None`` — no value to consume.
+    :yields: ``None`` â€” no value to consume.
     """
     yield
     await registry.shutdown()
@@ -123,7 +123,7 @@ async def cleanup_registry(registry: TerminalRegistry) -> AsyncIterator[None]:
 async def _invoke(tool: Tool, payload: dict[str, object], ctx: ToolContext) -> dict:
     """Drive ``tool.invoke`` via ``asyncio.to_thread`` and decode JSON.
 
-    Mirrors production dispatch: ``agent_meow/runtime/workflow.py`` calls
+    Mirrors production dispatch: ``omnigent/runtime/workflow.py`` calls
     ``tool_mgr.call_tool`` inside ``asyncio.to_thread`` so the sync
     ``invoke`` runs on a worker thread (with no event loop), letting
     the tool spin its own ``asyncio.run()`` for async work. Calling
@@ -139,7 +139,7 @@ async def _invoke(tool: Tool, payload: dict[str, object], ctx: ToolContext) -> d
     return json.loads(raw)
 
 
-# ── sys_terminal_launch ──────────────────────────────────────
+# â”€â”€ sys_terminal_launch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_launch_unknown_terminal_returns_error(
@@ -170,7 +170,7 @@ def test_launch_unknown_terminal_returns_error(
 def test_launch_requires_conversation_id(registry: TerminalRegistry, tmp_path: Path) -> None:
     """
     The launch tool fails loud when ``ctx.conversation_id`` is
-    ``None``. Per the registry's keying contract (and §4.2 of
+    ``None``. Per the registry's keying contract (and Â§4.2 of
     the design), a conversation id is required to scope the new
     terminal entry; falling back to a default would let two
     independent conversations share a terminal silently.
@@ -198,7 +198,7 @@ def test_launch_rejects_cwd_override_when_disallowed(
 ) -> None:
     """
     When ``terminal.allow_cwd_override`` is ``False`` (the default),
-    a per-call ``cwd`` argument is rejected with a clear error —
+    a per-call ``cwd`` argument is rejected with a clear error â€”
     the override does NOT silently apply.
 
     What breaks if this fails: a security-conscious spec author who
@@ -316,7 +316,7 @@ async def test_launch_send_read_close_round_trip(
     assert send.get("status") == "sent"
 
     # Allow tmux to render the echo output. Polling rather than a
-    # fixed sleep — the marker may appear after a few hundred ms.
+    # fixed sleep â€” the marker may appear after a few hundred ms.
     marker_seen = False
     read: dict = {}
     for _ in range(20):  # 20 * 0.1s = ~2s budget
@@ -335,7 +335,7 @@ async def test_launch_send_read_close_round_trip(
     # Close removes the entry from the registry.
     close = await _invoke(close_tool, {"terminal": "bash", "session": "s1"}, ctx)
     assert close.get("status") == "closed"
-    # Subsequent get() returns None — entry is gone.
+    # Subsequent get() returns None â€” entry is gone.
     assert registry.get(ctx.conversation_id, "bash", "s1") is None
 
 
@@ -376,7 +376,7 @@ async def test_launch_idempotent_returns_already_running(
     # Idempotent: second call doesn't spawn a new tmux but reports
     # the existing one with status='already_running'.
     assert second["status"] == "already_running"
-    # Same socket — proves we're pointing at the SAME instance, not
+    # Same socket â€” proves we're pointing at the SAME instance, not
     # a fresh one with a new socket.
     assert second["tmux_socket"] == first["tmux_socket"]
 
@@ -394,7 +394,7 @@ async def test_multiple_sessions_per_terminal_are_independent(
 
     What breaks if this fails: multi-session workflows (e.g.
     investigate one branch in s1 while comparing to another in
-    s2) collide on shared state — a ``cd /tmp`` in s1 affects s2.
+    s2) collide on shared state â€” a ``cd /tmp`` in s1 affects s2.
     """
     del cleanup_registry
     spec = _make_spec(
@@ -415,7 +415,7 @@ async def test_multiple_sessions_per_terminal_are_independent(
     s2 = await _invoke(launch_tool, {"terminal": "bash", "session": "s2"}, ctx)
     assert s1["status"] == "launched"
     assert s2["status"] == "launched"
-    # Two different tmux sockets — independent processes.
+    # Two different tmux sockets â€” independent processes.
     assert s1["tmux_socket"] != s2["tmux_socket"], (
         "Both sessions should have distinct tmux sockets. If they "
         "match, the registry collapsed (name, session_key) into "
@@ -423,13 +423,13 @@ async def test_multiple_sessions_per_terminal_are_independent(
     )
 
 
-# ── sys_terminal_send / read ──────────────────────────────────
+# â”€â”€ sys_terminal_send / read â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_send_unknown_session_returns_error(registry: TerminalRegistry, ctx: ToolContext) -> None:
     """
     Sending to a (terminal, session) the registry doesn't know
-    returns an error envelope — doesn't try to coerce something
+    returns an error envelope â€” doesn't try to coerce something
     into a tmux send and doesn't crash.
     """
     tool = SysTerminalSendTool(registry=registry)
@@ -454,7 +454,7 @@ def test_read_unknown_session_returns_error(registry: TerminalRegistry, ctx: Too
     assert "error" in result
 
 
-# ── sys_terminal_list ─────────────────────────────────────────
+# â”€â”€ sys_terminal_list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_list_empty_returns_empty_array(registry: TerminalRegistry, ctx: ToolContext) -> None:
@@ -468,7 +468,7 @@ def test_list_empty_returns_empty_array(registry: TerminalRegistry, ctx: ToolCon
     assert result == []
 
 
-# ── sys_terminal_close ────────────────────────────────────────
+# â”€â”€ sys_terminal_close â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_close_unknown_session_returns_not_found(
@@ -477,7 +477,7 @@ def test_close_unknown_session_returns_not_found(
     """
     Closing a non-existent (terminal, session) returns
     ``status: not_found`` rather than raising. Idempotent close
-    is the contract — the LLM may close the same terminal twice
+    is the contract â€” the LLM may close the same terminal twice
     without seeing an error.
     """
     tool = SysTerminalCloseTool(registry=registry)
@@ -485,16 +485,16 @@ def test_close_unknown_session_returns_not_found(
     assert result.get("status") == "not_found"
 
 
-# ── §4.6 cwd-resolution precedence ────────────────────────────
+# â”€â”€ Â§4.6 cwd-resolution precedence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_cwd_resolution_uses_workspace_when_spec_cwd_is_dot(
     registry: TerminalRegistry, ctx: ToolContext
 ) -> None:
     """
-    Per §4.6: when the spec's ``os_env.cwd`` is the bare ``"."``
+    Per Â§4.6: when the spec's ``os_env.cwd`` is the bare ``"."``
     placeholder, the launch falls through to ``ctx.workspace``.
-    This is the load-bearing fix — under agent-meow mode, AP's process
+    This is the load-bearing fix â€” under agent-meow mode, AP's process
     cwd is meaningless to the agent.
 
     Tests the resolver in isolation by inspecting the resolved
@@ -596,7 +596,7 @@ def test_cwd_resolution_per_call_override_wins(
     assert resolved == override_cwd
 
 
-# ── §9.1 concurrent-send race ─────────────────────
+# â”€â”€ Â§9.1 concurrent-send race â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_concurrent_sends_serialize_via_per_instance_lock(
@@ -611,7 +611,7 @@ async def test_concurrent_sends_serialize_via_per_instance_lock(
     must serialize through a per-instance lock. Without the lock,
     ``send(text=X, keys="Enter")`` decomposes into ~2 tmux
     subprocess invocations with a 50ms ``asyncio.sleep`` between
-    them — two concurrent sends can interleave their commands,
+    them â€” two concurrent sends can interleave their commands,
     feeding the shell garbled input.
 
     Test strategy: monkeypatch the running instance's ``send``
@@ -620,7 +620,7 @@ async def test_concurrent_sends_serialize_via_per_instance_lock(
     serialization, ``max_in_flight`` stays at 1; without
     serialization it can reach the concurrency level.
 
-    The measurement lock is not the production lock — it just
+    The measurement lock is not the production lock â€” it just
     keeps the counter consistent. The production lock under test
     is the one wired into ``SysTerminalSendTool.invoke``.
 
@@ -667,7 +667,7 @@ async def test_concurrent_sends_serialize_via_per_instance_lock(
             max_in_flight[0] = max(max_in_flight[0], in_flight[0])
         try:
             # Hold long enough that other waiters definitely
-            # arrive — 100ms is plenty given the worker-thread
+            # arrive â€” 100ms is plenty given the worker-thread
             # spawn overhead is sub-ms.
             await asyncio.sleep(0.1)
             return {"status": "sent"}
@@ -701,7 +701,7 @@ async def test_concurrent_sends_serialize_via_per_instance_lock(
 
     assert max_in_flight[0] == 1, (
         f"Expected max_in_flight=1 (lock serializes sends), got "
-        f"{max_in_flight[0]} — concurrent sends overlapped. The "
+        f"{max_in_flight[0]} â€” concurrent sends overlapped. The "
         f"per-instance lock is missing or bypassed. "
         f"If max_in_flight=={n}, no serialization at all; if 2..{n - 1}, "
         f"partial serialization (a regression that lets some calls "
@@ -709,7 +709,7 @@ async def test_concurrent_sends_serialize_via_per_instance_lock(
     )
 
 
-# ── notify_when_idle ─────────────────────────────────────────
+# â”€â”€ notify_when_idle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _build_idle_fixture(

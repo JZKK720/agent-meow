@@ -1,10 +1,10 @@
-"""Tests for agent_meow.inner.egress.rules — DSL parsing and matching."""
+"""Tests for omnigent.inner.egress.rules â€” DSL parsing and matching."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_meow.inner.egress.rules import (
+from omnigent.inner.egress.rules import (
     check_host,
     check_request,
     parse_rule,
@@ -12,7 +12,7 @@ from agent_meow.inner.egress.rules import (
 )
 
 # ------------------------------------------------------------------
-# parse_rule — happy paths
+# parse_rule â€” happy paths
 # ------------------------------------------------------------------
 
 
@@ -67,7 +67,7 @@ def test_parse_rule_valid(
 
 
 # ------------------------------------------------------------------
-# parse_rule — error paths
+# parse_rule â€” error paths
 # ------------------------------------------------------------------
 
 
@@ -156,7 +156,7 @@ def test_matches_single_segment_wildcard() -> None:
 
 
 # ------------------------------------------------------------------
-# check_request / check_host — multi-rule evaluation
+# check_request / check_host â€” multi-rule evaluation
 # ------------------------------------------------------------------
 
 
@@ -171,7 +171,7 @@ def test_check_request_any_rule_matches() -> None:
     assert check_request(rules, "GET", "api.github.com", "/repos/x") is True
     # POST matches second rule
     assert check_request(rules, "POST", "api.github.com", "/repos/x") is True
-    # DELETE matches neither — default deny
+    # DELETE matches neither â€” default deny
     assert check_request(rules, "DELETE", "api.github.com", "/repos/x") is False
 
 
@@ -203,7 +203,7 @@ def test_check_host_fast_reject() -> None:
         pytest.param("\x00api.allowed.com", "leading NUL", id="nul-byte-leading"),
         pytest.param("api.allowed.com\x00", "trailing NUL", id="nul-byte-trailing"),
         # Percent: URL-percent-encoded smuggling. ``%2e`` is ``.``,
-        # ``%00`` is NUL, ``%2f`` is ``/`` — many HTTP clients decode
+        # ``%00`` is NUL, ``%2f`` is ``/`` â€” many HTTP clients decode
         # before sending while the rule layer matches raw bytes,
         # creating a fresh client-vs-proxy parser differential.
         pytest.param(
@@ -297,7 +297,7 @@ def test_str_endswith_would_have_matched_smuggled_hosts() -> None:
 
     Pure-Python ``str.endswith`` happily reports True for hosts that
     libc's ``getaddrinfo`` truncates or that an HTTP-aware client
-    interprets differently — this is the exact behavior that makes the
+    interprets differently â€” this is the exact behavior that makes the
     explicit ``is_dns_safe_host`` check load-bearing. If any of these
     flip to False on a future Python, the defense's threat model has
     changed and this test will fail loudly.
@@ -313,7 +313,7 @@ def test_str_endswith_would_have_matched_smuggled_hosts() -> None:
     ]
     for h in smuggled:
         assert h.endswith(suffix) is True, (
-            f"str.endswith({h!r}, {suffix!r}) must be True — that is "
+            f"str.endswith({h!r}, {suffix!r}) must be True â€” that is "
             f"the parser differential ``is_dns_safe_host`` is defending "
             f"against. If this assertion now fails, the threat model "
             f"has shifted and the defense rationale needs revisiting."

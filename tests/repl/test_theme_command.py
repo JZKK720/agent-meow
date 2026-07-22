@@ -6,7 +6,7 @@ import pytest
 from omnigent_ui_sdk.terminal import RichBlockFormatter, TerminalHost
 from omnigent_ui_sdk.terminal._theme import DARK_THEME, LIGHT_THEME
 
-from agent_meow.repl._repl import COMMANDS, _load_startup_theme, handle_slash_command
+from omnigent.repl._repl import COMMANDS, _load_startup_theme, handle_slash_command
 
 
 class DummyHost(TerminalHost):
@@ -65,7 +65,7 @@ def test_startup_theme_shows_picker_on_first_launch(
 
     # Mock the picker to return DARK_THEME without requiring a tty.
     monkeypatch.setattr(
-        "agent_meow.repl._theme_picker.startup_theme_picker",
+        "omnigent.repl._theme_picker.startup_theme_picker",
         lambda **kwargs: DARK_THEME,
     )
 

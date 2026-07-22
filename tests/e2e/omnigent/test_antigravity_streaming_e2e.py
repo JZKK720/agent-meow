@@ -1,33 +1,33 @@
-"""Per-harness live characterization — antigravity (Gemini) SDK streaming fidelity.
+"""Per-harness live characterization â€” antigravity (Gemini) SDK streaming fidelity.
 
 Drives the ``antigravity`` harness end-to-end through the production
-``/v1/sessions`` flow — register an inline agent-meow agent
-(``executor.harness: antigravity``) → create + runner-bind a session →
-``POST /v1/sessions/{id}/events`` → poll the session to idle — then asserts over
+``/v1/sessions`` flow â€” register an inline agent-meow agent
+(``executor.harness: antigravity``) â†’ create + runner-bind a session â†’
+``POST /v1/sessions/{id}/events`` â†’ poll the session to idle â€” then asserts over
 the *persisted transcript items* (``GET /v1/sessions/{id}/items``), NOT stdout
 chrome. This exercises the full producer/consumer path in
-:mod:`~?agent_meow.inner.antigravity_executor`: ``conversation.send`` →
-``receive_steps()`` → the MODEL→USER ``content_delta`` mapping onto
-:class:`TextChunk` → the terminal :class:`TurnComplete` whose accumulated text
+:mod:`~?omnigent.inner.antigravity_executor`: ``conversation.send`` â†’
+``receive_steps()`` â†’ the MODELâ†’USER ``content_delta`` mapping onto
+:class:`TextChunk` â†’ the terminal :class:`TurnComplete` whose accumulated text
 the runner persists as an assistant ``message`` item.
 
 Scope is deliberately narrow: **streaming / output fidelity** of stable behavior
 already on ``main`` (this branch is cut from ``main``). It covers three things a
 streamed text channel can silently corrupt:
 
-1. **Long output** is not truncated or duplicated — the per-delta accumulation
+1. **Long output** is not truncated or duplicated â€” the per-delta accumulation
    in ``run_turn`` (``final_text_parts.append`` then ``"".join(...)``) must
    neither drop a tail nor replay a block.
-2. **Unicode fidelity** — emoji / CJK / accented text round-trips byte-exact
+2. **Unicode fidelity** â€” emoji / CJK / accented text round-trips byte-exact
    through ``content_delta`` concatenation and JSON (de)serialization, with no
-   mojibake (``Ã©``), replacement char (``�``), or double-encoding.
-3. **Reasoning-heavy task** — a step-by-step prompt still yields a coherent,
+   mojibake (``ÃƒÂ©``), replacement char (``ï¿½``), or double-encoding.
+3. **Reasoning-heavy task** â€” a step-by-step prompt still yields a coherent,
    non-empty final answer (we assert the answer sentinel, not the reasoning
    internals, which the harness maps separately as :class:`ReasoningChunk`).
 
 **Gating (mirrors the cursor per-harness test):** the antigravity harness is
-Gemini-native — it authenticates with a Gemini / Antigravity API key and has NO
-Databricks-gateway path — so this test SKIPS (rather than fails) when its
+Gemini-native â€” it authenticates with a Gemini / Antigravity API key and has NO
+Databricks-gateway path â€” so this test SKIPS (rather than fails) when its
 prerequisites are absent, keeping the e2e shards green where no Gemini key is
 provisioned. It runs for real wherever the prerequisites are present:
 
@@ -39,17 +39,17 @@ provisioned. It runs for real wherever the prerequisites are present:
    **glibc caveat.** The Antigravity SDK launches a bundled native
    ``localharness`` binary linked against a recent glibc (it needs
    ``GLIBC_ABI_DT_RELR``), so a turn only *completes* on a host with
-   glibc ≳ 2.36. On an older host (e.g. glibc 2.31) the turn fails at native
+   glibc â‰³ 2.36. On an older host (e.g. glibc 2.31) the turn fails at native
    setup with ``version 'GLIBC_ABI_DT_RELR' not found`` and the session goes
-   ``failed`` — that is an environment gap, not a regression in the code under
+   ``failed`` â€” that is an environment gap, not a regression in the code under
    test. The gate above mirrors cursor's (package + key) and deliberately does
    NOT probe glibc; on a glibc-2.31 dev box point the SDK at a loader-shim via
    ``ANTIGRAVITY_HARNESS_PATH`` (dev-only) to run the untouched binary under a
-   newer loader. CI runs this on a glibc-≥2.36 host.
+   newer loader. CI runs this on a glibc-â‰¥2.36 host.
 
 **What breaks if this fails (with prerequisites present):**
-- ``AntigravityExecutor`` regresses (the ``Step`` → :class:`TextChunk` mapping,
-  the per-turn text accumulation in ``run_turn``, or the MODEL→USER source/target
+- ``AntigravityExecutor`` regresses (the ``Step`` â†’ :class:`TextChunk` mapping,
+  the per-turn text accumulation in ``run_turn``, or the MODELâ†’USER source/target
   filter that keeps the echoed prompt out of the assistant reply).
 - ``_build_antigravity_spawn_env`` stops resolving the Gemini key into
   ``HARNESS_ANTIGRAVITY_API_KEY`` for a spec with no ``executor.auth``.
@@ -67,7 +67,7 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.onboarding.antigravity_auth import antigravity_api_key_configured
+from omnigent.onboarding.antigravity_auth import antigravity_api_key_configured
 from tests.e2e.conftest import (
     create_runner_bound_session,
     poll_session_until_terminal,
@@ -77,7 +77,7 @@ from tests.e2e.conftest import (
 
 # Gemini id that runs on a plain AI-Studio key. ``gemini-3-pro`` 404s without
 # Pro access, so the suite pins a Flash model; left un-rewritten (the harness is
-# Gemini-native — a Databricks model map / profile stamp would break it).
+# Gemini-native â€” a Databricks model map / profile stamp would break it).
 _MODEL = "gemini-3.5-flash"
 _HARNESS = "antigravity"
 
@@ -93,7 +93,7 @@ def _antigravity_skip_reason() -> str | None:
 
     Mirrors the cursor per-harness gate's spirit: the harness is Gemini-native
     (no Databricks-gateway fallback), so when its prerequisites are absent the
-    suite SKIPS rather than fails — CI shards without a provisioned Gemini key
+    suite SKIPS rather than fails â€” CI shards without a provisioned Gemini key
     stay green, and the test runs for real wherever a key is present.
 
     Two prerequisites, both probed against the *running* interpreter (the e2e
@@ -102,13 +102,13 @@ def _antigravity_skip_reason() -> str | None:
 
     1. ``google.antigravity`` is importable (the ``google-antigravity`` extra).
     2. A Gemini key is configured (the dedicated ``antigravity:`` config block)
-       or present ambiently as ``GEMINI_API_KEY`` / ``ANTIGRAVITY_API_KEY`` —
+       or present ambiently as ``GEMINI_API_KEY`` / ``ANTIGRAVITY_API_KEY`` â€”
        which ``_build_antigravity_spawn_env`` threads into the harness as
        ``HARNESS_ANTIGRAVITY_API_KEY`` for a spec with no ``executor.auth``.
 
     This gate intentionally does NOT probe glibc (see the module docstring's
     note): on a glibc-<2.36 host the prerequisites read as present and the turn
-    fails at native-binary setup — surfaced by the per-turn terminal-status
+    fails at native-binary setup â€” surfaced by the per-turn terminal-status
     assertion as an environment gap, not masked as a silent skip.
 
     :returns: A skip-reason string when a prerequisite is missing, else ``None``.
@@ -136,7 +136,7 @@ def _antigravity_skip_reason() -> str | None:
 # precede fixture setup: the live-server stack here is session-scoped (and the
 # e2e suite's own ``--llm-api-key`` gate lives on a session fixture), and
 # higher-scoped fixtures resolve before any function-scoped skip-guard could
-# fire — so a function-level gate would surface as a fixture ERROR instead of a
+# fire â€” so a function-level gate would surface as a fixture ERROR instead of a
 # clean SKIP when a prerequisite is absent. ``allow_module_level`` runs the gate
 # before any of that, yielding a clean skip with no server/runner spawned.
 _SKIP_REASON = _antigravity_skip_reason()
@@ -149,7 +149,7 @@ def _write_antigravity_agent_yaml(tmp_path: Path, *, prompt: str) -> Path:
 
     Deliberately carries NO ``executor.auth`` and NO Databricks ``profile``: the
     harness resolves its Gemini key Gemini-natively (configured ``antigravity:``
-    block, then ambient ``GEMINI_API_KEY`` / ``ANTIGRAVITY_API_KEY``) — a global
+    block, then ambient ``GEMINI_API_KEY`` / ``ANTIGRAVITY_API_KEY``) â€” a global
     ``auth:`` / profile would be the OpenAI-gateway key the SDK can't use. The
     bundle is uploaded with ``rewrite_model_for_databricks=False`` so the Gemini
     model id and ``antigravity`` harness pass through unmangled.
@@ -188,7 +188,7 @@ def _run_one_shot(
 ) -> str:
     """Run one antigravity turn through a fresh runner-bound session.
 
-    Creates a session, posts *user_text*, and polls to terminal — asserting the
+    Creates a session, posts *user_text*, and polls to terminal â€” asserting the
     turn completed (a ``failed`` status surfaces the error, e.g. the glibc
     native-binary failure on an old host, instead of masquerading as empty
     output).
@@ -215,7 +215,7 @@ def _run_one_shot(
         f"antigravity turn did not complete: status={body['status']!r}, "
         f"error={body.get('error')!r}. A 'failed' status with a "
         f"GLIBC_ABI_DT_RELR error means the host's glibc is < 2.36 (the SDK's "
-        f"native binary can't load) — an environment gap, not a code "
+        f"native binary can't load) â€” an environment gap, not a code "
         f"regression. output={body.get('output')!r}"
     )
     return session_id
@@ -227,9 +227,9 @@ def _assistant_text_from_items(http_client: httpx.Client, session_id: str) -> st
     Reads the persisted transcript (the durable record the production session
     flow commits), NOT stdout, so the assertions characterize what the harness
     actually streamed and stored. The items endpoint returns the flat
-    Responses-style item shape — assistant text lives in ``message`` items with
+    Responses-style item shape â€” assistant text lives in ``message`` items with
     ``role == "assistant"`` whose ``content`` carries ``output_text`` blocks
-    (see ``agent_meow/server/API.md`` § List Conversation Items).
+    (see ``omnigent/server/API.md`` Â§ List Conversation Items).
 
     :param http_client: HTTP client pointed at the live server.
     :param session_id: The session/conversation id to read.
@@ -275,7 +275,7 @@ def _max_repeated_run(text: str, *, block: int) -> int:
     return best
 
 
-# ─── Tests ───────────────────────────────────────────────────
+# â”€â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_antigravity_long_output_not_truncated_or_duplicated(
@@ -283,7 +283,7 @@ def test_antigravity_long_output_not_truncated_or_duplicated(
     live_runner_id: str,
     tmp_path: Path,
 ) -> None:
-    """A long multi-paragraph reply streams in full — not truncated, not duplicated.
+    """A long multi-paragraph reply streams in full â€” not truncated, not duplicated.
 
     The model is steered to emit six numbered sections, each ending in a unique
     ``[SECT-k-END]`` sentinel. Asserting every sentinel survives proves nothing
@@ -330,7 +330,7 @@ def test_antigravity_long_output_not_truncated_or_duplicated(
     # tail (the classic truncation bug) loses the later markers first.
     missing = [s for s in sentinels if s not in text]
     assert not missing, (
-        f"long-output reply is missing section markers {missing} — the streamed "
+        f"long-output reply is missing section markers {missing} â€” the streamed "
         f"text was truncated before the end. Got {len(text)} chars:\n{text!r}"
     )
 
@@ -345,7 +345,7 @@ def test_antigravity_long_output_not_truncated_or_duplicated(
     # block would push some window's count to >= 2.
     repeats = _max_repeated_run(text, block=80)
     assert repeats < 2, (
-        f"long-output reply repeats an 80-char block {repeats}x — the stream "
+        f"long-output reply repeats an 80-char block {repeats}x â€” the stream "
         f"likely double-appended a chunk. Reply:\n{text!r}"
     )
 
@@ -358,14 +358,14 @@ def test_antigravity_unicode_fidelity_round_trips(
     """Emoji + CJK + accented text round-trips byte-exact into the transcript.
 
     The model is asked to echo a fixed payload verbatim on its own line. We
-    assert each non-ASCII fragment appears EXACTLY in the persisted item text —
-    catching mojibake (``café`` → ``cafÃ©``), the replacement char ``\\ufffd``,
+    assert each non-ASCII fragment appears EXACTLY in the persisted item text â€”
+    catching mojibake (``cafÃ©`` â†’ ``cafÃƒÂ©``), the replacement char ``\\ufffd``,
     and double-encoding, any of which would corrupt the ``content_delta``
     concatenation or the JSON (de)serialization on the way into
     ``conversation_items``.
     """
     # One emoji (incl. a ZWJ sequence + skin-tone modifier), CJK, and accents.
-    fragments = ["café", "naïve façade", "日本語のテキスト", "中文字符", "🚀", "👩‍🚀", "👍🏽"]
+    fragments = ["cafÃ©", "naÃ¯ve faÃ§ade", "æ—¥æœ¬èªžã®ãƒ†ã‚­ã‚¹ãƒˆ", "ä¸­æ–‡å­—ç¬¦", "ðŸš€", "ðŸ‘©â€ðŸš€", "ðŸ‘ðŸ½"]
     payload = " | ".join(fragments)
     agent_name = upload_agent(
         http_client,
@@ -392,14 +392,14 @@ def test_antigravity_unicode_fidelity_round_trips(
     text = _assistant_text_from_items(http_client, session_id)
 
     # No corruption signatures anywhere in the persisted text.
-    assert "�" not in text, (
-        f"transcript contains the Unicode replacement char (\\ufffd) — bytes were "
+    assert "ï¿½" not in text, (
+        f"transcript contains the Unicode replacement char (\\ufffd) â€” bytes were "
         f"lost or mis-decoded in the stream. Reply:\n{text!r}"
     )
-    # ``Ã`` is the tell-tale lead byte of UTF-8 mis-decoded as Latin-1 (e.g.
-    # ``é`` → ``Ã©``); none of our intended fragments contain it.
-    assert "Ã" not in text and "â€" not in text, (
-        f"transcript shows mojibake / double-encoding (e.g. 'Ã©' for 'é') — a "
+    # ``Ãƒ`` is the tell-tale lead byte of UTF-8 mis-decoded as Latin-1 (e.g.
+    # ``Ã©`` â†’ ``ÃƒÂ©``); none of our intended fragments contain it.
+    assert "Ãƒ" not in text and "Ã¢â‚¬" not in text, (
+        f"transcript shows mojibake / double-encoding (e.g. 'ÃƒÂ©' for 'Ã©') â€” a "
         f"decode/encode mismatch corrupted the non-ASCII text. Reply:\n{text!r}"
     )
     # Each intended fragment must survive verbatim.
@@ -420,11 +420,11 @@ def test_antigravity_reasoning_heavy_task_final_answer(
 
     A small arithmetic word problem elicits multi-step reasoning; the model is
     told to end with ``FINAL ANSWER: <n>``. We assert the answer sentinel with
-    the correct value is present and the reply is non-trivial — characterizing
+    the correct value is present and the reply is non-trivial â€” characterizing
     that the harness streams a usable final answer for a reasoning-heavy turn.
     We deliberately do NOT assert on the reasoning internals (the harness maps
     ``thinking_delta`` onto :class:`ReasoningChunk` separately, and whether/how
-    much reasoning surfaces is model- and config-dependent — over-specifying it
+    much reasoning surfaces is model- and config-dependent â€” over-specifying it
     would make the test flaky without testing output fidelity).
     """
     agent_name = upload_agent(
@@ -461,10 +461,10 @@ def test_antigravity_reasoning_heavy_task_final_answer(
         f"({len(text.strip())} chars): {text!r}"
     )
     # The final answer surfaced with the correct value. ``77`` (not ``72``) also
-    # confirms the model accounted for the spares — i.e. the streamed reply
+    # confirms the model accounted for the spares â€” i.e. the streamed reply
     # carries the genuine end-of-reasoning result, not a truncated mid-step.
     assert "FINAL ANSWER" in text, (
-        f"reply is missing the requested 'FINAL ANSWER:' line — the final-answer "
+        f"reply is missing the requested 'FINAL ANSWER:' line â€” the final-answer "
         f"text didn't stream into the transcript. Reply:\n{text!r}"
     )
     assert "77" in text, (

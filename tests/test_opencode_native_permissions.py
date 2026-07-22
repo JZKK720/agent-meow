@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_meow.opencode_native_permissions import (
+from omnigent.opencode_native_permissions import (
     OPENCODE_NATIVE_HARNESS,
     decision_to_reply,
     map_verdict_to_decision,

@@ -3,18 +3,18 @@
 The companion to ``test_claude_coder_sandbox.py``. That file checks the
 claude-sdk native file tools, where the Claude Code CLI confines writes to
 its cwd *silently* (no tool result is surfaced for a dropped out-of-workspace
-write). This file checks the path real agents use for file output — the
-``sys_os_write`` MCP builtin — gated by the ``worktree_guard`` policy on the
+write). This file checks the path real agents use for file output â€” the
+``sys_os_write`` MCP builtin â€” gated by the ``worktree_guard`` policy on the
 **openai-agents** harness, which DOES surface tool results.
 
-``worktree_guard`` (agent_meow/inner/nessie/policies.py) denies
+``worktree_guard`` (omnigent/inner/nessie/policies.py) denies
 ``sys_os_write`` / ``sys_os_edit`` whose path is absolute or contains a ``..``
 segment (an escape), and ALLOWS relative in-tree paths. Because the deny is a
 TOOL_CALL-phase policy verdict, it surfaces as an error tool result even under
 the default ``bypassPermissions`` permission mode (the policy half of the
 ``can_use_tool`` gate runs in every mode).
 
-No API key needed — runs against the mock LLM server.
+No API key needed â€” runs against the mock LLM server.
 
 Usage::
 
@@ -43,7 +43,7 @@ from tests.e2e.conftest import (
 # confining writes to the workspace. ``sandbox: type: none`` keeps it
 # host-portable; the boundary here is enforced by the policy, not the kernel
 # sandbox. The factory-handler policy shape is ``type: function`` +
-# ``handler:`` (dotted path) + ``factory_params:`` (→ kwargs); worktree_guard
+# ``handler:`` (dotted path) + ``factory_params:`` (â†’ kwargs); worktree_guard
 # self-selects sys_os_write/sys_os_edit by tool name, so no ``on:`` clause is
 # needed. ``allowed_root`` / ``deny_reason`` only shape the deny message.
 _WORKTREE_GUARD_CONFIG: dict[str, Any] = {
@@ -55,7 +55,7 @@ _WORKTREE_GUARD_CONFIG: dict[str, Any] = {
     "policies": {
         "confine_writes_to_workspace": {
             "type": "function",
-            "handler": "agent_meow.inner.nessie.policies.worktree_guard",
+            "handler": "omnigent.inner.nessie.policies.worktree_guard",
             "factory_params": {
                 "allowed_root": "workspace",
                 "deny_reason": "Writes must stay inside the workspace.",
@@ -202,7 +202,7 @@ def test_sys_os_write_outside_workspace_denied(
         # Primary security property: the file must not exist on disk.
         assert not os.path.exists(target), (
             f"Workspace escape! File {target} was written outside the "
-            "workspace — the worktree_guard policy did not deny the write."
+            "workspace â€” the worktree_guard policy did not deny the write."
         )
 
         # Surfaced-deny property: at least one tool result must carry the

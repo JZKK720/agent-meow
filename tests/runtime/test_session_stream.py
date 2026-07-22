@@ -1,5 +1,5 @@
 """
-Unit tests for :mod:`~?agent_meow.runtime.session_stream`.
+Unit tests for :mod:`~?omnigent.runtime.session_stream`.
 
 The session stream is a pure pub-sub fan-out:
 
@@ -25,7 +25,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.runtime import session_stream
+from omnigent.runtime import session_stream
 
 
 # Each test resets the global subscriber registry so cross-test leak
@@ -58,7 +58,7 @@ async def _collect(conv_id: str, expected: int) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     # Bind the generator explicitly and ``aclose`` it on the way
     # out so the slot-cleanup ``finally`` in ``subscribe`` runs
-    # deterministically — Python 3.13 no longer auto-closes async
+    # deterministically â€” Python 3.13 no longer auto-closes async
     # generators when ``async for`` breaks/returns (cleanup is
     # garbage-collection-timed). Real consumers (FastAPI
     # ``StreamingResponse``) ``aclose`` the wrapping generator on
@@ -84,7 +84,7 @@ async def test_publish_without_subscriber_is_silent_noop() -> None:
     a side effect (e.g. a print, a log line, an exception) to the
     no-subscriber path. The pub-sub design contract is that events
     fired before any client connects are LOST and the producer pays
-    no cost — turn-emit sites publish unconditionally.
+    no cost â€” turn-emit sites publish unconditionally.
     """
     # Should not raise, should not log, should leave the registry empty.
     session_stream.publish("conv_unknown", {"type": "x", "i": 1})
@@ -108,14 +108,14 @@ async def test_single_subscriber_receives_events_in_order() -> None:
     task = asyncio.create_task(_collect("conv_a", expected=3))
     # Yield once so the subscriber registers its slot before publish.
     # Without this yield the event would land before the subscriber
-    # connected and be dropped — that's the design, but this test
+    # connected and be dropped â€” that's the design, but this test
     # is about the post-subscribe path.
     await asyncio.sleep(0)
     session_stream.publish("conv_a", {"type": "e", "i": 1})
     session_stream.publish("conv_a", {"type": "e", "i": 2})
     session_stream.publish("conv_a", {"type": "e", "i": 3})
     received = await asyncio.wait_for(task, timeout=2.0)
-    # Exact ordering of i=1,2,3 — anything else means publish
+    # Exact ordering of i=1,2,3 â€” anything else means publish
     # reordered or the queue isn't FIFO.
     assert received == [
         {"type": "e", "i": 1},
@@ -144,7 +144,7 @@ async def test_pre_subscribe_events_are_lost() -> None:
     session_stream.publish("conv_lost", {"type": "early", "i": 0})
 
     # Now subscribe and publish another event. The subscriber must
-    # see ONLY the second event — the first one is gone.
+    # see ONLY the second event â€” the first one is gone.
     task = asyncio.create_task(_collect("conv_lost", expected=1))
     await asyncio.sleep(0)
     session_stream.publish("conv_lost", {"type": "live", "i": 1})
@@ -177,7 +177,7 @@ async def test_multi_subscriber_fan_out_independently_delivers() -> None:
     session_stream.publish("conv_fan", {"type": "x", "i": 1})
     session_stream.publish("conv_fan", {"type": "x", "i": 2})
     r1, r2 = await asyncio.wait_for(asyncio.gather(t1, t2), timeout=2.0)
-    # Both subscribers see ALL events — that's the fan-out contract.
+    # Both subscribers see ALL events â€” that's the fan-out contract.
     expected = [{"type": "x", "i": 1}, {"type": "x", "i": 2}]
     assert r1 == expected, (
         f"Subscriber 1 received {r1!r}, expected {expected!r}. "
@@ -254,7 +254,7 @@ async def test_subscriber_slot_cleaned_up_on_exit() -> None:
     )
 
 
-# ── Side-channel: pending-elicitations index ─────────────────────────
+# â”€â”€ Side-channel: pending-elicitations index â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_publishing_elicitation_event_updates_pending_index() -> None:
@@ -270,7 +270,7 @@ def test_publishing_elicitation_event_updates_pending_index() -> None:
     that decouples them would silently break the sidebar for every
     session whose chat isn't currently open.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     session_stream.publish(
@@ -293,12 +293,12 @@ def test_publishing_non_elicitation_event_leaves_pending_index_untouched() -> No
     register anything in the pending index.
 
     ``record_publish`` filters on event type, but this test pins it
-    end-to-end through the publish call — if a future refactor
+    end-to-end through the publish call â€” if a future refactor
     inverts the filter or removes it, this catches the over-counting
     immediately. Without this guard, every text delta would inflate
     the sidebar badge.
     """
-    from agent_meow.runtime import pending_elicitations
+    from omnigent.runtime import pending_elicitations
 
     pending_elicitations.reset_for_tests()
     session_stream.publish(
@@ -312,7 +312,7 @@ def test_publishing_non_elicitation_event_leaves_pending_index_untouched() -> No
     pending_elicitations.reset_for_tests()
 
 
-# ── Idle keepalive: session.heartbeat ────────────────────────────────
+# â”€â”€ Idle keepalive: session.heartbeat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -462,7 +462,7 @@ async def test_no_heartbeat_when_interval_unset() -> None:
         await gen.aclose()
 
 
-# ── In-flight assistant-text replay ──────────────────────────
+# â”€â”€ In-flight assistant-text replay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_publishing_text_delta_records_inflight_text() -> None:
@@ -475,7 +475,7 @@ def test_publishing_text_delta_records_inflight_text() -> None:
     the ``inflight_text.record_publish`` call in ``publish`` would make
     every reconnect lose the in-flight bubble again.
     """
-    from agent_meow.runtime import inflight_text
+    from omnigent.runtime import inflight_text
 
     inflight_text.reset_for_tests()
     session_stream.publish(
@@ -508,14 +508,14 @@ def test_publishing_unrelated_event_leaves_inflight_index_untouched() -> None:
     filter (and starts replaying e.g. tool events as assistant text) is
     caught immediately.
     """
-    from agent_meow.runtime import inflight_text
+    from omnigent.runtime import inflight_text
 
     inflight_text.reset_for_tests()
     session_stream.publish(
         "conv_ift2",
         {"type": "response.elicitation_request", "elicitation_id": "elicit_1"},
     )
-    # No lifecycle/text event → nothing tracked. A non-empty result
+    # No lifecycle/text event â†’ nothing tracked. A non-empty result
     # would mean unrelated events inflate the replay.
     assert inflight_text.snapshot_for("conv_ift2") == []
     inflight_text.reset_for_tests()
@@ -531,7 +531,7 @@ async def test_publish_withholds_committed_native_duplicate_from_live_stream() -
     ``response.output_text.delta`` whose message already committed, and
     ``publish`` must WITHHOLD it from connected subscribers. The old order
     (fan out first, record after) could only scrub the reconnect snapshot
-    — it could never un-send a delta already on a live subscriber's queue,
+    â€” it could never un-send a delta already on a live subscriber's queue,
     which is exactly the duplicate users saw.
 
     Reproduces the single-chunk race: the message's ``output_item.done``
@@ -539,7 +539,7 @@ async def test_publish_withholds_committed_native_duplicate_from_live_stream() -
     ``final`` delta. The subscriber must see the committed item and a later
     sentinel, but NOT the duplicate delta wedged between them.
     """
-    from agent_meow.runtime import inflight_text
+    from omnigent.runtime import inflight_text
 
     inflight_text.reset_for_tests()
     cid = "conv_live_gate"
@@ -552,7 +552,7 @@ async def test_publish_withholds_committed_native_duplicate_from_live_stream() -
             "content": [{"type": "output_text", "text": "Hi there"}],
         },
     }
-    # Same text as the commit → matches it → suppressed from the live tail.
+    # Same text as the commit â†’ matches it â†’ suppressed from the live tail.
     duplicate_delta = {
         "type": "response.output_text.delta",
         "delta": "Hi there",
@@ -566,7 +566,7 @@ async def test_publish_withholds_committed_native_duplicate_from_live_stream() -
     # Yield so the subscriber registers its slot before we publish.
     await asyncio.sleep(0)
     session_stream.publish(cid, committed)  # broadcast; buffers the fingerprint
-    session_stream.publish(cid, duplicate_delta)  # matches commit → withheld
+    session_stream.publish(cid, duplicate_delta)  # matches commit â†’ withheld
     session_stream.publish(cid, sentinel)  # broadcast
 
     received = await asyncio.wait_for(task, timeout=2.0)
@@ -588,15 +588,15 @@ async def test_inflight_replay_via_pre_ready_snapshot_does_not_duplicate_window_
 
     Reproduces the real ``/stream`` subscribe shape and the double-render
     regression. The route passes BOTH ``ready_event`` (the subscription
-    ack heartbeat, yielded first — which SUSPENDS the generator) and
+    ack heartbeat, yielded first â€” which SUSPENDS the generator) and
     ``pre_ready_snapshot`` (the in-flight text replay). The relay
     keeps publishing deltas during the post-``ready_event`` gap. The fix
-    captures the replay snapshot synchronously at slot registration —
-    before the suspension — so a gap delta lands ONLY on the live tail,
+    captures the replay snapshot synchronously at slot registration â€”
+    before the suspension â€” so a gap delta lands ONLY on the live tail,
     not in both the replay and the tail.
 
     1. A turn streams ``response.created`` + two deltas with NO
-       subscriber connected — lost to the live stream (no replay
+       subscriber connected â€” lost to the live stream (no replay
        buffer), recoverable only from the in-flight index.
     2. A client subscribes with ``ready_event`` + ``pre_ready_snapshot``,
        exactly as the route does.
@@ -610,7 +610,7 @@ async def test_inflight_replay_via_pre_ready_snapshot_does_not_duplicate_window_
     "!" is in BOTH the replayed snapshot text AND the live tail, and the
     bubble renders "Hello world!!" instead of "Hello world!".
     """
-    from agent_meow.runtime import inflight_text
+    from omnigent.runtime import inflight_text
 
     inflight_text.reset_for_tests()
     cid = "conv_window"
@@ -618,7 +618,7 @@ async def test_inflight_replay_via_pre_ready_snapshot_does_not_duplicate_window_
         "type": "response.created",
         "response": {"id": "resp_1", "model": "nessie", "status": "in_progress", "created_at": 1},
     }
-    # (1) Prefix streamed before any subscriber connected — only in the
+    # (1) Prefix streamed before any subscriber connected â€” only in the
     # in-flight index, never on a queue.
     session_stream.publish(cid, created)
     session_stream.publish(cid, {"type": "response.output_text.delta", "delta": "Hello "})
@@ -660,7 +660,7 @@ async def test_inflight_replay_via_pre_ready_snapshot_does_not_duplicate_window_
 
     # (4) Recovered prefix once + gap delta once. "Hello world!!" (or
     # "Hello worldHello world!") would mean the gap delta was counted in
-    # both the replay and the live tail — the double-render.
+    # both the replay and the live tail â€” the double-render.
     assert "".join(deltas) == "Hello world!", (
         f"rendered bubble was {''.join(deltas)!r}; expected 'Hello world!' "
         f"(prefix once + gap delta once). A duplicate means the snapshot "

@@ -1,4 +1,4 @@
-"""Unit tests for agent_meow.inner.credential_proxy.
+"""Unit tests for omnigent.inner.credential_proxy.
 
 These cover the parent-side runtime: secret resolution from
 ``env`` / ``file`` / ``command`` sources, the default swap-on-access
@@ -16,11 +16,11 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.inner.credential_proxy import (
+from omnigent.inner.credential_proxy import (
     SYNTHETIC_CREDENTIAL_PREFIX,
     prepare_credential_proxy_runtime,
 )
-from agent_meow.inner.datamodel import (
+from omnigent.inner.datamodel import (
     CredentialProxyEntry,
     CredentialProxySpec,
     CredentialSourceSpec,
@@ -110,7 +110,7 @@ def test_env_source_resolves_and_mints_synthetic() -> None:
     assert len(runtime.rewrites) == 1
     rule = runtime.rewrites[0]
     # The proxy rule pairs the exact placeholder the sandbox holds with
-    # the real upstream secret — the swap only works if these match.
+    # the real upstream secret â€” the swap only works if these match.
     assert rule.synthetic == synthetic
     assert rule.real_secret == "real-jira-secret"
     assert rule.host == "jira.example.com"

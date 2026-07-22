@@ -5,7 +5,7 @@ test model, the CLI binary to skip-gate on, the transport class, the
 static matrix columns (owner, auth, implementation), and the *declared*
 verdict for each dimension (the spreadsheet cell, as data).
 
-The bench never hard-codes a harness anywhere else — probes and drivers
+The bench never hard-codes a harness anywhere else â€” probes and drivers
 are harness-agnostic. Adding an official harness means adding a profile
 to :mod:`tests.harness_bench.manifest`; a community / out-of-repo harness
 ships its own profile and is selected by name via :func:`resolve_profile`.
@@ -25,7 +25,7 @@ class BenchProfile:
     """Self-declared bench metadata for one harness.
 
     :param harness: Harness name as registered in
-        ``agent_meow.runtime.harnesses._HARNESS_MODULES`` (or resolvable by
+        ``omnigent.runtime.harnesses._HARNESS_MODULES`` (or resolvable by
         :func:`resolve_profile` for a community harness), e.g.
         ``"claude-sdk"``.
     :param model: A real model id the harness can route this run, threaded
@@ -45,12 +45,12 @@ class BenchProfile:
         :mod:`tests.harness_bench.driver`, e.g. ``"sdk-inproc"``. A
         harness on an unknown transport degrades its transport-dependent
         probes to ``SKIPPED``.
-    :param owner: Static matrix column — who owns this harness.
-    :param auth: Static matrix column — the auth mechanism, e.g.
+    :param owner: Static matrix column â€” who owns this harness.
+    :param auth: Static matrix column â€” the auth mechanism, e.g.
         ``"Databricks gateway"``.
     :param implementation: Static matrix column, e.g.
         ``"SDK in-process"`` or ``"CLI subprocess (app-server RPC)"``.
-    :param declared: The declared verdict per probe name — the spreadsheet
+    :param declared: The declared verdict per probe name â€” the spreadsheet
         row as data. Probe names absent from this map are treated as
         ``UNKNOWN`` (no claim), so they never raise drift.
     """

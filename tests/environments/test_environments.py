@@ -1,9 +1,9 @@
 """
 Tests for the environments wrapper package.
 
-The wrapper is pure re-exports of ``agent_meow.inner.os_env`` and
+The wrapper is pure re-exports of ``omnigent.inner.os_env`` and
 the ``OSEnvSpec`` / ``OSEnvSandboxSpec`` dataclasses from
-``agent_meow.inner.datamodel``. Tests only verify two properties:
+``omnigent.inner.datamodel``. Tests only verify two properties:
 every name in ``__all__`` resolves on the wrapper module, and the
 re-exported objects are identity-equal to their inner counterparts.
 Behavioral coverage of ``OSEnvironment`` and the helper subprocess
@@ -13,30 +13,30 @@ directly.
 
 from __future__ import annotations
 
-import agent_meow.inner.datamodel as inner_dm
-import agent_meow.inner.os_env as inner_os_env
-from agent_meow import environments
+import omnigent.inner.datamodel as inner_dm
+import omnigent.inner.os_env as inner_os_env
+from omnigent import environments
 
 
 def test_environments_all_symbols_importable() -> None:
     """
-    Every name in ``agent_meow.environments.__all__`` resolves on the
+    Every name in ``omnigent.environments.__all__`` resolves on the
     wrapper module.
 
     Catches accidental drift between the ``__all__`` list and the actual
-    re-exports — without this, a typo would slip through silently and only
+    re-exports â€” without this, a typo would slip through silently and only
     surface at the first downstream import.
     """
     for name in environments.__all__:
-        assert hasattr(environments, name), f"agent_meow.environments missing re-export {name!r}"
+        assert hasattr(environments, name), f"omnigent.environments missing re-export {name!r}"
 
 
 def test_environments_reexports_inner_os_env_objects() -> None:
     """
     The OS-environment classes and factories re-export the same Python
-    objects as ``agent_meow.inner.os_env``.
+    objects as ``omnigent.inner.os_env``.
 
-    Identity (``is``) — not equality — because anything else means a
+    Identity (``is``) â€” not equality â€” because anything else means a
     parallel definition has been introduced. Subclass/isinstance checks
     against the wrapper-imported names must continue to match instances
     produced via the inner module.
@@ -50,10 +50,10 @@ def test_environments_reexports_inner_os_env_objects() -> None:
 def test_environments_reexports_inner_datamodel_specs() -> None:
     """
     ``OSEnvSpec`` and ``OSEnvSandboxSpec`` re-export the same dataclasses
-    as ``agent_meow.inner.datamodel``.
+    as ``omnigent.inner.datamodel``.
 
     Identity matters because these are dataclasses consumers instantiate
-    directly (``OSEnvSpec(type="caller_process", ...)``) — a parallel copy
+    directly (``OSEnvSpec(type="caller_process", ...)``) â€” a parallel copy
     would mean instances built via the wrapper would not satisfy
     ``isinstance`` checks inside inner code that still reaches for the
     original class.
@@ -69,7 +69,7 @@ def test_default_os_env_spec_for_type_returns_caller_process() -> None:
 
     A minimal smoke test confirming the re-exported factory is genuinely
     callable through the wrapper (not just a name lookup) and produces a
-    spec instance from the wrapper's ``OSEnvSpec`` class — proves the two
+    spec instance from the wrapper's ``OSEnvSpec`` class â€” proves the two
     re-exports work together end-to-end.
     """
     spec = environments.default_os_env_spec_for_type("caller_process")

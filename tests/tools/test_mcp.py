@@ -1,4 +1,4 @@
-"""Tests for agent_meow.tools.mcp (MCP connections and tools)."""
+"""Tests for omnigent.tools.mcp (MCP connections and tools)."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from mcp.shared.exceptions import McpError
 from mcp.types import CONNECTION_CLOSED, CallToolResult, ErrorData, ImageContent, TextContent
 from mcp.types import Tool as McpToolDef
 
-from agent_meow.spec.types import MCPServerConfig, RetryPolicy
-from agent_meow.tools.mcp import (
+from omnigent.spec.types import MCPServerConfig, RetryPolicy
+from omnigent.tools.mcp import (
     _CIRCUIT_BREAKER_COOLDOWN_SECONDS,
     _CIRCUIT_BREAKER_THRESHOLD,
     _MCP_RECONNECT_DEFAULTS,
@@ -71,7 +71,7 @@ def _make_mcp_tool_def(
     Create a mock MCP tool definition matching ``mcp.types.Tool``.
 
     Uses a MagicMock because we only read ``.name``,
-    ``.description``, and ``.inputSchema`` — these are plain
+    ``.description``, and ``.inputSchema`` â€” these are plain
     attribute reads, not isinstance checks.
 
     :param name: Tool name.
@@ -121,17 +121,17 @@ def _mock_mcp_transport(
     mock_ctx.__aexit__ = AsyncMock(return_value=False)
 
     with patch(
-        "agent_meow.tools.mcp.streamablehttp_client",
+        "omnigent.tools.mcp.streamablehttp_client",
         return_value=mock_ctx,
     ):
         with patch(
-            "agent_meow.tools.mcp.ClientSession",
+            "omnigent.tools.mcp.ClientSession",
             return_value=mock_session,
         ):
             yield mock_session
 
 
-# ── _cache_key ───────────────────────────────────────────
+# â”€â”€ _cache_key â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_cache_key_includes_name_and_url() -> None:
@@ -157,13 +157,13 @@ def test_cache_key_different_configs_differ() -> None:
 def test_cache_key_stdio_includes_command_and_args() -> None:
     """
     Stdio MCP cache key includes the transport tag, name,
-    command, and joined args — so two stdio configs that share
+    command, and joined args â€” so two stdio configs that share
     a name but point at different subprocesses don't collide in
     the module-level ``_discovery_cache``.
 
     What breaks if this fails: two agents that both declare a
-    ``glean`` MCP — one pointing at ``--profile dogfood`` and
-    another at ``--profile prod`` — would share one cache entry
+    ``glean`` MCP â€” one pointing at ``--profile dogfood`` and
+    another at ``--profile prod`` â€” would share one cache entry
     and one would see the other's discovered tools.
     """
     config = MCPServerConfig(
@@ -178,7 +178,7 @@ def test_cache_key_stdio_includes_command_and_args() -> None:
     assert key.startswith("stdio:")
     assert "stdio-server" in key
     assert "npx" in key
-    # Arg content matters — different args means different cache
+    # Arg content matters â€” different args means different cache
     # entries, not a silent share.
     assert "@modelcontextprotocol/server-github" in key
 
@@ -186,7 +186,7 @@ def test_cache_key_stdio_includes_command_and_args() -> None:
 def test_cache_key_stdio_args_changes_key() -> None:
     """
     Different args on the same stdio command produce different
-    cache keys — covers the realistic "same binary, different
+    cache keys â€” covers the realistic "same binary, different
     CLI flags" case (e.g. databricks MCPs differentiated by
     ``--profile``).
 
@@ -208,7 +208,7 @@ def test_cache_key_stdio_args_changes_key() -> None:
 def test_cache_key_stdio_and_http_do_not_collide() -> None:
     """
     A stdio server named ``my-mcp`` and an HTTP server named
-    ``my-mcp`` produce different keys — the transport tag is
+    ``my-mcp`` produce different keys â€” the transport tag is
     the first segment of the key so same-name, different-
     transport never shares a cache entry.
 
@@ -221,7 +221,7 @@ def test_cache_key_stdio_and_http_do_not_collide() -> None:
     assert _cache_key(http) != _cache_key(stdio)
 
 
-# ── McpServerConnection caching ──────────────────────────
+# â”€â”€ McpServerConnection caching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio()
@@ -234,7 +234,7 @@ async def test_connect_skips_list_tools_when_cache_fresh() -> None:
     config = _make_http_config()
     tool_def = _make_mcp_tool_def()
 
-    # Pre-populate the cache — TTLCache uses dict assignment.
+    # Pre-populate the cache â€” TTLCache uses dict assignment.
     _discovery_cache[_cache_key(config)] = [tool_def]
 
     with _mock_mcp_transport() as mock_session:
@@ -300,7 +300,7 @@ async def test_connect_skips_expired_cache() -> None:
 
     fresh_tool = _make_mcp_tool_def("fresh_tool")
     with _mock_mcp_transport([fresh_tool]) as mock_session:
-        with patch("agent_meow.tools.mcp._discovery_cache", expired_cache):
+        with patch("omnigent.tools.mcp._discovery_cache", expired_cache):
             conn = McpServerConnection(config=config)
             tools = await conn.connect()
 
@@ -335,7 +335,7 @@ async def test_connect_populates_cache() -> None:
     await conn.close()
 
 
-# ── McpServerConnection.call_tool ────────────────────────
+# â”€â”€ McpServerConnection.call_tool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio()
@@ -350,7 +350,7 @@ async def test_call_tool_raises_without_connect() -> None:
         await conn.call_tool("test_tool", {"query": "hi"})
 
 
-# ── McpServerConnection.close ────────────────────────────
+# â”€â”€ McpServerConnection.close â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio()
@@ -397,7 +397,7 @@ def test_mcp_server_config_repr_redacts_headers() -> None:
 
 def test_mcp_server_config_repr_empty_headers() -> None:
     """
-    Repr works correctly when there are no headers — no crash,
+    Repr works correctly when there are no headers â€” no crash,
     no ``[REDACTED]`` in the output.
     """
     config = MCPServerConfig(name="plain", url="http://localhost/sse")
@@ -408,7 +408,7 @@ def test_mcp_server_config_repr_empty_headers() -> None:
     assert "[REDACTED]" not in r
 
 
-# ── _normalize_input_schema ───────────────────────────────
+# â”€â”€ _normalize_input_schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_normalize_none_schema_returns_empty_object() -> None:
@@ -450,7 +450,7 @@ def test_normalize_preserves_existing_properties() -> None:
 def test_normalize_does_not_mutate_original_schema() -> None:
     """
     ``_normalize_input_schema`` returns a new dict when
-    modifying — it does not mutate the original schema dict.
+    modifying â€” it does not mutate the original schema dict.
     """
     original = {"type": "object"}
     result = _normalize_input_schema(original, "test")
@@ -463,7 +463,7 @@ def test_normalize_does_not_mutate_original_schema() -> None:
 def test_normalize_non_object_schema_unchanged() -> None:
     """
     A schema with a non-object type (e.g. ``array``) is not
-    modified — ``properties`` injection only applies to objects.
+    modified â€” ``properties`` injection only applies to objects.
     """
     schema = {"type": "array", "items": {"type": "string"}}
     result = _normalize_input_schema(schema, "array_tool")
@@ -525,7 +525,7 @@ def test_normalize_no_warning_for_clean_schema(
     assert not any("reject" in msg or "inconsistent" in msg for msg in caplog.messages)
 
 
-# ── _collect_problematic_keywords ─────────────────────────
+# â”€â”€ _collect_problematic_keywords â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_collect_finds_ref_in_properties() -> None:
@@ -609,7 +609,7 @@ def test_collect_returns_empty_for_clean_schema() -> None:
     assert _collect_problematic_keywords(schema) == set()
 
 
-# ── _format_call_result ──────────────────────────────────
+# â”€â”€ _format_call_result â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_format_call_result_text_content() -> None:
@@ -691,7 +691,7 @@ def test_format_call_result_empty_content_with_error() -> None:
     assert _format_call_result(result) == "Error: (empty response)"
 
 
-# ── clear_discovery_cache ────────────────────────────────
+# â”€â”€ clear_discovery_cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_clear_discovery_cache() -> None:
@@ -730,10 +730,10 @@ def test_discovery_cache_evicts_lru_when_full() -> None:
     assert len(small_cache) == 2
 
 
-# ── _run_async ───────────────────────────────────────────
+# â”€â”€ _run_async â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
-# ── _is_connection_error ─────────────────────────────────
+# â”€â”€ _is_connection_error â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_is_connection_error_eof() -> None:
@@ -793,24 +793,24 @@ def test_is_connection_error_value_error() -> None:
     assert _is_connection_error(ValueError("bad")) is False
 
 
-# ── _backoff_delay ────────────────────────────────────────
+# â”€â”€ _backoff_delay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_backoff_delay_increases_with_attempt() -> None:
     """
     ``_backoff_delay`` increases with each attempt (exponential
-    backoff) and applies jitter (0.5–1.5x).
+    backoff) and applies jitter (0.5â€“1.5x).
     """
     retry = RetryPolicy(backoff_base_s=2.0, backoff_max_s=30.0)
-    # Attempt 0 → retry_index=1: base * 2^0 = 2.0, jitter [1.0, 3.0].
+    # Attempt 0 â†’ retry_index=1: base * 2^0 = 2.0, jitter [1.0, 3.0].
     delay_0 = _backoff_delay(0, retry)
     assert 1.0 <= delay_0 <= 3.0
 
-    # Attempt 1 → retry_index=2: base * 2^1 = 4.0, jitter [2.0, 6.0].
+    # Attempt 1 â†’ retry_index=2: base * 2^1 = 4.0, jitter [2.0, 6.0].
     delay_1 = _backoff_delay(1, retry)
     assert 2.0 <= delay_1 <= 6.0
 
-    # Attempt 2 → retry_index=3: base * 2^2 = 8.0, jitter [4.0, 12.0].
+    # Attempt 2 â†’ retry_index=3: base * 2^2 = 8.0, jitter [4.0, 12.0].
     delay_2 = _backoff_delay(2, retry)
     assert 4.0 <= delay_2 <= 12.0
 
@@ -821,12 +821,12 @@ def test_backoff_delay_capped_at_max() -> None:
     jitter).
     """
     retry = RetryPolicy(backoff_base_s=10.0, backoff_max_s=5.0)
-    # 10 * 2^0 = 10, capped to 5.0; jitter[0.5, 1.5] → [2.5, 7.5].
+    # 10 * 2^0 = 10, capped to 5.0; jitter[0.5, 1.5] â†’ [2.5, 7.5].
     delay = _backoff_delay(0, retry)
     assert delay <= 7.5
 
 
-# ── Reconnection on server death ─────────────────────────
+# â”€â”€ Reconnection on server death â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio()
@@ -856,7 +856,7 @@ async def test_call_tool_reconnects_on_connection_error() -> None:
         # (in production this opens a new transport).
         # Patch the _sleep indirection so retry backoff is instant.
         with patch.object(conn, "_reconnect", new_callable=AsyncMock) as mock_reconnect:
-            with patch("agent_meow.tools.mcp._sleep", new_callable=AsyncMock):
+            with patch("omnigent.tools.mcp._sleep", new_callable=AsyncMock):
                 result = await conn.call_tool("test_tool", {"query": "hi"})
 
         assert result == "recovered"
@@ -919,7 +919,7 @@ async def test_call_tool_exhausts_all_retries_then_raises() -> None:
         ]
 
         with patch.object(conn, "_reconnect", new_callable=AsyncMock):
-            with patch("agent_meow.tools.mcp._sleep", new_callable=AsyncMock):
+            with patch("omnigent.tools.mcp._sleep", new_callable=AsyncMock):
                 with pytest.raises(EOFError, match="attempt 3"):
                     await conn.call_tool("test_tool", {"query": "hi"})
 
@@ -933,7 +933,7 @@ async def test_call_tool_uses_config_retry_policy() -> None:
     ``call_tool()`` uses the per-server ``config.retry`` when
     set, rather than the module-level default.
     """
-    # max_retries=1 means 1 retry beyond first attempt — 2 invoke calls total.
+    # max_retries=1 means 1 retry beyond first attempt â€” 2 invoke calls total.
     config = MCPServerConfig(
         name="test-custom-retry",
         url="http://localhost:9000/mcp",
@@ -954,7 +954,7 @@ async def test_call_tool_uses_config_retry_policy() -> None:
         ]
 
         with patch.object(conn, "_reconnect", new_callable=AsyncMock):
-            with patch("agent_meow.tools.mcp._sleep", new_callable=AsyncMock):
+            with patch("omnigent.tools.mcp._sleep", new_callable=AsyncMock):
                 with pytest.raises(EOFError, match="attempt 2"):
                     await conn.call_tool("test_tool", {"query": "hi"})
 
@@ -968,7 +968,7 @@ async def test_call_tool_sleeps_between_retries() -> None:
     attempts. Verifies that the ``_sleep`` indirection is called
     with increasing delays.
     """
-    # max_retries=2 → 3 total attempts (2 errors + 1 success).
+    # max_retries=2 â†’ 3 total attempts (2 errors + 1 success).
     config = MCPServerConfig(
         name="test-backoff",
         url="http://localhost:9000/mcp",
@@ -995,7 +995,7 @@ async def test_call_tool_sleeps_between_retries() -> None:
 
         with patch.object(conn, "_reconnect", new_callable=AsyncMock):
             with patch(
-                "agent_meow.tools.mcp._sleep",
+                "omnigent.tools.mcp._sleep",
                 new_callable=AsyncMock,
             ) as mock_sleep:
                 result = await conn.call_tool("test_tool", {"query": "hi"})
@@ -1004,9 +1004,9 @@ async def test_call_tool_sleeps_between_retries() -> None:
         # Two sleeps: before retry 1 and before retry 2.
         assert mock_sleep.await_count == 2
         # Delays computed by RetryPolicy.compute_backoff_delay:
-        # retry_index=1 → 2.0 * 2^0 = 2.0; retry_index=2 → 2.0 * 2^1 = 4.0.
-        # Jitter is uniform[0.5, 1.5], so delay 1 ∈ [1.0, 3.0],
-        # delay 2 ∈ [2.0, 6.0].
+        # retry_index=1 â†’ 2.0 * 2^0 = 2.0; retry_index=2 â†’ 2.0 * 2^1 = 4.0.
+        # Jitter is uniform[0.5, 1.5], so delay 1 âˆˆ [1.0, 3.0],
+        # delay 2 âˆˆ [2.0, 6.0].
         delay_1 = mock_sleep.await_args_list[0].args[0]
         delay_2 = mock_sleep.await_args_list[1].args[0]
         assert 1.0 <= delay_1 <= 3.0
@@ -1019,7 +1019,7 @@ async def test_call_tool_default_retry_has_three_attempts() -> None:
     When ``config.retry`` is ``None``, ``call_tool()`` falls
     back to ``_MCP_RECONNECT_DEFAULTS`` which allows 3 attempts.
     """
-    # No retry config — should use default (3 attempts).
+    # No retry config â€” should use default (3 attempts).
     config = MCPServerConfig(
         name="test-default-retry",
         url="http://localhost:9000/mcp",
@@ -1037,7 +1037,7 @@ async def test_call_tool_default_retry_has_three_attempts() -> None:
         ]
 
         with patch.object(conn, "_reconnect", new_callable=AsyncMock):
-            with patch("agent_meow.tools.mcp._sleep", new_callable=AsyncMock):
+            with patch("omnigent.tools.mcp._sleep", new_callable=AsyncMock):
                 with pytest.raises(EOFError, match="attempt 3"):
                     await conn.call_tool("test_tool", {"query": "hi"})
 
@@ -1045,7 +1045,7 @@ async def test_call_tool_default_retry_has_three_attempts() -> None:
         assert mock_session.call_tool.await_count == _MCP_RECONNECT_DEFAULTS.max_retries + 1
 
 
-# ── Timeout propagation ──────────────────────────────────
+# â”€â”€ Timeout propagation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio()
@@ -1091,11 +1091,11 @@ async def test_connect_passes_timeout_to_client_session() -> None:
     mock_ctx.__aexit__ = AsyncMock(return_value=False)
 
     with patch(
-        "agent_meow.tools.mcp.ClientSession",
+        "omnigent.tools.mcp.ClientSession",
         side_effect=_capturing_session,
     ):
         with patch(
-            "agent_meow.tools.mcp.streamablehttp_client",
+            "omnigent.tools.mcp.streamablehttp_client",
             return_value=mock_ctx,
         ):
             conn = McpServerConnection(config=config)
@@ -1154,11 +1154,11 @@ async def test_connect_passes_none_timeout_to_client_session() -> None:
     mock_ctx.__aexit__ = AsyncMock(return_value=False)
 
     with patch(
-        "agent_meow.tools.mcp.ClientSession",
+        "omnigent.tools.mcp.ClientSession",
         side_effect=_capturing_session,
     ):
         with patch(
-            "agent_meow.tools.mcp.streamablehttp_client",
+            "omnigent.tools.mcp.streamablehttp_client",
             return_value=mock_ctx,
         ):
             conn = McpServerConnection(config=config)
@@ -1234,7 +1234,7 @@ async def test_connect_http_uses_default_timeouts_when_none() -> None:
     )
 
 
-# ── HTTP transport: connection, headers, discovery ────────
+# â”€â”€ HTTP transport: connection, headers, discovery â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -1317,11 +1317,11 @@ def _mock_http_transport(
         return mock_session
 
     with patch(
-        "agent_meow.tools.mcp.streamablehttp_client",
+        "omnigent.tools.mcp.streamablehttp_client",
         side_effect=_capturing_streamable_client,
     ):
         with patch(
-            "agent_meow.tools.mcp.ClientSession",
+            "omnigent.tools.mcp.ClientSession",
             side_effect=_capturing_session,
         ):
             yield captured
@@ -1407,7 +1407,7 @@ async def test_http_falls_back_to_sse_when_streamable_fails() -> None:
     tried first, Streamable HTTP servers (e.g. Databricks MCP
     gateways) would get the wrong transport.
 
-    A non-``/sse`` URL is used on purpose: an ``…/sse`` URL is routed
+    A non-``/sse`` URL is used on purpose: an ``â€¦/sse`` URL is routed
     straight to the SSE client by ``_is_sse_endpoint`` and would bypass
     Streamable HTTP entirely, so it would not exercise the fallback this
     test guards.
@@ -1445,15 +1445,15 @@ async def test_http_falls_back_to_sse_when_streamable_fails() -> None:
     mock_session.__aexit__ = AsyncMock(return_value=False)
 
     with patch(
-        "agent_meow.tools.mcp.streamablehttp_client",
+        "omnigent.tools.mcp.streamablehttp_client",
         side_effect=RuntimeError("server returned text/html, not application/json"),
     ) as mock_streamable:
         with patch(
-            "agent_meow.tools.mcp.sse_client",
+            "omnigent.tools.mcp.sse_client",
             side_effect=_capturing_sse,
         ):
             with patch(
-                "agent_meow.tools.mcp.ClientSession",
+                "omnigent.tools.mcp.ClientSession",
                 return_value=mock_session,
             ):
                 conn = McpServerConnection(config=config)
@@ -1565,7 +1565,7 @@ async def test_http_reconnect_on_connection_error() -> None:
         ]
 
         with patch.object(conn, "_reconnect", new_callable=AsyncMock) as mock_reconnect:
-            with patch("agent_meow.tools.mcp._sleep", new_callable=AsyncMock):
+            with patch("omnigent.tools.mcp._sleep", new_callable=AsyncMock):
                 result = await conn.call_tool("http_tool", {"query": "retry"})
 
     assert result == "recovered via HTTP"
@@ -1600,7 +1600,7 @@ async def test_http_connect_uses_cache() -> None:
     await conn.close()
 
 
-# ── Circuit breaker ──────────────────────────────────────────
+# â”€â”€ Circuit breaker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_circuit_breaker_allows_calls_when_closed() -> None:
@@ -1680,7 +1680,7 @@ def test_circuit_breaker_half_open_after_cooldown(
         lambda: original_monotonic() + 15.0,
     )
 
-    # Cooldown elapsed — half-open state allows one probe.
+    # Cooldown elapsed â€” half-open state allows one probe.
     assert breaker.is_tripped is False
     breaker.pre_call("test-server")  # Should not raise.
 
@@ -1707,7 +1707,7 @@ def test_circuit_breaker_re_trips_on_half_open_failure(
 
     # Half-open probe allowed.
     breaker.pre_call("test-server")
-    # Probe fails — re-trip.
+    # Probe fails â€” re-trip.
     breaker.record_failure("test-server")
     assert breaker.is_tripped is True
 
@@ -1737,7 +1737,7 @@ def test_circuit_breaker_failure_count_resets_on_success() -> None:
     breaker.record_success()
     breaker.record_failure("test-server")
     breaker.record_failure("test-server")
-    # Only 2 consecutive failures — not at threshold.
+    # Only 2 consecutive failures â€” not at threshold.
     assert breaker.is_tripped is False
 
 
@@ -1751,7 +1751,7 @@ def test_circuit_breaker_trip_log_includes_server_name(
     :param caplog: Pytest fixture that captures log records.
     """
     breaker = _CircuitBreaker(failure_threshold=2, cooldown_seconds=10.0)
-    with caplog.at_level(logging.WARNING, logger="agent_meow.tools.mcp"):
+    with caplog.at_level(logging.WARNING, logger="omnigent.tools.mcp"):
         breaker.record_failure("my-flaky-server")
         breaker.record_failure("my-flaky-server")
 
@@ -1791,7 +1791,7 @@ async def test_call_tool_trips_breaker_after_repeated_failures() -> None:
         mock_session.call_tool = AsyncMock(side_effect=EOFError("dead"))
 
         with patch.object(conn, "_reconnect", new_callable=AsyncMock):
-            with patch("agent_meow.tools.mcp._sleep", new_callable=AsyncMock):
+            with patch("omnigent.tools.mcp._sleep", new_callable=AsyncMock):
                 # First call: exhausts retries, records failure.
                 with pytest.raises(EOFError):
                     await conn.call_tool("my_tool", {"x": 1})
@@ -1842,22 +1842,22 @@ async def test_call_tool_resets_breaker_on_success() -> None:
         )
 
         with patch.object(conn, "_reconnect", new_callable=AsyncMock):
-            with patch("agent_meow.tools.mcp._sleep", new_callable=AsyncMock):
-                # First invocation: all 3 retries fail → failure (count=1).
+            with patch("omnigent.tools.mcp._sleep", new_callable=AsyncMock):
+                # First invocation: all 3 retries fail â†’ failure (count=1).
                 with pytest.raises(EOFError):
                     await conn.call_tool("my_tool", {})
 
-                # Second invocation: 3rd retry succeeds → reset.
+                # Second invocation: 3rd retry succeeds â†’ reset.
                 result = await conn.call_tool("my_tool", {})
                 assert result == "ok"
 
-        # Breaker should be reset — no accumulated failures.
+        # Breaker should be reset â€” no accumulated failures.
         assert conn._breaker.consecutive_failures == 0
 
     await conn.close()
 
 
-# ── Circuit breaker half-open atomic gate ─────────────────
+# â”€â”€ Circuit breaker half-open atomic gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_circuit_breaker_half_open_clears_tripped_at(
@@ -1887,14 +1887,14 @@ def test_circuit_breaker_half_open_clears_tripped_at(
 
     # First pre_call enters half-open and clears the tripped state.
     breaker.pre_call("test-server")
-    # Breaker should no longer report as tripped — a concurrent
+    # Breaker should no longer report as tripped â€” a concurrent
     # caller sees CLOSED, not half-open.
     assert breaker.is_tripped is False
     # Second pre_call should not raise (sees CLOSED state).
     breaker.pre_call("test-server")
 
 
-# ── EventLoopThread ──────────────────────────────────────
+# â”€â”€ EventLoopThread â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_stdio_config(
@@ -1924,20 +1924,20 @@ def _make_stdio_config(
 
 def test_open_stdio_transport_spawns_unwrapped() -> None:
     """
-    The stdio branch spawns the MCP subprocess directly — the
+    The stdio branch spawns the MCP subprocess directly â€” the
     ``StdioServerParameters`` command equals ``config.command``
     and the args equal ``config.args``, with no ``srt`` prefix
     inserted.
 
     Step 7 of the harness contract migration removed the
     ``MCPServerConfig.sandbox`` field and the ``wrap_with_srt``
-    call that gated this spawn — srt's default policy blocked
+    call that gated this spawn â€” srt's default policy blocked
     outbound network and broke every useful MCP. This test pins
     the post-step-7 behavior: the unwrap is not optional.
 
     What breaks if this fails: a regression that re-introduces
     ``srt -c <command>`` would silently hang every stdio MCP
-    that needs outbound HTTPS (essentially all of them — Glean,
+    that needs outbound HTTPS (essentially all of them â€” Glean,
     Slack, GitHub, UC, etc.).
     """
     config = _make_stdio_config(
@@ -1956,15 +1956,15 @@ def test_open_stdio_transport_spawns_unwrapped() -> None:
 
     conn = McpServerConnection(config=config)
 
-    with patch("agent_meow.tools.mcp.stdio_client", side_effect=_capture_stdio_client):
+    with patch("omnigent.tools.mcp.stdio_client", side_effect=_capture_stdio_client):
         with patch(
-            "agent_meow.tools.mcp.ClientSession",
+            "omnigent.tools.mcp.ClientSession",
             return_value=_mock_session(),
         ):
             asyncio.run(conn.connect())
 
     params = captured["params"]
-    # command + args pass through unchanged — any wrap insertion
+    # command + args pass through unchanged â€” any wrap insertion
     # here means the srt path came back.
     assert params.command == "fake-mcp"
     assert params.args == ["--flag", "value"]
@@ -1998,9 +1998,9 @@ def test_open_stdio_transport_overlays_env_on_parent() -> None:
 
     conn = McpServerConnection(config=config)
 
-    with patch("agent_meow.tools.mcp.stdio_client", side_effect=_capture_stdio_client):
+    with patch("omnigent.tools.mcp.stdio_client", side_effect=_capture_stdio_client):
         with patch(
-            "agent_meow.tools.mcp.ClientSession",
+            "omnigent.tools.mcp.ClientSession",
             return_value=_mock_session(),
         ):
             asyncio.run(conn.connect())
@@ -2008,7 +2008,7 @@ def test_open_stdio_transport_overlays_env_on_parent() -> None:
     env = captured["params"].env
     # Config overlay reached the subprocess
     assert env["GITHUB_TOKEN"] == "ghp_xyz"
-    # Parent env merged — PATH is always in os.environ on any
+    # Parent env merged â€” PATH is always in os.environ on any
     # realistic test runner, so its presence confirms the dict
     # union didn't wipe the inherited environment.
     assert "PATH" in env
@@ -2017,7 +2017,7 @@ def test_open_stdio_transport_overlays_env_on_parent() -> None:
 def test_open_stdio_transport_empty_env_inherits_fully() -> None:
     """
     When ``config.env`` is empty, the transport passes
-    ``env=None`` to :class:`StdioServerParameters` — which makes
+    ``env=None`` to :class:`StdioServerParameters` â€” which makes
     the MCP SDK inherit the parent environment wholesale. An
     explicit empty ``{}`` would wipe PATH etc. and break MCPs
     that don't set their own.
@@ -2040,21 +2040,21 @@ def test_open_stdio_transport_empty_env_inherits_fully() -> None:
 
     conn = McpServerConnection(config=config)
 
-    with patch("agent_meow.tools.mcp.stdio_client", side_effect=_capture_stdio_client):
+    with patch("omnigent.tools.mcp.stdio_client", side_effect=_capture_stdio_client):
         with patch(
-            "agent_meow.tools.mcp.ClientSession",
+            "omnigent.tools.mcp.ClientSession",
             return_value=_mock_session(),
         ):
             asyncio.run(conn.connect())
 
-    # None tells stdio_client to inherit the parent env as-is —
+    # None tells stdio_client to inherit the parent env as-is â€”
     # matches its documented behavior.
     assert captured["params"].env is None
 
 
 def _mock_session() -> AsyncMock:
     """
-    Build a mock ClientSession — minimum needed for the
+    Build a mock ClientSession â€” minimum needed for the
     stdio transport tests to reach connect() without exercising
     the real MCP handshake.
     """
@@ -2085,7 +2085,7 @@ def _make_pool_mcp_tool(name: str) -> McpToolDef:
     )
 
 
-# ── McpElicitationRequired & MRTR detection in _invoke_tool ────
+# â”€â”€ McpElicitationRequired & MRTR detection in _invoke_tool â”€â”€â”€â”€
 
 
 def _make_input_required_result(
@@ -2229,11 +2229,11 @@ async def test_invoke_tool_returns_normally_without_mrtr() -> None:
     ``_invoke_tool`` returns the formatted result string when
     ``model_extra`` does NOT contain ``resultType == "input_required"``.
 
-    If this fails: normal (non-MRTR) tool calls are broken — the
+    If this fails: normal (non-MRTR) tool calls are broken â€” the
     function is raising ``McpElicitationRequired`` when it shouldn't.
     """
     config = _make_http_config()
-    # Normal result — no extra fields triggering MRTR.
+    # Normal result â€” no extra fields triggering MRTR.
     normal_result = CallToolResult.model_validate(
         {
             "content": [{"type": "text", "text": "tool output here"}],
@@ -2266,7 +2266,7 @@ async def test_call_tool_with_elicitation_returns_result() -> None:
     ``inputResponses`` and ``requestState`` and returns the
     formatted result when the server responds normally.
 
-    If this fails: the elicitation retry path is broken — the
+    If this fails: the elicitation retry path is broken â€” the
     runner can't complete the tool call after the user approves.
     """
     config = _make_http_config()
@@ -2307,7 +2307,7 @@ async def test_call_tool_with_elicitation_raises_on_second_mrtr() -> None:
     when the retry itself returns another ``InputRequiredResult``
     (multi-round MRTR).
 
-    If this fails: multi-round elicitation is broken — the second
+    If this fails: multi-round elicitation is broken â€” the second
     elicitation round silently returns an empty result instead of
     surfacing the next approval request.
     """
@@ -2347,7 +2347,7 @@ async def test_call_tool_with_elicitation_raises_on_second_mrtr() -> None:
     await conn.close()
 
 
-# ── _is_sse_endpoint / legacy-SSE routing ────────────────
+# â”€â”€ _is_sse_endpoint / legacy-SSE routing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_is_sse_endpoint_detects_sse_paths() -> None:
@@ -2357,7 +2357,7 @@ def test_is_sse_endpoint_detects_sse_paths() -> None:
     client hangs in teardown against such a server, so the transport
     router must detect these and use the SSE client directly.
     """
-    from agent_meow.tools.mcp import _is_sse_endpoint
+    from omnigent.tools.mcp import _is_sse_endpoint
 
     assert _is_sse_endpoint("http://h:1/mcp/sse")
     assert _is_sse_endpoint("http://h:1/mcp/sse/")  # trailing slash
@@ -2371,10 +2371,10 @@ def test_is_sse_endpoint_detects_sse_paths() -> None:
 @pytest.mark.asyncio()
 async def test_open_http_transport_routes_sse_url_straight_to_sse() -> None:
     """
-    An ``…/sse`` URL goes directly to the SSE transport.
+    An ``â€¦/sse`` URL goes directly to the SSE transport.
 
     The Streamable HTTP client hangs in teardown against an SSE-only
-    server (crawl4ai), so it must be SKIPPED — not merely
+    server (crawl4ai), so it must be SKIPPED â€” not merely
     tried-then-fallen-back-from, because the hang prevents the
     fallback from ever running.
     """
@@ -2396,14 +2396,14 @@ async def test_open_http_transport_routes_sse_url_straight_to_sse() -> None:
     async with AsyncExitStack() as stack:
         await conn._open_http_transport(stack)
 
-    assert calls == ["sse"], "…/sse URL must skip Streamable HTTP entirely"
+    assert calls == ["sse"], "â€¦/sse URL must skip Streamable HTTP entirely"
 
 
 @pytest.mark.asyncio()
 async def test_open_http_transport_uses_streamable_for_non_sse_url() -> None:
     """
     A plain HTTP MCP URL still tries Streamable HTTP first (with the
-    existing SSE fallback on failure) — the routing change must not
+    existing SSE fallback on failure) â€” the routing change must not
     regress modern Streamable-HTTP servers.
     """
     from contextlib import AsyncExitStack

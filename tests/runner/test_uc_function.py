@@ -1,11 +1,11 @@
-"""Unit tests for :mod:`~?agent_meow.runner.uc_function`.
+"""Unit tests for :mod:`~?omnigent.runner.uc_function`.
 
 Tests cover:
 
 - SQL statement construction with parameterized queries
   (``_build_select_statement``).
 - End-to-end ``execute_uc_function`` with a mocked
-  ``WorkspaceClient`` — verifies the correct SQL is sent, the
+  ``WorkspaceClient`` â€” verifies the correct SQL is sent, the
   warehouse ID is forwarded, and the result is extracted from the
   SDK response.
 - Error handling: missing warehouse ID, failed execution, no result
@@ -22,12 +22,12 @@ from typing import Any
 
 import pytest
 
-from agent_meow.runner.uc_function import (
+from omnigent.runner.uc_function import (
     _build_select_statement,
 )
-from agent_meow.spec.types import LocalToolInfo, ToolRuntime
+from omnigent.spec.types import LocalToolInfo, ToolRuntime
 
-# ── Helpers ─────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -134,7 +134,7 @@ class _FakeDatabricksAuth:
     profile: str
 
 
-# ── _build_select_statement tests ───────────────────────────────
+# â”€â”€ _build_select_statement tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_select_no_args() -> None:
@@ -159,7 +159,7 @@ def test_build_select_bare_function_no_backticks() -> None:
 def test_build_select_rejects_sql_injection_in_catalog_path() -> None:
     """catalog_path with SQL metacharacters is rejected.
 
-    Prevents SQL injection via crafted tool specs — backticks,
+    Prevents SQL injection via crafted tool specs â€” backticks,
     semicolons, parens, or spaces in catalog_path would alter the
     generated SQL structure.
     """
@@ -220,17 +220,17 @@ def test_build_select_non_string_value_json_encoded() -> None:
     assert params[0]["value"] == json.dumps([1, 2, 3])
 
 
-# ── execute_uc_function tests ───────────────────────────────────
+# â”€â”€ execute_uc_function tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_execute_uc_function_missing_warehouse_id() -> None:
     """Calling without warehouse_id raises ValueError immediately.
 
-    This prevents a confusing SDK error downstream — the user
+    This prevents a confusing SDK error downstream â€” the user
     gets a clear message about the missing config.
     """
-    from agent_meow.runner.uc_function import execute_uc_function
+    from omnigent.runner.uc_function import execute_uc_function
 
     with pytest.raises(ValueError, match="requires a warehouse_id"):
         await execute_uc_function(
@@ -250,7 +250,7 @@ async def test_execute_uc_function_missing_warehouse_id_env_unset(
     the parameter nor ``DATABRICKS_WAREHOUSE_ID`` is available,
     the error message names both sources.
     """
-    from agent_meow.runner.uc_function import execute_uc_function
+    from omnigent.runner.uc_function import execute_uc_function
 
     monkeypatch.delenv("DATABRICKS_WAREHOUSE_ID", raising=False)
     with pytest.raises(ValueError, match="requires a warehouse_id"):
@@ -292,7 +292,7 @@ async def test_execute_uc_function_warehouse_from_env(monkeypatch: pytest.Monkey
         )
 
     monkeypatch.setattr(
-        "agent_meow.runner.uc_function._get_workspace_client",
+        "omnigent.runner.uc_function._get_workspace_client",
         lambda profile: _FakeClient(),
     )
 
@@ -305,7 +305,7 @@ async def test_execute_uc_function_warehouse_from_env(monkeypatch: pytest.Monkey
     monkeypatch.setattr("databricks.sdk.service.sql.StatementState", _FakeStatementState)
     monkeypatch.setenv("DATABRICKS_WAREHOUSE_ID", "env-wh-456")
 
-    from agent_meow.runner.uc_function import execute_uc_function
+    from omnigent.runner.uc_function import execute_uc_function
 
     result = await execute_uc_function(
         catalog_path="cat.schema.func",
@@ -368,7 +368,7 @@ async def test_execute_uc_function_success(monkeypatch: pytest.MonkeyPatch) -> N
     fake_client = _FakeClient()
 
     monkeypatch.setattr(
-        "agent_meow.runner.uc_function._get_workspace_client",
+        "omnigent.runner.uc_function._get_workspace_client",
         lambda profile: fake_client,
     )
 
@@ -388,7 +388,7 @@ async def test_execute_uc_function_success(monkeypatch: pytest.MonkeyPatch) -> N
         _FakeStatementState,
     )
 
-    from agent_meow.runner.uc_function import execute_uc_function
+    from omnigent.runner.uc_function import execute_uc_function
 
     result = await execute_uc_function(
         catalog_path="cat.schema.classify",
@@ -428,7 +428,7 @@ async def test_execute_uc_function_failed_statement(monkeypatch: pytest.MonkeyPa
         )
 
     monkeypatch.setattr(
-        "agent_meow.runner.uc_function._get_workspace_client",
+        "omnigent.runner.uc_function._get_workspace_client",
         lambda profile: _FakeClient(),
     )
 
@@ -446,7 +446,7 @@ async def test_execute_uc_function_failed_statement(monkeypatch: pytest.MonkeyPa
         _FakeStatementState,
     )
 
-    from agent_meow.runner.uc_function import execute_uc_function
+    from omnigent.runner.uc_function import execute_uc_function
 
     with pytest.raises(RuntimeError, match="Function not found"):
         await execute_uc_function(
@@ -479,7 +479,7 @@ async def test_execute_uc_function_null_result(monkeypatch: pytest.MonkeyPatch) 
         )
 
     monkeypatch.setattr(
-        "agent_meow.runner.uc_function._get_workspace_client",
+        "omnigent.runner.uc_function._get_workspace_client",
         lambda profile: _FakeClient(),
     )
 
@@ -497,7 +497,7 @@ async def test_execute_uc_function_null_result(monkeypatch: pytest.MonkeyPatch) 
         _FakeStatementState,
     )
 
-    from agent_meow.runner.uc_function import execute_uc_function
+    from omnigent.runner.uc_function import execute_uc_function
 
     result = await execute_uc_function(
         catalog_path="cat.schema.func",
@@ -508,12 +508,12 @@ async def test_execute_uc_function_null_result(monkeypatch: pytest.MonkeyPatch) 
     assert result == json.dumps(None)
 
 
-# ── Dispatch integration tests ──────────────────────────────────
+# â”€â”€ Dispatch integration tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_is_uc_function_tool_true() -> None:
     """``_is_uc_function_tool`` returns True for UC_FUNCTION tools."""
-    from agent_meow.runner.tool_dispatch import _is_uc_function_tool
+    from omnigent.runner.tool_dispatch import _is_uc_function_tool
 
     spec = _FakeAgentSpec(
         local_tools=[
@@ -535,7 +535,7 @@ def test_is_uc_function_tool_true() -> None:
 
 def test_is_uc_function_tool_false_for_server_tool() -> None:
     """``_is_uc_function_tool`` returns False for SERVER-runtime tools."""
-    from agent_meow.runner.tool_dispatch import _is_uc_function_tool
+    from omnigent.runner.tool_dispatch import _is_uc_function_tool
 
     spec = _FakeAgentSpec(
         local_tools=[
@@ -552,14 +552,14 @@ def test_is_uc_function_tool_false_for_server_tool() -> None:
 
 def test_is_uc_function_tool_no_spec() -> None:
     """``_is_uc_function_tool`` returns False when agent_spec is None."""
-    from agent_meow.runner.tool_dispatch import _is_uc_function_tool
+    from omnigent.runner.tool_dispatch import _is_uc_function_tool
 
     assert _is_uc_function_tool("classify", None) is False
 
 
 def test_resolve_uc_profile_from_auth() -> None:
     """Profile is extracted from ``executor.auth.profile``."""
-    from agent_meow.runner.tool_dispatch import _resolve_uc_profile
+    from omnigent.runner.tool_dispatch import _resolve_uc_profile
 
     spec = _FakeAgentSpec(
         executor=_FakeExecutorSpec(
@@ -571,7 +571,7 @@ def test_resolve_uc_profile_from_auth() -> None:
 
 def test_resolve_uc_profile_from_deprecated_field() -> None:
     """Profile falls back to ``executor.profile`` when auth is absent."""
-    from agent_meow.runner.tool_dispatch import _resolve_uc_profile
+    from omnigent.runner.tool_dispatch import _resolve_uc_profile
 
     spec = _FakeAgentSpec(
         executor=_FakeExecutorSpec(profile="legacy-profile"),
@@ -581,7 +581,7 @@ def test_resolve_uc_profile_from_deprecated_field() -> None:
 
 def test_resolve_uc_profile_from_config() -> None:
     """Profile falls back to ``executor.config["profile"]``."""
-    from agent_meow.runner.tool_dispatch import _resolve_uc_profile
+    from omnigent.runner.tool_dispatch import _resolve_uc_profile
 
     spec = _FakeAgentSpec(
         executor=_FakeExecutorSpec(config={"profile": "compat-profile"}),
@@ -591,7 +591,7 @@ def test_resolve_uc_profile_from_config() -> None:
 
 def test_resolve_uc_profile_none() -> None:
     """Returns None when no profile is configured anywhere."""
-    from agent_meow.runner.tool_dispatch import _resolve_uc_profile
+    from omnigent.runner.tool_dispatch import _resolve_uc_profile
 
     spec = _FakeAgentSpec(executor=_FakeExecutorSpec())
     assert _resolve_uc_profile(spec) is None

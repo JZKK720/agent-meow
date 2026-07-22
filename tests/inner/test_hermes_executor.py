@@ -19,13 +19,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agent_meow.inner.executor import (
+from omnigent.inner.executor import (
     ExecutorConfig,
     ExecutorError,
     TextChunk,
     TurnComplete,
 )
-from agent_meow.inner.hermes_executor import (
+from omnigent.inner.hermes_executor import (
     HermesExecutor,
     _build_hermes_args,
     _extract_last_user_message,

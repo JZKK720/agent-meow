@@ -1,11 +1,11 @@
-"""Tests for agent_meow.onboarding.providers — catalog loading and queries."""
+"""Tests for omnigent.onboarding.providers â€” catalog loading and queries."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_meow.onboarding import providers as _providers_mod
-from agent_meow.onboarding.providers import (
+from omnigent.onboarding import providers as _providers_mod
+from omnigent.onboarding.providers import (
     ModelInfo,
     ProviderConfig,
     default_chat_model,
@@ -88,7 +88,7 @@ def mock_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-# ── get_all_providers ──────────────────────────────────────
+# â”€â”€ get_all_providers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_get_all_providers_returns_nonempty_list() -> None:
@@ -114,7 +114,7 @@ def test_get_all_providers_contains_major_providers() -> None:
 
 def test_get_all_providers_popular_first() -> None:
     """Popular providers must appear before the rest."""
-    from agent_meow.onboarding.providers import COMMON_PROVIDERS
+    from omnigent.onboarding.providers import COMMON_PROVIDERS
 
     providers = get_all_providers()
     # The first entries should be the popular providers (in order).
@@ -152,7 +152,7 @@ def test_get_all_providers_consolidates_vertex_ai() -> None:
     )
 
 
-# ── get_models / get_chat_models ─────────────────────────
+# â”€â”€ get_models / get_chat_models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_get_models_anthropic_returns_models() -> None:
@@ -182,7 +182,7 @@ def test_get_chat_models_sorted_newest_first() -> None:
     # gpt-5.x models should appear before gpt-4.x models, which
     # should appear before gpt-3.5 models. Check that the first
     # model has a higher version than the last.
-    from agent_meow.onboarding.providers import _extract_model_version
+    from omnigent.onboarding.providers import _extract_model_version
 
     first_version = _extract_model_version(chat_models[0].name)
     last_version = _extract_model_version(chat_models[-1].name)
@@ -193,7 +193,7 @@ def test_get_chat_models_sorted_newest_first() -> None:
     )
 
 
-# ── default_chat_model ─────────────────────────────────────
+# â”€â”€ default_chat_model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_default_chat_model_anthropic_is_pinned_opus() -> None:
@@ -210,7 +210,7 @@ def test_default_chat_model_openai_is_pinned_gpt() -> None:
     """The openai default is the explicit ``gpt-5.5`` pin (general-purpose).
 
     The default must be a usable general-purpose ``gpt-*`` text model, never
-    a specialty (audio/realtime/…) variant. A failure means the pin
+    a specialty (audio/realtime/â€¦) variant. A failure means the pin
     regressed.
     """
     default = default_chat_model("openai")
@@ -224,7 +224,7 @@ def test_default_chat_model_openrouter_is_pinned_oss() -> None:
     """OpenRouter defaults to the pinned OSS model (not an OpenAI/Anthropic id).
 
     OpenRouter routes OSS models, so its out-of-box default is an OSS model
-    (``moonshotai/kimi-k2.6``) — also the gateway add flow's OpenAI-surface
+    (``moonshotai/kimi-k2.6``) â€” also the gateway add flow's OpenAI-surface
     pre-fill. A failure means the OSS pin regressed.
     """
     assert default_chat_model("openrouter") == "moonshotai/kimi-k2.6"
@@ -239,7 +239,7 @@ def test_default_chat_model_dynamic_skips_specialty_variants() -> None:
     and choose a general-purpose ``gpt-*``. Guards the fallback used for any
     non-pinned provider.
     """
-    from agent_meow.onboarding.providers import _SPECIALTY_MODEL_TOKENS
+    from omnigent.onboarding.providers import _SPECIALTY_MODEL_TOKENS
 
     general = [
         m.name
@@ -280,7 +280,7 @@ def test_get_models_strips_provider_prefix() -> None:
     models = get_models("gemini")
     for m in models:
         assert not m.name.startswith("gemini/"), (
-            f"Model name {m.name!r} still has provider prefix — should be stripped."
+            f"Model name {m.name!r} still has provider prefix â€” should be stripped."
         )
 
 
@@ -294,7 +294,7 @@ def test_get_models_excludes_finetuned() -> None:
     )
 
 
-# ── get_provider_config ──────────────────────────────────
+# â”€â”€ get_provider_config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_simple_provider_returns_api_key_mode() -> None:

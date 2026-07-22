@@ -8,7 +8,7 @@ sends a ``host.launch_runner`` frame.
 
 The dedicated ``POST /v1/hosts/{id}/runners`` endpoint is covered by
 ``test_hosts_api.py``. These tests pin the *inline* path's distinct
-behavior — in particular its deliberately lenient failure handling:
+behavior â€” in particular its deliberately lenient failure handling:
 unlike the dedicated endpoint (which raises 502/504 when the host
 declines or times out), session-create still returns 201 with the
 runner bound, leaving the session recoverable via reconnect/relaunch.
@@ -27,7 +27,7 @@ import pytest
 from asgiref.testing import ApplicationCommunicator
 from fastapi import FastAPI
 
-from agent_meow.host.frames import (
+from omnigent.host.frames import (
     HostHelloFrame,
     HostLaunchRunnerFrame,
     HostLaunchRunnerResultFrame,
@@ -38,17 +38,17 @@ from agent_meow.host.frames import (
     decode_host_frame,
     encode_host_frame,
 )
-from agent_meow.runner.transports.ws_tunnel.frames import HelloFrame
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server.app import create_app
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runner.transports.ws_tunnel.frames import HelloFrame
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server.app import create_app
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.host_store import HostStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.host_store import HostStore
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
@@ -203,7 +203,7 @@ async def _serve_one_launch(
     with ``launch_status`` to the launch, then returns.
 
     :param comm: The connected host communicator.
-    :param launch_status: ``"launched"`` or ``"failed"`` — the status
+    :param launch_status: ``"launched"`` or ``"failed"`` â€” the status
         the fake host reports for the launch.
     :param launch_error: Error string to attach when the launch is
         reported as failed.
@@ -266,7 +266,7 @@ async def _serve_one_stop(comm: ApplicationCommunicator) -> str:
     :returns: The ``runner_id`` carried by the stop frame, e.g.
         ``"runner_token_abc123..."``.
     :raises AssertionError: If no stop frame arrives within the frame
-        budget — i.e. the Stop handler did not ask the host to stop the
+        budget â€” i.e. the Stop handler did not ask the host to stop the
         runner (the regression this guards against).
     """
     # Bounded so a missing stop frame fails fast instead of hanging.
@@ -357,7 +357,7 @@ async def test_inline_launch_binds_runner_and_returns_host(
     the binding.
 
     A failure here means the Web UI New Chat wizard's create call no
-    longer launches a runner — the user would get an unbound session.
+    longer launches a runner â€” the user would get an unbound session.
     """
     comm = await _connect_host(app)
     agent = await create_test_agent(client)
@@ -376,7 +376,7 @@ async def test_inline_launch_binds_runner_and_returns_host(
     assert body["host_id"] == _HOST_ID
     assert body["runner_id"] is not None
     # runner_id is derived from the server's binding token, NOT the
-    # runner_id the host echoed back — so it has the token prefix.
+    # runner_id the host echoed back â€” so it has the token prefix.
     assert body["runner_id"].startswith("runner_token_"), (
         f"runner_id should be derived from the server binding token, got {body['runner_id']!r}"
     )
@@ -398,7 +398,7 @@ async def test_inline_launch_failure_still_returns_bound_session(
     db_uri: str,
 ) -> None:
     """When the host reports the launch failed, the inline path still
-    returns 201 with the runner bound — its deliberately lenient
+    returns 201 with the runner bound â€” its deliberately lenient
     contract, distinct from ``POST /v1/hosts/{id}/runners`` (which
     raises 502 on the same host failure).
 
@@ -439,7 +439,7 @@ async def test_inline_launch_failure_still_returns_bound_session(
 
 
 _HARNESS_REFUSAL = (
-    "harness 'codex' is not configured on host 'laptop' — run `agent-meow setup` on that machine"
+    "harness 'codex' is not configured on host 'laptop' â€” run `agent-meow setup` on that machine"
 )
 
 
@@ -452,8 +452,8 @@ async def test_inline_create_harness_not_configured_stays_lenient(
 
     The picker's readiness data can be stale (the user may have run
     ``agent-meow setup`` since the host last connected), so create never
-    gates on it: the session opens (201), the binding is kept, and —
-    unlike the earlier design — NO transcript item is written at create
+    gates on it: the session opens (201), the binding is kept, and â€”
+    unlike the earlier design â€” NO transcript item is written at create
     time. The error is deferred to the first-message relaunch (the real
     runner-start attempt), covered by the next test.
 
@@ -492,7 +492,7 @@ async def test_inline_create_harness_not_configured_stays_lenient(
     assert body["host_id"] == _HOST_ID
     assert body["runner_id"] is not None
 
-    # No transcript item at create — the notice is deferred to the
+    # No transcript item at create â€” the notice is deferred to the
     # first-message relaunch path.
     items = await client.get(f"/v1/sessions/{body['id']}/items")
     assert items.status_code == 200, items.text
@@ -514,17 +514,17 @@ async def test_message_relaunch_harness_not_configured_persists_error_turn(
     refuses the relaunch with ``harness_not_configured``, the server
     consumes the user message AND records a sibling ``type="error"`` item
     carrying the host's `agent-meow setup` message (the web renders it as
-    an error banner) — instead of timing out into a generic
+    an error banner) â€” instead of timing out into a generic
     ``RUNNER_UNAVAILABLE``. The binding is left intact so a later message
     relaunches once the user has run setup.
 
     Mutation check: drop the ``harness_not_configured`` branch in
     post_event's relaunch and the message instead 503s with
-    ``runner_unavailable`` and no error item is written — both assertions
+    ``runner_unavailable`` and no error item is written â€” both assertions
     below fail.
     """
-    from agent_meow.runtime import set_runner_client
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.runtime import set_runner_client
+    from omnigent.server.routes import sessions as sessions_module
 
     # Grace=0 so the message takes the relaunch branch immediately instead
     # of waiting for the (never-connecting) create-bound runner.
@@ -546,7 +546,7 @@ async def test_message_relaunch_harness_not_configured_persists_error_turn(
     assert create_resp.status_code == 201, create_resp.text
     session_id = create_resp.json()["id"]
 
-    # Runner offline (none ever connected) → the message relaunches; serve
+    # Runner offline (none ever connected) â†’ the message relaunches; serve
     # that relaunch as a harness refusal.
     set_runner_client(None)
     relaunch_responder = asyncio.create_task(
@@ -620,7 +620,7 @@ async def test_inline_launch_rejects_bad_workspace(
     This is the route-level contract behind the wizard's workspace
     picker (which only submits absolute paths). The lower-level
     ``validate_workspace`` unit tests don't cover the "workspace
-    required when host_id is set" branch — that check lives in the
+    required when host_id is set" branch â€” that check lives in the
     session-create helper.
     """
     agent = await create_test_agent(client)
@@ -641,7 +641,7 @@ async def _inline_launch_session(
 
     Drives ``POST /v1/sessions`` with ``host_id`` + ``workspace`` while
     answering the host's stat + launch round-trips, so the returned
-    session has ``host_id`` and a token-bound ``runner_id`` persisted —
+    session has ``host_id`` and a token-bound ``runner_id`` persisted â€”
     the shape the Stop / health / relaunch paths read.
 
     :param client: Test HTTP client bound to the host-wired app.
@@ -677,7 +677,7 @@ async def _stop_host_session(
     :param session_id: Session to stop, e.g. ``"conv_abc123"``.
     :returns: The ``runner_id`` the host was told to stop.
     """
-    from agent_meow.runtime import set_runner_client
+    from omnigent.runtime import set_runner_client
 
     def _runner_handler(request: httpx.Request) -> httpx.Response:
         """204 every runner POST (pane-kill forward) and snapshot GET."""
@@ -725,7 +725,7 @@ async def test_stop_session_stops_host_launched_runner(
 
     stopped_runner_id = await _stop_host_session(client, comm, session["id"])
 
-    # The host was asked to stop the SAME runner the session is bound to —
+    # The host was asked to stop the SAME runner the session is bound to â€”
     # proving the Stop handler read host_id/runner_id off the session row
     # and forwarded a stop_runner for it. A wrong/empty id would mean the
     # teardown targeted the wrong runner (or didn't run).
@@ -744,12 +744,12 @@ async def test_stopped_host_session_writes_no_label_and_host_stays_online(
     Stop is non-sticky (WS-S2): it kills the host-launched runner but
     writes NO persistent marker. With the host's ``agent-meow host``
     tunnel still open, ``GET /health`` keeps reporting ``host_online:
-    true`` — the relaunch affordance the open-session view needs — so the
+    true`` â€” the relaunch affordance the open-session view needs â€” so the
     next message auto-relaunches via the normal dispatch path (covered by
     :func:`test_stopped_host_session_message_relaunches_runner`).
 
     Asserts the post-Stop liveness reports the host still online and that
-    NO ``agent_meow.stopped`` label is persisted. Mutation check: re-add a
+    NO ``omnigent.stopped`` label is persisted. Mutation check: re-add a
     sticky stop-label write and the no-label assertion fails.
     """
     comm = await _connect_host(app)
@@ -768,10 +768,10 @@ async def test_stopped_host_session_writes_no_label_and_host_stays_online(
     )
 
     # Stop is non-sticky: no persistent marker is written. A re-introduced
-    # sticky label would resurface the retired agent_meow.stopped behavior.
+    # sticky label would resurface the retired omnigent.stopped behavior.
     snap = await client.get(f"/v1/sessions/{session_id}")
-    assert "agent_meow.stopped" not in snap.json()["labels"], (
-        f"Stop must NOT persist any agent_meow.stopped label; got {snap.json()['labels']!r}"
+    assert "omnigent.stopped" not in snap.json()["labels"], (
+        f"Stop must NOT persist any omnigent.stopped label; got {snap.json()['labels']!r}"
     )
 
 
@@ -785,18 +785,18 @@ async def test_stopped_host_session_message_relaunches_runner(
 
     Stop is non-sticky (WS-S2): it kills the current runner but writes no
     marker, so a subsequent message must auto-relaunch the session on its
-    still-online host via the normal message-dispatch relaunch path —
+    still-online host via the normal message-dispatch relaunch path â€”
     exactly as if the runner had merely died. This is the behavior that
     replaces the retired ``resume_session`` machinery.
 
     Asserts that after Stop, posting a message sends the host a
     ``host.launch_runner`` and rotates the conversation ``runner_id`` to a
     fresh token-bound id. Mutation check: re-add the deliberate-stop guard
-    to the relaunch branch and no launch frame is sent — the first
+    to the relaunch branch and no launch frame is sent â€” the first
     assertion fails.
     """
-    from agent_meow.runtime import set_runner_client
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.runtime import set_runner_client
+    from omnigent.server.routes import sessions as sessions_module
 
     monkeypatch.setattr(sessions_module, "_HOST_BOUND_RUNNER_CONNECT_GRACE_S", 0.0)
 
@@ -826,7 +826,7 @@ async def test_stopped_host_session_message_relaunches_runner(
     try:
         launch_frame = await _wait_for_launch(comm, budget_s=5.0)
     finally:
-        # No runner ever connects, so cancel before the ~30s wait loop —
+        # No runner ever connects, so cancel before the ~30s wait loop â€”
         # the relaunch frame + runner_id rotation already happened.
         post_task.cancel()
         with contextlib.suppress(asyncio.CancelledError, Exception):
@@ -834,7 +834,7 @@ async def test_stopped_host_session_message_relaunches_runner(
 
     assert launch_frame is not None, (
         "a message to a stopped (non-sticky) host session must trigger "
-        "host.launch_runner so the host re-spawns a runner; none arrived — "
+        "host.launch_runner so the host re-spawns a runner; none arrived â€” "
         "a stale stop guard is still blocking the relaunch branch"
     )
     assert launch_frame.workspace == _WORKSPACE, (
@@ -843,7 +843,7 @@ async def test_stopped_host_session_message_relaunches_runner(
     )
 
     # The relaunch minted a fresh token-bound runner_id so the server stops
-    # routing to the dead runner — same rotation the offline-runner path does.
+    # routing to the dead runner â€” same rotation the offline-runner path does.
     conv = SqlAlchemyConversationStore(db_uri).get_conversation(session_id)
     assert conv is not None
     assert conv.runner_id is not None and conv.runner_id.startswith("runner_token_"), (
@@ -875,12 +875,12 @@ async def test_host_session_message_relaunches_offline_runner(
     so the server routes to the new runner, not the dead one.
 
     Mutation check: drop the relaunch branch (or its ``conv.host_id`` arm)
-    in ``post_event`` and no launch frame is sent — ``_wait_for_launch``
+    in ``post_event`` and no launch frame is sent â€” ``_wait_for_launch``
     returns ``None`` and the first assertion fails. Make ``replace_runner_id``
     a no-op and the runner_id-rotation assertion fails.
     """
-    from agent_meow.runtime import set_runner_client
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.runtime import set_runner_client
+    from omnigent.server.routes import sessions as sessions_module
 
     monkeypatch.setattr(sessions_module, "_HOST_BOUND_RUNNER_CONNECT_GRACE_S", 0.0)
 
@@ -912,7 +912,7 @@ async def test_host_session_message_relaunches_offline_runner(
     finally:
         # We never connect a runner, so the route would otherwise block
         # ~30s in its wait loop. Cancel now that we've observed (or missed)
-        # the relaunch — the rotation + frame send already happened
+        # the relaunch â€” the rotation + frame send already happened
         # synchronously, so the assertions below remain valid.
         post_task.cancel()
         with contextlib.suppress(asyncio.CancelledError, Exception):
@@ -921,7 +921,7 @@ async def test_host_session_message_relaunches_offline_runner(
     assert launch_frame is not None, (
         "a message to a host-bound, runner-offline, non-stopped session must "
         "trigger host.launch_runner so the host can re-spawn a runner; none "
-        "arrived — the relaunch branch in post_event did not fire"
+        "arrived â€” the relaunch branch in post_event did not fire"
     )
     # Relaunch forwards the session's canonical workspace (not garbage),
     # proving it read the persisted workspace off the conversation row.
@@ -965,7 +965,7 @@ async def test_host_session_message_waits_for_bound_runner_before_relaunch(
     and this test observes a second host launch frame plus a changed
     conversation ``runner_id``.
     """
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.server.routes import sessions as sessions_module
 
     comm = await _connect_host(app)
     session = await _inline_launch_session(client, comm)
@@ -1087,11 +1087,11 @@ async def test_relaunch_posts_session_init_before_forwarding_message(
     handshake first guarantees the terminal + forwarder are in place
     before the message lands.
 
-    The invariant is harness-agnostic — the handshake POST must precede
-    the message forward for *any* relaunched session — so a plain agent
+    The invariant is harness-agnostic â€” the handshake POST must precede
+    the message forward for *any* relaunched session â€” so a plain agent
     suffices and keeps the assertion squarely on request ordering.
 
-    ``_get_runner_client`` is staged offline→online to drive the
+    ``_get_runner_client`` is staged offlineâ†’online to drive the
     relaunch branch deterministically: the app wires a real
     ``RunnerRouter`` that can only resolve a runner with a registered
     tunnel, so simulating "runner reconnects" via a registered tunnel
@@ -1104,7 +1104,7 @@ async def test_relaunch_posts_session_init_before_forwarding_message(
     leading ``/v1/sessions`` POST (first assertion fails). Move it after
     the forward and the index-ordering assertion fails.
     """
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.server.routes import sessions as sessions_module
 
     monkeypatch.setattr(sessions_module, "_HOST_BOUND_RUNNER_CONNECT_GRACE_S", 0.0)
 
@@ -1142,7 +1142,7 @@ async def test_relaunch_posts_session_init_before_forwarding_message(
         """Return ``None`` so the route enters the relaunch branch.
 
         :param sid: Session id being routed (unused; one session here).
-        :param router: Real app runner router (unused — staged here).
+        :param router: Real app runner router (unused â€” staged here).
         :returns: ``None``.
         """
         del sid, router
@@ -1213,7 +1213,7 @@ async def test_relaunch_posts_session_init_before_forwarding_message(
 
     # Handshake must be recorded AND precede the first /events forward.
     # Pre-fix: no "/v1/sessions" entry at all. Wrong order: handshake
-    # after the forward → the forwarder isn't watching when the message
+    # after the forward â†’ the forwarder isn't watching when the message
     # lands, reproducing the stuck-bubble bug.
     assert "/v1/sessions" in runner_paths, (
         f"relaunch path must POST /v1/sessions (session-init handshake) to the "
@@ -1249,7 +1249,7 @@ async def test_health_reports_online_for_host_on_other_replica(
     ``/health`` on a *separate* replica B that shares the same DB but
     has its own empty :class:`HostRegistry`. The runner tunnel lives
     on replica A's in-memory registry, so on replica B ``runner_online``
-    is (correctly, under strict liveness) ``False`` — but ``host_online``
+    is (correctly, under strict liveness) ``False`` â€” but ``host_online``
     must still be ``True``: the host is perfectly reachable on replica A,
     and host liveness is the cross-replica signal the open-session view
     keys off to decide "runner asleep, just send a message" vs "host
@@ -1268,7 +1268,7 @@ async def test_health_reports_online_for_host_on_other_replica(
     session_id = session["id"]
 
     # Replica B: same DB, fresh app/registries. It never sees the
-    # host's WebSocket — only the persisted ``hosts`` row.
+    # host's WebSocket â€” only the persisted ``hosts`` row.
     artifact_store_b = LocalArtifactStore(str(tmp_path / "artifacts_b"))
     app_b = create_app(
         agent_store=SqlAlchemyAgentStore(db_uri),
@@ -1295,17 +1295,17 @@ async def test_health_reports_online_for_host_on_other_replica(
 
     assert single.status_code == 200
     # The runner tunnel is on replica A only, so strict runner_online is
-    # False here — but host_online must be True, read cross-replica from
+    # False here â€” but host_online must be True, read cross-replica from
     # the hosts DB row rather than replica B's empty local registry.
     assert single.json()["session"]["host_online"] is True, (
         "replica B reported the host offline for a host connected to "
-        "replica A — _session_liveness is reading host liveness from the "
+        "replica A â€” _session_liveness is reading host liveness from the "
         "local registry instead of the hosts DB."
     )
     assert single.json()["session"]["runner_online"] is False
     assert batch.status_code == 200
     assert batch.json()["sessions"][session_id]["host_online"] is True, (
-        "replica B reported the host offline in the batch path — "
+        "replica B reported the host offline in the batch path â€” "
         "_bulk_session_liveness is reading host liveness from the local "
         "registry instead of the hosts DB."
     )

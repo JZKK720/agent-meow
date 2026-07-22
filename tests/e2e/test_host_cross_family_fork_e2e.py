@@ -1,24 +1,24 @@
 """End-to-end tests for CROSS-FAMILY fork history carry into claude-native.
 
 Covers forking an openai-family source into the anthropic NATIVE harness:
-codex-native → claude-native and openai-agents (SDK) → claude-native. The
+codex-native â†’ claude-native and openai-agents (SDK) â†’ claude-native. The
 source's history is the wrong format (or has no native transcript at all)
 for the target, so the runner must take the REBUILD path: synthesize the
 Claude transcript from the fork's copied agent-meow items
 (``_ensure_local_claude_resume_transcript``) under a freshly minted
 session uuid, then ``--resume`` it.
 
-The codex→claude test deliberately waits for the SOURCE to capture its
+The codexâ†’claude test deliberately waits for the SOURCE to capture its
 ``external_session_id`` before forking. That makes the regression sharp:
-the fork route must SKIP the ``agent_meow.fork.source_external_session_id``
-directive on a cross-family switch even though the source has one — if it
+the fork route must SKIP the ``omnigent.fork.source_external_session_id``
+directive on a cross-family switch even though the source has one â€” if it
 were stamped, the runner's clone branch would look for a native transcript
 in the wrong format, find nothing, and launch FRESH (silently losing
 history; the rebuild branch is only reached when the directive is absent).
 The label assertions catch that deterministically before the LLM recall
 does end-to-end.
 
-The reverse direction (→ codex-native) is intentionally NOT covered yet:
+The reverse direction (â†’ codex-native) is intentionally NOT covered yet:
 the synthesized Codex rollout's ``session_meta`` must track the installed
 Codex CLI's schema (e.g. 0.136 requires ``payload.timestamp`` +
 ``payload.cli_version`` or the whole rollout is rejected as "does not
@@ -26,10 +26,10 @@ start with session metadata" and resume launches fresh). Add the
 ``codex resume``-side tests together with that version-aware synthesizer
 change.
 
-Opt-in: the codex→claude test needs BOTH CLIs installed and logged in
+Opt-in: the codexâ†’claude test needs BOTH CLIs installed and logged in
 (claude-native needs a real interactive Claude login anchored to the real
 ``$HOME``; codex needs ``codex`` on PATH with model credentials); the
-SDK→native test needs only the Claude side. Set the matching gates::
+SDKâ†’native test needs only the Claude side. Set the matching gates::
 
     OMNIGENT_E2E_CLAUDE_NATIVE=1 OMNIGENT_E2E_CODEX_NATIVE=1 \\
     .venv/bin/python -m pytest tests/e2e/test_host_cross_family_fork_e2e.py \\
@@ -48,7 +48,7 @@ from typing import Protocol
 import httpx
 import pytest
 
-from agent_meow.stores.conversation_store import (
+from omnigent.stores.conversation_store import (
     FORK_CARRY_HISTORY_LABEL_KEY,
     FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY,
 )
@@ -84,9 +84,9 @@ from tests.e2e.test_host_codex_native_e2e import (
     _poll_for_assistant_marker as _poll_codex_marker,
 )
 
-# Opt-in only: the codex→claude test drives BOTH native CLIs in one test
+# Opt-in only: the codexâ†’claude test drives BOTH native CLIs in one test
 # (source on codex, clone on claude), so it needs both gates and both
-# binaries; the SDK→native test needs only the Claude side. See
+# binaries; the SDKâ†’native test needs only the Claude side. See
 # test_host_claude_native_e2e / test_host_codex_native_e2e for why binary
 # presence alone is not a sufficient gate.
 _BOTH_NATIVE_GATE = pytest.mark.skipif(
@@ -95,14 +95,14 @@ _BOTH_NATIVE_GATE = pytest.mark.skipif(
     or shutil.which("claude") is None
     or shutil.which("codex") is None,
     reason=(
-        "cross-family native↔native fork e2e needs `claude` AND `codex` installed/logged in; "
+        "cross-family nativeâ†”native fork e2e needs `claude` AND `codex` installed/logged in; "
         "set OMNIGENT_E2E_CLAUDE_NATIVE=1 and OMNIGENT_E2E_CODEX_NATIVE=1 to run"
     ),
 )
 _CLAUDE_NATIVE_GATE = pytest.mark.skipif(
     os.environ.get("OMNIGENT_E2E_CLAUDE_NATIVE") != "1" or shutil.which("claude") is None,
     reason=(
-        "cross-family SDK→claude-native fork e2e needs an interactive Claude login; "
+        "cross-family SDKâ†’claude-native fork e2e needs an interactive Claude login; "
         "set OMNIGENT_E2E_CLAUDE_NATIVE=1 (and have `claude` installed + logged in) to run"
     ),
 )
@@ -148,20 +148,20 @@ def _assert_cross_family_fork_labels(
     snap = client.get(f"/v1/sessions/{fork_id}", timeout=30.0)
     snap.raise_for_status()
     labels: dict[str, str] = snap.json().get("labels") or {}
-    # Stamped → the runner rebuilds the native transcript from items.
+    # Stamped â†’ the runner rebuilds the native transcript from items.
     # Absent would mean the fork route's cross-family carry gate regressed
     # and the clone resumes blank.
     assert labels.get(FORK_CARRY_HISTORY_LABEL_KEY) == "1", (
         f"cross-family fork must stamp carry-history, got labels {labels!r}"
     )
-    # Absent → the runner cannot take the (doomed) clone branch. Present
+    # Absent â†’ the runner cannot take the (doomed) clone branch. Present
     # would mean the store stamped the source's wrong-format native session
     # id, which makes the runner clone-attempt fail and launch fresh.
     assert FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY not in labels, (
         f"cross-family fork must NOT stamp the source's native session id, got labels {labels!r}"
     )
     # The clone's UI mode must reflect the TARGET harness, not the source's.
-    assert labels.get("agent_meow.wrapper") == expected_wrapper, (
+    assert labels.get("omnigent.wrapper") == expected_wrapper, (
         f"fork should present as the TARGET harness {expected_wrapper!r}, got labels {labels!r}"
     )
 
@@ -177,7 +177,7 @@ def _plant_marker_and_wait(
     Plant a code word in *session_id* and wait until it is committed.
 
     Sends the marker with a forced one-word ACK, waits for the ACK, then
-    waits for the source's ``external_session_id`` capture — the fork must
+    waits for the source's ``external_session_id`` capture â€” the fork must
     happen AFTER capture so the test proves the cross-family gate (not the
     mere absence of a source session id) is what routes the runner to the
     rebuild path.
@@ -211,7 +211,7 @@ def _recall_marker_in_clone(
     Ask the clone to recall the planted word and assert it surfaces.
 
     The recall only succeeds if the source's agent-meow items were rebuilt
-    into the clone's native transcript and resumed — a fresh launch (the
+    into the clone's native transcript and resumed â€” a fresh launch (the
     regression) has no history and never echoes the marker.
 
     :param client: HTTP client pointed at the test server.
@@ -232,7 +232,7 @@ def _recall_marker_in_clone(
     )
     text = poll_marker(client, session_id=fork_id, marker=marker, timeout=180.0)
     assert marker in text, (
-        f"{target_harness} clone did not recall {marker!r} (got {text!r}) — the "
+        f"{target_harness} clone did not recall {marker!r} (got {text!r}) â€” the "
         f"{source_harness} source's agent-meow items were not rebuilt into the "
         f"clone's native transcript, so it launched fresh without history"
     )
@@ -248,7 +248,7 @@ def test_fork_codex_native_into_claude_native_rebuilds_history(
     A codex-native source forked into claude-native recalls source history.
 
     The headline cross-family case: the source has a captured Codex thread
-    id, but a Claude target can't resume a Codex rollout — the fork must
+    id, but a Claude target can't resume a Codex rollout â€” the fork must
     skip the source-session directive and the runner must rebuild the
     Claude transcript from the copied agent-meow items, then ``--resume`` it.
 
@@ -314,9 +314,9 @@ def test_fork_openai_sdk_source_into_claude_native_rebuilds_history(
     """
     An openai-agents SDK source forked into claude-native recalls history.
 
-    The cross-family SDK→native shape: the source family (openai) differs
-    from the target's (anthropic), so — unlike the same-family
-    ``test_fork_sdk_source_into_native_builds_history`` — the fork route
+    The cross-family SDKâ†’native shape: the source family (openai) differs
+    from the target's (anthropic), so â€” unlike the same-family
+    ``test_fork_sdk_source_into_native_builds_history`` â€” the fork route
     used to refuse to carry history at all. The runner must rebuild the
     clone's Claude transcript from the copied agent-meow items and resume it.
     Only the Claude CLI is needed (the source runs in-process on the
@@ -343,14 +343,14 @@ def test_fork_openai_sdk_source_into_claude_native_rebuilds_history(
     configure_mock_llm(
         mock_llm_server_url,
         [
-            {"text": f"ACK — code word recorded: {marker}"},
+            {"text": f"ACK â€” code word recorded: {marker}"},
             {"text": marker},
         ],
         key=mock_model,
     )
 
     # Register the openai-coder (openai-agents, openai family) SOURCE agent.
-    # No Databricks rewrite needed — we use the mock model key directly.
+    # No Databricks rewrite needed â€” we use the mock model key directly.
     sdk_agent_name = upload_agent(
         http_client,
         _OPENAI_CODER_DIR,
@@ -365,7 +365,7 @@ def test_fork_openai_sdk_source_into_claude_native_rebuilds_history(
 
             # 1. openai-agents SOURCE on the server's runner; plant a code
             # word. SDK sources never capture an external_session_id, so
-            # (unlike the native↔native tests) there is no capture to await.
+            # (unlike the nativeâ†”native tests) there is no capture to await.
             source_id = create_runner_bound_session(
                 http_client, agent_name=sdk_agent_name, runner_id=live_runner_id
             )

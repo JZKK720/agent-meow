@@ -15,7 +15,7 @@ when:
    where the agent-meow server is a subprocess of the REPL).
 2. The store's session factory + busy_timeout pragmas come
    from the production code path
-   (:func:`~?agent_meow.db.utils.make_managed_session_maker`),
+   (:func:`~?omnigent.db.utils.make_managed_session_maker`),
    not a test-only override.
 
 The bug shape: the user's REPL session 2026-04-30 hit
@@ -67,8 +67,8 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow.entities import MessageData, NewConversationItem
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.entities import MessageData, NewConversationItem
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -90,14 +90,14 @@ def ap_server_with_shared_db() -> Iterator[tuple[str, str]]:
     Start a real agent-meow server subprocess and yield (base_url, db_uri).
 
     The DB URI is the same one the test uses to construct its own
-    ``SqlAlchemyConversationStore`` — so writes from the test
+    ``SqlAlchemyConversationStore`` â€” so writes from the test
     process and writes from the agent-meow server hit the same SQLite
     file. Reproduces the cross-process write contention the
-    user's REPL session triggers (REPL process does HTTP →
+    user's REPL session triggers (REPL process does HTTP â†’
     agent-meow server process writes; test process directly writes via
     the store, simulating a concurrent path).
 
-    :yields: ``(base_url, db_uri)`` — server URL and SQLite URI
+    :yields: ``(base_url, db_uri)`` â€” server URL and SQLite URI
         pointing at the shared DB.
     """
     port = _find_free_port()
@@ -119,12 +119,12 @@ def ap_server_with_shared_db() -> Iterator[tuple[str, str]]:
     for var in ("DATABRICKS_TOKEN", "ANTHROPIC_API_KEY", "CODEX", "CLAUDE_CODE"):
         env.pop(var, None)
 
-    log_handle = open(log_path, "w")  # noqa: SIM115 — subprocess holds the FD
+    log_handle = open(log_path, "w")  # noqa: SIM115 â€” subprocess holds the FD
     proc = subprocess.Popen(
         [
             str(_REPO_ROOT / ".venv" / "bin" / "python"),
             "-m",
-            "agent_meow.cli",
+            "omnigent.cli",
             "server",
             "--port",
             str(port),
@@ -243,21 +243,21 @@ def test_concurrent_appends_against_live_omnigent_server_db_no_collision(
         f"Concurrent appends against the live agent-meow server's SQLite "
         f"DB raised {len(errors)} error(s); first: {errors[0]!r}. "
         f"The cross-process / cross-engine lock escalation "
-        f"regressed — the user-reported 2026-04-30 IntegrityError "
+        f"regressed â€” the user-reported 2026-04-30 IntegrityError "
         f"on conversation_items.conversation_id+position is back."
     )
 
     expected_count = threads_count * items_per_thread
     items = conv_store.list_items(conv.id, limit=1000).data
     assert len(items) == expected_count, (
-        f"expected {expected_count} items; got {len(items)} — some "
+        f"expected {expected_count} items; got {len(items)} â€” some "
         f"appends silently dropped despite not raising."
     )
     # Position uniqueness is enforced by the SQL UNIQUE index on
     # (conversation_id, position). Any race that bypassed the
     # lock escalation and produced duplicate positions would
     # have raised IntegrityError above. The count + ID
-    # distinctness check is sufficient — and uses only the
+    # distinctness check is sufficient â€” and uses only the
     # public store API, no private session access.
     item_ids = {item.id for item in items}
     assert len(item_ids) == expected_count, (

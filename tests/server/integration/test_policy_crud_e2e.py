@@ -4,7 +4,7 @@ Covers multi-step scenarios and cross-cutting concerns that the
 per-endpoint unit-style tests in ``test_default_policy_routes.py``
 and ``test_session_policy_routes.py`` do not exercise:
 
-- Full create → read → update → delete lifecycle in a single test
+- Full create â†’ read â†’ update â†’ delete lifecycle in a single test
 - Policy registry discovery (``GET /v1/policy-registry``)
 - Cross-scope isolation (default vs. session policies)
 - Enabled/disabled toggle round-trip
@@ -20,23 +20,23 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server.app import create_app
-from agent_meow.server.auth import LEVEL_EDIT
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
-from agent_meow.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server.app import create_app
+from omnigent.server.auth import LEVEL_EDIT
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from omnigent.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
 from tests.server.conftest import ControllableMockClient
 
 pytestmark = pytest.mark.asyncio
 
-_HANDLER = "agent_meow.policies.builtins.safety.ask_on_os_tools"
+_HANDLER = "omnigent.policies.builtins.safety.ask_on_os_tools"
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _admin_headers(email: str = "admin@example.com") -> dict[str, str]:
@@ -73,7 +73,7 @@ def _seed_session(db_uri: str, user_email: str = "admin@example.com") -> str:
     return conversation.id
 
 
-# ── Fixtures ─────────────────────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -89,7 +89,7 @@ def auth_app(
     :param tmp_path: Pytest temp dir for artifacts.
     :returns: A :class:`FastAPI` instance with auth and policy routes.
     """
-    from agent_meow.server.auth import UnifiedAuthProvider
+    from omnigent.server.auth import UnifiedAuthProvider
 
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     return create_app(
@@ -116,12 +116,12 @@ async def auth_client(
     """Async HTTP client wired to the auth-enabled app.
 
     :param auth_app: FastAPI app with permission and policy stores.
-    :param mock_llm: Controllable mock LLM — released on teardown.
+    :param mock_llm: Controllable mock LLM â€” released on teardown.
     :param tmp_path: Pytest temp dir for the harness process manager.
     :yields: A ready-to-use :class:`httpx.AsyncClient`.
     """
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()
@@ -136,7 +136,7 @@ async def auth_client(
     await pm.shutdown()
 
 
-# ── Full lifecycle ───────────────────────────────────────────────────────────
+# â”€â”€ Full lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_default_policy_full_lifecycle(
@@ -165,19 +165,19 @@ async def test_default_policy_full_lifecycle(
     assert policy["name"] == "lifecycle_policy"
     assert policy["enabled"] is True
 
-    # 2. Get — verify freshly created state
+    # 2. Get â€” verify freshly created state
     get_resp = await auth_client.get(f"/v1/policies/{policy_id}", headers=headers)
     assert get_resp.status_code == 200
     assert get_resp.json()["name"] == "lifecycle_policy"
     assert get_resp.json()["enabled"] is True
 
-    # 3. List — appears in the full list
+    # 3. List â€” appears in the full list
     list_resp = await auth_client.get("/v1/policies", headers=headers)
     assert list_resp.status_code == 200
     ids = {p["id"] for p in list_resp.json()["data"]}
     assert policy_id in ids
 
-    # 4. Update — rename and disable
+    # 4. Update â€” rename and disable
     patch_resp = await auth_client.patch(
         f"/v1/policies/{policy_id}",
         json={"name": "lifecycle_renamed", "enabled": False},
@@ -187,7 +187,7 @@ async def test_default_policy_full_lifecycle(
     assert patch_resp.json()["name"] == "lifecycle_renamed"
     assert patch_resp.json()["enabled"] is False
 
-    # 5. Get — verify the update persisted
+    # 5. Get â€” verify the update persisted
     get_resp2 = await auth_client.get(f"/v1/policies/{policy_id}", headers=headers)
     assert get_resp2.status_code == 200
     body = get_resp2.json()
@@ -239,13 +239,13 @@ async def test_session_policy_full_lifecycle(
     assert get_resp.status_code == 200
     assert get_resp.json()["name"] == "session_lifecycle"
 
-    # 3. List — policy appears among session-scoped entries
+    # 3. List â€” policy appears among session-scoped entries
     list_resp = await auth_client.get(f"/v1/sessions/{session_id}/policies", headers=headers)
     assert list_resp.status_code == 200
     session_ids = {p["id"] for p in list_resp.json()["data"] if p["id"] is not None}
     assert policy_id in session_ids
 
-    # 4. Update — disable
+    # 4. Update â€” disable
     patch_resp = await auth_client.patch(
         f"/v1/sessions/{session_id}/policies/{policy_id}",
         json={"enabled": False},
@@ -254,7 +254,7 @@ async def test_session_policy_full_lifecycle(
     assert patch_resp.status_code == 200
     assert patch_resp.json()["enabled"] is False
 
-    # 5. Get — verify update persisted
+    # 5. Get â€” verify update persisted
     get_resp2 = await auth_client.get(
         f"/v1/sessions/{session_id}/policies/{policy_id}", headers=headers
     )
@@ -276,7 +276,7 @@ async def test_session_policy_full_lifecycle(
     assert gone_resp.status_code == 404
 
 
-# ── Policy registry discovery ────────────────────────────────────────────────
+# â”€â”€ Policy registry discovery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_policy_registry_returns_entries(
@@ -349,7 +349,7 @@ async def test_policy_registry_handler_matches_create_allowlist(
     assert create_resp.json()["handler"] == callable_entry["handler"]
 
 
-# ── Cross-scope isolation ────────────────────────────────────────────────────
+# â”€â”€ Cross-scope isolation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_default_policy_not_in_session_list(
@@ -438,7 +438,7 @@ async def test_two_sessions_have_independent_policies(
     assert "only_in_a" not in names_b
 
 
-# ── Enabled/disabled toggle ─────────────────────────────────────────────────
+# â”€â”€ Enabled/disabled toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_disable_and_reenable_default_policy(

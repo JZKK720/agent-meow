@@ -4,16 +4,16 @@ omnigent-format example YAMLs under ``examples/*.yaml``.
 
 Complements :mod:`test_enforcement_integration`, which loads
 pre-translated omnigent-native fixtures. The fixtures there
-are hand-maintained ports; any bug in the agent-meow → agent-meow
+are hand-maintained ports; any bug in the agent-meow â†’ agent-meow
 adapter layer (e.g. ``condition: {}`` parse rejection,
-``match_tools`` → ``on:`` expansion) slips past those tests. This module goes through
-:func:`~?agent_meow.spec.load` — the same path ``agent-meow run``
-uses — so the adapter is exercised on every run.
+``match_tools`` â†’ ``on:`` expansion) slips past those tests. This module goes through
+:func:`~?omnigent.spec.load` â€” the same path ``agent-meow run``
+uses â€” so the adapter is exercised on every run.
 
 Scenarios mirror the user-documented trigger matrix:
 
-#. ``agent_with_policies.yaml`` — sleep ≤ 5s → ALLOW.
-#. ``agent_with_policies.yaml`` — sleep > 5s → DENY.
+#. ``agent_with_policies.yaml`` â€” sleep â‰¤ 5s â†’ ALLOW.
+#. ``agent_with_policies.yaml`` â€” sleep > 5s â†’ DENY.
    **Documented pre-existing gap**: the example uses a legacy
    2-arg ``(content, phase)`` callable signature. Agent-plane's
    :class:`FunctionPolicy` calls 2-arg callables as
@@ -21,21 +21,21 @@ Scenarios mirror the user-documented trigger matrix:
    ``isinstance(content, dict)`` guard falls through and the
    policy returns ALLOW. Marked xfail so the regression is
    visible if/when the signature adapter is added.
-#. ``rate_limited_search_agent.yaml`` — first web_search → ALLOW.
-#. ``rate_limited_search_agent.yaml`` — 4th web_search → ASK.
+#. ``rate_limited_search_agent.yaml`` â€” first web_search â†’ ALLOW.
+#. ``rate_limited_search_agent.yaml`` â€” 4th web_search â†’ ASK.
    Same legacy-signature gap as #2 (xfail).
-#. ``secure_research_agent.yaml`` — clean run_shell → ALLOW.
-#. ``secure_research_agent.yaml`` — read → run_shell → ASK
+#. ``secure_research_agent.yaml`` â€” clean run_shell â†’ ALLOW.
+#. ``secure_research_agent.yaml`` â€” read â†’ run_shell â†’ ASK
    (ask_high_confidentiality).
-#. ``secure_research_agent.yaml`` — web_search + read →
-   run_shell → DENY (deny_contaminated_shell).
-#. ``secure_research_agent_os_env.yaml`` — same flow as #7,
+#. ``secure_research_agent.yaml`` â€” web_search + read â†’
+   run_shell â†’ DENY (deny_contaminated_shell).
+#. ``secure_research_agent_os_env.yaml`` â€” same flow as #7,
    verifies the os_env variant's policy block still fires.
 
 Prompt-policy scenarios (``block_canada_input``,
 ``block_canada_output``) require the real-LLM classifier and
 are covered by :mod:`tests.e2e.test_policies_e2e`
-(``test_prompt_policy_*``) — not re-tested here.
+(``test_prompt_policy_*``) â€” not re-tested here.
 """
 
 from __future__ import annotations
@@ -44,15 +44,15 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.runtime.policies import (
+from omnigent.policies.types import EvaluationContext
+from omnigent.runtime.policies import (
     _enforce_policy,
     build_policy_engine,
 )
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec import load
-from agent_meow.spec.types import Phase, PolicyAction
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec import load
+from omnigent.spec.types import Phase, PolicyAction
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -83,11 +83,11 @@ def _load_engine_from_yaml(
     Parse an omnigent-format example YAML and build a real
     :class:`PolicyEngine` bound to a fresh conversation.
 
-    Goes through :func:`~?agent_meow.spec.load`, so the
+    Goes through :func:`~?omnigent.spec.load`, so the
     ``_omnigent_compat`` adapter runs on every call. A bug
     there (condition parsing, match_tools expansion) will
     surface at ``load()`` time and fail the test at fixture
-    setup — exactly where a regression in the adapter would
+    setup â€” exactly where a regression in the adapter would
     show up in production.
 
     :param yaml_path: Absolute path to the example YAML.
@@ -120,7 +120,7 @@ def _tool_ctx(name: str, args: dict[str, object] | None = None) -> EvaluationCon
     )
 
 
-# ─── Scenario 1: agent_with_policies → ALLOW short sleep ────
+# â”€â”€â”€ Scenario 1: agent_with_policies â†’ ALLOW short sleep â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -142,7 +142,7 @@ async def test_agent_with_policies_allows_short_sleep(
     assert result.action == PolicyAction.ALLOW
 
 
-# ─── Scenario 2: agent_with_policies → DENY long sleep ──────
+# â”€â”€â”€ Scenario 2: agent_with_policies â†’ DENY long sleep â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -160,7 +160,7 @@ async def test_agent_with_policies_denies_long_sleep(
     inspects ``content.get("name")`` which works because
     :class:`EvaluationContext` is a :func:`dataclasses.dataclass`
     whose ``.content`` field is a dict carrying the tool-call
-    payload — and ``_coerce_to_policy_result`` accepts the
+    payload â€” and ``_coerce_to_policy_result`` accepts the
     returned dict shape structurally.
 
     Claim: the agent-meow YAML + its legacy-style example
@@ -177,7 +177,7 @@ async def test_agent_with_policies_denies_long_sleep(
     assert result.deciding_policy == "block_long_sleep"
 
 
-# Scenarios 5–6 (rate_limited_search_agent.yaml) are NOT tested
+# Scenarios 5â€“6 (rate_limited_search_agent.yaml) are NOT tested
 # here: the example's ``summarize`` tool references
 # ``examples.tool_functions.summarize`` which doesn't exist,
 # and spec load fails at fixture setup. The rate-limit policy
@@ -187,7 +187,7 @@ async def test_agent_with_policies_denies_long_sleep(
 # fixed, add direct-from-YAML coverage here.
 
 
-# ─── Scenario 7: secure_research → ALLOW clean shell ────────
+# â”€â”€â”€ Scenario 7: secure_research â†’ ALLOW clean shell â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -211,7 +211,7 @@ async def test_secure_research_clean_shell_allows(
     assert result.action == PolicyAction.ALLOW
 
 
-# ─── Scenario 8: secure_research → ASK on confidentiality ───
+# â”€â”€â”€ Scenario 8: secure_research â†’ ASK on confidentiality â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -234,7 +234,7 @@ async def test_secure_research_doc_then_shell_asks(
         engine,
         _tool_ctx("read_internal_doc", {"doc_id": "handbook"}),
     )
-    # Now run_shell → ASK (not DENY).
+    # Now run_shell â†’ ASK (not DENY).
     result = await _enforce_policy(
         engine,
         _tool_ctx("run_shell", {"command": "pwd"}),
@@ -243,7 +243,7 @@ async def test_secure_research_doc_then_shell_asks(
     assert result.deciding_policy == "ask_high_confidentiality"
 
 
-# ─── Scenario 9: secure_research → DENY on both taints ──────
+# â”€â”€â”€ Scenario 9: secure_research â†’ DENY on both taints â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -251,18 +251,18 @@ async def test_secure_research_both_taints_deny_shell(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """
-    After web_search (integrity→0) AND read_internal_doc
-    (confidentiality→1), run_shell matches
+    After web_search (integrityâ†’0) AND read_internal_doc
+    (confidentialityâ†’1), run_shell matches
     ``deny_contaminated_shell`` (which needs both). The DENY
     short-circuits before ``ask_high_confidentiality`` and
-    ``ask_low_integrity`` — YAML ordering matters.
+    ``ask_low_integrity`` â€” YAML ordering matters.
 
     Claim: multi-key condition gates compose correctly and
     the stricter policy placed first wins.
     """
     engine = _load_engine_from_yaml(_SECURE_RESEARCH, conversation_store)
     # Note: the tool is named ``search_web`` in the YAML (line
-    # 50) — not ``web_search``. The match_tools reference on
+    # 50) â€” not ``web_search``. The match_tools reference on
     # line 78 was corrected to match.
     await _enforce_policy(engine, _tool_ctx("search_web", {"query": "news"}))
     await _enforce_policy(
@@ -277,7 +277,7 @@ async def test_secure_research_both_taints_deny_shell(
     assert result.deciding_policy == "deny_contaminated_shell"
 
 
-# ─── risk_score_agent: built-in session-risk-score policy ───
+# â”€â”€â”€ risk_score_agent: built-in session-risk-score policy â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -303,7 +303,7 @@ async def test_risk_score_web_searches_accrue_and_gate_send(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """
-    Loaded from YAML: five web_searches (5×10 = 50) reach the threshold, so the
+    Loaded from YAML: five web_searches (5Ã—10 = 50) reach the threshold, so the
     next gmail_message_send escalates to ASK.
 
     Claim: per-call scoring accumulates in the engine's session_state across
@@ -317,7 +317,7 @@ async def test_risk_score_web_searches_accrue_and_gate_send(
     gated = await _enforce_policy(
         engine, _tool_ctx("mcp__google__gmail_message_send", {"to": "a@b.com"})
     )
-    # 50 >= 50 → the send needs approval; session_risk is the deciding policy.
+    # 50 >= 50 â†’ the send needs approval; session_risk is the deciding policy.
     assert gated.action == PolicyAction.ASK
     assert gated.deciding_policy == "session_risk"
 
@@ -337,14 +337,14 @@ async def test_risk_score_web_searches_accrue_and_gate_send(
 # validator rejects at spec load with "tool name 'web_search'
 # collides with a reserved builtin tool name". Fix requires
 # renaming the tool in the YAML or relaxing the reserved-name
-# check — separate from this file's scope. The enforcement
-# semantics (double-taint → DENY on gated os_env tools) are
+# check â€” separate from this file's scope. The enforcement
+# semantics (double-taint â†’ DENY on gated os_env tools) are
 # structurally identical to scenario 9 above, which IS covered,
-# so the policy-engine behavior is not uncovered — only the
+# so the policy-engine behavior is not uncovered â€” only the
 # direct-from-YAML load path is blocked.
 
 
-# ─── info_flow_agent: built-in gdrive Bell-LaPadula "no write-down" ───
+# â”€â”€â”€ info_flow_agent: built-in gdrive Bell-LaPadula "no write-down" â”€â”€â”€
 
 
 _INFO_FLOW = _EXAMPLES_DIR / "info_flow_agent.yaml"
@@ -400,7 +400,7 @@ async def test_info_flow_blocks_write_out_after_reading_confidential(
 
     Reading the confidential doc latches the session; the follow-up
     ``docs_document_create`` targets a brand-new (outside-compartment) file, a
-    write-down, and DENYs — the demo's headline "same action, different outcome,
+    write-down, and DENYs â€” the demo's headline "same action, different outcome,
     because the state changed".
 
     Claim: the confidential-read latch persists in session_state across
@@ -430,7 +430,7 @@ async def test_info_flow_confidential_files_does_not_grant_write(
 
     The example lists the doc in ``confidential_files`` but not ``write_files``,
     and the agent never created it, so a write to it is denied by the base write
-    rule — ``confidential_files`` is a containment declaration, not a write
+    rule â€” ``confidential_files`` is a containment declaration, not a write
     grant. (The no-write-down check itself abstains here, since the target is in
     the confidential set; the denial comes from the base scope rule.)
 

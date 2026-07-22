@@ -1,6 +1,6 @@
 """Tests for the CLI-side daemon-launch polling helpers.
 
-Covers ``agent_meow.host.daemon_launch``: the online-wait loops must poll
+Covers ``omnigent.host.daemon_launch``: the online-wait loops must poll
 through *transient* transport errors (connection refused while the local
 server is still binding, a dropped keepalive) instead of crashing on the
 first one, and must surface the last transport error when the deadline
@@ -15,8 +15,8 @@ import click
 import httpx
 import pytest
 
-from agent_meow.host import daemon_launch
-from agent_meow.host.daemon_launch import (
+from omnigent.host import daemon_launch
+from omnigent.host.daemon_launch import (
     runner_is_online,
     wait_for_host_online,
     wait_for_runner_online,
@@ -168,7 +168,7 @@ async def test_wait_for_runner_online_fails_fast_on_exit_report(
     connecting, the status endpoint answers ``online: false`` with an
     ``error`` carrying the daemon-composed cause (exit code + log
     tail). The wait must surface that error on the first poll that
-    sees it — a dead process can never come online, so polling out the
+    sees it â€” a dead process can never come online, so polling out the
     full deadline would only hide the cause behind a generic timeout.
     """
     daemon_error = (
@@ -189,8 +189,8 @@ async def test_wait_for_runner_online_fails_fast_on_exit_report(
             await wait_for_runner_online(client, "runner_abc123", timeout_s=5.0)
     message = str(excinfo.value)
     assert "runner_abc123" in message
-    # The daemon's full cause — including the log tail line that names
-    # the actual failure — must reach the user verbatim.
+    # The daemon's full cause â€” including the log tail line that names
+    # the actual failure â€” must reach the user verbatim.
     assert daemon_error in message
     # Exactly one poll: the first response already carried the death
     # report. More polls mean the error field was ignored at least once.
@@ -203,7 +203,7 @@ async def test_wait_for_runner_online_keeps_polling_without_exit_report(
     """``online: false`` with no error keeps polling to the deadline.
 
     A runner that is merely still starting reports offline with no
-    ``error`` field — the wait must NOT fail fast on that (it would
+    ``error`` field â€” the wait must NOT fail fast on that (it would
     break every normal launch), and the deadline failure keeps the
     generic guidance message.
     """

@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.inner import pi_native_executor as pne
-from agent_meow.inner.executor import ExecutorError, TurnComplete
+from omnigent.inner import pi_native_executor as pne
+from omnigent.inner.executor import ExecutorError, TurnComplete
 
 
 def test_supports_flags(tmp_path: Path) -> None:
@@ -114,7 +114,7 @@ async def test_turn_refreshes_baked_bearer(tmp_path: Path, monkeypatch) -> None:
     extension's policy/MCP POSTs fail closed once the session outlives it.
     Both turn paths (``run_turn`` and live steering) must refresh.
     """
-    import agent_meow.runner._entry as entry
+    import omnigent.runner._entry as entry
 
     monkeypatch.setattr(entry, "_make_auth_token_factory", lambda *a, **k: lambda: "tok")
     monkeypatch.setattr(pne, "enqueue_user_message", lambda *a: "msg")
@@ -133,7 +133,7 @@ async def test_turn_refreshes_baked_bearer(tmp_path: Path, monkeypatch) -> None:
 
 async def test_turn_refresh_is_best_effort(tmp_path: Path, monkeypatch) -> None:
     """A mint failure never blocks the turn (best-effort refresh)."""
-    import agent_meow.runner._entry as entry
+    import omnigent.runner._entry as entry
 
     def _boom(*_a, **_k):
         raise RuntimeError("sdk down")

@@ -185,8 +185,8 @@ async def test_delete_session_when_runner_offline(client: httpx.AsyncClient) -> 
     server-owned state (tasks, files, the conversation row) so the
     chat actually disappears from the UI.
     """
-    from agent_meow.errors import ErrorCode, OmnigentError
-    from agent_meow.runtime import _globals, set_runner_router
+    from omnigent.errors import ErrorCode, OmnigentError
+    from omnigent.runtime import _globals, set_runner_router
 
     snapshot = await create_test_session(client)
     conv_id = snapshot["id"]

@@ -1,24 +1,24 @@
 """
 Tests for the built-in working-directory / worktree policy
-(:mod:`~?agent_meow.policies.builtins.working_dir`) — the single
+(:mod:`~?omnigent.policies.builtins.working_dir`) â€” the single
 ``block_working_dir_changes`` factory gating ``sys_os_shell`` commands that
 switch the working directory or git worktrees.
 
 Layers:
 
-- **Layer 1** — direct callable: cd-family and ``git -C`` gating with the
+- **Layer 1** â€” direct callable: cd-family and ``git -C`` gating with the
   ``allowed_dirs`` carve-out; ``git worktree add/move/remove`` gating (and
   abstention on read/maintenance worktree subcommands); the ``block_cd`` /
   ``block_worktree`` toggles; ``action=ask``; robustness against chaining,
   ``bash -c`` / ``eval`` wrapping, env prefixes, and subshells; ASK/DENY on
   un-tokenizable gated segments; abstention on everything else (the
   composition guarantee); and fail-loud factory validation.
-- **Layer 2** — spec resolution through :func:`resolve_function_policy`,
+- **Layer 2** â€” spec resolution through :func:`resolve_function_policy`,
   proving DENY and ASK decisions thread through the engine boundary.
-- **Layer 3** — registry discovery: the one ``POLICY_REGISTRY`` factory entry
+- **Layer 3** â€” registry discovery: the one ``POLICY_REGISTRY`` factory entry
   is browsable and its schema validates good / bad params.
 
-The policy is stateless, so — like the GitHub builtin — there is no
+The policy is stateless, so â€” like the GitHub builtin â€” there is no
 session_state round-trip layer.
 """
 
@@ -26,15 +26,15 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.policies.builtins.working_dir import block_working_dir_changes
-from agent_meow.policies.function import FunctionPolicy, resolve_function_policy
-from agent_meow.policies.registry import get_registry, load_registry, validate_factory_params
-from agent_meow.policies.schema import PolicyEvent, PolicyResponse
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
+from omnigent.policies.builtins.working_dir import block_working_dir_changes
+from omnigent.policies.function import FunctionPolicy, resolve_function_policy
+from omnigent.policies.registry import get_registry, load_registry, validate_factory_params
+from omnigent.policies.schema import PolicyEvent, PolicyResponse
+from omnigent.policies.types import EvaluationContext
+from omnigent.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
 from tests.policies.builtins.helpers import tool_call_event as tc
 
-_HANDLER = "agent_meow.policies.builtins.working_dir.block_working_dir_changes"
+_HANDLER = "omnigent.policies.builtins.working_dir.block_working_dir_changes"
 
 
 def _sh(command: str) -> PolicyEvent:
@@ -58,9 +58,9 @@ def _action(result: PolicyResponse | None) -> str:
     return result["result"] if result else "ALLOW"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — cd-family gating
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” cd-family gating
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @pytest.mark.parametrize("command", ["cd /etc", "chdir /etc", "pushd /etc", "popd"])
@@ -115,7 +115,7 @@ def test_popd_denied_even_with_allowed_dirs() -> None:
     """``popd`` (no determinable target) is denied even when allowed_dirs is set.
 
     popd pops the directory stack to an unknown location, so it can't be proven
-    to land inside an allowed dir — the safe decision is to gate it.
+    to land inside an allowed dir â€” the safe decision is to gate it.
     """
     policy = block_working_dir_changes(allowed_dirs=["/workspace"])
     result = policy(_sh("popd"))
@@ -132,9 +132,9 @@ def test_cd_flags_ignored_when_finding_target() -> None:
     assert policy(_sh("cd -P /workspace")) is None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — git -C (run-in-other-directory)
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” git -C (run-in-other-directory)
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_git_dash_c_denied() -> None:
@@ -160,14 +160,14 @@ def test_git_without_dash_c_abstains() -> None:
     assert policy(_sh("git commit -m wip")) is None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — git worktree gating
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” git worktree gating
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @pytest.mark.parametrize("sub", ["add", "move", "remove"])
 def test_worktree_switch_subcommands_denied(sub: str) -> None:
-    """``git worktree add/move/remove`` are denied — they switch worktrees."""
+    """``git worktree add/move/remove`` are denied â€” they switch worktrees."""
     policy = block_working_dir_changes()
     result = policy(_sh(f"git worktree {sub} ../wt"))
     assert result is not None and result["result"] == "DENY"
@@ -175,7 +175,7 @@ def test_worktree_switch_subcommands_denied(sub: str) -> None:
 
 @pytest.mark.parametrize("sub", ["list", "prune", "lock", "unlock", "repair"])
 def test_worktree_maintenance_subcommands_abstain(sub: str) -> None:
-    """Read/maintenance worktree subcommands abstain — they don't switch trees.
+    """Read/maintenance worktree subcommands abstain â€” they don't switch trees.
 
     Denying ``git worktree list`` would over-block without preventing any
     directory switch.
@@ -197,9 +197,9 @@ def test_worktree_add_detected_past_global_option() -> None:
     assert result is not None and result["result"] == "DENY"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — block_cd / block_worktree toggles
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” block_cd / block_worktree toggles
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_block_worktree_off_abstains_on_worktree() -> None:
@@ -211,7 +211,7 @@ def test_block_worktree_off_abstains_on_worktree() -> None:
 def test_block_cd_off_abstains_on_cd_but_still_gates_worktree() -> None:
     """With block_cd=False: cd abstains, but worktree switches are still gated.
 
-    Proves the two gates are independent — turning off cd gating must not
+    Proves the two gates are independent â€” turning off cd gating must not
     disable worktree gating.
     """
     policy = block_working_dir_changes(block_cd=False)
@@ -220,9 +220,9 @@ def test_block_cd_off_abstains_on_cd_but_still_gates_worktree() -> None:
     assert result is not None and result["result"] == "DENY"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — action=ask
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” action=ask
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_action_ask_returns_ask() -> None:
@@ -232,9 +232,9 @@ def test_action_ask_returns_ask() -> None:
     assert result is not None and result["result"] == "ASK"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — robustness: chaining, wrapping, env prefixes, subshells
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” robustness: chaining, wrapping, env prefixes, subshells
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_chained_command_gates_the_cd() -> None:
@@ -260,7 +260,7 @@ def test_background_operator_does_not_hide_the_cd(command: str) -> None:
     """A single ``&`` (background operator) is a command separator too.
 
     Without splitting on a lone ``&``, ``echo hi & cd /etc`` is one un-split
-    segment whose head is ``echo``, so the ``cd /etc`` slips past the gate —
+    segment whose head is ``echo``, so the ``cd /etc`` slips past the gate â€”
     a trivial bypass. Each ``&``-separated sub-command must be evaluated.
     """
     policy = block_working_dir_changes()
@@ -281,7 +281,7 @@ def test_shell_interpreter_wrapping_is_unwrapped(command: str) -> None:
     """``bash -c`` / ``sh -c`` / ``eval`` wrappers are unwrapped and gated.
 
     Without unwrapping, ``bash -c "cd /etc"`` tokenizes to ``['bash','-c',...]``
-    and slips through ungated — a trivial bypass. The inner command must be
+    and slips through ungated â€” a trivial bypass. The inner command must be
     parsed and gated as if run directly.
     """
     policy = block_working_dir_changes()
@@ -321,9 +321,9 @@ def test_untokenizable_gated_segment_surfaces_action() -> None:
     assert result is not None and result["result"] == "DENY"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — abstention (composition) and tool selection
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” abstention (composition) and tool selection
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @pytest.mark.parametrize("command", ["ls -la", "cat README.md", "echo hello"])
@@ -365,19 +365,19 @@ def test_default_shell_tools_includes_native_bash() -> None:
     ``sys_os_shell``.
     """
     policy = block_working_dir_changes()
-    # Native Bash tool — should be gated by default.
+    # Native Bash tool â€” should be gated by default.
     result = policy(tc("Bash", {"command": "cd /etc"}))
     assert result is not None and result["result"] == "DENY"
-    # Worktree switch via native Bash — also gated.
+    # Worktree switch via native Bash â€” also gated.
     result = policy(tc("Bash", {"command": "git worktree add wt -b feat"}))
     assert result is not None and result["result"] == "DENY"
-    # Safe command via native Bash — no gate.
+    # Safe command via native Bash â€” no gate.
     assert policy(tc("Bash", {"command": "git status"})) is None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — fail-loud factory validation
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” fail-loud factory validation
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_factory_rejects_bad_action() -> None:
@@ -387,14 +387,14 @@ def test_factory_rejects_bad_action() -> None:
 
 
 def test_factory_rejects_both_gates_off() -> None:
-    """Disabling both gates fails loud — the policy could never fire otherwise."""
+    """Disabling both gates fails loud â€” the policy could never fire otherwise."""
     with pytest.raises(ValueError, match="gates nothing"):
         block_working_dir_changes(block_cd=False, block_worktree=False)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 2 — spec resolution through resolve_function_policy
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 2 â€” spec resolution through resolve_function_policy
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @pytest.mark.asyncio
@@ -422,7 +422,7 @@ async def test_resolve_from_spec_asks_when_action_ask() -> None:
     """An ``action=ask`` worktree switch surfaces as ASK through the engine.
 
     Proves the ASK decision (not just DENY) threads through
-    ``resolve_function_policy`` → ``evaluate`` → :class:`PolicyAction`.
+    ``resolve_function_policy`` â†’ ``evaluate`` â†’ :class:`PolicyAction`.
     """
     spec = FunctionPolicySpec(
         name="wd",
@@ -441,9 +441,9 @@ async def test_resolve_from_spec_asks_when_action_ask() -> None:
     assert result.action == PolicyAction.ASK
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 3 — registry
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 3 â€” registry
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_registry_discovers_working_dir_policy() -> None:

@@ -1,6 +1,6 @@
 """E2E coverage for the ``OMNIGENT_MODEL`` env-var fallback on ``agent-meow run``.
 
-The fallback fires in ``agent_meow/chat.py:_apply_overrides_to_raw`` when the
+The fallback fires in ``omnigent/chat.py:_apply_overrides_to_raw`` when the
 spec has no ``executor.model`` / ``executor.harness`` and no ``--model`` /
 ``--harness`` flag is passed. Helper-level coverage lives in
 ``tests/cli/test_chat.py``; this file spawns a real subprocess so a regression
@@ -13,13 +13,13 @@ import subprocess
 from pathlib import Path
 
 from tests.e2e._run_with_group_timeout import run_with_group_timeout
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 # ``databricks-`` prefix is load-bearing on two counts:
 # 1. ``databricks-`` exempts ``llm.connection`` from
-#    ``agent_meow.spec.validator._validate_executor_llm``; any other prefix
+#    ``omnigent.spec.validator._validate_executor_llm``; any other prefix
 #    rejects the YAML before any FM API call happens.
-# 2. ``databricks-gpt-`` routes through ``agent_meow.llms.routing.infer_
+# 2. ``databricks-gpt-`` routes through ``omnigent.llms.routing.infer_
 #    harness_from_model`` to ``openai-agents``; a bare ``databricks-`` prefix
 #    leaves ``executor.harness=""`` and the runtime wedges (no validator
 #    catches the empty harness when ``llm.model`` is set).
@@ -34,7 +34,7 @@ _BOGUS_MODEL = "databricks-gpt-this-model-does-not-exist-omnigent-env-test-9f3a"
 _PROMPT = "say hi in 5 words"
 # Wall-clock budget for the subprocess. ``agent-meow run`` spawns the
 # AP server + runner as grandchildren, so a plain ``subprocess.run``
-# timeout could not reap them — the grandchildren kept the captured
+# timeout could not reap them â€” the grandchildren kept the captured
 # pipe open and ``communicate()`` wedged the shard ~15+ min past the
 # nominal timeout (the bug that suppressed
 # ``test_omnigent_model_env_var_bogus_value_fails_with_named_error``).
@@ -142,7 +142,7 @@ def test_omnigent_model_env_var_drives_successful_run(
     )
 
     # Non-zero exit means either the env var never reached the executor block
-    # or the resolved model failed at the FM API — both silently break users.
+    # or the resolved model failed at the FM API â€” both silently break users.
     assert result.returncode == 0, (
         f"agent-meow run with OMNIGENT_MODEL={_VALID_MODEL!r} exited "
         f"with code {result.returncode}.\n"
@@ -183,7 +183,7 @@ def test_omnigent_model_env_var_bogus_value_fails_with_named_error(
     """
     # Configure an error response keyed to the bogus model name.
     # The mock server resolves the queue by matching the request's
-    # ``model`` field — if the bogus model env var travels through
+    # ``model`` field â€” if the bogus model env var travels through
     # the pipeline correctly, the server returns a 404 error that
     # names the model; if the env var is silently dropped, the
     # default queue fires a success response and the test fails
@@ -213,13 +213,13 @@ def test_omnigent_model_env_var_bogus_value_fails_with_named_error(
         f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
     )
 
-    # The bogus model name must appear in combined output — the mock
+    # The bogus model name must appear in combined output â€” the mock
     # server echoes it in the error message, which travels through the
     # SDK's exception path to stderr. This proves the env-var value
     # reached the FM API call rather than being silently discarded.
     combined = result.stdout + result.stderr
     assert _BOGUS_MODEL in combined, (
-        f"Bogus model {_BOGUS_MODEL!r} not in subprocess output — either the "
+        f"Bogus model {_BOGUS_MODEL!r} not in subprocess output â€” either the "
         f"env var was dropped and the default model took over, or the mock "
         f"server's error response was not surfaced in the exception.\n"
         f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"

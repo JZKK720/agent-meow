@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 
-from agent_meow.tools.builtins.docs import (
+from omnigent.tools.builtins.docs import (
     DocConvertTool,
     DocCreateOfficeTool,
     DocEditOfficeTool,

@@ -11,19 +11,19 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
-from agent_meow.errors import OmnigentError
-from agent_meow.policies.types import PolicyAction, PolicyResult
-from agent_meow.server.routes.sessions import create_sessions_router
-from agent_meow.spec import AgentSpec
-from agent_meow.spec.types import GuardrailsSpec
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.errors import OmnigentError
+from omnigent.policies.types import PolicyAction, PolicyResult
+from omnigent.server.routes.sessions import create_sessions_router
+from omnigent.spec import AgentSpec
+from omnigent.spec.types import GuardrailsSpec
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
-_CACHE_PATCH = "agent_meow.server.routes.sessions.get_agent_cache"
-_ENGINE_PATCH = "agent_meow.server.routes.sessions.build_policy_engine"
-_STREAM_PATCH = "agent_meow.server.routes.sessions.session_stream"
+_CACHE_PATCH = "omnigent.server.routes.sessions.get_agent_cache"
+_ENGINE_PATCH = "omnigent.server.routes.sessions.build_policy_engine"
+_STREAM_PATCH = "omnigent.server.routes.sessions.session_stream"
 
 
 @pytest.fixture

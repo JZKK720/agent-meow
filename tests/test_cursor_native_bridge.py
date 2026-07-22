@@ -1,10 +1,10 @@
-"""Unit tests for :mod:`~?agent_meow.cursor_native_bridge` composer handling.
+"""Unit tests for :mod:`~?omnigent.cursor_native_bridge` composer handling.
 
 Focused on the leftover-draft clear (:func:`_clear_composer`) and its use by
 :func:`inject_user_message`. cursor-agent restores the interrupted prompt into
 the composer when a turn is cancelled (web-UI Stop -> ``inject_interrupt`` sends
 ``Escape``), and its input widget ignores the readline ``C-a``/``C-k`` keys the
-clear used to send — so the leftover survived and prepended the next message.
+clear used to send â€” so the leftover survived and prepended the next message.
 The clear now floods ``Backspace`` until the pane stops changing.
 """
 
@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow import cursor_native_bridge
-from agent_meow.cursor_native_bridge import write_tmux_target
+from omnigent import cursor_native_bridge
+from omnigent.cursor_native_bridge import write_tmux_target
 
 _SOCK = "/tmp/example/cursor.sock"
 _TARGET = "cursor:0.0"
@@ -101,7 +101,7 @@ def test_clear_composer_terminates_on_empty_composer(
 
     A burst on empty input is a no-op (unlike ``C-c``, which would arm exit), so
     the clear is safe to run before every injection. The pane never changes, so
-    the first burst's capture matches and the loop returns at once — never
+    the first burst's capture matches and the loop returns at once â€” never
     reaching the round cap.
     """
     captured = _install_fake_tmux(monkeypatch, pane_captures=["idle-placeholder"])
@@ -185,7 +185,7 @@ class TestInjectModelGate:
 
     Regression for the reviewer-flagged bug: the readiness check used
     ``model in pane``, which is satisfied instantly by the echoed
-    ``/model <id>`` composer text and never confirms a match landed — so an
+    ``/model <id>`` composer text and never confirms a match landed â€” so an
     unavailable id would press Enter against "No matches" and mis-select.
     """
 
@@ -195,7 +195,7 @@ class TestInjectModelGate:
         """A landed filter ("Models matching") commits the selection with Enter."""
         bridge_dir = _prepare_bridge(tmp_path)
         captured = _install_fake_tmux(
-            monkeypatch, pane_captures=[f'{_IDLE}\nModels matching "gpt-5.2"\n →  GPT-5.2   High']
+            monkeypatch, pane_captures=[f'{_IDLE}\nModels matching "gpt-5.2"\n â†’  GPT-5.2   High']
         )
         monkeypatch.setattr(cursor_native_bridge.time, "sleep", lambda *_a, **_k: None)
 
@@ -212,7 +212,7 @@ class TestInjectModelGate:
         """ "No matches" fails loudly, dismisses the picker, and never presses Enter."""
         bridge_dir = _prepare_bridge(tmp_path)
         captured = _install_fake_tmux(
-            monkeypatch, pane_captures=[f"{_IDLE}\n → /model bogus-model\n    No matches"]
+            monkeypatch, pane_captures=[f"{_IDLE}\n â†’ /model bogus-model\n    No matches"]
         )
         monkeypatch.setattr(cursor_native_bridge.time, "sleep", lambda *_a, **_k: None)
 
@@ -228,13 +228,13 @@ class TestInjectModelGate:
     ) -> None:
         """The id in the echoed composer line (no header) is still treated as no-match.
 
-        The pane contains the typed ``/model gpt-5.2`` — a naive ``model in
-        pane`` check would pass — but with a "No matches" result and no "Models
+        The pane contains the typed ``/model gpt-5.2`` â€” a naive ``model in
+        pane`` check would pass â€” but with a "No matches" result and no "Models
         matching" header the gate must refuse to press Enter.
         """
         bridge_dir = _prepare_bridge(tmp_path)
         captured = _install_fake_tmux(
-            monkeypatch, pane_captures=[f"{_IDLE}\n → /model gpt-5.2\n    No matches"]
+            monkeypatch, pane_captures=[f"{_IDLE}\n â†’ /model gpt-5.2\n    No matches"]
         )
         monkeypatch.setattr(cursor_native_bridge.time, "sleep", lambda *_a, **_k: None)
 
@@ -258,7 +258,7 @@ class TestHooksConfig:
         # The recorder is invoked isolated (-I) on the usage module, with the
         # absolute bridge dir baked in so it writes where the forwarder reads.
         assert "-I" in command
-        assert "agent_meow.cursor_native_usage" in command
+        assert "omnigent.cursor_native_usage" in command
         assert "record-usage" in command
         assert "/tmp/bridge" in command
         assert command.startswith("/usr/bin/python3")

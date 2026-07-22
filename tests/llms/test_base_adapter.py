@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.llms.adapters.base import BaseAdapter
+from omnigent.llms.adapters.base import BaseAdapter
 
 
 def test_cannot_instantiate_base_adapter() -> None:

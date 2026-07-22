@@ -1,9 +1,9 @@
-"""Tests for agent_meow.onboarding.detected — ambient → provider bridge.
+"""Tests for omnigent.onboarding.detected â€” ambient â†’ provider bridge.
 
 Covers synthesizing config-shape provider entries from ambient detections,
 the read-time merge (explicit wins; detected auto-default per family), and
 the adopt set ``configure harnesses`` persists. Detections are constructed as
-real :class:`~?agent_meow.onboarding.ambient.DetectedProvider` objects (not
+real :class:`~?omnigent.onboarding.ambient.DetectedProvider` objects (not
 mocks) so a regression in field handling surfaces here.
 """
 
@@ -11,13 +11,13 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.onboarding.ambient import DetectedProvider
-from agent_meow.onboarding.detected import (
+from omnigent.onboarding.ambient import DetectedProvider
+from omnigent.onboarding.detected import (
     effective_config_with_detected,
     providers_to_adopt,
     synthesize_detected_entries,
 )
-from agent_meow.onboarding.provider_config import (
+from omnigent.onboarding.provider_config import (
     ANTHROPIC_FAMILY,
     GEMINI_FAMILY,
     OPENAI_FAMILY,
@@ -90,7 +90,7 @@ def test_synthesize_env_key_openrouter_uses_vendor_endpoint_and_chat_wire() -> N
     entries = synthesize_detected_entries([det])
     openai_block = entries["openrouter"]["openai"]
     assert openai_block["base_url"] == "https://openrouter.ai/api/v1"
-    # Chat wire is required — Responses would 404 against OpenRouter.
+    # Chat wire is required â€” Responses would 404 against OpenRouter.
     assert openai_block["wire_api"] == "chat"
     assert openai_block["api_key_ref"] == "env:OPENROUTER_API_KEY"
 
@@ -103,7 +103,7 @@ def test_synthesize_env_key_openai_honors_openai_base_url(
     The OpenAI SDK reads ``OPENAI_BASE_URL`` to target an OpenAI-compatible
     gateway (e.g. the Databricks AI gateway). Ambient detection must honor
     it; otherwise the env key is synthesized against ``api.openai.com`` and
-    every request 401s — the credential is a gateway token, not an OpenAI
+    every request 401s â€” the credential is a gateway token, not an OpenAI
     key. This is the regression guard for that intermittent multi-turn 401.
     """
     gateway = "https://example.cloud.databricks.com/ai-gateway/openai/v1"
@@ -199,7 +199,7 @@ def test_synthesize_local_ollama() -> None:
 
 
 def test_effective_merges_and_auto_defaults_per_family() -> None:
-    """Empty config + ambient creds → both merged and each its family default.
+    """Empty config + ambient creds â†’ both merged and each its family default.
 
     The first-run case: nothing configured, only ambient anthropic key +
     codex login. The merged view must contain both AND make each the
@@ -238,7 +238,7 @@ def test_effective_explicit_wins_on_name() -> None:
     }
     merged = effective_config_with_detected(explicit, [_anthropic_key()])
     entry = load_providers(merged)["anthropic"]
-    # The explicit model survives — the detected entry did not win.
+    # The explicit model survives â€” the detected entry did not win.
     # (Use family_default_model, which does not resolve the secret.)
     assert entry.family_default_model("anthropic") == "claude-opus-4-7"
     # The raw merged entry keeps the explicit proxy base_url, not the
@@ -284,7 +284,7 @@ def test_providers_to_adopt_skips_already_configured() -> None:
     """
     explicit = {"providers": {"anthropic": {"kind": "subscription", "cli": "claude"}}}
     adopt = providers_to_adopt(explicit, [_anthropic_key(), _codex_login()])
-    # anthropic already configured (by name) → skipped; only codex is new.
+    # anthropic already configured (by name) â†’ skipped; only codex is new.
     assert set(adopt) == {"codex"}
 
 
@@ -301,13 +301,13 @@ def test_providers_to_adopt_skips_subscription_for_configured_cli() -> None:
     The ambient detector names a Claude login ``"claude"``, but the user may
     have added that same login explicitly under a different name
     (``"claude-subscription"``). Adopting the detection by name would write a
-    *second* subscription for the one CLI — the ``claude`` +
+    *second* subscription for the one CLI â€” the ``claude`` +
     ``claude-subscription`` duplicate. Adoption must skip a detected
     subscription whose CLI is already configured (under any name).
     """
     explicit = {"providers": {"claude-subscription": {"kind": "subscription", "cli": "claude"}}}
     adopt = providers_to_adopt(explicit, [_claude_login(), _codex_login()])
-    # claude's CLI is already covered by claude-subscription → not re-adopted;
+    # claude's CLI is already covered by claude-subscription â†’ not re-adopted;
     # codex is genuinely new.
     assert set(adopt) == {"codex"}
 
@@ -317,7 +317,7 @@ def test_effective_config_skips_duplicate_subscription_for_configured_cli() -> N
 
     With an explicit ``claude-subscription`` (the default, as the add flow
     always writes it) and a detected ``claude`` login for the same CLI, the
-    merged view keeps only the explicit entry — no synthesized ``claude``
+    merged view keeps only the explicit entry â€” no synthesized ``claude``
     duplicate alongside it.
     """
     explicit = {
@@ -333,7 +333,7 @@ def test_effective_config_skips_duplicate_subscription_for_configured_cli() -> N
     assert get_default_provider(merged, ANTHROPIC_FAMILY).name == "claude-subscription"
 
 
-# ── cli-config (codex config.toml custom provider) bridging ────────────────
+# â”€â”€ cli-config (codex config.toml custom provider) bridging â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _codex_config_det() -> DetectedProvider:
@@ -369,7 +369,7 @@ def test_cli_config_detection_wins_codex_default_over_login() -> None:
     """With both codex detections, the config.toml provider auto-defaults.
 
     Detection priority (config provider first) mirrors codex's own
-    resolution — config.toml's default provider beats auth.json. Failure
+    resolution â€” config.toml's default provider beats auth.json. Failure
     means an isaac-configured machine with a stray auth.json would default
     omnigents to the ChatGPT login while plain ``codex`` uses the gateway.
     """
@@ -450,7 +450,7 @@ def test_malformed_dismissed_detections_treated_as_empty() -> None:
     accidentally dismiss everything; the next dismissal write self-heals
     the key into a proper list.
     """
-    from agent_meow.onboarding.detected import dismissed_detection_names
+    from omnigent.onboarding.detected import dismissed_detection_names
 
     assert dismissed_detection_names({"dismissed_detections": "oops"}) == frozenset()
     # Non-string members are ignored; string members still count.

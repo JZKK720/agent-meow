@@ -55,7 +55,7 @@ async def test_aenter_logs_stderr_redirect_failures(
         raise RuntimeError("redirect failed")
 
     monkeypatch.setattr(
-        "agent_meow.cli_diagnostics.redirect_stderr_to_log",
+        "omnigent.cli_diagnostics.redirect_stderr_to_log",
         _raise_redirect_failure,
     )
     host = TerminalHost(model_name="test")
@@ -94,7 +94,7 @@ async def test_aexit_logs_stderr_restore_failures(
         raise RuntimeError("restore failed")
 
     monkeypatch.setattr(
-        "agent_meow.cli_diagnostics.restore_stderr",
+        "omnigent.cli_diagnostics.restore_stderr",
         _raise_restore_failure,
     )
     host = TerminalHost(model_name="test")
@@ -124,7 +124,7 @@ def test_clear_streamed_text_drops_unflushed_partial_buffer(
     ``_text_buffer`` waiting for a newline / wrap; the REPL calls
     ``clear_streamed_text`` to erase the printed lines; then
     ``output(Markdown(...))`` flushes that leftover partial as raw
-    text right before printing the rendered panel — so the user
+    text right before printing the rendered panel â€” so the user
     sees the same content twice. The fix discards the partial in
     ``clear_streamed_text`` since the upcoming rendered output
     already contains the full message.
@@ -132,7 +132,7 @@ def test_clear_streamed_text_drops_unflushed_partial_buffer(
     host = TerminalHost(model_name="test")
 
     # Stream a partial line. Short text with no newline / wrap
-    # stays in the host's internal buffer — nothing is printed yet.
+    # stays in the host's internal buffer â€” nothing is printed yet.
     host.output(StreamingText(text="partial-tail-no-newline"))
 
     # Discard anything pytest already captured.
@@ -153,7 +153,7 @@ def test_clear_streamed_text_drops_unflushed_partial_buffer(
     # If the partial leaked, it would appear as raw text in the
     # captured stdout alongside (or just before) "rendered-panel".
     # Failure here means clear_streamed_text() forgot to reset
-    # _text_buffer — exactly the regression this test guards.
+    # _text_buffer â€” exactly the regression this test guards.
     assert "partial-tail-no-newline" not in captured.out, (
         f"clear_streamed_text leaked unflushed buffer content "
         f"into captured stdout: {captured.out!r}. The fix in "
@@ -172,7 +172,7 @@ def test_clear_streamed_text_resets_streaming_state(
     must NOT inherit the prior buffer's tail.
 
     Concretely: stream "partial", clear, then stream "fresh\\n".
-    Only "fresh" should print — never "partialfresh". Without the
+    Only "fresh" should print â€” never "partialfresh". Without the
     buffer reset, the new chunk would be appended to the leftover
     "partial" and printed as a single line.
     """
@@ -183,7 +183,7 @@ def test_clear_streamed_text_resets_streaming_state(
 
     host.clear_streamed_text()
 
-    # Stream a complete line — newline triggers a flush.
+    # Stream a complete line â€” newline triggers a flush.
     host.output(StreamingText(text="fresh\n"))
     captured = capsys.readouterr()
 
@@ -212,7 +212,7 @@ def test_replace_streamed_text_issues_a_single_atomic_write(
     Atomicity matters: the per-line ``print`` loop in
     ``clear_streamed_text`` followed by a separate render print
     produces N+1 syscalls, and prompt-toolkit's bottom-toolbar ticker
-    can sneak a redraw between them. That's the visible flicker —
+    can sneak a redraw between them. That's the visible flicker â€”
     especially noticeable on plain-prose paragraphs where the rendered
     Markdown looks ~identical to the streamed raw text.
 
@@ -244,7 +244,7 @@ def test_replace_streamed_text_issues_a_single_atomic_write(
 
     # Exactly one write call: clear escapes + rendered ANSI in one
     # contiguous string. Multiple writes would mean the atomicity
-    # is broken — the terminal could redraw between them.
+    # is broken â€” the terminal could redraw between them.
     assert len(writes) == 1, (
         f"replace_streamed_text issued {len(writes)} sys.stdout.write "
         f"calls; expected exactly 1 for atomic clear+render. Multiple "
@@ -253,7 +253,7 @@ def test_replace_streamed_text_issues_a_single_atomic_write(
     )
     combined = writes[0]
     # The single write contains the clear-line ANSI sequence repeated
-    # once per cleared line — verify the count matches the lines we
+    # once per cleared line â€” verify the count matches the lines we
     # planted, so we know we cleared the right amount, not "all" or
     # "none".
     expected_clears = "\033[A\033[2K" * pre_count
@@ -269,7 +269,7 @@ def test_replace_streamed_text_issues_a_single_atomic_write(
         f"replace_streamed_text's single write did not include the "
         f"rendered text 'RENDERED'. Got: {combined!r}. The renderable "
         f"must be Console-rendered into the same write as the clear "
-        f"escapes — separate writes lose atomicity."
+        f"escapes â€” separate writes lose atomicity."
     )
 
 
@@ -308,7 +308,7 @@ def test_replace_streamed_text_resets_streaming_state(
     assert host._text_buffer == "", (
         f"Expected _text_buffer == '' after replace, got "
         f"{host._text_buffer!r}. The next non-streaming output() "
-        f"would flush this leftover as raw text — same bug as the "
+        f"would flush this leftover as raw text â€” same bug as the "
         f"clear_streamed_text + output() duplication."
     )
     assert host._last_was_streaming is False, (
@@ -319,9 +319,9 @@ def test_replace_streamed_text_resets_streaming_state(
 
 def test_prompt_activity_row_keeps_same_height_after_work_finishes() -> None:
     """
-    Busy → idle prompt renders keep the same row count.
+    Busy â†’ idle prompt renders keep the same row count.
 
-    This guards the user-visible ``⠸ working``-stuck regression:
+    This guards the user-visible ``â ¸ working``-stuck regression:
     prompt-toolkit can leave stale text behind when the prompt message
     shrinks from a two-row busy header to a shorter idle header. The
     idle prompt must therefore repaint a blank activity row in the same
@@ -368,14 +368,14 @@ class _TitleRecordingOutput(DummyOutput):
 
     Subclassing the real ``DummyOutput`` (rather than rolling our
     own from-scratch stub) ensures the rest of the ``Output``
-    interface — ``responds_to_cpr``, ``fileno``,
-    ``write``, etc. — keeps prompt-toolkit's Renderer / Application
+    interface â€” ``responds_to_cpr``, ``fileno``,
+    ``write``, etc. â€” keeps prompt-toolkit's Renderer / Application
     happy when the host hands the same Output to ``PromptSession``.
     A bare-class stub broke prompt-toolkit's renderer with
     ``AttributeError: 'X' object has no attribute 'responds_to_cpr'``.
 
     Why not ``MagicMock``: a MagicMock would silently return
-    MagicMock for any attribute access — if the production code
+    MagicMock for any attribute access â€” if the production code
     started calling a non-existent method (e.g. ``set_titel``),
     the test would still pass. A typed stub class fails loud when
     the contract changes.
@@ -420,7 +420,7 @@ def _patch_create_output(monkeypatch: pytest.MonkeyPatch, output: object) -> Non
     (``monkeypatch.setattr`` is the canonical pattern for this).
 
     :param monkeypatch: pytest's monkeypatch fixture.
-    :param output: The replacement object — typically a
+    :param output: The replacement object â€” typically a
         :class:`_TitleRecordingOutput` or similar stub.
     """
     monkeypatch.setattr(
@@ -450,19 +450,19 @@ async def test_window_title_set_on_aenter_and_cleared_on_aexit(
 
     async with host:
         # ``__aenter__`` must have driven set_title before the
-        # body runs — otherwise multi-tab UX breaks for the
+        # body runs â€” otherwise multi-tab UX breaks for the
         # session's entire lifetime.
         assert stub.titles_set == ["agent-A"], (
             f"Expected set_title to be called once with 'agent-A' on "
             f"__aenter__; got {stub.titles_set!r}. If [], __aenter__ "
-            f"never invoked set_title — terminal tab bar stays as "
+            f"never invoked set_title â€” terminal tab bar stays as "
             f"'$SHELL' and multiple AP-mode sessions are indistinguishable."
         )
-        # Clear must NOT have happened yet — that would mean
+        # Clear must NOT have happened yet â€” that would mean
         # __aexit__ ran during __aenter__, a logic error.
         assert stub.clear_count == 0, (
             f"clear_title was called {stub.clear_count} time(s) before "
-            f"__aexit__ ran — it should fire exactly once on exit, "
+            f"__aexit__ ran â€” it should fire exactly once on exit, "
             f"never on enter."
         )
 
@@ -481,7 +481,7 @@ async def test_window_title_none_skips_title_calls(
 ) -> None:
     """
     With ``window_title=None`` (the default), neither ``set_title``
-    nor ``clear_title`` fires — the host leaves the user's terminal
+    nor ``clear_title`` fires â€” the host leaves the user's terminal
     title untouched.
 
     What this proves: SDK consumers that don't pass a title (e.g.
@@ -502,7 +502,7 @@ async def test_window_title_none_skips_title_calls(
         f"Expected no set_title calls when window_title is None; "
         f"got {stub.titles_set!r}. A non-empty list means the host "
         f"is overriding terminal titles even when the caller didn't "
-        f"opt in — violating the documented opt-in contract."
+        f"opt in â€” violating the documented opt-in contract."
     )
     assert stub.clear_count == 0, (
         f"Expected no clear_title calls when window_title is None; "
@@ -514,13 +514,13 @@ async def test_window_title_none_skips_title_calls(
 def test_default_history_file_matches_legacy_omnigent_path() -> None:
     """
     With no ``history_file`` override, the host's prompt session
-    persists input history to ``~/.omnigent_history`` — the
+    persists input history to ``~/.omnigent_history`` â€” the
     same path the legacy ``agent-meow run`` CLI uses
-    (``agent_meow/inner/cli.py:_cli_history_file_path``).
+    (``omnigent/inner/cli.py:_cli_history_file_path``).
 
     What this proves: a user who flips between
     ``agent-meow run agent.yaml`` (legacy) and
-    ``agent-meow run agent.yaml`` sees the same ↑ / Ctrl+R
+    ``agent-meow run agent.yaml`` sees the same â†‘ / Ctrl+R
     recall in both, instead of two divergent histories. If the
     default drifts (e.g. back to ``~/.omnigent-history``,
     or to a fresh location), this test fails loud at the SDK
@@ -539,8 +539,8 @@ def test_default_history_file_matches_legacy_omnigent_path() -> None:
         f"Default history_file resolved to {actual!r}; expected "
         f"{expected!r}. If the path is ``~/.omnigent-history`` "
         f"(the SDK's pre-unification default), the unification "
-        f"with the legacy CLI was reverted — users flipping "
-        f"between legacy and --agent-meow would lose ↑ / Ctrl+R recall "
+        f"with the legacy CLI was reverted â€” users flipping "
+        f"between legacy and --agent-meow would lose â†‘ / Ctrl+R recall "
         f"again."
     )
 
@@ -551,12 +551,12 @@ async def test_window_title_swallows_set_title_failure(
 ) -> None:
     """
     If ``set_title`` raises (e.g. an Output backend without title
-    support), ``__aenter__`` still completes cleanly — the host
+    support), ``__aenter__`` still completes cleanly â€” the host
     enters the context as if the title path had succeeded.
 
     What this proves: the documented "best-effort" contract
     holds. A future Output backend that doesn't support OSC 0
-    won't break ``agent-meow run`` — the REPL still boots,
+    won't break ``agent-meow run`` â€” the REPL still boots,
     just without the tab-label nicety.
     """
 
@@ -565,7 +565,7 @@ async def test_window_title_swallows_set_title_failure(
 
         Subclasses ``DummyOutput`` so the rest of the
         prompt-toolkit ``Output`` contract (``responds_to_cpr``,
-        ``fileno``, ``write``, etc.) is satisfied — only
+        ``fileno``, ``write``, etc.) is satisfied â€” only
         ``set_title`` is overridden to simulate a title-
         unsupported terminal.
         """
@@ -573,7 +573,7 @@ async def test_window_title_swallows_set_title_failure(
         def set_title(self, title: str) -> None:
             """Raise to simulate a title-unsupported Output.
 
-            :param title: Ignored — the override raises
+            :param title: Ignored â€” the override raises
                 unconditionally.
             """
             del title
@@ -594,7 +594,7 @@ def test_output_dispatches_stream_replace_to_replace_live_region(
     ``host.output(StreamReplace(renderable))`` must route to
     ``_replace_live_region(commit=True)`` rather than the generic
     non-streaming branch (which would flush ``_text_buffer`` as raw
-    text first — re-introducing the duplication the replace method
+    text first â€” re-introducing the duplication the replace method
     exists to avoid).
 
     Verifies the dispatch by checking state after the call:
@@ -641,7 +641,7 @@ def test_output_wraps_urls_in_osc_8_hyperlink(
     URLs in non-streaming Rich content emerge from ``output()``
     wrapped in OSC 8 hyperlink escape sequences, so terminals
     that support shell integration (iTerm2, Ghostty, kitty,
-    etc.) render them as ⌘-clickable links.
+    etc.) render them as âŒ˜-clickable links.
 
     Pins the wiring between :meth:`TerminalHost.output` and
     :func:`omnigent_ui_sdk.terminal._linkify.linkify_ansi`.
@@ -654,7 +654,7 @@ def test_output_wraps_urls_in_osc_8_hyperlink(
     call from ``output()`` (or swaps it for a no-op), and
     URLs in tool result panels / agent text stop being
     clickable. The OSC 8 byte sequence
-    (``\\x1b]8;;<url>\\x1b\\``) doesn't show up by accident —
+    (``\\x1b]8;;<url>\\x1b\\``) doesn't show up by accident â€”
     Rich does NOT auto-emit it for plain URLs in pre-built
     Text/Panel/Group renderables, only when the URL is
     explicitly wrapped in ``[link=...]...[/link]`` markup.
@@ -664,8 +664,8 @@ def test_output_wraps_urls_in_osc_8_hyperlink(
     host = TerminalHost(model_name="test")
     host.output(Text("Visit https://example.com here"))
     captured = capsys.readouterr()
-    # Pin the EXACT byte sequence — this is the wire format
-    # terminals consume. If it drifts, every ⌘-click breaks.
+    # Pin the EXACT byte sequence â€” this is the wire format
+    # terminals consume. If it drifts, every âŒ˜-click breaks.
     assert "\x1b]8;;https://example.com\x1b\\https://example.com\x1b]8;;\x1b\\" in captured.out, (
         f"Expected OSC 8 hyperlink wrapping around the URL in "
         f"output(); got {captured.out!r}. Likely cause: the "
@@ -674,7 +674,7 @@ def test_output_wraps_urls_in_osc_8_hyperlink(
     )
 
 
-# ── Overlay sidebar viewport scrolling ──────────────────────
+# â”€â”€ Overlay sidebar viewport scrolling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_compute_sidebar_scroll_offset_no_change_when_selection_in_view() -> None:
@@ -683,7 +683,7 @@ def test_compute_sidebar_scroll_offset_no_change_when_selection_in_view() -> Non
 
     Reproduces the no-op case: user has 38 targets, viewport
     shows rows 5..32 (offset=5, height=28), tabbing to target 10
-    keeps the offset at 5 — no gratuitous re-anchoring.
+    keeps the offset at 5 â€” no gratuitous re-anchoring.
 
     On regression (always re-anchor): the viewport jumps every
     Tab even when the selection is already comfortably visible,
@@ -696,7 +696,7 @@ def test_compute_sidebar_scroll_offset_no_change_when_selection_in_view() -> Non
         current_offset=5,
         visible_height=28,
     )
-    # Selection at row 10 is within rows [5, 33) → no scroll.
+    # Selection at row 10 is within rows [5, 33) â†’ no scroll.
     assert new_offset == 5, (
         f"expected offset to stay at 5 when selection is "
         f"comfortably inside the viewport; got {new_offset}. "
@@ -713,7 +713,7 @@ def test_compute_sidebar_scroll_offset_snaps_down_when_past_bottom() -> None:
     Reproduces the user-reported 2026-04-30 symptom: 38 targets
     in the sidebar, viewport bounded to ~28 rows, user
     tab-navigates to s36 (index 35). Without the snap, the
-    selection cursor (▸) walked invisibly off the bottom.
+    selection cursor (â–¸) walked invisibly off the bottom.
 
     Snap policy: new_offset = selected_index - visible + 1,
     so selected_index lands on the last visible row
@@ -731,13 +731,13 @@ def test_compute_sidebar_scroll_offset_snaps_down_when_past_bottom() -> None:
         visible_height=28,
     )
     # selection at row 35 should sit on the last visible row.
-    # last_visible = offset + height - 1 = 8 + 28 - 1 = 35. ✓
+    # last_visible = offset + height - 1 = 8 + 28 - 1 = 35. âœ“
     assert new_offset == 8, (
         f"expected offset to snap to 8 (so row 35 lands on "
         f"the last visible row, since 8 + 28 - 1 = 35); got "
         f"{new_offset}. A 0 value means the snap-down branch "
         f"didn't fire and the selection walks off the bottom "
-        f"of the viewport invisibly — exactly the user-reported "
+        f"of the viewport invisibly â€” exactly the user-reported "
         f"2026-04-30 symptom."
     )
 
@@ -758,7 +758,7 @@ def test_compute_sidebar_scroll_offset_snaps_up_when_above_viewport() -> None:
     target wraps selected_index to 0 via ``(idx + 1) % len``.
     With current_offset > 0 from prior scrolling, selection=0
     triggers this branch and snaps the viewport back to the
-    top — matching the user's expectation that wrapping returns
+    top â€” matching the user's expectation that wrapping returns
     to a top-anchored sidebar.
     """
     from omnigent_ui_sdk.terminal._host import _compute_sidebar_scroll_offset
@@ -773,7 +773,7 @@ def test_compute_sidebar_scroll_offset_snaps_up_when_above_viewport() -> None:
         f"expected snap-up to land selection on the first "
         f"visible row (offset == selected_index); got {above}."
     )
-    # Wrap-around case — equivalent to "user tabbed past the
+    # Wrap-around case â€” equivalent to "user tabbed past the
     # last entry and wrapped to 0" while the viewport was
     # scrolled down to row 7.
     wrapped = _compute_sidebar_scroll_offset(
@@ -802,7 +802,7 @@ def test_compute_sidebar_scroll_offset_handles_short_viewport() -> None:
     """
     from omnigent_ui_sdk.terminal._host import _compute_sidebar_scroll_offset
 
-    # selection inside the 1-row viewport — no scroll.
+    # selection inside the 1-row viewport â€” no scroll.
     assert (
         _compute_sidebar_scroll_offset(
             selected_index=0,
@@ -811,7 +811,7 @@ def test_compute_sidebar_scroll_offset_handles_short_viewport() -> None:
         )
         == 0
     )
-    # selection past the 1-row viewport — snap so selection
+    # selection past the 1-row viewport â€” snap so selection
     # lands on the only visible row.
     assert (
         _compute_sidebar_scroll_offset(
@@ -823,7 +823,7 @@ def test_compute_sidebar_scroll_offset_handles_short_viewport() -> None:
     )
 
 
-# ── StreamLive / live-region tests ───────────────────────────
+# â”€â”€ StreamLive / live-region tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_output_stream_live_replaces_live_region(
@@ -869,7 +869,7 @@ def test_output_stream_live_replaces_live_region(
         f"{host._live_line_count}. If 0, the next StreamLive won't know "
         f"how many lines to erase."
     )
-    # _streamed_line_count stays at 0 — StreamLive doesn't affect
+    # _streamed_line_count stays at 0 â€” StreamLive doesn't affect
     # the raw streaming counter.
     assert host._streamed_line_count == 0, (
         f"Expected _streamed_line_count == 0 after StreamLive, got {host._streamed_line_count}."
@@ -959,7 +959,7 @@ def test_live_region_capped_to_viewport_ceiling(
     every line on the next clear.
 
     Without the cap, lines that scroll into the terminal's scrollback
-    buffer can't be erased — each re-render leaves stale content in
+    buffer can't be erased â€” each re-render leaves stale content in
     scrollback, producing the "repeated bullet list" duplication bug.
 
     This test fakes a tiny viewport (10 rows, ceiling=5 after
@@ -972,25 +972,25 @@ def test_live_region_capped_to_viewport_ceiling(
 
     monkeypatch.setattr(sys.stdout, "write", lambda data: len(data))
     monkeypatch.setattr(sys.stdout, "flush", lambda: None)
-    # Fake a tiny terminal: 10 rows → ceiling = 10 - 5 = 5.
+    # Fake a tiny terminal: 10 rows â†’ ceiling = 10 - 5 = 5.
     monkeypatch.setattr(
         "omnigent_ui_sdk.terminal._host._term_height",
         lambda: 10,
     )
 
-    # Render 20 lines — well above the ceiling of 5.
+    # Render 20 lines â€” well above the ceiling of 5.
     long_text = "\n".join(f"line {i}" for i in range(20))
     host.output(StreamLive(renderable=Text(long_text)))
 
     # _live_line_count must be capped at the ceiling (5), not the
     # full rendered height (~20). If uncapped, the next StreamLive's
-    # cursor-up would try to clear 20 lines but only reach 5 — the
+    # cursor-up would try to clear 20 lines but only reach 5 â€” the
     # other 15 would be stranded in scrollback as stale duplicates.
     ceiling = 10 - 5  # _term_height() - _BOTTOM_RESERVED_ROWS
     assert host._live_line_count <= ceiling, (
         f"Expected _live_line_count <= {ceiling} (viewport ceiling), "
         f"got {host._live_line_count}. Uncapped live regions cause "
-        f"the scrollback duplication bug — cursor-up can't reach "
+        f"the scrollback duplication bug â€” cursor-up can't reach "
         f"lines that scrolled past the viewport top."
     )
 
@@ -1005,7 +1005,7 @@ def test_growing_live_region_erase_count_matches_prior_render(
     Simulate a growing bullet list streamed via successive
     ``StreamLive`` calls. On each call, the number of cursor-up
     erase sequences must equal the ``_live_line_count`` set by
-    the PREVIOUS call — never more (would eat committed content
+    the PREVIOUS call â€” never more (would eat committed content
     above), never fewer (would leave stale duplicates).
 
     This is the exact scenario from the user-reported scrollback
@@ -1029,7 +1029,7 @@ def test_growing_live_region_erase_count_matches_prior_render(
 
     monkeypatch.setattr(sys.stdout, "write", _capture_write)
     monkeypatch.setattr(sys.stdout, "flush", lambda: None)
-    # Fake terminal: 15 rows → ceiling = 15 - 5 = 10.
+    # Fake terminal: 15 rows â†’ ceiling = 15 - 5 = 10.
     monkeypatch.setattr(
         "omnigent_ui_sdk.terminal._host._term_height",
         lambda: 15,
@@ -1039,7 +1039,7 @@ def test_growing_live_region_erase_count_matches_prior_render(
     prev_live_count = 0
     for step in range(10):
         num_lines = 2 + step * 2  # 2, 4, 6, ... 20
-        bullet_list = "\n".join(f"• State {i} — Capital {i}" for i in range(num_lines))
+        bullet_list = "\n".join(f"â€¢ State {i} â€” Capital {i}" for i in range(num_lines))
         writes.clear()
         host.output(StreamLive(renderable=Text(bullet_list)))
 
@@ -1049,7 +1049,7 @@ def test_growing_live_region_erase_count_matches_prior_render(
         actual_erases = combined.count(_CURSOR_UP_ERASE)
 
         # The erase count must match the _live_line_count from the
-        # PREVIOUS render — that's exactly what the host should
+        # PREVIOUS render â€” that's exactly what the host should
         # clear before painting the new content.
         assert actual_erases == prev_live_count, (
             f"Step {step} (rendering {num_lines} lines): expected "
@@ -1060,13 +1060,13 @@ def test_growing_live_region_erase_count_matches_prior_render(
             f"from the prior render leak into scrollback."
         )
 
-        # _live_line_count must never exceed the ceiling —
+        # _live_line_count must never exceed the ceiling â€”
         # otherwise the next call's cursor-up can't reach all lines.
         assert host._live_line_count <= ceiling, (
             f"Step {step}: _live_line_count={host._live_line_count} "
             f"exceeds ceiling={ceiling}. Lines beyond the ceiling "
             f"scroll into scrollback where cursor-up can't reach "
-            f"them — the next erase will leave stale duplicates."
+            f"them â€” the next erase will leave stale duplicates."
         )
 
         prev_live_count = host._live_line_count
@@ -1116,7 +1116,7 @@ def test_stream_replace_after_overflowing_live_region(
     combined = "".join(writes)
     actual_erases = combined.count(_CURSOR_UP_ERASE)
 
-    # Erase count must match the capped live count — not the full
+    # Erase count must match the capped live count â€” not the full
     # 15 lines that were rendered (and partly scrolled off).
     assert actual_erases == capped_count, (
         f"Expected {capped_count} erases (matching capped "
@@ -1131,10 +1131,10 @@ def test_stream_replace_after_overflowing_live_region(
     )
     assert host._streamed_line_count == 0
 
-    # The committed content must appear in the output — StreamReplace
+    # The committed content must appear in the output â€” StreamReplace
     # is NOT capped (permanent content doesn't need clearing).
     assert "committed content" in combined, (
-        "Committed content missing from output — StreamReplace "
+        "Committed content missing from output â€” StreamReplace "
         "should write the full renderable without viewport cap."
     )
 
@@ -1163,7 +1163,7 @@ def test_set_model_name_updates_toolbar_and_window_title(
     host.set_model_name("claude native ui")
 
     after = _formatted_text_plain(host.build_toolbar())
-    # The new label replaces the old one on the next toolbar repaint —
+    # The new label replaces the old one on the next toolbar repaint â€”
     # a surviving "nessie" means the setter mutated the wrong slot.
     assert "claude native ui" in after
     assert "nessie" not in after
@@ -1195,7 +1195,7 @@ def test_set_model_name_without_window_title_skips_title(
     assert stub.titles_set == []
 
 
-# ── Sub-agent tree: state badge + ↓ menu ───────────────────────────
+# â”€â”€ Sub-agent tree: state badge + â†“ menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _busy(status: str = "in_progress") -> dict[str, object]:
@@ -1222,11 +1222,11 @@ def test_subagent_badge_replaces_sleeping_while_active() -> None:
     toolbar = _formatted_text_plain(host.build_toolbar())
     assert "state: sleeping" not in toolbar
     assert "1 agent running" in toolbar
-    assert "↓ agents" in toolbar  # the gesture hint is advertised
+    assert "â†“ agents" in toolbar  # the gesture hint is advertised
 
 
 def test_subagent_hint_sits_right_after_help() -> None:
-    """The ``↓ agents`` hint is placed immediately after the ``/help`` entry
+    """The ``â†“ agents`` hint is placed immediately after the ``/help`` entry
     (riding with the primary hints), not trailing the row."""
     host = TerminalHost(
         model_name="test",
@@ -1234,16 +1234,16 @@ def test_subagent_hint_sits_right_after_help() -> None:
     )
     host.upsert_subagent("conv_c1", parent_id="conv_main", child={"tool": "reviewer", **_busy()})
     toolbar = _formatted_text_plain(host.build_toolbar())
-    assert "/help help · ↓ agents · Ctrl+O debug" in toolbar
+    assert "/help help Â· â†“ agents Â· Ctrl+O debug" in toolbar
 
 
 def test_subagent_hint_appends_when_no_help_entry() -> None:
-    """With no ``/help`` entry (custom hint list), the ``↓ agents`` hint falls
+    """With no ``/help`` entry (custom hint list), the ``â†“ agents`` hint falls
     back to the end of the row rather than being dropped."""
     host = TerminalHost(model_name="test", toolbar_hints=["esc cancel", "ctrl+c exit"])
     host.upsert_subagent("conv_c1", parent_id="conv_main", child={"tool": "reviewer", **_busy()})
     toolbar = _formatted_text_plain(host.build_toolbar())
-    assert "ctrl+c exit · ↓ agents" in toolbar
+    assert "ctrl+c exit Â· â†“ agents" in toolbar
 
 
 def test_subagent_badge_pluralizes_and_returns_to_sleeping() -> None:
@@ -1262,7 +1262,7 @@ def test_subagent_badge_pluralizes_and_returns_to_sleeping() -> None:
 
     # Just-finished agents are debounced: they still count (and the badge
     # still reads "running") until they've been terminal for the linger
-    # window — this is what stops the badge flickering between turns.
+    # window â€” this is what stops the badge flickering between turns.
     assert host.active_subagent_count() == 2
     # Backdate both completions past the linger window -> they settle out of
     # the RUNNING count, but stay retained in the selector (web parity).
@@ -1272,10 +1272,10 @@ def test_subagent_badge_pluralizes_and_returns_to_sleeping() -> None:
     assert host.has_active_subagents() is False
     toolbar = _formatted_text_plain(host.build_toolbar())
     assert "state: sleeping" in toolbar
-    # The ↓ hint stays: finished sub-agents are retained in the selector so the
+    # The â†“ hint stays: finished sub-agents are retained in the selector so the
     # user can revisit / chat with them, so the gesture remains advertised.
     assert host.has_any_subagents() is True
-    assert "↓ agents" in toolbar
+    assert "â†“ agents" in toolbar
 
 
 @pytest.mark.parametrize(
@@ -1288,7 +1288,7 @@ def test_subagent_badge_pluralizes_and_returns_to_sleeping() -> None:
         (False, "launching", 0),
         (False, "completed", 1),  # awaiting input outranks a terminal status
         (False, None, 2),
-        (False, "completed", 0),  # terminal → not busy
+        (False, "completed", 0),  # terminal â†’ not busy
         (False, "failed", 0),
         (False, "cancelled", 0),
         (False, None, 0),  # warm-idle
@@ -1328,7 +1328,7 @@ def test_subagent_partial_update_preserves_label() -> None:
         parent_id="conv_main",
         child={"tool": "reviewer", "title": "reviewer:auth", **_busy("launching")},
     )
-    # A later delta carrying only the status — no tool/title.
+    # A later delta carrying only the status â€” no tool/title.
     host.upsert_subagent("conv_c1", child={"current_task_status": "in_progress"})
 
     rows = host.subagent_menu_rows()
@@ -1340,7 +1340,7 @@ def test_subagent_partial_update_preserves_label() -> None:
 
 def test_subagent_status_label_pending_elicitation_outranks_busy() -> None:
     """A sub-agent parked on an approval shows ``Needs response`` even while
-    ``busy`` — mirroring the web ``childStatus`` priority."""
+    ``busy`` â€” mirroring the web ``childStatus`` priority."""
     host = TerminalHost(model_name="test")
     host.upsert_subagent(
         "conv_c1",
@@ -1418,7 +1418,7 @@ def test_subagent_tree_cycle_guard() -> None:
 
 def test_subagent_seed_keeps_unsent_node_that_vanishes() -> None:
     """An unsent (still-active) sub-agent stays searchable even when a later
-    snapshot omits it — it persists until it delivers its result."""
+    snapshot omits it â€” it persists until it delivers its result."""
     host = TerminalHost(model_name="test")
     host.seed_subagent_tree(
         "conv_main",
@@ -1433,7 +1433,7 @@ def test_subagent_seed_keeps_unsent_node_that_vanishes() -> None:
 
 
 def test_subagent_seed_drops_terminal_node_gone_from_snapshot() -> None:
-    """A finished sub-agent is dropped only once the server STOPS listing it —
+    """A finished sub-agent is dropped only once the server STOPS listing it â€”
     i.e. it's gone from the snapshot. No linger wait is needed: retained nodes
     are the ones the server keeps reporting."""
     host = TerminalHost(model_name="test")
@@ -1449,7 +1449,7 @@ def test_subagent_seed_drops_terminal_node_gone_from_snapshot() -> None:
 
 def test_subagent_seed_keeps_finished_node_still_in_snapshot() -> None:
     """A finished sub-agent the server STILL lists is retained in the selector
-    indefinitely (web parity) — never pruned by a linger timer."""
+    indefinitely (web parity) â€” never pruned by a linger timer."""
     host = TerminalHost(model_name="test")
     host.seed_subagent_tree(
         "conv_main",
@@ -1486,7 +1486,7 @@ def test_clear_subagents_empties_the_tree() -> None:
     assert host.subagent_tree() == []
 
 
-# ── Inline ↓ sub-agents menu ───────────────────────────────────────
+# â”€â”€ Inline â†“ sub-agents menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _seed_busy_tree(host: TerminalHost, n: int = 2, root: str = "conv_main") -> None:
@@ -1501,8 +1501,8 @@ def _seed_busy_tree(host: TerminalHost, n: int = 2, root: str = "conv_main") -> 
 
 
 def test_subagent_menu_opens_when_any_node_exists() -> None:
-    """The inline menu opens whenever ANY sub-agent node exists — active OR
-    finished — so finished children stay reachable for revisit / chat (web
+    """The inline menu opens whenever ANY sub-agent node exists â€” active OR
+    finished â€” so finished children stay reachable for revisit / chat (web
     parity). It's a no-op only when the tree is genuinely empty."""
     host = TerminalHost(model_name="test")
     host._open_subagent_menu()
@@ -1515,7 +1515,7 @@ def test_subagent_menu_opens_when_any_node_exists() -> None:
 
 
 def test_subagent_menu_opens_with_only_finished_nodes() -> None:
-    """The menu opens even when EVERY child has finished — the selector retains
+    """The menu opens even when EVERY child has finished â€” the selector retains
     finished sub-agents so the user can dive back in and chat with them."""
     host = TerminalHost(model_name="test")
     host.seed_subagent_tree(
@@ -1545,7 +1545,7 @@ def test_subagent_menu_renders_inline_with_main_and_agents() -> None:
     assert "agent0" in menu_text and "agent1" in menu_text
     assert "select" in menu_text and "open" in menu_text  # the key hint
     # The selection marker sits on the first row (index 0 == "main").
-    assert "▸" in menu_text
+    assert "â–¸" in menu_text
     # The menu does NOT render in the prompt (which sits above the input);
     # it lives in its own Window below the toolbar.
     assert "agent0" not in _formatted_text_plain(host.build_prompt())
@@ -1579,7 +1579,7 @@ def test_subagent_menu_opens_on_main_at_top_level() -> None:
 
 def test_subagent_menu_opens_on_current_subagent_after_dive_in() -> None:
     """Reopening the menu while viewing a sub-agent pre-selects THAT sub-agent's
-    row, not ``main`` — so the highlight reflects where you actually are."""
+    row, not ``main`` â€” so the highlight reflects where you actually are."""
     host = TerminalHost(model_name="test")
     _seed_busy_tree(host, 3)  # conv_c0, conv_c1, conv_c2 under conv_main
     # Simulate having dived into conv_c1 (active session != root).
@@ -1648,7 +1648,7 @@ def test_subagent_menu_enter_selects_then_closes() -> None:
     assert host._subagent_menu_open is False
 
 
-# ── Left-arrow: back to the top-level session ──────────────────────
+# â”€â”€ Left-arrow: back to the top-level session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_is_inside_subagent_tracks_active_vs_root() -> None:
@@ -1669,20 +1669,20 @@ def test_is_inside_subagent_tracks_active_vs_root() -> None:
 
 
 def test_back_hint_shows_only_inside_subagent() -> None:
-    """The ``← back`` toolbar hint appears only while inside a sub-agent."""
+    """The ``â† back`` toolbar hint appears only while inside a sub-agent."""
     host = TerminalHost(model_name="test")
     _seed_busy_tree(host, 1)
     active = {"id": "conv_main"}
     host.active_session_id_getter = lambda: active["id"]
 
-    assert "← back" not in _formatted_text_plain(host.build_toolbar())
+    assert "â† back" not in _formatted_text_plain(host.build_toolbar())
     active["id"] = "conv_c0"
-    assert "← back" in _formatted_text_plain(host.build_toolbar())
+    assert "â† back" in _formatted_text_plain(host.build_toolbar())
 
 
 def test_subagent_count_debounces_busy_and_terminal_blips() -> None:
     """The running count stays steady through the status oscillation that
-    used to flicker the badge — both ``busy`` dropping between turns and a
+    used to flicker the badge â€” both ``busy`` dropping between turns and a
     brief terminal blip mid-run."""
     host = TerminalHost(model_name="test")
     host.upsert_subagent("conv_c1", parent_id="conv_main", child=_busy())
@@ -1724,12 +1724,12 @@ def test_subagent_poll_null_status_does_not_resurrect_terminal() -> None:
         parent_id="conv_main",
         child={"id": "conv_c1", "busy": False, "current_task_status": None},
     )
-    assert host._subagents["conv_c1"].done_at == done_at  # unchanged → not resurrected
+    assert host._subagents["conv_c1"].done_at == done_at  # unchanged â†’ not resurrected
 
 
 def test_subagent_poll_only_node_busy_false_is_warm_idle_not_done() -> None:
     """A poll-only node (no SSE terminal status) whose ``busy`` flag drops to
-    False is treated as WARM/IDLE, NOT terminal — mirroring the web, which
+    False is treated as WARM/IDLE, NOT terminal â€” mirroring the web, which
     shows ``Idle`` (not ``Done``) for a child whose loop is quiet with no
     terminal task status. It drops out of the running count but is NOT stamped
     terminal (``done_at`` stays None) and stays retained + chattable."""
@@ -1757,7 +1757,7 @@ def test_subagent_poll_only_node_busy_false_is_warm_idle_not_done() -> None:
 
 def test_subagent_finished_node_kept_visible_in_selector() -> None:
     """A finished-past-linger node drops out of the running BADGE but stays
-    VISIBLE in the ↓ selector indefinitely (web parity) — so the user can dive
+    VISIBLE in the â†“ selector indefinitely (web parity) â€” so the user can dive
     back in and chat with it. (Retention: it leaves only when the server stops
     listing it or the tree is cleared.)"""
     host = TerminalHost(model_name="test")

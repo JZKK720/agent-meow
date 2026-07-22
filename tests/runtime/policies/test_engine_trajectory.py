@@ -16,21 +16,21 @@ from typing import Any
 
 import pytest
 
-from agent_meow.entities.conversation import (
+from omnigent.entities.conversation import (
     MessageData,
     NewConversationItem,
 )
-from agent_meow.policies.base import Policy
-from agent_meow.policies.types import EvaluationContext, PolicyResult
-from agent_meow.runtime.policies.engine import _TRAJECTORY_WINDOW, PolicyEngine
-from agent_meow.spec.types import (
+from omnigent.policies.base import Policy
+from omnigent.policies.types import EvaluationContext, PolicyResult
+from omnigent.runtime.policies.engine import _TRAJECTORY_WINDOW, PolicyEngine
+from omnigent.spec.types import (
     DEFAULT_ASK_TIMEOUT,
     Phase,
     PhaseSelector,
     PolicyAction,
     PolicySpec,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 

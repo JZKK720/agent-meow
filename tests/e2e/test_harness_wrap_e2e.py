@@ -3,15 +3,15 @@ End-to-end smoke test for the per-harness wraps with a real LLM
 behind each, against the session-keyed harness API surface.
 
 Parametrized across every harness wrap registered in
-:data:`~?agent_meow.runtime.harnesses._HARNESS_MODULES`. For each:
+:data:`~?omnigent.runtime.harnesses._HARNESS_MODULES`. For each:
 spawn a real harness subprocess via
 :class:`HarnessProcessManager`, drive a turn via the session-keyed
 ``POST /v1/sessions/{conversation_id}/events`` endpoint with a
 deterministic prompt, and verify the full round-trip works:
 
 - The runner subprocess loads the wrap module
-  (e.g. :mod:`~?agent_meow.inner.claude_sdk_harness` or
-  :mod:`~?agent_meow.inner.codex_harness`).
+  (e.g. :mod:`~?omnigent.inner.claude_sdk_harness` or
+  :mod:`~?omnigent.inner.codex_harness`).
 - Reads its ``HARNESS_<HARNESS>_*`` env vars (per-spawn, per
   harness contract step 5a).
 - Constructs a real inner Executor configured for the Databricks
@@ -21,14 +21,14 @@ deterministic prompt, and verify the full round-trip works:
 - Closes with ``response.completed``.
 
 This test scopes to the harness wrap (subprocess + scaffold)
-directly — not the AP-level session lifecycle. The
+directly â€” not the AP-level session lifecycle. The
 ``HarnessProcessManager`` spawns a per-conversation subprocess
 whose scaffold owns exactly one conversation_id, validated via
 ``app.state.conversation_id``. No prior AP-level session
 creation is needed, and the scaffold's
 ``POST /v1/sessions/{id}/events`` endpoint returns the SSE
 stream directly as the HTTP response (no separate subscribe
-hop, unlike the AP-level :mod:`~?agent_meow.runtime.session_stream`
+hop, unlike the AP-level :mod:`~?omnigent.runtime.session_stream`
 pub-sub).
 
 Gated on ``--profile`` (the existing tests/conftest.py option).
@@ -56,7 +56,7 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 from tests.e2e._harness_probes import (
     HARNESS_IDS,
     HARNESS_PROBES,
@@ -201,7 +201,7 @@ async def test_harness_wrap_real_llm_smoke(
         # output for debugging.
         #
         # Wire shape: session-keyed ``MessageEvent`` body per
-        # ``agent_meow/runtime/harnesses/_scaffold.py``. The
+        # ``omnigent/runtime/harnesses/_scaffold.py``. The
         # outer ``type``/``role`` discriminate this as a fresh
         # downward user-side ``message`` event; ``content`` is
         # a list of input blocks the scaffold forwards to the
@@ -260,9 +260,9 @@ async def test_harness_wrap_real_llm_smoke(
             f"non-empty delta; the harness wrap never streamed text. "
             f"All event types: {event_types}"
         )
-        # The marker proves the full path: client → harness
-        # subprocess → inner Executor → Databricks gateway →
-        # model → SDK events → adapter → scaffold SSE → us. If
+        # The marker proves the full path: client â†’ harness
+        # subprocess â†’ inner Executor â†’ Databricks gateway â†’
+        # model â†’ SDK events â†’ adapter â†’ scaffold SSE â†’ us. If
         # the marker is missing, surface the full text so a
         # flake is debuggable.
         assert probe.marker in full_text, (

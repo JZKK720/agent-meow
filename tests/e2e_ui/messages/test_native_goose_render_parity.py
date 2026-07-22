@@ -4,10 +4,10 @@ The native ``goose-native`` ("Goose") wrapper is terminal-first: a real
 ``goose session`` CLI runs in the session terminal, the SPA's **Terminal** view
 attaches to that live TUI over a WebSocket, and the SPA's **Chat** view renders
 the SAME canonical transcript the TUI prints. A native forwarder
-(:mod:`~?agent_meow.goose_native_forwarder`) tails Goose's SQLite session store and
+(:mod:`~?omnigent.goose_native_forwarder`) tails Goose's SQLite session store and
 mirrors the transcript back OUT as conversation items; web-composer messages are
 injected INTO the TUI's tmux pane by
-:class:`~?agent_meow.inner.goose_native_executor.GooseNativeExecutor`. This suite is
+:class:`~?omnigent.inner.goose_native_executor.GooseNativeExecutor`. This suite is
 the goose sibling of ``test_native_cursor_render_parity`` and asserts the same
 three properties:
 
@@ -21,7 +21,7 @@ three properties:
 Gating
 ------
 Like cursor-native, Goose authenticates from its own config (``goose
-configure`` → keyring / ``~/.config/goose/config.yaml``), which CI does not
+configure`` â†’ keyring / ``~/.config/goose/config.yaml``), which CI does not
 provision. The suite **skips** when ``goose``/``tmux`` are absent or no Goose
 provider config is present, and runs for real where Goose is configured.
 """
@@ -64,7 +64,7 @@ def _goose_unavailable_reason() -> str | None:
 
     goose-native needs the ``goose`` binary + ``tmux`` on PATH and a usable Goose
     provider configuration (``~/.config/goose/config.yaml`` or a ``GOOSE_*``
-    provider env). Any missing → a clean skip (CI provisions no Goose account).
+    provider env). Any missing â†’ a clean skip (CI provisions no Goose account).
 
     :returns: A human-readable skip reason, or ``None`` when prerequisites exist.
     """
@@ -139,7 +139,7 @@ def _wait_marker_in_transcript(
             return
         time.sleep(2.0)
     raise AssertionError(
-        f"marker {marker!r} never reached the transcript within {timeout_ms}ms — "
+        f"marker {marker!r} never reached the transcript within {timeout_ms}ms â€” "
         f"the TUI-typed turn was not submitted/forwarded for {session_id}."
     )
 

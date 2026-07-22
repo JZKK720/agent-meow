@@ -11,7 +11,7 @@ import time
 import httpx
 import pytest
 
-from agent_meow.server.routes.auth import (
+from omnigent.server.routes.auth import (
     _GITHUB_EMAILS_ENDPOINT,
     _claim_is_verified_true,
     _CliTicket,

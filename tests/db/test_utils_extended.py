@@ -1,4 +1,4 @@
-"""Extended tests for database utilities (agent_meow/db/utils.py).
+"""Extended tests for database utilities (omnigent/db/utils.py).
 
 Covers public utilities NOT already tested in test_utils.py:
 - normalize_database_url
@@ -21,8 +21,8 @@ from pathlib import Path
 import pytest
 from sqlalchemy import text
 
-from agent_meow.db.db_models import SqlUser
-from agent_meow.db.utils import (
+from omnigent.db.db_models import SqlUser
+from omnigent.db.utils import (
     _ITEM_TYPE_PREFIX,
     clear_engine_cache,
     delete_fts_by_conversation,
@@ -40,7 +40,7 @@ from agent_meow.db.utils import (
     utc_day,
 )
 
-# ── normalize_database_url ────────────────────────────
+# â”€â”€ normalize_database_url â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestNormalizeDatabaseUrl:
@@ -68,7 +68,7 @@ class TestNormalizeDatabaseUrl:
         assert normalize_database_url(url) == url
 
 
-# ── Engine caching ────────────────────────────────────
+# â”€â”€ Engine caching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestEngineCaching:
@@ -100,7 +100,7 @@ class TestEngineCaching:
         assert e1 is not e2
 
 
-# ── make_managed_session_maker ────────────────────────
+# â”€â”€ make_managed_session_maker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestManagedSessionMaker:
@@ -151,7 +151,7 @@ class TestManagedSessionMaker:
             assert loaded is not None
 
 
-# ── ID generators ─────────────────────────────────────
+# â”€â”€ ID generators â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestIdGenerators:
@@ -182,7 +182,7 @@ class TestIdGenerators:
         assert len(ids) == 100
 
 
-# ── FTS helpers ───────────────────────────────────────
+# â”€â”€ FTS helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestFtsHelpers:
@@ -240,7 +240,7 @@ class TestFtsHelpers:
             assert len(kept) == 1
 
 
-# ── Timestamp helpers ─────────────────────────────────
+# â”€â”€ Timestamp helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestTimestampHelpers:

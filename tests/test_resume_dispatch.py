@@ -1,5 +1,5 @@
 """
-Tests for :mod:`~?agent_meow.resume_dispatch` — the top-level
+Tests for :mod:`~?omnigent.resume_dispatch` â€” the top-level
 ``agent-meow resume`` dispatcher.
 
 The dispatcher's job is to translate the user's "take me back to
@@ -19,9 +19,9 @@ import click
 import httpx
 import pytest
 
-from agent_meow import resume_dispatch
+from omnigent import resume_dispatch
 
-# ── run_resume — top-level entry ──────────────────────────
+# â”€â”€ run_resume â€” top-level entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_run_resume_picker_form_requires_server() -> None:
@@ -44,7 +44,7 @@ def test_run_resume_picker_form_requires_server() -> None:
 def test_run_resume_picker_cancel_exits_cleanly(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Picker returns ``None`` (user pressed q / Enter on empty list)
-    → dispatcher MUST return cleanly without calling
+    â†’ dispatcher MUST return cleanly without calling
     ``run_claude_native``. A misroute that called the wrapper with
     ``session_id=None`` would silently create a fresh session the
     user explicitly chose not to create.
@@ -58,7 +58,7 @@ def test_run_resume_picker_cancel_exits_cleanly(monkeypatch: pytest.MonkeyPatch)
 
     def _fail_if_called(**kwargs: Any) -> None:
         """
-        Marker for ``run_claude_native`` — fails the test if reached.
+        Marker for ``run_claude_native`` â€” fails the test if reached.
 
         :param kwargs: Wrapper kwargs (ignored).
         """
@@ -66,7 +66,7 @@ def test_run_resume_picker_cancel_exits_cleanly(monkeypatch: pytest.MonkeyPatch)
         invoked.append("run_claude_native")
 
     monkeypatch.setattr(
-        "agent_meow.claude_native.run_claude_native",
+        "omnigent.claude_native.run_claude_native",
         _fail_if_called,
     )
 
@@ -74,19 +74,19 @@ def test_run_resume_picker_cancel_exits_cleanly(monkeypatch: pytest.MonkeyPatch)
         target=None,
         server="https://example.com",
     )
-    # If the wrapper was invoked we'd see "run_claude_native" here —
+    # If the wrapper was invoked we'd see "run_claude_native" here â€”
     # which would be the silent-fresh-session bug.
     assert invoked == []
 
 
-# ── _dispatch_by_runtime — id-known dispatch ──────────────
+# â”€â”€ _dispatch_by_runtime â€” id-known dispatch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_dispatch_by_runtime_claude_native_remote_routes_to_wrapper(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Remote claude-native conv ⇒ ``run_claude_native(server=..., session_id=conv_id)``.
+    Remote claude-native conv â‡’ ``run_claude_native(server=..., session_id=conv_id)``.
 
     The agent-meow conv id MUST be preserved as ``session_id`` (the
     wrapper's resume kwarg). A bug that passed ``None`` would mint a
@@ -109,16 +109,16 @@ def test_dispatch_by_runtime_claude_native_remote_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("agent_meow.claude_native.run_claude_native", _capture)
+    monkeypatch.setattr("omnigent.claude_native.run_claude_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_abc",
-        server="https://example.com/",  # trailing slash — must be normalized
+        server="https://example.com/",  # trailing slash â€” must be normalized
     )
 
     # session_id preserves the agent-meow conv id end-to-end.
     assert captured["session_id"] == "conv_abc"
-    # Trailing slash stripped — the wrapper expects a bare base URL.
+    # Trailing slash stripped â€” the wrapper expects a bare base URL.
     assert captured["server"] == "https://example.com"
     # No leaking claude args; the wrapper builds its own.
     assert captured["claude_args"] == ()
@@ -128,7 +128,7 @@ def test_dispatch_by_runtime_codex_native_remote_routes_to_wrapper(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Remote codex-native conv ⇒ ``run_codex_native(server=..., session_id=conv_id)``.
+    Remote codex-native conv â‡’ ``run_codex_native(server=..., session_id=conv_id)``.
 
     The agent-meow conv id must be preserved exactly like the
     claude-native path, but the runtime-specific passthrough kwarg is
@@ -149,7 +149,7 @@ def test_dispatch_by_runtime_codex_native_remote_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("agent_meow.codex_native.run_codex_native", _capture)
+    monkeypatch.setattr("omnigent.codex_native.run_codex_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_abc",
@@ -186,7 +186,7 @@ def test_dispatch_by_runtime_codex_native_local_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("agent_meow.codex_native.run_codex_native", _capture)
+    monkeypatch.setattr("omnigent.codex_native.run_codex_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_codex",
@@ -212,7 +212,7 @@ def test_dispatch_by_runtime_kiro_native_remote_routes_to_wrapper(
     def _capture(**kwargs: Any) -> None:
         captured.update(kwargs)
 
-    monkeypatch.setattr("agent_meow.kiro_native.run_kiro_native", _capture)
+    monkeypatch.setattr("omnigent.kiro_native.run_kiro_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_kiro",
@@ -228,7 +228,7 @@ def test_dispatch_by_runtime_antigravity_native_remote_routes_to_wrapper(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Remote antigravity-native conv ⇒ ``run_antigravity_native(server=..., session_id=...)``.
+    Remote antigravity-native conv â‡’ ``run_antigravity_native(server=..., session_id=...)``.
 
     The agent-meow conv id must be preserved exactly like the codex/claude
     paths, but the runtime-specific passthrough kwarg is
@@ -253,7 +253,7 @@ def test_dispatch_by_runtime_antigravity_native_remote_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("agent_meow.antigravity_native.run_antigravity_native", _capture)
+    monkeypatch.setattr("omnigent.antigravity_native.run_antigravity_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_agy",
@@ -290,7 +290,7 @@ def test_dispatch_by_runtime_antigravity_native_local_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("agent_meow.antigravity_native.run_antigravity_native", _capture)
+    monkeypatch.setattr("omnigent.antigravity_native.run_antigravity_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_agy_local",
@@ -327,7 +327,7 @@ def test_dispatch_by_runtime_claude_native_local_still_routes_to_wrapper(
         """
         captured.update(kwargs)
 
-    monkeypatch.setattr("agent_meow.claude_native.run_claude_native", _capture)
+    monkeypatch.setattr("omnigent.claude_native.run_claude_native", _capture)
 
     resume_dispatch._dispatch_by_runtime(
         target="conv_claude",
@@ -371,14 +371,14 @@ def test_read_wrapper_label_local_reads_persistent_store(
     tmp_path: Path,
 ) -> None:
     """
-    Local dispatch classifies sessions from ``~/.agent_meow/chat.db``.
+    Local dispatch classifies sessions from ``~/.omnigent/chat.db``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary persistent agent-meow directory.
     :returns: None.
     """
-    import agent_meow.chat as chat_mod
-    from agent_meow.stores.conversation_store.sqlalchemy_store import (
+    import omnigent.chat as chat_mod
+    from omnigent.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
 
@@ -389,7 +389,7 @@ def test_read_wrapper_label_local_reads_persistent_store(
         agent_name="codex-native-ui",
         agent_bundle_location="ag_codex/bundle",
         agent_description=None,
-        labels={"agent_meow.wrapper": "codex-native-ui"},
+        labels={"omnigent.wrapper": "codex-native-ui"},
     )
     monkeypatch.setattr(chat_mod, "_omnigent_persistent_dir", lambda: tmp_path)
 
@@ -402,7 +402,7 @@ def test_dispatch_by_runtime_non_claude_native_remote_raises_with_hint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Remote non-claude-native conv ⇒ ``ClickException`` with a
+    Remote non-claude-native conv â‡’ ``ClickException`` with a
     copy-pasteable ``agent-meow run --resume`` hint.
 
     The hint MUST include both the conv id and the original
@@ -418,11 +418,11 @@ def test_dispatch_by_runtime_non_claude_native_remote_raises_with_hint(
     )
 
     def _fail_if_called(**kwargs: Any) -> None:
-        """Marker — fails the test if ``run_claude_native`` is called."""
+        """Marker â€” fails the test if ``run_claude_native`` is called."""
         del kwargs
         raise AssertionError("run_claude_native invoked on non-claude conv")
 
-    monkeypatch.setattr("agent_meow.claude_native.run_claude_native", _fail_if_called)
+    monkeypatch.setattr("omnigent.claude_native.run_claude_native", _fail_if_called)
 
     with pytest.raises(click.ClickException) as excinfo:
         resume_dispatch._dispatch_by_runtime(
@@ -436,7 +436,7 @@ def test_dispatch_by_runtime_non_claude_native_remote_raises_with_hint(
     assert "https://example.com" in msg
 
 
-# ── _read_wrapper_label_remote ────────────────────────────
+# â”€â”€ _read_wrapper_label_remote â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_read_wrapper_label_remote_returns_label_when_present(
@@ -466,13 +466,13 @@ def test_read_wrapper_label_remote_returns_label_when_present(
                 "agent_id": "ag_1",
                 "status": "idle",
                 "created_at": 1,
-                "labels": {"agent_meow.wrapper": "claude-code-native-ui"},
+                "labels": {"omnigent.wrapper": "claude-code-native-ui"},
             },
         )
 
     monkeypatch.setattr(httpx, "get", _fake_get)
     monkeypatch.setattr(
-        "agent_meow.chat._remote_headers",
+        "omnigent.chat._remote_headers",
         lambda *, server_url: {},
     )
 
@@ -487,8 +487,8 @@ def test_read_wrapper_label_remote_returns_none_when_label_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A conv with no ``agent_meow.wrapper`` label returns ``None``, which
-    the caller treats as "not claude-native" (the right call — wrappers
+    A conv with no ``omnigent.wrapper`` label returns ``None``, which
+    the caller treats as "not claude-native" (the right call â€” wrappers
     stamp their label on every session they own; absence means a
     different runtime).
     """
@@ -509,7 +509,7 @@ def test_read_wrapper_label_remote_returns_none_when_label_missing(
 
     monkeypatch.setattr(httpx, "get", _fake_get)
     monkeypatch.setattr(
-        "agent_meow.chat._remote_headers",
+        "omnigent.chat._remote_headers",
         lambda *, server_url: {},
     )
 
@@ -524,7 +524,7 @@ def test_read_wrapper_label_remote_raises_on_404(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    404 means the conv id doesn't exist — surface a clear error with
+    404 means the conv id doesn't exist â€” surface a clear error with
     the conv id and server so the user can fix a typo or check the
     server. Without this, the caller would proceed with a None label
     and surface the generic "not claude-native" hint, which would
@@ -538,7 +538,7 @@ def test_read_wrapper_label_remote_raises_on_404(
 
     monkeypatch.setattr(httpx, "get", _fake_get)
     monkeypatch.setattr(
-        "agent_meow.chat._remote_headers",
+        "omnigent.chat._remote_headers",
         lambda *, server_url: {},
     )
 

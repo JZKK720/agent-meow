@@ -50,7 +50,7 @@ fs.writeFileSync(
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "session-1",
     inboxDir,
     authHeaders: { authorization: "Bearer test" },
@@ -177,7 +177,7 @@ const configPath = path.join(require("os").tmpdir(), `pi-usage-${process.pid}.js
 require("fs").writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "session-1",
     authHeaders: { authorization: "Bearer test" },
   }),
@@ -298,7 +298,7 @@ def test_usage_accumulates_and_dedupes_across_messages(tmp_path: Path) -> None:
 
   await handlers.message_end({ message: msgA }, ctx);
   await handlers.message_end({ message: msgB }, ctx);
-  // Re-emit msgB on turn_end (same id) — must NOT double-count.
+  // Re-emit msgB on turn_end (same id) â€” must NOT double-count.
   await handlers.turn_end({ message: msgB }, ctx);
 
   const usage = usageEvents();
@@ -341,7 +341,7 @@ def test_no_usage_message_posts_nothing(tmp_path: Path) -> None:
     { message: { role: "assistant", content: [{ type: "text", text: "hi" }] } },
     ctx,
   );
-  // Empty usage (all zeros) — treated as "no usage".
+  // Empty usage (all zeros) â€” treated as "no usage".
   await handlers.message_end(
     {
       message: {
@@ -372,7 +372,7 @@ def test_distinct_messages_with_identical_usage_are_not_collapsed(
 ) -> None:
     """Two DISTINCT Pi messages with identical token counts each count once.
 
-    Pi's ``AssistantMessage`` (``@earendil-works/pi-ai``) carries NO ``id`` —
+    Pi's ``AssistantMessage`` (``@earendil-works/pi-ai``) carries NO ``id`` â€”
     only an optional ``responseId`` and a required numeric ``timestamp``. Two
     genuinely distinct LLM calls can report identical ``usage`` (e.g. two
     identical short acks under prompt caching); keying dedup on the usage
@@ -413,7 +413,7 @@ def test_distinct_messages_with_identical_usage_are_not_collapsed(
 
   await handlers.message_end({ message: msg1 }, ctx);
   await handlers.message_end({ message: msg2 }, ctx);
-  // Re-emit msg2 (same timestamp) on turn_end — must NOT double-count.
+  // Re-emit msg2 (same timestamp) on turn_end â€” must NOT double-count.
   await handlers.turn_end({ message: msg2 }, ctx);
 
   const events = usageEvents();
@@ -467,7 +467,7 @@ def test_agent_end_dedupes_real_shaped_messages_by_timestamp(
 
   // Counted on message_end.
   await handlers.message_end({ message: msg }, ctx);
-  // agent_end re-scans the whole conversation including the same message —
+  // agent_end re-scans the whole conversation including the same message â€”
   // must NOT re-count it (same timestamp).
   await handlers.agent_end({ messages: [msg] }, ctx);
 
@@ -523,7 +523,7 @@ const configPath = path.join(tmpDir, "config.json");
 
 fs.writeFileSync(
   configPath,
-  JSON.stringify({ serverUrl: "http://agent_meow.test", sessionId: "session-1" }),
+  JSON.stringify({ serverUrl: "http://omnigent.test", sessionId: "session-1" }),
 );
 process.env.OMNIGENT_PI_NATIVE_CONFIG = configPath;
 
@@ -641,8 +641,8 @@ def test_multiple_text_blocks_share_one_message_preview(tmp_path: Path) -> None:
     """Multiple text blocks in one message stream under one message_id.
 
     The web UI finalizes the oldest live preview per authoritative item (FIFO,
-    one item per message), so a message with two text blocks (e.g. text → tool
-    call → text) must stream as ONE growing preview — not two — or the second
+    one item per message), so a message with two text blocks (e.g. text â†’ tool
+    call â†’ text) must stream as ONE growing preview â€” not two â€” or the second
     preview is orphaned. Asserts both blocks' chunks share one ``message_id``
     with a single monotonic index.
     """
@@ -738,7 +738,7 @@ def test_message_without_streamed_text_posts_no_delta(tmp_path: Path) -> None:
     """A message_end with no preceding text_delta emits no delta events.
 
     A tool-only assistant message (or a non-streaming path) must not post a
-    stray final marker — there is no live preview to close, so a spurious delta
+    stray final marker â€” there is no live preview to close, so a spurious delta
     could create an empty preview bubble in the web UI.
     """
     script = (
@@ -748,7 +748,7 @@ def test_message_without_streamed_text_posts_no_delta(tmp_path: Path) -> None:
   await handlers.agent_start({}, ctx);
   await handlers.turn_start({ turnIndex: 1 }, ctx);
 
-  // No text_delta at all — just the authoritative item.
+  // No text_delta at all â€” just the authoritative item.
   await endMessage("");
 
   assert.equal(deltas().length, 0, JSON.stringify(deltas()));
@@ -794,7 +794,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "conv_abc",
     inboxDir,
     authHeaders: { authorization: "Bearer test" },
@@ -875,7 +875,7 @@ require(extensionPath)(pi);
 
   assert.equal(fetchCalls.length, 1, JSON.stringify(fetchCalls));
   const call = fetchCalls[0];
-  assert.equal(call.url, "http://agent_meow.test/v1/sessions/conv_abc/mcp");
+  assert.equal(call.url, "http://omnigent.test/v1/sessions/conv_abc/mcp");
   assert.equal(call.request.method, "POST");
   assert.equal(call.request.headers.authorization, "Bearer test");
   const body = JSON.parse(call.request.body);
@@ -940,7 +940,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "conv_abc",
     inboxDir,
     authHeaders: {},
@@ -1046,7 +1046,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "conv_abc",
     inboxDir,
     authHeaders: { authorization: "Bearer test" },
@@ -1076,7 +1076,7 @@ global.fetch = async (url, request) => {
   mcpCallCount += 1;
   mcpCalls.push({ url, body: JSON.parse(request.body) });
   if (mcpCallCount === 1) {
-    // First call → ASK → input_required (MRTR envelope).
+    // First call â†’ ASK â†’ input_required (MRTR envelope).
     return {
       ok: true,
       async json() {
@@ -1092,7 +1092,7 @@ global.fetch = async (url, request) => {
       },
     };
   }
-  // Retry (post-approval) → executed result.
+  // Retry (post-approval) â†’ executed result.
   return {
     ok: true,
     async json() {
@@ -1179,7 +1179,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "conv_abc",
     inboxDir,
     authHeaders: {},
@@ -1235,7 +1235,7 @@ require(extensionPath)(pi);
 
 
 def test_input_required_denied_fails_closed_not_false_success(tmp_path: Path) -> None:
-    """A declined ASK gate fails CLOSED (isError) — never reports false success.
+    """A declined ASK gate fails CLOSED (isError) â€” never reports false success.
 
     When the elicitation park collapses to DENY, the extension retries once with
     ``{action: "decline"}``; the proxy returns a -32000 error which surfaces as an
@@ -1268,7 +1268,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "conv_abc",
     inboxDir,
     authHeaders: {},
@@ -1287,7 +1287,7 @@ let mcpCallCount = 0;
 let lastRetryBody = null;
 global.fetch = async (url, request) => {
   if (typeof url === "string" && url.indexOf("/policies/evaluate") !== -1) {
-    // The human declined → the ASK park collapses to DENY.
+    // The human declined â†’ the ASK park collapses to DENY.
     return { ok: true, async json() { return { result: "POLICY_ACTION_DENY", reason: "nope" }; } };
   }
   mcpCallCount += 1;
@@ -1410,7 +1410,7 @@ fs.writeFileSync(
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "session-1",
     inboxDir,
     authHeaders: { authorization: "Bearer test" },
@@ -1520,7 +1520,7 @@ def test_compact_in_progress_reaches_server_before_completed_when_slow(
     ``triggerCompaction`` AWAITS the ``in_progress`` POST before calling
     ``ctx.compact()``. The mock fetch records each edge on RESOLUTION (server
     receipt) and delays only ``in_progress``, with ``onComplete`` firing
-    synchronously — so without the await the server would see
+    synchronously â€” so without the await the server would see
     ``[completed, in_progress]``. Asserts the server saw ``[in_progress,
     completed]``.
     """
@@ -1543,7 +1543,7 @@ fs.mkdirSync(inboxDir, { recursive: true });
 fs.writeFileSync(payloadPath, JSON.stringify({ id: "compact-1", type: "compact" }));
 fs.writeFileSync(
   configPath,
-  JSON.stringify({ serverUrl: "http://agent_meow.test", sessionId: "session-1", inboxDir }),
+  JSON.stringify({ serverUrl: "http://omnigent.test", sessionId: "session-1", inboxDir }),
 );
 
 process.env.OMNIGENT_PI_NATIVE_CONFIG = configPath;
@@ -1620,7 +1620,7 @@ def test_compact_payload_without_ctx_compact_surfaces_error_and_consumes_file(
     Runs the real JavaScript extension under Node with a resident context that
     exposes no ``compact`` function (e.g. an older Pi without the extension
     compaction API, or a model that cannot compact). The runner already returned
-    200, so the server runs no AP-side fallback — if the extension stayed silent
+    200, so the server runs no AP-side fallback â€” if the extension stayed silent
     the user's /compact would vanish with no feedback. ``triggerCompaction`` must
     instead post a visible ``external_conversation_item`` error
     (``pi_compact_unavailable``) and raise NO spinner edge (zero
@@ -1659,7 +1659,7 @@ fs.writeFileSync(
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "session-1",
     inboxDir,
   }),
@@ -1756,7 +1756,7 @@ def test_compact_payload_synchronous_throw_dismisses_spinner(
     ``ctx.compact()``. If that call throws synchronously (before any
     ``onComplete``/``onError`` can fire), the catch must post ``failed`` so the
     raised spinner is dismissed rather than stranded. Edges must be exactly
-    ``[in_progress, failed]`` — distinct from the ``onError`` path, which reaches
+    ``[in_progress, failed]`` â€” distinct from the ``onError`` path, which reaches
     ``failed`` via the callback.
     """
     node = shutil.which("node")
@@ -1790,7 +1790,7 @@ fs.writeFileSync(
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "session-1",
     inboxDir,
   }),
@@ -1872,7 +1872,7 @@ def test_compact_payload_failure_dismisses_spinner(tmp_path: Path) -> None:
 
     Pi's ``compact()`` surfaces failures through the ``onError`` callback. The
     extension must publish ``external_compaction_status`` ``failed`` so the web
-    UI's "Compacting…" spinner is dismissed rather than stranded.
+    UI's "Compactingâ€¦" spinner is dismissed rather than stranded.
     """
     node = shutil.which("node")
     if node is None:
@@ -1905,7 +1905,7 @@ fs.writeFileSync(
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "session-1",
     inboxDir,
   }),
@@ -1980,7 +1980,7 @@ const ctx = {
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-# ── TOOL_CALL policy evaluation (DENY / ALLOW / ASK elicitation) ──────────
+# â”€â”€ TOOL_CALL policy evaluation (DENY / ALLOW / ASK elicitation) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # These exercise the real evalNativePolicyHttp park/resolve loop in the
 # generated extension by driving its tool_call handler under Node with a
@@ -2003,7 +2003,7 @@ const configPath = path.join(tmpDir, "config.json");
 fs.writeFileSync(
   configPath,
   JSON.stringify({
-    serverUrl: "http://agent_meow.test",
+    serverUrl: "http://omnigent.test",
     sessionId: "session-1",
     authHeaders: { authorization: "Bearer test" },
   }),
@@ -2040,7 +2040,7 @@ global.fetch = async (url, request) => {
     }
     if (responder === "THROW_ABORT") {
       // Simulate our own AbortController firing after holding the connection
-      // for the FULL per-attempt park timeout — i.e. a legitimate long-poll
+      // for the FULL per-attempt park timeout â€” i.e. a legitimate long-poll
       // re-attach. The extension disambiguates a real park from a genuine
       // transport error by the attempt's elapsed wall-time (a real connect
       // error throws fast; a real park only aborts at the per-attempt
@@ -2064,7 +2064,7 @@ global.fetch = async (url, request) => {
 // Fake clock + timers. A short delay (sleep/backoff) advances a virtual clock
 // by its duration and fires on the next microtask, so the extension's
 // wall-clock budgets (transient retry, park ceiling) elapse deterministically
-// and instantly — no real 30s wait. The long park abort timer (>= 100s) is
+// and instantly â€” no real 30s wait. The long park abort timer (>= 100s) is
 // never fired so a scripted fetch always resolves first; but scheduling it
 // still advances nothing (it is cleared in the finally).
 let fakeNow = 1_000_000;
@@ -2326,8 +2326,8 @@ def test_policy_transport_error_fails_closed(tmp_path: Path) -> None:
     so an unevaluable policy must BLOCK, not proceed. Every evaluate POST
     throws a non-abort transport error; after the transient retry budget
     elapses the extension returns a deny verdict (fail closed) rather than
-    null, matching agent_meow.policies.types.FAIL_CLOSED_PHASES and the Python
-    native hook's fail_closed_hook_output(PreToolUse) → deny.
+    null, matching omnigent.policies.types.FAIL_CLOSED_PHASES and the Python
+    native hook's fail_closed_hook_output(PreToolUse) â†’ deny.
     """
     body = r"""
 (async () => {
@@ -2335,7 +2335,7 @@ def test_policy_transport_error_fails_closed(tmp_path: Path) -> None:
   // the transient budget elapses quickly and the loop must fail CLOSED.
   responders = new Array(64).fill("THROW");
   const verdict = await runToolCall();
-  // Fail closed → a block verdict with the unreachable-server reason.
+  // Fail closed â†’ a block verdict with the unreachable-server reason.
   assert.equal(verdict && verdict.block, true, JSON.stringify(verdict));
   assert.match(verdict.reason, /unreachable/);
   assert.match(verdict.reason, /failing closed/);
@@ -2424,17 +2424,17 @@ def test_policy_raw_ask_never_collapses_fails_closed(tmp_path: Path) -> None:
     A read-only caller's gate can return ASK without parking server-side. The
     extension re-evaluates (re-attaching the same id), but a raw ASK that NEVER
     collapses to a hard verdict must not ride the 24h park ceiling and then
-    proceed — after _MAX_RAW_ASK_ROUNDS it denies, mirroring the Python native
+    proceed â€” after _MAX_RAW_ASK_ROUNDS it denies, mirroring the Python native
     hook's stray-ASK-closed behavior.
     """
     body = r"""
 (async () => {
-  // Always ASK — it never collapses to ALLOW/DENY.
+  // Always ASK â€” it never collapses to ALLOW/DENY.
   const askForever = (_b) =>
     makeJsonResponse({ result: "POLICY_ACTION_ASK", reason: "approve?" });
   responders = new Array(256).fill(askForever);
   const verdict = await runToolCall();
-  // Fail closed → a block verdict, NOT a proceed (the old 24h-hang-then-allow).
+  // Fail closed â†’ a block verdict, NOT a proceed (the old 24h-hang-then-allow).
   assert.equal(verdict && verdict.block, true, JSON.stringify(verdict));
   assert.match(verdict.reason, /failing closed/);
   // It re-attached several rounds before giving up, but is bounded (not 24h /
@@ -2461,7 +2461,7 @@ def test_policy_fast_error_racing_abort_is_bounded_fails_closed(
     on ``aborted`` alone, so such an error retried unboundedly toward the 24h
     ceiling. The fix disambiguates by elapsed wall-time: a fast-failing error
     (well under the per-attempt timeout) is a genuine transport error charged
-    against the short transient budget — so a persistent one fails CLOSED
+    against the short transient budget â€” so a persistent one fails CLOSED
     instead of looping forever.
 
     THROW_FAST_ABORT flips ``aborted`` true (as if the timer had fired) but
@@ -2481,7 +2481,7 @@ def test_policy_fast_error_racing_abort_is_bounded_fails_closed(
     abort() { this.signal._abort(); }
   };
   // Every attempt: flip aborted=true (timer "fired") but throw immediately with
-  // NO clock advance — a genuine reset racing the abort timer. The extension
+  // NO clock advance â€” a genuine reset racing the abort timer. The extension
   // must charge these against the transient budget (elapsed ~= 0 << per-attempt
   // timeout) and ultimately fail CLOSED, not re-attach forever.
   let calls = 0;
@@ -2497,7 +2497,7 @@ def test_policy_fast_error_racing_abort_is_bounded_fails_closed(
       evalBodies.push(parsed);
       calls += 1;
       if (request && request.signal && typeof request.signal._abort === "function") {
-        request.signal._abort(); // timer "fired" — aborted=true
+        request.signal._abort(); // timer "fired" â€” aborted=true
       }
       const err = new Error("ECONNRESET racing abort");
       err.name = "AbortError";
@@ -2506,7 +2506,7 @@ def test_policy_fast_error_racing_abort_is_bounded_fails_closed(
     return { ok: true, status: 200, json: async () => ({}) };
   };
   const verdict = await runToolCall();
-  // Bounded by the transient budget → fail CLOSED, not an infinite re-attach.
+  // Bounded by the transient budget â†’ fail CLOSED, not an infinite re-attach.
   assert.equal(verdict && verdict.block, true, JSON.stringify(verdict));
   assert.match(verdict.reason, /failing closed/);
   // Retried a few times (transient budget) but nowhere near unbounded.
@@ -2546,7 +2546,7 @@ function writeConfig(bearer) {
   fs.writeFileSync(
     configPath,
     JSON.stringify({
-      serverUrl: "http://agent_meow.test",
+      serverUrl: "http://omnigent.test",
       sessionId: "session-1",
       authHeaders: { authorization: bearer },
     }),
@@ -2585,7 +2585,7 @@ function usage(id) {
   await handlers.message_end(usage("m2"), ctx);
 
   // First POST used the launch token; the second re-read the rewritten config
-  // and carried the fresh bearer — not the stale one closed over at startup.
+  // and carried the fresh bearer â€” not the stale one closed over at startup.
   assert.deepEqual(sentAuth, ["Bearer stale", "Bearer fresh"], JSON.stringify(sentAuth));
 })().catch((error) => {
   console.error(error && error.stack ? error.stack : error);

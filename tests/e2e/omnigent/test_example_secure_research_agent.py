@@ -3,7 +3,7 @@
 The example declares three tools backed by simple Python
 callables (``web_search``, ``read_internal_doc``, ``run_shell``)
 plus a :class:`FunctionPolicy` that gates which tools can fire
-based on prompt content. No external services — runs entirely
+based on prompt content. No external services â€” runs entirely
 from the venv.
 
 **What breaks if this fails:**
@@ -19,11 +19,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.e2e.agent_meow._example_helpers import (
+from tests.e2e.omnigent._example_helpers import (
     assert_completed_one_shot,
     run_one_shot,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 
 def test_secure_research_agent_one_shot(

@@ -1,15 +1,15 @@
-"""Tests for agent_meow.harness_aliases."""
+"""Tests for omnigent.harness_aliases."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_meow.harness_aliases import (
+from omnigent.harness_aliases import (
     canonicalize_harness,
     is_native_harness,
     native_terminal_name,
 )
-from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+from omnigent.spec._omnigent_compat import OMNIGENT_HARNESSES
 
 
 @pytest.mark.parametrize(
@@ -26,7 +26,7 @@ from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
         ("pi", "pi"),
         # Canonical cursor id passes through unchanged (no alias).
         ("cursor", "cursor"),
-        # Antigravity SDK harness: user-facing spellings → canonical id.
+        # Antigravity SDK harness: user-facing spellings â†’ canonical id.
         ("agy", "antigravity"),
         ("google-antigravity", "antigravity"),
         ("antigravity", "antigravity"),
@@ -57,7 +57,7 @@ def test_canonicalize_harness(alias: str | None, canonical: str | None) -> None:
         ("native-pi", True),
         ("kiro-native", True),
         ("native-kiro", True),
-        # SDK harnesses are NOT native — they replay the agent-meow
+        # SDK harnesses are NOT native â€” they replay the agent-meow
         # transcript and don't own an on-disk runtime transcript. A
         # regression that classified these as native would wrongly route a
         # fork into the native-rebuild path.

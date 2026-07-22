@@ -1,6 +1,6 @@
 """Tests for the post-hoc Antigravity (agy) policy-audit helpers.
 
-Pure unit tests for :mod:`~?agent_meow.antigravity_native_audit` — the
+Pure unit tests for :mod:`~?omnigent.antigravity_native_audit` â€” the
 classification/rendering layer of the audit-only governance path. No I/O; the
 async POST + interrupt (in the forwarder) are covered separately.
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_meow.antigravity_native_audit import (
+from omnigent.antigravity_native_audit import (
     DEGRADE_NOTICE_TEXT,
     HARNESS_NAME,
     audit_verdict_is_violation,
@@ -41,7 +41,7 @@ def _planner_tool_step(name: str = "run_command", **args: Any) -> dict[str, Any]
     }
 
 
-# ── step_to_audit_tool_calls ───────────────────────────────────────────────
+# â”€â”€ step_to_audit_tool_calls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_planner_tool_step_yields_neutral_record() -> None:
@@ -101,7 +101,7 @@ def test_multiple_tool_calls_preserved_in_order() -> None:
     assert [r["tool_name"] for r in records] == ["a", "b"]
 
 
-# ── build_audit_evaluation_request ─────────────────────────────────────────
+# â”€â”€ build_audit_evaluation_request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_audit_request_is_tool_call_phase_with_harness_and_model() -> None:
@@ -159,7 +159,7 @@ def test_audit_request_evaluates_connector_mcp_tools() -> None:
     assert event["context"]["harness"] == HARNESS_NAME
 
 
-# ── audit_verdict_is_violation / warning text ──────────────────────────────
+# â”€â”€ audit_verdict_is_violation / warning text â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_deny_is_violation() -> None:
@@ -197,7 +197,7 @@ def test_warning_text_has_fallback_reason() -> None:
     assert "already executed" in text
 
 
-# ── conversation items ─────────────────────────────────────────────────────
+# â”€â”€ conversation items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_policy_violation_item_is_assistant_message() -> None:
@@ -216,7 +216,7 @@ def test_policy_violation_item_is_assistant_message() -> None:
 def test_policy_violation_items_distinct_per_call_ordinal_in_one_step() -> None:
     """
     Two violations from the SAME step get DISTINCT response ids via the call
-    ordinal — keying on step_index alone would collide them onto one id (a single
+    ordinal â€” keying on step_index alone would collide them onto one id (a single
     PLANNER_RESPONSE step can carry multiple violating tool calls).
     """
     first = build_policy_violation_item(

@@ -16,28 +16,28 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from agent_meow.entities import DEFAULT_ENVIRONMENT_ID
-from agent_meow.entities.session_resources import (
+from omnigent.entities import DEFAULT_ENVIRONMENT_ID
+from omnigent.entities.session_resources import (
     SessionResourceView,
     default_environment_resource,
     environment_safety_metadata,
     terminal_resource_id,
     terminal_resource_view,
 )
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from agent_meow.inner.os_env import EditEntry, OpResult, OSEnvironment
-from agent_meow.inner.terminal import TerminalInstance
-from agent_meow.runner import create_runner_app
-from agent_meow.runner import resource_registry as resource_registry_mod
-from agent_meow.runner.resource_registry import (
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
+from omnigent.inner.os_env import EditEntry, OpResult, OSEnvironment
+from omnigent.inner.terminal import TerminalInstance
+from omnigent.runner import create_runner_app
+from omnigent.runner import resource_registry as resource_registry_mod
+from omnigent.runner.resource_registry import (
     _CLAUDE_NATIVE_STATUS_IDLE_THRESHOLD_SECONDS,
     _CLAUDE_NATIVE_STATUS_POLL_INTERVAL_SECONDS,
     _TERMINAL_ACTIVITY_EMIT_MIN_INTERVAL_SECONDS,
     CLAUDE_NATIVE_TERMINAL_ROLE,
     SessionResourceRegistry,
 )
-from agent_meow.spec.types import AgentSpec, ExecutorSpec
-from agent_meow.terminals import TerminalListEntry, TerminalRegistry
+from omnigent.spec.types import AgentSpec, ExecutorSpec
+from omnigent.terminals import TerminalListEntry, TerminalRegistry
 from tests.runner.helpers import NullServerClient, make_test_terminal_instance
 
 
@@ -409,7 +409,7 @@ async def test_session_resources_are_scoped_by_session(
     assert ids == [DEFAULT_ENVIRONMENT_ID, "terminal_other_s1"]
 
 
-# ── Phase 1b: typed collections ─────────────────────────────────
+# â”€â”€ Phase 1b: typed collections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -495,7 +495,7 @@ class _SwitchableServerClient:
     async def get(self, url: str, **kwargs: Any) -> _SwitchableServerClient._Response:
         """Report the session snapshot with the current ``agent_id`` binding.
 
-        :param url: Request URL (ignored — only the session GET is exercised).
+        :param url: Request URL (ignored â€” only the session GET is exercised).
         :param kwargs: Extra kwargs (ignored).
         :returns: A 200 snapshot whose ``agent_id`` reflects the current binding.
         """
@@ -518,7 +518,7 @@ class _SwitchableServerClient:
 @pytest.mark.asyncio
 async def test_reset_state_rematerializes_env_from_new_agent_spec(tmp_path: Path) -> None:
     """``POST /reset-state`` makes the next filesystem access resolve the
-    NEW agent's spec — and therefore its ``os_env`` / sandbox.
+    NEW agent's spec â€” and therefore its ``os_env`` / sandbox.
 
     Regression guard for the in-place agent-switch sandbox fix. The web
     filesystem/shell endpoints materialize the primary OSEnv from the
@@ -550,7 +550,7 @@ async def test_reset_state_rematerializes_env_from_new_agent_spec(tmp_path: Path
     )
 
     async def _spec_resolver(agent_id: str, session_id: str | None) -> AgentSpec:
-        """Resolve agent_a→spec_a, agent_b→spec_b (the switch target)."""
+        """Resolve agent_aâ†’spec_a, agent_bâ†’spec_b (the switch target)."""
         del session_id
         return spec_a if agent_id == "agent_a" else spec_b
 
@@ -604,7 +604,7 @@ async def test_reset_state_rematerializes_env_from_new_agent_spec(tmp_path: Path
 
     # After the reset the next access resolved agent_b (sandbox=linux_bwrap).
     # If reset-state had NOT dropped the spec/snapshot caches, this would
-    # still be agent_a/"none" — the cross-agent sandbox leak this guards.
+    # still be agent_a/"none" â€” the cross-agent sandbox leak this guards.
     assert captured_specs[-1].name == "agent_b"
     assert captured_specs[-1].os_env.sandbox.type == "linux_bwrap"
 
@@ -616,12 +616,12 @@ async def test_reset_state_closes_terminals_and_publishes_deleted(tmp_path: Path
 
     Regression guard for the switch-agent stale-terminal bug: the
     switch's runner-side reset used to pop terminals from the registry
-    silently (``cleanup_session`` emits no events), so the web UI —
-    whose terminal list is SSE-primary — kept showing the old agent's
+    silently (``cleanup_session`` emits no events), so the web UI â€”
+    whose terminal list is SSE-primary â€” kept showing the old agent's
     dead terminal, and attaching to it failed with "terminal resource
     not found or not running".
     """
-    from agent_meow.runner.app import _session_event_queues_ref
+    from omnigent.runner.app import _session_event_queues_ref
 
     conv_id = "conv_switch_term_teardown"
     workspace = tmp_path / "workspace"
@@ -669,7 +669,7 @@ async def test_reset_state_closes_terminals_and_publishes_deleted(tmp_path: Path
             if isinstance(item, dict):
                 queued_events.append(item)
 
-    # The terminal is gone from the registry → the /resources/terminals
+    # The terminal is gone from the registry â†’ the /resources/terminals
     # list the web UI seeds from no longer shows it. Still present =
     # reset-state skipped the teardown entirely.
     assert terminal_registry.get(conv_id, "tui", "main") is None, (
@@ -698,7 +698,7 @@ async def test_get_environment_reports_root_and_home(tmp_path: Path) -> None:
 
     The Web UI needs ``home`` to expand a leading ``~`` in agent-mentioned
     paths and resolve them against ``root``. ``home`` is the runner process's
-    own home — the same one the agent's ``~`` expands to. The endpoint only
+    own home â€” the same one the agent's ``~`` expands to. The endpoint only
     emits it when ``os.path.expanduser("~")`` resolves to an absolute path;
     when it can't (``~`` left literal), the field is omitted, so the
     assertion matches that conditional behavior.
@@ -721,7 +721,7 @@ async def test_get_environment_reports_root_and_home(tmp_path: Path) -> None:
     # when isolated); a value outside it means compute_default_env_root
     # regressed, not the home addition.
     assert metadata["root"].startswith(str(workspace.resolve()))
-    # home is the runner's own home — the value the agent's ``~`` expands to.
+    # home is the runner's own home â€” the value the agent's ``~`` expands to.
     # Mirror the endpoint's guard: emitted only when expanduser yields an
     # absolute path; omitted entirely when it can't resolve ``~``.
     expanded_home = os.path.expanduser("~")
@@ -889,7 +889,7 @@ async def test_list_resources_type_filter(
     assert types == {"terminal"}
 
 
-# ── Phase 1b: terminal lifecycle ────────────────────────────────
+# â”€â”€ Phase 1b: terminal lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -1023,11 +1023,11 @@ async def test_create_terminal_threads_agent_parent_os_env_through(
     Regression: the previous implementation built a fresh
     ``TerminalEnvSpec`` from the body with **no** sandbox at all,
     so every REST-launched terminal ran completely outside the
-    agent's configured sandbox — operator/API callers (e.g. the
+    agent's configured sandbox â€” operator/API callers (e.g. the
     ``agent-meow claude`` wrapper) could spawn an unsandboxed
     terminal in a session whose YAML declared an egress allow-list.
     """
-    from agent_meow.inner.datamodel import AgentDef, OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner.datamodel import AgentDef, OSEnvSandboxSpec, OSEnvSpec
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -1104,7 +1104,7 @@ async def test_create_terminal_uses_declared_terminal_spec_over_body(
     could spawn the YAML-declared terminal name with a completely
     different command.
     """
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         AgentDef,
         OSEnvSandboxSpec,
         OSEnvSpec,
@@ -1183,11 +1183,11 @@ async def test_create_terminal_resolves_declared_placeholder_cwd_to_workspace(
 
     The declared-terminal branch previously passed ``cwd: .`` through
     unresolved, so ``create_terminal_instance`` fell back to
-    ``Path(".").resolve()`` — the host launch dir. The resolved
+    ``Path(".").resolve()`` â€” the host launch dir. The resolved
     workspace must be baked into the launched spec (never via
     ``cwd_override``, which the stub asserts stays ``None``).
     """
-    from agent_meow.inner.datamodel import (
+    from omnigent.inner.datamodel import (
         AgentDef,
         OSEnvSandboxSpec,
         OSEnvSpec,
@@ -1196,7 +1196,7 @@ async def test_create_terminal_resolves_declared_placeholder_cwd_to_workspace(
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
-    # Declared shell owns its os_env with the placeholder cwd — the
+    # Declared shell owns its os_env with the placeholder cwd â€” the
     # real ``examples/polly`` ``shell`` terminal shape.
     declared_shell = TerminalEnvSpec(
         command="bash",
@@ -1267,8 +1267,8 @@ async def test_create_terminal_publishes_bridge_tmux_target(
     the terminal existed, but the launch request failed with a 500
     while trying to write ``tmux.json``.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
 
     resp = await client.post(
         "/v1/sessions/conv_abc/resources/terminals",
@@ -1284,7 +1284,7 @@ async def test_create_terminal_publishes_bridge_tmux_target(
     )
 
     assert resp.status_code == 200
-    from agent_meow.claude_native_bridge import bridge_dir_for_conversation_id
+    from omnigent.claude_native_bridge import bridge_dir_for_conversation_id
 
     derived = bridge_dir_for_conversation_id("conv_abc")
     payload = json.loads((derived / "tmux.json").read_text(encoding="utf-8"))
@@ -1306,8 +1306,8 @@ async def test_create_terminal_ignores_client_supplied_bridge_path(
     below win, and ``tmux.json`` (which carries a live tmux socket)
     would land under it instead of the session-derived directory.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
 
     attacker_path = tmp_path / "attacker-controlled-dir"
     attacker_path.mkdir()
@@ -1327,7 +1327,7 @@ async def test_create_terminal_ignores_client_supplied_bridge_path(
 
     assert resp.status_code == 200
     assert not (attacker_path / "tmux.json").exists()
-    from agent_meow.claude_native_bridge import bridge_dir_for_conversation_id
+    from omnigent.claude_native_bridge import bridge_dir_for_conversation_id
 
     derived = bridge_dir_for_conversation_id("conv_abc")
     assert (derived / "tmux.json").exists()
@@ -1500,7 +1500,7 @@ def _make_capturing_instance(
 
     Shadows :meth:`TerminalInstance.start_idle_watcher_thread` on the
     instance with a recorder so the test can drive the activity/idle
-    edges by hand and assert what the registry wired — without spawning
+    edges by hand and assert what the registry wired â€” without spawning
     the real tmux-polling daemon thread.
 
     :param tmp_path: Temporary directory for the instance's placeholder
@@ -1611,7 +1611,7 @@ async def test_claude_native_terminal_drives_session_status_from_pane_activity(
 
     Launching with ``CLAUDE_NATIVE_TERMINAL_ROLE`` must wire the idle
     edge (with the short claude-native status threshold) and translate
-    pane activity → ``running`` / quiescence → ``idle``, deduped to the
+    pane activity â†’ ``running`` / quiescence â†’ ``idle``, deduped to the
     transition so a continuously-redrawing pane doesn't spam ``running``.
     This is the PTY-activity-derived status that replaces the hook-based
     ``UserPromptSubmit``/``Stop`` bracketing.
@@ -1644,21 +1644,21 @@ async def test_claude_native_terminal_drives_session_status_from_pane_activity(
     assert capture.poll_interval_s == _CLAUDE_NATIVE_STATUS_POLL_INTERVAL_SECONDS
 
     # Two pane changes in one working stretch must yield exactly one
-    # ``running`` edge — the dedupe holds. A second ``running`` here would
-    # mean the idle→running edge isn't being coalesced.
+    # ``running`` edge â€” the dedupe holds. A second ``running`` here would
+    # mean the idleâ†’running edge isn't being coalesced.
     capture.on_activity()
     capture.on_activity()
     await asyncio.sleep(0)  # let the call_soon_threadsafe publishes run
     assert [e.status for e in status_edges] == ["running"]
 
-    # Quiescence → idle, and a repeat idle tick must not re-emit. A second
+    # Quiescence â†’ idle, and a repeat idle tick must not re-emit. A second
     # ``idle`` would mean the edge isn't deduped.
     capture.on_idle()
     capture.on_idle()
     await asyncio.sleep(0)
     assert [e.status for e in status_edges] == ["running", "idle"]
 
-    # New pane output after idle re-arms ``running`` — this is the case
+    # New pane output after idle re-arms ``running`` â€” this is the case
     # the hook path missed (e.g. compaction resume / typing after a turn).
     capture.on_activity()
     await asyncio.sleep(0)
@@ -1675,7 +1675,7 @@ async def test_generic_terminal_does_not_drive_session_status(
 
     A side shell (no ``CLAUDE_NATIVE_TERMINAL_ROLE``) still drives the
     terminal-activity badge, but its output must never flip the session's
-    working status — otherwise typing in an unrelated terminal would show
+    working status â€” otherwise typing in an unrelated terminal would show
     the agent as "running".
     """
     capture = _WatcherCapture()
@@ -1693,10 +1693,10 @@ async def test_generic_terminal_does_not_drive_session_status(
         terminal_name="zsh",
         session_key="s1",
         spec=_claude_terminal_spec(tmp_path),
-        # No resource_role → generic terminal.
+        # No resource_role â†’ generic terminal.
     )
 
-    # Generic terminals get the activity badge but NOT the idle→status
+    # Generic terminals get the activity badge but NOT the idleâ†’status
     # wiring, and keep the module defaults (not the claude threshold or the
     # fast poll interval).
     assert capture.started is True
@@ -1730,7 +1730,7 @@ async def test_terminal_activity_pulses_throttled_to_one_per_second(
     immediately rather than lagging up to a second behind the
     running-status edge.
 
-    A fake monotonic clock makes the throttle window deterministic — the
+    A fake monotonic clock makes the throttle window deterministic â€” the
     real watcher's 200ms poll spacing is replaced by hand-advanced time so
     we drive the exact sub-second / cross-second boundaries.
 
@@ -1762,7 +1762,7 @@ async def test_terminal_activity_pulses_throttled_to_one_per_second(
     assert capture.on_activity is not None
     assert capture.on_idle is not None
 
-    # Three pane changes inside one poll-spaced instant (clock frozen) →
+    # Three pane changes inside one poll-spaced instant (clock frozen) â†’
     # exactly one pulse. Without the throttle each changed tick emits, so a
     # count of 3 here would mean the per-second coalescing was dropped.
     capture.on_activity()
@@ -1775,16 +1775,16 @@ async def test_terminal_activity_pulses_throttled_to_one_per_second(
         f"coalesced and fires on every pane-changed tick."
     )
 
-    # Still inside the throttle window (advance < the min interval) → no new
+    # Still inside the throttle window (advance < the min interval) â†’ no new
     # pulse. A 2nd pulse here would mean the window is too short / ignored.
     clock["now"] += _TERMINAL_ACTIVITY_EMIT_MIN_INTERVAL_SECONDS / 2
     capture.on_activity()
     await asyncio.sleep(0)
     assert len(activity_pulses) == 1, (
-        "A pulse fired inside the throttle window — the min-interval guard is not being applied."
+        "A pulse fired inside the throttle window â€” the min-interval guard is not being applied."
     )
 
-    # Cross the throttle boundary → the next changed tick emits again. If
+    # Cross the throttle boundary â†’ the next changed tick emits again. If
     # this stays at 1 the throttle never re-opens and the badge would go
     # dark mid-turn.
     clock["now"] += _TERMINAL_ACTIVITY_EMIT_MIN_INTERVAL_SECONDS
@@ -1828,7 +1828,7 @@ async def test_concurrent_resource_reads_share_one_session_snapshot(
     resolution.
 
     Determinism: request A is confirmed parked inside the (blocked)
-    snapshot fetch — holding the per-session spec + snapshot locks —
+    snapshot fetch â€” holding the per-session spec + snapshot locks â€”
     before the followers are created. A holds the spec lock continuously
     from before the followers exist until after it writes the cache, so
     no follower can acquire the lock with an empty cache; each must reuse
@@ -1910,12 +1910,12 @@ async def test_concurrent_resource_reads_share_one_session_snapshot(
     finally:
         await server_client.aclose()
 
-    # Every concurrent read succeeded — the shared resolution is correct
+    # Every concurrent read succeeded â€” the shared resolution is correct
     # under contention, not merely rare.
     assert all(r.status_code == 200 for r in responses)
     # The 9 concurrent reads hit the server snapshot exactly once. Without
     # single-flight on the snapshot loader, each request that missed the
-    # empty cache would issue its own GET (the observed burst → 9 here).
+    # empty cache would issue its own GET (the observed burst â†’ 9 here).
     assert snapshot_count == 1, (
         f"expected one shared snapshot GET, got {snapshot_count}; >1 means "
         f"concurrent readers stampeded the cache instead of sharing one fetch"
@@ -1935,7 +1935,7 @@ async def test_failed_session_snapshot_is_not_cached_and_retries(
     """A transient non-200 snapshot is not memoized: a later read
     refetches and resolves once the session is reachable.
 
-    Guards the retry-until-bound path — the agent may bind to the session
+    Guards the retry-until-bound path â€” the agent may bind to the session
     after the runner first looks. If the failed snapshot were negatively
     cached, spec resolution would raise forever and the session could
     never recover.
@@ -2003,10 +2003,10 @@ async def test_failed_session_snapshot_is_not_cached_and_retries(
     finally:
         await server_client.aclose()
 
-    # First read hit the 503 snapshot → spec resolution raised
-    # OmnigentError → the endpoint returned a non-200 error response.
+    # First read hit the 503 snapshot â†’ spec resolution raised
+    # OmnigentError â†’ the endpoint returned a non-200 error response.
     assert first.status_code != 200
-    # Second read refetched the (now 200) snapshot and resolved → 200.
+    # Second read refetched the (now 200) snapshot and resolved â†’ 200.
     assert second.status_code == 200
     # snapshot_count == 2 proves the 503 was NOT negatively cached; 1 would
     # mean the failed snapshot stuck and the session could never recover.
@@ -2026,7 +2026,7 @@ async def test_unbound_agent_snapshot_is_not_cached_and_retries(
     """A 200 snapshot whose ``agent_id`` is still null is not memoized:
     a later read refetches and resolves once the agent binds.
 
-    This is the harder retry-until-bound case than the non-200 one — the
+    This is the harder retry-until-bound case than the non-200 one â€” the
     session GET succeeds (HTTP 200) before the agent binds, so the
     snapshot is "ok" but incomplete. If it were cached on ``ok`` alone,
     the stale ``agent_id=None`` would latch and spec resolution would
@@ -2099,10 +2099,10 @@ async def test_unbound_agent_snapshot_is_not_cached_and_retries(
     finally:
         await server_client.aclose()
 
-    # First read saw the unbound (agent_id null) snapshot → spec
-    # resolution raised NOT_FOUND → non-200 error response.
+    # First read saw the unbound (agent_id null) snapshot â†’ spec
+    # resolution raised NOT_FOUND â†’ non-200 error response.
     assert first.status_code != 200
-    # Second read refetched the now-bound snapshot and resolved → 200.
+    # Second read refetched the now-bound snapshot and resolved â†’ 200.
     assert second.status_code == 200
     # snapshot_count == 2 proves the unbound 200 was NOT cached; 1 would
     # mean agent_id=None latched and the session could never bind.
@@ -2131,7 +2131,7 @@ async def test_claude_terminal_ensure_concurrent_calls_create_once(
     that also calls ``_auto_create_claude_terminal`` under
     ``_claude_terminal_ensure_locks``.  Without the per-session lock on the
     terminals endpoint, both requests pass the "no terminal yet" check
-    simultaneously and both call ``_auto_create_claude_terminal`` — spawning
+    simultaneously and both call ``_auto_create_claude_terminal`` â€” spawning
     two forwarders that double-persist every transcript item (the
     double-bubble bug).  The fix wraps the terminals-endpoint check-and-create
     in the same ``_claude_terminal_ensure_locks`` key as the sessions path,
@@ -2195,7 +2195,7 @@ async def test_claude_terminal_ensure_concurrent_calls_create_once(
         terminal_ready = True
         return fake_view
 
-    monkeypatch.setattr("agent_meow.runner.app._auto_create_claude_terminal", fake_auto_create)
+    monkeypatch.setattr("omnigent.runner.app._auto_create_claude_terminal", fake_auto_create)
 
     async def fake_get_terminal_resource(
         self: Any,
@@ -2265,7 +2265,7 @@ async def test_claude_terminal_ensure_concurrent_calls_create_once(
     assert resp2.status_code == 200, f"Request 2 failed: {resp2.status_code} {resp2.text}"
 
     # _auto_create_claude_terminal must be called exactly once.
-    # If 2: the per-session lock on the terminals endpoint is absent — both
+    # If 2: the per-session lock on the terminals endpoint is absent â€” both
     # concurrent requests passed the "no terminal" check and both spawned a
     # Claude terminal, reproducing the double-forwarder / double-bubble bug.
     assert create_count == 1, (

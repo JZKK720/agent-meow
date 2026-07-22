@@ -18,7 +18,7 @@ Opt-in (needs a pinned ``opencode`` binary + LLM credentials)::
         -v
 
 Running under an isolated ``$HOME`` keeps the runner-owned ``opencode serve``
-bridge dirs (``~/.agent_meow/opencode-native``) and the daemon registry off the
+bridge dirs (``~/.omnigent/opencode-native``) and the daemon registry off the
 developer's real ones, so a co-resident daemon is never disturbed.
 """
 
@@ -33,7 +33,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow.entities.session_resources import terminal_resource_id
+from omnigent.entities.session_resources import terminal_resource_id
 from tests._helpers.compat import apply_runner_env, compat_runner_cwd, runner_executable
 from tests.e2e.helpers import POLL_INTERVAL_S
 
@@ -56,7 +56,7 @@ def _spawn_host_daemon(*, tmp_path: Path, live_server: str) -> subprocess.Popen[
     daemon_log = tmp_path / "host-daemon.log"
     with open(daemon_log, "w") as log_fh:
         return subprocess.Popen(
-            [runner_executable(), "-m", "agent_meow.host._daemon_entry", "--server", live_server],
+            [runner_executable(), "-m", "omnigent.host._daemon_entry", "--server", live_server],
             env=apply_runner_env(env),
             cwd=compat_runner_cwd(),
             stdout=subprocess.DEVNULL,
@@ -228,12 +228,12 @@ def test_opencode_native_host_session_auto_creates_terminal(
     runs the session, and the runner's session-creation dispatch must call
     :func:`_auto_create_opencode_terminal` (boot ``opencode serve`` + SSE
     forwarder + ``opencode attach``) and register ``terminal_opencode_main`` as
-    a streamable resource — so the Web UI has a terminal+chat view to embed,
+    a streamable resource â€” so the Web UI has a terminal+chat view to embed,
     exactly as it does for claude/codex/pi/cursor.
 
     (The LLM turn itself is covered by ``test_opencode_native_wire_contract_e2e``
     and the standalone gateway round-trip; out-of-box turns through the built-in
-    agent additionally need its default model gateway-wired — tracked
+    agent additionally need its default model gateway-wired â€” tracked
     separately.)
     """
     resp = http_client.get("/v1/agents")
@@ -259,7 +259,7 @@ def test_opencode_native_host_session_auto_creates_terminal(
 
         # The runner's _auto_create_opencode_terminal must register the TUI on
         # session creation (the dispatch branch this PR adds alongside the other
-        # natives) — otherwise the Web UI would have no terminal to attach to.
+        # natives) â€” otherwise the Web UI would have no terminal to attach to.
         terminal_id = terminal_resource_id("opencode", "main")
         _poll_for_terminal(
             http_client,
@@ -269,7 +269,7 @@ def test_opencode_native_host_session_auto_creates_terminal(
         )
         # The `agent-meow opencode` CLI launcher attaches this TTY directly to the
         # runner-owned tmux pane, so the terminal resource must expose the tmux
-        # socket + target — assert that prerequisite is present.
+        # socket + target â€” assert that prerequisite is present.
         detail = http_client.get(f"/v1/sessions/{session_id}/resources/terminals/{terminal_id}")
         detail.raise_for_status()
         meta = detail.json().get("metadata", {})

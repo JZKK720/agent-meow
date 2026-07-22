@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow import cursor_native
+from omnigent import cursor_native
 
 
 class _FakeAsyncClient:
@@ -30,7 +30,7 @@ class _FakeAsyncClient:
         if url == "/v1/sessions/conv_cursor":
             return httpx.Response(
                 200,
-                json={"labels": {"agent_meow.wrapper": "cursor-native-ui"}},
+                json={"labels": {"omnigent.wrapper": "cursor-native-ui"}},
                 request=request,
             )
         if url.endswith("/resources/terminals/terminal_cursor_main"):

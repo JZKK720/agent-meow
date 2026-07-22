@@ -9,8 +9,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import agent_meow.antigravity_native_bridge as _mod
-from agent_meow.antigravity_native_bridge import (
+import omnigent.antigravity_native_bridge as _mod
+from omnigent.antigravity_native_bridge import (
     ANTIGRAVITY_NATIVE_BRIDGE_DIR_ENV_VAR,
     ANTIGRAVITY_NATIVE_REQUEST_SESSION_ID_ENV_VAR,
     AntigravityNativeBridgeState,
@@ -193,7 +193,7 @@ def test_write_bridge_state_omits_agy_pid_key(bridge_dir: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# read_bridge_state — None branches
+# read_bridge_state â€” None branches
 # ---------------------------------------------------------------------------
 
 
@@ -208,7 +208,7 @@ def test_read_bridge_state_missing_dir_returns_none(
     """
     monkeypatch.setattr(_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     missing = prepare_bridge_dir("never_written")
-    # Don't write any state — the directory exists but state.json does not.
+    # Don't write any state â€” the directory exists but state.json does not.
     assert read_bridge_state(missing) is None
 
 
@@ -278,7 +278,7 @@ def test_read_bridge_state_ignores_legacy_sidecar_fields(bridge_dir: Path) -> No
     prior build must not crash the reader. This covers the removed sidecar_port /
     data_dir fields AND the durable read cursor (forwarded_step_index /
     forwarded_steps) the transcript forwarder persisted before the RPC reader
-    superseded it — all obsolete keys are simply ignored.
+    superseded it â€” all obsolete keys are simply ignored.
     """
     (bridge_dir / "state.json").write_text(
         json.dumps(
@@ -432,11 +432,11 @@ def test_update_conversation_id_returns_false_and_warns_when_no_state(
     update_conversation_id returns False and WARNs when there is no state.
 
     Guards observability (Fix C): on a missing/invalid state file the real
-    cascade id must NOT be silently dropped — the function returns ``False`` and
+    cascade id must NOT be silently dropped â€” the function returns ``False`` and
     logs a WARNING naming the dropped id so the cold-start caller can report that
     the reader will stay bound to the ``agy_conv_*`` placeholder.
     """
-    with caplog.at_level(logging.WARNING, logger="agent_meow.antigravity_native_bridge"):
+    with caplog.at_level(logging.WARNING, logger="omnigent.antigravity_native_bridge"):
         result = update_conversation_id(bridge_dir, "agy_conv_new")  # empty bridge dir
     assert result is False
     assert read_bridge_state(bridge_dir) is None
@@ -518,8 +518,8 @@ def test_ensure_onboarding_is_idempotent_no_rewrite(agy_marker: Path) -> None:
     When all three keys are already complete the file is left byte-for-byte intact.
 
     Pre-write a non-canonical encoding (custom key order, no trailing newline); a
-    returning user's agy state must not be churned, so an early return — not a
-    re-serialize — is required.
+    returning user's agy state must not be churned, so an early return â€” not a
+    re-serialize â€” is required.
     """
     agy_marker.parent.mkdir(parents=True, exist_ok=True)
     original = '{"onboardingComplete": true, "consumerOnboardingComplete": true, "enterpriseOnboardingComplete": false}'  # noqa: E501
@@ -565,7 +565,7 @@ def test_ensure_onboarding_overwrites_non_object_json(agy_marker: Path) -> None:
 def test_ensure_onboarding_normalises_numeric_truthy_values(agy_marker: Path) -> None:
     """
     A marker storing numeric 1/0 (which ``==`` True/False in Python) is rewritten
-    to real JSON booleans — the early-return uses identity, not equality, so a
+    to real JSON booleans â€” the early-return uses identity, not equality, so a
     numeric file is not mistaken for the boolean complete-state.
     """
     agy_marker.parent.mkdir(parents=True, exist_ok=True)
@@ -589,7 +589,7 @@ def test_ensure_onboarding_normalises_numeric_truthy_values(agy_marker: Path) ->
 def test_ensure_onboarding_raises_when_marker_dir_unwritable(agy_marker: Path) -> None:
     """
     An un-creatable marker directory surfaces OSError (fail-loud), not a silent
-    skip — a missing marker would otherwise hang agy on the wizard.
+    skip â€” a missing marker would otherwise hang agy on the wizard.
     """
     # Put a regular FILE where the ``cache`` directory must be so mkdir() fails.
     agy_marker.parent.parent.mkdir(parents=True, exist_ok=True)
@@ -600,7 +600,7 @@ def test_ensure_onboarding_raises_when_marker_dir_unwritable(agy_marker: Path) -
 
 def test_ensure_onboarding_overwrites_non_utf8_file(agy_marker: Path) -> None:
     """
-    A non-UTF-8 marker is treated as corrupt and regenerated, not raised on —
+    A non-UTF-8 marker is treated as corrupt and regenerated, not raised on â€”
     UnicodeDecodeError is a ValueError, caught alongside JSONDecodeError.
     """
     agy_marker.parent.mkdir(parents=True, exist_ok=True)
@@ -716,7 +716,7 @@ def test_inject_user_message_via_tui_happy_path(
 
     The fake models agy's TUI: idle (``? for shortcuts``) before the paste, the
     draft visible after the paste, and a running turn (``esc to cancel``) once
-    Enter submits — exercising the readiness, paste-commit, and submit-verify
+    Enter submits â€” exercising the readiness, paste-commit, and submit-verify
     gates that a static pane would stall.
     """
     bridge_dir = tmp_path / "bridge"
@@ -784,7 +784,7 @@ def test_inject_user_message_via_tui_resends_enter_when_coalesced(
     A first Enter folded into the paste burst is re-sent until the turn starts.
 
     The fake leaves the pane idle after the first Enter (the submit was
-    swallowed) and starts the turn only on the second — the delivery must not
+    swallowed) and starts the turn only on the second â€” the delivery must not
     give up after one Enter.
     """
     bridge_dir = tmp_path / "bridge"
@@ -901,7 +901,7 @@ def test_inject_user_message_via_tui_ignores_transcript_echo_after_submit(
     write_tmux_target(bridge_dir, socket_path=Path("/tmp/ex/tmux.sock"), tmux_target="main")
     content = "Reply exactly: transcript echo ok"
     enters = {"n": 0}
-    separator = "────────────────────────────────────────────────────────────────────────────────"
+    separator = "â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€"
     tui = {"pane": f"{separator}\n>\n{separator}\n? for shortcuts"}
 
     def _fake_run(cmd: list[str], **kwargs: object) -> SimpleNamespace:
@@ -916,7 +916,7 @@ def test_inject_user_message_via_tui_ignores_transcript_echo_after_submit(
         if cmd[-1] == "Enter":
             enters["n"] += 1
             tui["pane"] = (
-                f"{separator}\n> {content}\n⣾  Generating...\n{separator}\n"
+                f"{separator}\n> {content}\nâ£¾  Generating...\n{separator}\n"
                 f">\n{separator}\nesc to cancel"
             )
         return SimpleNamespace(returncode=0, stdout="", stderr="")
@@ -929,7 +929,7 @@ def test_inject_user_message_via_tui_ignores_transcript_echo_after_submit(
 def test_inject_user_message_via_tui_raises_when_target_never_advertised(
     tmp_path: Path,
 ) -> None:
-    """No ``tmux.json`` → a loud RuntimeError (the turn must not silently vanish)."""
+    """No ``tmux.json`` â†’ a loud RuntimeError (the turn must not silently vanish)."""
     with pytest.raises(RuntimeError, match="tmux target was not advertised"):
         inject_user_message_via_tui(tmp_path / "bridge", content="hi", timeout_s=0.0)
 
@@ -962,7 +962,7 @@ def test_inject_user_message_via_tui_raises_when_session_dies_before_submit(
     A TUI that exits between the readiness check and the submit fails fast.
 
     The entry liveness check passes, but ``_submit_and_verify`` re-checks before
-    each Enter — so a pane that dies after the paste raises the specific
+    each Enter â€” so a pane that dies after the paste raises the specific
     "exited before the message could be submitted" error instead of spinning the
     full submit budget and then blaming paste-coalescing.
     """
@@ -1027,7 +1027,7 @@ def test_inject_user_message_via_tui_raises_when_turn_never_starts(
     tui = {"pane": "> \n? for shortcuts"}
 
     def _fake_run(cmd: list[str], **kwargs: object) -> SimpleNamespace:
-        """Pane never leaves idle — the submit never starts a turn."""
+        """Pane never leaves idle â€” the submit never starts a turn."""
         del kwargs
         if "capture-pane" in cmd:
             return SimpleNamespace(returncode=0, stdout=tui["pane"], stderr="")
@@ -1052,19 +1052,19 @@ def test_inject_user_message_via_tui_rejects_empty_content(tmp_path: Path) -> No
 
 
 def test_agy_separator_line_accepts_pure_and_decorated_rules() -> None:
-    """Separator detection accepts a pure ─ rule and corner/join-decorated rules.
+    """Separator detection accepts a pure â”€ rule and corner/join-decorated rules.
 
-    agy 1.0.14 renders a pure ``─`` composer rule, but a future build could frame
+    agy 1.0.14 renders a pure ``â”€`` composer rule, but a future build could frame
     it with box-drawing corners; detection must tolerate that without matching
     ordinary text or a short dash run.
     """
-    assert _mod._agy_separator_line("─" * 60)
-    assert _mod._agy_separator_line("╭" + "─" * 40 + "╮")
-    assert _mod._agy_separator_line("├" + "─" * 20 + "┤")
+    assert _mod._agy_separator_line("â”€" * 60)
+    assert _mod._agy_separator_line("â•­" + "â”€" * 40 + "â•®")
+    assert _mod._agy_separator_line("â”œ" + "â”€" * 20 + "â”¤")
     # Not separators: ordinary text, ASCII dashes, and < 8 rule chars.
     assert not _mod._agy_separator_line("> Generating the answer now")
     assert not _mod._agy_separator_line("--- short ---")
-    assert not _mod._agy_separator_line("─────")
+    assert not _mod._agy_separator_line("â”€â”€â”€â”€â”€")
 
 
 def test_draft_candidate_lines_keep_prompt_text_with_status_words() -> None:
@@ -1083,7 +1083,7 @@ def test_draft_candidate_lines_keep_prompt_text_with_status_words() -> None:
 
 def test_draft_in_input_region_keeps_prompt_text_with_status_words() -> None:
     """A draft whose first line contains 'Generating' is detected, not hard-failed."""
-    sep = "─" * 60
+    sep = "â”€" * 60
     baseline = _mod._agy_input_region(f"{sep}\n>\n{sep}\n? for shortcuts")
     content = "Generating the migration is slow, please fix it"
     needle = _mod._submit_needle(content)
@@ -1096,9 +1096,9 @@ def test_draft_in_input_region_matches_short_message_by_composer_change() -> Non
 
     A draft in a composer that differs from the pre-paste baseline counts as
     present; the unchanged baseline (or a fresh empty composer after submit) does
-    not — so short messages are render/submit-verified instead of submitted blind.
+    not â€” so short messages are render/submit-verified instead of submitted blind.
     """
-    sep = "─" * 60
+    sep = "â”€" * 60
     baseline = _mod._agy_input_region(f"{sep}\n>\n{sep}\n? for shortcuts")
     pane_with_draft = f"{sep}\n> ok\n{sep}\n? for shortcuts"
     pane_after_submit = f"{sep}\n> ok\n{sep}\n>\n{sep}\nesc to cancel"
@@ -1133,7 +1133,7 @@ def test_inject_user_message_via_tui_delivers_short_message(
     """A short message with no stable needle ('ok') is render- and submit-verified.
 
     The empty-needle path must not submit blind: the draft is confirmed to render
-    by composer change, and submission is confirmed by the draft clearing — so a
+    by composer change, and submission is confirmed by the draft clearing â€” so a
     legitimate short turn is delivered with exactly one verified Enter.
     """
     bridge_dir = tmp_path / "bridge"
@@ -1192,7 +1192,7 @@ def test_inject_user_message_via_tui_short_message_raises_when_not_submitted(
 
 
 # ---------------------------------------------------------------------------
-# agent-meow MCP relay wiring (sys_* tools) — #1194
+# agent-meow MCP relay wiring (sys_* tools) â€” #1194
 # ---------------------------------------------------------------------------
 
 
@@ -1204,7 +1204,7 @@ def test_build_mcp_config_registers_omnigent_relay(tmp_path: Path) -> None:
     assert server["args"] == [
         "-I",
         "-m",
-        "agent_meow.claude_native_bridge",
+        "omnigent.claude_native_bridge",
         "serve-mcp",
         "--bridge-dir",
         str(tmp_path),
@@ -1339,7 +1339,7 @@ def test_seed_isolated_agy_home_trusts_workspace_in_isolated_settings(
 def test_seed_isolated_agy_home_tolerates_missing_credential(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A missing OAuth token only means agy re-auths — never a hard failure."""
+    """A missing OAuth token only means agy re-auths â€” never a hard failure."""
     fake_home = tmp_path / "real-home"
     fake_home.mkdir()
     monkeypatch.setattr(Path, "home", classmethod(lambda _cls: fake_home))
@@ -1375,8 +1375,8 @@ def test_seeding_and_mcp_config_never_mutate_real_gemini_dir(
     This is the central promise of the ``--gemini_dir`` design: keeping the real
     ``HOME`` must NOT reintroduce the clobber/concurrency footgun the prior
     isolated-HOME design avoided. Both setup steps that touch the real
-    ``~/.gemini`` — ``seed_isolated_agy_home`` (COPIES the OAuth markers out) and
-    ``write_mcp_config`` (writes the relay config) — must leave a fully populated
+    ``~/.gemini`` â€” ``seed_isolated_agy_home`` (COPIES the OAuth markers out) and
+    ``write_mcp_config`` (writes the relay config) â€” must leave a fully populated
     real ``~/.gemini`` (interactive-agy user with their own MCP config) byte-for-byte
     untouched, writing only under the per-session isolated Gemini dir.
     """
@@ -1420,7 +1420,7 @@ def test_seeding_and_mcp_config_never_mutate_real_gemini_dir(
 
 
 # ---------------------------------------------------------------------------
-# Interaction-prompt TUI delivery (send_interaction_keys_via_tui) — #1200
+# Interaction-prompt TUI delivery (send_interaction_keys_via_tui) â€” #1200
 # ---------------------------------------------------------------------------
 
 
@@ -1473,7 +1473,7 @@ def test_send_interaction_keys_via_tui_reject_sequence(
 
 
 def test_send_interaction_keys_via_tui_raises_without_target(tmp_path: Path) -> None:
-    """No advertised tmux target → a clear RuntimeError (no silent drop)."""
+    """No advertised tmux target â†’ a clear RuntimeError (no silent drop)."""
     with pytest.raises(RuntimeError, match="tmux target not advertised"):
         send_interaction_keys_via_tui(tmp_path / "bridge", "1", "Enter")
 
@@ -1482,7 +1482,7 @@ def test_send_interaction_keys_via_tui_raises_when_pane_gone(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """An exited agy pane → RuntimeError so the bridge logs the best-effort miss."""
+    """An exited agy pane â†’ RuntimeError so the bridge logs the best-effort miss."""
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(bridge_dir, socket_path=Path("/tmp/ex/tmux.sock"), tmux_target="main")
 
@@ -1515,7 +1515,7 @@ def test_ensure_agy_feedback_survey_disabled_creates_missing_settings(tmp_path: 
 
 
 def test_ensure_agy_feedback_survey_disabled_merges_preserving_keys(tmp_path: Path) -> None:
-    """The user's other settings (model/trustedWorkspaces/…) survive the merge."""
+    """The user's other settings (model/trustedWorkspaces/â€¦) survive the merge."""
     settings = _agy_settings_path(tmp_path)
     settings.parent.mkdir(parents=True)
     settings.write_text(
@@ -1646,7 +1646,7 @@ def test_ensure_agy_feedback_survey_disabled_write_failure_never_raises(
     """A write-side OSError is swallowed + logged so the launch is never broken (#1494 review).
 
     The read of an existing-but-unreadable file is already covered; this exercises
-    the WRITE phase guarantee — a failing atomic replace must not propagate out of
+    the WRITE phase guarantee â€” a failing atomic replace must not propagate out of
     a best-effort helper called inline on the launch path.
     """
     settings = _agy_settings_path(tmp_path)

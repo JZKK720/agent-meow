@@ -1,12 +1,12 @@
 """
-Tests for :mod:`~?agent_meow.spec._omnigent_legacy_shim` — the
+Tests for :mod:`~?omnigent.spec._omnigent_legacy_shim` â€” the
 compatibility layer that lets legacy agent-meow
 ``(content, phase)`` function-policy callables run under
 agent-meow' ``(ctx, context)`` convention.
 
 Each test pins one of the shim's contracts. The e2e integration
-that exercises the full translator → engine pipeline lives in
-``tests/e2e/agent_meow/test_run_omnigent_policy_enforcement.py``.
+that exercises the full translator â†’ engine pipeline lives in
+``tests/e2e/omnigent/test_run_omnigent_policy_enforcement.py``.
 """
 
 from __future__ import annotations
@@ -18,8 +18,8 @@ from typing import Any
 
 import pytest
 
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.spec._omnigent_legacy_shim import (
+from omnigent.policies.types import EvaluationContext
+from omnigent.spec._omnigent_legacy_shim import (
     _convert_args,
     _has_legacy_signature,
     _legacy_content,
@@ -27,9 +27,9 @@ from agent_meow.spec._omnigent_legacy_shim import (
     _wrap_legacy,
     build,
 )
-from agent_meow.spec.types import Phase
+from omnigent.spec.types import Phase
 
-# ── signature detection ──────────────────────────────────────
+# â”€â”€ signature detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _legacy_two_arg(content: Any, phase: str) -> dict[str, Any]:
@@ -61,7 +61,7 @@ def _modern_two_arg(
 
 def _wrong_order(phase: str, content: Any) -> dict[str, Any]:
     """
-    Two args but names are swapped — detection must treat this
+    Two args but names are swapped â€” detection must treat this
     as modern (the shim deliberately refuses to second-guess
     authors whose signatures don't exactly match the legacy
     convention).
@@ -98,12 +98,12 @@ def test_has_legacy_signature_matches_only_exact_param_names(
 
     What breaks if this fails: a modern callable happens to be
     wrapped and its ``ctx`` is re-shaped into a legacy content
-    dict — the policy then reads garbage and mis-decides.
+    dict â€” the policy then reads garbage and mis-decides.
     """
     assert _has_legacy_signature(fn) is expected_legacy
 
 
-# ── content conversion per phase ─────────────────────────────
+# â”€â”€ content conversion per phase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_legacy_content_input_passes_string_through() -> None:
@@ -113,7 +113,7 @@ def test_legacy_content_input_passes_string_through() -> None:
 
 
 def test_legacy_content_output_passes_string_through() -> None:
-    """RESPONSE: ``ctx.content`` is the assistant text — pass through."""
+    """RESPONSE: ``ctx.content`` is the assistant text â€” pass through."""
     ctx = EvaluationContext(phase=Phase.RESPONSE, content="here is the answer", tool_name=None)
     assert _legacy_content(ctx) == "here is the answer"
 
@@ -123,7 +123,7 @@ def test_legacy_content_tool_call_passes_dict_through() -> None:
     TOOL_CALL: agent-meow already normalizes to
     ``{"tool": name, "args": parsed_args}`` at the enforcement
     site (see ``_enforce_tool_call_policy``). Legacy agent-meow
-    expects the same shape — pass the dict through verbatim.
+    expects the same shape â€” pass the dict through verbatim.
 
     What breaks if this fails: ``block_long_sleep`` reads
     ``content["args"]["seconds"]``; if the shim reshapes the
@@ -139,7 +139,7 @@ def test_legacy_content_tool_call_passes_dict_through() -> None:
 def test_legacy_content_tool_result_plain_string_passes_through() -> None:
     """
     TOOL_RESULT: agent-meow passes the raw tool output string
-    (no longer wrapped — kasey bug #4 fix). Non-JSON strings
+    (no longer wrapped â€” kasey bug #4 fix). Non-JSON strings
     pass through to the legacy callable unchanged so callables
     branching on ``isinstance(content, str)`` still work.
     """
@@ -156,12 +156,12 @@ def test_legacy_content_tool_result_json_text_parses_to_dict() -> None:
     TOOL_RESULT: when agent-meow' raw string IS a JSON-encoded
     object, the shim parses it into the corresponding Python
     dict. Mirrors omnigent-native's
-    :func:`~?agent_meow.inner.mcp_tools._extract_call_result_payload`,
+    :func:`~?omnigent.inner.mcp_tools._extract_call_result_payload`,
     which JSON-parses each text content block on the way back.
 
     Why this matters: the Databricks ``google_policy``'s
     ``tool_result`` branch is gated on
-    ``isinstance(content, dict)`` — without JSON-parsing here,
+    ``isinstance(content, dict)`` â€” without JSON-parsing here,
     every MCP tool result reaches the policy as a string and
     the file-id tracking branch never runs, so any follow-up
     operation on a doc the agent just created (update,
@@ -177,14 +177,14 @@ def test_legacy_content_tool_result_json_text_parses_to_dict() -> None:
         tool_name="google__docs_document_create",
     )
     parsed = _legacy_content(ctx)
-    # Exact-dict equality, not just isinstance — any change
+    # Exact-dict equality, not just isinstance â€” any change
     # to the parse semantics shows up here.
     assert parsed == payload_dict
 
 
 def test_legacy_content_tool_result_partial_json_falls_back() -> None:
     """
-    Truncated / malformed JSON must NOT raise — fall back to
+    Truncated / malformed JSON must NOT raise â€” fall back to
     the raw string. A flaky tool result that emits half a JSON
     object should reach the policy unmodified, not crash the
     whole evaluation.
@@ -198,19 +198,19 @@ def test_legacy_content_tool_result_partial_json_falls_back() -> None:
     assert _legacy_content(ctx) == bad
 
 
-# ── _convert_args (wiring of content + phase str + optional context) ─
+# â”€â”€ _convert_args (wiring of content + phase str + optional context) â”€
 
 
 def test_convert_args_two_arg_form_omits_context() -> None:
     """
     Two-arg legacy callables (``fn(content, phase)``) must
-    receive exactly two positional arguments — passing an
+    receive exactly two positional arguments â€” passing an
     extra ``context`` dict would raise
     ``TypeError: too many positional arguments``.
     """
     ctx = EvaluationContext(phase=Phase.REQUEST, content="hi", tool_name=None)
     args = _convert_args(ctx, {"labels": {}}, wants_context=False)
-    # Exactly (content, "input") — length 2 is the contract.
+    # Exactly (content, "input") â€” length 2 is the contract.
     assert args == ("hi", "input")
 
 
@@ -243,7 +243,7 @@ def test_convert_args_three_arg_form_includes_context() -> None:
 def test_legacy_context_does_not_mutate_engine_context() -> None:
     """
     Building the legacy context dict must not mutate the
-    engine's dict — if it did, ``tool_name`` would persist
+    engine's dict â€” if it did, ``tool_name`` would persist
     between evaluations and cross-contaminate policy calls.
     Uses ``TOOL_RESULT`` because that's the phase native
     agent-meow adds ``tool_name`` on (see
@@ -286,7 +286,7 @@ def test_legacy_context_threads_configured_phases_when_provided() -> None:
     engine_ctx = {"labels": {}, "conversation_id": "c_abc"}
     # ``TOOL_RESULT`` chosen because that's the phase that
     # populates ``tool_name`` in the legacy context (matching
-    # native agent-meow — see ``_legacy_context``'s docstring),
+    # native agent-meow â€” see ``_legacy_context``'s docstring),
     # so this test exercises both ``configured_phases`` AND
     # ``tool_name`` plumbing in the same call.
     ctx = EvaluationContext(
@@ -298,7 +298,7 @@ def test_legacy_context_threads_configured_phases_when_provided() -> None:
     legacy = _legacy_context(ctx, engine_ctx, configured_phases=phases_in)
     # Value: the YAML ``on:`` shows up verbatim in the dict.
     assert legacy["configured_phases"] == ["tool_call", "tool_result"]
-    # Identity: must be a fresh list, not the input object —
+    # Identity: must be a fresh list, not the input object â€”
     # otherwise a legacy callable that mutates
     # ``context["configured_phases"]`` (e.g. .append, .clear)
     # would leak state into the shared spec / next evaluation.
@@ -311,7 +311,7 @@ def test_legacy_context_threads_configured_phases_when_provided() -> None:
 def test_legacy_context_omits_configured_phases_when_not_provided() -> None:
     """
     Calling ``_legacy_context`` without ``configured_phases``
-    must NOT add the key to the dict — preserves the contract
+    must NOT add the key to the dict â€” preserves the contract
     for callers that build the shim directly without a
     translator (the existing test suite + ad-hoc unit tests).
 
@@ -334,7 +334,7 @@ def test_legacy_context_omits_tool_name_on_tool_call() -> None:
     ONLY on ``TOOL_RESULT`` (see
     :meth:`Session._apply_tool_result_policy`'s ``context =
     {"tool_name": tool_name}`` setup). On ``TOOL_CALL`` no
-    ``tool_name`` key is added — the legacy callable reads the
+    ``tool_name`` key is added â€” the legacy callable reads the
     name from ``content["tool"]`` instead.
 
     The shim must mirror this so callables that branch on
@@ -364,7 +364,7 @@ def test_legacy_context_omits_tool_name_on_input_and_output() -> None:
     must not appear in the legacy context dict either.
 
     Also verifies the shim doesn't accidentally fabricate a
-    tool name on these phases — ``ctx.tool_name`` is ``None``
+    tool name on these phases â€” ``ctx.tool_name`` is ``None``
     on REQUEST/RESPONSE in agent-meow today, and any future change
     that populated it should still result in the legacy
     context omitting the key.
@@ -381,7 +381,7 @@ def test_convert_args_three_arg_form_forwards_configured_phases() -> None:
     """
     The wiring from ``_convert_args`` to ``_legacy_context``
     must not drop ``configured_phases``. This is the layer that
-    hands the legacy context dict to the legacy callable —
+    hands the legacy context dict to the legacy callable â€”
     a regression here is silent (the callable just sees the
     pre-fix legacy context).
     """
@@ -401,7 +401,7 @@ def test_convert_args_three_arg_form_forwards_configured_phases() -> None:
     assert args[-1]["configured_phases"] == ["tool_call", "tool_result"]
 
 
-# ── build(): wrapping / passthrough ──────────────────────────
+# â”€â”€ build(): wrapping / passthrough â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -428,7 +428,7 @@ def test_build_wraps_legacy_callable_and_converts_args(
     callable with the legacy ``(content, phase)`` shape.
 
     What breaks if this fails: ``block_long_sleep`` and friends
-    see ``ctx`` where they expected a content dict — their
+    see ``ctx`` where they expected a content dict â€” their
     ``isinstance(content, dict)`` check fails, they allow
     everything, and the tool call goes through unblocked.
     """
@@ -443,7 +443,7 @@ def test_build_wraps_legacy_callable_and_converts_args(
     ephemeral_module.policy = _legacy
 
     wrapped = build("_legacy_shim_test_ephemeral.policy")
-    # Not the same function object — wrapping happened.
+    # Not the same function object â€” wrapping happened.
     assert wrapped is not _legacy
 
     ctx = EvaluationContext(
@@ -452,7 +452,7 @@ def test_build_wraps_legacy_callable_and_converts_args(
         tool_name="sleep",
     )
     result = wrapped(ctx, {"labels": {}})
-    # Legacy callable received legacy-shaped args — verified by
+    # Legacy callable received legacy-shaped args â€” verified by
     # inspecting the captured call and by the real return value.
     # The shim coerces the old {"action": ...} dict to the V0
     # {"decision": {"result": ...}} format so the agent-meow'
@@ -536,7 +536,7 @@ def test_build_raises_when_target_not_callable(ephemeral_module: Any) -> None:
         build("_legacy_shim_test_ephemeral.not_a_func")
 
 
-# ── end-to-end via FunctionPolicySpec ────────────────────────
+# â”€â”€ end-to-end via FunctionPolicySpec â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_shim_builds_usable_FunctionPolicy_through_spec_factory(
@@ -544,8 +544,8 @@ def test_shim_builds_usable_FunctionPolicy_through_spec_factory(
 ) -> None:
     """
     Proves the shim integrates with the existing
-    :func:`~?agent_meow.policies.function.resolve_function_policy`
-    factory mechanism — i.e. the translator's ``function: {path:
+    :func:`~?omnigent.policies.function.resolve_function_policy`
+    factory mechanism â€” i.e. the translator's ``function: {path:
     shim.build, arguments: {target: ...}}`` shape drives a real
     :class:`FunctionPolicy` that returns the legacy callable's
     decision.
@@ -555,8 +555,8 @@ def test_shim_builds_usable_FunctionPolicy_through_spec_factory(
     engine's invocation; only integration tests would catch it
     otherwise.
     """
-    from agent_meow.policies.function import resolve_function_policy
-    from agent_meow.spec.types import (
+    from omnigent.policies.function import resolve_function_policy
+    from omnigent.spec.types import (
         FunctionPolicySpec,
         FunctionRef,
         Phase,
@@ -581,7 +581,7 @@ def test_shim_builds_usable_FunctionPolicy_through_spec_factory(
         name="sleep_gate",
         on=(PhaseSelector(phase=Phase.TOOL_CALL),),
         function=FunctionRef(
-            path="agent_meow.spec._omnigent_legacy_shim.build",
+            path="omnigent.spec._omnigent_legacy_shim.build",
             arguments={"target": "_legacy_shim_test_ephemeral.policy"},
         ),
     )
@@ -595,14 +595,14 @@ def test_shim_builds_usable_FunctionPolicy_through_spec_factory(
         tool_name="sleep",
     )
     result = asyncio.run(policy.evaluate(ctx, {"labels": {}}))
-    # PolicyResult carries the deny — full pipeline worked.
-    from agent_meow.spec.types import PolicyAction
+    # PolicyResult carries the deny â€” full pipeline worked.
+    from omnigent.spec.types import PolicyAction
 
     assert result.action == PolicyAction.DENY
     assert result.reason == "sleep too long"
 
 
-# ── reset_turn forwarding (fix #2) ───────────────────────────
+# â”€â”€ reset_turn forwarding (fix #2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_forwards_reset_turn_attribute_from_legacy_callable() -> None:
@@ -615,7 +615,7 @@ def test_build_forwards_reset_turn_attribute_from_legacy_callable() -> None:
     and invoke it at turn boundaries.
 
     What breaks if this fails: per-turn rate-limit counters
-    silently degrade to per-session limits — the agent quietly
+    silently degrade to per-session limits â€” the agent quietly
     runs further than the YAML author intended.
     """
     reset_calls: list[None] = []
@@ -634,7 +634,7 @@ def test_build_forwards_reset_turn_attribute_from_legacy_callable() -> None:
     # Wrapper exposes the reset_turn passthrough.
     assert hasattr(wrapped, "reset_turn")
     wrapped.reset_turn()
-    # The underlying reset was invoked exactly once — no
+    # The underlying reset was invoked exactly once â€” no
     # decorators, no copies, no extra invocations.
     assert len(reset_calls) == 1
 
@@ -645,7 +645,7 @@ def test_build_does_not_attach_reset_turn_when_callable_lacks_it() -> None:
     must NOT get a fabricated reset_turn on the wrapper. A
     spurious no-op attribute would still pass the
     ``hasattr(...) and callable(...)`` check downstream and
-    waste a function call per turn — but more importantly,
+    waste a function call per turn â€” but more importantly,
     pinning this contract here protects against future shim
     changes that auto-create a default no-op (which would
     mask author-side bugs where reset_turn was supposed to
@@ -677,8 +677,8 @@ def test_rate_limit_factory_reset_turn_propagates_through_shim_and_policy() -> N
     """
     import asyncio
 
-    from agent_meow.policies.function import resolve_function_policy
-    from agent_meow.spec.types import (
+    from omnigent.policies.function import resolve_function_policy
+    from omnigent.spec.types import (
         FunctionPolicySpec,
         FunctionRef,
         Phase,
@@ -690,7 +690,7 @@ def test_rate_limit_factory_reset_turn_propagates_through_shim_and_policy() -> N
         name="rate_limit",
         on=(PhaseSelector(phase=Phase.TOOL_CALL),),
         function=FunctionRef(
-            path="agent_meow.spec._omnigent_legacy_shim.build",
+            path="omnigent.spec._omnigent_legacy_shim.build",
             arguments={
                 "target": (
                     "tests.resources.examples._shared.rate_limit_policy.max_tool_calls_per_turn"

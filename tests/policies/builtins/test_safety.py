@@ -1,14 +1,14 @@
 """
 Tests for the built-in safety policies
-(:mod:`~?agent_meow.policies.builtins.safety`).
+(:mod:`~?omnigent.policies.builtins.safety`).
 
 Covers:
 
-- ``ask_on_os_tools`` — ASKs approval before file/shell tool calls,
+- ``ask_on_os_tools`` â€” ASKs approval before file/shell tool calls,
   including agent-meow ``sys_os_*`` tools, Claude Code native tools
   (``Bash``, ``Read``, ``Write``, ``Edit``, ``Glob``, ``Grep``),
   and Codex native tools (same ``PreToolUse`` hook contract).
-- ``block_skills`` — factory that denies skill loading via two paths:
+- ``block_skills`` â€” factory that denies skill loading via two paths:
   1. ``load_skill`` / ``read_skill_file`` tool calls (TOOL_CALL phase).
   2. Slash-command skill loads (REQUEST phase, ``"/<name> <args>"``).
 - Existing policies are tested transitively via the registry tests;
@@ -19,11 +19,11 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.policies.builtins.safety import ask_on_os_tools, block_skills
-from agent_meow.policies.schema import PolicyEvent
+from omnigent.policies.builtins.safety import ask_on_os_tools, block_skills
+from omnigent.policies.schema import PolicyEvent
 from tests.policies.builtins.helpers import tool_call_event as tc
 
-# ── ask_on_os_tools: agent-meow sys_os_* tools ─────────────────────────────
+# â”€â”€ ask_on_os_tools: agent-meow sys_os_* tools â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -44,7 +44,7 @@ def test_ask_on_os_tools_asks_for_sys_os_tools(tool: str) -> None:
     assert tool in result["reason"]
 
 
-# ── ask_on_os_tools: Claude Code / Codex native tools ─────────────────────
+# â”€â”€ ask_on_os_tools: Claude Code / Codex native tools â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -84,7 +84,7 @@ def test_ask_on_os_tools_asks_for_native_tools(
     assert expected_preview in result["reason"]
 
 
-# ── ask_on_os_tools: Pi native tools (lowercase) ──────────────────────────
+# â”€â”€ ask_on_os_tools: Pi native tools (lowercase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -106,7 +106,7 @@ def test_ask_on_os_tools_asks_for_pi_native_tools(
     hook contract.
 
     Pi names its in-process tools ``read`` / ``bash`` / ``write`` /
-    ``edit`` — distinct from the Claude/Codex casing covered above. The
+    ``edit`` â€” distinct from the Claude/Codex casing covered above. The
     pi executor routes these through the same TOOL_CALL verdict, so the
     builtin must recognize the lowercase names; otherwise a polly pi
     worker calling native ``read`` (enabled for skills) is silently
@@ -127,7 +127,7 @@ def test_ask_on_os_tools_asks_for_pi_native_tools(
     assert expected_preview in result["reason"]
 
 
-# ── ask_on_os_tools: Goose native tools (developer__ namespace) ───────────────
+# â”€â”€ ask_on_os_tools: Goose native tools (developer__ namespace) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -149,7 +149,7 @@ def test_ask_on_os_tools_asks_for_goose_native_tools(
 
     Goose namespaces its built-in developer tools (``developer__shell`` etc.).
     Without these names the standard ``ask_on_os_tools`` policy would silently
-    fail to gate a native goose session's shell/file tools — so a card would
+    fail to gate a native goose session's shell/file tools â€” so a card would
     never appear. ``developer__shell`` resolves the ``command`` preview branch;
     the file tools use Goose's ``path`` arg, matching the default branch.
 
@@ -163,7 +163,7 @@ def test_ask_on_os_tools_asks_for_goose_native_tools(
     assert expected_preview in result["reason"]
 
 
-# ── ask_on_os_tools: opencode native permission categories ────────────────────
+# â”€â”€ ask_on_os_tools: opencode native permission categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -183,7 +183,7 @@ def test_ask_on_os_tools_asks_for_opencode_native_tools(
     expected_preview: str,
 ) -> None:
     """opencode's permission categories trigger ASK via the SSE forwarder's
-    ``permission.asked`` → policy-evaluate path.
+    ``permission.asked`` â†’ policy-evaluate path.
 
     The forwarder maps opencode's ``permission`` field (e.g. ``"bash"``) onto
     the policy tool name. Without these in the OS-tool set, enabling "Require
@@ -226,7 +226,7 @@ def test_ask_on_os_tools_allows_non_tool_call_phase() -> None:
     assert result["result"] == "ALLOW"
 
 
-# ── block_skills: load_skill ────────────────────────────────────────────────
+# â”€â”€ block_skills: load_skill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_block_skills_denies_blocked_load_skill() -> None:
@@ -284,7 +284,7 @@ def test_block_skills_case_insensitive_parametrized(blocked_name: str, call_name
     assert result["result"] == "DENY"
 
 
-# ── block_skills: read_skill_file ───────────────────────────────────────────
+# â”€â”€ block_skills: read_skill_file â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_block_skills_denies_blocked_read_skill_file() -> None:
@@ -310,7 +310,7 @@ def test_block_skills_allows_unblocked_read_skill_file() -> None:
     assert result["result"] == "ALLOW"
 
 
-# ── block_skills: non-skill tools + non-tool_call phases ────────────────────
+# â”€â”€ block_skills: non-skill tools + non-tool_call phases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_block_skills_allows_non_skill_tools() -> None:
@@ -359,7 +359,7 @@ def test_block_skills_allows_request_without_slash() -> None:
     assert result["result"] == "ALLOW"
 
 
-# ── block_skills: multiple blocked names ────────────────────────────────────
+# â”€â”€ block_skills: multiple blocked names â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_block_skills_multiple_blocked_names() -> None:
@@ -377,7 +377,7 @@ def test_block_skills_multiple_blocked_names() -> None:
     assert policy(tc("load_skill", {"name": "safe-skill"}))["result"] == "ALLOW"
 
 
-# ── block_skills: edge cases ────────────────────────────────────────────────
+# â”€â”€ block_skills: edge cases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_block_skills_empty_blocked_list_allows_all() -> None:
@@ -401,7 +401,7 @@ def test_block_skills_missing_name_argument_allows() -> None:
     assert result["result"] == "ALLOW"
 
 
-# ── block_skills: slash-command path (REQUEST phase) ────────────────────────
+# â”€â”€ block_skills: slash-command path (REQUEST phase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _request_event(text: str) -> PolicyEvent:
@@ -427,7 +427,7 @@ def test_block_skills_denies_slash_command_blocked_skill() -> None:
     """A ``/blocked-skill`` slash command is denied at the request phase.
 
     This is the path the agent-meow server takes when the user types
-    ``/skill-name`` in the UI — it converts to a synthetic request
+    ``/skill-name`` in the UI â€” it converts to a synthetic request
     with text ``"/skill-name"``. If this returns ALLOW, the slash
     command bypass is not covered.
     """
@@ -492,12 +492,12 @@ def test_block_skills_slash_then_whitespace_allows(text: str) -> None:
     assert result["result"] == "ALLOW"
 
 
-# ── ask_on_add_policy ──────────────────────────────────────────
+# â”€â”€ ask_on_add_policy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_ask_on_add_policy_asks_for_sys_add_policy() -> None:
     """sys_add_policy tool call triggers ASK with a preview."""
-    from agent_meow.policies.builtins.safety import ask_on_add_policy
+    from omnigent.policies.builtins.safety import ask_on_add_policy
 
     result = ask_on_add_policy(
         {
@@ -506,7 +506,7 @@ def test_ask_on_add_policy_asks_for_sys_add_policy() -> None:
                 "name": "sys_add_policy",
                 "arguments": {
                     "name": "block_shell",
-                    "handler": "agent_meow.policies.builtins.cel.cel_policy",
+                    "handler": "omnigent.policies.builtins.cel.cel_policy",
                 },
             },
         }
@@ -518,7 +518,7 @@ def test_ask_on_add_policy_asks_for_sys_add_policy() -> None:
 
 def test_ask_on_add_policy_allows_other_tools() -> None:
     """Non-policy tool calls pass through."""
-    from agent_meow.policies.builtins.safety import ask_on_add_policy
+    from omnigent.policies.builtins.safety import ask_on_add_policy
 
     result = ask_on_add_policy(
         {
@@ -531,7 +531,7 @@ def test_ask_on_add_policy_allows_other_tools() -> None:
 
 def test_ask_on_add_policy_allows_non_tool_events() -> None:
     """Non-tool_call events pass through."""
-    from agent_meow.policies.builtins.safety import ask_on_add_policy
+    from omnigent.policies.builtins.safety import ask_on_add_policy
 
     result = ask_on_add_policy({"type": "request", "data": "hello"})
     assert result["result"] == "ALLOW"
@@ -539,7 +539,7 @@ def test_ask_on_add_policy_allows_non_tool_events() -> None:
 
 def test_ask_on_add_policy_handles_missing_arguments() -> None:
     """Missing or non-dict arguments doesn't crash."""
-    from agent_meow.policies.builtins.safety import ask_on_add_policy
+    from omnigent.policies.builtins.safety import ask_on_add_policy
 
     result = ask_on_add_policy(
         {
@@ -550,7 +550,7 @@ def test_ask_on_add_policy_handles_missing_arguments() -> None:
     assert result["result"] == "ASK"
 
 
-# ── block_skills: native Skill tool (PreToolUse hook path) ─────────────────
+# â”€â”€ block_skills: native Skill tool (PreToolUse hook path) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_block_skills_denies_native_skill_tool() -> None:
@@ -558,7 +558,7 @@ def test_block_skills_denies_native_skill_tool() -> None:
 
     This is the primary enforcement path for native Claude Code and Codex
     harnesses, where there is no ``load_skill`` runner tool. The
-    ``PreToolUse`` hook fires → agent-meow server evaluates → this policy denies.
+    ``PreToolUse`` hook fires â†’ agent-meow server evaluates â†’ this policy denies.
     If this returns ALLOW, native harnesses can load blocked skills.
     """
     policy = block_skills(blocked=["deploy"])

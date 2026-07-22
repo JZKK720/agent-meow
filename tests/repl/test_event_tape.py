@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from agent_meow.repl._event_tape import (
+from omnigent.repl._event_tape import (
     EventTape,
     PipelineCounters,
     Stage,
@@ -29,7 +29,7 @@ from agent_meow.repl._event_tape import (
     open_event_log,
 )
 
-# ── Synthetic event stubs ──────────────────────────────────────────────
+# â”€â”€ Synthetic event stubs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Real types where the production code only inspects ``type().__name__``
 # and doesn't do ``isinstance`` checks on the raw events. Using
 # lightweight stubs avoids importing server/SDK internals into a
@@ -38,7 +38,7 @@ from agent_meow.repl._event_tape import (
 
 @dataclass
 class _FakeTextDelta:
-    """Stub for ``OutputTextDeltaEvent`` — carries a text delta.
+    """Stub for ``OutputTextDeltaEvent`` â€” carries a text delta.
 
     :param delta: The text chunk, e.g. ``"hello"``.
     """
@@ -48,7 +48,7 @@ class _FakeTextDelta:
 
 @dataclass
 class _FakeCompletedEvent:
-    """Stub for ``CompletedEvent`` — signals response completion."""
+    """Stub for ``CompletedEvent`` â€” signals response completion."""
 
 
 @dataclass
@@ -66,7 +66,7 @@ class _FakeSDKTextDelta:
     delta: str
 
 
-# ── StreamingText stub ─────────────────────────────────────────────────
+# â”€â”€ StreamingText stub â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -79,7 +79,7 @@ class _FakeStreamingText:
     text: str
 
 
-# ── Formatter stub ─────────────────────────────────────────────────────
+# â”€â”€ Formatter stub â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _FakeFmt:
@@ -93,13 +93,13 @@ class _FakeFmt:
     accent: str = "bold"
 
 
-# ── PipelineCounters ───────────────────────────────────────────────────
+# â”€â”€ PipelineCounters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_pipeline_counters_initial_state() -> None:
     """All counters start at zero."""
     counters = PipelineCounters()
-    # Every counter field must be zero at construction — a non-zero
+    # Every counter field must be zero at construction â€” a non-zero
     # default would cause the toolbar to show stale data before any
     # events arrive.
     assert counters.raw == 0
@@ -171,7 +171,7 @@ def test_pipeline_counters_toolbar_text_with_gap() -> None:
     assert "ev:10" in text
 
 
-# ── EventTape: record_raw ──────────────────────────────────────────────
+# â”€â”€ EventTape: record_raw â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_record_raw_creates_entry() -> None:
@@ -239,7 +239,7 @@ def test_record_raw_tracks_max_gap(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-# ── EventTape: update_translation ──────────────────────────────────────
+# â”€â”€ EventTape: update_translation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_update_translation_non_none() -> None:
@@ -263,7 +263,7 @@ def test_update_translation_none() -> None:
     tape.update_translation(entry, None)
 
     assert entry.sdk_translation == "None (dropped)"
-    # Stage must NOT advance — the event was dropped.
+    # Stage must NOT advance â€” the event was dropped.
     assert entry.stage_reached == Stage.RAW
     # Translated counter must NOT be incremented for dropped events.
     assert tape.counters.translated == 0, (
@@ -271,7 +271,7 @@ def test_update_translation_none() -> None:
     )
 
 
-# ── EventTape: update_format ──────────────────────────────────────────
+# â”€â”€ EventTape: update_format â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_update_format_with_items() -> None:
@@ -304,7 +304,7 @@ def test_update_format_empty_list() -> None:
     )
 
 
-# ── EventTape: mark_rendered ──────────────────────────────────────────
+# â”€â”€ EventTape: mark_rendered â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_mark_rendered() -> None:
@@ -320,7 +320,7 @@ def test_mark_rendered() -> None:
     assert tape.counters.rendered == 1
 
 
-# ── EventTape: entries / summary_counts ───────────────────────────────
+# â”€â”€ EventTape: entries / summary_counts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_entries_returns_snapshot() -> None:
@@ -330,7 +330,7 @@ def test_entries_returns_snapshot() -> None:
     tape.record_raw(_FakeCompletedEvent())
 
     entries = tape.entries
-    # Two events recorded → two entries in the snapshot.
+    # Two events recorded â†’ two entries in the snapshot.
     assert len(entries) == 2, (
         f"Expected 2 entries, got {len(entries)}. If 0, record_raw failed to append to the buffer."
     )
@@ -367,7 +367,7 @@ def test_ring_buffer_eviction() -> None:
     assert entries[0].raw_event_type == "_FakeTextDelta"
 
 
-# ── EventTape: reset_turn ─────────────────────────────────────────────
+# â”€â”€ EventTape: reset_turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_reset_turn_zeros_counters_keeps_entries() -> None:
@@ -384,7 +384,7 @@ def test_reset_turn_zeros_counters_keeps_entries() -> None:
     assert len(tape.entries) == 2, "reset_turn should preserve buffer entries, not clear them."
 
 
-# ── _summarize_formatted_item ──────────────────────────────────────────
+# â”€â”€ _summarize_formatted_item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_summarize_streaming_text() -> None:
@@ -400,7 +400,7 @@ def test_summarize_generic_object() -> None:
     assert result == "int"
 
 
-# ── build_tape_targets ─────────────────────────────────────────────────
+# â”€â”€ build_tape_targets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_tape_targets_empty() -> None:
@@ -424,16 +424,16 @@ def test_build_tape_targets_with_entries() -> None:
 
     # One target per entry.
     assert len(targets) == 2, f"Expected 2 targets for 2 entries, got {len(targets)}."
-    # First target: rendered → green icon.
+    # First target: rendered â†’ green icon.
     assert targets[0].key == "0"
     assert "_FakeTextDelta" in targets[0].label
-    assert targets[0].icon == "🟢"
-    # Second target: dropped → red icon.
+    assert targets[0].icon == "ðŸŸ¢"
+    # Second target: dropped â†’ red icon.
     assert targets[1].key == "1"
-    assert targets[1].icon == "🔴"
+    assert targets[1].icon == "ðŸ”´"
 
 
-# ── build_tape_detail ──────────────────────────────────────────────────
+# â”€â”€ build_tape_detail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_tape_detail_shows_pipeline_journey() -> None:
@@ -461,7 +461,7 @@ def test_build_tape_detail_shows_pipeline_journey() -> None:
     # Formatter output summary.
     assert "_FakeStreamingText(2 chars)" in text
     # "Rendered As" section should show the actual text content
-    # that host.output() received — "hi" from the StreamingText.
+    # that host.output() received â€” "hi" from the StreamingText.
     assert "Rendered As" in text
     assert "hi" in text
 
@@ -531,14 +531,14 @@ def test_build_tape_detail_invalid_key() -> None:
     assert "No event selected" in text
 
 
-# ── open_event_log ─────────────────────────────────────────────────────
+# â”€â”€ open_event_log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_open_event_log_creates_file(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """``open_event_log`` creates the debug directory and returns a valid path."""
-    # Redirect HOME so we don't pollute the real ~/.agent_meow/debug/.
+    # Redirect HOME so we don't pollute the real ~/.omnigent/debug/.
     monkeypatch.setattr(pathlib.Path, "home", lambda: tmp_path)
 
     path = open_event_log("sess_abc123")
@@ -561,7 +561,7 @@ def test_open_event_log_sanitizes_id(
     assert ".." not in path.stem
 
 
-# ── log_entry_jsonl ────────────────────────────────────────────────────
+# â”€â”€ log_entry_jsonl â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_log_entry_jsonl_writes_valid_json(tmp_path: pathlib.Path) -> None:
@@ -628,11 +628,11 @@ def test_log_entry_jsonl_dropped_event(tmp_path: pathlib.Path) -> None:
     assert record["stage"] == "raw"
 
 
-# ── Full pipeline walkthrough ──────────────────────────────────────────
+# â”€â”€ Full pipeline walkthrough â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_full_pipeline_walkthrough() -> None:
-    """Exercise the complete record → translate → format → render pipeline.
+    """Exercise the complete record â†’ translate â†’ format â†’ render pipeline.
 
     Verifies that counters increment correctly at each stage and that
     the tape entries reflect the full journey.
@@ -675,7 +675,7 @@ def test_full_pipeline_walkthrough() -> None:
     assert e3.stage_reached == Stage.RAW  # dropped at translation
 
 
-# ── _snapshot_event ────────────────────────────────────────────────────
+# â”€â”€ _snapshot_event â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_snapshot_event_dataclass() -> None:
@@ -707,12 +707,12 @@ def test_snapshot_event_plain_object() -> None:
 
 def test_snapshot_event_non_serializable_returns_none() -> None:
     """Primitive types without __dict__ return None."""
-    # Integers don't have vars() — snapshot should return None.
+    # Integers don't have vars() â€” snapshot should return None.
     result = _snapshot_event(42)
     assert result is None
 
 
-# ── _truncate_deep ─────────────────────────────────────────────────────
+# â”€â”€ _truncate_deep â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_truncate_deep_short_strings_unchanged() -> None:
@@ -725,17 +725,17 @@ def test_truncate_deep_long_strings_truncated() -> None:
     """Strings longer than max_chars are truncated with ellipsis."""
     long_str = "x" * 200
     result = _truncate_deep({"key": long_str}, max_chars=10)
-    assert result["key"] == "x" * 10 + "…"
+    assert result["key"] == "x" * 10 + "â€¦"
 
 
 def test_truncate_deep_nested_structures() -> None:
     """Truncation applies recursively to dicts and lists."""
     data = {"outer": [{"inner": "a" * 50}]}
     result = _truncate_deep(data, max_chars=10)
-    assert result["outer"][0]["inner"] == "a" * 10 + "…"
+    assert result["outer"][0]["inner"] == "a" * 10 + "â€¦"
 
 
-# ── _format_payload ────────────────────────────────────────────────────
+# â”€â”€ _format_payload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_format_payload_simple_dict() -> None:
@@ -753,8 +753,8 @@ def test_format_payload_truncates_long_values() -> None:
     payload = {"text": "x" * 300}
     result = _format_payload(payload)
     # The truncated value should contain the ellipsis (either as a
-    # literal "…" or JSON-escaped "\u2026" depending on json.dumps).
-    assert "…" in result or "\\u2026" in result
+    # literal "â€¦" or JSON-escaped "\u2026" depending on json.dumps).
+    assert "â€¦" in result or "\\u2026" in result
     # The full 300-char string should NOT appear.
     assert "x" * 300 not in result
 
@@ -770,7 +770,7 @@ def test_format_payload_caps_line_count() -> None:
     assert "more lines" in lines[-1]
 
 
-# ── record_raw captures payload ────────────────────────────────────────
+# â”€â”€ record_raw captures payload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_record_raw_captures_payload() -> None:
@@ -787,7 +787,7 @@ def test_record_raw_captures_payload() -> None:
     assert entry.raw_payload["delta"] == "hello"
 
 
-# ── Overlay shows JSON payload ─────────────────────────────────────────
+# â”€â”€ Overlay shows JSON payload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_tape_detail_shows_payload() -> None:
@@ -816,7 +816,7 @@ def test_build_tape_detail_shows_payload() -> None:
     assert "Raw Event Payload" in text
 
 
-# ── JSONL log includes payload ─────────────────────────────────────────
+# â”€â”€ JSONL log includes payload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_log_entry_jsonl_includes_payload(

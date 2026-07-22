@@ -17,20 +17,20 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
-from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+from omnigent.runtime.harnesses import _HARNESS_MODULES
+from omnigent.spec._omnigent_compat import OMNIGENT_HARNESSES
 from tests.e2e._harness_probes import (
     HARNESS_IDS,
     HARNESS_PROBES,
     HarnessProbe,
     skip_if_harness_cli_missing,
 )
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _PROMPT_TEMPLATE = (
     "Reply with exactly the identifier between <answer> tags, but omit the tags: "
@@ -107,15 +107,15 @@ def test_run_harness_without_agent_live_repl_round_trip(
     try:
         # Headless one-shot ``-p``: the launcher boots, auto-submits the
         # prompt, and prints the accumulated reply. It does NOT render the
-        # interactive ``◆`` assistant-turn glyph (the streaming contract
-        # changed in #783), so sync on the marker text the model returns —
+        # interactive ``â—†`` assistant-turn glyph (the streaming contract
+        # changed in #783), so sync on the marker text the model returns â€”
         # that landing in stdout is the load-bearing proof the no-AGENT
         # launcher reached the model and rendered the reply.
         child.expect(marker, timeout=_COMPLETION_TIMEOUT)
         output = strip_ansi(child.before or "") + marker
     finally:
         # Drive the exit. The one-shot process does not always terminate
-        # promptly under CI load (shutdown/teardown lag — parked tasks,
+        # promptly under CI load (shutdown/teardown lag â€” parked tasks,
         # session-log write), so clean_exit sends ``/quit`` and force-kills as
         # a fallback rather than blocking on EOF. Teardown cleanliness is not
         # asserted (it is a known CI-load flake; see clean_exit's docstring).
@@ -140,7 +140,7 @@ def test_run_harness_live_matrix_covers_registered_coding_harnesses() -> None:
     ``claude-native``, ``codex-native``, ``pi-native``, and
     ``opencode-native`` are excluded because their inner executors require
     bridge directories plus runner-managed terminal panes to inject keys
-    into — both set up by their native launchers, not by
+    into â€” both set up by their native launchers, not by
     ``agent-meow run --harness <native>``. (``opencode-native`` is a
     terminal-takeover ``native-server`` harness, the same shape as the
     other natives.) Running them through this matrix would hang or crash.

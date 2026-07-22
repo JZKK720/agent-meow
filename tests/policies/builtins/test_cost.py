@@ -1,6 +1,6 @@
 """
 Tests for the built-in cost-budget policy
-(:mod:`~?agent_meow.policies.builtins.cost`) — the ``cost_budget`` factory.
+(:mod:`~?omnigent.policies.builtins.cost`) â€” the ``cost_budget`` factory.
 
 The policy's hard limit gates both the ``request`` and ``tool_call``
 phases: once reached, DENY (the whole turn on ``request``, or each tool
@@ -12,17 +12,17 @@ persists the crossed checkpoint on accept).
 
 Layers:
 
-- **Layer 1** — direct callable on the ``request`` / ``tool_call``
+- **Layer 1** â€” direct callable on the ``request`` / ``tool_call``
   phases: ALLOW below the soft checkpoints, ASK (recorded via
   ``session_state`` so an approved checkpoint doesn't re-prompt) when one
   is crossed, DENY over the hard limit on an expensive/unknown model,
   ALLOW over the limit on a cheaper model, abstain on every non-gated
   phase, and factory validation.
-- **Layer 2** — spec resolution through :func:`resolve_function_policy`,
+- **Layer 2** â€” spec resolution through :func:`resolve_function_policy`,
   proving DENY and ASK thread through the engine boundary with the cost
   on ``EvaluationContext.usage`` and the active model on
   ``EvaluationContext.model``.
-- **Layer 3** — registry discovery: the one ``POLICY_REGISTRY`` factory
+- **Layer 3** â€” registry discovery: the one ``POLICY_REGISTRY`` factory
   entry is browsable and its schema validates good / bad params.
 """
 
@@ -32,14 +32,14 @@ from typing import Any
 
 import pytest
 
-from agent_meow.policies.builtins.cost import _ASK_APPROVED_KEY, cost_budget
-from agent_meow.policies.function import FunctionPolicy, resolve_function_policy
-from agent_meow.policies.registry import get_registry, load_registry, validate_factory_params
-from agent_meow.policies.schema import PolicyEvent
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
+from omnigent.policies.builtins.cost import _ASK_APPROVED_KEY, cost_budget
+from omnigent.policies.function import FunctionPolicy, resolve_function_policy
+from omnigent.policies.registry import get_registry, load_registry, validate_factory_params
+from omnigent.policies.schema import PolicyEvent
+from omnigent.policies.types import EvaluationContext
+from omnigent.spec.types import FunctionPolicySpec, FunctionRef, Phase, PolicyAction
 
-_HANDLER = "agent_meow.policies.builtins.cost.cost_budget"
+_HANDLER = "omnigent.policies.builtins.cost.cost_budget"
 
 
 def _tool(
@@ -133,9 +133,9 @@ def _event(phase: str, cost: float) -> PolicyEvent:
     }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 1 — direct callable
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 1 â€” direct callable
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_below_ask_threshold_allows() -> None:
@@ -145,7 +145,7 @@ def test_below_ask_threshold_allows() -> None:
 
 
 def test_crossing_a_checkpoint_asks_and_records_it() -> None:
-    """Crossing a checkpoint (unapproved) → ASK + record the crossed value.
+    """Crossing a checkpoint (unapproved) â†’ ASK + record the crossed value.
 
     The ASK must carry a ``state_updates`` SET recording the crossed
     checkpoint so it (and lower ones) don't re-prompt once approved. A
@@ -153,7 +153,7 @@ def test_crossing_a_checkpoint_asks_and_records_it() -> None:
     subsequent tool call even after approving.
     """
     policy = cost_budget(max_cost_usd=5.0, ask_thresholds_usd=[2.0, 4.0])
-    result = policy(_tool(2.0))  # exactly at the first checkpoint — `>=`
+    result = policy(_tool(2.0))  # exactly at the first checkpoint â€” `>=`
     assert result["result"] == "ASK"
     # SET highwater = 2.0: applied on approve so $2 (and lower) stop prompting.
     assert result["state_updates"] == [
@@ -162,14 +162,14 @@ def test_crossing_a_checkpoint_asks_and_records_it() -> None:
 
 
 def test_approved_checkpoint_does_not_reprompt_higher_one_does() -> None:
-    """Approved $2 → a $3 tool call is silent; reaching $4 ASKs again.
+    """Approved $2 â†’ a $3 tool call is silent; reaching $4 ASKs again.
 
     Proves the "ASK at several amounts, once each on approve" behavior:
     the recorded highwater suppresses lower checkpoints, the next higher
     checkpoint still fires.
     """
     policy = cost_budget(max_cost_usd=5.0, ask_thresholds_usd=[2.0, 4.0])
-    # Already approved past $2 → a $3 tool call is allowed (no re-prompt).
+    # Already approved past $2 â†’ a $3 tool call is allowed (no re-prompt).
     assert policy(_tool(3.0, session_state={_ASK_APPROVED_KEY: 2.0})) == {"result": "ALLOW"}
     # Crossing the next checkpoint ($4) prompts again.
     result = policy(_tool(4.0, session_state={_ASK_APPROVED_KEY: 2.0}))
@@ -184,7 +184,7 @@ def test_declined_checkpoint_reasks_until_approved() -> None:
 
     A decline never writes the highwater (the engine withholds an ASK's
     ``state_updates`` on decline), so the next tool call still over the
-    same threshold must ASK again — the gate keeps blocking until the
+    same threshold must ASK again â€” the gate keeps blocking until the
     user approves, not just once. Calling the policy twice with the same
     un-recorded state must ASK both times.
     """
@@ -192,11 +192,11 @@ def test_declined_checkpoint_reasks_until_approved() -> None:
     first = policy(_tool(3.0, session_state={}))
     second = policy(_tool(3.0, session_state={}))
     assert first["result"] == "ASK"
-    assert second["result"] == "ASK"  # not recorded → re-asks
+    assert second["result"] == "ASK"  # not recorded â†’ re-asks
 
 
 def test_over_budget_denies_all_models_by_default() -> None:
-    """Over the hard limit → DENY for any model when expensive_models is unset.
+    """Over the hard limit â†’ DENY for any model when expensive_models is unset.
 
     The default (None) is a true hard stop: every model is blocked once
     the limit is reached, not just named expensive tiers. The reason must
@@ -213,8 +213,8 @@ def test_over_budget_denies_all_models_by_default() -> None:
 def test_deny_reason_for_codex_points_to_terminal() -> None:
     """A codex-native session's deny reason says to switch in the terminal.
 
-    Codex has no web model picker — the only way to switch is the terminal
-    TUI's ``/model`` — so the verbatim instruction must name both. Uses an
+    Codex has no web model picker â€” the only way to switch is the terminal
+    TUI's ``/model`` â€” so the verbatim instruction must name both. Uses an
     explicit expensive_models list (downgrade-gate mode) so a cheaper model
     is possible and the switch hint applies.
     """
@@ -230,7 +230,7 @@ def test_deny_reason_for_non_codex_omits_terminal() -> None:
 
     Claude / web / API sessions are not terminal-only (they have a model
     picker), so the message must NOT tell them to use the terminal or
-    ``/model`` — it would be wrong/confusing. Uses explicit expensive_models
+    ``/model`` â€” it would be wrong/confusing. Uses explicit expensive_models
     (downgrade-gate mode) so the switch hint is present but terminal-agnostic.
     """
     policy = cost_budget(max_cost_usd=5.0, expensive_models=["opus"])
@@ -243,7 +243,7 @@ def test_deny_reason_for_non_codex_omits_terminal() -> None:
 
 
 def test_over_budget_on_cheaper_model_allows_with_explicit_list() -> None:
-    """Over the hard limit on a cheaper model → ALLOW when using an explicit expensive list.
+    """Over the hard limit on a cheaper model â†’ ALLOW when using an explicit expensive list.
 
     With explicit expensive_models (downgrade-gate mode), once the session
     has switched off a named expensive model, the budget becomes a no-op.
@@ -254,7 +254,7 @@ def test_over_budget_on_cheaper_model_allows_with_explicit_list() -> None:
 
 
 def test_over_budget_unknown_model_denies_fail_closed() -> None:
-    """Over the hard limit with no determinable model → DENY (fail closed).
+    """Over the hard limit with no determinable model â†’ DENY (fail closed).
 
     When the engine could not resolve a model (``None``), the gate cannot
     confirm a cheaper model, so it blocks and asks the user to pick one
@@ -291,7 +291,7 @@ def _unpriced_tool(input_tokens: int = 1000, model: str = "unpriced-model") -> P
 
 
 def test_unpriced_session_asks_fail_closed() -> None:
-    """Token usage without ``total_cost_usd`` → ASK (fail closed with user bypass).
+    """Token usage without ``total_cost_usd`` â†’ ASK (fail closed with user bypass).
 
     A model absent from the pricing catalog never writes ``total_cost_usd``
     to the session, so the gate would score the session at $0 and never
@@ -300,7 +300,7 @@ def test_unpriced_session_asks_fail_closed() -> None:
     ASK reason must name the model-pricing gap. The state_updates must
     carry the unpriced-approved key so an approval is remembered.
     """
-    from agent_meow.policies.schema import SESSION_COST_UNPRICED_APPROVED_KEY
+    from omnigent.policies.schema import SESSION_COST_UNPRICED_APPROVED_KEY
 
     policy = cost_budget(max_cost_usd=5.0)
     result = policy(_unpriced_tool())
@@ -335,7 +335,7 @@ def test_unpriced_session_allows_after_approval() -> None:
     next gate evaluation sees it and skips the unpriced check so the
     turn proceeds without re-asking.
     """
-    from agent_meow.policies.schema import SESSION_COST_UNPRICED_APPROVED_KEY
+    from omnigent.policies.schema import SESSION_COST_UNPRICED_APPROVED_KEY
 
     policy = cost_budget(max_cost_usd=5.0)
     approved_event = _unpriced_tool()
@@ -344,7 +344,7 @@ def test_unpriced_session_allows_after_approval() -> None:
 
 
 def test_no_tokens_yet_allows_first_turn() -> None:
-    """No tokens in session_usage → ALLOW (first turn, nothing unpriced yet).
+    """No tokens in session_usage â†’ ALLOW (first turn, nothing unpriced yet).
 
     The unpriced check must not fire when the session is brand new (no
     prior turns). The gate can only detect unpriced spend after at least
@@ -352,16 +352,16 @@ def test_no_tokens_yet_allows_first_turn() -> None:
     be allowed so the gate is not infinitely recursive.
     """
     policy = cost_budget(max_cost_usd=5.0)
-    # cost=None + no token keys → brand-new session, nothing spent
+    # cost=None + no token keys â†’ brand-new session, nothing spent
     result = policy(_tool(None))
     assert result["result"] == "ALLOW"
 
 
 def test_priced_zero_cost_allows() -> None:
-    """``total_cost_usd = 0.0`` (explicitly priced at zero) → not an unpriced session.
+    """``total_cost_usd = 0.0`` (explicitly priced at zero) â†’ not an unpriced session.
 
     A free model that IS in the catalog and reports $0 should behave
-    normally — the key is present, the cost is zero, the gate allows.
+    normally â€” the key is present, the cost is zero, the gate allows.
     Confusing this with the absent-key case would block free catalog models.
     """
     policy = cost_budget(max_cost_usd=5.0)
@@ -383,7 +383,7 @@ def test_priced_zero_cost_allows() -> None:
 
 
 def test_hard_limit_wins_over_checkpoint_approval() -> None:
-    """Over the hard limit on an expensive model → DENY even if approved.
+    """Over the hard limit on an expensive model â†’ DENY even if approved.
 
     A prior checkpoint approval must not let an over-budget session keep
     calling tools on the costly model; the hard gate is checked before
@@ -415,7 +415,7 @@ def test_hard_limit_wins_over_checkpoint_approval() -> None:
 def test_default_blocks_every_model(model: str) -> None:
     """The default (expensive_models=None) blocks every model over budget.
 
-    The default is now a true hard stop — no model tier is "cheap enough"
+    The default is now a true hard stop â€” no model tier is "cheap enough"
     to continue once the limit is reached. Every model id must DENY.
     """
     policy = cost_budget(max_cost_usd=5.0)
@@ -435,7 +435,7 @@ def test_custom_expensive_models_substring_case_insensitive() -> None:
 
 
 def test_explicit_expensive_models_apply_no_mini_nano_exclusion() -> None:
-    """An explicit ``expensive_models`` list is matched literally — no excludes.
+    """An explicit ``expensive_models`` list is matched literally â€” no excludes.
 
     The ``-mini`` / ``-nano`` carve-out applies ONLY to the built-in
     default set. When the author spells the tokens themselves, the set is
@@ -451,16 +451,16 @@ def test_explicit_expensive_models_apply_no_mini_nano_exclusion() -> None:
 def test_empty_expensive_models_blocks_all_models() -> None:
     """``expensive_models=[]`` makes the hard cap a true hard stop for all models.
 
-    Over budget on any model — cheap or expensive — must be hard-DENYed.
+    Over budget on any model â€” cheap or expensive â€” must be hard-DENYed.
     The DENY reason must say "All model calls are blocked" (no switch hint).
     The soft ASK still fires below the limit.
     """
     policy = cost_budget(max_cost_usd=5.0, ask_thresholds_usd=[2.0], expensive_models=[])
-    # Over budget on Opus → DENY (all models blocked).
+    # Over budget on Opus â†’ DENY (all models blocked).
     result = policy(_tool(6.0, model="opus", session_state={_ASK_APPROVED_KEY: 2.0}))
     assert result["result"] == "DENY"
     assert "All model calls are blocked" in result["reason"]
-    # Over budget on a cheap model → also DENY.
+    # Over budget on a cheap model â†’ also DENY.
     result_cheap = policy(_tool(6.0, model="haiku"))
     assert result_cheap["result"] == "DENY"
     assert "All model calls are blocked" in result_cheap["reason"]
@@ -470,7 +470,7 @@ def test_empty_expensive_models_blocks_all_models() -> None:
 
 @pytest.mark.parametrize("phase", ["response", "tool_result", "llm_request", "llm_response"])
 def test_abstains_on_non_gated_phases(phase: str) -> None:
-    """Only ``request`` / ``tool_call`` are gated — other phases abstain.
+    """Only ``request`` / ``tool_call`` are gated â€” other phases abstain.
 
     The cost gate runs at ``request`` (before the turn) and ``tool_call``
     (the PreToolUse hook); an over-budget event of any other phase must
@@ -512,12 +512,12 @@ def test_request_phase_over_budget_on_cheaper_model_allows_with_explicit_list() 
 
 
 def test_request_phase_soft_checkpoint_asks_and_records_it() -> None:
-    """A crossed soft checkpoint ASKs at the request phase → ASK + record.
+    """A crossed soft checkpoint ASKs at the request phase â†’ ASK + record.
 
     The request phase has a server-side approval round-trip (the engine
     parks the whole turn before it reaches the model and applies the ASK's
     ``state_updates`` only on accept), so a newly-crossed checkpoint must
-    ASK here exactly as it does on ``tool_call`` — warning text-only turns
+    ASK here exactly as it does on ``tool_call`` â€” warning text-only turns
     too. The ASK carries the same ``state_updates`` SET so an approved
     checkpoint (and lower ones) won't re-prompt.
     """
@@ -554,7 +554,7 @@ def test_request_approval_carries_over_to_tool_call() -> None:
 
     The request phase records the crossed checkpoint on approve, so the
     first tool call of the same over-threshold turn sees it already
-    approved and ALLOWs — the user is warned once per checkpoint, not
+    approved and ALLOWs â€” the user is warned once per checkpoint, not
     twice (once on the turn, once on its first tool call).
     """
     policy = cost_budget(max_cost_usd=5.0, ask_thresholds_usd=[2.0])
@@ -563,9 +563,9 @@ def test_request_approval_carries_over_to_tool_call() -> None:
 
 
 def test_no_usage_at_all_allows() -> None:
-    """No ``total_cost_usd`` AND no token counters → ALLOW (first turn).
+    """No ``total_cost_usd`` AND no token counters â†’ ALLOW (first turn).
 
-    When session_usage has no tokens yet the session is brand new — the
+    When session_usage has no tokens yet the session is brand new â€” the
     first turn on any model must be allowed because there's nothing to
     price yet. The unpriced-model ASK only fires once tokens have been
     written (i.e. after the first turn completes).
@@ -603,22 +603,22 @@ def test_factory_rejects_invalid_config(kwargs: dict[str, Any]) -> None:
 def test_ask_thresholds_only_no_hard_cap() -> None:
     """cost_budget with only ask_thresholds_usd never denies, only asks."""
     policy = cost_budget(ask_thresholds_usd=[1.0, 3.0])
-    # Below threshold — allow.
+    # Below threshold â€” allow.
     assert policy(_tool(0.5, model="opus")) == {"result": "ALLOW"}
-    # Crossed threshold — ask.
+    # Crossed threshold â€” ask.
     result = policy(_tool(2.0, model="opus"))
     assert result["result"] == "ASK"
     assert "1.00" in result["reason"]
     # No hard-cap message (no max_cost_usd in reason).
     assert "limit" not in result["reason"]
-    # Way over threshold — still only asks, never denies.
+    # Way over threshold â€” still only asks, never denies.
     result = policy(_tool(100.0, model="opus"))
     assert result["result"] == "ASK"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 2 — spec resolution through resolve_function_policy
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 2 â€” spec resolution through resolve_function_policy
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def _tool_ctx(cost: float, model: str | None) -> EvaluationContext:
@@ -667,7 +667,7 @@ async def test_resolve_from_spec_allows_over_budget_on_cheaper_model() -> None:
     """Over-budget on a cheaper model ALLOWs through the engine boundary.
 
     With an explicit expensive_models list (downgrade-gate mode), the model
-    on ``EvaluationContext.model`` lets a downgraded session through —
+    on ``EvaluationContext.model`` lets a downgraded session through â€”
     proving the model gate (not just the cost) crosses the boundary.
     """
     spec = FunctionPolicySpec(
@@ -725,9 +725,9 @@ async def test_resolve_from_spec_denies_over_budget_on_request_phase() -> None:
     assert result.action == PolicyAction.DENY
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 3 — registry discovery
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Layer 3 â€” registry discovery
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 def test_registry_discovers_cost_budget() -> None:

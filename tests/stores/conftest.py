@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
+from omnigent.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
 
 
 @pytest.fixture()

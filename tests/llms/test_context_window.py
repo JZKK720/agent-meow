@@ -12,8 +12,8 @@ from typing import Any
 
 import pytest
 
-from agent_meow.llms import context_window
-from agent_meow.llms.context_window import (
+from omnigent.llms import context_window
+from omnigent.llms.context_window import (
     ModelPricing,
     _registry_context_window,
     compute_llm_cost,

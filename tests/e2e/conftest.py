@@ -8,7 +8,7 @@ Parallel runs::
 
     pytest tests/e2e/ --llm-api-key $LLM_API_KEY -n 8 --dist=loadscope
 
-Empirically ``-n 8`` is the sweet spot on a 12-core laptop —
+Empirically ``-n 8`` is the sweet spot on a 12-core laptop â€”
 fastest wall time, same flake count as ``-n auto`` (12). ``-n 4``
 is more stable (matches main's failure set exactly with no
 ordering flakes) but slower; bump up if your host has more
@@ -41,7 +41,7 @@ import httpx
 import pytest
 import yaml
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 from tests._helpers.compat import (
     apply_runner_env,
     apply_server_env,
@@ -100,7 +100,7 @@ def _enforce_min_server_version(request: pytest.FixtureRequest) -> None:
     Resolves :func:`server_version` (and thus requires a live server) when a
     test carries the marker OR when a compat run is active
     (``OMNIGENT_COMPAT_SERVER_VERSION`` set). The latter makes the
-    ``/api/version`` ↔ env cross-check (the PYTHONPATH/CWD-shadow tripwire in
+    ``/api/version`` â†” env cross-check (the PYTHONPATH/CWD-shadow tripwire in
     :func:`resolve_server_version`) fire once per session even before any
     feature has a marker. In normal runs with no marker, nothing is resolved,
     so non-server tests are unaffected.
@@ -132,9 +132,9 @@ def _enforce_min_runner_version(request: pytest.FixtureRequest) -> None:
     """Skip tests marked ``@pytest.mark.min_runner_version(X)`` on older runners/hosts.
 
     The runner/host backwards-compat run (Config 2) pins the
-    ``agent_meow.runner._entry`` / ``agent_meow.host._daemon_entry`` subprocesses to
+    ``omnigent.runner._entry`` / ``omnigent.host._daemon_entry`` subprocesses to
     an older build and sets ``OMNIGENT_COMPAT_RUNNER_VERSION``. The runner/host
-    expose no ``/api/version`` endpoint, so — unlike the server skip — the
+    expose no ``/api/version`` endpoint, so â€” unlike the server skip â€” the
     version comes purely from that env backstop
     (:func:`tests._helpers.compat.pinned_runner_version`); ``None`` (normal
     runs) means "newest", so unmarked / non-compat runs skip nothing.
@@ -164,7 +164,7 @@ _ARCHER_DIR = _REPO_ROOT / "tests" / "resources" / "examples" / "archer"
 
 # OpenAI model name -> nearest-equivalent Databricks foundation-model
 # name. Intentionally lossy (e.g. ``gpt-4o`` and ``openai/gpt-4o`` both
-# map to ``databricks-gpt-5-4``) — the e2e harness only needs the
+# map to ``databricks-gpt-5-4``) â€” the e2e harness only needs the
 # routing to resolve, not exact-model parity.
 _DATABRICKS_MODEL_MAP: dict[str, str] = {
     "gpt-5.4": "databricks-gpt-5-4",
@@ -190,7 +190,7 @@ _SANDBOX_DEPS_OS_ENV_DIR = _REPO_ROOT / "tests" / "resources" / "agents" / "sand
 _SYS_TERMINAL_TEST_DIR = _REPO_ROOT / "tests" / "resources" / "agents" / "sys-terminal-test"
 # A plain claude-sdk chat agent seeded as a BUILT-IN (via the server's
 # OMNIGENT_BUILTIN_AGENT_DIRS hook) so fork-switch e2e tests have a
-# deterministic SDK target to switch INTO — built-in because the fork route
+# deterministic SDK target to switch INTO â€” built-in because the fork route
 # only binds built-in agents, and plain (not the polly supervisor) so a
 # recall assertion isn't flaky.
 _SDK_CHAT_BUILTIN_SPEC = _REPO_ROOT / "tests" / "resources" / "agents" / "sdk-chat-builtin.yaml"
@@ -237,7 +237,7 @@ def databricks_workspace_host(
     Resolve the Databricks workspace host from ``--profile``, or
     ``None`` when ``--profile`` is empty (api.openai.com path).
 
-    :param request: pytest request — reads ``--profile``.
+    :param request: pytest request â€” reads ``--profile``.
     :returns: Host URL with trailing ``/`` stripped, or ``None``.
     :raises pytest.UsageError: When ``--profile`` names a missing
         section or one without a ``host`` key.
@@ -363,7 +363,7 @@ def configure_mock_llm(
 
     No-op when running against a real LLM. Each dict in *responses*
     maps to a ``QueuedResponse`` on the mock server. The *key*
-    determines which queue the responses are stored in — the mock
+    determines which queue the responses are stored in â€” the mock
     server routes each ``POST /v1/responses`` request to the queue
     whose key matches the request's ``model`` field.
 
@@ -379,7 +379,7 @@ def configure_mock_llm(
     Pass *match* to route by request CONTENT instead of model: the queue
     serves any request whose ``role="user"`` input contains the token.
     This lets a test claim its own queue by the unique message it sends,
-    so a stray/late request from another test can't draw from it — the
+    so a stray/late request from another test can't draw from it â€” the
     fix for the #523 cross-test contamination flake without per-test
     mock servers::
 
@@ -390,7 +390,7 @@ def configure_mock_llm(
     :param responses: List of response configs. Keys:
         ``text``, ``tool_calls``, ``block``, ``stream``,
         ``error``, ``status_code``.
-    :param key: Queue key — typically the model name baked into the
+    :param key: Queue key â€” typically the model name baked into the
         agent spec. Defaults to ``"default"`` (matches any model
         not assigned to a more specific queue).
     :param match: Optional content-routing token. When set, the queue is
@@ -439,7 +439,7 @@ def set_fallback_mock_llm(
 
     The fallback is returned when the regular queue for *key* is
     exhausted.  Unlike regular entries, the fallback survives
-    :func:`reset_mock_llm` — use it for session-level queues that
+    :func:`reset_mock_llm` â€” use it for session-level queues that
     must return a valid response even when per-test resets clear the
     regular queue (e.g. the server-level policy-classifier LLM queue).
 
@@ -508,17 +508,17 @@ def openai_judge_api_key(
     ``api.openai.com``, which under ``--profile`` rejects the
     Databricks bearer with HTTP 401 ``invalid_issuer``. We
     deliberately do NOT translate these tests' specs to Databricks
-    models — Databricks is preferred for testing because it's free,
+    models â€” Databricks is preferred for testing because it's free,
     so we'd rather skip the judge tests under ``--profile`` than
     re-route them and pay for OpenAI tokens on every run.
 
     Resolution order:
-    1. No ``--profile`` → ``--llm-api-key`` is the OpenAI key, use it.
+    1. No ``--profile`` â†’ ``--llm-api-key`` is the OpenAI key, use it.
     2. ``--profile`` set + ``OPENAI_API_KEY`` in env (real ``sk-...``)
-       → use the explicit key. Caller invoked pytest without
+       â†’ use the explicit key. Caller invoked pytest without
        ``env -u OPENAI_API_KEY``, signaling intent to pay for the
        judge calls.
-    3. ``--profile`` set + no ``OPENAI_API_KEY`` → skip the test.
+    3. ``--profile`` set + no ``OPENAI_API_KEY`` â†’ skip the test.
 
     :param llm_api_key: The ``--llm-api-key`` value (Databricks
         token under ``--profile``, OpenAI key otherwise).
@@ -556,7 +556,7 @@ def live_runner_id() -> str:
     """
     import secrets as _secrets
 
-    from agent_meow.runner.identity import token_bound_runner_id
+    from omnigent.runner.identity import token_bound_runner_id
 
     if "runner_id" not in _live_runner_state:
         token = _secrets.token_urlsafe(32)
@@ -600,7 +600,7 @@ def live_server(
     """
     # Dynamic free port so back-to-back test sessions don't race
     # on a hard-coded port (which produced
-    # "address already in use" → server death → ConnectError in
+    # "address already in use" â†’ server death â†’ ConnectError in
     # every subsequent test when a prior run hadn't fully torn
     # down).
     port = find_free_port()
@@ -609,10 +609,10 @@ def live_server(
     server_log = tmp_path_factory.mktemp("e2e_logs") / "server.log"
     # PYTHONPATH forces the server to import from the worktree
     # checkout rather than whatever version is installed in the
-    # venv — otherwise a branch with migration or model changes
+    # venv â€” otherwise a branch with migration or model changes
     # would run against the stale installed copy and fail with
     # "no such column" or similar schema mismatches. _REPO_ROOT is
-    # the worktree root (tests/e2e/conftest.py → parents[2]).
+    # the worktree root (tests/e2e/conftest.py â†’ parents[2]).
     # Seed the plain claude-sdk chat agent as a built-in so fork/switch
     # e2e tests can rebind a session INTO it (the route only binds
     # built-ins). Materialize a profile-aware copy: under ``--profile`` the
@@ -649,15 +649,15 @@ def live_server(
     # The CLI exposes ``--database-uri`` but not an env var, so the
     # DB path must be on the command line. Absolute path prevents
     # the server from writing into the CWD (which was previously
-    # happening silently — each e2e run polluted ``agent_meow.db``
+    # happening silently â€” each e2e run polluted ``omnigent.db``
     # in whatever dir pytest was invoked from).
     # Route server output to a file so DBOS/agent logs don't fill
-    # a PIPE buffer (which would block the server after ~64KB —
+    # a PIPE buffer (which would block the server after ~64KB â€”
     # previously every session failed mid-way through the second
     # test with "ConnectError: Connection refused" as the server
     # deadlocked on a full stdout pipe). Keeping the log as a file
     # also lets tests inspect it on failure.
-    # The server is a pure state server — it does not spawn a runner.
+    # The server is a pure state server â€” it does not spawn a runner.
     # We spawn the runner as a sibling subprocess with a shared tunnel
     # token so the server's allowlist accepts exactly this runner.
     # The binding token and runner_id are generated by live_runner_id
@@ -666,7 +666,7 @@ def live_server(
     binding_token = _live_runner_state["binding_token"]
     runner_id = live_runner_id
 
-    # ── Server-level ``llm:`` config (policy classifier) ─────
+    # â”€â”€ Server-level ``llm:`` config (policy classifier) â”€â”€â”€â”€â”€
     # Prompt-policy classifiers run server-side through
     # ``RuntimeCaps.llm``. Without a server ``llm:`` block the
     # classifier's OpenAI client defaults to api.openai.com and
@@ -678,7 +678,7 @@ def live_server(
         # sys.executable (it tracks the test process / client version).
         server_executable(),
         "-m",
-        "agent_meow.cli",
+        "omnigent.cli",
         "server",
         "--port",
         str(port),
@@ -722,15 +722,15 @@ def live_server(
         )
         server_args.extend(["--config", str(server_cfg)])
 
-    # ── Spawn server subprocess ──────────────────────────
-    log_handle = open(server_log, "w")  # noqa: SIM115 — handle lives for Popen's lifetime; closed in the cleanup block below
+    # â”€â”€ Spawn server subprocess â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    log_handle = open(server_log, "w")  # noqa: SIM115 â€” handle lives for Popen's lifetime; closed in the cleanup block below
     proc = subprocess.Popen(
         server_args,
         env={
             **env,
             "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token,
         },
-        # Compat mode: neutral CWD so the worktree agent_meow/ doesn't shadow
+        # Compat mode: neutral CWD so the worktree omnigent/ doesn't shadow
         # the pinned old install via sys.path[0]. None (inherit) otherwise.
         cwd=compat_server_cwd(),
         stdout=log_handle,
@@ -738,7 +738,7 @@ def live_server(
     )
     base_url = f"http://localhost:{port}"
 
-    # ── Spawn runner as sibling subprocess ───────────────
+    # â”€â”€ Spawn runner as sibling subprocess â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Compat-aware: the test process's python normally, the pinned OLD runner's
     # venv python in runner compat mode (Config 2). apply_runner_env drops the
     # inherited worktree PYTHONPATH in that mode so the old build resolves; the
@@ -755,7 +755,7 @@ def live_server(
         }
     )
     runner_proc = subprocess.Popen(
-        [runner_executable(), "-m", "agent_meow.runner._entry"],
+        [runner_executable(), "-m", "omnigent.runner._entry"],
         env=runner_env,
         cwd=compat_runner_cwd(),
         stdout=runner_log_handle,
@@ -1016,11 +1016,11 @@ def register_dir_agent_with_mock_llm(
     Python source under ``tools/python/``, routed at a mock LLM.
 
     Unlike :func:`register_inline_agent` (a single ``<name>.yaml`` whose
-    tool callables are dotted import paths), this tars *agent_dir* — whose
+    tool callables are dotted import paths), this tars *agent_dir* â€” whose
     ``tools/python/*.py`` files the server loads by absolute file path from
     the unpacked bundle (auto-discovered, like the ``archer`` fixture). So
     the tools resolve on any server version without the server importing
-    the repo's ``tests/`` tree — the server-version backwards-compat failure
+    the repo's ``tests/`` tree â€” the server-version backwards-compat failure
     mode that dotted ``tests.*`` callables hit when the server is isolated.
 
     The bundle's ``config.yaml`` is stamped per call: ``name`` and
@@ -1113,7 +1113,7 @@ def _rewrite_yaml_models(
     both the map and the balance pools pass through untouched.
 
     When *profile* is set, also stamp ``profile:`` onto every
-    ``executor`` block that lacks one — native (no-harness) agents
+    ``executor`` block that lacks one â€” native (no-harness) agents
     otherwise reach the Databricks gateway with no profile and 401.
 
     :param node: A parsed YAML node (dict, list, or scalar).
@@ -1196,14 +1196,14 @@ def _materialize_builtin_sdk_chat_spec(
     Write a profile-aware copy of ``sdk-chat-builtin.yaml`` to seed as a built-in.
 
     The built-in fork/switch TARGET is seeded via
-    ``OMNIGENT_BUILTIN_AGENT_DIRS``, which reads the spec verbatim — it
+    ``OMNIGENT_BUILTIN_AGENT_DIRS``, which reads the spec verbatim â€” it
     does NOT pass through :func:`upload_agent`'s model rewrite. The on-disk
     spec (``model: claude-sonnet-4-20250514``, no profile) therefore
     authenticates via the ``claude`` CLI's OAuth session, which hosted CI
     lacks (the post-switch turn would fail ``NOT LOGGED IN``). Under
-    ``--profile`` we apply the SAME rewrite ``upload_agent`` does — map the
+    ``--profile`` we apply the SAME rewrite ``upload_agent`` does â€” map the
     model via :data:`_DATABRICKS_MODEL_MAP` and stamp ``executor.profile``
-    — so the seeded built-in is gateway-wired like the source agent.
+    â€” so the seeded built-in is gateway-wired like the source agent.
     Verbatim (local OAuth path) otherwise. The filename is kept as
     ``sdk-chat-builtin.yaml`` so the built-in seeds under the name the e2e
     tests look up, and no ``os_env`` is added (the os_env-reset test relies
@@ -1231,7 +1231,7 @@ def _materialize_builtin_sdk_chat_spec(
         _rewrite_yaml_models(config, profile, spread_key=_SDK_CHAT_BUILTIN_SPEC.stem)
     if mock_llm_server_url is not None:
         # The Anthropic SDK appends /v1/messages to base_url, so do NOT
-        # include /v1 here — the mock server serves POST /v1/messages.
+        # include /v1 here â€” the mock server serves POST /v1/messages.
         config.setdefault("executor", {})["auth"] = {
             "type": "api_key",
             "api_key": "mock-key",
@@ -1356,8 +1356,8 @@ def sys_terminal_test_agent(
 
     Used by ``test_sys_terminal_e2e.py``. The agent declares a
     single ``bash`` terminal so ``sys_terminal_*`` tools register
-    on the AP-side ToolManager — verifying the compat translator
-    threads ``AgentDef.terminals`` → ``AgentSpec.terminals``.
+    on the AP-side ToolManager â€” verifying the compat translator
+    threads ``AgentDef.terminals`` â†’ ``AgentSpec.terminals``.
 
     :param http_client: HTTP client pointed at the server.
     :returns: The agent name, ``"sys-terminal-test"``.
@@ -1562,7 +1562,7 @@ def send_user_message_to_session(
     # request-phase policy that resolves synchronously instead returns an
     # inline verdict (e.g. ``{"denied": True, "reason": ...}``) with no
     # ``item_id``. Fail loud with the actual body rather than letting the
-    # bare ``["item_id"]`` index raise a cryptic ``KeyError`` — that masked a
+    # bare ``["item_id"]`` index raise a cryptic ``KeyError`` â€” that masked a
     # real prompt-policy classifier flake as an unreadable crash. Callers that
     # expect the synchronous-verdict path should use ``_post_user_message``.
     if "item_id" not in payload:
@@ -1658,7 +1658,7 @@ def poll_session_until_terminal(
     deadline = time.monotonic() + timeout
     last_body: dict[str, Any] = {}
     # A queued turn reads ``idle`` until the runner dispatches it, so accept
-    # ``idle`` as terminal only once the turn has started — seen as a
+    # ``idle`` as terminal only once the turn has started â€” seen as a
     # running/waiting edge, or as real output (a non-user, non-resource_event
     # item) for turns that finish between polls. ``failed`` is always terminal.
     seen_running = False
@@ -1802,12 +1802,12 @@ def resume_test_server(
     # See docstring: an allow-list would reject the CLI's own runner.
     env.pop("OMNIGENT_RUNNER_TUNNEL_TOKEN", None)
 
-    log_handle = open(server_log, "w")  # noqa: SIM115 — lives for the Popen lifetime; closed in finally
+    log_handle = open(server_log, "w")  # noqa: SIM115 â€” lives for the Popen lifetime; closed in finally
     proc = subprocess.Popen(
         [
             server_executable(),
             "-m",
-            "agent_meow.cli",
+            "omnigent.cli",
             "server",
             "--port",
             str(port),

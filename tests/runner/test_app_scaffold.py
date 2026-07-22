@@ -23,7 +23,7 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from agent_meow.runner import create_runner_app
+from omnigent.runner import create_runner_app
 from tests.runner.helpers import NullServerClient
 
 # ── Fixtures ─────────────────────────────────────────────

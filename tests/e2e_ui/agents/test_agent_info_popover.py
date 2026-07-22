@@ -1,12 +1,12 @@
 """UI journey: the header "Agent tools & policies" popover (AgentInfo).
 
-The chat header carries an info button (``components/AgentInfo.tsx`` →
+The chat header carries an info button (``components/AgentInfo.tsx`` â†’
 ``AgentInfoButton``) that opens a popover summarizing the bound agent: its
 tools / MCP servers, session cost, and the **session policies** the user can
-add and remove on the fly. The policy surface is the interactive part —
+add and remove on the fly. The policy surface is the interactive part â€”
 ``GET /v1/policy-registry`` lists attachable handlers, ``POST`` /
-``DELETE /v1/sessions/<id>/policies`` mutate the session — so this suite drives
-the full add→delete loop and pins each step to the REST state behind it.
+``DELETE /v1/sessions/<id>/policies`` mutate the session â€” so this suite drives
+the full addâ†’delete loop and pins each step to the REST state behind it.
 
 No LLM turn is involved (the popover is rail/REST state, not a function of any
 model output), so this stays a fast, deterministic check. It is the companion
@@ -15,7 +15,7 @@ tool call; this one proves a user can attach and detach a policy through the UI.
 
 The load-bearing assertions are pinned to ``GET /v1/sessions/<id>/policies``:
 the added handler appears with ``source == "session"`` after the dialog submits,
-and is gone after the pill's Remove — proof the popover mutates real
+and is gone after the pill's Remove â€” proof the popover mutates real
 server-side session policy, not just optimistic local state.
 """
 
@@ -29,7 +29,7 @@ import httpx
 import pytest
 from playwright.sync_api import Page, expect
 
-_COMPOSER = "Ask the agent anything…"
+_COMPOSER = "Ask the agent anythingâ€¦"
 _AGENT_INFO_TRIGGER = '[data-testid="agent-info-trigger"]'
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _ECHO_MCP_SERVER = _REPO_ROOT / "tests" / "tools" / "fixtures" / "echo_stdio_mcp_server.py"
@@ -39,7 +39,7 @@ def _callable_registry_policy(base_url: str) -> dict:
     """Return a no-parameter (``callable``) policy from ``GET /v1/policy-registry``.
 
     A ``callable`` handler takes no factory params, so the Add-Policy dialog
-    needs only a selection + submit — keeping the UI flow deterministic. Skips
+    needs only a selection + submit â€” keeping the UI flow deterministic. Skips
     the test if the server exposes no such handler (a registry-shape change),
     rather than guessing at factory params.
 
@@ -142,12 +142,12 @@ def test_agent_info_policy_add_and_remove(
     page: Page,
     seeded_session: tuple[str, str],
 ) -> None:
-    """Popover → add a policy → pill + REST reflect it → Remove → both clear."""
+    """Popover â†’ add a policy â†’ pill + REST reflect it â†’ Remove â†’ both clear."""
     base_url, session_id = seeded_session
     entry = _callable_registry_policy(base_url)
     registry_name = entry["name"]
     # The dialog stores the policy under a slugified name (see AgentInfo's
-    # AddPolicyDialog.handleAdd): lowercased, whitespace runs → underscores.
+    # AddPolicyDialog.handleAdd): lowercased, whitespace runs â†’ underscores.
     stored_name = re.sub(r"\s+", "_", registry_name.lower())
 
     page.goto(f"{base_url}/c/{session_id}")
@@ -192,7 +192,7 @@ def test_agent_info_policy_integer_params_validate_and_submit(
     base_url, session_id = seeded_session
     entry = _registry_policy_by_handler(
         base_url,
-        "agent_meow.policies.builtins.safety.max_tool_calls_per_session",
+        "omnigent.policies.builtins.safety.max_tool_calls_per_session",
     )
     registry_name = entry["name"]
     stored_name = re.sub(r"\s+", "_", registry_name.lower())
@@ -228,7 +228,7 @@ def test_agent_info_mcp_server_add_and_remove(
     page: Page,
     seeded_session: tuple[str, str],
 ) -> None:
-    """Popover → manage MCP servers → add → REST reflects it → delete."""
+    """Popover â†’ manage MCP servers â†’ add â†’ REST reflects it â†’ delete."""
     base_url, session_id = seeded_session
 
     page.goto(f"{base_url}/c/{session_id}")

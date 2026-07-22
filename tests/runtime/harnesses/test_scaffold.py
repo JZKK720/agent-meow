@@ -1,5 +1,5 @@
 """
-Tests for :class:`~?agent_meow.runtime.harnesses._scaffold.HarnessApp`.
+Tests for :class:`~?omnigent.runtime.harnesses._scaffold.HarnessApp`.
 
 End-to-end through real subprocesses spawned via the same
 :class:`HarnessProcessManager` used in production. Each test
@@ -38,11 +38,11 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.errors import ErrorCode
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
-from agent_meow.runtime.harnesses._scaffold import HarnessApp, TurnContext
-from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
-from agent_meow.runtime.tool_output import MAX_TOOL_OUTPUT_BYTES
+from omnigent.errors import ErrorCode
+from omnigent.runtime.harnesses import _HARNESS_MODULES
+from omnigent.runtime.harnesses._scaffold import HarnessApp, TurnContext
+from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
+from omnigent.runtime.tool_output import MAX_TOOL_OUTPUT_BYTES
 
 _TEST_HARNESS_NAME = "scaffold_fixture"
 _TEST_HARNESS_MODULE = "tests.runtime.harnesses._test_scaffold_harnesses"
@@ -109,7 +109,7 @@ def _make_side_client(socket_path: str) -> httpx.AsyncClient:
     Tests that need to issue a ``tool_result`` / ``interrupt`` /
     ``approval`` event concurrently with an open streaming
     response use this so the second request gets its own TCP
-    connection — sharing one client across both ends of the
+    connection â€” sharing one client across both ends of the
     simulated round-trip can block the second request behind the
     first's keepalive connection (the symptom is a httpx.ReadError
     on the streaming side mid-test).
@@ -272,14 +272,14 @@ async def manager(
         await mgr.shutdown()
 
 
-# ── Per-fixture-harness selectors ──────────────────────────────
+# â”€â”€ Per-fixture-harness selectors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # Each fixture below sets the ``HARNESS_TEST_FIXTURE`` env var
 # the runner subprocess reads in
 # ``tests/runtime/harnesses/_test_scaffold_harnesses.py:create_app``
 # to pick which HarnessApp subclass to instantiate. Tests opt in
 # by depending on the fixture they need (e.g.
-# ``async def test_x(use_echo, manager): ...``) — declarative,
+# ``async def test_x(use_echo, manager): ...``) â€” declarative,
 # self-documenting in the signature, impossible to forget.
 
 
@@ -368,12 +368,12 @@ def use_wedged_fast_heartbeat(monkeypatch: pytest.MonkeyPatch) -> None:
 def use_busy_absolute_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     """Busy harness, 2s absolute ceiling below its ~3s runtime; idle high so only the cap fires."""
     monkeypatch.setenv("HARNESS_TEST_FIXTURE", "busy_progress")
-    # Idle high + reset on every emit → never trips; only the absolute cap can fire.
+    # Idle high + reset on every emit â†’ never trips; only the absolute cap can fire.
     monkeypatch.setenv("HARNESS_TURN_TIMEOUT_S", "10")
     monkeypatch.setenv("HARNESS_TURN_ABSOLUTE_TIMEOUT_S", "2")
 
 
-# ── Native function_call emission ──────────────────────────────
+# â”€â”€ Native function_call emission â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_subclass_can_emit_paired_function_call_items(
@@ -382,7 +382,7 @@ async def test_subclass_can_emit_paired_function_call_items(
 ) -> None:
     """A subclass can emit function_call + function_call_output directly.
 
-    Verifies the §Sub-agent representation pattern: harness-native
+    Verifies the Â§Sub-agent representation pattern: harness-native
     sub-agents (Claude Code Task, OpenAI Agents handoff) surface
     as a paired function_call (status: completed) +
     function_call_output emitted directly via ctx.emit, NOT going
@@ -410,14 +410,14 @@ async def test_subclass_can_emit_paired_function_call_items(
     assert fc_item["status"] == "completed"
     assert fc_item["name"] == "Task"
     assert fco_item["type"] == "function_call_output"
-    # The pair correlates via call_id — if these don't match,
+    # The pair correlates via call_id â€” if these don't match,
     # consumers can't render them as a single sub-agent
     # invocation.
     assert fc_item["call_id"] == fco_item["call_id"]
     assert fco_item["output"] == "subagent done"
 
 
-# ── Heartbeat metadata ────────────────────────────────────────
+# â”€â”€ Heartbeat metadata â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_heartbeat_carries_server_time_and_last_event_seq(
@@ -427,12 +427,12 @@ async def test_heartbeat_carries_server_time_and_last_event_seq(
     """
     The streaming wrapper stamps ``server_time`` and
     ``last_event_seq`` on every emitted ``response.heartbeat``
-    event per contract §Heartbeats.
+    event per contract Â§Heartbeats.
 
     Uses the ``fast_heartbeat`` fixture (overrides
     ``_heartbeat_loop`` to fire every 0.2s, sleeps 0.6s in
     ``run_turn``) so at least one heartbeat is captured during a
-    sub-second turn — production cadence is 15s which is too long
+    sub-second turn â€” production cadence is 15s which is too long
     for a unit test.
 
     What breaks if this fails: consumers can't detect clock drift
@@ -454,9 +454,9 @@ async def test_heartbeat_carries_server_time_and_last_event_seq(
     # At least one heartbeat must fire during the 0.6s turn at
     # 0.2s cadence. Zero would mean either the heartbeat task
     # wasn't started or the turn returned before the first
-    # interval — either way, regression in scaffold lifecycle.
+    # interval â€” either way, regression in scaffold lifecycle.
     assert len(heartbeats) >= 1, (
-        f"expected ≥1 heartbeat in a 0.6s turn at 0.2s cadence, "
+        f"expected â‰¥1 heartbeat in a 0.6s turn at 0.2s cadence, "
         f"got {len(heartbeats)}. All event types received: "
         f"{[e.event for e in events]}"
     )
@@ -476,7 +476,7 @@ async def test_heartbeat_carries_server_time_and_last_event_seq(
     # time, so format must match _utc_now_iso's output.
     server_time = later_heartbeat.data.get("server_time")
     assert server_time is not None, (
-        "heartbeat after warmup is missing server_time — wrapper "
+        "heartbeat after warmup is missing server_time â€” wrapper "
         "didn't stamp it (regression in _stream_response_body)"
     )
     assert server_time.endswith("Z"), f"server_time {server_time!r} not ISO-UTC"
@@ -502,7 +502,7 @@ async def test_heartbeat_carries_server_time_and_last_event_seq(
     )
 
 
-# ── Unclassified-exception robustness ────────────────────────
+# â”€â”€ Unclassified-exception robustness â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_run_turn_raise_synthesizes_response_failed_event(
@@ -519,7 +519,7 @@ async def test_run_turn_raise_synthesizes_response_failed_event(
     ``run_turn`` (or any other point in the streaming loop) caused
     the response stream to close mid-flight without emitting the
     terminal event. AP-side ``the harness HTTP client.run_turn``
-    saw ``httpx.ReadError`` reading a closed stream → workflow
+    saw ``httpx.ReadError`` reading a closed stream â†’ workflow
     catch-all rendered the unhelpful ``[llm] ReadError`` to the
     REPL.
 
@@ -550,7 +550,7 @@ async def test_run_turn_raise_synthesizes_response_failed_event(
         f"with anything other than response.failed (or "
         f"response.completed when the harness recovered), the "
         f"scaffold's last-line-of-defense terminal-event guarantee "
-        f"regressed — AP-side will see httpx.ReadError instead of "
+        f"regressed â€” AP-side will see httpx.ReadError instead of "
         f"a meaningful semantic code."
     )
     # The terminal event must be the LAST event on the stream;
@@ -647,7 +647,7 @@ async def test_per_turn_watchdog_allows_active_turn_past_window(
     minutes (tests + build + many tool calls) isn't killed mid-turn. The
     ``busy_progress`` harness emits a delta every 0.1s for ~3s against a
     2s watchdog. This test FAILS on the old fixed-cumulative watchdog
-    (which fired at 2s → ``response.failed``), which is exactly the
+    (which fired at 2s â†’ ``response.failed``), which is exactly the
     nessie bug being fixed.
     """
     conv_id = "conv_busy_progress"
@@ -698,7 +698,7 @@ async def test_per_turn_watchdog_ignores_heartbeats(
     events: list[_ParsedSSEEvent] = []
     # Above the 2s watchdog, below the suite timeout. If heartbeats wrongly
     # reset the deadline the stream never terminates and this timeout trips
-    # — a clean failure rather than a silent pass.
+    # â€” a clean failure rather than a silent pass.
     async with asyncio.timeout(20):
         async with client.stream("POST", f"/v1/sessions/{conv_id}/events", json=body) as response:
             async for event in _stream_iter(response):
@@ -706,13 +706,13 @@ async def test_per_turn_watchdog_ignores_heartbeats(
 
     event_types = [e.event for e in events]
     # Heartbeats fired throughout, but the wedged turn made no real
-    # progress — the idle watchdog must ignore the heartbeats and fail.
+    # progress â€” the idle watchdog must ignore the heartbeats and fail.
     assert event_types[-1] == "response.failed", (
         f"Wedged turn must fail despite ongoing heartbeats; got "
         f"{event_types[-1]!r}. If response.completed/no-terminal, "
         f"heartbeats wrongly reset the idle watchdog."
     )
-    # At least one heartbeat must have actually fired inside the window —
+    # At least one heartbeat must have actually fired inside the window â€”
     # otherwise this test would pass even if heartbeat-reset were broken.
     assert "response.heartbeat" in event_types, (
         f"Expected heartbeats during the wedged window; got {event_types!r}. "
@@ -734,7 +734,7 @@ async def test_per_turn_absolute_watchdog_caps_runaway_active_turn(
     The idle watchdog never trips an actively-streaming turn (each emit
     resets it), so a runaway-but-active loop needs the absolute backstop.
     The ``busy_progress`` harness emits every 0.1s for ~3s; with idle=10s
-    (reset on every emit → never trips) and absolute=2s, the absolute cap
+    (reset on every emit â†’ never trips) and absolute=2s, the absolute cap
     must fire ~1s before the harness's natural completion.
     """
     conv_id = "conv_busy_absolute_cap"
@@ -756,7 +756,7 @@ async def test_per_turn_absolute_watchdog_caps_runaway_active_turn(
         f"Absolute ceiling must fail a runaway-but-active turn; got "
         f"{event_types[-1]!r} (full: {event_types!r})."
     )
-    # The error must name the ABSOLUTE watchdog, not the idle one — proves
+    # The error must name the ABSOLUTE watchdog, not the idle one â€” proves
     # the right ceiling tripped (idle was set high and reset by every emit).
     error = events[-1].data["response"]["error"]
     assert error is not None and "absolute" in error["message"], (
@@ -764,13 +764,13 @@ async def test_per_turn_absolute_watchdog_caps_runaway_active_turn(
         f"'idle'-only message would mean the idle watchdog fired instead."
     )
     # Deltas streamed before the cap fired (it was actively emitting, not
-    # wedged) — distinguishes this from the idle/wedged path.
+    # wedged) â€” distinguishes this from the idle/wedged path.
     assert "response.output_text.delta" in event_types, (
         f"Expected progress deltas before the absolute cap; got {event_types!r}."
     )
 
 
-# ── Health probe ──────────────────────────────────────────────
+# â”€â”€ Health probe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_health_endpoint_returns_status_ok(
@@ -787,7 +787,7 @@ async def test_health_endpoint_returns_status_ok(
     resp = await client.get("/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
-    # /v1/health should NOT exist — that would be a misconfiguration.
+    # /v1/health should NOT exist â€” that would be a misconfiguration.
     bad_resp = await client.get("/v1/health")
     assert bad_resp.status_code == 404
 
@@ -843,7 +843,7 @@ async def test_scaffold_response_completed_preserves_cache_tokens(
     ``cache_creation_input_tokens`` counts. If that conversion drops
     the cache counts (the bug this guards), the server-side cost path
     never sees them and ``total_cost_usd`` silently reverts to the
-    cache-blind ``input*price + output*price`` formula — a large,
+    cache-blind ``input*price + output*price`` formula â€” a large,
     systematic undercount in an agent loop where the system prompt
     and history are cached almost every turn.
     """
@@ -876,16 +876,16 @@ async def test_scaffold_response_completed_preserves_cache_tokens(
     )
 
 
-# ── Session-keyed surface (POST /events) ──────────────────────
+# â”€â”€ Session-keyed surface (POST /events) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # Exercises the discriminated
-# /v1/sessions/{conversation_id}/events endpoint — the harness
+# /v1/sessions/{conversation_id}/events endpoint â€” the harness
 # scaffold's only downward-event surface after the legacy
 # /v1/responses routes were dropped. Each test verifies that a
 # downward event variant (message / interrupt / tool_result /
 # approval) dispatches into the same in-flight machinery
 # (TurnContext / Future registries). Endpoint shape matches
-# ``designs/session_rearchitecture.md`` §3 "Endpoints" /
+# ``designs/session_rearchitecture.md`` Â§3 "Endpoints" /
 # "Event types and direction".
 
 
@@ -921,12 +921,12 @@ async def test_session_message_event_streams_initial_then_text_then_completes(
         "response.output_text.delta",
         "response.completed",
     ]
-    # The same allocation rule applies — turn id is the harness's
+    # The same allocation rule applies â€” turn id is the harness's
     # response_id from the underlying _post_responses.
     turn_id = events[0].data["response"]["id"]
     assert turn_id.startswith("resp_")
     assert events[-1].data["response"]["status"] == "completed"
-    # Echo payload survives — proves the body actually reached
+    # Echo payload survives â€” proves the body actually reached
     # ``run_turn`` through the new route, not just an empty
     # delegation that lost the request.
     assert "hi" in events[2].data["delta"]
@@ -940,7 +940,7 @@ async def test_session_events_404s_on_conversation_id_mismatch(
 
     The harness scaffold is per-conversation. A request addressed
     to the wrong conversation indicates the caller routed to the
-    wrong subprocess — fail loud rather than silently start a
+    wrong subprocess â€” fail loud rather than silently start a
     turn under a mismatched id (which would produce a turn that
     agent-meow could never correlate).
     """
@@ -974,7 +974,7 @@ async def test_session_tool_result_event_resolves_parked_dispatch(
     ``action_required``, then POSTs a ``tool_result`` event to
     the same ``/events`` endpoint with the matching ``call_id``.
     Verifies the parked Future resolves and the subclass receives
-    the output — proves the discriminated surface dispatches
+    the output â€” proves the discriminated surface dispatches
     into the right entry of the in-flight registry.
     """
     conv_id = "conv_session_tool"
@@ -1012,12 +1012,12 @@ async def test_session_tool_result_event_resolves_parked_dispatch(
                     assert patch_resp.status_code == 204
                     patched = True
         # Subclass received the event-delivered output through the
-        # session-keyed surface — proves shared in-flight state.
+        # session-keyed surface â€” proves shared in-flight state.
         deltas = [e.data["delta"] for e in events if e.event == "response.output_text.delta"]
         assert any("got:ok" in d for d in deltas), (
             f"expected the tool_result-delivered output to reach run_turn; got deltas={deltas!r}"
         )
-        # A small output flows through the cap untouched — guards against an
+        # A small output flows through the cap untouched â€” guards against an
         # over-eager cap that truncates everything, which the large-input cap
         # test alone would not catch.
         streamed = [
@@ -1042,14 +1042,14 @@ async def test_session_tool_result_over_cap_streams_truncated_but_returns_full(
     Proves the output cap end-to-end: the function_call_output the scaffold
     streams + persists is bounded (so the client never receives one giant SSE
     frame), while ``ctx.dispatch_tool`` still returns the FULL result to the
-    harness's ``run_turn`` — the live model's view is unaffected.
+    harness's ``run_turn`` â€” the live model's view is unaffected.
     ``_ToolDispatchHarness`` echoes the returned value as a ``got:<result>``
     text delta, so the delta length proves the return was not truncated.
     """
     conv_id = "conv_session_tool_cap"
     stream_client = await manager.get_client(conv_id, _TEST_HARNESS_NAME)
     side_client = _make_side_client(str(manager.socket_path(conv_id)))
-    # 2 MiB — comfortably over the 1 MiB cap so truncation is unambiguous.
+    # 2 MiB â€” comfortably over the 1 MiB cap so truncation is unambiguous.
     big_output = "x" * (2 * 1024 * 1024)
     start_body = {"type": "message", "role": "user", "model": "test-agent", "content": []}
     events: list[_ParsedSSEEvent] = []
@@ -1081,7 +1081,7 @@ async def test_session_tool_result_over_cap_streams_truncated_but_returns_full(
 
         # The streamed function_call_output is capped: it carries the truncation
         # notice and is far smaller than the 2 MiB input. Without the cap wiring
-        # this would be the full 2 MiB payload — one giant client frame.
+        # this would be the full 2 MiB payload â€” one giant client frame.
         streamed_outputs = [
             e.data["item"]["output"]
             for e in events
@@ -1100,7 +1100,7 @@ async def test_session_tool_result_over_cap_streams_truncated_but_returns_full(
 
         # ...but run_turn received the FULL result via dispatch_tool's return:
         # the echoed got:<result> delta is the whole 2 MiB. This is the load-
-        # bearing guarantee — capping the mirror must not shrink the model's view.
+        # bearing guarantee â€” capping the mirror must not shrink the model's view.
         got_deltas = [
             e.data["delta"]
             for e in events
@@ -1181,7 +1181,7 @@ async def test_session_interrupt_event_cancels_in_flight_turn(
 
     Verifies that an interrupt sets ``ctx.cancelled``. The
     fixture subclass observes it and emits ``"cancelled"`` before
-    returning — terminal event is ``response.cancelled``.
+    returning â€” terminal event is ``response.cancelled``.
     """
     conv_id = "conv_session_cancel"
     stream_client = await manager.get_client(conv_id, _TEST_HARNESS_NAME)
@@ -1244,7 +1244,7 @@ async def test_session_interrupt_event_404s_when_no_turn_in_flight(
 ) -> None:
     """Correct conversation_id + no in-flight turn returns 404.
 
-    The harness has no concept of an idle interrupt — if no turn
+    The harness has no concept of an idle interrupt â€” if no turn
     is in flight, there is nothing to cancel. Fail loud rather
     than silently no-op so a stray interrupt from agent-meow after a turn
     already ended surfaces as an obvious operator error.
@@ -1426,8 +1426,8 @@ async def test_interrupt_then_message_without_prev_id_starts_fresh_turn(
 ) -> None:
     """After an interrupt, a follow-up (no previous_response_id) starts a FRESH turn.
 
-    Production bug: the follow-up was injected into the just-cancelled turn —
-    whose session is mid-teardown — resuming the abandoned generation and
+    Production bug: the follow-up was injected into the just-cancelled turn â€”
+    whose session is mid-teardown â€” resuming the abandoned generation and
     leaving the agent one message behind. ``_handle_interrupt_event`` now clears
     ``_active_turn_ctx``, so a follow-up with no ``previous_response_id`` must
     start a new turn (HTTP 200 stream with its own ``response.created``), NOT a
@@ -1459,7 +1459,7 @@ async def test_interrupt_then_message_without_prev_id_starts_fresh_turn(
                     assert cancel_resp.status_code == 204
                     interrupted = True
                     # Send the follow-up while the cancelled turn is still
-                    # tearing down — it must start a fresh turn, not inject.
+                    # tearing down â€” it must start a fresh turn, not inject.
                     async with followup_client.stream(
                         "POST", f"/v1/sessions/{conv_id}/events", json=followup_body
                     ) as r2:
@@ -1471,7 +1471,7 @@ async def test_interrupt_then_message_without_prev_id_starts_fresh_turn(
                                     break
                     break
         # 200 (fresh streaming turn), NOT 204 (in-band injection into the
-        # cancelled turn — the bug). If 204, the follow-up resumed the dying
+        # cancelled turn â€” the bug). If 204, the follow-up resumed the dying
         # session and the agent would answer one message behind.
         assert followup_status == 200, (
             f"follow-up after interrupt must start a fresh turn (200), got {followup_status}"
@@ -1491,7 +1491,7 @@ async def test_interrupt_then_message_with_prev_id_starts_fresh_turn(
     """A follow-up that steers via the interrupted turn's id also starts fresh.
 
     A client may follow up using the in-progress response_id. After Stop, that
-    id points at a cancelled turn whose session is mid-teardown — injecting into
+    id points at a cancelled turn whose session is mid-teardown â€” injecting into
     it (then dropping the injection) loses the message. The explicit
     previous_response_id branch must also skip a cancelled turn and start a fresh
     turn (HTTP 200 with a NEW response_id), not return 204.
@@ -1557,7 +1557,7 @@ async def test_session_message_event_in_band_injection(
     """A ``message`` with ``previous_response_id`` injects in-band.
 
     Verifies the in-band POST routing works through the new
-    surface — the second message event with
+    surface â€” the second message event with
     ``previous_response_id == in-flight turn_id`` returns 204
     (not a streaming 200) and the subclass sees the injection.
     Without this, the new surface would silently start a second
@@ -1632,7 +1632,7 @@ async def test_session_events_unknown_type_returns_422(
     assert resp.status_code == 422
 
 
-# ── Lifespan shutdown hook ─────────────────────────
+# â”€â”€ Lifespan shutdown hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_on_shutdown_hook_called_during_lifespan_teardown(
@@ -1646,8 +1646,8 @@ async def test_on_shutdown_hook_called_during_lifespan_teardown(
 
     Spawns a ``_ShutdownTrackingHarness`` subprocess that writes a
     sentinel file in ``on_shutdown``. After a normal streaming turn,
-    the manager releases the subprocess (SIGTERM → graceful shutdown
-    → lifespan finally → ``on_shutdown``). The test checks the
+    the manager releases the subprocess (SIGTERM â†’ graceful shutdown
+    â†’ lifespan finally â†’ ``on_shutdown``). The test checks the
     sentinel file exists.
 
     Before the fix (Fix A + E): uvicorn's signal
@@ -1687,7 +1687,7 @@ async def test_on_shutdown_hook_called_during_lifespan_teardown(
             async for event in _stream_iter(response):
                 events.append(event)
 
-        # Turn completed — the scaffold should have emitted
+        # Turn completed â€” the scaffold should have emitted
         # response.completed.
         terminal_events = [e for e in events if e.event == "response.completed"]
         assert len(terminal_events) == 1, (
@@ -1695,8 +1695,8 @@ async def test_on_shutdown_hook_called_during_lifespan_teardown(
             "without it, the turn didn't finish cleanly."
         )
 
-        # Release triggers SIGTERM → graceful shutdown → lifespan
-        # finally → on_shutdown → sentinel write.
+        # Release triggers SIGTERM â†’ graceful shutdown â†’ lifespan
+        # finally â†’ on_shutdown â†’ sentinel write.
         await mgr.release(conv_id)
 
         import asyncio
@@ -1710,7 +1710,7 @@ async def test_on_shutdown_hook_called_during_lifespan_teardown(
 
         # The sentinel file should exist, proving on_shutdown was
         # called. If missing, the lifespan's finally block didn't
-        # invoke the hook — the bug this guards against.
+        # invoke the hook â€” the bug this guards against.
         assert Path(marker_path).exists(), (
             f"Sentinel file {marker_path} was not written. "
             f"on_shutdown() was not called during lifespan teardown. "
@@ -1722,7 +1722,7 @@ async def test_on_shutdown_hook_called_during_lifespan_teardown(
         await mgr.shutdown()
 
 
-# ── Idle-watchdog surfaces forwarder connectivity cause ──
+# â”€â”€ Idle-watchdog surfaces forwarder connectivity cause â”€â”€
 #
 # The pure-module unit test for ``_native_forwarder_health`` (record / recency
 # / clear) lives in ``tests/test_native_forwarder_health.py``. This file keeps
@@ -1735,15 +1735,15 @@ async def test_idle_watchdog_attaches_recent_forwarder_post_failure(
     """Idle-watchdog failure names a recent forwarder connectivity error.
 
     Regression for issue #1119: when a native forwarder can't reach the server
-    its event POSTs starve the turn of progress, so the idle watchdog — not the
-    connectivity error — fails the turn. The watchdog must attach that recorded
+    its event POSTs starve the turn of progress, so the idle watchdog â€” not the
+    connectivity error â€” fails the turn. The watchdog must attach that recorded
     POST failure to the reason instead of only the generic "wedged LLM" text.
 
     Fails on the unfixed watchdog (reason omits the forwarder cause); passes
     once the watchdog reads ``_native_forwarder_health``.
     """
-    from agent_meow import _native_forwarder_health as health
-    from agent_meow.runtime.harnesses import _scaffold
+    from omnigent import _native_forwarder_health as health
+    from omnigent.runtime.harnesses import _scaffold
 
     class _WedgedApp(HarnessApp):
         async def run_turn(self, request: Any, ctx: TurnContext) -> None:
@@ -1775,7 +1775,7 @@ async def test_idle_watchdog_attaches_recent_forwarder_post_failure(
 
     message = str(excinfo.value)
     # Names the idle ceiling (not the absolute one) so we know which watchdog
-    # fired, and carries the full recorded forwarder detail — both the event
+    # fired, and carries the full recorded forwarder detail â€” both the event
     # type and the connectivity error, not just a coincidental substring.
     assert "idle watchdog" in message, message
     assert "external_session_status" in message, message

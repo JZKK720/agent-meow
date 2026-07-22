@@ -2,12 +2,12 @@
 
 Companion to the build-output guard in ``conftest._assert_pwa_build`` and
 ``test_pwa_build.py`` (which inspect the emitted files): this drives the SPA in a
-real browser and asserts the runtime PWA contract end to end —
+real browser and asserts the runtime PWA contract end to end â€”
 
   1. the service worker registers and reaches an active state,
   2. the app is installable (manifest linked, served with the manifest MIME,
      with the required name / display / icons),
-  3. the worker caches ONLY ``version.json`` — never the app shell, and
+  3. the worker caches ONLY ``version.json`` â€” never the app shell, and
   4. navigations always hit the network (the worker does not intercept them,
      even once it controls the page).
 
@@ -18,9 +18,9 @@ source guard but actually serves the shell at runtime.
 
 Unlike the rest of this suite, the PWA contract is independent of the agent /
 LLM, so this spawns a plain ``agent-meow server`` (no ``--agent``, no runner, no
-Databricks credentials) — keeping the test fast and runnable anywhere. It still
+Databricks credentials) â€” keeping the test fast and runnable anywhere. It still
 serves the production static mount + cache/MIME headers from
-``agent_meow/server/app.py``, which is exactly what the browser checks rely on.
+``omnigent/server/app.py``, which is exactly what the browser checks rely on.
 
 Part of the gated e2e_ui suite (excluded from the default ``pytest`` run via
 ``--ignore=tests/e2e_ui``); see this package's ``conftest`` module docstring.
@@ -85,11 +85,11 @@ def pwa_server(
 ) -> Iterator[str]:
     """Serve the built SPA via a no-agent ``agent-meow server`` and yield its URL.
 
-    No ``--agent`` (and therefore no runner / LLM credentials) — the PWA
+    No ``--agent`` (and therefore no runner / LLM credentials) â€” the PWA
     contract this test checks is agent-independent, so this stays fast and
     creds-free where ``live_server`` cannot. ``--database-uri`` /
     ``--artifact-location`` point at the pytest tmp dir so the user's default
-    ``agent_meow.db`` / ``artifacts`` are never touched.
+    ``omnigent.db`` / ``artifacts`` are never touched.
 
     :param built_spa: Ensures the SPA bundle (incl. the PWA assets) is on disk
         before the server mounts it.
@@ -105,8 +105,8 @@ def pwa_server(
     port = _free_port()
     server_tmp = tmp_path_factory.mktemp("pwa_e2e_server")
     log_path = server_tmp / "server.log"
-    # PYTHONPATH forces the subprocess to import agent_meow from the worktree, not
-    # whatever is pip-installed in .venv — otherwise a branch's code changes
+    # PYTHONPATH forces the subprocess to import omnigent from the worktree, not
+    # whatever is pip-installed in .venv â€” otherwise a branch's code changes
     # would silently run against stale code (same trick as ``live_server``).
     env = {
         **os.environ,
@@ -114,13 +114,13 @@ def pwa_server(
     }
     base_url = f"http://127.0.0.1:{port}"
     # The log handle must outlive the Popen, so the context manager spans the
-    # whole fixture (Popen → yield → teardown), closing on fixture exit.
+    # whole fixture (Popen â†’ yield â†’ teardown), closing on fixture exit.
     with open(log_path, "w", encoding="utf-8") as log_handle:
         proc = subprocess.Popen(
             [
                 sys.executable,
                 "-c",
-                "from agent_meow.cli import main; main()",
+                "from omnigent.cli import main; main()",
                 "server",
                 "--host",
                 "127.0.0.1",
@@ -153,7 +153,7 @@ def test_pwa_installable_sw_registers_and_never_serves_the_shell(
     pwa_server: str,
 ) -> None:
     """The installed PWA registers its worker, is installable, and the worker
-    serves only ``version.json`` — never the app shell or navigations.
+    serves only ``version.json`` â€” never the app shell or navigations.
 
     :param page: Playwright page fixture (fresh context per test).
     :param pwa_server: Base URL of the no-agent server serving the built SPA.
@@ -198,7 +198,7 @@ def test_pwa_installable_sw_registers_and_never_serves_the_shell(
     assert manifest["display"] == "standalone"
     assert manifest["icons"] >= 2  # 192 + 512 is the installability minimum
 
-    # 3. The worker caches ONLY version.json — never the app shell. A cached
+    # 3. The worker caches ONLY version.json â€” never the app shell. A cached
     #    shell would white-screen users behind a stale deploy.
     cached_paths = page.evaluate(
         """async () => {
@@ -212,7 +212,7 @@ def test_pwa_installable_sw_registers_and_never_serves_the_shell(
     )
     assert cached_paths == ["/version.json"], f"worker cached unexpected entries: {cached_paths}"
 
-    # 4. Navigations always hit the network — the worker must not intercept them
+    # 4. Navigations always hit the network â€” the worker must not intercept them
     #    even once it controls the page. Reload so the worker is controlling,
     #    then assert the navigation response came from the network, not the SW.
     resp = page.goto(base_url, wait_until="load")
@@ -221,6 +221,6 @@ def test_pwa_installable_sw_registers_and_never_serves_the_shell(
     )
     assert resp is not None
     assert resp.from_service_worker is False, (
-        "the service worker intercepted a navigation — navigations must hit the "
+        "the service worker intercepted a navigation â€” navigations must hit the "
         "network so a deploy is never masked by a stale shell"
     )

@@ -5,15 +5,15 @@ The web-UI ``/compact`` command and compact button POST
 ``designs/CLAUDE_NATIVE.md`` ("Control events dispatch on the runner"),
 the agent-meow server stays harness-agnostic: it forwards the control to the
 bound runner and only runs its own in-process compaction
-(``_run_compact_locked`` → ``compact_conversation_now``) when the
+(``_run_compact_locked`` â†’ ``compact_conversation_now``) when the
 runner did NOT handle it.
 
 The runner's dispatch contract (verified in
 ``tests/runner/test_app_sessions_native.py``):
 
 * claude-native injects ``/compact`` into the tmux pane and returns
-  **200** — Claude Code compacts its own context.
-* other harnesses **204** no-op — the agent-meow server owns the operation.
+  **200** â€” Claude Code compacts its own context.
+* other harnesses **204** no-op â€” the agent-meow server owns the operation.
 * a failed injection (pane not attached) returns **503**.
 
 These tests pin the agent-meow side of that contract by stubbing the runner's
@@ -28,7 +28,7 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.runtime.compaction import CompactionResult
+from omnigent.runtime.compaction import CompactionResult
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
@@ -103,7 +103,7 @@ async def test_compact_skips_omnigent_compaction_when_runner_handles_it(
     When the runner reports it handled the control (200), the agent-meow server
     must NOT run ``compact_conversation_now`` at all.
     """
-    from agent_meow.runtime import set_runner_client
+    from omnigent.runtime import set_runner_client
 
     async def _must_not_run(**_: Any) -> CompactionResult:
         """Fail loudly if AP-side compaction is reached on the 200 path."""
@@ -114,7 +114,7 @@ async def test_compact_skips_omnigent_compaction_when_runner_handles_it(
         )
 
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow.compact_conversation_now",
+        "omnigent.runtime.workflow.compact_conversation_now",
         _must_not_run,
     )
 
@@ -138,7 +138,7 @@ async def test_compact_skips_omnigent_compaction_when_runner_handles_it(
     assert resp.json() == {"queued": False}, resp.text
     # Exactly one compact control was forwarded to the runner. 0 = the
     # agent-meow server never forwarded (it would have run _run_compact_locked
-    # directly — the pre-fix behavior); 2+ = duplicate forward.
+    # directly â€” the pre-fix behavior); 2+ = duplicate forward.
     assert captured == [{"type": "compact"}], (
         f"AP server must forward exactly one compact control to the runner; got {captured!r}."
     )
@@ -152,12 +152,12 @@ async def test_compact_runs_omnigent_compaction_when_runner_noops(
     A 204 from the runner (in-process harness) makes the agent-meow server run
     its own ``compact_conversation_now``.
 
-    In-process harnesses have no terminal to inject into — explicit
+    In-process harnesses have no terminal to inject into â€” explicit
     compaction is an AP-side LLM summarisation. The 204 no-op tells the
     agent-meow server it owns the operation, so it must still forward the
     control (harness-agnostic) AND then run the compaction.
     """
-    from agent_meow.runtime import set_runner_client
+    from omnigent.runtime import set_runner_client
 
     calls: list[dict[str, Any]] = []
 
@@ -167,7 +167,7 @@ async def test_compact_runs_omnigent_compaction_when_runner_noops(
         return CompactionResult(messages=[], summary_metadata=None, total_tokens=1234)
 
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow.compact_conversation_now",
+        "omnigent.runtime.workflow.compact_conversation_now",
         _record,
     )
 
@@ -186,7 +186,7 @@ async def test_compact_runs_omnigent_compaction_when_runner_noops(
 
     assert resp.status_code == 202, resp.text
     assert resp.json() == {"queued": False}, resp.text
-    # Control was still forwarded even though the runner no-ops — the
+    # Control was still forwarded even though the runner no-ops â€” the
     # agent-meow server is harness-agnostic and forwards for every harness.
     assert captured == [{"type": "compact"}], (
         f"AP server must forward compact to the runner even on the "
@@ -217,18 +217,18 @@ async def test_compact_errors_when_runner_injection_fails(
     wrong (summarising the mirror). The agent-meow server must surface the
     failure rather than silently running its own compaction.
     """
-    from agent_meow.runtime import set_runner_client
+    from omnigent.runtime import set_runner_client
 
     async def _must_not_run(**_: Any) -> CompactionResult:
         """Fail loudly if AP-side compaction is reached on the error path."""
         raise AssertionError(
             "compact_conversation_now must not run when the runner "
-            "returned a non-200/204 status — agent-meow fell through to its "
+            "returned a non-200/204 status â€” agent-meow fell through to its "
             "own compaction instead of surfacing the runner failure."
         )
 
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow.compact_conversation_now",
+        "omnigent.runtime.workflow.compact_conversation_now",
         _must_not_run,
     )
 
@@ -256,12 +256,12 @@ async def test_compact_errors_when_runner_injection_fails(
     )
 
 
-# ── external_compaction_status: terminal-observed compaction edge ────────
+# â”€â”€ external_compaction_status: terminal-observed compaction edge â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # The claude-native forwarder posts external_compaction_status when Claude
 # Code's PreCompact / post-compaction SessionStart(source=compact) hooks
 # fire, so the web UI brackets Claude's own terminal compaction with the
-# same "Compacting conversation…" spinner the AP-side path drives.
+# same "Compacting conversationâ€¦" spinner the AP-side path drives.
 
 
 @pytest.mark.parametrize(
@@ -295,7 +295,7 @@ async def test_external_compaction_status_publishes_compaction_sse(
         published.append((session_id, event))
 
     monkeypatch.setattr(
-        "agent_meow.server.routes.sessions.session_stream.publish",
+        "omnigent.server.routes.sessions.session_stream.publish",
         capture_publish,
     )
     agent = await create_test_agent(client)
@@ -309,7 +309,7 @@ async def test_external_compaction_status_publishes_compaction_sse(
     assert resp.json() == {"queued": False}, resp.text
 
     # Exactly the one matching compaction SSE, scoped to this session.
-    # A different event type (or zero) would mean the status→SSE mapping
+    # A different event type (or zero) would mean the statusâ†’SSE mapping
     # regressed and the web UI spinner would not bracket compaction.
     assert [event["type"] for _, event in published] == [expected_event], (
         f"Expected one {expected_event!r} event; got {published!r}."
@@ -331,7 +331,7 @@ async def test_external_compaction_status_rejects_unknown_status(
     Unknown compaction-status values are rejected with a 400.
 
     Without this guard a typo in the forwarder would publish a
-    non-conforming event the SDK's strict adapter drops downstream —
+    non-conforming event the SDK's strict adapter drops downstream â€”
     the fail-loud guard rule 15 exists to prevent.
     """
     agent = await create_test_agent(client)

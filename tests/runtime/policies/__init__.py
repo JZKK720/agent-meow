@@ -1,5 +1,5 @@
 """
-Tests for ``agent_meow.runtime.policies`` — the PolicyEngine,
+Tests for ``omnigent.runtime.policies`` â€” the PolicyEngine,
 its builder, and (in later phases) the concrete Policy
 subclasses.
 """

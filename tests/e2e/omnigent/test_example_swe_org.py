@@ -5,8 +5,8 @@ A single-file multi-agent demo in the spirit of ``coding_supervisor.yaml``: a
 director root delegates to a team of role sub-agents that run on *different*
 models for different jobs (Claude for backend / QA / staff-review, GPT for
 frontend / design), all able to inspect the repo through inherited ``os_env``
-tools, with two function-policy guardrails. Pure spec-load — no LLM, no
-credentials — modeled on ``test_example_polly.py``.
+tools, with two function-policy guardrails. Pure spec-load â€” no LLM, no
+credentials â€” modeled on ``test_example_polly.py``.
 
 What breaks if this fails:
 - a team role is dropped/renamed (the org loses a function),
@@ -22,10 +22,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.spec import load
-from agent_meow.spec.types import AgentSpec
+from omnigent.spec import load
+from omnigent.spec.types import AgentSpec
 
-# tests/e2e/agent_meow/test_example_swe_org.py -> repo root is 3 parents up.
+# tests/e2e/omnigent/test_example_swe_org.py -> repo root is 3 parents up.
 _SWE_ORG_YAML = (
     Path(__file__).resolve().parents[3] / "tests" / "resources" / "examples" / "swe_org.yaml"
 )
@@ -68,7 +68,7 @@ def test_team_roles_and_cross_model_split(swe_org_spec: AgentSpec) -> None:
         assert by_name[name].executor.config.get("harness") == "claude-sdk", name
     for name in gpt_roles:
         assert by_name[name].executor.config.get("harness") == "openai-agents", name
-    # Both vendors are represented — not a single-model org.
+    # Both vendors are represented â€” not a single-model org.
     harnesses = {a.executor.config.get("harness") for a in swe_org_spec.sub_agents}
     assert harnesses == {"claude-sdk", "openai-agents"}
 

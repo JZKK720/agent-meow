@@ -5,7 +5,7 @@ from __future__ import annotations
 import click
 import pytest
 
-from agent_meow import hermes_native as hn
+from omnigent import hermes_native as hn
 
 
 def test_resolve_hermes_executable_found() -> None:
@@ -44,13 +44,13 @@ def test_terminal_resource_id_stable() -> None:
 
 
 def test_harness_registry_has_hermes_native() -> None:
-    from agent_meow.runtime.harnesses import _HARNESS_MODULES
+    from omnigent.runtime.harnesses import _HARNESS_MODULES
 
-    assert _HARNESS_MODULES["hermes-native"] == "agent_meow.inner.hermes_native_harness"
+    assert _HARNESS_MODULES["hermes-native"] == "omnigent.inner.hermes_native_harness"
 
 
 def test_alias_and_native_membership() -> None:
-    from agent_meow.harness_aliases import (
+    from omnigent.harness_aliases import (
         NATIVE_HARNESSES,
         canonicalize_harness,
         is_native_harness,
@@ -66,14 +66,14 @@ def test_alias_and_native_membership() -> None:
 
 
 def test_native_coding_agent_resolves() -> None:
-    from agent_meow._wrapper_labels import (
+    from omnigent._wrapper_labels import (
         HERMES_NATIVE_WRAPPER_VALUE,
         UI_MODE_LABEL_KEY,
         UI_MODE_TERMINAL_VALUE,
         WRAPPER_LABEL_KEY,
     )
-    from agent_meow.harness_plugins import HERMES_NATIVE_CODING_AGENT
-    from agent_meow.native_coding_agents import native_coding_agent_for_harness
+    from omnigent.harness_plugins import HERMES_NATIVE_CODING_AGENT
+    from omnigent.native_coding_agents import native_coding_agent_for_harness
 
     agent = native_coding_agent_for_harness("native-hermes")
     assert agent is HERMES_NATIVE_CODING_AGENT
@@ -87,7 +87,7 @@ def test_native_coding_agent_resolves() -> None:
 
 
 def test_create_app_builds() -> None:
-    from agent_meow.inner.hermes_native_harness import create_app
+    from omnigent.inner.hermes_native_harness import create_app
 
     assert create_app() is not None
 
@@ -118,7 +118,7 @@ def test_launched_terminal_from_payload_decodes_tmux_metadata() -> None:
     assert term.terminal_id == "terminal_hermes_main"
     assert str(term.tmux_socket) == "/s"
     assert term.tmux_target == "t:0.0"
-    # No metadata → id only, sockets None.
+    # No metadata â†’ id only, sockets None.
     bare = hn._launched_hermes_terminal_from_payload({"id": "terminal_hermes_main"})
     assert bare.tmux_socket is None and bare.tmux_target is None
 
@@ -144,12 +144,12 @@ def test_direct_tmux_unavailable_reason_branches(tmp_path, monkeypatch) -> None:
     assert "tmux target" in (hn._direct_tmux_unavailable_reason(_prep(tmp_path, None)) or "")
     missing = tmp_path / "nope.sock"
     assert "not reachable" in (hn._direct_tmux_unavailable_reason(_prep(missing, "t")) or "")
-    # Socket exists + tmux present → no reason (attach is available).
+    # Socket exists + tmux present â†’ no reason (attach is available).
     sock = tmp_path / "live.sock"
     sock.write_text("")
     monkeypatch.setattr(hn.shutil, "which", lambda _c: "/usr/bin/tmux")
     assert hn._direct_tmux_unavailable_reason(_prep(sock, "t")) is None
-    # tmux absent → reason.
+    # tmux absent â†’ reason.
     monkeypatch.setattr(hn.shutil, "which", lambda _c: None)
     assert "tmux is not available" in (hn._direct_tmux_unavailable_reason(_prep(sock, "t")) or "")
 
@@ -173,8 +173,8 @@ def test_update_startup_progress_is_noop_without_renderer() -> None:
             self.messages.append(msg)
 
     prog = _Progress()
-    hn._update_startup_progress(prog, "Starting…")
-    assert prog.messages == ["Starting…"]
+    hn._update_startup_progress(prog, "Startingâ€¦")
+    assert prog.messages == ["Startingâ€¦"]
 
 
 # --- daemon-flow HTTP helpers (fake async client; no real server) -------------
@@ -216,7 +216,7 @@ async def test_create_hermes_session_returns_id_or_raises() -> None:
 
 
 async def test_fetch_hermes_session_handles_status() -> None:
-    payload = {"labels": {"agent_meow.wrapper": "hermes-native-ui"}}
+    payload = {"labels": {"omnigent.wrapper": "hermes-native-ui"}}
     assert (
         await hn._fetch_hermes_session(_FakeAsyncClient(_FakeResp(200, payload)), "c") == payload
     )
@@ -233,15 +233,15 @@ async def test_ensure_terminal_on_runner_raises_on_error() -> None:
 
 
 async def test_find_running_terminal_states() -> None:
-    # 404 → not created yet.
+    # 404 â†’ not created yet.
     assert await hn._find_running_hermes_terminal(_FakeAsyncClient(_FakeResp(404)), "c") is None
-    # running:false → treated as absent.
+    # running:false â†’ treated as absent.
     not_running = _FakeResp(200, {"id": "terminal_hermes_main", "metadata": {"running": False}})
     assert await hn._find_running_hermes_terminal(_FakeAsyncClient(not_running), "c") is None
-    # 409 not-bound → None (runner not ready), not an error.
+    # 409 not-bound â†’ None (runner not ready), not an error.
     notbound = _FakeResp(409, {"error": {"message": "session not bound to a runner"}})
     assert await hn._find_running_hermes_terminal(_FakeAsyncClient(notbound), "c") is None
-    # Live terminal with tmux metadata → decoded.
+    # Live terminal with tmux metadata â†’ decoded.
     live = _FakeResp(
         200,
         {"id": "terminal_hermes_main", "metadata": {"tmux_socket": "/s", "tmux_target": "t:0.0"}},

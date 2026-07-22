@@ -11,7 +11,7 @@ import logging
 from collections.abc import AsyncIterator
 from typing import Any
 
-from agent_meow.server import schemas as _srv_events
+from omnigent.server import schemas as _srv_events
 
 from ._events import (
     NATIVE_TOOL_TYPES,

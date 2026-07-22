@@ -7,12 +7,12 @@ claude-sdk orchestrator brain, the six cross-vendor coding sub-agents
 (claude_code / codex / opencode / cursor / hermes / pi, which implement, review,
 and explore),
 the three spine skills, and the bounds/blast-radius guardrails. Pure spec-load
-— no LLM, no credentials.
+â€” no LLM, no credentials.
 
 What breaks if this fails:
 - the orchestrator substrate drifts (model / harness / context window),
 - a coding sub-agent is dropped or its harness changes (no implementers, or
-  two collapse onto one vendor → cross-vendor review blind spot),
+  two collapse onto one vendor â†’ cross-vendor review blind spot),
 - a spine skill is dropped or renamed (the strategy layer regresses),
 - a guardrail is removed (unbounded fan-out, or ungated push/deploy).
 """
@@ -23,10 +23,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.spec import load
-from agent_meow.spec.types import AgentSpec
+from omnigent.spec import load
+from omnigent.spec.types import AgentSpec
 
-# tests/e2e/agent_meow/test_example_polly.py -> repo root is 3 parents up.
+# tests/e2e/omnigent/test_example_polly.py -> repo root is 3 parents up.
 _POLLY_BUNDLE = Path(__file__).resolve().parents[3] / "examples" / "polly"
 
 
@@ -50,7 +50,7 @@ def test_orchestrator_executor(polly_spec: AgentSpec) -> None:
     ``chat.py`` ``_spec_declares_harness_or_model``, which recognizes the
     nested ``executor.config.harness`` and so never injects the ad-hoc
     default. Re-pinning a ``model`` here would re-couple polly to one
-    provider — fail here so that regression is caught.
+    provider â€” fail here so that regression is caught.
 
     Reads ``executor.config.harness`` (not a flat ``harness:``) because this
     is a bundle: a regression that drops the harness into a flat key would
@@ -59,7 +59,7 @@ def test_orchestrator_executor(polly_spec: AgentSpec) -> None:
     assert polly_spec.name == "polly"
     ex = polly_spec.executor
     assert ex.config.get("harness") == "claude-sdk"
-    # No model pin — the configured provider's default Claude model is used.
+    # No model pin â€” the configured provider's default Claude model is used.
     # Re-introducing a pin (Databricks or otherwise) fails here.
     assert ex.model is None
     # Profile is intentionally NOT pinned either.
@@ -77,7 +77,7 @@ def test_coding_subagents(polly_spec: AgentSpec) -> None:
     (Chat / Terminal pill) so the human can watch or take over.
 
     A missing/renamed agent means fewer implementers, and same-vendor harnesses
-    would break cross-vendor review — polly's differentiator.
+    would break cross-vendor review â€” polly's differentiator.
     """
     fam = {a.name: a.executor.config.get("harness") for a in polly_spec.sub_agents}
     assert sorted(polly_spec.tools.agents) == [
@@ -94,20 +94,20 @@ def test_coding_subagents(polly_spec: AgentSpec) -> None:
     assert fam["cursor"] == "cursor-native"
     assert fam["hermes"] == "hermes-native"
     assert fam["pi"] == "pi"
-    # Six distinct vendors → any implementer's diff is reviewable by another.
+    # Six distinct vendors â†’ any implementer's diff is reviewable by another.
     assert len(set(fam.values())) == 6
     for name in ("claude_code", "codex", "opencode", "cursor", "hermes", "pi"):
         prompt = (_POLLY_BUNDLE / "agents" / name / "config.yaml").read_text(encoding="utf-8")
-        assert "IMPLEMENT — write real product code" in prompt
-        assert "REVIEW — verify another agent's diff" in prompt
-        assert "EXPLORE / SEARCH — answer a specific question" in prompt
+        assert "IMPLEMENT â€” write real product code" in prompt
+        assert "REVIEW â€” verify another agent's diff" in prompt
+        assert "EXPLORE / SEARCH â€” answer a specific question" in prompt
 
 
 def test_pi_subagent_is_headless_scaffold_worker(polly_spec: AgentSpec) -> None:
     """
     The ``pi`` sub-agent is a headless scaffold-harness child: pi harness,
-    no pinned model/profile (so ``args.model`` per dispatch — and otherwise
-    the provider default — decides), and an ``os_env`` block so the bridged
+    no pinned model/profile (so ``args.model`` per dispatch â€” and otherwise
+    the provider default â€” decides), and an ``os_env`` block so the bridged
     ``sys_os_*`` tools register and every shell call crosses the policy
     layer (``blast_radius`` matches ``sys_os_shell``).
 
@@ -119,7 +119,7 @@ def test_pi_subagent_is_headless_scaffold_worker(polly_spec: AgentSpec) -> None:
     assert pi.executor.config.get("harness") == "pi"
     assert pi.executor.model is None
     assert pi.executor.profile is None
-    # No native bypass knobs — pi is not a terminal harness.
+    # No native bypass knobs â€” pi is not a terminal harness.
     assert pi.executor.config.get("permission_mode") is None
     assert pi.executor.config.get("yolo") is None
     assert pi.os_env is not None
@@ -209,8 +209,8 @@ def test_orchestrator_forbids_premature_idle_after_announcing_intent() -> None:
     brain ended its very first
     turn after a single intent sentence ("I'll load the cross-review skill and
     fetch the PR diff in parallel") without emitting any tool call, so nothing
-    fanned out and — because no sub-agent was dispatched — no inbox auto-wake
-    ever arrived to revive it. The whole decompose → fan-out → review →
+    fanned out and â€” because no sub-agent was dispatched â€” no inbox auto-wake
+    ever arrived to revive it. The whole decompose â†’ fan-out â†’ review â†’
     synthesize pipeline silently stalled. The fix is a strategy-layer rule
     ("mechanism is code; strategy is prompts + skills"): announcing a next
     action is not progress, so the tool calls that perform it must ride the
@@ -221,7 +221,7 @@ def test_orchestrator_forbids_premature_idle_after_announcing_intent() -> None:
     config = (_POLLY_BUNDLE / "config.yaml").read_text(encoding="utf-8")
     compact = " ".join(config.split())
 
-    # The hard rule and its rationale (dropped turn → no fan-out → no wake).
+    # The hard rule and its rationale (dropped turn â†’ no fan-out â†’ no wake).
     assert "Act in the SAME turn you announce" in compact
     assert "NEVER end a turn after only saying what you are about to do" in compact
     assert "no inbox wake will ever arrive to revive you" in compact
@@ -233,7 +233,7 @@ def test_orchestrator_forbids_premature_idle_after_announcing_intent() -> None:
         "anything"
     ) in compact
     # The first-turn case (the exact repro) is called out explicitly.
-    assert "including right after a preamble on your FIRST turn — is a bug" in compact
+    assert "including right after a preamble on your FIRST turn â€” is a bug" in compact
 
     # Each spine skill reinforces "dispatch in this turn, then end the turn" so a
     # skill the brain loads can't reintroduce the announce-then-yield gap.
@@ -263,7 +263,7 @@ def test_orchestrator_delegates_substantive_work() -> None:
     compact = " ".join(config.split())
 
     # The hard rule: no code written directly; all coding work is delegated.
-    assert "you do NOT write code — ALL coding work gets delegated" in compact
+    assert "you do NOT write code â€” ALL coding work gets delegated" in compact
     assert "Any change to source code or tests, however small" in compact
     # Real investigation is delegated to explore/search workers...
     assert (
@@ -378,9 +378,9 @@ def test_function_policies_have_nonempty_arguments(polly_spec: AgentSpec) -> Non
     Every polly function-policy supplies a non-empty ``function.arguments``.
 
     Regression guard for a bug found in live testing: the resolver only calls
-    the factory when arguments are truthy —
+    the factory when arguments are truthy â€”
     ``target(**func_ref.arguments) if func_ref.arguments else target``
-    (agent_meow/policies/function.py). With empty ``arguments: {}`` the factory
+    (omnigent/policies/function.py). With empty ``arguments: {}`` the factory
     object itself is used as the evaluator, so the first gated tool call fails
     closed. Our policies are factories, so each must pass at least one argument.
     """

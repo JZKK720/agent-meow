@@ -14,22 +14,22 @@ from unittest.mock import patch
 
 import pytest
 
-from agent_meow.entities import Conversation, ConversationItem
-from agent_meow.entities.agent import Agent, LoadedAgent
-from agent_meow.entities.conversation import FunctionCallData
-from agent_meow.policies.types import PolicyAction, PolicyResult
-from agent_meow.server.routes.sessions import (
+from omnigent.entities import Conversation, ConversationItem
+from omnigent.entities.agent import Agent, LoadedAgent
+from omnigent.entities.conversation import FunctionCallData
+from omnigent.policies.types import PolicyAction, PolicyResult
+from omnigent.server.routes.sessions import (
     _build_evaluation_context,
     _build_skill_slash_command_policy_body,
     _evaluate_input_policy,
     _evaluate_tool_call_policy,
     _persist_policy_deny_sentinel,
 )
-from agent_meow.server.schemas import SessionEventInput
-from agent_meow.spec import AgentSpec
-from agent_meow.spec.types import Phase, PolicySpec
+from omnigent.server.schemas import SessionEventInput
+from omnigent.spec import AgentSpec
+from omnigent.spec.types import Phase, PolicySpec
 
-# ── Stub stores ──────────────────────────────────────────────
+# â”€â”€ Stub stores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -142,7 +142,7 @@ class _FakeRequest:
     ``_hold_native_ask_gate`` (for upstream-disconnect detection while
     parked on an ASK). The ALLOW / DENY / skip tests never reach the
     gate, and the ASK tests stub the gate out, so the request is never
-    actually introspected — this exists only to fill the positional
+    actually introspected â€” this exists only to fill the positional
     parameter with a real object rather than ``None``.
     """
 
@@ -154,7 +154,7 @@ class _FakeRequest:
         return False
 
 
-# ── Helpers ──────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_function_call_body(
@@ -203,13 +203,13 @@ def _make_spec_no_guardrails() -> AgentSpec:
     return AgentSpec(spec_version=1, name="test-agent")
 
 
-# ── Tests ────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
-_CACHE_PATCH = "agent_meow.server.routes.sessions.get_agent_cache"
-_ENGINE_PATCH = "agent_meow.server.routes.sessions.build_policy_engine"
-_HOLD_GATE_PATCH = "agent_meow.server.routes.sessions._hold_native_ask_gate"
-_STREAM_PATCH = "agent_meow.server.routes.sessions.session_stream"
+_CACHE_PATCH = "omnigent.server.routes.sessions.get_agent_cache"
+_ENGINE_PATCH = "omnigent.server.routes.sessions.build_policy_engine"
+_HOLD_GATE_PATCH = "omnigent.server.routes.sessions._hold_native_ask_gate"
+_STREAM_PATCH = "omnigent.server.routes.sessions.session_stream"
 
 
 @pytest.mark.asyncio
@@ -319,7 +319,7 @@ async def test_pending_verdict_registers_elicitation():
         mock_cache.return_value.load.return_value = loaded
         mock_engine = mock_build.return_value
         mock_engine.evaluate = _eval
-        # No per-policy override → the spec-wide engine value applies.
+        # No per-policy override â†’ the spec-wide engine value applies.
         mock_engine.spec_for = lambda _name: None
         mock_engine.ask_timeout = 30
 
@@ -394,7 +394,7 @@ async def test_pending_verdict_carries_per_policy_ask_timeout():
         )
 
     assert result["verdict"] == "pending"
-    # 86400 (per-policy) — not 30 (engine-wide): the override wins.
+    # 86400 (per-policy) â€” not 30 (engine-wide): the override wins.
     assert result["ask_timeout"] == 86400
 
 
@@ -426,7 +426,7 @@ async def test_no_agent_binding_skips_policy():
     assert result is None
 
 
-# ── INPUT policy tests (step 5.6) ───────────────────────────
+# â”€â”€ INPUT policy tests (step 5.6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_user_message_body(
@@ -455,7 +455,7 @@ def _make_spec_with_guardrails() -> AgentSpec:
 
     :returns: AgentSpec with guardrails enabled.
     """
-    from agent_meow.spec.types import GuardrailsSpec
+    from omnigent.spec.types import GuardrailsSpec
 
     return AgentSpec(
         spec_version=1,
@@ -673,7 +673,7 @@ async def test_input_ask_approved_falls_through_to_allow():
     via ``_hold_native_ask_gate`` and, on accept, return ``None`` so the
     /events handler forwards the message. Before the fix, an input ASK
     returned a ``pending`` verdict that the handler collapsed to
-    ``[Denied by policy]`` — the approval card was published but nothing
+    ``[Denied by policy]`` â€” the approval card was published but nothing
     waited on it.
     """
     conv_store = _FakeConversationStore()
@@ -710,7 +710,7 @@ async def test_input_ask_approved_falls_through_to_allow():
         Records the phase so the test can assert the ASK was routed
         through the gate at the REQUEST phase (not the old pending path).
 
-        :returns: ``True`` — the user clicked Approve.
+        :returns: ``True`` â€” the user clicked Approve.
         """
         held_phases.append(phase)
         return True
@@ -784,7 +784,7 @@ async def test_input_ask_declined_denies():
     ) -> bool:
         """Stand in for the server-side approval park; simulate decline.
 
-        :returns: ``False`` — the user declined / the gate timed out.
+        :returns: ``False`` â€” the user declined / the gate timed out.
         """
         return False
 
@@ -844,7 +844,7 @@ async def test_input_policy_deny_sentinel_persists_as_assistant_history():
     ]
 
 
-# ── OUTPUT policy tests (step 5.7) ──────────────────────────
+# â”€â”€ OUTPUT policy tests (step 5.7) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_assistant_message_body(
@@ -871,7 +871,7 @@ async def test_output_allow_verdict():
     """OUTPUT policy evaluation returns allow when the engine
     ALLOWs the assistant response.
     """
-    from agent_meow.server.routes.sessions import _evaluate_output_policy
+    from omnigent.server.routes.sessions import _evaluate_output_policy
 
     conv_store = _FakeConversationStore()
     agent_store = _FakeAgentStore(agent=_make_agent())
@@ -911,7 +911,7 @@ async def test_output_deny_replaces_text():
     """OUTPUT policy DENY replaces the assistant text with the
     deny sentinel in the persisted message.
     """
-    from agent_meow.server.routes.sessions import _evaluate_output_policy
+    from omnigent.server.routes.sessions import _evaluate_output_policy
 
     conv_store = _FakeConversationStore()
     agent_store = _FakeAgentStore(agent=_make_agent())
@@ -962,7 +962,7 @@ def test_build_evaluation_context_request_accepts_string_data() -> None:
     opencode's policy plugin sends the prompt text directly as ``data`` for
     PHASE_REQUEST (``{"event": {"type": "PHASE_REQUEST", "data": "<prompt>"}}``).
     The old code did ``data.get("text")`` unconditionally and ``AttributeError``ed
-    on a string, 500ing the evaluate endpoint — which silently failed the
+    on a string, 500ing the evaluate endpoint â€” which silently failed the
     request-phase gate OPEN (cost-over-budget terminal prompts sailed through).
     """
     ctx = _build_evaluation_context(Phase.REQUEST, "delete the prod database", {})

@@ -6,13 +6,13 @@ pidfile AND must stamp the config-signature sidecar, so a later
 and respawning it. These tests spawn the REAL CLI subprocesses and assert
 process survival across the three scenarios the bug report describes:
 
-1. ``server`` then ``connect``      → the foreground server survives.
-2. ``connect`` then ``server``      → the connect-owned server survives
+1. ``server`` then ``connect``      â†’ the foreground server survives.
+2. ``connect`` then ``server``      â†’ the connect-owned server survives
    (the second ``server`` reuses it and exits without binding).
-3. ``server`` + ``server --port X`` → an explicit ``--port`` is a
+3. ``server`` + ``server --port X`` â†’ an explicit ``--port`` is a
    dedicated server; both run side by side, neither is torn down.
 
-No LLM is needed — this is pure process-lifecycle wiring — so these run
+No LLM is needed â€” this is pure process-lifecycle wiring â€” so these run
 without ``--llm-api-key``::
 
     .venv/bin/python -m pytest tests/e2e/test_local_server_lifecycle_e2e.py -v
@@ -21,7 +21,7 @@ Each test isolates ``$HOME`` to a tmp dir so the pidfile / sig / DB land
 under ``<home>/.agent-meow`` and never touch the developer's real
 ``~/.agent-meow`` or a server on the real :8000 (a busy :8000 just makes
 the canonical server fall back to a free port, recorded in the isolated
-pidfile — discovery is via the pidfile, never the port).
+pidfile â€” discovery is via the pidfile, never the port).
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ from tests.e2e.helpers import HEALTH_TIMEOUT_S, POLL_INTERVAL_S
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# Server boot budget — shared with the e2e suite's live_server fixture: a
+# Server boot budget â€” shared with the e2e suite's live_server fixture: a
 # cold `agent-meow server` imports the whole stack and runs SQLite
 # migrations before /health answers.
 _SERVER_BOOT_TIMEOUT_S = HEALTH_TIMEOUT_S
@@ -65,14 +65,14 @@ _ENV_TO_CLEAR = (
     "OMNIGENT_DATA_DIR",
     "OMNIGENT_CONFIG_HOME",
     "OMNIGENT_AUTH_ENABLED",
-    # Pre-rename alias for OMNIGENT_AUTH_ENABLED — still honored, so strip
+    # Pre-rename alias for OMNIGENT_AUTH_ENABLED â€” still honored, so strip
     # it too or a dev shell that exports it flips the server into accounts mode.
     "OMNIGENT_ACCOUNTS_ENABLED",
     # An ambient issuer would select oidc once auth is (accidentally) enabled.
     "OMNIGENT_OIDC_ISSUER",
     "OMNIGENT_AUTH_PROVIDER",
     # ensure_local_omnigent_server honors OMNIGENT_DATABASE_URI over the isolated
-    # tmp sqlite db, and the server honors OMNIGENT_RUNNER_TUNNEL_TOKEN — if
+    # tmp sqlite db, and the server honors OMNIGENT_RUNNER_TUNNEL_TOKEN â€” if
     # either is set on the dev box / CI, the spawned server escapes the
     # isolated HOME (shared DB, tunnel-token allowlist) and the test flakes.
     "OMNIGENT_DATABASE_URI",
@@ -99,7 +99,7 @@ def _reap_pid(pid: int, timeout: float) -> None:
     """Wait for a (detached, non-child) pid to die, SIGKILL if it doesn't.
 
     The detached connect-owned server isn't our child, so ``waitpid`` won't
-    work — poll liveness instead, then escalate to SIGKILL.
+    work â€” poll liveness instead, then escalate to SIGKILL.
 
     :param pid: Process id already sent SIGTERM, e.g. ``12345``.
     :param timeout: Seconds to wait for a clean exit before SIGKILL.
@@ -136,7 +136,7 @@ def _pidfile_path(home: Path) -> Path:
     """Return the canonical local-server pidfile path under an isolated home.
 
     :param home: The isolated home dir.
-    :returns: ``<home>/.agent_meow/local_server.pid``.
+    :returns: ``<home>/.omnigent/local_server.pid``.
     """
     return home / ".agent-meow" / "local_server.pid"
 
@@ -260,7 +260,7 @@ def _wait_for_host_online(port: int, timeout: float = _HOST_ONLINE_TIMEOUT_S) ->
             pass
         time.sleep(_POLL_INTERVAL_S)
     raise AssertionError(
-        f"no host came online on :{port} within {timeout}s — connect did not "
+        f"no host came online on :{port} within {timeout}s â€” connect did not "
         f"reuse the running server (it crashed or respawned a replacement)."
     )
 
@@ -271,15 +271,15 @@ def _respawned_server_pids(home: Path) -> set[int]:
     The single-server invariant for scenario 1: ``connect`` must REUSE the
     foreground server, not spawn a competitor. Any respawn goes through
     :func:`ensure_local_omnigent_server`, which spawns a detached
-    ``agent-meow server --database-uri sqlite:///<home>/.agent_meow/chat.db
-    --artifact-location <home>/.agent_meow/artifacts`` — so its argv carries
+    ``agent-meow server --database-uri sqlite:///<home>/.omnigent/chat.db
+    --artifact-location <home>/.omnigent/artifacts`` â€” so its argv carries
     this isolated HOME path. The reused foreground server (spawned here as a
     bare ``["server"]``) does NOT, so every match is a respawned competitor,
     never the original. This is independent of the pidfile, so it catches a
     respawn that preserved the pidfile (e.g. a stray bound to a random port).
 
     :param home: The test's isolated home dir.
-    :returns: PIDs of live ``agent_meow.cli ... server`` processes whose
+    :returns: PIDs of live ``omnigent.cli ... server`` processes whose
         command line references ``home``; empty when ``connect`` reused.
     """
     # ``ww`` disables ps's column-width truncation: the home path sits late in
@@ -292,13 +292,13 @@ def _respawned_server_pids(home: Path) -> set[int]:
         text=True,
         check=False,
     ).stdout
-    # Match the home as a directory PREFIX (``<home>/.agent_meow/...`` always
-    # appears in a respawn's argv), not a bare substring — so a sibling home
+    # Match the home as a directory PREFIX (``<home>/.omnigent/...`` always
+    # appears in a respawn's argv), not a bare substring â€” so a sibling home
     # sharing a prefix (``/tmp/x/home`` vs ``/tmp/x/home2``) can't false-match.
     home_prefix = f"{home}{os.sep}"
     pids: set[int] = set()
     for line in out.splitlines():
-        if "agent_meow.cli" not in line or home_prefix not in line:
+        if "omnigent.cli" not in line or home_prefix not in line:
             continue
         if not re.search(r"\bserver\b", line):
             continue
@@ -340,7 +340,7 @@ class _Procs:
     ) -> subprocess.Popen[bytes]:
         """Spawn a CLI subprocess with output captured to ``log``.
 
-        :param args: CLI args after the ``python -m agent_meow.cli`` prefix.
+        :param args: CLI args after the ``python -m omnigent.cli`` prefix.
         :param env: Subprocess environment.
         :param cwd: Working directory (an isolated home).
         :param log: File to capture combined stdout/stderr.
@@ -350,7 +350,7 @@ class _Procs:
         fh = open(log, "wb")  # noqa: SIM115
         self._logs.append(fh)
         proc = subprocess.Popen(
-            [sys.executable, "-m", "agent_meow.cli", *args],
+            [sys.executable, "-m", "omnigent.cli", *args],
             env=env,
             cwd=str(cwd),
             stdout=fh,
@@ -383,7 +383,7 @@ class _Procs:
         """SIGTERM every tracked process and detached server, then SIGKILL.
 
         ``connect`` spawns the local server in a new session, so SIGTERM to
-        ``connect`` does not cascade to it — we must signal it via the
+        ``connect`` does not cascade to it â€” we must signal it via the
         pidfile AND escalate to SIGKILL if it ignores SIGTERM, or it leaks
         across tests / xdist workers.
         """
@@ -410,7 +410,7 @@ class _Procs:
             _reap_pid(pid, timeout=5.0)
         # Reap any server respawned against a tracked home (the single-server
         # assertion's failure mode): not a child, not in the pidfile, so only
-        # the argv scan finds it. SIGKILL directly — there's no clean-exit
+        # the argv scan finds it. SIGKILL directly â€” there's no clean-exit
         # contract for a server the test never meant to spawn.
         for home in self._homes:
             for pid in _respawned_server_pids(home):
@@ -438,12 +438,12 @@ def test_connect_reuses_foreground_server_without_killing_it(
     procs: _Procs,
     tmp_path: Path,
 ) -> None:
-    """Scenario 1: ``server`` then ``connect`` — the server survives.
+    """Scenario 1: ``server`` then ``connect`` â€” the server survives.
 
     Before the fix, the foreground server stamped no config-sig sidecar, so
     connect saw ``None != desired`` and SIGTERM'd it. We assert the original
     PID stays alive, the pidfile is unchanged, and a host comes online on the
-    ORIGINAL port — proving connect bound to the SAME server, not a respawn.
+    ORIGINAL port â€” proving connect bound to the SAME server, not a respawn.
     """
     home = tmp_path / "home"
     home.mkdir()
@@ -467,11 +467,11 @@ def test_connect_reuses_foreground_server_without_killing_it(
     # The original foreground server was reused, not torn down + respawned.
     assert _pid_alive(pid1), "foreground server was killed by connect"
     assert _read_pidfile(_pidfile_path(home)) == (pid1, port1), (
-        "pidfile changed — connect respawned a replacement server"
+        "pidfile changed â€” connect respawned a replacement server"
     )
     assert _health_ok(port1), "original server stopped answering /health"
     # Direct single-server invariant: the asserts above prove the
-    # ORIGINAL survived but, on their own, only catch a respawn TRANSITIVELY —
+    # ORIGINAL survived but, on their own, only catch a respawn TRANSITIVELY â€”
     # via the pidfile rewrite that `ensure_local_omnigent_server` happens to do. A
     # respawn that left the pidfile pointing at the original (a stray bound to
     # a random port) would slip past them. Assert directly that connect spawned
@@ -479,7 +479,7 @@ def test_connect_reuses_foreground_server_without_killing_it(
     strays = _respawned_server_pids(home)
     assert strays == set(), (
         f"connect spawned {len(strays)} detached local server(s) {sorted(strays)} "
-        f"instead of reusing the foreground one — exactly one server must exist.\n"
+        f"instead of reusing the foreground one â€” exactly one server must exist.\n"
         f"--- connect log ---\n{_tail(tmp_path / 'connect.log')}"
     )
 
@@ -488,11 +488,11 @@ def test_foreground_server_reuses_connect_owned_server(
     procs: _Procs,
     tmp_path: Path,
 ) -> None:
-    """Scenario 2 (vice versa): ``connect`` then ``server`` — both survive.
+    """Scenario 2 (vice versa): ``connect`` then ``server`` â€” both survive.
 
     The connect-owned local server is already healthy in the pidfile, so a
     second canonical ``agent-meow server`` must reuse it (print "already
-    running — reusing it" and exit 0) rather than bind a competing server or
+    running â€” reusing it" and exit 0) rather than bind a competing server or
     tear the running one down.
     """
     home = tmp_path / "home"
@@ -529,14 +529,14 @@ def test_explicit_port_servers_run_side_by_side(
 
     An explicit ``--port`` marks a DEDICATED server: it binds the exact port
     and must NOT consult or register in the shared pidfile. Two such servers
-    on different ports run independently — the canonical reuse/respawn logic
+    on different ports run independently â€” the canonical reuse/respawn logic
     never engages.
     """
     home = tmp_path / "home"
     home.mkdir()
     env = _isolated_env(home)
     # Two distinct free ports: the probe socket closes immediately, so the OS
-    # could hand out the same ephemeral port twice — loop until they differ.
+    # could hand out the same ephemeral port twice â€” loop until they differ.
     port_a = _find_free_port()
     port_b = _find_free_port()
     while port_b == port_a:
@@ -552,10 +552,10 @@ def test_explicit_port_servers_run_side_by_side(
     )
     _wait_for_health(port_b, srv_b, tmp_path / "b.log")
 
-    # Both alive, both serving — neither tore the other down.
+    # Both alive, both serving â€” neither tore the other down.
     assert srv_a.poll() is None and srv_b.poll() is None
     assert _health_ok(port_a) and _health_ok(port_b)
     # A dedicated (explicit-port) server never registers in the shared pidfile.
     assert not _pidfile_path(home).exists(), (
-        "an explicit-port server wrote the canonical pidfile — it must stay dedicated"
+        "an explicit-port server wrote the canonical pidfile â€” it must stay dedicated"
     )

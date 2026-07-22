@@ -1,4 +1,4 @@
-"""End-to-end TCP transport tests — real uvicorn, real localhost socket.
+"""End-to-end TCP transport tests â€” real uvicorn, real localhost socket.
 
 The Phase 3 transport mirrors Phase 2's UDS but on a TCP loopback
 socket. The application protocol is identical; only the wire bytes
@@ -10,19 +10,19 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from agent_meow.runner.transports.tcp import (
+from omnigent.runner.transports.tcp import (
     RunnerTCPSubprocess,
     create_tcp_client,
 )
 
 # ``_entry:create_app`` requires RUNNER_SERVER_URL in the subprocess
-# environment. Tests don't need a real agent-meow server — the env var only
+# environment. Tests don't need a real agent-meow server â€” the env var only
 # needs to satisfy the non-empty check so the factory can build the
 # httpx client. The actual URL is never dialled during these transport
 # smoke tests.
 _FAKE_SERVER_ENV = {"RUNNER_SERVER_URL": "http://127.0.0.1:1"}
 
-# ── Subprocess lifecycle ─────────────────────────────────
+# â”€â”€ Subprocess lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_runner_tcp_subprocess_starts_and_binds_port() -> None:
@@ -41,7 +41,7 @@ def test_runner_tcp_subprocess_with_explicit_port() -> None:
     actually used what we passed.
     """
     # Probe for a free port via the OS, then pass it explicitly.
-    from agent_meow.runner.transports.tcp import _pick_free_port
+    from omnigent.runner.transports.tcp import _pick_free_port
 
     port = _pick_free_port()
     with RunnerTCPSubprocess(port=port, extra_env=_FAKE_SERVER_ENV) as runner:
@@ -55,12 +55,12 @@ def test_runner_tcp_subprocess_cleans_up_on_exit() -> None:
     assert process.poll() is not None, "TCP subprocess must be reaped on context-manager exit."
 
 
-# ── Round-trip via the TCP client ────────────────────────
+# â”€â”€ Round-trip via the TCP client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_health_round_trip_via_tcp() -> None:
-    """The flagship Phase 3 test: server → TCP → uvicorn → runner FastAPI."""
+    """The flagship Phase 3 test: server â†’ TCP â†’ uvicorn â†’ runner FastAPI."""
     with RunnerTCPSubprocess(extra_env=_FAKE_SERVER_ENV) as runner:
         async with create_tcp_client(runner.base_url) as client:
             response = await client.get("/health")
@@ -74,7 +74,7 @@ async def test_post_session_events_stub_via_tcp() -> None:
 
     ``create_runner_app_from_env`` starts without a HarnessProcessManager
     (scaffold mode), so the endpoint returns 501. The test asserts that
-    the route exists and the transport delivers the response — not that
+    the route exists and the transport delivers the response â€” not that
     the runner is fully functional.
     """
     with RunnerTCPSubprocess(
@@ -88,13 +88,13 @@ async def test_post_session_events_stub_via_tcp() -> None:
             assert response.status_code == 501
 
 
-# ── Failure modes ────────────────────────────────────────
+# â”€â”€ Failure modes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_tcp_subprocess_with_bad_app_factory_raises() -> None:
-    """Bad import path → uvicorn crashes → __enter__ surfaces a useful error."""
+    """Bad import path â†’ uvicorn crashes â†’ __enter__ surfaces a useful error."""
     with pytest.raises(RuntimeError, match="exited prematurely"):
-        with RunnerTCPSubprocess(app_factory_path="agent_meow.does.not.exist:app"):
+        with RunnerTCPSubprocess(app_factory_path="omnigent.does.not.exist:app"):
             pass
 
 

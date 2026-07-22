@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from agent_meow.host.frames import (
+from omnigent.host.frames import (
     HARNESS_NOT_CONFIGURED_ERROR_CODE,
     HostCreateDirFrame,
     HostCreateDirResultFrame,

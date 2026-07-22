@@ -1,12 +1,12 @@
 """Tests for the per-user read-state feature:
 
-  * ``PUT /v1/sessions/{session_id}/read-state`` — set the caller's
+  * ``PUT /v1/sessions/{session_id}/read-state`` â€” set the caller's
     read-state for one session (returns ``204``).
   * ``viewer_last_seen`` / ``viewer_unread`` embedded per-user in the
     ``GET /v1/sessions`` list items (built by ``_build_session_list_item``).
 
 Read state is per-user and in-memory on the server (module-level dicts in
-``agent_meow.server.routes.sessions``); each test resets those globals so
+``omnigent.server.routes.sessions``); each test resets those globals so
 state doesn't leak between cases. Runs without auth (``permission_store``
 is ``None``), so the caller is the single-user ``None`` identity and the
 PUT's access check short-circuits.
@@ -21,14 +21,14 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.testclient import TestClient
 
-from agent_meow.entities import Conversation
-from agent_meow.errors import OmnigentError
-from agent_meow.server.routes import sessions as sessions_mod
-from agent_meow.server.routes.sessions import create_sessions_router
+from omnigent.entities import Conversation
+from omnigent.errors import OmnigentError
+from omnigent.server.routes import sessions as sessions_mod
+from omnigent.server.routes.sessions import create_sessions_router
 
 
 class _ConversationStore:
-    """Conversation store stub — unused by the PUT when auth is off."""
+    """Conversation store stub â€” unused by the PUT when auth is off."""
 
     def get_conversation(self, conversation_id: str) -> None:
         """Return ``None`` (no conversation lookups happen without auth)."""
@@ -36,7 +36,7 @@ class _ConversationStore:
 
 
 class _AgentStore:
-    """Agent store stub — present only to satisfy the router factory."""
+    """Agent store stub â€” present only to satisfy the router factory."""
 
     def get(self, agent_id: str) -> None:
         """Return ``None``."""

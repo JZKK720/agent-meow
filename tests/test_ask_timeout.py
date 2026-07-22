@@ -15,11 +15,11 @@ unreachable server still fails out promptly. If any delivery budget drops
 below ``DEFAULT_ASK_TIMEOUT`` again, these fail loudly.
 """
 
-import agent_meow.runner.app as runner_app
-import agent_meow.runner.pending_approvals as pending_approvals
-import agent_meow.runner.tool_dispatch as tool_dispatch
-import agent_meow.runtime.harnesses._scaffold as scaffold
-from agent_meow.spec.types import DEFAULT_ASK_TIMEOUT
+import omnigent.runner.app as runner_app
+import omnigent.runner.pending_approvals as pending_approvals
+import omnigent.runner.tool_dispatch as tool_dispatch
+import omnigent.runtime.harnesses._scaffold as scaffold
+from omnigent.spec.types import DEFAULT_ASK_TIMEOUT
 
 # The deciding policy's default ASK budget — one day. Every delivery client
 # that can park behind the gate is pinned to this so none caps the wait first.

@@ -9,11 +9,11 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from agent_meow.entities import Conversation
-from agent_meow.errors import OmnigentError
-from agent_meow.inner.codex_executor import CodexExecutor
-from agent_meow.server import app as app_module
-from agent_meow.server.routes.sessions import create_sessions_router
+from omnigent.entities import Conversation
+from omnigent.errors import OmnigentError
+from omnigent.inner.codex_executor import CodexExecutor
+from omnigent.server import app as app_module
+from omnigent.server.routes.sessions import create_sessions_router
 from tests.codex_parity.helpers import (
     assert_completed as _assert_completed,
 )
@@ -49,8 +49,8 @@ class _CodexGoalConversationStore:
                 root_conversation_id="conv_codex",
                 agent_id="ag_codex",
                 labels={
-                    "agent_meow.ui": "terminal",
-                    "agent_meow.wrapper": "codex-native-ui",
+                    "omnigent.ui": "terminal",
+                    "omnigent.wrapper": "codex-native-ui",
                 },
             ),
             "conv_codex_no_runner": Conversation(
@@ -60,8 +60,8 @@ class _CodexGoalConversationStore:
                 root_conversation_id="conv_codex_no_runner",
                 agent_id="ag_codex",
                 labels={
-                    "agent_meow.ui": "terminal",
-                    "agent_meow.wrapper": "codex-native-ui",
+                    "omnigent.ui": "terminal",
+                    "omnigent.wrapper": "codex-native-ui",
                 },
             ),
         }

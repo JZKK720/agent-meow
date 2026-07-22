@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.cursor_native_bridge import (
+from omnigent.cursor_native_bridge import (
     BRIDGE_DIR_ENV_VAR,
     FORK_HISTORY_CLOSE_TAG,
     FORK_HISTORY_OPEN_TAG,
@@ -35,13 +35,13 @@ from agent_meow.cursor_native_bridge import (
     write_mcp_config,
     write_tmux_target,
 )
-from agent_meow.inner import cursor_native_executor as cne
-from agent_meow.inner.cursor_native_executor import (
+from omnigent.inner import cursor_native_executor as cne
+from omnigent.inner.cursor_native_executor import (
     CursorNativeExecutor,
     _content_to_text,
     _latest_user_text,
 )
-from agent_meow.inner.executor import ExecutorError
+from omnigent.inner.executor import ExecutorError
 
 
 class TestContentExtraction:
@@ -162,7 +162,7 @@ class TestRunTurnPreambleInjection:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # If the FIRST injection fails (e.g. the TUI exited), the preamble must
-        # NOT be consumed — otherwise the forked history is lost permanently and
+        # NOT be consumed â€” otherwise the forked history is lost permanently and
         # a retried first turn launches with no prior context.
         injected: list[str] = []
         calls = {"n": 0}
@@ -215,7 +215,7 @@ class TestPastePayload:
         assert _paste_payload_bytes("a\tb\x1b\x07c") == b"a\tbc"
 
     def test_unicode_passthrough(self) -> None:
-        assert _paste_payload_bytes("café") == "café".encode()
+        assert _paste_payload_bytes("cafÃ©") == "cafÃ©".encode()
 
 
 class TestBridge:
@@ -231,7 +231,7 @@ class TestBridge:
         env = build_cursor_native_spawn_env("conv_xyz")
         assert env[BRIDGE_DIR_ENV_VAR] == str(bridge_dir_for_session_id("conv_xyz"))
         # The cursor bridge has no active-session concept (unlike claude/pi), so
-        # no request-session-id guard env is emitted — only the bridge dir.
+        # no request-session-id guard env is emitted â€” only the bridge dir.
         assert "HARNESS_CURSOR_NATIVE_REQUEST_SESSION_ID" not in env
         assert list(env) == [BRIDGE_DIR_ENV_VAR]
 
@@ -250,7 +250,7 @@ class TestBridge:
         assert server["args"] == [
             "-I",
             "-m",
-            "agent_meow.claude_native_bridge",
+            "omnigent.claude_native_bridge",
             "serve-mcp",
             "--bridge-dir",
             str(tmp_path),
@@ -264,7 +264,7 @@ class TestBridge:
         workspace = tmp_path / "workspace"
         bridge_dir = tmp_path / "bridge"
         monkeypatch.setattr(
-            "agent_meow.cursor_native_bridge.approve_mcp_server_for_workspace",
+            "omnigent.cursor_native_bridge.approve_mcp_server_for_workspace",
             lambda _workspace: pytest.fail("approval must happen after tool relay starts"),
         )
         path = write_mcp_config(workspace, bridge_dir, python_executable="python-test")
@@ -321,7 +321,7 @@ class TestBridge:
         calls: list[dict[str, object]] = []
 
         monkeypatch.setattr(
-            "agent_meow.cursor_native.resolve_cursor_executable",
+            "omnigent.cursor_native.resolve_cursor_executable",
             lambda: "/bin/cursor-agent-test",
         )
 
@@ -350,12 +350,12 @@ class TestBridge:
 
 class TestRegistration:
     def test_harness_is_registered(self) -> None:
-        from agent_meow.runtime.harnesses import _HARNESS_MODULES
+        from omnigent.runtime.harnesses import _HARNESS_MODULES
 
-        assert _HARNESS_MODULES["cursor-native"] == "agent_meow.inner.cursor_native_harness"
+        assert _HARNESS_MODULES["cursor-native"] == "omnigent.inner.cursor_native_harness"
 
     def test_harness_is_allowlisted(self) -> None:
-        from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+        from omnigent.spec._omnigent_compat import OMNIGENT_HARNESSES
 
         assert "cursor-native" in OMNIGENT_HARNESSES
 
@@ -363,13 +363,13 @@ class TestRegistration:
         # cursor-native launches the cursor-agent TUI in an agent-meow terminal
         # (like claude/codex/pi-native), so the runner must treat it as a native
         # terminal harness.
-        from agent_meow.harness_aliases import is_native_harness
+        from omnigent.harness_aliases import is_native_harness
 
         assert is_native_harness("cursor-native") is True
         assert is_native_harness("native-cursor") is True
 
     def test_native_coding_agent_record(self) -> None:
-        from agent_meow.native_coding_agents import native_coding_agent_for_harness
+        from omnigent.native_coding_agents import native_coding_agent_for_harness
 
         agent = native_coding_agent_for_harness("cursor-native")
         assert agent is not None

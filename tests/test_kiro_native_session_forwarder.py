@@ -10,7 +10,7 @@ from typing import Any
 import httpx
 import pytest
 
-import agent_meow.kiro_native_session_forwarder as forwarder
+import omnigent.kiro_native_session_forwarder as forwarder
 
 
 def _write_kiro_session(

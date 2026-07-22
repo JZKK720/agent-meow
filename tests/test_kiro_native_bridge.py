@@ -11,8 +11,8 @@ from typing import Any
 
 import pytest
 
-import agent_meow.kiro_native_bridge as bridge
-from agent_meow.kiro_native_bridge import (
+import omnigent.kiro_native_bridge as bridge
+from omnigent.kiro_native_bridge import (
     KIRO_ACP_RECORD_PATH_ENV_VAR,
     KIRO_NATIVE_BRIDGE_DIR_ENV_VAR,
     acp_record_path,
@@ -24,28 +24,28 @@ from agent_meow.kiro_native_bridge import (
 )
 
 _READY_PANE = (
-    "old output\n────────────────\nkiro_default · auto\n\n ask a question or describe a task ↵"
+    "old output\nâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\nkiro_default Â· auto\n\n ask a question or describe a task â†µ"
 )
 _PERMISSION_PANE = """
-────────────────────────────────────────────────────────────────────────────────
-↓ Shell pwd
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+â†“ Shell pwd
 
  shell requires approval
- ❯ Yes, single permission
+ â¯ Yes, single permission
    Trust, always allow in this session
    No (Tab to edit)
-────────────────────────────────────────────────────────────────────────────────
-ESC to close · Tab to edit
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ESC to close Â· Tab to edit
 """
 _PERMISSION_PANE_TRUST_FOCUSED = _PERMISSION_PANE.replace(
-    "❯ Yes, single permission\n   Trust, always allow in this session",
-    "  Yes, single permission\n ❯ Trust, always allow in this session",
+    "â¯ Yes, single permission\n   Trust, always allow in this session",
+    "  Yes, single permission\n â¯ Trust, always allow in this session",
 )
 _PERMISSION_PANE_REJECT_FOCUSED = _PERMISSION_PANE.replace(
-    "❯ Yes, single permission\n   Trust, always allow in this session\n   No (Tab to edit)",
-    "  Yes, single permission\n   Trust, always allow in this session\n ❯ No (Tab to edit)",
+    "â¯ Yes, single permission\n   Trust, always allow in this session\n   No (Tab to edit)",
+    "  Yes, single permission\n   Trust, always allow in this session\n â¯ No (Tab to edit)",
 )
-_PERMISSION_PANE_DATE = _PERMISSION_PANE.replace("↓ Shell pwd", "↓ Shell date")
+_PERMISSION_PANE_DATE = _PERMISSION_PANE.replace("â†“ Shell pwd", "â†“ Shell date")
 
 
 def _install_fake_tmux(
@@ -381,7 +381,7 @@ def test_inject_user_message_multiline_routes_through_bracketed_paste(
 
     The bug: ``send-keys -l`` delivers the interior newlines as Enter keys, so
     the first line submits on its own. The fix routes the message through a
-    single bracketed paste (``paste-buffer -p``) — the CR encoding the TUI needs
+    single bracketed paste (``paste-buffer -p``) â€” the CR encoding the TUI needs
     to keep the breaks as draft data is covered by
     :func:`test_paste_payload_bytes_encodes_line_breaks_as_cr`. Here we just pin
     that multi-line content never reaches ``send-keys -l`` and is committed by a
@@ -400,7 +400,7 @@ def test_inject_user_message_multiline_routes_through_bracketed_paste(
 
     assert any("paste-buffer" in call and "-p" in call for call in calls)
     assert not any("-l" in call for call in calls)
-    # Exactly one Enter commits the whole draft — not one per line.
+    # Exactly one Enter commits the whole draft â€” not one per line.
     assert sum(1 for call in calls if call[-1] == "Enter") == 1
 
 
@@ -424,9 +424,9 @@ def test_inject_user_message_fails_when_resumed_forwarder_is_not_ready(
 
 def test_draft_in_input_region_ignores_matching_history_and_baseline() -> None:
     """Short messages like '2' must match only a changed Kiro input region."""
-    baseline = "kiro_default · auto · ◔ 2%\n\n ask a question or describe a task ↵"
-    pane_with_history_only = "2\n\nold answer\n────────────────\n" + baseline
-    pane_with_draft = "old 2\n────────────────\nkiro_default · auto · ◔ 2%\n\n 2"
+    baseline = "kiro_default Â· auto Â· â—” 2%\n\n ask a question or describe a task â†µ"
+    pane_with_history_only = "2\n\nold answer\nâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n" + baseline
+    pane_with_draft = "old 2\nâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\nkiro_default Â· auto Â· â—” 2%\n\n 2"
 
     assert not bridge._draft_in_input_region(pane_with_history_only, "2", baseline)
     assert bridge._draft_in_input_region(pane_with_draft, "2", baseline)
@@ -435,17 +435,17 @@ def test_draft_in_input_region_ignores_matching_history_and_baseline() -> None:
 def test_draft_in_input_region_ignores_kiro_chrome_for_short_messages() -> None:
     """One-character prompts must not match cwd, branch, or placeholder chrome."""
     baseline = (
-        "kiro_default · auto · ◔ 3%             ~/Work/agent-meow · "
-        "(feat/kiro-cli-harness)\n\n ask a question or describe a task ↵"
+        "kiro_default Â· auto Â· â—” 3%             ~/Work/agent-meow Â· "
+        "(feat/kiro-cli-harness)\n\n ask a question or describe a task â†µ"
     )
     pane_after_submit = (
-        "c\n\n🙂\n────────────────\nkiro_default · auto · ◔ 4%             "
-        "~/Work/agent-meow · (feat/kiro-cli-harness)\n\n "
-        "ask a question or describe a task ↵\n/copy to clipboard"
+        "c\n\nðŸ™‚\nâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\nkiro_default Â· auto Â· â—” 4%             "
+        "~/Work/agent-meow Â· (feat/kiro-cli-harness)\n\n "
+        "ask a question or describe a task â†µ\n/copy to clipboard"
     )
     pane_with_draft = (
-        "old answer\n────────────────\nkiro_default · auto · ◔ 3%             "
-        "~/Work/agent-meow · (feat/kiro-cli-harness)\n\n c"
+        "old answer\nâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\nkiro_default Â· auto Â· â—” 3%             "
+        "~/Work/agent-meow Â· (feat/kiro-cli-harness)\n\n c"
     )
 
     assert not bridge._draft_in_input_region(pane_after_submit, "c", baseline)
@@ -511,7 +511,7 @@ def test_build_kiro_mcp_config_targets_serve_mcp(tmp_path: Path) -> None:
     assert server["args"] == [
         "-I",
         "-m",
-        "agent_meow.claude_native_bridge",
+        "omnigent.claude_native_bridge",
         "serve-mcp",
         "--bridge-dir",
         str(bridge_dir),

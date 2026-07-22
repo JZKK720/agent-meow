@@ -1,6 +1,6 @@
 """Tests for llms.types — dataclass construction and edge cases."""
 
-from agent_meow.llms.types import (
+from omnigent.llms.types import (
     NATIVE_TOOL_OUTPUT_TYPES,
     FunctionCallOutput,
     MessageOutput,

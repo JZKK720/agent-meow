@@ -24,7 +24,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from agent_meow.llms.client import Client
+from omnigent.llms.client import Client
 
 
 def _encode_sse(event_type: str, data: dict[str, Any]) -> bytes:

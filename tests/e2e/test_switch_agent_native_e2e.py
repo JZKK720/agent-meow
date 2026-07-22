@@ -1,20 +1,20 @@
 """E2E tests for in-place agent switch ACROSS the native boundary.
 
-Companion to ``test_switch_agent_e2e.py`` (SDK→SDK). These exercise the two
-harness-crossing in-place switches, which hit code the SDK→SDK test does not:
+Companion to ``test_switch_agent_e2e.py`` (SDKâ†’SDK). These exercise the two
+harness-crossing in-place switches, which hit code the SDKâ†’SDK test does not:
 
-- **native → SDK**: the SDK target replays the agent-meow transcript as context
+- **native â†’ SDK**: the SDK target replays the agent-meow transcript as context
   (and the source's terminal-first presentation labels must be dropped).
-- **SDK → native**: the native CLI ignores the agent-meow transcript, so the
+- **SDK â†’ native**: the native CLI ignores the agent-meow transcript, so the
   runner must REBUILD the on-disk Claude transcript from the session's own AP
   items (``_ensure_local_claude_resume_transcript``) under a fresh uuid and
-  ``--resume`` it — the same rebuild path the SDK→native *fork* uses, but
+  ``--resume`` it â€” the same rebuild path the SDKâ†’native *fork* uses, but
   triggered in place (no new session, no re-launch).
 
 Both run on a real host daemon via the Claude CLI's OAuth, so they're gated
 behind ``OMNIGENT_E2E_CLAUDE_NATIVE=1`` like the native fork e2e. Unlike a
 fork, an in-place switch keeps the session's host + workspace + runner, so
-there is no directory picker / ``_launch_runner`` step — the next turn simply
+there is no directory picker / ``_launch_runner`` step â€” the next turn simply
 cold-starts the switched-to harness on the bound runner.
 
 Usage::
@@ -71,7 +71,7 @@ _RECALL = (
 def _wait_for_session_idle(client: httpx.Client, *, session_id: str, timeout: float) -> None:
     """Poll until the session reports ``idle`` status.
 
-    Switching is gated on the session being idle (a running turn → 409), and
+    Switching is gated on the session being idle (a running turn â†’ 409), and
     the UI only enables the switcher when idle. A native turn's assistant
     marker can appear in the transcript slightly before the relay reports the
     turn idle, so callers wait here before switching.
@@ -92,7 +92,7 @@ def _wait_for_session_idle(client: httpx.Client, *, session_id: str, timeout: fl
         time.sleep(POLL_INTERVAL_S)
     raise AssertionError(
         f"session {session_id} did not return to idle within {timeout}s "
-        f"(last status={last_status!r}) — cannot switch agent while busy"
+        f"(last status={last_status!r}) â€” cannot switch agent while busy"
     )
 
 
@@ -228,13 +228,13 @@ def test_switch_native_to_sdk_in_place_carries_history(
             _wait_for_session_idle(http_client, session_id=session_id, timeout=60.0)
             original_agent_id = _bound_agent_id(http_client, session_id)
 
-            # 2. Switch IN PLACE to the SDK agent — no fork, no re-launch.
+            # 2. Switch IN PLACE to the SDK agent â€” no fork, no re-launch.
             switched = _switch_agent(http_client, session_id=session_id, agent_id=sdk_agent_id)
             assert switched["id"] == session_id, "switch must keep the same session id"
             assert switched["agent_id"] != original_agent_id, "switch must rebind the agent"
             # Switching to an SDK target must drop terminal-first mode.
             snap = http_client.get(f"/v1/sessions/{session_id}", timeout=30.0).json()
-            assert snap.get("labels", {}).get("agent_meow.ui") != "terminal", (
+            assert snap.get("labels", {}).get("omnigent.ui") != "terminal", (
                 f"SDK target must drop terminal-first mode, got labels {snap.get('labels')!r}"
             )
 
@@ -244,7 +244,7 @@ def test_switch_native_to_sdk_in_place_carries_history(
                 http_client, session_id=session_id, marker=marker, timeout=180.0
             )
             assert marker in text, (
-                f"SDK agent did not recall {marker!r} (got {text!r}) — the native "
+                f"SDK agent did not recall {marker!r} (got {text!r}) â€” the native "
                 "source's transcript was not replayed as context after the switch"
             )
 
@@ -263,7 +263,7 @@ def test_switch_sdk_to_native_in_place_carries_history(
     native harness fresh and the recall fails.
 
     The SDK source runs on the host daemon (so the post-switch native harness
-    has a host + workspace to run in — an in-place switch cannot rebind those).
+    has a host + workspace to run in â€” an in-place switch cannot rebind those).
 
     :param live_server: The test server URL.
     :param http_client: HTTP client pointed at the test server.
@@ -302,14 +302,14 @@ def test_switch_sdk_to_native_in_place_carries_history(
             assert switched["id"] == session_id, "switch must keep the same session id"
             assert switched["agent_id"] != original_agent_id, "switch must rebind the agent"
 
-            # 3. The switched-in native agent recalls the planted word — only
+            # 3. The switched-in native agent recalls the planted word â€” only
             # possible if the AP items were rebuilt into its Claude transcript.
             _send_user_message(http_client, session_id=session_id, text=_RECALL)
             text = _poll_for_assistant_marker(
                 http_client, session_id=session_id, marker=marker, timeout=180.0
             )
             assert marker in text, (
-                f"native agent did not recall {marker!r} (got {text!r}) — the SDK "
+                f"native agent did not recall {marker!r} (got {text!r}) â€” the SDK "
                 "source's AP items were not rebuilt into the native transcript on switch"
             )
 
@@ -319,14 +319,14 @@ def test_switch_native_roundtrip_carries_turns_added_while_away(
     http_client: httpx.Client,
     tmp_path: Path,
 ) -> None:
-    """Switching native → SDK → native carries turns added on the SDK leg.
+    """Switching native â†’ SDK â†’ native carries turns added on the SDK leg.
 
     A session runs claude-native, switches to an SDK agent where the user adds
     a NEW fact, then switches BACK to claude-native. The switched-back native
-    agent must recall the fact added while away — which requires the
+    agent must recall the fact added while away â€” which requires the
     switch-back rebuild to use the CURRENT AP items (including the SDK-leg
     turns), not the transcript left over from the first native run. Guards the
-    round-trip path (native → other → native), which carries more lingering
+    round-trip path (native â†’ other â†’ native), which carries more lingering
     runtime state than a single switch.
 
     :param live_server: The test server URL.
@@ -376,7 +376,7 @@ def test_switch_native_roundtrip_carries_turns_added_while_away(
             _switch_agent(http_client, session_id=session_id, agent_id=native_agent_id)
 
             # 4. The switched-back native agent recalls the word added WHILE on
-            # the other agent — the regression loses exactly this word.
+            # the other agent â€” the regression loses exactly this word.
             _send_user_message(
                 http_client,
                 session_id=session_id,
@@ -389,7 +389,7 @@ def test_switch_native_roundtrip_carries_turns_added_while_away(
             )
             assert marker_away in text, (
                 f"native agent did not recall {marker_away!r} added while on the SDK "
-                f"agent (got {text!r}) — the switch-back reused the stale native "
+                f"agent (got {text!r}) â€” the switch-back reused the stale native "
                 "terminal/transcript instead of rebuilding from current AP items"
             )
 
@@ -402,14 +402,14 @@ def test_switch_native_roundtrip_with_open_terminal_carries_history(
     """Round-trip recall holds even with the terminal tab kept open.
 
     Same as the round-trip test above, but the claude terminal-attach
-    WebSocket is held OPEN across the whole away-and-back sequence — exactly
+    WebSocket is held OPEN across the whole away-and-back sequence â€” exactly
     what a browser terminal tab does, keeping the original claude terminal
     registered. This was written to reproduce a reported loss of mid-switch
     history on claude-native; it does NOT reproduce it (the switch-back still
     rebuilds and recalls the away-word), which **rules out a lingering
     terminal** as the cause and guards against a regression where holding the
     terminal open would break the round-trip. (The reported bug with nessie as
-    the middle agent is still under investigation — likely supervisor-specific
+    the middle agent is still under investigation â€” likely supervisor-specific
     transcript persistence, not the terminal.)
 
     :param live_server: The test server URL.
@@ -472,6 +472,6 @@ def test_switch_native_roundtrip_with_open_terminal_carries_history(
                 )
             assert marker_away in text, (
                 f"native agent did not recall {marker_away!r} added while away (got "
-                f"{text!r}) — with the terminal tab open, the stale terminal shadowed the "
+                f"{text!r}) â€” with the terminal tab open, the stale terminal shadowed the "
                 "rebuild, so the switch-back resumed the original transcript"
             )

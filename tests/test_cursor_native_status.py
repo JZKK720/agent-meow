@@ -2,17 +2,17 @@
 
 Covers the three layers of the cursor parent-wake path:
 
-1. :mod:`~?agent_meow.cursor_native_status` — the turn-end marker store + poster
+1. :mod:`~?omnigent.cursor_native_status` â€” the turn-end marker store + poster
    state (record/count markers, read/write/clear the posted-count).
-2. :func:`~?agent_meow.cursor_native_usage._cli_record_usage` — the cursor ``stop``
+2. :func:`~?omnigent.cursor_native_usage._cli_record_usage` â€” the cursor ``stop``
    hook entrypoint, which must record a turn-end marker on EVERY firing (even a
    turn with no billable usage) so the parent wake never depends on usage.
-3. :func:`~?agent_meow.cursor_native_forwarder.forward_cursor_store_to_session` —
+3. :func:`~?omnigent.cursor_native_forwarder.forward_cursor_store_to_session` â€”
    the poll loop must POST ``external_session_status: idle`` exactly once per
    completed turn, deduped against the persisted posted-count and restart-safe.
 
 The loop tests deliberately let store discovery return ``None`` so the idle path
-is exercised in isolation from the chat-mirroring machinery — the idle check runs
+is exercised in isolation from the chat-mirroring machinery â€” the idle check runs
 every poll independent of store binding.
 """
 
@@ -24,8 +24,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow import cursor_native_forwarder as fwd
-from agent_meow import cursor_native_status as status
+from omnigent import cursor_native_forwarder as fwd
+from omnigent import cursor_native_status as status
 
 # --- status store: markers + poster state ------------------------------------
 
@@ -70,7 +70,7 @@ def test_read_posted_count_ignores_corrupt_state(tmp_path: Path) -> None:
 
 def test_cli_record_usage_records_turn_end(tmp_path: Path, monkeypatch) -> None:
     """The cursor ``stop`` hook entrypoint records a turn-end marker per firing."""
-    from agent_meow import cursor_native_usage
+    from omnigent import cursor_native_usage
 
     bridge = tmp_path / "cursor-native" / "sess"
     bridge.mkdir(parents=True)
@@ -83,7 +83,7 @@ def test_cli_record_usage_records_turn_end(tmp_path: Path, monkeypatch) -> None:
 
 def test_cli_record_usage_records_turn_end_on_empty_stdin(tmp_path: Path, monkeypatch) -> None:
     """Even an empty hook payload (no usage) still records the turn-end marker."""
-    from agent_meow import cursor_native_usage
+    from omnigent import cursor_native_usage
 
     bridge = tmp_path / "b"
     bridge.mkdir(parents=True)

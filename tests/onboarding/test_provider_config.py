@@ -1,4 +1,4 @@
-"""Tests for agent_meow.onboarding.provider_config."""
+"""Tests for omnigent.onboarding.provider_config."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.errors import OmnigentError
-from agent_meow.onboarding.provider_config import (
+from omnigent.errors import OmnigentError
+from omnigent.onboarding.provider_config import (
     ANTHROPIC_FAMILY,
     GEMINI_FAMILY,
     OPENAI_FAMILY,
@@ -28,7 +28,7 @@ from agent_meow.onboarding.provider_config import (
     "harness,expected",
     [
         ("claude-sdk", ANTHROPIC_FAMILY),
-        # Native CLI harnesses — the canonical spec spellings. These were
+        # Native CLI harnesses â€” the canonical spec spellings. These were
         # missing from the family map, so a claude-native / codex-native
         # agent's credential failed to resolve for the /model readout and the
         # startup-header creds line (nessie's sub-agents use exactly these).
@@ -40,7 +40,7 @@ from agent_meow.onboarding.provider_config import (
         ("codex", OPENAI_FAMILY),
         ("openai-agents", OPENAI_FAMILY),
         # Qwen Code is OpenAI-compatible; the native TUI harness keys both
-        # spellings so a same-agent qwen→qwen fork/switch reads same-family.
+        # spellings so a same-agent qwenâ†’qwen fork/switch reads same-family.
         ("qwen", OPENAI_FAMILY),
         ("qwen-native", OPENAI_FAMILY),
         ("native-qwen", OPENAI_FAMILY),
@@ -70,7 +70,7 @@ def test_harness_family_maps_native_harness_spellings(harness: str, expected: st
         ("claude-sdk", ANTHROPIC_FAMILY),
         ("openai-agents", OPENAI_FAMILY),
         # Executor-type spellings AgentSpec.harness_kind returns for SDK
-        # harnesses — these are NOT keys in _HARNESS_FAMILY, so they only
+        # harnesses â€” these are NOT keys in _HARNESS_FAMILY, so they only
         # resolve via the executor-type alias map. A regression dropping the
         # alias returns None and a same-family SDK fork would be misjudged
         # cross-family (model settings + native carry wrongly reset).
@@ -88,9 +88,9 @@ def test_provider_family_for_harness_accepts_executor_type_spellings(
     """``provider_family_for_harness`` resolves SDK executor-type spellings.
 
     The fork agent-switch reads ``AgentSpec.harness_kind``, which returns
-    executor types (``claude_sdk`` / ``agents_sdk``) for SDK agents — not
+    executor types (``claude_sdk`` / ``agents_sdk``) for SDK agents â€” not
     the canonical ``claude-sdk`` / ``openai-agents`` keys. This helper must
-    bridge both so a claude_sdk → claude-native switch is recognised as
+    bridge both so a claude_sdk â†’ claude-native switch is recognised as
     same-family (anthropic) and carries history.
     """
     assert provider_family_for_harness(harness) == expected
@@ -111,7 +111,7 @@ def test_default_provider_for_pi_skips_subscription_defaults() -> None:
     """For the unmapped ``pi`` harness, a subscription default is skipped.
 
     A subscription entry's credential is the claude/codex CLI's own login,
-    which pi does not wrap and cannot read —
+    which pi does not wrap and cannot read â€”
     ``configure_agent_harness_with_provider`` no-ops on subscription kind, so
     routing pi to one spawns the harness with no auth at all ("No API key
     found", observed live on the nessie ``pi`` sub-agent). The resolver must
@@ -127,7 +127,7 @@ def test_default_provider_for_pi_skips_subscription_defaults() -> None:
     # pi skips the anthropic-family subscription and lands on the openai-
     # family databricks default, which it CAN consume (ucode/gateway path).
     assert default_provider_for_harness(config, "pi").name == "databricks"
-    # The mapped claude-sdk harness still takes the subscription — it wraps
+    # The mapped claude-sdk harness still takes the subscription â€” it wraps
     # the claude CLI, so the CLI login is exactly its credential.
     assert default_provider_for_harness(config, "claude-sdk").name == "claude"
 
@@ -182,7 +182,7 @@ def test_default_provider_for_pi_selects_cli_config_databricks_gateway(
     Anthropic surface natively), and pi resolution now routes it (pi-native
     translates it; the gateway-harness pi path translates it too). So when the
     pinned ``[model_providers.X]`` resolves to a real Databricks gateway, the
-    shared selection returns it for pi — the previous "skip all cli-config for
+    shared selection returns it for pi â€” the previous "skip all cli-config for
     pi" behavior was the bug.
     """
     _write_codex_toml(tmp_path, _DATABRICKS_CODEX_CONFIG_TOML)
@@ -201,7 +201,7 @@ def test_default_provider_for_pi_selects_cli_config_databricks_gateway(
     pi_default = default_provider_for_harness(config, "pi")
     assert pi_default is not None
     assert pi_default.name == "codex-databricks"
-    # The codex harness still takes the cli-config default — it is exactly the
+    # The codex harness still takes the cli-config default â€” it is exactly the
     # CLI whose config.toml carries the provider table.
     assert default_provider_for_harness(config, "codex").name == "codex-databricks"
 
@@ -243,13 +243,13 @@ args = ["%s", "sk-static"]
             },
         }
     }
-    # A non-Databricks cli-config is not pi-consumable → pi falls back to None.
+    # A non-Databricks cli-config is not pi-consumable â†’ pi falls back to None.
     assert default_provider_for_harness(config, "pi") is None
     # The codex harness still takes the cli-config default.
     assert default_provider_for_harness(config, "codex").name == "codex-databricks"
 
 
-# ── the pi default scope ──────────────────────────────────────────────
+# â”€â”€ the pi default scope â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _key_entry(
@@ -301,7 +301,7 @@ def test_pi_scope_parses_and_outranks_fallback() -> None:
 
 
 def test_default_true_never_claims_pi_scope() -> None:
-    """``default: true`` expands to the served model families only — never pi.
+    """``default: true`` expands to the served model families only â€” never pi.
 
     Two coexisting ``default: true`` keys (one per family) are a valid,
     common config. If ``true`` expanded to the pi scope, both would claim
@@ -323,19 +323,19 @@ def test_default_true_never_claims_pi_scope() -> None:
 
 
 def test_gemini_key_never_becomes_pi_default() -> None:
-    """A gemini key serves ONLY the Gemini surface — never pi.
+    """A gemini key serves ONLY the Gemini surface â€” never pi.
 
     pi consumes the anthropic / openai families only (a gemini key's
-    add-surface scoping is ``frozenset({GEMINI_FAMILY})`` — no pi scope). So
+    add-surface scoping is ``frozenset({GEMINI_FAMILY})`` â€” no pi scope). So
     a machine whose only configured provider is a gemini key must leave pi
     UNRESOLVED: the cross-family pi fallback must skip gemini. A regression
     that walks gemini in the pi fallback silently routes pi through a
     credential it cannot use (incorrect default, broken pi launches).
     """
     config = {"providers": {"gemini": _key_entry(GEMINI_FAMILY, default=True)}}
-    # The gemini (antigravity-native) surface still resolves to its key…
+    # The gemini (antigravity-native) surface still resolves to its keyâ€¦
     assert default_provider_for_harness(config, "antigravity-native").name == "gemini"
-    # …but pi does NOT — gemini is not a pi-capable family.
+    # â€¦but pi does NOT â€” gemini is not a pi-capable family.
     assert default_provider_for_harness(config, "pi") is None
     assert surface_default_provider(config, PI_SURFACE) is None
 
@@ -366,7 +366,7 @@ def test_gemini_key_cannot_claim_pi_scope_at_parse() -> None:
     ``default_provider_for_harness(config, "pi")`` matches on
     ``entry.default_families`` directly, bypassing ``provider_families``. So a
     gemini key's pi scope must be rejected at PARSE time (parity with how a
-    subscription claiming pi is rejected) — otherwise a hand-edited config is
+    subscription claiming pi is rejected) â€” otherwise a hand-edited config is
     accepted, resolves pi to the gemini key, and only fails when pi launches.
     """
     for bad in (["gemini", "pi"], "pi"):
@@ -408,7 +408,7 @@ def test_gateway_local_does_not_serve_gemini_surface(kind: str) -> None:
     (the antigravity SDK harness via a raw GEMINI_API_KEY, antigravity-native
     via OAuth), neither of which can be driven by an OpenAI/Anthropic-compatible
     proxy. So a ``gateway`` / ``local`` may carry a gemini block alongside a real
-    family but must NOT report ``gemini`` in ``provider_families`` — otherwise it
+    family but must NOT report ``gemini`` in ``provider_families`` â€” otherwise it
     could silently become the gemini-surface default and wedge a launch the proxy
     can't honor. Its legitimate anthropic surface is unaffected.
     """
@@ -420,12 +420,12 @@ def test_gateway_local_does_not_serve_gemini_surface(kind: str) -> None:
     entry = load_providers({"providers": {"gw": raw}})["gw"]
     served = provider_families(entry)
     assert GEMINI_FAMILY not in served
-    # The real (anthropic) surface — and its pi capability — are untouched.
+    # The real (anthropic) surface â€” and its pi capability â€” are untouched.
     assert served == frozenset({ANTHROPIC_FAMILY, PI_SURFACE})
-    # And it can never become the gemini-surface default…
+    # And it can never become the gemini-surface defaultâ€¦
     cfg = {"providers": {"gw": {**raw, "default": True}}}
     assert default_provider_for_harness(cfg, "antigravity-native") is None
-    # …nor name the gemini scope explicitly at parse.
+    # â€¦nor name the gemini scope explicitly at parse.
     with pytest.raises(OmnigentError):
         load_providers({"providers": {"gw": {**raw, "default": ["gemini"]}}})
 
@@ -451,8 +451,8 @@ def test_gemini_auth_command_rejected_at_parse() -> None:
     drives the google SDK with a STATIC GEMINI_API_KEY. ``auth_command`` mints a
     bearer token the SDK cannot use as a key, so the block is nonsensical.
     Rejecting it at PARSE (rather than only at the runtime spawn / ``/models``
-    guard) keeps every layer — provider_families, default-resolution, the
-    display+readiness check, spawn, ``/models`` — consistent by construction: an
+    guard) keeps every layer â€” provider_families, default-resolution, the
+    display+readiness check, spawn, ``/models`` â€” consistent by construction: an
     auth_command gemini key can no longer leak a false "Gemini ready" into the
     configure-harness readiness path while spawn rejects it.
     """
@@ -462,7 +462,7 @@ def test_gemini_auth_command_rejected_at_parse() -> None:
 
 
 def test_auth_command_still_valid_for_non_gemini_families() -> None:
-    """``auth_command`` remains valid for anthropic/openai families — no over-restriction.
+    """``auth_command`` remains valid for anthropic/openai families â€” no over-restriction.
 
     The gemini parse-rejection is gemini-SPECIFIC: gateways and dynamic-token
     setups still mint bearers via ``auth_command`` for the anthropic/openai
@@ -488,7 +488,7 @@ def test_key_with_gemini_block_still_serves_gemini() -> None:
 
     The contrast case to the gateway/local rejection: a real GEMINI_API_KEY is
     exactly what the antigravity harness consumes, so a ``key`` keeps the
-    Gemini surface (and only that — gemini is not pi-capable).
+    Gemini surface (and only that â€” gemini is not pi-capable).
     """
     raw = {"kind": "key", "gemini": {"base_url": "https://x/v1beta", "api_key_ref": "env:G"}}
     entry = load_providers({"providers": {"google": raw}})["google"]
@@ -507,7 +507,7 @@ def test_subscription_cannot_claim_pi_scope() -> None:
     """Naming ``"pi"`` in a subscription's default scope fails loud.
 
     Both at parse time (a hand-edited config) and via set_default_provider
-    (the menu path) — a subscription can never drive pi, so persisting the
+    (the menu path) â€” a subscription can never drive pi, so persisting the
     scope would wedge pi on an unusable credential.
     """
     raw = {"kind": "subscription", "cli": "claude", "default": ["pi"]}
@@ -522,7 +522,7 @@ def test_set_default_provider_pi_scope_round_trips_and_moves() -> None:
     """Setting the pi scope persists in a re-parseable form and moves cleanly.
 
     The ``default: true`` compact form must NOT absorb the pi scope on
-    rewrite (re-parsing ``true`` would drop it — the round-trip bug), and
+    rewrite (re-parsing ``true`` would drop it â€” the round-trip bug), and
     moving the pi default to another provider must clear it from the first
     while leaving both providers' family defaults untouched.
     """
@@ -532,7 +532,7 @@ def test_set_default_provider_pi_scope_round_trips_and_moves() -> None:
     }
     after_first = set_default_provider(providers, "anthropic", PI_SURFACE)
     parsed = load_providers({"providers": after_first})
-    # The pi scope survived a write→parse round-trip (not collapsed to true).
+    # The pi scope survived a writeâ†’parse round-trip (not collapsed to true).
     assert parsed["anthropic"].default_families == frozenset({ANTHROPIC_FAMILY, PI_SURFACE})
 
     after_move = set_default_provider(after_first, "openai", PI_SURFACE)
@@ -553,7 +553,7 @@ def test_set_default_provider_pi_scope_round_trips_and_moves() -> None:
             True,
         ),
         ({"kind": "databricks", "profile": "my-ws"}, True),
-        # Bedrock mode is native-`agent-meow claude` only — pi cannot use it.
+        # Bedrock mode is native-`agent-meow claude` only â€” pi cannot use it.
         (
             {"kind": "bedrock", "anthropic": {"base_url": "https://x", "api_key_ref": "env:K"}},
             False,
@@ -577,7 +577,7 @@ def test_set_default_provider_pi_scope_round_trips_and_moves() -> None:
             },
             True,
         ),
-        # A CLI login is unusable outside its own CLI — never pi-capable.
+        # A CLI login is unusable outside its own CLI â€” never pi-capable.
         ({"kind": "subscription", "cli": "claude"}, False),
     ],
 )
@@ -587,7 +587,7 @@ def test_provider_families_pi_capability(raw: dict[str, object], expect_pi: bool
     pi-capable = an inline key/gateway/local declaring an anthropic or openai
     family, or a databricks profile. A gemini-only key (Gemini surface only)
     and a subscription (CLI-bound) are NOT pi-capable. This drives both the Pi
-    page's credential list (which rows appear) and set-default validation — a
+    page's credential list (which rows appear) and set-default validation â€” a
     regression in either direction lets the menu offer a credential pi can't
     use, or hides one it can.
     """
@@ -631,7 +631,7 @@ def test_surface_default_model_prefers_anthropic_for_pi() -> None:
     assert surface_default_model(openai_only, PI_SURFACE) == "gpt-5.5"
 
 
-# ── cli-config kind: parsing, families, readout ─────────────────────────────
+# â”€â”€ cli-config kind: parsing, families, readout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_cli_config_entry() -> None:
@@ -640,7 +640,7 @@ def test_parse_cli_config_entry() -> None:
     Failure means adoption-written entries stop loading (every configure
     open would crash) or the entry loses its harness surface.
     """
-    from agent_meow.onboarding.provider_config import load_providers, provider_families
+    from omnigent.onboarding.provider_config import load_providers, provider_families
 
     entry = load_providers(
         {
@@ -662,7 +662,7 @@ def test_parse_cli_config_entry() -> None:
     # A codex cli-config serves the openai surface AND is structurally
     # pi-capable: a Databricks AI Gateway is reusable by Pi (its Anthropic
     # surface), so it can claim the pi scope. (``default: true`` deliberately
-    # never expands to pi — only an explicit ``pi`` does — so default_families
+    # never expands to pi â€” only an explicit ``pi`` does â€” so default_families
     # stays openai-only here.)
     assert provider_families(entry) == frozenset({OPENAI_FAMILY, PI_SURFACE})
     assert entry.default_families == frozenset({OPENAI_FAMILY})
@@ -677,7 +677,7 @@ def test_parse_cli_config_entry() -> None:
             {"kind": "cli-config", "cli": "claude", "model_provider": "X"},
             "requires cli: 'codex'",
         ),
-        # The pin target is the entry's whole point — fail loud without it.
+        # The pin target is the entry's whole point â€” fail loud without it.
         ({"kind": "cli-config", "cli": "codex"}, "'model_provider'"),
     ],
 )
@@ -687,8 +687,8 @@ def test_parse_cli_config_entry_invalid(body: dict[str, object], message_fragmen
     Failure means a broken entry would parse into a launch that pins
     nothing (or the wrong CLI) at run time.
     """
-    from agent_meow.errors import OmnigentError
-    from agent_meow.onboarding.provider_config import load_providers
+    from omnigent.errors import OmnigentError
+    from omnigent.onboarding.provider_config import load_providers
 
     with pytest.raises(OmnigentError, match=r"cli-config|model_provider|cli"):
         load_providers({"providers": {"bad": body}})
@@ -706,7 +706,7 @@ def test_describe_active_credential_cli_config() -> None:
     Failure means the readout would crash on (or misname) an adopted
     isaac-style provider.
     """
-    from agent_meow.onboarding.provider_config import describe_active_credential
+    from omnigent.onboarding.provider_config import describe_active_credential
 
     config = {
         "providers": {
@@ -722,7 +722,7 @@ def test_describe_active_credential_cli_config() -> None:
     assert cred is not None
     assert cred.kind == "cli-config"
     assert cred.provider_name == "codex-databricks"
-    # The source names the file and the pinned provider — the two facts a
+    # The source names the file and the pinned provider â€” the two facts a
     # user needs to find/edit the underlying credential.
     assert cred.source == "~/.codex/config.toml provider: Databricks"
     # No inline endpoint/model: both live in the CLI's own config.
@@ -733,13 +733,13 @@ def test_describe_active_credential_cli_config() -> None:
 def test_bedrock_kind_rejected_for_non_native_harnesses() -> None:
     """`kind: bedrock` is native-`agent-meow claude` only; in-process harnesses fail loud.
 
-    ``configure_agent_harness_with_provider`` has no Bedrock path — emitting the
+    ``configure_agent_harness_with_provider`` has no Bedrock path â€” emitting the
     generic ``HARNESS_*_GATEWAY_*`` vars would silently point claude-sdk / pi at
     the Bedrock endpoint as if it were the Anthropic Messages API. Each non-native
     harness must raise rather than mis-configure.
     """
-    from agent_meow.errors import ErrorCode
-    from agent_meow.runtime.workflow import configure_agent_harness_with_provider
+    from omnigent.errors import ErrorCode
+    from omnigent.runtime.workflow import configure_agent_harness_with_provider
 
     entry = load_providers(
         {
@@ -768,7 +768,7 @@ def test_default_provider_for_pi_skips_bedrock_default() -> None:
 
     pi can't drive Bedrock mode (configure_agent_harness_with_provider raises),
     so the unmapped-harness fallback must skip a kind: bedrock default and fall
-    through to the next family — otherwise adding a Bedrock Claude default would
+    through to the next family â€” otherwise adding a Bedrock Claude default would
     turn a previously-working pi run (its own login) into a hard INVALID_INPUT
     error. The mapped claude-sdk harness still takes the bedrock default (its
     family); the fail-loud there is by design.

@@ -1,10 +1,10 @@
-"""Tests for agent_meow.onboarding.harness_readiness gating."""
+"""Tests for omnigent.onboarding.harness_readiness gating."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_meow.onboarding import harness_readiness as hr
+from omnigent.onboarding import harness_readiness as hr
 
 
 @pytest.mark.parametrize("harness", ["pi", "pi-native", "native-pi"])
@@ -13,7 +13,7 @@ def test_pi_harnesses_gate_on_pi_cli(harness: str, monkeypatch: pytest.MonkeyPat
 
     Regression guard: ``pi-native`` has no ``_HARNESS_FAMILY`` entry (pi uses
     the ``PI_SURFACE`` sentinel), so it used to hit the unknown-harness
-    fail-open branch and report configured even when ``pi`` was missing — the
+    fail-open branch and report configured even when ``pi`` was missing â€” the
     host pre-spawn check then let a doomed launch through. Both spellings must
     track ``harness_cli_installed``.
     """
@@ -46,7 +46,7 @@ def test_kiro_native_harnesses_gate_on_kiro_cli(
 def test_sdk_and_unknown_harnesses_still_fail_open(monkeypatch: pytest.MonkeyPatch) -> None:
     """SDK and unknown harnesses are never gated, even with no CLI installed.
 
-    Pins that the pi-native fix narrowed only the pi surface — SDK harnesses
+    Pins that the pi-native fix narrowed only the pi surface â€” SDK harnesses
     (runtime/ambient credentials) and unknown harnesses must keep failing open
     so a working launch is never blocked.
     """

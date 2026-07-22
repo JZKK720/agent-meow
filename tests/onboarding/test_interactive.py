@@ -1,10 +1,10 @@
 """Tests for the shared onboarding interactive selectors.
 
-:mod:`~?agent_meow.onboarding.interactive` provides the theme-picker-styled
+:mod:`~?omnigent.onboarding.interactive` provides the theme-picker-styled
 ``select`` arrow-key menu and the ``prompt_text`` text input. The
 raw-termios TTY path cannot be exercised in a headless test runner (no
 controlling terminal), so these tests cover the **non-TTY numbered
-fallback** — the path pipes, CI, and the CLI test suite actually hit.
+fallback** â€” the path pipes, CI, and the CLI test suite actually hit.
 
 Each test forces a non-TTY by monkeypatching ``sys.stdin.isatty`` to
 ``False`` and feeds input via ``click``'s isolated input stream, then
@@ -19,7 +19,7 @@ import sys
 
 import pytest
 
-from agent_meow.onboarding import interactive
+from omnigent.onboarding import interactive
 
 
 @pytest.fixture()
@@ -47,7 +47,7 @@ def _feed(monkeypatch: pytest.MonkeyPatch, lines: list[str]) -> None:
     fed = iter(lines)
 
     def _fake_prompt(_text: str) -> str:
-        # click calls visible_prompt_func(" ") — the arg is the echoed
+        # click calls visible_prompt_func(" ") â€” the arg is the echoed
         # space, not a readline size, so ignore it and pop the next
         # scripted line (mirrors a user typing at the prompt).
         return next(fed)
@@ -78,13 +78,13 @@ def test_select_fallback_returns_chosen_index(
     """``select`` non-TTY returns the zero-based index of the typed number.
 
     Feeds ``"2"`` against three options; the fallback must return index
-    ``1`` (the second option). A failure means the 1-based→0-based
-    conversion is wrong or the wrong option was selected — which would
+    ``1`` (the second option). A failure means the 1-basedâ†’0-based
+    conversion is wrong or the wrong option was selected â€” which would
     map a user's pick to the wrong provider/action downstream.
     """
     _feed(monkeypatch, ["2"])
     result = interactive.select("Pick one", ["alpha", "beta", "gamma"])
-    # Typed "2" → second option → zero-based index 1. If 0 or 2, the
+    # Typed "2" â†’ second option â†’ zero-based index 1. If 0 or 2, the
     # off-by-one fallback parsing regressed.
     assert result == 1
     # The numbered list rendered every option so the user could choose.
@@ -178,7 +178,7 @@ def test_select_fallback_default_maps_to_numbered_position(
     """An empty enter returns the row at *default* (mapped past headers).
 
     With ``default=2`` (original index of the 2nd selectable row) and a
-    leading header, an empty enter must resolve to original index 2 — the
+    leading header, an empty enter must resolve to original index 2 â€” the
     fallback translates the original default index to its position among
     the numbered rows and back. A failure means the default wiring ignored
     header offsets and would pre-select the wrong provider.
@@ -187,7 +187,7 @@ def test_select_fallback_default_maps_to_numbered_position(
     options = ["Claude", "  anthropic", "  claude-sub", "Quit"]
     selectable = [False, True, True, True]
     result = interactive.select("Configure harness", options, selectable=selectable, default=2)
-    # Empty enter → click returns the default → original index 2.
+    # Empty enter â†’ click returns the default â†’ original index 2.
     assert result == 2
 
 
@@ -215,9 +215,9 @@ def test_select_rejects_all_header_rows(non_tty: None) -> None:
 def test_step_selectable_skips_headers() -> None:
     """``_step_selectable`` glides over non-selectable rows in both directions.
 
-    This is the arrow-key cursor arithmetic. The raw-termios ↑/↓ path is
+    This is the arrow-key cursor arithmetic. The raw-termios â†‘/â†“ path is
     unreachable in a headless runner, so per the testing guide (cursor
-    arithmetic → focused unit test) the skip logic is verified directly.
+    arithmetic â†’ focused unit test) the skip logic is verified directly.
     Mask ``[F, T, F, T, F]`` has selectable indices {1, 3}.
     """
     mask = [False, True, False, True, False]
@@ -239,9 +239,9 @@ def test_first_selectable_falls_to_first_selectable() -> None:
     a default of 3 (selectable) must be kept.
     """
     mask = [False, False, True, True]
-    # Default points at a header → fall to the first selectable (index 2).
+    # Default points at a header â†’ fall to the first selectable (index 2).
     assert interactive._first_selectable(mask, 0) == 2
-    # Default already selectable → keep it.
+    # Default already selectable â†’ keep it.
     assert interactive._first_selectable(mask, 3) == 3
 
 
@@ -257,7 +257,7 @@ def test_prompt_text_fallback_returns_typed_value(
     """
     _feed(monkeypatch, ["my-gateway"])
     result = interactive.prompt_text("Name for this gateway")
-    # The exact typed value must round-trip — proves no default override
+    # The exact typed value must round-trip â€” proves no default override
     # or transformation happened.
     assert result == "my-gateway"
 
@@ -336,7 +336,7 @@ def test_clear_screen_emits_clear_sequence_only_on_a_tty(monkeypatch: pytest.Mon
 
     The TTY branch must emit the full clear (screen + scrollback + home) so the
     Databricks ``+ Add`` takeover's leftover subprocess output is wiped before
-    the menu redraws. The non-TTY branch must emit NOTHING — otherwise escape
+    the menu redraws. The non-TTY branch must emit NOTHING â€” otherwise escape
     sequences would leak into piped/CI output and the numbered-fallback tests.
     """
 
@@ -378,11 +378,11 @@ def test_render_menu_windows_long_list_to_viewport() -> None:
         assert shown in out
     assert "item-0" not in out
     assert "item-19" not in out
-    assert "8 more" in out and "7 more" in out  # ↑/↓ scroll markers
+    assert "8 more" in out and "7 more" in out  # â†‘/â†“ scroll markers
 
 
 def test_render_menu_without_max_visible_renders_all_rows() -> None:
-    """Default (no ``max_visible``) renders every row — no regression."""
+    """Default (no ``max_visible``) renders every row â€” no regression."""
     options = [f"item-{i}" for i in range(20)]
     out = interactive._render_menu(
         "Pick", options, 0, descriptions=None, width=80, selectable=[True] * 20
@@ -402,7 +402,7 @@ def test_render_menu_compact_uses_top_level_footer_and_no_title_gap() -> None:
 
     out = interactive._render_menu(
         "Configure harnesses",
-        ["Claude    ✓ Subscription", "Quit"],
+        ["Claude    âœ“ Subscription", "Quit"],
         0,
         descriptions=["", ""],
         width=80,
@@ -413,8 +413,8 @@ def test_render_menu_compact_uses_top_level_footer_and_no_title_gap() -> None:
     plain = re.sub(r"\x1b\[[0-9;]*m", "", out)
     lines = plain.splitlines()
     title_index = next(i for i, line in enumerate(lines) if "Configure harnesses" in line)
-    assert "❯  Claude" in lines[title_index + 1]
-    assert "↑/↓ nav" in plain
+    assert "â¯  Claude" in lines[title_index + 1]
+    assert "â†‘/â†“ nav" in plain
     assert "Esc exit" in plain
     assert "Esc back" not in plain
 
@@ -436,8 +436,8 @@ def test_render_menu_default_keeps_nested_footer_and_title_gap() -> None:
     lines = plain.splitlines()
     title_index = next(i for i, line in enumerate(lines) if "Pick" in line)
     assert lines[title_index + 1] == ""
-    assert "❯  alpha" in lines[title_index + 2]
-    assert "↑/↓ move" in plain
+    assert "â¯  alpha" in lines[title_index + 2]
+    assert "â†‘/â†“ move" in plain
     assert "Esc back" in plain
     assert "Esc exit" not in plain
 
@@ -448,7 +448,7 @@ def test_render_menu_compact_truncates_long_description_to_one_line() -> None:
 
     out = interactive._render_menu(
         "Configure harnesses",
-        ["Hermes    ✗ Not installed", "Quit"],
+        ["Hermes    âœ— Not installed", "Quit"],
         0,
         descriptions=[
             "Install with `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash`",
@@ -462,5 +462,5 @@ def test_render_menu_compact_truncates_long_description_to_one_line() -> None:
     plain = re.sub(r"\x1b\[[0-9;]*m", "", out)
     hint_lines = [line for line in plain.splitlines() if "Install with" in line]
     assert len(hint_lines) == 1
-    assert "…" in hint_lines[0]
+    assert "â€¦" in hint_lines[0]
     assert len(hint_lines[0]) <= 40

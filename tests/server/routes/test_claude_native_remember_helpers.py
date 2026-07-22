@@ -14,7 +14,7 @@ tests pin the gating and URL-parsing edge cases directly.
 
 from __future__ import annotations
 
-from agent_meow.server.routes.sessions import (
+from omnigent.server.routes.sessions import (
     _allow_remember_eligible,
     _claude_native_remember_host,
 )

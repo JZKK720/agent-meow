@@ -1,5 +1,5 @@
 """
-Tests for ``agent_meow.inner.bundle_skills`` — the shared helpers that
+Tests for ``omnigent.inner.bundle_skills`` â€” the shared helpers that
 expose an agent bundle's skills to a Claude harness (the SDK executor and
 the ``claude-native`` CLI launch path both use these so they stay in
 lockstep).
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.inner.bundle_skills import (
+from omnigent.inner.bundle_skills import (
     claude_native_skill_args,
     ensure_bundle_plugin_manifest,
 )
@@ -35,7 +35,7 @@ def test_ensure_bundle_plugin_manifest_writes_when_missing(tmp_path: Path) -> No
 
 def test_ensure_bundle_plugin_manifest_is_idempotent(tmp_path: Path) -> None:
     """
-    An existing manifest is preserved verbatim — the helper bails on the
+    An existing manifest is preserved verbatim â€” the helper bails on the
     first ``.exists()`` check, protecting a user-authored richer manifest
     (e.g. with ``version`` / ``author``) from being overwritten.
     """
@@ -44,7 +44,7 @@ def test_ensure_bundle_plugin_manifest_is_idempotent(tmp_path: Path) -> None:
     user_authored = '{"name":"user-name","author":"someone"}'
     existing.write_text(user_authored)
     ensure_bundle_plugin_manifest(tmp_path, "different-name")
-    # Unchanged bytes — a regression that overwrote unconditionally would
+    # Unchanged bytes â€” a regression that overwrote unconditionally would
     # silently drop the user's metadata.
     assert existing.read_text() == user_authored
 
@@ -52,7 +52,7 @@ def test_ensure_bundle_plugin_manifest_is_idempotent(tmp_path: Path) -> None:
 def test_ensure_bundle_plugin_manifest_falls_back_to_basename(tmp_path: Path) -> None:
     """
     When ``agent_name`` is ``None`` the manifest name falls back to the
-    bundle directory's basename — still deterministic, just less readable.
+    bundle directory's basename â€” still deterministic, just less readable.
     """
     bundle = tmp_path / "my-bundle"
     bundle.mkdir()
@@ -77,11 +77,11 @@ def _make_bundle_with_skill(root: Path) -> Path:
 @pytest.mark.parametrize(
     "skills_filter, expect_setting_sources",
     [
-        # "all" → host skills via the CLI default; no explicit override.
+        # "all" â†’ host skills via the CLI default; no explicit override.
         pytest.param("all", False, id="all"),
-        # "none" → suppress host skills with empty setting-sources.
+        # "none" â†’ suppress host skills with empty setting-sources.
         pytest.param("none", True, id="none"),
-        # list → like "all" for host sources (no per-name CLI allowlist);
+        # list â†’ like "all" for host sources (no per-name CLI allowlist);
         # bundle skills still load via --plugin-dir.
         pytest.param(["only"], False, id="list"),
     ],
@@ -95,7 +95,7 @@ def test_claude_native_skill_args_with_bundle(
     A bundle with ``skills/`` yields ``--plugin-dir <bundle>`` (the CLI
     plugin convention loads ``<bundle>/skills/<name>/SKILL.md``) and a
     written manifest. ``--setting-sources ""`` appears only for ``"none"``
-    — the SDK-parity gate on host skills.
+    â€” the SDK-parity gate on host skills.
 
     :param tmp_path: Pytest temp dir.
     :param skills_filter: The spec's ``skills_filter`` under test.
@@ -117,7 +117,7 @@ def test_claude_native_skill_args_with_bundle(
 def test_claude_native_skill_args_no_bundle_is_empty() -> None:
     """
     With no bundle (the ``agent-meow claude`` CLI path), no plugin args are
-    produced under the default ``"all"`` filter — Claude launches with its
+    produced under the default ``"all"`` filter â€” Claude launches with its
     own host config untouched.
     """
     assert claude_native_skill_args(None) == []
@@ -125,7 +125,7 @@ def test_claude_native_skill_args_no_bundle_is_empty() -> None:
 
 def test_claude_native_skill_args_bundle_without_skills_dir(tmp_path: Path) -> None:
     """
-    A bundle that ships no ``skills/`` directory adds no ``--plugin-dir`` —
+    A bundle that ships no ``skills/`` directory adds no ``--plugin-dir`` â€”
     a spurious empty plugin would make Claude Code warn/reject.
     """
     (tmp_path / "no_skills").mkdir()

@@ -2,15 +2,15 @@
 
 Covers the non-trivial logic in the AP-server-side MCP connection pool:
 
-- ``list_tools`` with empty spec → empty list without connecting
+- ``list_tools`` with empty spec â†’ empty list without connecting
 - ``list_tools`` happy path: tools returned per server
-- ``list_tools`` with tools allow-list → only allowed tools surfaced
-- ``list_tools`` with invalid tool name → tool silently skipped
-- ``list_tools`` when a server fails to connect → server skipped, others visible
+- ``list_tools`` with tools allow-list â†’ only allowed tools surfaced
+- ``list_tools`` with invalid tool name â†’ tool silently skipped
+- ``list_tools`` when a server fails to connect â†’ server skipped, others visible
 - ``call_tool`` happy path
-- ``call_tool`` with no MCP servers → RuntimeError
-- ``call_tool`` with unknown server name → RuntimeError
-- ``call_tool`` when the server is unhealthy → RuntimeError
+- ``call_tool`` with no MCP servers â†’ RuntimeError
+- ``call_tool`` with unknown server name â†’ RuntimeError
+- ``call_tool`` when the server is unhealthy â†’ RuntimeError
 - ``shutdown_for`` closes connections and removes pool entry
 - ``shutdown_all`` closes all entries and empties the pool
 - spec hash invalidation: changed spec evicts the old entry and rebuilds
@@ -26,17 +26,17 @@ from typing import Any
 import pytest
 from mcp.types import Tool as McpToolDef
 
-from agent_meow.server import mcp_pool as _mcp_pool_module
-from agent_meow.server.mcp_pool import McpToolEntry, ServerMcpPool
-from agent_meow.spec.types import AgentSpec, MCPServerConfig
+from omnigent.server import mcp_pool as _mcp_pool_module
+from omnigent.server.mcp_pool import McpToolEntry, ServerMcpPool
+from omnigent.spec.types import AgentSpec, MCPServerConfig
 
-# ── Helpers ────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_config(name: str, tools: list[str] | None = None) -> MCPServerConfig:
     """HTTP MCPServerConfig with an optional tools allow-list.
 
-    ``MCPServerConfig`` has no ``tools`` field in its constructor — the allow-list
+    ``MCPServerConfig`` has no ``tools`` field in its constructor â€” the allow-list
     is a dynamic attribute read by :meth:`ServerMcpPool.list_tools` via
     ``getattr(config, "tools", None)``.  We set it directly on the instance
     when the test needs to exercise the filter path.
@@ -51,7 +51,7 @@ def _make_config(name: str, tools: list[str] | None = None) -> MCPServerConfig:
         url=f"http://mcp/{name}",
     )
     if tools is not None:
-        config.tools = tools  # type: ignore[attr-defined]  — dynamic allow-list attr
+        config.tools = tools  # type: ignore[attr-defined]  â€” dynamic allow-list attr
     return config
 
 
@@ -178,13 +178,13 @@ def patch_mcp_connection(
             return await conns[self._name].call_tool(name, arguments)
 
     monkeypatch.setattr(
-        "agent_meow.server.mcp_pool.McpServerConnection",
+        "omnigent.server.mcp_pool.McpServerConnection",
         _FakeMcpServerConnection,
     )
     return conns
 
 
-# ── list_tools ─────────────────────────────────────────────────────────────
+# â”€â”€ list_tools â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -238,7 +238,7 @@ async def test_list_tools_apply_allow_list(patch_mcp_connection: dict[str, _Fake
     patch_mcp_connection["github"] = _FakeConn(
         tools=[_make_tool("search"), _make_tool("delete_repo"), _make_tool("create_issue")]
     )
-    # Only allow "search" — "delete_repo" and "create_issue" must be filtered out
+    # Only allow "search" â€” "delete_repo" and "create_issue" must be filtered out
     spec = _make_spec(_make_config("github", tools=["search"]))
     pool = ServerMcpPool()
 
@@ -304,7 +304,7 @@ async def test_list_tools_connect_failure_skips_server(
     )
 
 
-# ── call_tool ──────────────────────────────────────────────────────────────
+# â”€â”€ call_tool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -384,7 +384,7 @@ async def test_call_tool_unhealthy_server_raises(
         await pool.shutdown_all()
 
 
-# ── shutdown_for / shutdown_all ────────────────────────────────────────────
+# â”€â”€ shutdown_for / shutdown_all â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -393,7 +393,7 @@ async def test_shutdown_for_removes_entry_and_closes(
 ) -> None:
     """``shutdown_for`` must remove the agent's pool entry and close connections.
 
-    Failure means connections leak when an agent is deleted — every
+    Failure means connections leak when an agent is deleted â€” every
     subsequent agent deletion leaves an open MCP connection behind.
     """
     patch_mcp_connection["github"] = _FakeConn(tools=[_make_tool("search")])
@@ -457,7 +457,7 @@ async def test_shutdown_all_closes_all_entries(
     )
 
 
-# ── spec hash invalidation ─────────────────────────────────────────────────
+# â”€â”€ spec hash invalidation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -467,7 +467,7 @@ async def test_spec_hash_change_evicts_old_entry(
     """Changing the spec's MCP servers must evict the old pool entry and reconnect.
 
     Failure means agents that get a new MCP server config keep using stale
-    connections to the old servers — changes to the agent spec have no effect.
+    connections to the old servers â€” changes to the agent spec have no effect.
     """
     patch_mcp_connection["v1"] = _FakeConn(tools=[_make_tool("old_tool")])
     spec_v1 = _make_spec(_make_config("v1"))
@@ -477,7 +477,7 @@ async def test_spec_hash_change_evicts_old_entry(
     entries_v1 = await pool.list_tools("agent_1", spec_v1)
     assert {e.tool.name for e in entries_v1} == {"old_tool"}, "Sanity: v1 tools visible"
 
-    # Now switch to a new spec (different MCP server name → different hash)
+    # Now switch to a new spec (different MCP server name â†’ different hash)
     patch_mcp_connection["v2"] = _FakeConn(tools=[_make_tool("new_tool")])
     spec_v2 = _make_spec(_make_config("v2"))
 
@@ -488,7 +488,7 @@ async def test_spec_hash_change_evicts_old_entry(
 
     try:
         assert {e.tool.name for e in entries_v2} == {"new_tool"}, (
-            "After spec hash change, new tools must be returned — old entry must have been evicted"
+            "After spec hash change, new tools must be returned â€” old entry must have been evicted"
         )
         # The old connection was closed when the entry was evicted
         assert patch_mcp_connection["v1"].close_calls == 1, (
@@ -498,7 +498,7 @@ async def test_spec_hash_change_evicts_old_entry(
         await pool.shutdown_all()
 
 
-# ── LRU eviction ───────────────────────────────────────────────────────────
+# â”€â”€ LRU eviction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -508,7 +508,7 @@ async def test_lru_evicts_least_recently_used_at_capacity(
 ) -> None:
     """When the pool reaches capacity, the LRU agent's entry must be evicted.
 
-    Failure means unbounded memory growth — each new agent adds connections
+    Failure means unbounded memory growth â€” each new agent adds connections
     without ever closing old ones, eventually exhausting resources.
     """
     # Shrink capacity to 2 so we can test eviction with 3 agents
@@ -523,7 +523,7 @@ async def test_lru_evicts_least_recently_used_at_capacity(
     spec_b = _make_spec(_make_config("b"))
     spec_c = _make_spec(_make_config("c"))
 
-    # Fill pool to capacity (agent_a then agent_b — agent_a is now LRU)
+    # Fill pool to capacity (agent_a then agent_b â€” agent_a is now LRU)
     await pool.list_tools("agent_a", spec_a)
     await pool.list_tools("agent_b", spec_b)
 

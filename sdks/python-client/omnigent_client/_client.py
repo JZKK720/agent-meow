@@ -7,7 +7,7 @@ from typing import Any, Literal, overload
 
 import httpx
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 
 from ._files import FilesNamespace
 from ._query import QueryResult, QueryStream

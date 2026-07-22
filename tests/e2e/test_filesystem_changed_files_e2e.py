@@ -4,7 +4,7 @@ Tests exercise the unified filesystem endpoints under
 ``/v1/sessions/{id}/resources/environments/{env_id}/filesystem``
 that replaced the legacy ``/filesystem/changes`` and
 ``/filesystem/file-content`` routes (see
-``designs/UI_SESSION_RESOURCES_MIGRATION.md`` §F1).
+``designs/UI_SESSION_RESOURCES_MIGRATION.md`` Â§F1).
 
 **No-LLM tests** (no LLM inference calls; ``--llm-api-key`` still
 required to start the server):
@@ -16,7 +16,7 @@ required to start the server):
 
 - ``test_filesystem_user_write_put_round_trip``: exercises the
   user-facing ``PUT .../filesystem/{path}`` endpoint that the web
-  editor's auto-save calls — write a new file, read it back, then
+  editor's auto-save calls â€” write a new file, read it back, then
   overwrite it and read back again. No inference; distinct from the
   agent ``sys_os_write`` path.
 
@@ -73,7 +73,7 @@ _WORKSPACE_WRITER_DIR = _REPO_ROOT / "tests" / "resources" / "agents" / "workspa
 _DEFAULT_ENV = "default"
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _fs_root_url(session_id: str) -> str:
@@ -212,14 +212,14 @@ def _build_mock_workspace_writer_bundle(mock_llm_server_url: str) -> bytes:
     return buf.getvalue()
 
 
-# ── Workspace-rooted server+runner (for the agent-write tests) ─────────────────
+# â”€â”€ Workspace-rooted server+runner (for the agent-write tests) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # The shared ``live_server`` fixture spawns its runner with no
 # ``OMNIGENT_RUNNER_WORKSPACE``. That leaves the runner with no filesystem
 # registry (so ``GET .../changes`` is always empty) AND resolves the agent's
 # ``sys_os_write`` cwd to a throwaway ``/tmp`` dir (so writes never land where a
-# watcher could see them) — see ``_effective_runner_os_env_spec`` and
-# ``_resolve_session_fs_registry`` in ``agent_meow/runner/app.py``. The agent-write
+# watcher could see them) â€” see ``_effective_runner_os_env_spec`` and
+# ``_resolve_session_fs_registry`` in ``omnigent/runner/app.py``. The agent-write
 # tests below need both pointed at a real workspace, so they use a dedicated
 # server+runner pair rooted at an isolated, throwaway **git** workspace (a git
 # tree so the diff test's ``git show HEAD`` baseline works and new files surface
@@ -260,7 +260,7 @@ def fs_workspace(tmp_path_factory: pytest.TempPathFactory) -> Path:
         [
             "git",
             "-c",
-            "user.email=e2e@agent_meow.test",
+            "user.email=e2e@omnigent.test",
             "-c",
             "user.name=omnigent-e2e",
             "commit",
@@ -280,7 +280,7 @@ def fs_ws_runner_id() -> str:
 
     :returns: Runner id string bound to a per-module binding token.
     """
-    from agent_meow.runner.identity import token_bound_runner_id
+    from omnigent.runner.identity import token_bound_runner_id
 
     if "runner_id" not in _fs_ws_runner_state:
         token = secrets.token_urlsafe(32)
@@ -302,7 +302,7 @@ def fs_ws_server(
     The runner is given ``OMNIGENT_RUNNER_WORKSPACE=fs_workspace`` (and the
     server CWD matches), so ``create_filesystem_registry`` builds a
     :class:`GitFilesystemRegistry` over that workspace and the agent's relative
-    ``sys_os_write`` lands inside it — the two prerequisites for writes to
+    ``sys_os_write`` lands inside it â€” the two prerequisites for writes to
     surface in ``GET .../changes``.
 
     :param llm_api_key: The ``--llm-api-key`` option value.
@@ -330,12 +330,12 @@ def fs_ws_server(
         "OPENAI_BASE_URL": f"{mock_llm_server_url}/v1",
     }
 
-    log_handle = open(server_log, "w")  # noqa: SIM115 — closed in cleanup below
+    log_handle = open(server_log, "w")  # noqa: SIM115 â€” closed in cleanup below
     proc = subprocess.Popen(
         [
             sys.executable,
             "-m",
-            "agent_meow.cli",
+            "omnigent.cli",
             "server",
             "--port",
             str(port),
@@ -352,9 +352,9 @@ def fs_ws_server(
     base_url = f"http://localhost:{port}"
 
     runner_log = tmp_path_factory.mktemp("e2e_fs_runner_logs") / "runner.log"
-    runner_log_handle = open(runner_log, "w")  # noqa: SIM115 — closed in cleanup below
+    runner_log_handle = open(runner_log, "w")  # noqa: SIM115 â€” closed in cleanup below
     runner_proc = subprocess.Popen(
-        [sys.executable, "-m", "agent_meow.runner._entry"],
+        [sys.executable, "-m", "omnigent.runner._entry"],
         env={
             **env,
             "OMNIGENT_RUNNER_ID": fs_ws_runner_id,
@@ -440,7 +440,7 @@ def fs_ws_client(fs_ws_server: str) -> Iterator[httpx.Client]:
         yield client
 
 
-# ── No-LLM tests ──────────────────────────────────────────────────────────────
+# â”€â”€ No-LLM tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_filesystem_listing_shape(
@@ -545,7 +545,7 @@ def test_filesystem_user_write_put_round_trip(
         f"{len(initial.encode('utf-8'))} (UTF-8 payload length)"
     )
 
-    # 2. Read it back — content must match exactly, byte for byte.
+    # 2. Read it back â€” content must match exactly, byte for byte.
     get_resp = http_client.get(_fs_file_url(session_id, filename))
     get_resp.raise_for_status()
     body = get_resp.json()
@@ -560,7 +560,7 @@ def test_filesystem_user_write_put_round_trip(
     )
     assert put2.status_code == 200, f"Overwrite PUT failed: {put2.status_code} {put2.text}"
     result2 = put2.json()
-    # created=False proves the endpoint detected the existing file —
+    # created=False proves the endpoint detected the existing file â€”
     # an overwrite, not a create. If True, the write target resolved to
     # the wrong path or the existence check is broken.
     assert result2["created"] is False, (
@@ -574,12 +574,12 @@ def test_filesystem_user_write_put_round_trip(
     get2 = http_client.get(_fs_file_url(session_id, filename))
     get2.raise_for_status()
     assert get2.json().get("content") == modified, (
-        "Read-back after overwrite did not reflect the new content — the "
+        "Read-back after overwrite did not reflect the new content â€” the "
         "second write did not replace the file on disk."
     )
 
 
-# ── Mock-LLM tests ───────────────────────────────────────────────────────────
+# â”€â”€ Mock-LLM tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_filesystem_changes_appear_after_agent_write(
@@ -745,7 +745,7 @@ def test_diff_endpoint_shows_git_diff_for_modified_file(
     Uses the isolated git-workspace server+runner (``fs_ws_*``): the agent
     overwrites the seed file tracked in that throwaway workspace's initial
     commit, so the runner's GitFilesystemRegistry watches it and
-    ``git show HEAD`` resolves the baseline — without touching the live repo
+    ``git show HEAD`` resolves the baseline â€” without touching the live repo
     checkout (so no restore is needed and the result is deterministic).
 
     :param fs_ws_client: HTTP client pointed at the workspace-rooted server.
@@ -837,7 +837,7 @@ def test_diff_endpoint_shows_git_diff_for_modified_file(
     assert diff_body["object"] == "session.environment.filesystem.file_diff", (
         f"Wrong object type: {diff_body.get('object')!r}"
     )
-    # ``before`` must equal the content at git HEAD — proves get_baseline
+    # ``before`` must equal the content at git HEAD â€” proves get_baseline
     # is calling ``git show HEAD:<path>`` and returning the correct bytes.
     assert diff_body["before"] == git_head_content, (
         f"before content does not match git HEAD.\n"
@@ -845,7 +845,7 @@ def test_diff_endpoint_shows_git_diff_for_modified_file(
         f"  got:      {diff_body['before']!r}\n"
         "get_baseline is either not calling git show or returning wrong content."
     )
-    # ``after`` must contain the modified content — proves CallerProcessFilesystem
+    # ``after`` must contain the modified content â€” proves CallerProcessFilesystem
     # is reading the current on-disk state, not the snapshot.
     assert modified_content in (diff_body["after"] or ""), (
         f"after content does not contain modified text.\n"

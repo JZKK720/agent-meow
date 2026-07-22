@@ -1,8 +1,8 @@
-"""Tests for llms.adapters.databricks — payload building and validation."""
+"""Tests for llms.adapters.databricks â€” payload building and validation."""
 
 from typing import Any
 
-from agent_meow.llms.adapters.databricks import DatabricksAdapter
+from omnigent.llms.adapters.databricks import DatabricksAdapter
 
 
 def test_stream_options_stripped_from_streaming_payload() -> None:
@@ -47,8 +47,8 @@ def test_missing_base_url_raises_when_no_auto_resolve(monkeypatch: Any) -> None:
     """
     import asyncio
 
-    from agent_meow.errors import OmnigentError
-    from agent_meow.llms.adapters import databricks as adapter_mod
+    from omnigent.errors import OmnigentError
+    from omnigent.llms.adapters import databricks as adapter_mod
 
     def _raise(profile: Any) -> None:
         raise OSError("Could not resolve Databricks workspace credentials.")
@@ -77,16 +77,16 @@ def test_missing_base_url_raises_when_no_auto_resolve(monkeypatch: Any) -> None:
 def test_auto_resolve_used_when_no_connection_params(monkeypatch: Any) -> None:
     """
     When ``connection_params`` is absent, the adapter calls
-    :func:`~?agent_meow.runtime.credentials.databricks.resolve_databricks_workspace`
+    :func:`~?omnigent.runtime.credentials.databricks.resolve_databricks_workspace`
     and uses the result.
 
-    We don't make a real HTTP call here — we just verify that the resolved
+    We don't make a real HTTP call here â€” we just verify that the resolved
     credentials are forwarded to the parent ``chat_completions``.
     """
     import asyncio
 
-    from agent_meow.llms.adapters import databricks as adapter_mod
-    from agent_meow.runtime.credentials.databricks import WorkspaceCreds
+    from omnigent.llms.adapters import databricks as adapter_mod
+    from omnigent.runtime.credentials.databricks import WorkspaceCreds
 
     monkeypatch.setattr(
         adapter_mod,
@@ -110,7 +110,7 @@ def test_auto_resolve_used_when_no_connection_params(monkeypatch: Any) -> None:
         captured.append({"connection_params": connection_params})
         return {}
 
-    from agent_meow.llms.adapters.openai import OpenAICompatibleAdapter
+    from omnigent.llms.adapters.openai import OpenAICompatibleAdapter
 
     monkeypatch.setattr(OpenAICompatibleAdapter, "chat_completions", _fake_parent)
 

@@ -6,15 +6,15 @@ admissible:
 1. ``OIDCConfig`` parsing of ``OMNIGENT_OIDC_ALLOW_INVITES`` and the
    ``base_url`` derivation used to build invite links.
 2. ``SqlAlchemyAccountStore.redeem_oidc_invite`` / ``is_email_invited``
-   against a real DB — the OIDC invite reuses the existing
+   against a real DB â€” the OIDC invite reuses the existing
    ``account_tokens`` table (no dedicated table): redemption stamps the
    email into ``user_id`` and that redeemed row is the durable pre-auth.
-3. The redeem → admit chain the callback performs (invite token consumed
+3. The redeem â†’ admit chain the callback performs (invite token consumed
    once, bound email then admitted past the domain allowlist).
 4. The ``POST /auth/invite`` route: admin-gated, mints a usable link,
    and is absent entirely when invites are disabled.
 
-The full browser callback (IdP token exchange) isn't driven here — that
+The full browser callback (IdP token exchange) isn't driven here â€” that
 path is covered by the manual IdP verification in the plan; these tests
 pin every server-side building block it relies on.
 """
@@ -30,13 +30,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from agent_meow.server.accounts_store import SqlAlchemyAccountStore
-from agent_meow.server.admin_list import AdminList
-from agent_meow.server.auth import UnifiedAuthProvider
-from agent_meow.server.oidc import OIDCConfig, mint_session_cookie
-from agent_meow.server.oidc_access import OidcAdmissionPolicy
-from agent_meow.server.routes.auth import create_auth_router
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from omnigent.server.accounts_store import SqlAlchemyAccountStore
+from omnigent.server.admin_list import AdminList
+from omnigent.server.auth import UnifiedAuthProvider
+from omnigent.server.oidc import OIDCConfig, mint_session_cookie
+from omnigent.server.oidc_access import OidcAdmissionPolicy
+from omnigent.server.routes.auth import create_auth_router
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 _TEST_SECRET = bytes.fromhex("aa" * 32)
 
@@ -62,14 +62,14 @@ def _oidc_config(*, allow_invites: bool, allowed_domains: frozenset[str] | None)
     )
 
 
-# ── Config parsing ────────────────────────────────────────────────
+# â”€â”€ Config parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    # Follows the project env-var convention (agent_meow.server.auth
+    # Follows the project env-var convention (omnigent.server.auth
     # .env_var_is_truthy): 1/true/yes are truthy (case-insensitive);
-    # everything else — including "on" — is false.
+    # everything else â€” including "on" â€” is false.
     [("1", True), ("true", True), ("YES", True), ("on", False), ("0", False), ("", False)],
 )
 def test_allow_invites_env_parsing(
@@ -96,7 +96,7 @@ def test_base_url_derives_from_redirect_uri() -> None:
     assert config.base_url == "http://localhost:8000"
 
 
-# ── Store: invite redemption binds email to the account_tokens row ──
+# â”€â”€ Store: invite redemption binds email to the account_tokens row â”€â”€
 
 
 def _mint_invite(store: SqlAlchemyAccountStore, *, now: int, ttl: int = 3600) -> str:
@@ -117,7 +117,7 @@ def test_redeem_oidc_invite_binds_and_is_findable(db_uri: str) -> None:
     """``redeem_oidc_invite`` stamps the email; ``is_email_invited`` finds it.
 
     Proves the OIDC invite reuses the existing ``account_tokens`` table
-    (no dedicated table) — redemption writes the email into ``user_id``
+    (no dedicated table) â€” redemption writes the email into ``user_id``
     and that redeemed row is the durable pre-authorization.
     """
     store = SqlAlchemyAccountStore(db_uri)
@@ -136,7 +136,7 @@ def test_redeem_oidc_invite_is_single_use(db_uri: str) -> None:
     token_id = _mint_invite(store, now=now)
 
     assert store.redeem_oidc_invite(token_id, "guest@external.com", now_epoch_seconds=now) is True
-    # Second attempt (even by a different email) fails — already redeemed.
+    # Second attempt (even by a different email) fails â€” already redeemed.
     assert store.redeem_oidc_invite(token_id, "other@external.com", now_epoch_seconds=now) is False
     assert store.is_email_invited("other@external.com") is False
 
@@ -165,7 +165,7 @@ def test_accounts_invite_does_not_count_as_oidc_invited(db_uri: str) -> None:
     assert store.is_email_invited("admin@example.com") is False
 
 
-# ── redeem → admit chain (what the callback does) ──────────────────
+# â”€â”€ redeem â†’ admit chain (what the callback does) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_redeem_admit_chain(tmp_path: Path, db_uri: str) -> None:
@@ -196,7 +196,7 @@ def test_redeem_admit_chain(tmp_path: Path, db_uri: str) -> None:
     assert policy.is_admitted("guest@external.com") is True
 
 
-# ── POST /auth/invite route ───────────────────────────────────────
+# â”€â”€ POST /auth/invite route â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture

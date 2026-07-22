@@ -12,18 +12,18 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.errors import ErrorCode, OmnigentError
-from agent_meow.server.auth import (
+from omnigent.errors import ErrorCode, OmnigentError
+from omnigent.server.auth import (
     LEVEL_EDIT,
     LEVEL_OWNER,
     LEVEL_READ,
     RESERVED_USER_PUBLIC,
 )
-from agent_meow.server.routes._auth_helpers import require_access_and_level
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.server.routes._auth_helpers import require_access_and_level
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.permission_store.sqlalchemy_store import (
+from omnigent.stores.permission_store.sqlalchemy_store import (
     SqlAlchemyPermissionStore,
 )
 

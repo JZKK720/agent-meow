@@ -43,7 +43,7 @@ from omnigent_client._sessions import (
     SessionsNamespace,
 )
 
-from agent_meow.server.schemas import (
+from omnigent.server.schemas import (
     CompletedEvent,
     OutputTextDeltaEvent,
     SessionInputConsumedEvent,

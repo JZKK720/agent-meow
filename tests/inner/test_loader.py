@@ -11,10 +11,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agent_meow.inner.datamodel import ExecutorSpec, OSEnvSandboxSpec, OSEnvSpec
-from agent_meow.inner.loader import load_agent_def
-from agent_meow.inner.policies import FunctionPolicy, PromptPolicy
-from agent_meow.inner.tools import (
+from omnigent.inner.datamodel import ExecutorSpec, OSEnvSandboxSpec, OSEnvSpec
+from omnigent.inner.loader import load_agent_def
+from omnigent.inner.policies import FunctionPolicy, PromptPolicy
+from omnigent.inner.tools import (
     AgentTool,
     CancellableFunctionTool,
     FunctionTool,
@@ -33,13 +33,13 @@ def _run(coro):
         loop.close()
 
 
-# ── Local runner-protocol fixture ────────────────────────
+# â”€â”€ Local runner-protocol fixture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # The inner stack still supports ``type: cancellable_function``
 # YAMLs that point at runner-protocol objects. The test file
 # carries its own minimal runner instance instead of depending
 # on ``tests.resources.examples._shared.tool_functions`` (which is now plain-
-# callable only after step (c) — see
+# callable only after step (c) â€” see
 # designs/SERVER_HARNESS_CONTRACT.md).
 
 
@@ -47,7 +47,7 @@ class _TestSleepRunner:
     """Runner-protocol stub for the cancellable_function loader test."""
 
     def start(self, args: object, on_complete: object) -> None:
-        """Stub — never called by the loader test."""
+        """Stub â€” never called by the loader test."""
         raise NotImplementedError
 
 
@@ -521,7 +521,7 @@ class TestInstructionsField(unittest.TestCase):
     Native agent-meow YAMLs have always supported ``instructions: <path>``
     (path relative to the bundle dir, falling through to inline
     text if not a file). agent-meow-flavored YAMLs silently
-    dropped the field — the loader didn't read it, the translator
+    dropped the field â€” the loader didn't read it, the translator
     didn't see it. Bug from kasey_uhlenhuth's report. These tests
     pin the cross-format parity.
     """
@@ -535,14 +535,14 @@ class TestInstructionsField(unittest.TestCase):
             (Path(td) / "AGENTS.md").write_text("REPLY ONLY: SAUCE")
             a = load_agent_def(str(yaml_path))
             self.assertEqual(a.instructions, "REPLY ONLY: SAUCE")
-            # ``prompt`` is preserved as the user wrote it — only
+            # ``prompt`` is preserved as the user wrote it â€” only
             # the translator picks one over the other.
             self.assertEqual(a.prompt, "dummy")
 
     def test_instructions_inline_text_when_no_matching_file(self):
         """A value that doesn't match any sibling file is treated as inline.
 
-        Matches the native agent-meow behavior — silent fall-through to
+        Matches the native agent-meow behavior â€” silent fall-through to
         inline avoids breaking specs whose authors typed an
         instruction that happens to look pathy.
         """
@@ -566,7 +566,7 @@ class TestInstructionsField(unittest.TestCase):
             self.assertIn("line two", a.instructions or "")
 
     def test_instructions_absent_yields_none(self):
-        """No ``instructions:`` key in YAML → ``a.instructions is None``.
+        """No ``instructions:`` key in YAML â†’ ``a.instructions is None``.
 
         Catches a regression where the loader mistakenly populates
         a default that overrides ``prompt:``.
@@ -607,7 +607,7 @@ class TestInstructionsField(unittest.TestCase):
             self.assertEqual(a.instructions, "FROM INNER DIR")
 
     def test_instructions_from_dict_input_treated_as_inline(self):
-        """Loading from a raw dict has no path anchor → inline only.
+        """Loading from a raw dict has no path anchor â†’ inline only.
 
         Tools that synthesize an AgentDef from a dict (rather than a
         file) shouldn't pretend to do path resolution; the
@@ -638,7 +638,7 @@ def test_instructions_rejects_path_traversal() -> None:
 
         a = load_agent_def(str(yaml_path))
 
-        # The out-of-root target is never read — its contents must not leak.
+        # The out-of-root target is never read â€” its contents must not leak.
         assert "TOP SECRET" not in (a.instructions or "")
         # Falls back to the literal value (the existing inline-text path).
         assert a.instructions == "../secret.txt"
@@ -651,7 +651,7 @@ class TestLoaderOsEnvValidation(unittest.TestCase):
     actually invokes (via the omnigent-compat shim). If the legacy
     loader silently accepts a misconfigured sandbox (egress_rules on a
     non-enforcing backend, start_in_scratch without an active sandbox,
-    etc.), the user gets a spec that **looks** hardened but isn't —
+    etc.), the user gets a spec that **looks** hardened but isn't â€”
     the same class of bug as the recent terminal egress-rules drop.
     """
 
@@ -831,8 +831,8 @@ os_env:
         had no ``credential_proxy`` parsing, so the field was silently
         dropped and the secretless proxy never armed even though the
         YAML declared it. We assert the entry actually reaches the spec
-        with the right host/scheme/injection — not merely that the
-        sandbox is non-None — because a dropped field would leave
+        with the right host/scheme/injection â€” not merely that the
+        sandbox is non-None â€” because a dropped field would leave
         ``credential_proxy`` as ``None`` while everything else parsed.
         """
         yaml_content = """
@@ -877,7 +877,7 @@ os_env:
         the synthetic->real swap and blocks placeholder leaks; without it
         the proxy injects a placeholder the agent can't use. The loader
         must fail loud rather than hand back an inert, half-wired policy
-        — mirroring the bundle parser guard so the two paths can't drift.
+        â€” mirroring the bundle parser guard so the two paths can't drift.
         """
         yaml_content = """
 name: t
@@ -940,7 +940,7 @@ os_env:
         egress MITM CA and every ``gh`` call fails at runtime with
         ``certificate is not trusted``. The single-file loader (the
         ``agent-meow run agent.yaml`` path) must fail loud at load time with the
-        same explanation as the bundle parser — sharing one detection helper so
+        same explanation as the bundle parser â€” sharing one detection helper so
         the two paths can't drift.
         """
         yaml_content = """
@@ -974,7 +974,7 @@ def test_factory_params_with_unresolvable_handler_does_not_crash() -> None:
     even when ``_resolve_callable`` returned ``None`` (import error),
     which tripped ``FunctionPolicy.__post_init__``'s
     ``"factory_params requires factory"`` invariant check. The loader's
-    contract is to silently handle missing callables — the error only
+    contract is to silently handle missing callables â€” the error only
     surfaces when the policy is *evaluated*, not when the YAML is *loaded*.
     """
     agent = load_agent_def(
@@ -989,7 +989,7 @@ def test_factory_params_with_unresolvable_handler_does_not_crash() -> None:
             },
         }
     )
-    # Must load without raising — the callable is None (import failed)
+    # Must load without raising â€” the callable is None (import failed)
     # but the FunctionPolicy is constructed without factory_params so
     # __post_init__ does not raise.
     policy = agent.policies["broken_policy"]
@@ -997,7 +997,7 @@ def test_factory_params_with_unresolvable_handler_does_not_crash() -> None:
     assert policy.callable is None
     assert policy.factory is None
     # factory_params must be cleared when the factory could not be
-    # resolved — keeping them with factory=None would re-trigger the
+    # resolved â€” keeping them with factory=None would re-trigger the
     # invariant on the next __copy__ or serialization path.
     assert policy.factory_params == {}
 
@@ -1005,7 +1005,7 @@ def test_factory_params_with_unresolvable_handler_does_not_crash() -> None:
 def test_load_agent_def_allows_custom_handler_by_default() -> None:
     """Trusted loading (the default) keeps supporting custom handlers.
 
-    This is the operator/local ``agent-meow run`` path — the custom
+    This is the operator/local ``agent-meow run`` path â€” the custom
     FunctionPolicy feature. An unregistered, non-built-in handler must
     load without error when ``enforce_handler_allowlist`` is not set, so
     the bundle guard does not regress local custom policies.
@@ -1060,7 +1060,7 @@ def test_load_agent_def_enforce_allows_registered_handler() -> None:
             "policies": {
                 "ask_os": {
                     "type": "function",
-                    "handler": "agent_meow.policies.builtins.safety.ask_on_os_tools",
+                    "handler": "omnigent.policies.builtins.safety.ask_on_os_tools",
                 }
             },
         },

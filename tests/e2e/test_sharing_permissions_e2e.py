@@ -35,7 +35,7 @@ from tests.e2e.conftest import (
     send_user_message_to_session,
 )
 
-# Permission levels mirrored from agent_meow/server/auth.py. Mirrored
+# Permission levels mirrored from omnigent/server/auth.py. Mirrored
 # rather than imported so a server-side renumbering fails these tests
 # loudly instead of silently tracking the change.
 _LEVEL_READ = 1

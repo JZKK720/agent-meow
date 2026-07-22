@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.opencode_native_state import (
+from omnigent.opencode_native_state import (
     read_launch_state,
     write_launch_state,
 )

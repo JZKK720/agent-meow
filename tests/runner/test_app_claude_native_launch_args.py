@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.runner.app import _build_claude_native_base_args
+from omnigent.runner.app import _build_claude_native_base_args
 
 
 @pytest.mark.parametrize(

@@ -14,8 +14,8 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 
-from agent_meow.runner import create_runner_app
-from agent_meow.runner.transports.ws_tunnel.frames import (
+from omnigent.runner import create_runner_app
+from omnigent.runner.transports.ws_tunnel.frames import (
     HelloFrame,
     RequestFrame,
     ResponseBodyFrame,
@@ -23,12 +23,12 @@ from agent_meow.runner.transports.ws_tunnel.frames import (
     ResponseHeadFrame,
     decode_frame,
 )
-from agent_meow.runner.transports.ws_tunnel.registry import (
+from omnigent.runner.transports.ws_tunnel.registry import (
     RunnerSession,
     TunnelRegistry,
 )
-from agent_meow.runner.transports.ws_tunnel.serve import dispatch_via_asgi
-from agent_meow.runner.transports.ws_tunnel.transport import WSTunnelTransport
+from omnigent.runner.transports.ws_tunnel.serve import dispatch_via_asgi
+from omnigent.runner.transports.ws_tunnel.transport import WSTunnelTransport
 from tests.runner.helpers import NullServerClient
 
 # ── Fake WebSocket pair ──────────────────────────────────

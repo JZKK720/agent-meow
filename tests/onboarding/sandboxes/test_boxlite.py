@@ -1,4 +1,4 @@
-"""Tests for :mod:`~?agent_meow.onboarding.sandboxes.boxlite`."""
+"""Tests for :mod:`~?omnigent.onboarding.sandboxes.boxlite`."""
 
 from __future__ import annotations
 
@@ -11,25 +11,25 @@ from pathlib import Path
 import click
 import pytest
 
-from agent_meow.onboarding.sandboxes import boxlite as blmod
-from agent_meow.onboarding.sandboxes.base import (
+from omnigent.onboarding.sandboxes import boxlite as blmod
+from omnigent.onboarding.sandboxes.base import (
     DEFAULT_HOST_IMAGE,
     SandboxCapabilityError,
 )
-from agent_meow.onboarding.sandboxes.boxlite import (
+from omnigent.onboarding.sandboxes.boxlite import (
     HOST_IMAGE_ENV_VAR,
     SANDBOX_ENV_PASSTHROUGH_ENV_VAR,
     BoxliteSandboxLauncher,
 )
 
-# ── Fake boxlite SDK ────────────────────────────────────────
+# â”€â”€ Fake boxlite SDK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # The boxlite SDK is an optional dependency the test environment does
 # not install, and real boxes are micro-VMs that only exist on a
-# virtualization-capable host — so these are hand-rolled stub classes
+# virtualization-capable host â€” so these are hand-rolled stub classes
 # (never MagicMock: the launcher's attribute access must hit explicitly
 # defined recorders). Crucially the SDK is ASYNC: create/get/remove/exec
-# /wait are coroutines, and stdout()/stderr() return async iterators —
+# /wait are coroutines, and stdout()/stderr() return async iterators â€”
 # the launcher marshals them onto its shared event loop, so the fakes
 # must mirror that shape. The fake module is injected via sys.modules so
 # the launcher's function-local ``import boxlite`` resolves to it.
@@ -269,7 +269,7 @@ def _install_fake_boxlite(monkeypatch: pytest.MonkeyPatch) -> _FakeBoxliteState:
         """Fake ``boxlite.Boxlite`` runtime + factory."""
 
         def __new__(cls, options: object = None) -> _Runtime:  # type: ignore[misc]
-            # `Boxlite(options)` — customized LOCAL runtime. Returning a
+            # `Boxlite(options)` â€” customized LOCAL runtime. Returning a
             # non-_Boxlite instance skips __init__, mirroring the real API
             # where the constructor yields the runtime directly.
             state.runtime_count += 1
@@ -311,13 +311,13 @@ def fake_boxlite(monkeypatch: pytest.MonkeyPatch) -> _FakeBoxliteState:
     return _install_fake_boxlite(monkeypatch)
 
 
-# ── prepare ─────────────────────────────────────────────────
+# â”€â”€ prepare â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_prepare_requires_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
     """Without the boxlite SDK installed, preflight fails with an install hint."""
     # No fake installed and the real package is an optional extra, so the
-    # launcher's `import boxlite` raises ImportError → ClickException.
+    # launcher's `import boxlite` raises ImportError â†’ ClickException.
     monkeypatch.delitem(sys.modules, "boxlite", raising=False)
     with pytest.raises(click.ClickException, match="boxlite SDK"):
         BoxliteSandboxLauncher().prepare()
@@ -327,7 +327,7 @@ def test_prepare_local_requires_kvm_on_linux(
     fake_boxlite: _FakeBoxliteState, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Local mode on Linux without /dev/kvm fails loud (no hypervisor)."""
-    monkeypatch.setattr("agent_meow.onboarding.sandboxes.boxlite.platform.system", lambda: "Linux")
+    monkeypatch.setattr("omnigent.onboarding.sandboxes.boxlite.platform.system", lambda: "Linux")
     monkeypatch.setattr("os.path.exists", lambda path: False)
     with pytest.raises(click.ClickException, match="KVM"):
         BoxliteSandboxLauncher().prepare()
@@ -336,21 +336,21 @@ def test_prepare_local_requires_kvm_on_linux(
 def test_prepare_local_passes_on_macos(
     fake_boxlite: _FakeBoxliteState, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """macOS always has Hypervisor.framework → no KVM probe, preflight passes."""
-    monkeypatch.setattr("agent_meow.onboarding.sandboxes.boxlite.platform.system", lambda: "Darwin")
+    """macOS always has Hypervisor.framework â†’ no KVM probe, preflight passes."""
+    monkeypatch.setattr("omnigent.onboarding.sandboxes.boxlite.platform.system", lambda: "Darwin")
     BoxliteSandboxLauncher().prepare()
 
 
 def test_prepare_cloud_skips_virtualization_check(
     fake_boxlite: _FakeBoxliteState, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Cloud mode delegates virtualization to the remote pool — no local KVM check."""
-    monkeypatch.setattr("agent_meow.onboarding.sandboxes.boxlite.platform.system", lambda: "Linux")
+    """Cloud mode delegates virtualization to the remote pool â€” no local KVM check."""
+    monkeypatch.setattr("omnigent.onboarding.sandboxes.boxlite.platform.system", lambda: "Linux")
     monkeypatch.setattr("os.path.exists", lambda path: False)
     BoxliteSandboxLauncher(endpoint="https://boxlite.example.com:8100").prepare()
 
 
-# ── provision ───────────────────────────────────────────────
+# â”€â”€ provision â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_provision_defaults_official_image_and_persists(
@@ -393,7 +393,7 @@ def test_provision_env_passthrough_resolves_from_server_env(
 ) -> None:
     """
     Constructor env NAMES resolve to ``(name, value)`` pairs from the
-    server process environment — the config carries names only.
+    server process environment â€” the config carries names only.
     """
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-123")
     monkeypatch.setenv("GIT_TOKEN", "ghp-test-456")
@@ -445,11 +445,11 @@ def test_provision_wraps_sdk_errors_with_provider_reason(
         BoxliteSandboxLauncher().provision("a")
 
 
-# ── local vs cloud runtime switch ───────────────────────────
+# â”€â”€ local vs cloud runtime switch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_local_mode_uses_default_runtime(fake_boxlite: _FakeBoxliteState) -> None:
-    """No endpoint → embedded ``Boxlite.default()`` (boxes on the server host)."""
+    """No endpoint â†’ embedded ``Boxlite.default()`` (boxes on the server host)."""
     BoxliteSandboxLauncher().provision("a")
     assert fake_boxlite.mode == "local"
     assert fake_boxlite.rest_options is None
@@ -459,7 +459,7 @@ def test_cloud_mode_uses_rest_runtime_with_env_credential(
     fake_boxlite: _FakeBoxliteState, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
-    An endpoint → ``Boxlite.rest(BoxliteRestOptions(url, credential))`` with
+    An endpoint â†’ ``Boxlite.rest(BoxliteRestOptions(url, credential))`` with
     the API key read from BOXLITE_API_KEY (12-factor; never in config).
     """
     monkeypatch.setenv("BOXLITE_API_KEY", "blk_live_xyz")
@@ -482,18 +482,18 @@ def test_cloud_mode_unauthenticated_when_no_key(
     assert fake_boxlite.rest_options.credential is None
 
 
-# ── local runtime customization (home_dir / private registry) ─
+# â”€â”€ local runtime customization (home_dir / private registry) â”€
 
 
 def test_local_uses_default_runtime_when_unconfigured(fake_boxlite: _FakeBoxliteState) -> None:
-    """No home_dir/registry → the zero-config ``Boxlite.default()`` singleton."""
+    """No home_dir/registry â†’ the zero-config ``Boxlite.default()`` singleton."""
     BoxliteSandboxLauncher().provision("a")
     assert fake_boxlite.used_default is True
     assert fake_boxlite.local_options is None
 
 
 def test_local_home_dir_builds_options_runtime(fake_boxlite: _FakeBoxliteState) -> None:
-    """A home_dir → a customized ``Boxlite(Options(home_dir=…))``, not default()."""
+    """A home_dir â†’ a customized ``Boxlite(Options(home_dir=â€¦))``, not default()."""
     BoxliteSandboxLauncher(home_dir="/data/boxlite").provision("a")
     assert fake_boxlite.used_default is False
     assert fake_boxlite.local_options is not None
@@ -535,13 +535,13 @@ def test_local_registry_missing_cred_env_fails_loud(
     assert fake_boxlite.create_calls == []
 
 
-# ── run ─────────────────────────────────────────────────────
+# â”€â”€ run â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_run_drains_output_and_returns_exit_code(fake_boxlite: _FakeBoxliteState) -> None:
     """
     ``run`` wraps the command in ``sh -lc``, drains the stdout stream, and
-    returns the exit code — the shape ``SandboxLauncher.start_host`` relies on
+    returns the exit code â€” the shape ``SandboxLauncher.start_host`` relies on
     for ``printf %s "$HOME"`` (no trailing newline, ``.strip()`` on the
     caller side).
     """
@@ -589,7 +589,7 @@ def test_run_wraps_exec_errors_with_provider_reason(fake_boxlite: _FakeBoxliteSt
         launcher.run(box_id, "true")
 
 
-# ── terminate ───────────────────────────────────────────────
+# â”€â”€ terminate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_terminate_removes_and_is_idempotent(fake_boxlite: _FakeBoxliteState) -> None:
@@ -600,7 +600,7 @@ def test_terminate_removes_and_is_idempotent(fake_boxlite: _FakeBoxliteState) ->
     launcher.terminate(box_id)
     assert fake_boxlite.removed == [(box_id, True)]
 
-    # Already gone → swallow (the fake's remove raises "not found").
+    # Already gone â†’ swallow (the fake's remove raises "not found").
     launcher.terminate(box_id)
     assert fake_boxlite.removed == [(box_id, True)]
 
@@ -615,7 +615,7 @@ def test_terminate_wraps_unexpected_errors(fake_boxlite: _FakeBoxliteState) -> N
         launcher.terminate(box_id)
 
 
-# ── capability surface ──────────────────────────────────────
+# â”€â”€ capability surface â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_managed_only_capability_surface(fake_boxlite: _FakeBoxliteState) -> None:
@@ -634,13 +634,13 @@ def test_managed_only_capability_surface(fake_boxlite: _FakeBoxliteState) -> Non
         launcher.forward_local_port("bl-1", 8022)
 
 
-# ── timeout / cancellation ──────────────────────────────────
+# â”€â”€ timeout / cancellation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_run_bounds_exec_with_guest_timeout(fake_boxlite: _FakeBoxliteState) -> None:
     """
     run() must pass timeout_secs to box.exec so boxlite (guest/REST) kills the
-    process on timeout — relying on the Python-side wait to bound it leaves the
+    process on timeout â€” relying on the Python-side wait to bound it leaves the
     guest running (boxlite's documented zombie-prevention requirement).
     """
     launcher = BoxliteSandboxLauncher()
@@ -666,7 +666,7 @@ def test_run_surfaces_error_message_on_failure(fake_boxlite: _FakeBoxliteState) 
 def test_run_failure_detail_includes_stderr(fake_boxlite: _FakeBoxliteState) -> None:
     """
     A non-zero exit must surface the captured stderr (e.g. a git-clone
-    "fatal: ..."), not just the exit code — else the real reason is dropped.
+    "fatal: ..."), not just the exit code â€” else the real reason is dropped.
     """
     launcher = BoxliteSandboxLauncher()
     box_id = launcher.provision("a")
@@ -697,7 +697,7 @@ def test_provision_timeout_cleans_up_orphan_box(
 ) -> None:
     """
     create() is not atomic under cancellation, so a provision timeout must
-    best-effort remove the (possibly server-side-created) box BY NAME — else it
+    best-effort remove the (possibly server-side-created) box BY NAME â€” else it
     leaks an untracked, persistent box invisible to managed teardown.
     """
     monkeypatch.setattr(blmod, "_PROVISION_TIMEOUT_S", 0.05)
@@ -710,11 +710,11 @@ def test_provision_timeout_cleans_up_orphan_box(
     assert ("managed-x", True) in fake_boxlite.remove_attempts
 
 
-# ── terminate existence check ───────────────────────────────
+# â”€â”€ terminate existence check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_terminate_unknown_box_skips_remove(fake_boxlite: _FakeBoxliteState) -> None:
-    """An already-gone box is detected via get() — no remove is attempted."""
+    """An already-gone box is detected via get() â€” no remove is attempted."""
     BoxliteSandboxLauncher().terminate("bl-gone")
     assert fake_boxlite.remove_attempts == []
 
@@ -724,7 +724,7 @@ def test_terminate_does_not_swallow_unrelated_not_found_error(
 ) -> None:
     """
     A real removal failure whose message merely CONTAINS 'not found' (e.g.
-    'image manifest not found') must surface — the old substring-swallow hid it.
+    'image manifest not found') must surface â€” the old substring-swallow hid it.
     """
     launcher = BoxliteSandboxLauncher()
     box_id = launcher.provision("a")
@@ -733,12 +733,12 @@ def test_terminate_does_not_swallow_unrelated_not_found_error(
         launcher.terminate(box_id)
 
 
-# ── shared event loop liveness ──────────────────────────────
+# â”€â”€ shared event loop liveness â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_get_loop_recreates_dead_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    A closed/dead shared loop is replaced, not reused — a dead loop must not
+    A closed/dead shared loop is replaced, not reused â€” a dead loop must not
     permanently brick every later boxlite call for the process lifetime.
     """
     dead = asyncio.new_event_loop()
@@ -757,7 +757,7 @@ def test_run_tolerates_unavailable_streams(fake_boxlite: _FakeBoxliteState) -> N
     """
     The SDK's stdout()/stderr() RAISE when a stream is unavailable (they never
     return None), so run() must call them defensively and still return the exit
-    code — matching boxlite's own SimpleBox handling.
+    code â€” matching boxlite's own SimpleBox handling.
     """
     launcher = BoxliteSandboxLauncher()
     box_id = launcher.provision("a")

@@ -1,6 +1,6 @@
 """
 Unit tests for the OTel log bridge wired up in
-``agent_meow.runtime.telemetry``.
+``omnigent.runtime.telemetry``.
 
 Exercises ``_init_otel_logs`` and verifies that log records emitted
 inside an active span carry the span's trace_id and span_id once the
@@ -23,7 +23,7 @@ from opentelemetry.sdk._logs.export import (
 )
 from opentelemetry.sdk.trace import TracerProvider
 
-from agent_meow.runtime import telemetry
+from omnigent.runtime import telemetry
 
 _BRIDGE_NAME = "omnigent-otel-log-bridge"
 
@@ -63,7 +63,7 @@ def _opt_in_telemetry(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     try:
         yield
     finally:
-        from agent_meow.inner.tracing import disable_tracing
+        from omnigent.inner.tracing import disable_tracing
 
         disable_tracing()
         telemetry._initialized = False
@@ -87,7 +87,7 @@ def reset_log_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr(telemetry, "_logs_initialized", False)
 
 
-# ── _logs_exporter_name ─────────────────────────────────
+# â”€â”€ _logs_exporter_name â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_logs_exporter_name_otlp_from_endpoint(
@@ -131,7 +131,7 @@ def test_logs_exporter_name_explicit_none_wins(
     assert telemetry._logs_exporter_name() == "none"
 
 
-# ── _init_otel_logs ─────────────────────────────────────
+# â”€â”€ _init_otel_logs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_init_otel_logs_attaches_handler_with_endpoint(
@@ -220,7 +220,7 @@ def test_init_otel_logs_idempotent_via_init(
     )
 
 
-# ── trace_id / span_id propagation ──────────────────────
+# â”€â”€ trace_id / span_id propagation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_log_emitted_in_span_carries_trace_and_span_ids(
@@ -260,7 +260,7 @@ def test_log_emitted_in_span_carries_trace_and_span_ids(
         with tracer.start_as_current_span("test-span") as span:
             expected_trace_id = span.get_span_context().trace_id
             expected_span_id = span.get_span_context().span_id
-            logging.getLogger("agent_meow.test").info("hello from inside the span")
+            logging.getLogger("omnigent.test").info("hello from inside the span")
     finally:
         root_logger.setLevel(previous_level)
 

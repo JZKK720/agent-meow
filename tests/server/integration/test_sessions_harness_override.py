@@ -51,7 +51,7 @@ def _stub_runner_client(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     :returns: A dict the test inspects after the runner POST runs;
         contains ``path`` and ``body`` keys once the route fires.
     """
-    from agent_meow.server.routes import sessions as sessions_mod
+    from omnigent.server.routes import sessions as sessions_mod
 
     captured: dict[str, Any] = {}
 

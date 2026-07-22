@@ -1,4 +1,4 @@
-"""Tests for agent_meow.spec.load()."""
+"""Tests for omnigent.spec.load()."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
-from agent_meow.spec import load, materialize_bundle
-from agent_meow.spec._omnigent_compat import load_omnigent_yaml
+from omnigent.errors import OmnigentError
+from omnigent.spec import load, materialize_bundle
+from omnigent.spec._omnigent_compat import load_omnigent_yaml
 
 
 @pytest.fixture()
@@ -82,7 +82,7 @@ def test_load_yaml_missing_prompt_raises_actionable_error(tmp_path: Path) -> Non
     A ``.yaml`` file that's missing the ``prompt`` key fails the
     omnigent-YAML check. Without the diagnostic dispatch in
     ``load()``, the caller would see ``"dest is required when
-    loading from a tarball"`` — the file's a YAML, not a tarball.
+    loading from a tarball"`` â€” the file's a YAML, not a tarball.
     The fix surfaces the specific reason instead.
 
     What breaks if this fails: a user editing the prompt field in
@@ -177,7 +177,7 @@ def test_load_bytes_without_dest_raises() -> None:
         load(b"fake-tarball-bytes")
 
 
-# ── materialize_bundle ──────────────────────────────────────
+# â”€â”€ materialize_bundle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_materialize_bundle_copies_directory_recursively(tmp_path: Path) -> None:
@@ -189,7 +189,7 @@ def test_materialize_bundle_copies_directory_recursively(tmp_path: Path) -> None
     full spec tree.
 
     What breaks if this fails: ``agent-meow server --agent my-agent/``
-    ends up tarballing a partial bundle — the server-side
+    ends up tarballing a partial bundle â€” the server-side
     extraction would either fail or produce an incomplete spec
     the LLM runs with.
     """
@@ -201,10 +201,10 @@ def test_materialize_bundle_copies_directory_recursively(tmp_path: Path) -> None
     dest = tmp_path / "dest"
     returned = materialize_bundle(source, dest)
 
-    # Return value is *dest* itself — callers chain directly.
+    # Return value is *dest* itself â€” callers chain directly.
     assert returned == dest
     assert dest.is_dir()
-    # Top-level and nested files both copied — a shallow copy
+    # Top-level and nested files both copied â€” a shallow copy
     # would fail the nested assertion.
     assert (dest / "config.yaml").read_text() == "spec_version: 1\nname: x\n"
     assert (dest / "sub" / "asset.txt").read_text() == "hello"
@@ -214,7 +214,7 @@ def test_materialize_bundle_wraps_yaml_file_in_dest(tmp_path: Path) -> None:
     """
     A single-file YAML source is placed at the root of *dest*
     with its original basename preserved. This is the shape
-    ``_find_omnigent_yaml_in_dir`` expects — it scans the
+    ``_find_omnigent_yaml_in_dir`` expects â€” it scans the
     directory for exactly one YAML not named ``config.yaml``.
     Wrong placement (nested directory, renamed file) would fall
     through the dispatch and the load would fail.
@@ -227,7 +227,7 @@ def test_materialize_bundle_wraps_yaml_file_in_dest(tmp_path: Path) -> None:
 
     assert returned == dest
     assert dest.is_dir()
-    # Basename preserved — agent-meow' dispatch uses
+    # Basename preserved â€” agent-meow' dispatch uses
     # ``is_omnigent_yaml`` on the exact file (not a synthesized
     # ``config.yaml``), so the original name must carry through.
     assert (dest / "coding_supervisor.yaml").read_text() == source.read_text()
@@ -243,7 +243,7 @@ def test_materialize_bundle_creates_dest_for_file_source(tmp_path: Path) -> None
     source = tmp_path / "foo.yaml"
     source.write_text("name: foo\n")
 
-    # Destination doesn't exist yet — materialize must create it.
+    # Destination doesn't exist yet â€” materialize must create it.
     dest = tmp_path / "does" / "not" / "exist" / "bundle"
     assert not dest.exists()
 
@@ -270,7 +270,7 @@ def test_materialize_bundle_then_load_roundtrip_directory(tmp_path: Path) -> Non
     :func:`load` on the materialized path returns the same spec
     the caller would have gotten from ``load(source)`` directly.
     Proves the helper's output is the canonical input to
-    :func:`load` — which is the contract all three consumers
+    :func:`load` â€” which is the contract all three consumers
     (``_preregister_agent``, ``_prepare_omnigent_yaml_bundle``,
     ``_chat_local``) rely on.
     """
@@ -301,10 +301,10 @@ def test_materialize_bundle_then_load_roundtrip_yaml(tmp_path: Path) -> None:
     yield a directory ``load`` rejects.
     """
     source = tmp_path / "hello.yaml"
-    # Include an executor block with a harness — the adapter's
+    # Include an executor block with a harness â€” the adapter's
     # validator requires one for executor.type='agent-meow'. The
     # roundtrip shape we want to prove is "path goes through, spec
-    # loads" — not harness-selection logic, which has its own
+    # loads" â€” not harness-selection logic, which has its own
     # tests in test_omnigent_adapter.py.
     source.write_text(
         yaml.dump(
@@ -322,7 +322,7 @@ def test_materialize_bundle_then_load_roundtrip_yaml(tmp_path: Path) -> None:
     bundle_dir = materialize_bundle(source, tmp_path / "bundle")
     spec = load(bundle_dir)
 
-    # agent-meow-sourced spec — translator sets executor.type.
+    # agent-meow-sourced spec â€” translator sets executor.type.
     assert spec.name == "hello-from-yaml"
     assert spec.executor.type == "agent-meow"
 
@@ -333,7 +333,7 @@ def test_load_omnigent_yaml_preserves_use_responses_bool(tmp_path: Path) -> None
     on ``spec.executor.config["use_responses"]``, not the string ``"false"``.
 
     What breaks if this fails: ``_build_openai_agents_sdk_spawn_env`` encodes the
-    config value with ``bool(use_responses)`` — but ``bool("false") is True``, so a
+    config value with ``bool(use_responses)`` â€” but ``bool("false") is True``, so a
     string ``"false"`` inverts the flag and the executor is launched with
     ``HARNESS_OPENAI_AGENTS_USE_RESPONSES=true``, causing silent API failures for
     models that require ``use_responses=False`` (e.g. Kimi K2 via Databricks).
@@ -420,7 +420,7 @@ def test_load_omnigent_yaml_missing_harness_omits_version_skew_hint(
     """
     The version-skew hint is gated on a harness *enum mismatch*, not on any
     ``executor.config.harness`` failure. A *missing* harness is a plain
-    authoring mistake — the synthesized-spec error still fires (same path),
+    authoring mistake â€” the synthesized-spec error still fires (same path),
     but it must NOT imply the client is older than the server, since no
     unrecognized harness value is involved.
     """
@@ -442,14 +442,14 @@ def test_load_omnigent_yaml_missing_harness_omits_version_skew_hint(
     assert "this client (runner) may be older than the server" not in message
 
 
-# ── prune_invalid_sub_agents (execution-path backwards compat) ──────────
+# â”€â”€ prune_invalid_sub_agents (execution-path backwards compat) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # The motivating incident: a newer server bumped polly to a definition with an
 # ``opencode`` sub-agent, and older clients failed to launch *any* polly
 # because the unknown ``opencode-native`` harness failed the whole spec's
 # validation. ``opencode-native`` is itself a recognized harness now, so these
 # tests use a deliberately-synthetic harness name to stand in for "whatever the
-# next server adds that this client doesn't know yet" — the mechanism must
+# next server adds that this client doesn't know yet" â€” the mechanism must
 # survive that class of skew regardless of which specific harness triggers it.
 _UNKNOWN_HARNESS = "harness-from-a-newer-server"
 
@@ -465,7 +465,7 @@ def _write_parent_with_sub_agents(
     :param root: Bundle root to populate.
     :param parent_agents: Names placed under the parent's
         ``tools.agents`` delegation list.
-    :param sub_agents: Map of sub-agent name → its ``config.yaml`` dict,
+    :param sub_agents: Map of sub-agent name â†’ its ``config.yaml`` dict,
         each written to ``agents/<name>/config.yaml``.
     """
     parent = {
@@ -487,7 +487,7 @@ def test_load_drops_invalid_sub_agent_when_pruning(tmp_path: Path) -> None:
     This is matei's scenario: a newer server's bundle declares a
     sub-agent whose harness this (older) client doesn't recognize. With
     pruning on (the runner/AgentCache execution path), the bad sub-agent
-    is dropped — along with its ``tools.agents`` reference — and the
+    is dropped â€” along with its ``tools.agents`` reference â€” and the
     parent agent loads with its remaining capabilities.
     """
     _write_parent_with_sub_agents(
@@ -515,12 +515,12 @@ def test_load_drops_invalid_sub_agent_when_pruning(tmp_path: Path) -> None:
     sub_names = {sa.name for sa in spec.sub_agents}
     assert sub_names == {"helper"}
     # The dangling reference must be removed too, or the parent itself
-    # would fail validation on "references sub-agent 'newcomer'…".
+    # would fail validation on "references sub-agent 'newcomer'â€¦".
     assert spec.tools.agents == ["helper"]
 
 
 def test_load_without_pruning_still_fails_on_invalid_sub_agent(tmp_path: Path) -> None:
-    """Default (strict) load still fails the whole spec — unchanged behavior."""
+    """Default (strict) load still fails the whole spec â€” unchanged behavior."""
     _write_parent_with_sub_agents(
         tmp_path,
         parent_agents=["newcomer"],
@@ -571,7 +571,7 @@ def test_load_pruning_keeps_valid_sub_agents_intact(tmp_path: Path) -> None:
 def test_load_pruning_logs_warning_for_dropped_sub_agent(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Dropping a sub-agent is loud — a WARNING names it (never silent)."""
+    """Dropping a sub-agent is loud â€” a WARNING names it (never silent)."""
     _write_parent_with_sub_agents(
         tmp_path,
         parent_agents=["newcomer"],
@@ -587,7 +587,7 @@ def test_load_pruning_logs_warning_for_dropped_sub_agent(
         },
     )
 
-    with caplog.at_level("WARNING", logger="agent_meow.spec"):
+    with caplog.at_level("WARNING", logger="omnigent.spec"):
         load(tmp_path, prune_invalid_sub_agents=True)
 
     assert any("newcomer" in rec.message and rec.levelname == "WARNING" for rec in caplog.records)
@@ -596,7 +596,7 @@ def test_load_pruning_logs_warning_for_dropped_sub_agent(
 def test_load_pruning_drops_grandchild_but_keeps_valid_child(tmp_path: Path) -> None:
     """Depth-first: a bad *grandchild* is pruned without taking out its parent.
 
-    parent → child (valid) → grandchild (unknown harness). Only the
+    parent â†’ child (valid) â†’ grandchild (unknown harness). Only the
     grandchild is dropped; the valid child survives with the dangling
     grandchild reference cleaned off its own ``tools.agents``.
     """

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow import claude_native_status
+from omnigent import claude_native_status
 
 
 def _run(

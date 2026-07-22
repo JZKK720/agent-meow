@@ -12,13 +12,13 @@ from typing import Any
 
 import pytest
 
-from agent_meow.stores.artifact_store.databricks_volumes import (
+from omnigent.stores.artifact_store.databricks_volumes import (
     DatabricksVolumesArtifactStore,
     _parse_volume_root,
     _validate_key,
 )
 
-# ── _parse_volume_root ──────────────────────────────────────
+# â”€â”€ _parse_volume_root â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_volume_root_basic() -> None:
@@ -39,8 +39,8 @@ def test_parse_volume_root_with_prefix() -> None:
     **What breaks if wrong**: prefix is stripped, artifacts land
     in the volume root instead of the intended subdirectory.
     """
-    result = _parse_volume_root("dbfs:/Volumes/cat/schema/vol/agent_meow/artifacts")
-    assert result == "/Volumes/cat/schema/vol/agent_meow/artifacts"
+    result = _parse_volume_root("dbfs:/Volumes/cat/schema/vol/omnigent/artifacts")
+    assert result == "/Volumes/cat/schema/vol/omnigent/artifacts"
 
 
 def test_parse_volume_root_rejects_non_dbfs() -> None:
@@ -60,7 +60,7 @@ def test_parse_volume_root_rejects_non_dbfs() -> None:
         _parse_volume_root("dbfs:/some/other/path")
 
 
-# ── _validate_key ───────────────────────────────────────────
+# â”€â”€ _validate_key â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -100,7 +100,7 @@ def test_validate_key_accepts_valid_keys() -> None:
     _validate_key("simple_key")
 
 
-# ── _resolve path construction ──────────────────────────────
+# â”€â”€ _resolve path construction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_constructs_full_path(
@@ -113,7 +113,7 @@ def test_resolve_constructs_full_path(
     operations target wrong location.
     """
     monkeypatch.setattr(
-        "agent_meow.stores.artifact_store.databricks_volumes._ensure_databricks_sdk",
+        "omnigent.stores.artifact_store.databricks_volumes._ensure_databricks_sdk",
         lambda: None,
     )
     # Patch the SDK import inside __init__
@@ -127,14 +127,14 @@ def test_resolve_constructs_full_path(
     assert path == "/Volumes/cat/schema/vol/prefix/agents/ag_1/bundle.tar.gz"
 
 
-# ── SDK operation stubs ──────────────────────────────────────
+# â”€â”€ SDK operation stubs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _StubFilesAPI:
     """
     Stub for ``WorkspaceClient.files`` that records calls.
 
-    :param stored: Dict mapping path → bytes for simulated storage.
+    :param stored: Dict mapping path â†’ bytes for simulated storage.
     """
 
     def __init__(self, stored: dict[str, bytes] | None = None) -> None:
@@ -199,7 +199,7 @@ def stub_store(monkeypatch: pytest.MonkeyPatch) -> DatabricksVolumesArtifactStor
     :returns: A store backed by in-memory stubs.
     """
     monkeypatch.setattr(
-        "agent_meow.stores.artifact_store.databricks_volumes._ensure_databricks_sdk",
+        "omnigent.stores.artifact_store.databricks_volumes._ensure_databricks_sdk",
         lambda: None,
     )
     files_api = _StubFilesAPI()
@@ -299,7 +299,7 @@ def test_nested_key(stub_store: DatabricksVolumesArtifactStore) -> None:
     assert stub_store.get("agents/ag_1/bundle.tar.gz") == b"bundle"
 
 
-# ── workspace_client injection ───────────────────────────────
+# â”€â”€ workspace_client injection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_injected_workspace_client_used_as_is(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -312,7 +312,7 @@ def test_injected_workspace_client_used_as_is(monkeypatch: pytest.MonkeyPatch) -
     Volume operations run under the wrong identity.
     """
     monkeypatch.setattr(
-        "agent_meow.stores.artifact_store.databricks_volumes._ensure_databricks_sdk",
+        "omnigent.stores.artifact_store.databricks_volumes._ensure_databricks_sdk",
         lambda: None,
     )
 
@@ -341,7 +341,7 @@ def test_ambient_workspace_client_built_when_not_injected(monkeypatch: pytest.Mo
     breaking every existing call site that relies on ambient credentials.
     """
     monkeypatch.setattr(
-        "agent_meow.stores.artifact_store.databricks_volumes._ensure_databricks_sdk",
+        "omnigent.stores.artifact_store.databricks_volumes._ensure_databricks_sdk",
         lambda: None,
     )
 

@@ -1,4 +1,4 @@
-"""Phase 0 characterization test — claude-sdk harness, one-shot prompt.
+"""Phase 0 characterization test â€” claude-sdk harness, one-shot prompt.
 
 Runs ``agent-meow run hello_world.yaml --harness claude-sdk -p
 "..."`` as a real subprocess against the mock LLM server and
@@ -9,16 +9,16 @@ assistant text length).
 - agent-meow' ``ClaudeSDKExecutor`` regresses (auth, MCP tool
   bridging, Claude Code binary discovery, or the message-stream
   translation in ``claude_sdk_executor.run_turn``).
-- ``agent_meow.cli._run_agent`` for the ``-p`` one-shot path
+- ``omnigent.cli._run_agent`` for the ``-p`` one-shot path
   stops printing the assistant text to stdout on turn complete.
 - The Claude Agent SDK dependency or the ``claude`` CLI binary
   goes missing from the agent-meow venv.
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
 per-harness suite.
 
 **Serial execution note:** These tests are designed for serial
-execution — do NOT run them under pytest-xdist or any parallel
+execution â€” do NOT run them under pytest-xdist or any parallel
 runner that shares the mock LLM server process. Each test uses a
 UUID-keyed model name, so concurrent tests use separate queues and
 queue cross-contamination is impossible even without ``reset_mock_llm``.
@@ -37,13 +37,13 @@ from typing import Any
 
 import pytest
 
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
 
 _HARNESS = "claude-sdk"
 _PROMPT = "say hi in 5 words"
 
-# Minimum assistant-text length — anything longer than "hi" is
+# Minimum assistant-text length â€” anything longer than "hi" is
 # enough to prove the turn actually produced model output (not
 # an empty response or a pure error banner).
 _MIN_ASSISTANT_CHARS = 4
@@ -62,7 +62,7 @@ def claude_sdk_available(omnigent_python: Path) -> bool:
     harness.
 
     claude-sdk needs BOTH the Python package (inside the
-    *agent-meow* venv — the test's own venv is irrelevant because
+    *agent-meow* venv â€” the test's own venv is irrelevant because
     the test shells out) and the ``claude`` CLI binary on PATH.
     The binary is installed manually by users on their dev
     machines (``npm install -g @anthropic-ai/claude-code``), so
@@ -115,14 +115,14 @@ def test_per_harness_claude_sdk_one_shot(
         ``ANTHROPIC_BASE_URL``.
     :param claude_sdk_available: True when the claude-sdk
         prerequisites (SDK package + ``claude`` binary) are
-        present. If False, the test skips — the ``claude`` binary
+        present. If False, the test skips â€” the ``claude`` binary
         is a genuine proprietary CLI that CI commonly lacks.
     """
     if not claude_sdk_available:
         pytest.skip(
             "claude-sdk harness prerequisites missing: both the "
             "'claude_agent_sdk' Python package and the 'claude' CLI "
-            "binary must be present on PATH. Skipping — binary absent."
+            "binary must be present on PATH. Skipping â€” binary absent."
         )
 
     model = f"mock-harness-claude-sdk-{uuid.uuid4().hex[:8]}"
@@ -188,7 +188,7 @@ def test_per_harness_claude_sdk_one_shot(
     }
 
     # Full stderr surfaced on failure so CI logs show WHY the
-    # run went wrong — stderr here is opaque unless we dump it.
+    # run went wrong â€” stderr here is opaque unless we dump it.
     diffs = compare_snapshot("test_per_harness_claude_sdk", observed)
     assert diffs == [], (
         "Snapshot mismatch for claude-sdk run:\n"

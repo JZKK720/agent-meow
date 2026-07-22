@@ -10,7 +10,7 @@ import httpx
 import pytest
 import yaml
 
-from agent_meow.server.routes import session_mcp_servers as mcp_routes
+from omnigent.server.routes import session_mcp_servers as mcp_routes
 from tests.server.helpers import create_test_session
 
 pytestmark = pytest.mark.asyncio

@@ -18,9 +18,9 @@ import click
 import httpx
 import pytest
 
-from agent_meow import claude_native, codex_native, native_terminal
-from agent_meow.claude_native_bridge import BRIDGE_ID_LABEL_KEY
-from agent_meow.host import daemon_launch
+from omnigent import claude_native, codex_native, native_terminal
+from omnigent.claude_native_bridge import BRIDGE_ID_LABEL_KEY
+from omnigent.host import daemon_launch
 
 pytestmark = pytest.mark.asyncio
 
@@ -47,7 +47,7 @@ async def test_native_wrappers_share_daemon_terminal_helpers() -> None:
 
 async def test_launch_or_reuse_daemon_runner_reuses_online_runner() -> None:
     """
-    An already-bound, still-online runner is reused — no new launch.
+    An already-bound, still-online runner is reused â€” no new launch.
 
     Resuming into a live session must not spawn a second runner. If the
     helper POSTed to ``/runners`` here it would 400 ("already bound") or
@@ -75,7 +75,7 @@ async def test_launch_or_reuse_daemon_runner_reuses_online_runner() -> None:
         )
 
     assert runner_id == "runner_live"
-    # No launch POST fired — proves the online runner was reused, not respawned.
+    # No launch POST fired â€” proves the online runner was reused, not respawned.
     assert posted == []
 
 
@@ -143,7 +143,7 @@ async def test_launch_or_reuse_daemon_runner_clears_stale_binding() -> None:
 
     assert runner_id == "runner_fresh"
     # The stale binding was cleared (runner_id="") strictly before the
-    # launch — the ordering the atomic NULL-bind requires.
+    # launch â€” the ordering the atomic NULL-bind requires.
     assert ("patch", {"runner_id": ""}) in events
     assert events.index(("patch", {"runner_id": ""})) < events.index(("launch", None))
 
@@ -157,7 +157,7 @@ async def test_create_claude_session_persists_terminal_launch_args() -> None:
     daemon-spawned runner: they're written to the session's
     ``terminal_launch_args`` at create so the runner applies them when it
     auto-launches the terminal. The bridge-id label is omitted
-    (``bridge_id=None``) so the bridge dir keys by session id — the
+    (``bridge_id=None``) so the bridge dir keys by session id â€” the
     convention the runner's auto-create uses. A missing
     ``terminal_launch_args`` would silently drop the user's flags; a
     present bridge-id label would split the bridge dir between the
@@ -186,7 +186,7 @@ async def test_create_claude_session_persists_terminal_launch_args() -> None:
     body = captured["body"]
     assert b'"terminal_launch_args"' in body
     assert b"--dangerously-skip-permissions" in body
-    # bridge_id=None → the bridge-id label must NOT be written.
+    # bridge_id=None â†’ the bridge-id label must NOT be written.
     assert BRIDGE_ID_LABEL_KEY.encode() not in body
 
 
@@ -214,15 +214,15 @@ def _install_daemon_seam_mocks(
         to.
     :returns: None.
     """
-    monkeypatch.setattr("agent_meow.chat._remote_headers", lambda server_url=None, **k: {})
-    monkeypatch.setattr("agent_meow.chat._server_auth", lambda server_url=None, **k: None)
-    monkeypatch.setattr("agent_meow.chat._bundle_agent", lambda path: b"bundle")
+    monkeypatch.setattr("omnigent.chat._remote_headers", lambda server_url=None, **k: {})
+    monkeypatch.setattr("omnigent.chat._server_auth", lambda server_url=None, **k: None)
+    monkeypatch.setattr("omnigent.chat._bundle_agent", lambda path: b"bundle")
     monkeypatch.setattr(
-        "agent_meow.cli._ensure_host_daemon",
+        "omnigent.cli._ensure_host_daemon",
         lambda url: ensured.append(url),
     )
     monkeypatch.setattr(
-        "agent_meow.host.identity.load_or_create_host_identity",
+        "omnigent.host.identity.load_or_create_host_identity",
         lambda *a, **k: SimpleNamespace(host_id="host_1", name="h"),
     )
     monkeypatch.setattr(
@@ -339,7 +339,7 @@ def test_run_with_remote_server_detach_prints_resume_hint(
 
     err = capsys.readouterr().err
     assert "Detached. Agent still running at https://example.com/c/conv_existing" in err
-    # Exact resume command: server + session only — a --profile part
+    # Exact resume command: server + session only â€” a --profile part
     # here would tell the user to run a flag that no longer exists.
     assert (
         "Resume with: agent-meow claude --server https://example.com --resume conv_existing"

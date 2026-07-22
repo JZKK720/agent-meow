@@ -5,8 +5,8 @@ Covers both INPUT (``request``) and TOOL_CALL phases with approve/refuse
 outcomes, exercising the full path from agent bundle upload through
 policy engine construction, elicitation parking, and resolution.
 
-Uses ``create_test_agent`` with inline ``guardrails`` dicts — the same
-spec shape the YAML ``guardrails:`` block produces — so no fixture
+Uses ``create_test_agent`` with inline ``guardrails`` dicts â€” the same
+spec shape the YAML ``guardrails:`` block produces â€” so no fixture
 agent directories are needed.
 
 The ``make_fixed_action_callable`` builtin generates policy callables
@@ -22,12 +22,12 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.runtime import pending_elicitations, session_stream
+from omnigent.runtime import pending_elicitations, session_stream
 from tests.server.helpers import create_test_agent
 
 pytestmark = pytest.mark.asyncio
 
-# ── Guardrails specs ─────────────────────────────────────
+# â”€â”€ Guardrails specs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _INPUT_ASK_GUARDRAILS: dict[str, Any] = {
     "policies": {
@@ -35,7 +35,7 @@ _INPUT_ASK_GUARDRAILS: dict[str, Any] = {
             "type": "function",
             "on": ["request"],
             "function": {
-                "path": "agent_meow.policies.function.make_fixed_action_callable",
+                "path": "omnigent.policies.function.make_fixed_action_callable",
                 "arguments": {
                     "action": "ask",
                     "reason": "Confirm this message before processing.",
@@ -52,7 +52,7 @@ _TOOL_CALL_ASK_GUARDRAILS: dict[str, Any] = {
             "type": "function",
             "on": ["tool_call"],
             "function": {
-                "path": "agent_meow.policies.function.make_fixed_action_callable",
+                "path": "omnigent.policies.function.make_fixed_action_callable",
                 "arguments": {
                     "action": "ask",
                     "reason": "Approve this tool call.",
@@ -64,7 +64,7 @@ _TOOL_CALL_ASK_GUARDRAILS: dict[str, Any] = {
 }
 
 
-# ── Helpers ──────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def _create_session(
@@ -144,7 +144,7 @@ def _tool_call_request(
     }
 
 
-# ── Test 1: ASK on INPUT from YAML -> approve ───────────
+# â”€â”€ Test 1: ASK on INPUT from YAML -> approve â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_input_ask_yaml_approve(
@@ -173,7 +173,7 @@ async def test_input_ask_yaml_approve(
     try:
         await subscribed.wait()
 
-        # POST the user message — this parks inside _evaluate_input_policy
+        # POST the user message â€” this parks inside _evaluate_input_policy
         # until the ASK is resolved.
         message_task = asyncio.create_task(
             client.post(
@@ -206,9 +206,9 @@ async def test_input_ask_yaml_approve(
         )
         assert verdict.status_code == 202, verdict.text
 
-        # The message POST should now return — ALLOW means the message
+        # The message POST should now return â€” ALLOW means the message
         # was forwarded past the policy layer (not denied synchronously).
-        # It may then fail with 503 (no runner bound) — that still proves
+        # It may then fail with 503 (no runner bound) â€” that still proves
         # the ASK gate approved the message through.
         resp = await asyncio.wait_for(message_task, timeout=5.0)
         body = resp.json()
@@ -221,7 +221,7 @@ async def test_input_ask_yaml_approve(
         pending_elicitations.reset_for_tests()
 
 
-# ── Test 2: ASK on INPUT from YAML -> refuse ────────────
+# â”€â”€ Test 2: ASK on INPUT from YAML -> refuse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_input_ask_yaml_refuse(
@@ -231,7 +231,7 @@ async def test_input_ask_yaml_refuse(
     Declining an INPUT ASK elicitation produces the DENY sentinel.
 
     The events endpoint returns a synchronous deny verdict (``denied:
-    true``) when the human refuses the ASK gate — fail-closed. The
+    true``) when the human refuses the ASK gate â€” fail-closed. The
     deny reason carries the policy's configured reason text.
     """
     agent = await create_test_agent(
@@ -284,7 +284,7 @@ async def test_input_ask_yaml_refuse(
         pending_elicitations.reset_for_tests()
 
 
-# ── Test 3: ASK on TOOL_CALL from YAML -> approve ───────
+# â”€â”€ Test 3: ASK on TOOL_CALL from YAML -> approve â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_tool_call_ask_yaml_approve(

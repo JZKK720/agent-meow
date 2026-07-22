@@ -23,14 +23,14 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.types import (
+from omnigent.policies.types import EvaluationContext
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.types import (
     LabelDef,
     Phase,
     PolicyAction,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -207,7 +207,7 @@ def test_spec_for_finds_policy_by_name(
 ) -> None:
     """When a policy with the given name exists, spec_for
     returns its spec. Proves the YAML-order list lookup works."""
-    from agent_meow.spec.types import PhaseSelector
+    from omnigent.spec.types import PhaseSelector
     from tests.runtime.policies.conftest import make_fixed_policy
 
     conv = conversation_store.create_conversation()

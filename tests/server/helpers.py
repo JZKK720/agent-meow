@@ -17,13 +17,13 @@ import httpx
 import yaml
 from fastapi import FastAPI
 
-from agent_meow.onboarding.sandboxes import (
+from omnigent.onboarding.sandboxes import (
     RemoteCommandResult,
     RemoteProcess,
     SandboxLauncher,
 )
-from agent_meow.runner.transports.ws_tunnel.frames import HelloFrame
-from agent_meow.runtime import session_stream
+from omnigent.runner.transports.ws_tunnel.frames import HelloFrame
+from omnigent.runtime import session_stream
 
 # Sentinel ready event so a stream collector's registration is a
 # deterministic sync point (first delivered item) rather than a
@@ -38,7 +38,7 @@ class SessionStreamCollector:
     A live ``session_stream`` subscriber capturing published events.
 
     Used by presence tests to observe broadcasts through the same
-    pub/sub path the SSE route consumes — every assertion exercises
+    pub/sub path the SSE route consumes â€” every assertion exercises
     the real publish pipeline, not a mock.
 
     :param queue: Events delivered to this subscriber, in order.
@@ -63,7 +63,7 @@ class SessionStreamCollector:
 
         :param within: Seconds to wait, e.g. ``0.2``. Chosen per test
             to comfortably cover the (shrunken) timer under test, so
-            a spurious broadcast — the breakage being tested for —
+            a spurious broadcast â€” the breakage being tested for â€”
             lands inside the window deterministically.
         """
         try:
@@ -115,7 +115,7 @@ class HostStartInvocation:
 
     :param host_id: Value of the injected ``OMNIGENT_HOST_ID``.
     :param host_name: Value of the injected ``OMNIGENT_HOST_NAME``.
-    :param token: Value of the injected ``OMNIGENT_HOST_TOKEN`` — the
+    :param token: Value of the injected ``OMNIGENT_HOST_TOKEN`` â€” the
         raw launch token.
     :param command: The full shell command, for free-form assertions.
     """
@@ -152,7 +152,7 @@ class FakeSandboxLauncher(SandboxLauncher):
         (simulates an in-sandbox command failing). ``None`` disables.
     :param home: ``$HOME`` the fake sandbox reports, e.g. ``"/root"``.
     :param provision_gate: When set, ``provision`` blocks until the
-        event is set — a deterministic hold-the-launch-mid-provision
+        event is set â€” a deterministic hold-the-launch-mid-provision
         point for tests of the background managed launch (``provision``
         runs on an ``asyncio.to_thread`` worker, so a
         ``threading.Event`` is the correct primitive). ``None``
@@ -216,7 +216,7 @@ class FakeSandboxLauncher(SandboxLauncher):
     def provision(self, name: str) -> str:
         """Record provisioning and return a per-generation sandbox id.
 
-        Ids increment per call (``sb-fake-1``, ``sb-fake-2``, …) so
+        Ids increment per call (``sb-fake-1``, ``sb-fake-2``, â€¦) so
         relaunch tests can tell sandbox generations apart.
         """
         if self._provision_gate is not None:
@@ -228,11 +228,11 @@ class FakeSandboxLauncher(SandboxLauncher):
         return f"sb-fake-{len(self.provisioned_names)}"
 
     def attach(self, sandbox_id: str) -> None:
-        """Unused by the managed flow — fail loud if reached."""
+        """Unused by the managed flow â€” fail loud if reached."""
         raise AssertionError("managed launch must not attach to existing sandboxes")
 
     def keep_alive(self, sandbox_id: str) -> None:
-        """Unused by the managed flow — fail loud if reached."""
+        """Unused by the managed flow â€” fail loud if reached."""
         raise AssertionError("managed launch must not call keep_alive")
 
     def run(self, sandbox_id: str, command: str, *, check: bool = True) -> RemoteCommandResult:
@@ -252,19 +252,19 @@ class FakeSandboxLauncher(SandboxLauncher):
         return RemoteCommandResult(returncode=0, stdout="", stderr="")
 
     def put(self, sandbox_id: str, local_path: Any, remote_path: str) -> None:
-        """Unused by the managed flow — fail loud if reached."""
+        """Unused by the managed flow â€” fail loud if reached."""
         raise AssertionError("managed launch must not ship files (image is pre-baked)")
 
     def stream_exec(self, sandbox_id: str, command: str, *, pty: bool = False) -> RemoteProcess:
-        """Unused by the managed flow — fail loud if reached."""
+        """Unused by the managed flow â€” fail loud if reached."""
         raise AssertionError("managed launch must not stream_exec")
 
     def exec_foreground(self, sandbox_id: str, command: str) -> int:
-        """Unused by the managed flow — fail loud if reached."""
+        """Unused by the managed flow â€” fail loud if reached."""
         raise AssertionError("managed launch must not exec_foreground")
 
     def wheel_install_command(self, remote_tgz_path: str) -> str:
-        """Unused by the managed flow — fail loud if reached."""
+        """Unused by the managed flow â€” fail loud if reached."""
         raise AssertionError("managed launch must not install wheels (image is pre-baked)")
 
     def terminate(self, sandbox_id: str) -> None:
@@ -283,7 +283,7 @@ def _parse_host_start(command: str) -> HostStartInvocation:
 
     :param command: The recorded shell command.
     :returns: The parsed invocation.
-    :raises AssertionError: If any of the three env vars is missing —
+    :raises AssertionError: If any of the three env vars is missing â€”
         the production command regressed.
     """
     values: dict[str, str] = {}
@@ -300,13 +300,13 @@ def _parse_host_start(command: str) -> HostStartInvocation:
 
 
 def install_fake_modal_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``ModalSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``ModalSandboxLauncher(image=…)`` (and
+    The managed flow constructs ``ModalSandboxLauncher(image=â€¦)`` (and
     the terminate path constructs it bare); the shim records the image
     on the fake and hands the fake back, so production code runs
     unmodified against it.
@@ -314,7 +314,7 @@ def install_fake_modal_launcher(
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import agent_meow.onboarding.sandboxes.modal as modal_mod
+    import omnigent.onboarding.sandboxes.modal as modal_mod
 
     def _ctor(
         *, image: str | None = None, secrets: list[str] | None = None
@@ -328,20 +328,20 @@ def install_fake_modal_launcher(
 
 
 def install_fake_daytona_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``DaytonaSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``DaytonaSandboxLauncher(image=…,
-    env=…)``; the shim records both on the fake and hands the fake
+    The managed flow constructs ``DaytonaSandboxLauncher(image=â€¦,
+    env=â€¦)``; the shim records both on the fake and hands the fake
     back, so production code runs unmodified against it.
 
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import agent_meow.onboarding.sandboxes.daytona as daytona_mod
+    import omnigent.onboarding.sandboxes.daytona as daytona_mod
 
     def _ctor(*, image: str | None = None, env: list[str] | None = None) -> FakeSandboxLauncher:
         """Stand-in constructor recording the construction wiring."""
@@ -353,20 +353,20 @@ def install_fake_daytona_launcher(
 
 
 def install_fake_boxlite_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``BoxliteSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``BoxliteSandboxLauncher(endpoint=…,
-    image=…, env=…)``; the shim records all three on the fake and hands
+    The managed flow constructs ``BoxliteSandboxLauncher(endpoint=â€¦,
+    image=â€¦, env=â€¦)``; the shim records all three on the fake and hands
     the fake back, so production code runs unmodified against it.
 
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import agent_meow.onboarding.sandboxes.boxlite as boxlite_mod
+    import omnigent.onboarding.sandboxes.boxlite as boxlite_mod
 
     def _ctor(
         *,
@@ -388,22 +388,22 @@ def install_fake_boxlite_launcher(
 
 
 def install_fake_islo_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``IsloSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``IsloSandboxLauncher(image=…, env=…,
-    base_url=…, gateway_profile=…, snapshot_name=…, workdir=…,
-    vcpus=…, memory_mb=…, disk_gb=…)``; the shim records those
+    The managed flow constructs ``IsloSandboxLauncher(image=â€¦, env=â€¦,
+    base_url=â€¦, gateway_profile=â€¦, snapshot_name=â€¦, workdir=â€¦,
+    vcpus=â€¦, memory_mb=â€¦, disk_gb=â€¦)``; the shim records those
     constructor args on the fake and hands it back, so production code
     runs unmodified against it.
 
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import agent_meow.onboarding.sandboxes.islo as islo_mod
+    import omnigent.onboarding.sandboxes.islo as islo_mod
 
     def _ctor(
         *,
@@ -433,20 +433,20 @@ def install_fake_islo_launcher(
 
 
 def install_fake_e2b_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``E2BSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``E2BSandboxLauncher(template=…, env=…)``;
+    The managed flow constructs ``E2BSandboxLauncher(template=â€¦, env=â€¦)``;
     the shim records the template name and env names on the fake and
     hands the fake back, so production code runs unmodified against it.
 
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import agent_meow.onboarding.sandboxes.e2b as e2b_mod
+    import omnigent.onboarding.sandboxes.e2b as e2b_mod
 
     def _ctor(*, template: str | None = None, env: list[str] | None = None) -> FakeSandboxLauncher:
         """Stand-in constructor recording the construction wiring."""
@@ -462,20 +462,20 @@ def install_fake_e2b_launcher(
 
 
 def install_fake_openshell_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``OpenShellSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``OpenShellSandboxLauncher(image=…,
-    env=…, cluster=…)``; the shim records those constructor args on the
+    The managed flow constructs ``OpenShellSandboxLauncher(image=â€¦,
+    env=â€¦, cluster=â€¦)``; the shim records those constructor args on the
     fake and hands it back, so production code runs unmodified against it.
 
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import agent_meow.onboarding.sandboxes.openshell as openshell_mod
+    import omnigent.onboarding.sandboxes.openshell as openshell_mod
 
     def _ctor(
         *,
@@ -493,22 +493,22 @@ def install_fake_openshell_launcher(
 
 
 def install_fake_kubernetes_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``KubernetesSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``KubernetesSandboxLauncher(image=…, env=…,
-    namespace=…, secret_name=…, service_account=…, node_selector=…,
-    kubeconfig=…, in_cluster=…, resources=…)``; the shim records those
+    The managed flow constructs ``KubernetesSandboxLauncher(image=â€¦, env=â€¦,
+    namespace=â€¦, secret_name=â€¦, service_account=â€¦, node_selector=â€¦,
+    kubeconfig=â€¦, in_cluster=â€¦, resources=â€¦)``; the shim records those
     constructor args on the fake and hands it back, so production code runs
     unmodified against it.
 
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
     """
-    import agent_meow.onboarding.sandboxes.kubernetes as kubernetes_mod
+    import omnigent.onboarding.sandboxes.kubernetes as kubernetes_mod
 
     def _ctor(
         *,
@@ -637,7 +637,7 @@ def build_agent_bundle(
         Each must have at least a ``"name"`` key, e.g.
         ``[{"name": "researcher", "description": "..."}]``.
     :param max_iterations: Optional override for
-        ``executor.max_iterations`` — useful for tests that want
+        ``executor.max_iterations`` â€” useful for tests that want
         to force an ``incomplete`` terminal state after a known
         number of LLM turns. ``None`` uses the spec default.
     :param executor: Optional executor block to write verbatim,
@@ -878,7 +878,7 @@ class CapturingRunnerClient:
     ``/events`` and signals when a ``cost_approval_popup`` arrives. A real
     class (not MagicMock) so an unexpected call shape fails loud rather than
     silently returning a mock. Install it as the global runner client with
-    ``monkeypatch.setattr("agent_meow.runtime._globals._runner_client", c)``;
+    ``monkeypatch.setattr("omnigent.runtime._globals._runner_client", c)``;
     the server's forward falls back to it when no runner is bound.
 
     :param posted: Accumulated ``{"url", "json"}`` records of each POST.

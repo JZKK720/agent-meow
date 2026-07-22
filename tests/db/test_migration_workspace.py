@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
-from agent_meow.db.utils import clear_engine_cache, get_or_create_engine
+from omnigent.db.utils import clear_engine_cache, get_or_create_engine
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 """
 Tests for the ``harness: hermes`` wrap shape.
 
-Mirror of ``tests/inner/test_pi_harness.py`` — verifies the wrap
+Mirror of ``tests/inner/test_pi_harness.py`` â€” verifies the wrap
 module has the same shape (registry entry, FastAPI app routes,
 env-var-driven lazy executor construction). Does NOT exercise
 the real Hermes CLI; the inner ``HermesExecutor.__init__`` is
@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.inner import hermes_harness
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
+from omnigent.inner import hermes_harness
+from omnigent.runtime.harnesses import _HARNESS_MODULES
 
 
 def test_harness_module_registered_in_module_registry() -> None:
@@ -25,7 +25,7 @@ def test_harness_module_registered_in_module_registry() -> None:
     Without this entry, the runner subprocess can't find the wrap
     when AP-side tries to spawn it for a ``harness: hermes`` spec.
     """
-    assert _HARNESS_MODULES.get("hermes") == "agent_meow.inner.hermes_harness"
+    assert _HARNESS_MODULES.get("hermes") == "omnigent.inner.hermes_harness"
 
 
 def test_create_app_returns_fastapi_with_required_routes() -> None:
@@ -43,7 +43,7 @@ def test_create_app_returns_fastapi_with_required_routes() -> None:
     app = hermes_harness.create_app()
     paths = {route.path for route in app.routes}  # type: ignore[attr-defined]
     # Session-keyed harness API: liveness probe + single
-    # discriminated-event endpoint per §The Harness API Subset.
+    # discriminated-event endpoint per Â§The Harness API Subset.
     assert "/health" in paths
     assert "/v1/sessions/{conversation_id}/events" in paths
 

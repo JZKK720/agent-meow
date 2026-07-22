@@ -10,9 +10,9 @@ It is deliberately fenced off from normal CI two ways, so it can never red the
 PR/push gate:
 
 1. It lives under ``tests/e2e_live/``, which the default ``addopts`` ignores
-   (``--ignore=tests/e2e_live`` in pyproject.toml) — unit collection never sees
+   (``--ignore=tests/e2e_live`` in pyproject.toml) â€” unit collection never sees
    it.
-2. It is marked ``@pytest.mark.nightly`` — even when the dir is named
+2. It is marked ``@pytest.mark.nightly`` â€” even when the dir is named
    explicitly, PR/push runs pass ``-m "not nightly"`` and skip it; only the
    scheduled / ``workflow_dispatch`` pass runs it.
 
@@ -22,15 +22,15 @@ Run it on demand::
 
 A FAIL here means DDG drifted: re-capture the golden fixture with
 ``tests/tools/fixtures/refresh_ddg_fixture.py`` and fix the parser in
-``agent_meow/tools/builtins/web_search_duckduckgo.py``. Transient throttling
-(429 / 5xx / timeout) SKIPS — it is noise, not drift.
+``omnigent/tools/builtins/web_search_duckduckgo.py``. Transient throttling
+(429 / 5xx / timeout) SKIPS â€” it is noise, not drift.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from agent_meow.tools.builtins.web_search_duckduckgo import _search_duckduckgo
+from omnigent.tools.builtins.web_search_duckduckgo import _search_duckduckgo
 
 
 @pytest.mark.nightly
@@ -40,15 +40,15 @@ def test_ddg_live_canary_returns_results() -> None:
 
     Catches the whole silent-200 family in one check: an anti-bot block page,
     a ``result__a`` / ``result__snippet`` rename, or the snippet leaving its
-    element all collapse into "evergreen query → 0 results / wrong shape"."""
-    # "wikipedia" is evergreen — a non-zero result set is a true invariant.
+    element all collapse into "evergreen query â†’ 0 results / wrong shape"."""
+    # "wikipedia" is evergreen â€” a non-zero result set is a true invariant.
     out = _search_duckduckgo("wikipedia", {})
 
     if out.startswith("DuckDuckGo search error"):
         pytest.skip(f"transient DDG error, not drift: {out}")  # 429/5xx/timeout
 
     assert out != "No results found.", (
-        "DDG returned zero results for an evergreen query — blocked or the "
+        "DDG returned zero results for an evergreen query â€” blocked or the "
         "result__a / result__snippet selectors drifted. Refresh the golden "
         "fixture and check the parser."
     )
@@ -58,5 +58,5 @@ def test_ddg_live_canary_returns_results() -> None:
     blocks = out.split("\n\n")
     with_snippet = sum(1 for b in blocks if len(b.splitlines()) >= 3 and b.splitlines()[2].strip())
     assert with_snippet >= len(blocks) // 2, (
-        "snippets mostly empty — result__snippet likely moved or was renamed"
+        "snippets mostly empty â€” result__snippet likely moved or was renamed"
     )

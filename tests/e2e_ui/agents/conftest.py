@@ -9,7 +9,7 @@ jokes itself: each joke lives ONLY in one of its two inline
 ``type: agent`` comedian sub-agents, tagged with a per-run nonce. A
 joke's nonce reaching the parent's bubbles can therefore only have
 traveled through a real ``sys_session_send`` round trip (dispatch,
-sub-agent turn, inbox auto-wake) — never from the parent's own world
+sub-agent turn, inbox auto-wake) â€” never from the parent's own world
 knowledge. Two distinct comedians means two distinct child sessions,
 which is what the Agents-rail tests assert on.
 """
@@ -27,7 +27,7 @@ from dataclasses import dataclass
 import httpx
 import pytest
 
-# Private helpers from the parent conftest — same import pattern the
+# Private helpers from the parent conftest â€” same import pattern the
 # sibling chat tests use for ``open_right_rail`` / ``TwoAgentChatSession``.
 from tests.e2e_ui.conftest import _ensure_runner_online, _server_state
 
@@ -56,7 +56,7 @@ def _joke_director_yaml(code_one: str, code_two: str) -> str:
     """Build the joke-director spec (parent + two comedian sub-agents).
 
     Mirrors the omnigent-flavored inline ``type: agent`` shape parsed by
-    ``agent_meow/inner/loader.py:_parse_tool`` (same as the Hitchhiker's
+    ``omnigent/inner/loader.py:_parse_tool`` (same as the Hitchhiker's
     fixture in the parent conftest). The parent must dispatch to BOTH
     comedians and relay their jokes verbatim; each joke's nonce appears
     only in that comedian's prompt, so a nonce in the parent's reply
@@ -71,7 +71,7 @@ name: {_JOKE_DIRECTOR_NAME}
 prompt: |
   You are a joke director coordinating two stand-up comedian sub-agents:
   `comic_one` and `comic_two`. You are NOT funny and you must NEVER write
-  or guess a joke yourself — only your comedians tell jokes.
+  or guess a joke yourself â€” only your comedians tell jokes.
 
   When the user asks you to get some jokes, you MUST do exactly this:
 
@@ -79,12 +79,12 @@ prompt: |
   2. Call `sys_session_send` to ask your `comic_two` sub-agent to tell a joke.
 
   Then end your turn and wait; do not poll. When the comedians' replies
-  arrive in your inbox, relay BOTH jokes to the user VERBATIM — repeat
+  arrive in your inbox, relay BOTH jokes to the user VERBATIM â€” repeat
   every word and every code exactly as written, without omitting or
   altering anything.
 
   You have exactly ONE of each comedian. If a comedian sub-agent already
-  exists, send any follow-up to that SAME sub-agent session — NEVER spawn
+  exists, send any follow-up to that SAME sub-agent session â€” NEVER spawn
   a second `comic_one` or `comic_two`.
 
 executor:

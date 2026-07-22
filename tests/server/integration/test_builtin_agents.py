@@ -20,10 +20,10 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server.routes.builtin_agents import create_builtin_agents_router
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server.routes.builtin_agents import create_builtin_agents_router
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
 from tests.server.helpers import build_agent_bundle
 
 pytestmark = pytest.mark.asyncio

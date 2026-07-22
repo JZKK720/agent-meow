@@ -22,13 +22,13 @@ from click.testing import CliRunner
 from rich.console import Console
 
 # Import the daemon's module chain eagerly: ``_ensure_host_daemon`` imports
-# ``agent_meow.host.connect`` lazily, and the daemon-spawn tests below patch
+# ``omnigent.host.connect`` lazily, and the daemon-spawn tests below patch
 # the process-wide ``subprocess.Popen``. Running that import for the first
 # time *while* Popen is patched would evaluate ``subprocess.Popen[...]``
 # generic aliases in the import chain against the stub (not subscriptable).
-import agent_meow.host.connect  # noqa: F401
-from agent_meow import cli
-from agent_meow.cli import (
+import omnigent.host.connect  # noqa: F401
+from omnigent import cli
+from omnigent.cli import (
     _build_host_daemon_env,
     _discover_local_server_url,
     _ensure_backend,
@@ -36,10 +36,10 @@ from agent_meow.cli import (
     _resolve_attach_server,
     _resolve_host_server,
 )
-from agent_meow.cli import (
+from omnigent.cli import (
     cli as cli_group,
 )
-from agent_meow.host.local_server import LocalServerStartup
+from omnigent.host.local_server import LocalServerStartup
 
 
 @pytest.fixture(autouse=True)
@@ -187,7 +187,7 @@ def test_ensure_host_daemon_local_inherits_data_dir_and_db_uri(
     """The local daemon inherits the runtime data-dir + DB URI vars.
 
     In local mode the daemon owns the local agent-meow server, so it must resolve the
-    same config home, data dir, and DB URI the CLI assumes — otherwise the CLI
+    same config home, data dir, and DB URI the CLI assumes â€” otherwise the CLI
     reads the local-server pidfile from one dir while the daemon writes it to
     another and discovery times out.
     """
@@ -275,7 +275,7 @@ def test_build_host_daemon_env_remote_strips_provider_credentials(
 def test_ensure_host_daemon_reuses_same_target(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A live daemon for the same target is reused — no respawn."""
+    """A live daemon for the same target is reused â€” no respawn."""
     captured: dict[str, object] = {}
     _patch_daemon_spawn(monkeypatch, tmp_path, captured)
     (tmp_path / "host.pid").write_text("4242\nlocal\n")
@@ -283,7 +283,7 @@ def test_ensure_host_daemon_reuses_same_target(
 
     _ensure_host_daemon(None)
 
-    # No spawn happened — the existing local daemon was reused.
+    # No spawn happened â€” the existing local daemon was reused.
     assert "args" not in captured
 
 
@@ -340,7 +340,7 @@ def test_ensure_host_daemon_reuses_healthy_background_daemon(
     """A live background daemon with matching config + online host is reused.
 
     The healthy fast path: PID alive, config signature matches this
-    invocation, and the host reports online — no teardown, no respawn.
+    invocation, and the host reports online â€” no teardown, no respawn.
     """
     captured: dict[str, object] = {}
     _patch_daemon_spawn(monkeypatch, tmp_path, captured)
@@ -502,7 +502,7 @@ def test_ensure_host_daemon_young_offline_daemon_not_torn_down(
         resolved_server_url="http://127.0.0.1:8123",
     )
     monkeypatch.setattr(cli, "_pid_alive", lambda pid: True)
-    # Younger than _DAEMON_REUSE_MIN_AGE_S → skip the tunnel-health teardown.
+    # Younger than _DAEMON_REUSE_MIN_AGE_S â†’ skip the tunnel-health teardown.
     monkeypatch.setattr(cli.time, "time", lambda: 1_000_002.0)
 
     def _must_not_probe(record: object, **_kw: object) -> bool:
@@ -647,7 +647,7 @@ def test_ensure_backend_exits_clean_on_config_change(
 def test_ensure_backend_continues_when_no_config_change(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A plain reuse / heal does NOT exit — the command continues normally."""
+    """A plain reuse / heal does NOT exit â€” the command continues normally."""
     monkeypatch.setattr(cli, "_ensure_host_daemon", lambda server: False)
     monkeypatch.setattr(cli, "_discover_local_server_url", lambda: "http://127.0.0.1:8000")
     monkeypatch.setattr(cli, "_update_daemon_resolved_server_url", lambda target, url: None)
@@ -675,7 +675,7 @@ def test_foreground_connect_registers_status_record(
         observed.extend(cli._list_daemon_records(include_legacy=False))
         assert server_url == "https://server.example.com"
 
-    monkeypatch.setattr("agent_meow.host.connect.run_host_process", _fake_run_host_process)
+    monkeypatch.setattr("omnigent.host.connect.run_host_process", _fake_run_host_process)
 
     result = CliRunner().invoke(
         cli_group,
@@ -711,7 +711,7 @@ def test_foreground_connect_refuses_duplicate_live_daemon(
         raise AssertionError(f"unexpected foreground connect: {server_url}")
 
     monkeypatch.setattr(
-        "agent_meow.host.connect.run_host_process",
+        "omnigent.host.connect.run_host_process",
         _unexpected_run_host_process,
     )
 
@@ -751,7 +751,7 @@ def _patch_foreground_host_local(
         "ensure_local_omnigent_server",
         lambda: LocalServerStartup(url="http://127.0.0.1:8000", spawned=spawned),
     )
-    monkeypatch.setattr("agent_meow.host.connect.run_host_process", run_host_process)
+    monkeypatch.setattr("omnigent.host.connect.run_host_process", run_host_process)
 
 
 def test_foreground_connect_local_prompts_and_stops_server_on_yes(
@@ -795,7 +795,7 @@ def test_foreground_connect_local_prompt_aborted_leaves_server(
     """Aborting the prompt (EOF / second Ctrl-C) leaves the server running.
 
     ``click.confirm`` raises ``click.Abort`` on EOF (non-interactive stdin)
-    or a second Ctrl-C. The prompt must treat that as "no" — never stop the
+    or a second Ctrl-C. The prompt must treat that as "no" â€” never stop the
     server and still exit 0 rather than dying with an ``Aborted!`` trace.
     """
     _patch_foreground_host_local(monkeypatch, tmp_path, run_host_process=lambda server_url: None)
@@ -810,7 +810,7 @@ def test_foreground_connect_local_prompt_aborted_leaves_server(
         """Stand in for ``click.confirm`` hitting EOF / a second Ctrl-C."""
         raise click.Abort
 
-    # Simulate the abort at the confirm boundary deterministically — empty
+    # Simulate the abort at the confirm boundary deterministically â€” empty
     # CliRunner stdin yields the default (False), which is the same path as
     # the ``n`` test, not the Abort branch this test targets.
     monkeypatch.setattr(cli.click, "confirm", _raise_abort)
@@ -869,7 +869,7 @@ def test_foreground_connect_reused_server_omits_prompt(
     """Reusing a server we didn't spawn (e.g. ``agent-meow server``) skips the prompt.
 
     Local mode connecting to a server that was already running must NOT offer
-    to stop it on Ctrl-C — the user started it independently, so killing it
+    to stop it on Ctrl-C â€” the user started it independently, so killing it
     would be surprising.
     """
     _patch_foreground_host_local(
@@ -879,7 +879,7 @@ def test_foreground_connect_reused_server_omits_prompt(
         spawned=False,
     )
     # A healthy server exists, but since we reused it the prompt must not even
-    # probe / fire — fail loudly if it tries to stop someone else's server.
+    # probe / fire â€” fail loudly if it tries to stop someone else's server.
     monkeypatch.setattr(
         cli,
         "local_server_url_if_healthy",
@@ -932,7 +932,7 @@ def test_foreground_connect_remote_omits_local_server_prompt(
         lambda: pytest.fail("remote mode must not probe the local server"),
     )
     monkeypatch.setattr(
-        "agent_meow.host.connect.run_host_process",
+        "omnigent.host.connect.run_host_process",
         lambda server_url: None,
     )
 
@@ -1215,7 +1215,7 @@ def test_ensure_backend_remote_passthrough(monkeypatch: pytest.MonkeyPatch) -> N
 def test_ensure_backend_local_discovers_url(monkeypatch: pytest.MonkeyPatch) -> None:
     """No URL ensures a ``--local`` daemon and returns the discovered URL.
 
-    The CLI does not start the server itself — it discovers the URL the
+    The CLI does not start the server itself â€” it discovers the URL the
     daemon's server published. ``_ensure_host_daemon`` must be called with
     ``None`` (local mode).
     """
@@ -1239,11 +1239,11 @@ def test_ensure_backend_defaults_scheme_https(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
     monkeypatch.setattr(cli, "_ensure_databricks_server_auth", lambda server: None)
 
-    result = _ensure_backend("dbc-x.cloud.databricks.com/agent_meow")
+    result = _ensure_backend("dbc-x.cloud.databricks.com/omnigent")
 
     # Scheme defaulted to https before the workspace expansion ran.
-    assert seen == ["https://dbc-x.cloud.databricks.com/agent_meow"]
-    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent_meow")
+    assert seen == ["https://dbc-x.cloud.databricks.com/omnigent"]
+    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/omnigent")
 
 
 def test_discover_local_server_url_returns_when_healthy(
@@ -1283,16 +1283,16 @@ def test_claude_command_routes_server_through_ensure_backend(
     """``agent-meow claude --server ""`` resolves via ``_ensure_backend``.
 
     The empty/local value must be turned into the concrete daemon-backed URL
-    and passed to ``run_claude_native`` — never forwarded raw.
+    and passed to ``run_claude_native`` â€” never forwarded raw.
     """
-    monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
+    monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
     monkeypatch.setattr(
-        "agent_meow.cli._ensure_backend",
+        "omnigent.cli._ensure_backend",
         lambda server: "http://127.0.0.1:8123",
     )
     captured: dict[str, object] = {}
     monkeypatch.setattr(
-        "agent_meow.claude_native.run_claude_native",
+        "omnigent.claude_native.run_claude_native",
         _fake_run_claude_native_capture(captured),
     )
 
@@ -1313,7 +1313,7 @@ def _capture_run_chat(monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
     def _stub(**kwargs: object) -> None:
         captured.update(kwargs)
 
-    monkeypatch.setattr("agent_meow.chat.run_chat", _stub)
+    monkeypatch.setattr("omnigent.chat.run_chat", _stub)
     return captured
 
 
@@ -1326,7 +1326,7 @@ def test_run_reads_server_from_config(monkeypatch: pytest.MonkeyPatch) -> None:
     reach ``run_chat`` as ``server_url``.
     """
     monkeypatch.setattr(
-        "agent_meow.cli._load_effective_config",
+        "omnigent.cli._load_effective_config",
         lambda: {
             "server": "https://config-default.example.com",
             "model": "databricks-claude-sonnet-4-6",
@@ -1344,7 +1344,7 @@ def test_run_reads_server_from_config(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_run_explicit_server_overrides_config(monkeypatch: pytest.MonkeyPatch) -> None:
     """An explicit ``--server`` wins over the configured default."""
     monkeypatch.setattr(
-        "agent_meow.cli._load_effective_config",
+        "omnigent.cli._load_effective_config",
         lambda: {"server": "https://config-default.example.com"},
     )
     captured = _capture_run_chat(monkeypatch)
@@ -1363,7 +1363,7 @@ def test_run_explicit_server_overrides_config(monkeypatch: pytest.MonkeyPatch) -
     assert captured["server_url"] == "https://explicit.example.com"
 
 
-# ── Databricks-fronted server auth pre-flight ───────────────────────
+# â”€â”€ Databricks-fronted server auth pre-flight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _databricks_probe_response(status_code: int) -> object:
@@ -1405,7 +1405,7 @@ def _patch_auth_preflight(
     import httpx
 
     monkeypatch.setattr(
-        "agent_meow.chat._remote_headers",
+        "omnigent.chat._remote_headers",
         lambda server_url=None: {},
     )
     monkeypatch.setattr(httpx, "get", lambda url, **kw: _databricks_probe_response(probe_status))
@@ -1469,7 +1469,7 @@ def test_ensure_backend_databricks_preflight_skips_when_authenticated(
     assert result == "https://myapp-1234.aws.databricksapps.com"
 
 
-# ── Foreground ``host`` auth pre-flight ─────────────────────────────
+# â”€â”€ Foreground ``host`` auth pre-flight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # ``host`` runs the same Databricks sign-in pre-flight ``run`` does before
 # connecting to a remote server, but exposes ``--non-interactive`` so a
@@ -1522,11 +1522,11 @@ def _patch_foreground_host(
         "ensure_local_omnigent_server",
         lambda: LocalServerStartup(url="http://127.0.0.1:8000", spawned=True),
     )
-    # No healthy local server after exit → the Ctrl-C stop prompt stays quiet.
+    # No healthy local server after exit â†’ the Ctrl-C stop prompt stays quiet.
     monkeypatch.setattr(cli, "local_server_url_if_healthy", lambda: None)
     connected: list[str] = []
     monkeypatch.setattr(
-        "agent_meow.host.connect.run_host_process",
+        "omnigent.host.connect.run_host_process",
         lambda server_url: connected.append(server_url),
     )
     return connected
@@ -1631,14 +1631,14 @@ def test_host_remote_preflight_skips_when_authenticated(
     assert connected == [_HOST_DATABRICKS_SERVER]
 
 
-# ── Workspace-URL expansion for attach / resume / host ──────────────
+# â”€â”€ Workspace-URL expansion for attach / resume / host â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # ``run`` / ``claude`` / ``codex`` expand a bare Databricks workspace URL to
 # its ``/api/2.0/agent-meow`` mount via ``_ensure_backend`` (covered above);
 # ``attach``, ``resume``, and the ``host`` subcommands resolve ``--server``
 # on their own paths and must route through the same expansion. The
 # expansion itself probes the network and is tested in
-# ``test_login_databricks.py`` — here we stub it to a recognizable
+# ``test_login_databricks.py`` â€” here we stub it to a recognizable
 # transform and assert each resolver actually calls it.
 
 
@@ -1718,10 +1718,10 @@ def test_resolve_attach_server_defaults_scheme_https(monkeypatch: pytest.MonkeyP
     seen: list[str] = []
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
 
-    result = _resolve_attach_server("dbc-x.cloud.databricks.com/agent_meow", configured_server=None)
+    result = _resolve_attach_server("dbc-x.cloud.databricks.com/omnigent", configured_server=None)
 
-    assert seen == ["https://dbc-x.cloud.databricks.com/agent_meow"]
-    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent_meow")
+    assert seen == ["https://dbc-x.cloud.databricks.com/omnigent"]
+    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/omnigent")
 
 
 def test_resolve_host_server_expands_explicit_workspace_url(
@@ -1776,11 +1776,11 @@ def test_resolve_host_server_defaults_scheme_and_accepts_omnigent(
     seen: list[str] = []
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
 
-    result = _resolve_host_server("dbc-x.cloud.databricks.com/agent_meow")
+    result = _resolve_host_server("dbc-x.cloud.databricks.com/omnigent")
 
     # Scheme defaulted to https before the expansion saw the URL.
-    assert seen == ["https://dbc-x.cloud.databricks.com/agent_meow"]
-    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/agent_meow")
+    assert seen == ["https://dbc-x.cloud.databricks.com/omnigent"]
+    assert result == _expand_marker("https://dbc-x.cloud.databricks.com/omnigent")
 
 
 def test_host_command_defaults_scheme_and_accepts_omnigent_web_url(
@@ -1800,19 +1800,19 @@ def test_host_command_defaults_scheme_and_accepts_omnigent_web_url(
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
     observed: list[str] = []
     monkeypatch.setattr(
-        "agent_meow.host.connect.run_host_process",
+        "omnigent.host.connect.run_host_process",
         lambda server_url: observed.append(server_url),
     )
 
     result = CliRunner().invoke(
-        cli_group, ["host", "--server", "dbc-x.cloud.databricks.com/agent_meow"]
+        cli_group, ["host", "--server", "dbc-x.cloud.databricks.com/omnigent"]
     )
 
     assert result.exit_code == 0, result.output
     # Scheme defaulted to https before the workspace expansion ran.
-    assert seen == ["https://dbc-x.cloud.databricks.com/agent_meow"]
+    assert seen == ["https://dbc-x.cloud.databricks.com/omnigent"]
     # The foreground connect targeted the expanded API-mount URL.
-    assert observed == [_expand_marker("https://dbc-x.cloud.databricks.com/agent_meow")]
+    assert observed == [_expand_marker("https://dbc-x.cloud.databricks.com/omnigent")]
 
 
 def test_resume_command_expands_server_url(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1824,7 +1824,7 @@ def test_resume_command_expands_server_url(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(cli, "_workspace_api_server_url", _expand_marker)
     captured: dict[str, object] = {}
     monkeypatch.setattr(
-        "agent_meow.resume_dispatch.run_resume",
+        "omnigent.resume_dispatch.run_resume",
         lambda **kwargs: captured.update(kwargs),
     )
 
@@ -1848,7 +1848,7 @@ def test_resume_command_without_server_skips_expansion(
     )
     captured: dict[str, object] = {}
     monkeypatch.setattr(
-        "agent_meow.resume_dispatch.run_resume",
+        "omnigent.resume_dispatch.run_resume",
         lambda **kwargs: captured.update(kwargs),
     )
 
@@ -1864,15 +1864,15 @@ def test_resume_command_defaults_scheme_https(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(cli, "_workspace_api_server_url", _recording_expander(seen))
     captured: dict[str, object] = {}
     monkeypatch.setattr(
-        "agent_meow.resume_dispatch.run_resume",
+        "omnigent.resume_dispatch.run_resume",
         lambda **kwargs: captured.update(kwargs),
     )
 
     result = CliRunner().invoke(
         cli_group,
-        ["resume", "conv_abc123", "--server", "dbc-x.cloud.databricks.com/agent_meow"],
+        ["resume", "conv_abc123", "--server", "dbc-x.cloud.databricks.com/omnigent"],
     )
 
     assert result.exit_code == 0, result.output
-    assert seen == ["https://dbc-x.cloud.databricks.com/agent_meow"]
-    assert captured["server"] == _expand_marker("https://dbc-x.cloud.databricks.com/agent_meow")
+    assert seen == ["https://dbc-x.cloud.databricks.com/omnigent"]
+    assert captured["server"] == _expand_marker("https://dbc-x.cloud.databricks.com/omnigent")

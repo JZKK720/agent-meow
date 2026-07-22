@@ -2,8 +2,8 @@
 
 The landing composer (``NewChatLandingScreen`` in
 ``web/src/shell/NewChatDialog.tsx``) owns session creation end to end:
-the textarea is the new session's first message and the footer chips —
-host, working directory, git worktree — plus the unified agent/harness
+the textarea is the new session's first message and the footer chips â€”
+host, working directory, git worktree â€” plus the unified agent/harness
 picker supply every create parameter. The picker is a single dropdown
 (``new-chat-landing-agent-select``); each agent's run-config knobs live in a
 per-entry submenu (see :func:`_open_entry_config`). Hitting Send POSTs
@@ -12,13 +12,13 @@ per-entry submenu (see :func:`_open_entry_config`). Hitting Send POSTs
 These tests cover the three configuration affordances the user reaches
 before sending:
 
-1. **Permission mode** — Claude Code's ``--permission-mode`` choices, in
+1. **Permission mode** â€” Claude Code's ``--permission-mode`` choices, in
    the agent picker's per-entry config submenu. A non-default pick rides
    along as ``terminal_launch_args``.
-2. **Working directory** — the file-browser popover behind the working-
+2. **Working directory** â€” the file-browser popover behind the working-
    directory chip. Browsing into a folder sets the session's
    ``workspace``.
-3. **Git worktree** — the branch chip's popover. Naming a branch attaches
+3. **Git worktree** â€” the branch chip's popover. Naming a branch attaches
    a ``git`` worktree spec to the create.
 
 Why the heavy ``page.route`` stubbing (mirrors
@@ -29,8 +29,8 @@ online host, an agent catalog, and (for the folder test) a directory
 listing the headless harness can't produce, so ``/v1/hosts``,
 ``/v1/agents``, and ``/v1/hosts/{id}/filesystem`` are faked. The create
 ``POST /v1/sessions`` is intercepted too: rather than really launch a
-session, the handler *captures the request body* — which is the thing
-under test (that each selection reached the create call) — and returns a
+session, the handler *captures the request body* â€” which is the thing
+under test (that each selection reached the create call) â€” and returns a
 real pre-seeded session id so the post-send navigation lands somewhere
 real. ``/events`` is stubbed so the auto-sent first prompt never dispatches
 a real LLM turn.
@@ -57,13 +57,13 @@ from playwright.async_api import Route, async_playwright, expect
 # host). Keyed identically in the recent-workspaces localStorage seed.
 _HOST_ID = "host_e2e"
 # Bare create endpoint: ``/v1/sessions`` with an optional query, but NOT
-# ``/v1/sessions/{id}/...`` — so the GET conversation list and the
+# ``/v1/sessions/{id}/...`` â€” so the GET conversation list and the
 # agent-discovery scan pass through to the real server while only the POST
 # create is faked.
 _SESSIONS_RE = re.compile(r"/v1/sessions(\?.*)?$")
 # Any host filesystem listing, base (home) or a nested path. ``search``
-# matches the substring, so it catches both ``…/filesystem`` and
-# ``…/filesystem/home/e2e/projects``; it never matches the bare
+# matches the substring, so it catches both ``â€¦/filesystem`` and
+# ``â€¦/filesystem/home/e2e/projects``; it never matches the bare
 # ``/v1/hosts`` list (no ``/filesystem`` segment).
 _FILESYSTEM_RE = re.compile(r"/v1/hosts/[^/]+/filesystem")
 
@@ -114,7 +114,7 @@ async def _wait_until(predicate, *, timeout_s: float = 15.0) -> None:
 def _agents_body() -> str:
     """Stub body for ``GET /v1/agents``: a single Claude Code agent.
 
-    ``claude-native-ui`` is the only built-in the picker needs here — its
+    ``claude-native-ui`` is the only built-in the picker needs here â€” its
     name is what gates the permission-mode UI (``isClaudeNativeAgent``) and,
     ranked first by display name, it auto-selects so no explicit pick is
     required. ``harness: null`` keeps the "needs setup" badge off regardless
@@ -217,8 +217,8 @@ def _bundle_agents_body() -> str:
 
     Polly and Debby are multi-agent bundles, not native terminal wrappers, so
     their spec declares a brain harness (``harness: "claude-sdk"``) that lands
-    them in ``BRAIN_HARNESS_LABELS``. That — and the fact that neither is named
-    ``claude-native-ui`` — is what makes the composer render the harness picker
+    them in ``BRAIN_HARNESS_LABELS``. That â€” and the fact that neither is named
+    ``claude-native-ui`` â€” is what makes the composer render the harness picker
     (an **Agent Harness** radio group) instead of Claude Code's permission-mode
     pill. Polly is
     ranked ahead of Debby by ``AGENT_DISPLAY_ORDER``, so it auto-selects and no
@@ -257,7 +257,7 @@ def _pi_native_agents_body() -> str:
     pi-native wrapper labels. The wire ``display_name`` is deliberately set to
     the raw ``"pi-native-ui"`` to prove the picker derives "Pi" itself
     (``displayNameForAgent`` ignores the wire value) rather than echoing the
-    server — the regression showed the raw "Pi-native-ui" here. Sole agent, so
+    server â€” the regression showed the raw "Pi-native-ui" here. Sole agent, so
     it auto-selects and no explicit pick is needed.
     """
     return json.dumps(
@@ -310,7 +310,7 @@ def _opencode_native_agents_body() -> str:
     frontend maps (via ``nativeCodingAgents``) to the display label
     **"OpenCode"** and the opencode-native wrapper labels. As with the Pi stub,
     the wire ``display_name`` is deliberately the raw ``"opencode-native-ui"``
-    to prove the picker derives "OpenCode" itself (the harness→display mapping
+    to prove the picker derives "OpenCode" itself (the harnessâ†’display mapping
     wins) rather than echoing the server's raw value. Sole agent, so it
     auto-selects and no explicit pick is needed.
     """
@@ -361,7 +361,7 @@ def _kimi_with_sdk_agents_body() -> str:
 
     The headless SDK ``kimi`` harness is kept (sub-agents use it) but is hidden
     from the new-session picker via ``NEW_SESSION_HIDDEN_AGENTS`` so there is one
-    "Kimi" to pick — the native TUI agent (``kimi-native-ui``). Returning both
+    "Kimi" to pick â€” the native TUI agent (``kimi-native-ui``). Returning both
     here drives that dedup: the picker must offer only the native row and drop
     the SDK ``kimi`` row by name.
     """
@@ -377,7 +377,7 @@ def _kimi_with_sdk_agents_body() -> str:
                     "skills": [],
                 },
                 {
-                    # SDK kimi harness — present in the catalog, hidden from the
+                    # SDK kimi harness â€” present in the catalog, hidden from the
                     # picker by NEW_SESSION_HIDDEN_AGENTS (name == "kimi").
                     "id": "ag_kimi_sdk_e2e",
                     "name": "kimi",
@@ -420,7 +420,7 @@ async def _register_common_routes(
     :param created_session_id: Real pre-seeded session id the faked create
         returns, so the post-send navigation lands on a real page.
     :param create_bodies: Sink the create ``POST /v1/sessions`` body is
-        appended to — the assertion target for each test.
+        appended to â€” the assertion target for each test.
     :param agents_body: Override for the ``GET /v1/agents`` stub body;
         defaults to the single Claude Code agent (:func:`_agents_body`).
     """
@@ -471,7 +471,7 @@ async def _open_entry_config(page, agent_id: str) -> None:
     brain-harness override) lives in a per-entry **submenu**. A plain *click* on
     a knobbed row COMMITS that agent and closes the menu, so config flows hover
     the row and nudge it with ``ArrowRight`` to open the submenu without
-    committing — the Playwright counterpart of the unit test's
+    committing â€” the Playwright counterpart of the unit test's
     ``openAgentConfig`` helper.
 
     :param page: The Playwright page (the landing picker is already mounted).
@@ -510,7 +510,7 @@ async def _drive_permission_mode(base_url: str, session_id: str) -> None:
             # the picker. The landing picker merges `/v1/agents` with agents found
             # by scanning the caller's sessions (`/v1/sessions?kind=any`); on the
             # shared e2e_ui server a native agent another test left behind would
-            # otherwise leak in and — ranking ahead — auto-select, so opening
+            # otherwise leak in and â€” ranking ahead â€” auto-select, so opening
             # Claude's submenu and picking a knob would SWITCH agent mid-flow
             # (remounting the submenu and detaching the next row). Registered
             # after _register_common_routes so it wins the kind=any scan.
@@ -574,7 +574,7 @@ def test_start_session_select_model_and_effort(seeded_session: tuple[str, str]) 
     """Picking a model + reasoning effort rides along to the create call.
 
     For the Claude-native agent the config submenu shows a model/effort
-    picker that starts with NOTHING selected — no model/effort default is
+    picker that starts with NOTHING selected â€” no model/effort default is
     forced, so an untouched picker omits the override and Claude Code keeps its
     own configured model. Explicitly selecting "Opus" and "High" must (a) check
     those radios as immediate feedback and (b) reach ``POST /v1/sessions`` as
@@ -623,7 +623,7 @@ async def _drive_model_effort(base_url: str, session_id: str) -> None:
             )
             # Claude Code auto-selects; open its config submenu, which carries the
             # model + effort radio groups. No default is forced, so both groups
-            # start with NOTHING checked — an untouched picker omits the override
+            # start with NOTHING checked â€” an untouched picker omits the override
             # and Claude Code uses its own configured model. Verify the unselected
             # default, then make an explicit pick.
             await _open_entry_config(page, "ag_claude_e2e")
@@ -636,7 +636,7 @@ async def _drive_model_effort(base_url: str, session_id: str) -> None:
 
             # Pick model and effort in SEPARATE submenu visits. Picking a knob
             # COMMITS the agent, which collapses the submenu (its model / effort /
-            # permission rows unmount) while the ROOT menu stays open — so a second
+            # permission rows unmount) while the ROOT menu stays open â€” so a second
             # knob clicked in the same visit chases a row that has already detached
             # and flakes ("detached from the DOM, retrying" until the click times
             # out). Reopen the submenu between the two picks: the picks persist as
@@ -646,7 +646,7 @@ async def _drive_model_effort(base_url: str, session_id: str) -> None:
             await expect(opus).to_have_attribute("aria-checked", "true")
             # The model pick collapsed the submenu; wait for it to fully unmount,
             # then reopen it. The root menu never closed (the radio's preventDefault
-            # keeps it open), so reopen via the row — re-hover + ArrowRight — rather
+            # keeps it open), so reopen via the row â€” re-hover + ArrowRight â€” rather
             # than re-clicking the trigger (which would race the still-settling
             # dismiss and fail to reopen).
             row = page.get_by_test_id("new-chat-landing-agent-ag_claude_e2e")
@@ -843,9 +843,9 @@ def test_start_session_bypass_sandbox(seeded_session: tuple[str, str]) -> None:
     is deliberately hard to arm: the Switch stays **disabled** until the user
     types the confirmation phrase *verbatim* (a click alone, or a near-miss
     phrase, never arms it), and once on, a persistent red banner shows under the
-    composer — surviving the menu's close. When armed, the create
+    composer â€” surviving the menu's close. When armed, the create
     ``POST /v1/sessions`` must carry the
-    ``agent_meow.codex_native.bypass_sandbox: "1"`` conversation label so the
+    ``omnigent.codex_native.bypass_sandbox: "1"`` conversation label so the
     runner launches Codex with the bypass flag.
     """
     base_url, session_id = seeded_session
@@ -892,11 +892,11 @@ async def _drive_bypass_sandbox(base_url: str, session_id: str) -> None:
             await _open_entry_config(page, "ag_codex_e2e")
 
             # Guardrail: the bypass Switch is DISABLED until the verbatim phrase
-            # is typed — a click alone can never arm the dangerous mode.
+            # is typed â€” a click alone can never arm the dangerous mode.
             switch = page.get_by_test_id("new-chat-landing-bypass-sandbox-switch")
             await expect(switch).to_be_disabled()
 
-            # A near-miss phrase (different case) keeps it disabled — the match
+            # A near-miss phrase (different case) keeps it disabled â€” the match
             # is verbatim, no case-folding or trimming.
             confirm = page.get_by_test_id("new-chat-landing-bypass-sandbox-confirm")
             await confirm.fill("Bypass Sandbox")
@@ -908,7 +908,7 @@ async def _drive_bypass_sandbox(base_url: str, session_id: str) -> None:
             await switch.click()
 
             # Close the submenu then the root menu; the in-menu banner goes with
-            # them, but the persistent red banner under the composer must remain —
+            # them, but the persistent red banner under the composer must remain â€”
             # proof the armed stance stays visible after the menu closes.
             await page.keyboard.press("Escape")
             await page.keyboard.press("Escape")
@@ -927,7 +927,7 @@ async def _drive_bypass_sandbox(base_url: str, session_id: str) -> None:
             # The dangerous opt-in rides along as the canonical conversation
             # label alongside the codex-native wrapper labels.
             labels = body.get("labels") or {}
-            assert labels.get("agent_meow.codex_native.bypass_sandbox") == "1", body
+            assert labels.get("omnigent.codex_native.bypass_sandbox") == "1", body
         finally:
             await browser.close()
 
@@ -935,7 +935,7 @@ async def _drive_bypass_sandbox(base_url: str, session_id: str) -> None:
 def test_start_session_select_harness(seeded_session: tuple[str, str]) -> None:
     """For a bundle agent (Polly/Debby), the composer offers an agent-harness pick.
 
-    Unlike Claude Code — whose submenu shows permission/model knobs — Polly and
+    Unlike Claude Code â€” whose submenu shows permission/model knobs â€” Polly and
     Debby declare a brain harness, so their config submenu renders an "Agent
     Harness" radio group. Selecting a dynamically registered community harness
     must (a) show the label from ``/v1/harnesses`` and (b) reach
@@ -1036,13 +1036,13 @@ def test_start_session_pi_native_picker_and_wrapper_labels(
 
     Covers the user-facing Pi native-agent flow this PR adds:
 
-    1. **Picker label/icon** — the agent chip renders the harness-derived
+    1. **Picker label/icon** â€” the agent chip renders the harness-derived
        display label **"Pi"** (via ``nativeCodingAgents``), NOT the raw agent
        name ``"pi-native-ui"`` the server sends. (The pre-fix bug surfaced the
        raw name capitalized as "Pi-native-ui".)
-    2. **Session-creation wrapper labels** — selecting Pi and sending must POST
+    2. **Session-creation wrapper labels** â€” selecting Pi and sending must POST
        ``/v1/sessions`` with the terminal-first wrapper labels
-       (``agent_meow.ui: terminal`` + ``agent_meow.wrapper: pi-native-ui``) that
+       (``omnigent.ui: terminal`` + ``omnigent.wrapper: pi-native-ui``) that
        make the runner launch the Pi TUI and the web UI render the
        Chat/Terminal view.
     """
@@ -1067,8 +1067,8 @@ async def _drive_pi_native_start(base_url: str, session_id: str) -> None:
             # built-in Pi. The landing picker merges `/v1/agents` with agents
             # found by scanning the caller's sessions (`/v1/sessions?kind=any`);
             # on the shared e2e_ui server, sessions other tests left behind
-            # (e.g. a claude-native fork) would otherwise leak in and — ranking
-            # ahead of Pi — auto-select, so the chip would read "Claude Code".
+            # (e.g. a claude-native fork) would otherwise leak in and â€” ranking
+            # ahead of Pi â€” auto-select, so the chip would read "Claude Code".
             # Registered after _register_common_routes so it wins for the
             # kind=any scan; the bare POST /v1/sessions create still falls
             # through to the capturing handler.
@@ -1096,8 +1096,8 @@ async def _drive_pi_native_start(base_url: str, session_id: str) -> None:
             )
 
             # Pi auto-selects (sole agent). The chip shows the derived label
-            # "Pi" — and crucially NOT "...native...": the regression rendered
-            # the raw agent name "Pi-native-ui" when the harness→display
+            # "Pi" â€” and crucially NOT "...native...": the regression rendered
+            # the raw agent name "Pi-native-ui" when the harnessâ†’display
             # mapping was missing.
             agent_chip = page.get_by_test_id("new-chat-landing-agent-select")
             await expect(agent_chip).to_contain_text("Pi")
@@ -1114,8 +1114,8 @@ async def _drive_pi_native_start(base_url: str, session_id: str) -> None:
             # The terminal-first wrapper labels are the contract that drives the
             # runner-owned Pi TUI and the web UI's Chat/Terminal view.
             assert body.get("labels") == {
-                "agent_meow.ui": "terminal",
-                "agent_meow.wrapper": "pi-native-ui",
+                "omnigent.ui": "terminal",
+                "omnigent.wrapper": "pi-native-ui",
             }, body
         finally:
             await browser.close()
@@ -1128,12 +1128,12 @@ def test_start_session_antigravity_native_picker_and_wrapper_labels(
 
     Covers the user-facing Antigravity native-agent flow this PR adds:
 
-    1. **Picker label/icon** — the agent chip renders the harness-derived display
+    1. **Picker label/icon** â€” the agent chip renders the harness-derived display
        label **"Antigravity"** (via ``nativeCodingAgents``), NOT the raw agent name
        ``"antigravity-native-ui"`` the server sends.
-    2. **Session-creation wrapper labels** — selecting Antigravity and sending must
+    2. **Session-creation wrapper labels** â€” selecting Antigravity and sending must
        POST ``/v1/sessions`` with the terminal-first wrapper labels
-       (``agent_meow.ui: terminal`` + ``agent_meow.wrapper: antigravity-native-ui``)
+       (``omnigent.ui: terminal`` + ``omnigent.wrapper: antigravity-native-ui``)
        that make the runner launch the agy TUI and the web UI render the
        Chat/Terminal view.
     """
@@ -1179,8 +1179,8 @@ async def _drive_antigravity_native_start(base_url: str, session_id: str) -> Non
             )
 
             # Antigravity auto-selects (sole agent). The chip shows the derived
-            # label "Antigravity" — and NOT "...native...": the raw agent name
-            # would surface "antigravity-native-ui" without the harness→display map.
+            # label "Antigravity" â€” and NOT "...native...": the raw agent name
+            # would surface "antigravity-native-ui" without the harnessâ†’display map.
             agent_chip = page.get_by_test_id("new-chat-landing-agent-select")
             await expect(agent_chip).to_contain_text("Antigravity")
             await expect(agent_chip).not_to_contain_text("native")
@@ -1196,8 +1196,8 @@ async def _drive_antigravity_native_start(base_url: str, session_id: str) -> Non
             # The terminal-first wrapper labels drive the runner-owned agy TUI and
             # the web UI's Chat/Terminal view.
             assert body.get("labels") == {
-                "agent_meow.ui": "terminal",
-                "agent_meow.wrapper": "antigravity-native-ui",
+                "omnigent.ui": "terminal",
+                "omnigent.wrapper": "antigravity-native-ui",
             }, body
         finally:
             await browser.close()
@@ -1211,12 +1211,12 @@ def test_start_session_opencode_native_picker_and_wrapper_labels(
     Covers the user-facing OpenCode native-agent flow this PR adds (mirrors
     the Codex / Pi native rows):
 
-    1. **Picker label/icon** — the agent chip renders the harness-derived
+    1. **Picker label/icon** â€” the agent chip renders the harness-derived
        display label **"OpenCode"** (via ``nativeCodingAgents``), NOT the raw
        agent name ``"opencode-native-ui"`` the server sends.
-    2. **Session-creation wrapper labels** — selecting OpenCode and sending
+    2. **Session-creation wrapper labels** â€” selecting OpenCode and sending
        must POST ``/v1/sessions`` with the terminal-first wrapper labels
-       (``agent_meow.ui: terminal`` + ``agent_meow.wrapper: opencode-native-ui``)
+       (``omnigent.ui: terminal`` + ``omnigent.wrapper: opencode-native-ui``)
        that make the runner launch the OpenCode TUI and the web UI render the
        Chat/Terminal view.
     """
@@ -1242,7 +1242,7 @@ async def _drive_opencode_native_start(base_url: str, session_id: str) -> None:
             # agents found by scanning the caller's sessions
             # (`/v1/sessions?kind=any`); on the shared e2e_ui server, sessions
             # other tests left behind (e.g. a claude-native fork) would
-            # otherwise leak in and — ranking ahead of OpenCode — auto-select,
+            # otherwise leak in and â€” ranking ahead of OpenCode â€” auto-select,
             # so the chip would read the wrong label. Registered after
             # _register_common_routes so it wins for the kind=any scan; the
             # bare POST /v1/sessions create still falls through to the
@@ -1271,7 +1271,7 @@ async def _drive_opencode_native_start(base_url: str, session_id: str) -> None:
             )
 
             # OpenCode auto-selects (sole agent). The chip shows the derived
-            # label "OpenCode" — and crucially NOT "...native...": the raw
+            # label "OpenCode" â€” and crucially NOT "...native...": the raw
             # agent name "opencode-native-ui" must never surface.
             agent_chip = page.get_by_test_id("new-chat-landing-agent-select")
             await expect(agent_chip).to_contain_text("OpenCode")
@@ -1288,8 +1288,8 @@ async def _drive_opencode_native_start(base_url: str, session_id: str) -> None:
             # The terminal-first wrapper labels are the contract that drives the
             # runner-owned OpenCode TUI and the web UI's Chat/Terminal view.
             assert body.get("labels") == {
-                "agent_meow.ui": "terminal",
-                "agent_meow.wrapper": "opencode-native-ui",
+                "omnigent.ui": "terminal",
+                "omnigent.wrapper": "opencode-native-ui",
             }, body
         finally:
             await browser.close()
@@ -1303,12 +1303,12 @@ def test_start_session_kimi_native_picker_and_wrapper_labels(
     Covers the user-facing Kimi native-agent flow this PR adds (mirrors the
     Codex / Pi / OpenCode native rows):
 
-    1. **Picker label/icon** — the agent chip renders the harness-derived
+    1. **Picker label/icon** â€” the agent chip renders the harness-derived
        display label **"Kimi"** (via ``nativeCodingAgents``), NOT the raw agent
        name ``"kimi-native-ui"`` the server sends.
-    2. **Session-creation wrapper labels** — selecting Kimi and sending must POST
+    2. **Session-creation wrapper labels** â€” selecting Kimi and sending must POST
        ``/v1/sessions`` with the terminal-first wrapper labels
-       (``agent_meow.ui: terminal`` + ``agent_meow.wrapper: kimi-native-ui``) that
+       (``omnigent.ui: terminal`` + ``omnigent.wrapper: kimi-native-ui``) that
        make the runner launch the Kimi TUI and the web UI render the
        Chat/Terminal view.
     """
@@ -1333,7 +1333,7 @@ async def _drive_kimi_native_start(base_url: str, session_id: str) -> None:
             # built-in Kimi. The landing picker merges `/v1/agents` with agents
             # found by scanning the caller's sessions (`/v1/sessions?kind=any`);
             # on the shared e2e_ui server, sessions other tests left behind would
-            # otherwise leak in and — ranking ahead of Kimi — auto-select.
+            # otherwise leak in and â€” ranking ahead of Kimi â€” auto-select.
             # Registered after _register_common_routes so it wins the kind=any
             # scan; the bare POST /v1/sessions create still falls through.
             async def handle_agent_scan(route: Route) -> None:
@@ -1358,7 +1358,7 @@ async def _drive_kimi_native_start(base_url: str, session_id: str) -> None:
             )
 
             # Kimi auto-selects (sole agent). The chip shows the derived label
-            # "Kimi" — and crucially NOT "...native...": the raw agent name
+            # "Kimi" â€” and crucially NOT "...native...": the raw agent name
             # "kimi-native-ui" must never surface in the picker.
             agent_chip = page.get_by_test_id("new-chat-landing-agent-select")
             await expect(agent_chip).to_contain_text("Kimi")
@@ -1375,8 +1375,8 @@ async def _drive_kimi_native_start(base_url: str, session_id: str) -> None:
             # The terminal-first wrapper labels are the contract that drives the
             # runner-owned Kimi TUI and the web UI's Chat/Terminal view.
             assert body.get("labels") == {
-                "agent_meow.ui": "terminal",
-                "agent_meow.wrapper": "kimi-native-ui",
+                "omnigent.ui": "terminal",
+                "omnigent.wrapper": "kimi-native-ui",
             }, body
         finally:
             await browser.close()
@@ -1389,7 +1389,7 @@ def test_start_session_picker_hides_sdk_kimi(
 
     The headless SDK ``kimi`` harness is retained for sub-agents but hidden from
     the landing picker (``NEW_SESSION_HIDDEN_AGENTS``) so there is exactly one
-    "Kimi" to start — the native TUI agent (``kimi-native-ui``), which opens in
+    "Kimi" to start â€” the native TUI agent (``kimi-native-ui``), which opens in
     the user's workspace. This drives that dedup against the rendered picker: with
     both rows in the catalog, only ``kimi-native-ui`` is offered and the SDK
     ``kimi`` row is dropped (the regression surfaced two "Kimi" entries, and
@@ -1446,7 +1446,7 @@ async def _drive_kimi_picker_dedup(base_url: str, session_id: str) -> None:
                 page.get_by_test_id("new-chat-landing-agent-ag_kimi_sdk_e2e")
             ).to_have_count(0)
             # Two menu items total: the one native Kimi + the "Create custom
-            # agent" action — no second "Kimi" sneaks in via the SDK row.
+            # agent" action â€” no second "Kimi" sneaks in via the SDK row.
             await expect(page.get_by_role("menuitem")).to_have_count(2)
         finally:
             await browser.close()
@@ -1560,7 +1560,7 @@ def test_start_session_create_folder(seeded_session: tuple[str, str]) -> None:
     folder", names it, and confirms. The picker POSTs
     ``/v1/hosts/{id}/directories``, drops into the freshly created
     directory, and the working-directory chip follows. On Send the new
-    folder's path must reach ``POST /v1/sessions`` as ``workspace`` — i.e.
+    folder's path must reach ``POST /v1/sessions`` as ``workspace`` â€” i.e.
     the agent's working directory is the folder the user just made.
 
     Like the other tests here, the tunneled runner registers no host, so
@@ -1750,18 +1750,18 @@ def _fork_scan_body() -> str:
         {
             "object": "list",
             "data": [
-                # Binds the built-in's own agent row — dropped by id.
+                # Binds the built-in's own agent row â€” dropped by id.
                 {
                     "id": "conv_native",
                     "agent_id": "ag_claude_e2e",
                     "agent_name": "claude-native-ui",
                 },
-                # Single fork of the built-in — dropped by name (one layer).
+                # Single fork of the built-in â€” dropped by name (one layer).
                 {"id": "conv_f1", "agent_id": "ag_fork1", "agent_name": _SINGLE_FORK_NAME},
-                # Fork of a fork — the regression: dropped only if EVERY clone
+                # Fork of a fork â€” the regression: dropped only if EVERY clone
                 # layer is stripped before the built-in-name check.
                 {"id": "conv_ff", "agent_id": "ag_forkfork", "agent_name": _FORK_OF_FORK_NAME},
-                # A genuinely custom agent — must SURVIVE and be offered.
+                # A genuinely custom agent â€” must SURVIVE and be offered.
                 {"id": "conv_doc", "agent_id": "ag_doc", "agent_name": "doc-writer"},
             ],
             "has_more": False,
@@ -1778,8 +1778,8 @@ def test_start_session_picker_drops_fork_of_fork_shadows(
     (``GET /v1/agents``) with session-scoped agents discovered by scanning the
     caller's sessions (``GET /v1/sessions?kind=any``), dropping any discovered
     agent whose clone name roots back to a built-in. A fork of a fork nests two
-    clone suffixes — ``"claude-native-ui (fork …) (fork …)"`` — so a single-
-    layer strip leaves ``"claude-native-ui (fork …)"``, which is not a built-in
+    clone suffixes â€” ``"claude-native-ui (fork â€¦) (fork â€¦)"`` â€” so a single-
+    layer strip leaves ``"claude-native-ui (fork â€¦)"``, which is not a built-in
     name, and the clone leaked into the picker as a SECOND "Claude Code" row.
 
     This drives that regression end to end against the rendered picker: only
@@ -1814,7 +1814,7 @@ async def _drive_fork_of_fork_dedup(base_url: str, session_id: str) -> None:
 
             async def handle_enrich(route: Route) -> None:
                 # Only the surviving custom agent reaches the per-agent enrich
-                # fetch — the dropped shadows never get here.
+                # fetch â€” the dropped shadows never get here.
                 await route.fulfill(
                     status=200,
                     content_type="application/json",
@@ -1859,7 +1859,7 @@ async def _drive_fork_of_fork_dedup(base_url: str, session_id: str) -> None:
                 0
             )
             # Three options total: the built-in + the one custom agent +
-            # the "Create custom agent" action — no duplicate "Claude Code"
+            # the "Create custom agent" action â€” no duplicate "Claude Code"
             # sneaks in via a leaked clone.
             await expect(page.get_by_role("menuitem")).to_have_count(3)
         finally:

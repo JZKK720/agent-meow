@@ -1,7 +1,7 @@
 """
 Shared cwd-walker decision tests for the sandbox backends.
 
-The walker in :mod:`~?agent_meow.inner._cwd_scan` is consumed by every
+The walker in :mod:`~?omnigent.inner._cwd_scan` is consumed by every
 spawn-time sandbox backend (``linux_bwrap``, ``darwin_seatbelt``)
 to decide which cwd entries must be masked from the helper. Backend
 emit code (``--bind /dev/null`` / ``--tmpfs`` for bwrap, ``(deny
@@ -12,7 +12,7 @@ the agent fails the same test for both backends on whichever host
 runs the suite.
 
 Tests assert on :class:`MaskedEntry` tuples directly, not on backend-
-specific tokens. They run on every platform — the walker is pure
+specific tokens. They run on every platform â€” the walker is pure
 Python and doesn't shell out to ``bwrap`` / ``sandbox-exec``.
 """
 
@@ -23,7 +23,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.inner._cwd_scan import MaskedEntry, scan_cwd_mask_entries
+from omnigent.inner._cwd_scan import MaskedEntry, scan_cwd_mask_entries
 
 # The walker contract says ``safe_roots`` should include cwd plus the
 # backend-specific exposed mounts. For these decision-level tests we
@@ -56,7 +56,7 @@ def _scan(
         Defaults to ``[]`` (mask every dotfile) so each test states
         its allowlist intent explicitly.
     :param safe_roots: Override the safe-root set. Defaults to
-        ``[cwd, /usr]`` — cwd because the walker always trusts
+        ``[cwd, /usr]`` â€” cwd because the walker always trusts
         traversal into its own tree, ``/usr`` to mimic the bwrap +
         seatbelt default mounts.
     :param max_entries: Visit cap. Default is the production
@@ -169,7 +169,7 @@ def test_allowlisted_dotdir_is_not_masked(tmp_path: Path) -> None:
 
 def test_regular_file_is_not_masked(tmp_path: Path) -> None:
     """
-    Non-dotfile content is never returned by the walker — the
+    Non-dotfile content is never returned by the walker â€” the
     sandbox lets the helper read it through the cwd bind / SBPL
     allow rule. Regression here would over-mask everything in cwd.
     """
@@ -186,7 +186,7 @@ def test_symlink_pointing_outside_safe_roots_is_marked_as_file(tmp_path: Path) -
     ``kind="file"`` (the link itself, not the target).
 
     Backends translate this into a ``--bind /dev/null <link>`` or
-    ``(deny file-* (literal <link>))`` — both reject reads through
+    ``(deny file-* (literal <link>))`` â€” both reject reads through
     the link path. The escape they defend against is
     ``./link -> /etc/shadow`` showing up in cwd.
     """
@@ -206,7 +206,7 @@ def test_symlink_pointing_outside_safe_roots_is_marked_as_file(tmp_path: Path) -
 def test_symlink_pointing_into_safe_root_is_not_marked(tmp_path: Path) -> None:
     """
     A symlink whose target resolves inside ``safe_roots`` is NOT
-    marked — the agent has legit reasons to symlink to system tools
+    marked â€” the agent has legit reasons to symlink to system tools
     and over-masking would break realistic project layouts (e.g.
     ``./bin/python -> /usr/bin/python3``).
     """
@@ -313,7 +313,7 @@ def test_walker_does_not_follow_symlink_loops(tmp_path: Path) -> None:
     test will hang rather than fail.
 
     The loop symlink resolves to cwd, which is inside ``safe_roots``,
-    so the symlink itself is NOT masked — the walker just must not
+    so the symlink itself is NOT masked â€” the walker just must not
     follow it for recursion.
     """
     (tmp_path / "loop").symlink_to(tmp_path)
@@ -331,7 +331,7 @@ def test_overflow_error_raises_with_actionable_message(tmp_path: Path) -> None:
     """
     With ``overflow="error"`` (the production default), exceeding the
     cap raises :class:`OSError` whose message names both spec keys
-    the user can tune — Fail-Loud per project conventions.
+    the user can tune â€” Fail-Loud per project conventions.
     """
     for i in range(50):
         (tmp_path / f"file_{i}.txt").write_text("x")
@@ -359,7 +359,7 @@ def test_overflow_warn_returns_partial_mask_and_logs(
     (tmp_path / ".env").write_text("SECRET")
     for i in range(50):
         (tmp_path / f"file_{i}.txt").write_text("x")
-    caplog.set_level("WARNING", logger="agent_meow.inner._cwd_scan")
+    caplog.set_level("WARNING", logger="omnigent.inner._cwd_scan")
     entries = _scan(tmp_path, max_entries=5, overflow="warn")
     env_entry = _entry_for(entries, tmp_path / ".env")
     assert env_entry is not None, (
@@ -410,7 +410,7 @@ def _build_deprioritize_tree(cwd: Path) -> None:
 
     ``app`` sorts before ``node_modules`` alphabetically, so a plain
     DFS (no deprioritization) would pop ``node_modules`` off the LIFO
-    stack *before* ``app`` and spend the cap budget there — leaving
+    stack *before* ``app`` and spend the cap budget there â€” leaving
     ``app/.secret`` unmasked. With deprioritization, ``app`` is walked
     first and ``node_modules`` last. The two regimes therefore drop
     opposite dotfiles, which is what the contrast test asserts.
@@ -436,7 +436,7 @@ def test_deprioritized_dir_walked_last_so_project_dotfiles_win(tmp_path: Path) -
     whole tree masks the project's own dotfiles (``cwd/.env`` and
     ``cwd/app/.secret``) and leaves only the ``node_modules`` dotfile
     unmasked. The no-deprioritization contrast drops the opposite
-    dotfile, proving the deferral — not luck of DFS ordering — is what
+    dotfile, proving the deferral â€” not luck of DFS ordering â€” is what
     protects the project secret.
 
     A failure of the first block means deprioritization stopped
@@ -450,7 +450,7 @@ def test_deprioritized_dir_walked_last_so_project_dotfiles_win(tmp_path: Path) -
     # (node_modules/.npmrc) trips the cap. warn => partial mask returned.
     defer = _scan(tmp_path, max_entries=6, overflow="warn")
     assert _entry_for(defer, tmp_path / ".env") is not None, (
-        "Top-level project .env must be masked — it is visited before "
+        "Top-level project .env must be masked â€” it is visited before "
         "the cap trips regardless of deprioritization."
     )
     assert _entry_for(defer, tmp_path / "app" / ".secret") is not None, (
@@ -459,21 +459,21 @@ def test_deprioritized_dir_walked_last_so_project_dotfiles_win(tmp_path: Path) -
         "node_modules was NOT deferred and stole the budget."
     )
     assert _entry_for(defer, tmp_path / "node_modules" / ".npmrc") is None, (
-        "node_modules/.npmrc must be the dropped (unmasked) entry — it is "
+        "node_modules/.npmrc must be the dropped (unmasked) entry â€” it is "
         "walked last, after the cap is already exhausted."
     )
 
     # Same tree + same cap, but deprioritization disabled: plain DFS
     # pops node_modules before app, so node_modules/.npmrc is masked
-    # and app/.secret is the one dropped — the mirror image.
+    # and app/.secret is the one dropped â€” the mirror image.
     no_defer = _scan(tmp_path, max_entries=6, overflow="warn", deprioritize_names=[])
     assert _entry_for(no_defer, tmp_path / "node_modules" / ".npmrc") is not None, (
         "Without deprioritization, node_modules is walked first and its "
-        ".npmrc is masked — confirming the budget went there."
+        ".npmrc is masked â€” confirming the budget went there."
     )
     assert _entry_for(no_defer, tmp_path / "app" / ".secret") is None, (
         "Without deprioritization, app is walked last and app/.secret is "
-        "dropped — the exact leak deprioritization exists to prevent."
+        "dropped â€” the exact leak deprioritization exists to prevent."
     )
 
 
@@ -499,7 +499,7 @@ def test_deprioritized_dir_dotfiles_masked_when_under_cap(tmp_path: Path) -> Non
 def test_nested_deprioritized_dir_terminates_and_masks_deep_dotfile(tmp_path: Path) -> None:
     """
     A ``node_modules`` nested inside another ``node_modules`` must be
-    re-deferred on each drain and still walked — the walk terminates
+    re-deferred on each drain and still walked â€” the walk terminates
     (no infinite re-deferral) and the deeply nested dotfile is masked
     when the cap allows.
 
@@ -515,7 +515,7 @@ def test_nested_deprioritized_dir_terminates_and_masks_deep_dotfile(tmp_path: Pa
     entry = _entry_for(entries, deep_secret)
     assert entry is not None and entry.kind == "file", (
         "The dotfile inside a nested node_modules must be masked under "
-        "unlimited overflow — proving nested deferral terminates and "
+        "unlimited overflow â€” proving nested deferral terminates and "
         "still visits the inner subtree."
     )
 
@@ -538,12 +538,12 @@ def test_allowed_dot_dir_is_treated_as_deprioritized(dotdir: str, tmp_path: Path
 
     Why the ``deprioritized`` flag is the load-bearing assertion: a
     dot-dir already sorts before sibling regular dirs, so plain DFS
-    happens to pop it last anyway — the masked *set* alone wouldn't
+    happens to pop it last anyway â€” the masked *set* alone wouldn't
     distinguish the two regimes. The flag is emitted only because the
     basename is in ``_DEFAULT_DEPRIORITIZED_DIRS``. If this name were
     removed from that set, the dir would be a normal stack entry and
     the message would say ``partially scanned`` WITHOUT
-    ``deprioritized`` — so this assertion fails exactly when the
+    ``deprioritized`` â€” so this assertion fails exactly when the
     feature regresses.
     """
     cache = tmp_path / dotdir
@@ -554,7 +554,7 @@ def test_allowed_dot_dir_is_treated_as_deprioritized(dotdir: str, tmp_path: Path
     (proj / ".secret").write_text("PROJECT_SECRET=1")
     (proj / "a.txt").write_text("x")
     (proj / "b.txt").write_text("x")
-    # cwd children sorted: <dotdir>, proj. dotdir is allowed → deferred;
+    # cwd children sorted: <dotdir>, proj. dotdir is allowed â†’ deferred;
     # proj (3 children) is walked in the primary phase. With cap=5 the
     # budget covers <dotdir> (1) + proj (2) as cwd children, then proj's
     # 3 children (3,4,5); the 6th entry (inner.txt under the promoted
@@ -575,7 +575,7 @@ def test_unallowed_deprioritized_dot_dir_is_masked_not_walked(dotdir: str, tmp_p
     """
     The "if they are allowed" guard: when a deprioritized dot-dir is
     NOT on ``allow_hidden``, membership in the deprioritize set is a
-    no-op — the dir is masked and pruned (its contents never walked),
+    no-op â€” the dir is masked and pruned (its contents never walked),
     exactly as any other un-allowed dotdir.
 
     This guards the ordering of the two branches: masking is decided
@@ -620,7 +620,7 @@ def test_overflow_error_message_names_unfinished_node_modules(tmp_path: Path) ->
     # Budget math (see _build_deprioritize_tree, every dir has 3 children):
     # cwd's children .env/app/node_modules are entries 1-3 (node_modules
     # deferred), app's children are 4-6, then node_modules is promoted and
-    # its first child trips the 7th entry > cap=6 — so node_modules is the
+    # its first child trips the 7th entry > cap=6 â€” so node_modules is the
     # partially-scanned, deprioritized dir the message must name.
     with pytest.raises(OSError) as exc_info:
         _scan(tmp_path, max_entries=6, overflow="error")
@@ -654,7 +654,7 @@ def test_overflow_warn_message_distinguishes_partial_and_bounds_list(
     Setup: 15 top-level dirs each holding one file, cap=15. The walker
     pushes all 15 dirs while scanning cwd (entries 1..15), then trips
     on the first grandchild file (entry 16) while inside the
-    last-popped dir — making that dir "partially scanned" and leaving
+    last-popped dir â€” making that dir "partially scanned" and leaving
     14 dirs queued. 1 partial + 14 not-scanned = 15 lines; the first
     10 are shown and the remaining 5 collapse to ``(+5 more)``.
     """
@@ -662,7 +662,7 @@ def test_overflow_warn_message_distinguishes_partial_and_bounds_list(
         d = tmp_path / f"d{i:02d}"
         d.mkdir()
         (d / "f.txt").write_text("x")
-    caplog.set_level("CRITICAL", logger="agent_meow.inner._cwd_scan")
+    caplog.set_level("CRITICAL", logger="omnigent.inner._cwd_scan")
     _scan(tmp_path, max_entries=15, overflow="warn")
     records = [r for r in caplog.records if "Mask is incomplete" in r.getMessage()]
     assert len(records) == 1, (

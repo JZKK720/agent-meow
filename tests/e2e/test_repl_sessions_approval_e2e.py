@@ -47,7 +47,7 @@ def _build_repl_env(mock_llm_server_url: str, tmp_home: Path) -> dict[str, str]:
     Points ``OPENAI_BASE_URL`` at the mock LLM server so the spawned
     ``agent-meow run`` subprocess uses mock responses.
     """
-    from tests.e2e.agent_meow._pexpect_harness import ensure_repl_test_theme_env
+    from tests.e2e.omnigent._pexpect_harness import ensure_repl_test_theme_env
 
     sdk_paths = [
         str(_REPO_ROOT / "sdks" / "python-client"),
@@ -140,8 +140,8 @@ def _spawn_repl_with_args(
 
 
 def _wait_for_prompt_ready(child: Any, timeout: float = 60.0) -> None:
-    """Wait for the REPL prompt (``❯``) to appear."""
-    child.expect("❯", timeout=timeout)
+    """Wait for the REPL prompt (``â¯``) to appear."""
+    child.expect("â¯", timeout=timeout)
 
 
 def _read_pending(child: Any, seconds: float = 0.3) -> str:
@@ -196,7 +196,7 @@ def _configure_multi_turn_responses(mock_llm_server_url: str, count: int = 2) ->
     )
 
 
-# ── CUJ 1: Single approval allows LLM response ─────────
+# â”€â”€ CUJ 1: Single approval allows LLM response â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_sessions_single_approval_allows_llm_response(
@@ -229,7 +229,7 @@ def test_sessions_single_approval_allows_llm_response(
         _clean_exit(child)
 
 
-# ── CUJ 2: Refusal shows deny sentinel ──────────────────
+# â”€â”€ CUJ 2: Refusal shows deny sentinel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_sessions_refusal_shows_deny_sentinel(
@@ -258,7 +258,7 @@ def test_sessions_refusal_shows_deny_sentinel(
         _clean_exit(child)
 
 
-# ── CUJ 3: Multi-turn fires approval each turn ──────────
+# â”€â”€ CUJ 3: Multi-turn fires approval each turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_sessions_two_turns_fires_one_approval_per_turn(
@@ -295,7 +295,7 @@ def test_sessions_two_turns_fires_one_approval_per_turn(
         _clean_exit(child)
 
 
-# ── CUJ 4: Approve-always caches for session ────────────
+# â”€â”€ CUJ 4: Approve-always caches for session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_sessions_approve_always_caches_for_later_turns(
@@ -334,7 +334,7 @@ def test_sessions_approve_always_caches_for_later_turns(
         _clean_exit(child)
 
 
-# ── CUJ 5: Tool call approval ───────────────────────────
+# â”€â”€ CUJ 5: Tool call approval â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_sessions_tool_call_approval_allows_tool(
@@ -384,7 +384,7 @@ def test_sessions_tool_call_approval_allows_tool(
         _clean_exit(child)
 
 
-# ── CUJ 6: Default flag uses sessions API ─────────────────
+# â”€â”€ CUJ 6: Default flag uses sessions API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _write_simple_agent_yaml(directory: Path) -> Path:

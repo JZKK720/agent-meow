@@ -12,13 +12,13 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from agent_meow.entities import DEFAULT_ENVIRONMENT_ID
-from agent_meow.entities.environment_filesystem import FilesystemPathNotFound
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-from agent_meow.inner.os_env import create_os_environment
-from agent_meow.runner import create_runner_app
-from agent_meow.runner.environment_filesystem import CallerProcessFilesystem
-from agent_meow.runner.resource_registry import SessionResourceRegistry
+from omnigent.entities import DEFAULT_ENVIRONMENT_ID
+from omnigent.entities.environment_filesystem import FilesystemPathNotFound
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+from omnigent.inner.os_env import create_os_environment
+from omnigent.runner import create_runner_app
+from omnigent.runner.environment_filesystem import CallerProcessFilesystem
+from omnigent.runner.resource_registry import SessionResourceRegistry
 from tests.runner.helpers import NullServerClient
 
 
@@ -404,7 +404,7 @@ async def test_stat_path_with_command_substitution_does_not_execute(
     containing a command substitution must raise ``FilesystemPathNotFound``
     without creating the marker the substituted command would produce.
     """
-    from agent_meow.runner.environment_filesystem import CallerProcessFilesystem
+    from omnigent.runner.environment_filesystem import CallerProcessFilesystem
 
     os_env = create_os_environment(
         OSEnvSpec(
@@ -439,7 +439,7 @@ async def test_stat_real_file_with_command_substitution_name(
     file-type entry with the real byte size. A shell-interpreted path would
     stat a different string and raise instead.
     """
-    from agent_meow.runner.environment_filesystem import CallerProcessFilesystem
+    from omnigent.runner.environment_filesystem import CallerProcessFilesystem
 
     os_env = create_os_environment(
         OSEnvSpec(

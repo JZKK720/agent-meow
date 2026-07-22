@@ -20,8 +20,8 @@ from typing import Any, TextIO
 
 import pytest
 
-from agent_meow import claude_native_bridge, native_cost_popup
-from agent_meow.claude_native_bridge import (
+from omnigent import claude_native_bridge, native_cost_popup
+from omnigent.claude_native_bridge import (
     _claude_prompt_rendered,
     _hook_record_from_jsonl_record,
     _JsonlRecord,
@@ -47,7 +47,7 @@ from agent_meow.claude_native_bridge import (
     stop_hook_seen_since,
     write_tmux_target,
 )
-from agent_meow.reasoning_effort import CLAUDE_EFFORTS
+from omnigent.reasoning_effort import CLAUDE_EFFORTS
 
 
 @pytest.fixture(autouse=True)
@@ -59,8 +59,8 @@ def _trust_tmp_bridge_parent(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     :param tmp_path: Per-test temp directory.
     :returns: None.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path)
 
 
 @pytest.fixture
@@ -70,7 +70,7 @@ def subprocess_bridge_root() -> Iterator[Path]:
 
     :yields: Temporary directory path under the production trusted
         Claude bridge root, so a child
-        ``python -m agent_meow.claude_native_bridge`` accepts bridge
+        ``python -m omnigent.claude_native_bridge`` accepts bridge
         writes without inheriting pytest monkeypatches.
     """
     production_root = Path("/tmp") / f"omnigent-{os.getuid()}" / "claude-native"
@@ -209,8 +209,8 @@ def test_prepare_bridge_dir_preserves_token_and_updates_runtime(
     old token.
     """
     root = tmp_path / "root"
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
 
     first = prepare_bridge_dir(
         "conv_abc",
@@ -240,13 +240,13 @@ def test_prepare_bridge_dir_preserves_permission_hook_config(
     ``permission_hook.json`` at hook time to learn which agent-meow server to
     POST to (the URL is not baked into Claude's launch args). A
     rebind/reattach that re-runs ``prepare_bridge_dir`` must NOT wipe
-    that file — if it does, the permission subprocess bails with "AP
+    that file â€” if it does, the permission subprocess bails with "AP
     server URL missing" and approval prompts silently stop reaching the
     web UI (a regression we guard against).
     """
     root = tmp_path / "root"
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
 
     bridge_dir = prepare_bridge_dir("conv_abc", workspace=tmp_path)
     # ``augment_claude_args`` is the production path that writes
@@ -280,13 +280,13 @@ def test_prepare_bridge_dir_restricts_filesystem_permissions(
     holds a bearer token the local MCP server uses; if its perms drift
     to a default 0o755 (dir) / 0o644 (file) other users on the box can
     read it and impersonate the runner against the MCP server. Per the
-    design doc §12 the dir must be 0o700 and bearer files 0o600. A
+    design doc Â§12 the dir must be 0o700 and bearer files 0o600. A
     regression here would be invisible without an explicit stat assertion.
     """
     import stat
 
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
 
     bridge_dir = prepare_bridge_dir("conv_abc", workspace=tmp_path)
     bridge_json = bridge_dir / "bridge.json"
@@ -314,8 +314,8 @@ def test_prepare_bridge_dir_refuses_symlinked_ancestor(
     Without `_ensure_secure_dir`, ``mkdir(parents=True, exist_ok=True)``
     happily walks through a symlinked intermediate dir, redirecting the
     bridge tree (including ``bridge.json``'s bearer token) to a path an
-    attacker controls. A regression that removes the validation — or
-    swaps it back to plain mkdir — would let this attack succeed.
+    attacker controls. A regression that removes the validation â€” or
+    swaps it back to plain mkdir â€” would let this attack succeed.
     """
     # Layout: tmp_path is the trusted parent. Place a "claude-native"
     # symlink that points at a separate attacker-controlled directory
@@ -325,14 +325,14 @@ def test_prepare_bridge_dir_refuses_symlinked_ancestor(
     symlink = tmp_path / "claude-native"
     symlink.symlink_to(attacker_dir, target_is_directory=True)
 
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", symlink)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", symlink)
 
     with pytest.raises(RuntimeError, match="symlink"):
         prepare_bridge_dir("conv_abc", workspace=tmp_path)
 
     # Confirm the bearer token did NOT land in the attacker-controlled
-    # directory — the refusal happened before any file write.
+    # directory â€” the refusal happened before any file write.
     assert not (attacker_dir / "bridge.json").exists()
 
 
@@ -343,7 +343,7 @@ def test_trusted_parent_accepts_qwen_native_bridge_dir(
     """
     The relay's bridge-root allowlist accepts qwen-native bridge dirs.
 
-    The comment relay (``start_tool_relay`` → ``_ensure_secure_dir`` →
+    The comment relay (``start_tool_relay`` â†’ ``_ensure_secure_dir`` â†’
     ``_trusted_parent_for_bridge_dir``) writes its JSON file under the
     harness's bridge dir, validating it lives below a known bridge root.
     qwen-native reuses this relay but keeps files under its own root
@@ -352,12 +352,12 @@ def test_trusted_parent_accepts_qwen_native_bridge_dir(
     root`` and the relay never starts (observed in a live runner log). This
     pins the qwen-native branch so the regression can't return.
     """
-    from agent_meow import qwen_native_bridge
+    from omnigent import qwen_native_bridge
 
     # Distinct claude root so the qwen target can't match the claude branch
     # first (the autouse fixture points the claude root at ``tmp_path``).
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     # qwen root mirrors production shape: <uid-scoped temp>/qwen-native.
     qwen_root = tmp_path / "omnigent-test" / "qwen-native"
     monkeypatch.setattr(qwen_native_bridge, "_BRIDGE_ROOT", qwen_root)
@@ -383,12 +383,12 @@ def test_trusted_parent_accepts_kiro_native_bridge_dir(
     and the relay (and serve-mcp's own ``server.json`` write) never start. This
     pins the kiro-native branch.
     """
-    from agent_meow import kiro_native_bridge
+    from omnigent import kiro_native_bridge
 
     # Distinct claude root so the kiro target can't match the claude branch
     # first (the autouse fixture points the claude root at ``tmp_path``).
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     # kiro root mirrors production shape: <uid-scoped temp>/kiro-native.
     kiro_root = tmp_path / "omnigent-test" / "kiro-native"
     monkeypatch.setattr(kiro_native_bridge, "_BRIDGE_ROOT", kiro_root)
@@ -405,12 +405,12 @@ def test_trusted_parent_rejects_path_outside_all_roots_and_names_qwen(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A path under no known root is refused, and the error names the qwen root."""
-    from agent_meow import qwen_native_bridge
+    from omnigent import qwen_native_bridge
 
     # Distinct claude root so ``outside`` below isn't swept under it (the autouse
     # fixture points the claude root at ``tmp_path``).
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", tmp_path / "claude-native")
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     qwen_root = tmp_path / "omnigent-test" / "qwen-native"
     monkeypatch.setattr(qwen_native_bridge, "_BRIDGE_ROOT", qwen_root)
 
@@ -1182,7 +1182,7 @@ def test_read_transcript_items_since_surfaces_skill_as_slash_command(
         "content": [{"type": "output_text", "text": "Done."}],
     }
     # Slash command + the assistant turn it triggered must cluster in
-    # one bubble — see test_slash_command_does_not_inherit_prior_turn_response_id.
+    # one bubble â€” see test_slash_command_does_not_inherit_prior_turn_response_id.
     assert items[0].response_id == items[1].response_id
 
 
@@ -1264,7 +1264,7 @@ def test_read_transcript_items_since_drops_cli_builtin_slash_commands(
     Uses ``/login`` because it's in the DROPPED set; commands in the
     SURFACED set (``/effort``, ``/clear``, ``/compact``, ``/model``,
     ``/ultrareview``) deliberately emit a ``slash_command`` item now,
-    so they'd fail this assertion — see the surfaces-cli-commands
+    so they'd fail this assertion â€” see the surfaces-cli-commands
     parametric test below.
     """
     transcript_path = tmp_path / "session.jsonl"
@@ -1312,7 +1312,7 @@ def test_read_transcript_items_since_drops_cli_builtin_slash_commands(
                         "message": {
                             "role": "user",
                             "content": (
-                                "<local-command-stdout>Opening browser…</local-command-stdout>"
+                                "<local-command-stdout>Opening browserâ€¦</local-command-stdout>"
                             ),
                         },
                     }
@@ -1375,7 +1375,7 @@ def test_read_transcript_items_since_drops_standalone_cli_scaffolding_records(
     must drop instead of rendering markup as a user bubble.
 
     Note: ``<bash-input>``, ``<bash-stdout>``, and ``<bash-stderr>`` are
-    intentionally excluded here — they are surfaced as ``terminal_command``
+    intentionally excluded here â€” they are surfaced as ``terminal_command``
     items (see ``test_read_transcript_items_since_surfaces_terminal_command_*``).
     """
     transcript_path = tmp_path / "session.jsonl"
@@ -1409,7 +1409,7 @@ def test_read_transcript_items_since_drops_standalone_cli_scaffolding_records(
         # String form (how Claude Code ships it today), both variants.
         "[Request interrupted by user]",
         "[Request interrupted by user for tool use]",
-        # List form — defensive: Claude's JSONL shape isn't under our control.
+        # List form â€” defensive: Claude's JSONL shape isn't under our control.
         [{"type": "text", "text": "[Request interrupted by user]"}],
     ],
 )
@@ -1612,10 +1612,10 @@ def test_read_transcript_items_since_surfaces_skill_when_command_name_is_not_fir
 ) -> None:
     """
     Skill invocations with args ship the tag order
-    ``<command-message>…<command-name>…<command-args>…`` (real shape
+    ``<command-message>â€¦<command-name>â€¦<command-args>â€¦`` (real shape
     observed in transcripts for e.g. ``/supervisor-agent-e2e-test use this skill``).
     The dispatcher must detect ``<command-name>`` anywhere in the
-    content, not just at the start — otherwise the record falls into
+    content, not just at the start â€” otherwise the record falls into
     the scaffolding-drop branch because ``<command-message>`` IS in
     ``_CLI_SCAFFOLDING_MARKERS`` and the skill silently disappears.
     """
@@ -1714,7 +1714,7 @@ def test_read_transcript_items_since_drops_recently_added_cli_builtins(
     tmp_path: Path, builtin_name: str
 ) -> None:
     """
-    Names in the CLI built-in DROPPED set drop end-to-end — not
+    Names in the CLI built-in DROPPED set drop end-to-end â€” not
     surface as fake Skill rows. Drives each through the full bridge
     pipeline (set membership alone wouldn't catch a name that's in
     the set but mishandled downstream).
@@ -1766,7 +1766,7 @@ def test_read_transcript_items_since_surfaces_cli_commands_with_kind_command(
     """
     Surfaced CLI built-ins (``/effort``, ``/clear``, ``/compact``,
     ``/model``, ``/ultrareview``) emit a ``slash_command`` item with
-    ``kind="command"`` — the renderer uses that to switch the prefix
+    ``kind="command"`` â€” the renderer uses that to switch the prefix
     label from "Skill" to "Command".
 
     These commands change conversation-visible state (effort level,
@@ -1819,7 +1819,7 @@ def test_read_transcript_items_since_drops_malformed_slash_command_record(
     A truncated slash-command record (open tag, no close) drops
     instead of falling through to the user-bubble path that would
     render the markup verbatim. Subsequent legitimate
-    records still surface — one bad line must not kill the poll loop.
+    records still surface â€” one bad line must not kill the poll loop.
     """
     transcript_path = tmp_path / "session.jsonl"
     transcript_path.write_text(
@@ -1831,7 +1831,7 @@ def test_read_transcript_items_since_drops_malformed_slash_command_record(
                         "uuid": "slash-truncated",
                         "message": {
                             "role": "user",
-                            # Start tag with no closing tag — pathological shape.
+                            # Start tag with no closing tag â€” pathological shape.
                             "content": "<command-name>/oncall",
                         },
                     }
@@ -1877,7 +1877,7 @@ def test_read_transcript_items_since_drops_list_form_slash_command_text_block(
     Today Claude Code emits slash-command records as string content
     (covered by the surfaces/drops/malformed tests above). If that
     serialization ever changes to list form, the string-branch guard
-    no longer fires — without the list-branch filter this regresses
+    no longer fires â€” without the list-branch filter this regresses
     to the raw-markup-as-user-bubble bug.
     """
     transcript_path = tmp_path / "session.jsonl"
@@ -1916,7 +1916,7 @@ def test_read_transcript_items_since_drops_list_form_slash_command_text_block(
         agent_name="claude-native-ui",
     )
 
-    # The text block holding ``<command-name>…`` is dropped; only the
+    # The text block holding ``<command-name>â€¦`` is dropped; only the
     # legitimate tool_result survives. If the list-branch filter
     # regresses, items would contain a "message" with the raw markup
     # as ``input_text``.
@@ -1993,20 +1993,20 @@ def test_augment_claude_args_injects_mcp_and_hooks(tmp_path: Path) -> None:
     server = mcp_config["mcpServers"]["agent-meow"]
     assert server["command"] == "/venv/bin/python"
     assert server["args"][-2:] == ["--bridge-dir", str(tmp_path)]
-    # Web-UI input does not flow through Claude Channels — that
+    # Web-UI input does not flow through Claude Channels â€” that
     # capability is blocked at the org level. The wrapper must not
     # pass the development-channels flag.
     assert "--dangerously-load-development-channels" not in args
     settings = json.loads(args[args.index("--settings") + 1])
-    assert "agent_meow.claude_native_hook" in settings["hooks"]["Stop"][0]["hooks"][0]["command"]
+    assert "omnigent.claude_native_hook" in settings["hooks"]["Stop"][0]["hooks"][0]["command"]
     # ``PreCompact`` must be wired so the forwarder can surface
     # ``response.compaction.in_progress`` while Claude compacts in the
-    # terminal. Missing it = no "Compacting…" spinner for claude-native.
+    # terminal. Missing it = no "Compactingâ€¦" spinner for claude-native.
     assert "PreCompact" in settings["hooks"], (
         f"PreCompact hook must be registered; got hooks {sorted(settings['hooks'])!r}."
     )
     assert (
-        "agent_meow.claude_native_hook" in settings["hooks"]["PreCompact"][0]["hooks"][0]["command"]
+        "omnigent.claude_native_hook" in settings["hooks"]["PreCompact"][0]["hooks"][0]["command"]
     )
     # No built-in tools are disabled anymore: ``AskUserQuestion``
     # routes through its dedicated PreToolUse hook (answers injected
@@ -2021,7 +2021,7 @@ def test_augment_claude_args_merges_user_disallowed_tools(tmp_path: Path) -> Non
     A user-supplied ``--disallowedTools`` passes through unchanged.
 
     With no wrapper-disabled tools, the user's flag must survive
-    verbatim — exactly one flag, exactly their value. This fails if the
+    verbatim â€” exactly one flag, exactly their value. This fails if the
     wrapper appends a duplicate flag or mutates the user's disables.
     """
     args = augment_claude_args(
@@ -2046,7 +2046,7 @@ def test_augment_claude_args_injects_plugin_dir_for_bundle_with_skills(
 
     This is the claude-native parity for the SDK executor's plugin
     wiring. It fails if a deployed agent's bundled skills never reach the
-    real ``claude`` CLI (the gap before this change — native ignores the
+    real ``claude`` CLI (the gap before this change â€” native ignores the
     harness ``tools``/skill plumbing, so ``--plugin-dir`` is the only
     surface). ``skills_filter`` defaults to ``"all"``, so host skills use
     the CLI's default sources and no ``--setting-sources`` is emitted.
@@ -2067,14 +2067,14 @@ def test_augment_claude_args_injects_plugin_dir_for_bundle_with_skills(
     # The plugin path is the bundle root (Claude discovers
     # <bundle>/skills/<name>/SKILL.md under the plugin convention).
     assert args[args.index("--plugin-dir") + 1] == str(bundle)
-    # "all" → host skills via the CLI default; no explicit override.
+    # "all" â†’ host skills via the CLI default; no explicit override.
     assert "--setting-sources" not in args
     # The manifest gives the plugin a stable name for clean skill labels.
     manifest = bundle / ".claude-plugin" / "plugin.json"
     assert manifest.exists()
     assert json.loads(manifest.read_text())["name"] == "researcher"
     # The skill args are appended alongside the MCP/hook injection, not in
-    # place of it — both must reach the final launch command.
+    # place of it â€” both must reach the final launch command.
     assert "--mcp-config" in args
 
 
@@ -2087,7 +2087,7 @@ def test_augment_claude_args_omits_permission_hook_without_omnigent_server(
 
     This guards the default path: a call site that forgets to plumb
     the agent-meow server URL must NOT silently fall through to Claude's TUI
-    prompt for every tool — but it also must not register an HTTP hook
+    prompt for every tool â€” but it also must not register an HTTP hook
     against an undefined URL. The expected behaviour is "no hook at
     all", which means Claude uses its built-in permission flow.
     """
@@ -2110,7 +2110,7 @@ def test_augment_claude_args_registers_permission_command_hook(
 
     If this regresses, Claude Code's built-in TUI permission prompt
     appears every time the user is supposed to approve from the web
-    UI instead — silently breaking the blocking-UI-hook contract.
+    UI instead â€” silently breaking the blocking-UI-hook contract.
     """
     args = augment_claude_args(
         (),
@@ -2133,7 +2133,7 @@ def test_augment_claude_args_registers_permission_command_hook(
     # terminal prompt is still open. A failure here (missing key or a
     # short value) means that premature auto-resolve has regressed.
     assert hook["timeout"] == 86400
-    assert "agent_meow.claude_native_hook permission-request" in hook["command"]
+    assert "omnigent.claude_native_hook permission-request" in hook["command"]
     assert "--bridge-dir" in hook["command"]
     assert "Bearer xyz" not in hook["command"]
     permission_config = json.loads((tmp_path / "permission_hook.json").read_text(encoding="utf-8"))
@@ -2146,7 +2146,7 @@ def test_augment_claude_args_registers_permission_command_hook(
     # statusLine is now intentionally injected (it's the only place
     # Claude Code surfaces ``context_window`` on stdin); ensure it
     # points at our wrapper module rather than something arbitrary.
-    assert "agent_meow.claude_native_status" in settings["statusLine"]["command"]
+    assert "omnigent.claude_native_status" in settings["statusLine"]["command"]
 
 
 def test_augment_claude_args_registers_user_prompt_submit_policy_hook(
@@ -2160,7 +2160,7 @@ def test_augment_claude_args_registers_user_prompt_submit_policy_hook(
     message events, so this hook is the sole REQUEST-phase gate (covering
     both web-UI-injected and direct-terminal prompts). If it regressed,
     native prompts would reach the model with no request-phase policy. The
-    forwarder's own UserPromptSubmit hook (status → running) must survive,
+    forwarder's own UserPromptSubmit hook (status â†’ running) must survive,
     so the policy hook is appended, not substituted.
     """
     args = augment_claude_args(
@@ -2224,7 +2224,7 @@ def test_augment_claude_args_keeps_permission_hook_without_launch_session_id(
     session_start_command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
     assert "--conversation-url" not in session_start_command
     assert "companyAnnouncements" not in settings
-    assert "agent_meow.claude_native_status" in settings["statusLine"]["command"]
+    assert "omnigent.claude_native_status" in settings["statusLine"]["command"]
 
 
 def test_mcp_server_initialize_omits_blocked_channel_capability(
@@ -2239,14 +2239,14 @@ def test_mcp_server_initialize_omits_blocked_channel_capability(
     Code would refuse to start with that capability advertised under
     org policy, breaking the native wrapper.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
     bridge_dir = prepare_bridge_dir("conv_abc", workspace=tmp_path)
     proc = subprocess.Popen(
         [
             sys.executable,
             "-m",
-            "agent_meow.claude_native_bridge",
+            "omnigent.claude_native_bridge",
             "serve-mcp",
             "--bridge-dir",
             str(bridge_dir),
@@ -2332,8 +2332,8 @@ def test_write_tmux_target_persists_socket_and_target(tmp_path: Path) -> None:
         # close the bracketed-paste sequence on Claude's side.
         ("a\x1bb", b"ab\r"),
         # Large payload (a PR diff in a sub-agent dispatch). Must ride the
-        # load-buffer file — per-byte send-keys argv tripped tmux's ~16KB
-        # client→server command cap with "command too long".
+        # load-buffer file â€” per-byte send-keys argv tripped tmux's ~16KB
+        # clientâ†’server command cap with "command too long".
         ("x" * 100_000, b"x" * 100_000 + b"\r"),
     ],
     ids=["plain", "multiline", "trailing-backslash", "crlf", "embedded-esc", "large"],
@@ -2348,7 +2348,7 @@ def test_inject_user_message_pastes_content_then_submits(
     Every message is delivered as one bracketed paste, then a separate Enter.
 
     The paste goes via ``load-buffer`` (from a temp file, so size is
-    unbounded — tmux caps a single command at ~16KB, which a PR-diff
+    unbounded â€” tmux caps a single command at ~16KB, which a PR-diff
     dispatch exceeded as "command too long") then ``paste-buffer -p``,
     with interior newlines encoded as CR so Claude Code's TUI keeps
     multi-line input as a single editable block instead of submitting on
@@ -2356,7 +2356,7 @@ def test_inject_user_message_pastes_content_then_submits(
     regresses to send-keys argv delivery, drops the trailing Enter, or
     stops clearing the stale buffer.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -2371,7 +2371,7 @@ def test_inject_user_message_pastes_content_then_submits(
     # again once Enter submits. The paste-committed and submit-verified
     # gates both poll capture-pane, so a static pane would either stall
     # the paste gate (draft never appears) or fail verification.
-    tui = {"pane": "❯ "}
+    tui = {"pane": "â¯ "}
 
     def _fake_run(cmd: list[str], **kwargs: object) -> SimpleNamespace:
         """
@@ -2379,7 +2379,7 @@ def test_inject_user_message_pastes_content_then_submits(
 
         ``capture-pane`` calls (the readiness / paste-committed /
         submit-verified polls) return the current simulated pane and
-        are not recorded — the assertions below count only the
+        are not recorded â€” the assertions below count only the
         delivery invocations. ``load-buffer`` calls read the temp
         file's bytes at call time (the harness unlinks it after the
         paste, so asserting later would race the cleanup).
@@ -2396,16 +2396,16 @@ def test_inject_user_message_pastes_content_then_submits(
         if "load-buffer" in cmd:
             loaded_payloads.append(Path(cmd[-1]).read_bytes())
         if "paste-buffer" in cmd:
-            tui["pane"] = "❯ [Pasted text #1 +2 lines]"
+            tui["pane"] = "â¯ [Pasted text #1 +2 lines]"
         if cmd[-1] == "Enter":
-            tui["pane"] = "❯ "
+            tui["pane"] = "â¯ "
         captured.append(cmd)
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr("subprocess.run", _fake_run)
     inject_user_message(bridge_dir, content=content)
 
-    # C-a, C-k (clear), load-buffer, paste-buffer, Enter — fewer than 5
+    # C-a, C-k (clear), load-buffer, paste-buffer, Enter â€” fewer than 5
     # means a delivery step was dropped.
     assert len(captured) == 5, (
         f"Expected 5 tmux calls (C-a, C-k, load-buffer, paste-buffer, Enter), got {len(captured)}."
@@ -2458,7 +2458,7 @@ def test_inject_user_message_raises_when_tmux_target_never_published(
     The injection helper fails loud when the runner has not written tmux.json.
 
     Failing silently would let the agent-meow turn complete with no user
-    message ever reaching Claude — the executor needs the
+    message ever reaching Claude â€” the executor needs the
     RuntimeError so it can surface an ExecutorError.
     """
     with pytest.raises(RuntimeError, match="tmux target is not advertised"):
@@ -2499,7 +2499,7 @@ def test_inject_user_message_raises_on_tmux_failure(
         """
         del kwargs
         if "capture-pane" in cmd:
-            return SimpleNamespace(returncode=0, stdout="❯ ", stderr="")
+            return SimpleNamespace(returncode=0, stdout="â¯ ", stderr="")
         return SimpleNamespace(
             returncode=1,
             stdout="",
@@ -2524,7 +2524,7 @@ def test_inject_user_message_waits_for_claude_prompt_before_typing(
     no send-keys is issued until ``capture-pane`` shows the prompt
     glyph, and that injection proceeds once it does.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -2538,9 +2538,9 @@ def test_inject_user_message_waits_for_claude_prompt_before_typing(
     # polls; a correct gate waits for the third capture. After boot the
     # fake behaves like the live input box: the paste deposits the
     # draft, Enter clears it (so the submit-verification gate passes).
-    boot_panes = ["", "", "❯ "]
+    boot_panes = ["", "", "â¯ "]
     capture_calls = {"n": 0}
-    tui = {"pane": "❯ "}
+    tui = {"pane": "â¯ "}
 
     def _fake_run(cmd: list[str], **kwargs: object) -> SimpleNamespace:
         """
@@ -2562,9 +2562,9 @@ def test_inject_user_message_waits_for_claude_prompt_before_typing(
                 return SimpleNamespace(returncode=0, stdout="", stderr="")
             return SimpleNamespace(returncode=0, stdout=tui["pane"], stderr="")
         if "paste-buffer" in cmd:
-            tui["pane"] = "❯ hello"
+            tui["pane"] = "â¯ hello"
         if cmd[-1] == "Enter":
-            tui["pane"] = "❯ "
+            tui["pane"] = "â¯ "
         send_keys.append(cmd)
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
@@ -2600,10 +2600,10 @@ def test_inject_user_message_raises_when_prompt_never_renders(
     Injection fails loud if Claude's prompt never renders (boot failed).
 
     Without this the turn would complete with the message dropped and
-    the web UI stuck on "Working…". The RuntimeError surfaces as an
+    the web UI stuck on "Workingâ€¦". The RuntimeError surfaces as an
     ExecutorError instead. No keystrokes must be sent on this path.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -2639,24 +2639,24 @@ def test_inject_user_message_ignores_prompt_glyph_in_scrollback(
     """
     The readiness gate only trusts the prompt glyph in the pane tail.
 
-    Claude echoes prior user input (which may contain ``❯``) into
+    Claude echoes prior user input (which may contain ``â¯``) into
     scrollback. If the gate matched anywhere in the pane it would
-    falsely pass while the live input box is still booting. Here ``❯``
+    falsely pass while the live input box is still booting. Here ``â¯``
     appears only in an early line, with later non-empty lines lacking
     it, so the gate must NOT treat the pane as ready.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
         socket_path=Path("/tmp/example/tmux.sock"),
         tmux_target="claude:0.0",
     )
-    # `❯` only on an early line; the last several non-empty lines (the
+    # `â¯` only on an early line; the last several non-empty lines (the
     # tail the gate scans) do not contain it.
     scrollback = "\n".join(
         [
-            "❯ old prompt echo",
+            "â¯ old prompt echo",
             "output line 1",
             "output line 2",
             "output line 3",
@@ -2693,7 +2693,7 @@ def test_inject_user_message_resends_enter_when_first_submit_swallowed(
 
     Claude Code coalesces rapid stdin bursts into a paste; an Enter
     that lands inside that window becomes a newline in the draft
-    instead of a submit, and the message sits unsent — the "typed but
+    instead of a submit, and the message sits unsent â€” the "typed but
     never sent" bug. The helper must observe (via capture-pane) that
     the draft is still in the input box after Enter and re-send Enter
     until it clears. Here the fake TUI swallows the first Enter
@@ -2701,12 +2701,12 @@ def test_inject_user_message_resends_enter_when_first_submit_swallowed(
     fire-and-forget Enter would send exactly one and return "success"
     with the message undelivered.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    # Shrink the polling cadence so the retry happens in milliseconds —
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    # Shrink the polling cadence so the retry happens in milliseconds â€”
     # the production defaults (1s retry spacing) would make this test slow.
-    monkeypatch.setattr("agent_meow.claude_native_bridge._CLAUDE_READY_POLL_INTERVAL_S", 0.01)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._SUBMIT_RETRY_INTERVAL_S", 0.02)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._PASTE_SETTLE_S", 0.0)
+    monkeypatch.setattr("omnigent.claude_native_bridge._CLAUDE_READY_POLL_INTERVAL_S", 0.01)
+    monkeypatch.setattr("omnigent.claude_native_bridge._SUBMIT_RETRY_INTERVAL_S", 0.02)
+    monkeypatch.setattr("omnigent.claude_native_bridge._PASTE_SETTLE_S", 0.0)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -2716,9 +2716,9 @@ def test_inject_user_message_resends_enter_when_first_submit_swallowed(
 
     enters: list[list[str]] = []
     # Input-box state machine: the paste deposits the draft; the FIRST
-    # Enter is swallowed (folded into the paste burst — draft stays);
+    # Enter is swallowed (folded into the paste burst â€” draft stays);
     # the second Enter submits and clears the box.
-    tui = {"pane": "❯ ", "swallowed_enters": 0}
+    tui = {"pane": "â¯ ", "swallowed_enters": 0}
 
     def _fake_run(cmd: list[str], **kwargs: object) -> SimpleNamespace:
         """
@@ -2733,13 +2733,13 @@ def test_inject_user_message_resends_enter_when_first_submit_swallowed(
         if "capture-pane" in cmd:
             return SimpleNamespace(returncode=0, stdout=tui["pane"], stderr="")
         if "paste-buffer" in cmd:
-            tui["pane"] = "❯ fix the flaky test"
+            tui["pane"] = "â¯ fix the flaky test"
         if cmd[-1] == "Enter":
             enters.append(cmd)
             if tui["swallowed_enters"] == 0:
-                tui["swallowed_enters"] = 1  # folded into the paste — draft stays
+                tui["swallowed_enters"] = 1  # folded into the paste â€” draft stays
             else:
-                tui["pane"] = "❯ "  # submitted — input box clears
+                tui["pane"] = "â¯ "  # submitted â€” input box clears
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr("subprocess.run", _fake_run)
@@ -2765,11 +2765,11 @@ def test_inject_user_message_raises_when_draft_never_submits(
     the message still sitting unsent in Claude's input box. The
     RuntimeError surfaces as an ExecutorError instead.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._CLAUDE_READY_POLL_INTERVAL_S", 0.01)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._SUBMIT_RETRY_INTERVAL_S", 0.02)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._SUBMIT_VERIFY_TIMEOUT_S", 0.2)
-    monkeypatch.setattr("agent_meow.claude_native_bridge._PASTE_SETTLE_S", 0.0)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", tmp_path)
+    monkeypatch.setattr("omnigent.claude_native_bridge._CLAUDE_READY_POLL_INTERVAL_S", 0.01)
+    monkeypatch.setattr("omnigent.claude_native_bridge._SUBMIT_RETRY_INTERVAL_S", 0.02)
+    monkeypatch.setattr("omnigent.claude_native_bridge._SUBMIT_VERIFY_TIMEOUT_S", 0.2)
+    monkeypatch.setattr("omnigent.claude_native_bridge._PASTE_SETTLE_S", 0.0)
     bridge_dir = tmp_path / "bridge"
     write_tmux_target(
         bridge_dir,
@@ -2777,7 +2777,7 @@ def test_inject_user_message_raises_when_draft_never_submits(
         tmux_target="claude:0.0",
     )
 
-    tui = {"pane": "❯ "}
+    tui = {"pane": "â¯ "}
 
     def _fake_run(cmd: list[str], **kwargs: object) -> SimpleNamespace:
         """
@@ -2795,7 +2795,7 @@ def test_inject_user_message_raises_when_draft_never_submits(
         if "capture-pane" in cmd:
             return SimpleNamespace(returncode=0, stdout=tui["pane"], stderr="")
         if "paste-buffer" in cmd:
-            tui["pane"] = "❯ fix the flaky test"
+            tui["pane"] = "â¯ fix the flaky test"
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr("subprocess.run", _fake_run)
@@ -2982,7 +2982,7 @@ def test_kill_session_raises_when_tmux_target_never_published(
     kill_session fails loud if tmux.json was never written.
 
     The runner handler catches RuntimeError and returns 503 (best
-    effort — a missing target means there is no live session to
+    effort â€” a missing target means there is no live session to
     kill). Swallowing it silently would make the stop button appear
     to work while doing nothing.
     """
@@ -3037,7 +3037,7 @@ def test_inject_slash_command_clears_draft_pastes_literal_then_enter(
     """
     Slash commands flow via C-u + literal paste + Enter.
 
-    C-u kills any draft the user is mid-typing — otherwise the paste
+    C-u kills any draft the user is mid-typing â€” otherwise the paste
     concatenates and Enter submits ``<draft>/effort high``. ``-l`` is
     required so tmux pastes ``/`` and spaces literally; Enter submits.
     """
@@ -3122,7 +3122,7 @@ def test_inject_slash_command_rejects_invalid_commands(
     chain a second command. Validation must fire before the tmux call
     so the route returns 4xx instead of silently appearing to succeed.
     """
-    # No tmux.json published — validation must reject before the
+    # No tmux.json published â€” validation must reject before the
     # wait-for-tmux path, proving the check is up front.
     bridge_dir = tmp_path / "bridge"
 
@@ -3165,14 +3165,14 @@ async def test_channel_server_relays_active_omnigent_tools(
     This fails if Claude Code can receive web-channel inputs but cannot
     call the agent-meow tools made available to the server-side agent.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
     bridge_dir = prepare_bridge_dir("conv_tools", workspace=tmp_path)
     proc = subprocess.Popen(
         [
             sys.executable,
             "-m",
-            "agent_meow.claude_native_bridge",
+            "omnigent.claude_native_bridge",
             "serve-mcp",
             "--bridge-dir",
             str(bridge_dir),
@@ -3283,8 +3283,8 @@ def test_call_relay_tool_returns_mcp_error_on_read_timeout(
     ``TimeoutError`` (an ``OSError`` subclass that is NOT a ``URLError``) when
     the relay server accepts the connection but never responds. The previous
     ``except error.URLError`` did not catch it, so the exception propagated up
-    through ``_call_mcp_tool`` → ``_stdio_jsonrpc_loop`` and killed the MCP
-    server — surfacing to Claude Code as ``-32000: Connection closed``. This
+    through ``_call_mcp_tool`` â†’ ``_stdio_jsonrpc_loop`` and killed the MCP
+    server â€” surfacing to Claude Code as ``-32000: Connection closed``. This
     asserts the call instead yields an ``isError`` MCP result so the stdio
     loop can keep serving.
     """
@@ -3363,23 +3363,23 @@ async def test_serve_mcp_survives_handler_exception_and_keeps_serving(
     handling ONE ``tools/call`` must not tear down the long-lived stdio MCP
     server. The relay backend returns invalid UTF-8 bytes, so
     ``_call_relay_tool``'s ``resp.read().decode("utf-8")`` raises
-    ``UnicodeDecodeError`` — a ``ValueError`` that is NOT an ``OSError``, so
+    ``UnicodeDecodeError`` â€” a ``ValueError`` that is NOT an ``OSError``, so
     it escapes the ``except OSError`` clause and propagates out of
     ``_handle_mcp_request``. The loop's per-request guard must convert it into
     a JSON-RPC ``-32603`` error for the offending call, and a SUBSEQUENT
-    ``tools/list`` on the same process must still succeed — proving the server
+    ``tools/list`` on the same process must still succeed â€” proving the server
     did not exit (which Claude would otherwise see as
     ``-32000: Connection closed``). Without the guard, the decode error kills
     ``_serve_mcp`` and the ``tools/list`` read below times out.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
     bridge_dir = prepare_bridge_dir("conv_crash", workspace=tmp_path)
 
     # A relay server that returns HTTP 200 with invalid UTF-8 bytes. This
     # makes _call_relay_tool's resp.read().decode("utf-8") raise
     # UnicodeDecodeError (a ValueError, NOT an OSError), which the function's
-    # except OSError does not catch — so the exception propagates up to the
+    # except OSError does not catch â€” so the exception propagates up to the
     # stdio loop and exercises the per-request guard under test. The relay
     # tool name must appear in tool_relay.json so _call_mcp_tool routes to
     # _call_relay_tool.
@@ -3404,7 +3404,7 @@ async def test_serve_mcp_survives_handler_exception_and_keeps_serving(
             """
             length = int(self.headers.get("Content-Length", "0"))
             self.rfile.read(length)
-            # 0xFF/0xFE are never valid UTF-8 lead bytes → decode() raises.
+            # 0xFF/0xFE are never valid UTF-8 lead bytes â†’ decode() raises.
             body = b"\xff\xfe\xfa"
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -3435,7 +3435,7 @@ async def test_serve_mcp_survives_handler_exception_and_keeps_serving(
         [
             sys.executable,
             "-m",
-            "agent_meow.claude_native_bridge",
+            "omnigent.claude_native_bridge",
             "serve-mcp",
             "--bridge-dir",
             str(bridge_dir),
@@ -3470,7 +3470,7 @@ async def test_serve_mcp_survives_handler_exception_and_keeps_serving(
         call_result = await asyncio.to_thread(_read_json_line, proc.stdout, timeout_s=5.0)
         assert call_result["id"] == 2
         # The guard reports the uncaught exception as a JSON-RPC -32603
-        # ("Internal error") response — NOT a normal MCP error result. This is
+        # ("Internal error") response â€” NOT a normal MCP error result. This is
         # the assertion that fails if the guard is removed (the call would get
         # no response because the server would have exited).
         assert call_result["error"]["code"] == -32603
@@ -3507,7 +3507,7 @@ async def test_start_tool_relay_accepts_codex_native_bridge_root(
     Relay startup accepts Codex-native's persistent bridge root.
 
     Codex-native reuses the Claude MCP relay but stores bridge files in
-    ``~/.agent_meow/codex-native`` instead of Claude's ``/tmp`` bridge
+    ``~/.omnigent/codex-native`` instead of Claude's ``/tmp`` bridge
     root. A regression here logs "Failed to start comment relay" and
     leaves Codex without comment/session tools.
 
@@ -3516,10 +3516,10 @@ async def test_start_tool_relay_accepts_codex_native_bridge_root(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from agent_meow import codex_native_bridge
+    from omnigent import codex_native_bridge
 
     codex_root = tmp_path / ".agent-meow" / "codex-native"
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", codex_root)
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", codex_root)
     bridge_dir = codex_native_bridge.prepare_bridge_dir("conv_codex")
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
 
@@ -3568,7 +3568,7 @@ async def test_start_tool_relay_accepts_antigravity_native_bridge_root(
     Relay startup accepts Antigravity-native's persistent bridge root (#1194).
 
     Antigravity-native reuses the Claude MCP relay but stores bridge files in
-    ``~/.agent_meow/antigravity-native`` (the same ``$HOME/.agent_meow/<harness>``
+    ``~/.omnigent/antigravity-native`` (the same ``$HOME/.omnigent/<harness>``
     shape codex uses). A regression in :func:`_trusted_parent_for_bridge_dir`
     would reject the bridge dir, the relay would fail to write
     ``tool_relay.json``, and the wrapped agy would get no ``sys_*`` tools.
@@ -3578,10 +3578,10 @@ async def test_start_tool_relay_accepts_antigravity_native_bridge_root(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from agent_meow import antigravity_native_bridge
+    from omnigent import antigravity_native_bridge
 
     antigravity_root = tmp_path / ".agent-meow" / "antigravity-native"
-    monkeypatch.setattr("agent_meow.antigravity_native_bridge._BRIDGE_ROOT", antigravity_root)
+    monkeypatch.setattr("omnigent.antigravity_native_bridge._BRIDGE_ROOT", antigravity_root)
     bridge_dir = antigravity_native_bridge.prepare_bridge_dir("conv_agy")
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
 
@@ -3631,9 +3631,9 @@ async def test_start_tool_relay_accepts_opencode_native_bridge_root(
     Relay startup accepts OpenCode-native's persistent bridge root.
 
     opencode-native reuses the Claude MCP relay but stores bridge files in
-    ``~/.agent_meow/opencode-native`` (the same ``$HOME/.agent_meow/<harness>``
+    ``~/.omnigent/opencode-native`` (the same ``$HOME/.omnigent/<harness>``
     shape codex/antigravity use). The missing allowlist entry made ``serve-mcp``
-    crash on startup (``_ensure_secure_dir`` → "not under an allowed bridge
+    crash on startup (``_ensure_secure_dir`` â†’ "not under an allowed bridge
     root"), which opencode surfaced as ``MCP error -32000: Connection closed``
     and the wrapped opencode got no ``sys_*`` tools. Guards the regression.
 
@@ -3641,10 +3641,10 @@ async def test_start_tool_relay_accepts_opencode_native_bridge_root(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    from agent_meow import opencode_native_bridge
+    from omnigent import opencode_native_bridge
 
     opencode_root = tmp_path / ".agent-meow" / "opencode-native"
-    monkeypatch.setattr("agent_meow.opencode_native_bridge._BRIDGE_ROOT", opencode_root)
+    monkeypatch.setattr("omnigent.opencode_native_bridge._BRIDGE_ROOT", opencode_root)
     bridge_dir = opencode_native_bridge.prepare_bridge_dir("conv_oc")
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
 
@@ -3686,21 +3686,21 @@ async def test_relay_close_keeps_advertisement_owned_by_newer_relay(
     """
     Closing a superseded relay must not delete a newer relay's advertisement.
 
-    Fork/clear/resume sessions keep the same ``bridge_id`` — hence the same
+    Fork/clear/resume sessions keep the same ``bridge_id`` â€” hence the same
     bridge dir and ``tool_relay.json``. When a newer session starts its relay
     it overwrites the file with its own token; closing the older session's
     relay (e.g. on session delete) must recognise it no longer owns the file
     and leave it in place. Unconditional unlinking here would erase the
     still-active newer session's ``list_comments`` / ``update_comment``.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TRUSTED_PARENT", Path("/tmp"))
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", subprocess_bridge_root)
     bridge_dir = prepare_bridge_dir("conv_shared_bridge", workspace=tmp_path)
     relay_file = bridge_dir / claude_native_bridge._TOOL_RELAY_FILE
 
     async def _executor(name: str, arguments: dict[str, object]) -> dict[str, object]:
         """
-        Unused executor — this test only exercises advertisement lifecycle.
+        Unused executor â€” this test only exercises advertisement lifecycle.
 
         :param name: Tool name (unused).
         :param arguments: Tool arguments (unused).
@@ -3727,7 +3727,7 @@ async def test_relay_close_keeps_advertisement_owned_by_newer_relay(
         old_token = json.loads(relay_file.read_text())["token"]
 
         # A second relay on the same bridge dir overwrites the advertisement
-        # with its own token — the fork/clear/resume reuse of one bridge_id.
+        # with its own token â€” the fork/clear/resume reuse of one bridge_id.
         new_relay = start_tool_relay(
             bridge_dir=bridge_dir, tools=tools, tool_executor=_executor, loop=loop
         )
@@ -3740,7 +3740,7 @@ async def test_relay_close_keeps_advertisement_owned_by_newer_relay(
         old_relay.close()
         assert relay_file.exists(), (
             "old relay.close() deleted tool_relay.json now owned by the newer "
-            "relay — the still-active session would lose its comment tools"
+            "relay â€” the still-active session would lose its comment tools"
         )
         # The file still advertises the NEW relay, untouched by the old close.
         assert json.loads(relay_file.read_text())["token"] == new_token, (
@@ -4053,7 +4053,7 @@ def test_read_claude_context_state_returns_parsed_payload(tmp_path: Path) -> Non
 
 
 def test_read_claude_context_state_returns_none_when_missing(tmp_path: Path) -> None:
-    """A missing context.json must not raise — forwarder treats as no update."""
+    """A missing context.json must not raise â€” forwarder treats as no update."""
     assert claude_native_bridge.read_claude_context_state(tmp_path) is None
 
 
@@ -4095,7 +4095,7 @@ def test_read_user_status_line_command_returns_string(
 def test_read_user_status_line_command_returns_none_when_unset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No global statusLine → chain is omitted; wrapper prints nothing extra."""
+    """No global statusLine â†’ chain is omitted; wrapper prints nothing extra."""
     settings = tmp_path / "settings.json"
     settings.write_text(json.dumps({"model": "opus"}), encoding="utf-8")
     monkeypatch.setattr(claude_native_bridge, "_USER_CLAUDE_SETTINGS_PATH", settings)
@@ -4116,7 +4116,7 @@ def test_read_user_effort_level_returns_configured_level(
 def test_read_user_effort_level_returns_none_when_unset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No ``effortLevel`` → None, so creation omits reasoning_effort entirely."""
+    """No ``effortLevel`` â†’ None, so creation omits reasoning_effort entirely."""
     settings = tmp_path / "settings.json"
     settings.write_text(json.dumps({"model": "opus"}), encoding="utf-8")
     monkeypatch.setattr(claude_native_bridge, "_USER_CLAUDE_SETTINGS_PATH", settings)
@@ -4136,7 +4136,7 @@ def test_read_user_effort_level_rejects_unrecognized_value(
 def test_read_user_effort_level_returns_none_when_settings_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Missing settings.json → None; absence of config must not raise."""
+    """Missing settings.json â†’ None; absence of config must not raise."""
     missing = tmp_path / "does-not-exist" / "settings.json"
     monkeypatch.setattr(claude_native_bridge, "_USER_CLAUDE_SETTINGS_PATH", missing)
     assert claude_native_bridge.read_user_effort_level() is None
@@ -4153,7 +4153,7 @@ def test_prepare_bridge_dir_stores_launch_model(
 ) -> None:
     """``launch_model`` is persisted in bridge.json when provided."""
     root = tmp_path / "root"
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
 
     bridge_dir = prepare_bridge_dir(
         "conv_abc",
@@ -4170,7 +4170,7 @@ def test_prepare_bridge_dir_omits_launch_model_when_none(
 ) -> None:
     """``launch_model`` key is absent from bridge.json when not provided."""
     root = tmp_path / "root"
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
 
     bridge_dir = prepare_bridge_dir(
         "conv_abc",
@@ -4186,7 +4186,7 @@ def test_read_launch_model_returns_stored_value(
 ) -> None:
     """``read_launch_model`` round-trips the value stored by ``prepare_bridge_dir``."""
     root = tmp_path / "root"
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
 
     bridge_dir = prepare_bridge_dir(
         "conv_abc",
@@ -4202,7 +4202,7 @@ def test_read_launch_model_returns_none_when_absent(
 ) -> None:
     """``read_launch_model`` returns ``None`` when no launch model was stored."""
     root = tmp_path / "root"
-    monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", root)
+    monkeypatch.setattr("omnigent.claude_native_bridge._BRIDGE_ROOT", root)
 
     bridge_dir = prepare_bridge_dir(
         "conv_abc",
@@ -4218,7 +4218,7 @@ def test_read_launch_model_returns_none_for_missing_bridge_dir(
     assert read_launch_model(tmp_path / "nonexistent") is None
 
 
-# ── _hook_record_from_jsonl_record: task/todo event parsing ──────────────────
+# â”€â”€ _hook_record_from_jsonl_record: task/todo event parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_jsonl_record(
@@ -4244,7 +4244,7 @@ def _make_jsonl_record(
 
 def test_hook_record_parses_todo_write_todos() -> None:
     """
-    ``PostToolUse/TodoWrite`` → ``record.todos`` is the items list.
+    ``PostToolUse/TodoWrite`` â†’ ``record.todos`` is the items list.
 
     This fails if the ``tool_input.todos`` extraction path is broken or
     the dict-only filter is removed (non-dict entries would leak through).
@@ -4278,7 +4278,7 @@ def test_hook_record_parses_todo_write_todos() -> None:
 
 def test_hook_record_parses_task_update() -> None:
     """
-    ``PostToolUse/TaskUpdate`` → ``record.task_id`` and ``record.task_status``.
+    ``PostToolUse/TaskUpdate`` â†’ ``record.task_id`` and ``record.task_status``.
 
     This fails if the ``taskId``/``status`` extraction from
     ``tool_input`` is broken or if the field names change.
@@ -4300,7 +4300,7 @@ def test_hook_record_parses_task_update() -> None:
 
 def test_hook_record_parses_task_created() -> None:
     """
-    ``TaskCreated`` → ``task_id``, ``task_subject``, ``task_status == "pending"``.
+    ``TaskCreated`` â†’ ``task_id``, ``task_subject``, ``task_status == "pending"``.
 
     This fails if the field names change or the hardcoded "pending"
     assignment is removed.
@@ -4324,7 +4324,7 @@ def test_hook_record_parses_task_created() -> None:
 
 def test_hook_record_parses_task_completed() -> None:
     """
-    ``TaskCompleted`` → ``task_id``, ``task_status == "completed"``.
+    ``TaskCompleted`` â†’ ``task_id``, ``task_status == "completed"``.
 
     This fails if the hardcoded "completed" assignment is removed or if
     task_id extraction from the payload breaks.
@@ -4345,7 +4345,7 @@ def test_hook_record_parses_task_completed() -> None:
 
 def test_hook_record_task_created_with_int_task_id_gives_none() -> None:
     """
-    Malformed ``TaskCreated`` with a numeric ``task_id`` → ``task_id`` is ``None``.
+    Malformed ``TaskCreated`` with a numeric ``task_id`` â†’ ``task_id`` is ``None``.
 
     Ensures the ``isinstance(raw_task_id, str)`` guard prevents integer ids
     from leaking into the accumulation maps (which key by str).
@@ -4367,7 +4367,7 @@ def test_hook_record_task_created_with_int_task_id_gives_none() -> None:
 
 def test_hook_record_task_update_with_missing_task_id_gives_none() -> None:
     """
-    ``PostToolUse/TaskUpdate`` with no ``taskId`` → ``task_id`` is ``None``.
+    ``PostToolUse/TaskUpdate`` with no ``taskId`` â†’ ``task_id`` is ``None``.
 
     Ensures the forwarder safely ignores updates for tasks whose id
     cannot be extracted (they would silently create orphaned map entries
@@ -4388,7 +4388,7 @@ def test_hook_record_task_update_with_missing_task_id_gives_none() -> None:
 
 def test_hook_record_todo_write_with_non_list_todos_gives_none() -> None:
     """
-    ``PostToolUse/TodoWrite`` with ``tool_input.todos`` as a non-list → ``todos`` is ``None``.
+    ``PostToolUse/TodoWrite`` with ``tool_input.todos`` as a non-list â†’ ``todos`` is ``None``.
 
     Protects against forwarder crashing when a malformed hook payload
     arrives with an unexpected ``todos`` shape.
@@ -4405,7 +4405,7 @@ def test_hook_record_todo_write_with_non_list_todos_gives_none() -> None:
     assert record.todos is None
 
 
-# ── stop_hook_seen_since: subagent filtering ─────────────────────────
+# â”€â”€ stop_hook_seen_since: subagent filtering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_stop_hook_seen_since_ignores_subagent_stop(
@@ -4417,7 +4417,7 @@ def test_stop_hook_seen_since_ignores_subagent_stop(
     When a Claude Code subagent (spawned via the Agent tool) finishes,
     its ``Stop`` hook lands in the same ``hooks.jsonl`` as the parent's.
     The subagent's ``transcript_path`` contains a ``subagents/``
-    component — ``stop_hook_seen_since`` uses this to distinguish it
+    component â€” ``stop_hook_seen_since`` uses this to distinguish it
     from a parent stop. Without this filter, the tmux message injection
     path prematurely considers the parent turn complete.
     """
@@ -4437,7 +4437,7 @@ def test_stop_hook_seen_since_ignores_subagent_stop(
         },
     )
     cursor = 1
-    # Subagent Stop — must not be detected.
+    # Subagent Stop â€” must not be detected.
     record_hook_event(
         bridge_dir,
         {
@@ -4448,7 +4448,7 @@ def test_stop_hook_seen_since_ignores_subagent_stop(
     )
     assert not stop_hook_seen_since(bridge_dir, cursor)
 
-    # Parent Stop — must be detected.
+    # Parent Stop â€” must be detected.
     record_hook_event(
         bridge_dir,
         {
@@ -4488,7 +4488,7 @@ def test_stop_hook_seen_since_detects_stop_without_transcript_path(
     assert stop_hook_seen_since(bridge_dir, 1)
 
 
-# ── ensure_claude_workspace_trusted ────────────────────
+# â”€â”€ ensure_claude_workspace_trusted â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _redirect_home(monkeypatch: pytest.MonkeyPatch, home: Path) -> Path:
@@ -4529,10 +4529,10 @@ def test_ensure_trusted_creates_config_when_missing(
     ensure_claude_workspace_trusted(workspace)
 
     data = json.loads(config_path.read_text())
-    # Global onboarding gate — without this Claude shows the theme/login
+    # Global onboarding gate â€” without this Claude shows the theme/login
     # flow on a never-onboarded machine.
     assert data["hasCompletedOnboarding"] is True
-    # Per-directory trust gate, keyed by the RESOLVED absolute path —
+    # Per-directory trust gate, keyed by the RESOLVED absolute path â€”
     # without this Claude shows "Do you trust the files in this folder?".
     assert data["projects"][str(workspace.resolve())]["hasTrustDialogAccepted"] is True
 
@@ -4569,7 +4569,7 @@ def test_ensure_trusted_preserves_existing_state(
     ensure_claude_workspace_trusted(workspace)
 
     data = json.loads(config_path.read_text())
-    # Unrelated top-level state survives — proves we merge, not overwrite.
+    # Unrelated top-level state survives â€” proves we merge, not overwrite.
     assert data["oauthAccount"] == {"emailAddress": "user@example.com"}
     # The pre-existing sibling project is untouched, including its own
     # non-trust keys (a naive ``projects = {key: {...}}`` would drop it).
@@ -4591,7 +4591,7 @@ def test_ensure_trusted_idempotent_does_not_rewrite(
     The seed file is written in compact form; the helper's writer uses
     two-space indentation. So if the ``if not changed: return`` short-
     circuit were removed, the file would be reformatted and the bytes
-    would differ — this test would then fail, proving it guards the
+    would differ â€” this test would then fail, proving it guards the
     no-op path (not merely that the values end up correct).
     """
     config_path = _redirect_home(monkeypatch, tmp_path / "home")
@@ -4601,20 +4601,20 @@ def test_ensure_trusted_idempotent_does_not_rewrite(
         "hasCompletedOnboarding": True,
         "projects": {str(workspace.resolve()): {"hasTrustDialogAccepted": True}},
     }
-    # Compact, no indentation — distinct from the helper's indent=2 output.
+    # Compact, no indentation â€” distinct from the helper's indent=2 output.
     config_path.write_text(json.dumps(already, separators=(",", ":")))
     before = config_path.read_bytes()
 
     ensure_claude_workspace_trusted(workspace)
 
-    # Byte-identical → the helper detected no change and never wrote.
+    # Byte-identical â†’ the helper detected no change and never wrote.
     assert config_path.read_bytes() == before
 
 
 @pytest.mark.parametrize(
     "raw,expected_exc",
     [
-        # Invalid JSON — a half-written or corrupt file. Must fail loud,
+        # Invalid JSON â€” a half-written or corrupt file. Must fail loud,
         # never be silently replaced (losing the user's real config).
         ("{not valid json", json.JSONDecodeError),
         # Valid JSON but not an object (e.g. a stray list). Claude never
@@ -4642,7 +4642,7 @@ def test_ensure_trusted_refuses_malformed_config(
     with pytest.raises(expected_exc):
         ensure_claude_workspace_trusted(workspace)
 
-    # The original (malformed) bytes are preserved — no clobber occurred.
+    # The original (malformed) bytes are preserved â€” no clobber occurred.
     assert config_path.read_text() == raw
 
 
@@ -4655,11 +4655,11 @@ def test_display_cost_approval_popup_builds_detached_tmux_command(
     cost-popup module with all resolve inputs.
 
     Proves the modal targets the right tmux socket + pane + attached
-    client (``-c``), launches :mod:`~?agent_meow.native_cost_popup`, and
+    client (``-c``), launches :mod:`~?omnigent.native_cost_popup`, and
     forwards the session/elicitation/message plus THIS bridge's
     ``permission_hook.json`` (where the popup reads the agent-meow url/token). A
     failure means native approval would render at the wrong pane/client,
-    run the wrong program, or omit an input the resolve POST needs — i.e.
+    run the wrong program, or omit an input the resolve POST needs â€” i.e.
     it silently wouldn't work.
     """
     bridge_dir = tmp_path / "bridge"
@@ -4668,7 +4668,7 @@ def test_display_cost_approval_popup_builds_detached_tmux_command(
         json.dumps({"socket_path": "/tmp/x.sock", "tmux_target": "claude:0.0"}),
         encoding="utf-8",
     )
-    # One client attached — display-popup must target it via ``-c`` since
+    # One client attached â€” display-popup must target it via ``-c`` since
     # the runner invoking the helper is not itself a tmux client.
     monkeypatch.setattr(native_cost_popup, "_list_tmux_clients", lambda _s, _t: ["/dev/pts/9"])
 
@@ -4703,7 +4703,7 @@ def test_display_cost_approval_popup_builds_detached_tmux_command(
     assert args[args.index("-t") + 1] == "claude:0.0"
     # Inner command runs the popup module with every resolve input.
     inner = shlex.split(args[-1])
-    assert "agent_meow.native_cost_popup" in inner
+    assert "omnigent.native_cost_popup" in inner
     assert "conv_abc123" in inner  # --session-id value
     assert "elicit_deadbeef" in inner  # --elicitation-id value
     assert "Cost $0.12 crossed the $0.10 checkpoint. Continue?" in inner  # --message
@@ -4712,7 +4712,7 @@ def test_display_cost_approval_popup_builds_detached_tmux_command(
     cfg = inner[inner.index("--config-file") + 1]
     assert cfg.endswith("permission_hook.json")
     assert str(bridge_dir) in cfg
-    # Detached, non-interactive stdio — the runner handler must not inherit
+    # Detached, non-interactive stdio â€” the runner handler must not inherit
     # a tty or block; DEVNULL on all three proves fire-and-forget.
     assert captured["kwargs"]["stdin"] == subprocess.DEVNULL
     assert captured["kwargs"]["stdout"] == subprocess.DEVNULL
@@ -4767,7 +4767,7 @@ def test_display_cost_approval_popup_skips_when_no_client_attached(
 
     A ``display-popup`` needs an attached client to render on; with none
     (e.g. the web Terminal tab closed) tmux would error "no current
-    client". The helper must skip cleanly — NOT spawn a doomed ``tmux`` —
+    client". The helper must skip cleanly â€” NOT spawn a doomed ``tmux`` â€”
     leaving the web ApprovalCard as the answer surface. A regression here
     (spawning anyway) means noisy failed popups and, worse, masks that the
     real surface is the web card.
@@ -4830,8 +4830,8 @@ def test_claude_prompt_rendered_sees_prompt_above_default_footer() -> None:
 
     Claude Code 2.1.x renders a footer below the input box (the box's
     closing rule line, the cwd/status line, the model+effort line, and
-    the permission-mode hint), so the live ``❯`` row is the 5th
-    non-empty line from the bottom — NOT the last. The prior 4-line scan
+    the permission-mode hint), so the live ``â¯`` row is the 5th
+    non-empty line from the bottom â€” NOT the last. The prior 4-line scan
     window never reached it and the web-UI readiness gate timed out with
     "did not become ready" even though the box was mounted. A failure
     here means the scan window regressed below 5 and the first web
@@ -4839,15 +4839,15 @@ def test_claude_prompt_rendered_sees_prompt_above_default_footer() -> None:
     """
     pane = "\n".join(
         [
-            "────────────────────────────────────────",  # input box top rule
-            "❯ ",  # the live prompt row (5th non-empty line from bottom)
-            "────────────────────────────────────────",  # box closing rule
+            "â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€",  # input box top rule
+            "â¯ ",  # the live prompt row (5th non-empty line from bottom)
+            "â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€",  # box closing rule
             "  alice: /home/alice/proj   Remote Control failed",  # status line
             "  Opus 4.8 (1M context) | effort:high",  # model + effort line
-            "  ⏵⏵ don't ask on (shift+tab to cycle) · ← for agents",  # hint line
+            "  âµâµ don't ask on (shift+tab to cycle) Â· â† for agents",  # hint line
         ]
     )
-    # ``❯`` is 5 non-empty lines above the bottom (rule + status + model
+    # ``â¯`` is 5 non-empty lines above the bottom (rule + status + model
     # + hint sit below it), so only a scan window of >= 5 reaches it.
     assert _claude_prompt_rendered(pane) is True
 
@@ -4872,7 +4872,7 @@ def test_read_message_deltas_parses_and_advances_offset(tmp_path: Path) -> None:
     Complete delta records parse in order and the offset reaches EOF.
 
     Fails if the reader drops fields or stops short of the last complete
-    record — either would lose streamed chunks the forwarder must POST.
+    record â€” either would lose streamed chunks the forwarder must POST.
     """
     bridge_dir = tmp_path / "bridge"
     _write_deltas_lines(
@@ -4896,9 +4896,9 @@ def test_read_message_deltas_resumes_from_offset(tmp_path: Path) -> None:
     """
     A second read from the prior offset returns only newly appended records.
 
-    Fails if the byte cursor is ignored (re-reading old chunks → the
+    Fails if the byte cursor is ignored (re-reading old chunks â†’ the
     forwarder re-POSTs and the UI double-renders) or over-advances
-    (skipping a new chunk → a gap in the live text).
+    (skipping a new chunk â†’ a gap in the live text).
     """
     bridge_dir = tmp_path / "bridge"
     _write_deltas_lines(
@@ -4941,9 +4941,9 @@ def test_read_message_deltas_skips_malformed_records(tmp_path: Path) -> None:
 
     A line missing ``message_id``, with a non-string ``delta``, with a
     boolean ``index`` (``bool`` is an ``int`` subclass), or that isn't
-    JSON must be skipped while still advancing past it — one bad line
+    JSON must be skipped while still advancing past it â€” one bad line
     must never wedge the live tail. Fails if a malformed record is
-    surfaced (→ a malformed SSE event) or halts the read.
+    surfaced (â†’ a malformed SSE event) or halts the read.
     """
     bridge_dir = tmp_path / "bridge"
     _write_deltas_lines(
@@ -4968,7 +4968,7 @@ def test_read_message_deltas_missing_file_is_empty(tmp_path: Path) -> None:
     A read before the hook has written anything returns no deltas.
 
     Fails if a missing file raises instead of being treated as "no
-    chunks yet" — the forwarder polls this every tick before streaming
+    chunks yet" â€” the forwarder polls this every tick before streaming
     has started.
     """
     bridge_dir = tmp_path / "bridge"
@@ -4978,7 +4978,7 @@ def test_read_message_deltas_missing_file_is_empty(tmp_path: Path) -> None:
     assert result.byte_offset == 0
 
 
-# ── compute_transcript_cumulative_cost ────────────────────────────────
+# â”€â”€ compute_transcript_cumulative_cost â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _write_transcript_jsonl(path: Path, entries: list[dict[str, Any]]) -> None:
@@ -5043,10 +5043,10 @@ def test_compute_transcript_cumulative_cost_dedupes_by_request_id(
     double-bills (observed ~2x inflation, which leaked into the parent
     badge and the cost-budget gate). The cost must dedupe by ``requestId``.
     """
-    from agent_meow.llms.context_window import ModelPricing
+    from omnigent.llms.context_window import ModelPricing
 
     pricing = ModelPricing(input_per_token=10.0, output_per_token=20.0)
-    monkeypatch.setattr("agent_meow.llms.context_window.fetch_model_pricing", lambda model: pricing)
+    monkeypatch.setattr("omnigent.llms.context_window.fetch_model_pricing", lambda model: pricing)
     claude_native_bridge._TRANSCRIPT_PRICING_CACHE.clear()
     path = tmp_path / "transcript.jsonl"
     _write_transcript_jsonl(
@@ -5061,7 +5061,7 @@ def test_compute_transcript_cumulative_cost_dedupes_by_request_id(
     )
     cost = claude_native_bridge.compute_transcript_cumulative_cost(path, include_sidechains=True)
     # 80 + 30 = 110. Without dedup the duplicate req_A record adds another
-    # 80 → 190, the ~2x over-report this dedup fixes.
+    # 80 â†’ 190, the ~2x over-report this dedup fixes.
     assert cost == pytest.approx(110.0)
 
 
@@ -5072,20 +5072,20 @@ def test_compute_transcript_cumulative_cost_sums_priced_messages(
     Cost is the sum over every priced assistant message in the transcript.
 
     Asserts the exact USD total (real :func:`compute_llm_cost` math), so
-    a regression in per-message summation or token pricing fails loudly —
+    a regression in per-message summation or token pricing fails loudly â€”
     not just "some positive number".
     """
-    from agent_meow.llms.context_window import ModelPricing
+    from omnigent.llms.context_window import ModelPricing
 
     pricing = ModelPricing(input_per_token=10.0, output_per_token=20.0)
-    monkeypatch.setattr("agent_meow.llms.context_window.fetch_model_pricing", lambda model: pricing)
+    monkeypatch.setattr("omnigent.llms.context_window.fetch_model_pricing", lambda model: pricing)
     claude_native_bridge._TRANSCRIPT_PRICING_CACHE.clear()
     path = tmp_path / "transcript.jsonl"
     _write_transcript_jsonl(
         path,
         [
             _assistant_entry(model="m", input_tokens=2, output_tokens=3),  # 2*10 + 3*20 = 80
-            {"message": {"role": "user", "content": "hi"}},  # no usage → skipped
+            {"message": {"role": "user", "content": "hi"}},  # no usage â†’ skipped
             _assistant_entry(model="m", input_tokens=1, output_tokens=1),  # 1*10 + 1*20 = 30
         ],
     )
@@ -5104,17 +5104,17 @@ def test_compute_transcript_cumulative_cost_excludes_parent_sidechains(
     own transcript would double-bill, so the parent path must drop them.
     The sub-agent path (``include_sidechains=True``) counts everything.
     """
-    from agent_meow.llms.context_window import ModelPricing
+    from omnigent.llms.context_window import ModelPricing
 
     pricing = ModelPricing(input_per_token=10.0, output_per_token=0.0)
-    monkeypatch.setattr("agent_meow.llms.context_window.fetch_model_pricing", lambda model: pricing)
+    monkeypatch.setattr("omnigent.llms.context_window.fetch_model_pricing", lambda model: pricing)
     claude_native_bridge._TRANSCRIPT_PRICING_CACHE.clear()
     path = tmp_path / "parent.jsonl"
     _write_transcript_jsonl(
         path,
         [
-            _assistant_entry(model="m", input_tokens=5, output_tokens=0),  # own → 50
-            _assistant_entry(  # inlined sub-agent → 1000
+            _assistant_entry(model="m", input_tokens=5, output_tokens=0),  # own â†’ 50
+            _assistant_entry(  # inlined sub-agent â†’ 1000
                 model="m", input_tokens=100, output_tokens=0, is_sidechain=True
             ),
         ],
@@ -5134,10 +5134,10 @@ def test_compute_transcript_cumulative_cost_none_when_nothing_priceable(
     Returns ``None`` (not ``0.0``) when no message can be priced.
 
     Covers a missing file, a transcript with no assistant usage, and a
-    model with no available pricing — each must yield ``None`` so the
+    model with no available pricing â€” each must yield ``None`` so the
     forwarder treats it as "no estimate" rather than "$0 spent".
     """
-    from agent_meow.llms.context_window import ModelPricing
+    from omnigent.llms.context_window import ModelPricing
 
     claude_native_bridge._TRANSCRIPT_PRICING_CACHE.clear()
     # Missing file.
@@ -5149,7 +5149,7 @@ def test_compute_transcript_cumulative_cost_none_when_nothing_priceable(
     )
     # File with no assistant usage.
     pricing = ModelPricing(input_per_token=10.0, output_per_token=20.0)
-    monkeypatch.setattr("agent_meow.llms.context_window.fetch_model_pricing", lambda model: pricing)
+    monkeypatch.setattr("omnigent.llms.context_window.fetch_model_pricing", lambda model: pricing)
     no_usage = tmp_path / "no_usage.jsonl"
     _write_transcript_jsonl(no_usage, [{"message": {"role": "user", "content": "hi"}}])
     assert (
@@ -5158,7 +5158,7 @@ def test_compute_transcript_cumulative_cost_none_when_nothing_priceable(
     )
     # Pricing unavailable for the model.
     claude_native_bridge._TRANSCRIPT_PRICING_CACHE.clear()
-    monkeypatch.setattr("agent_meow.llms.context_window.fetch_model_pricing", lambda model: None)
+    monkeypatch.setattr("omnigent.llms.context_window.fetch_model_pricing", lambda model: None)
     priced = tmp_path / "priced.jsonl"
     _write_transcript_jsonl(priced, [_assistant_entry(model="m", input_tokens=5, output_tokens=5)])
     assert (
@@ -5196,11 +5196,11 @@ def test_format_terminal_failure_tail_caps_length(monkeypatch: pytest.MonkeyPatc
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    monkeypatch.setattr("agent_meow.claude_native_bridge._TERMINAL_FAILURE_TAIL_CHARS", 50)
+    monkeypatch.setattr("omnigent.claude_native_bridge._TERMINAL_FAILURE_TAIL_CHARS", 50)
     pane = "\n".join(f"line {i}" for i in range(100))
     tail = claude_native_bridge._format_terminal_failure_tail(pane)
     body = tail.split("\n", 1)[1]
-    assert body.startswith("…")
+    assert body.startswith("â€¦")
     # Leading ellipsis marker plus at most the configured character cap.
     assert len(body) <= 51
 
@@ -5226,7 +5226,7 @@ def test_wait_for_claude_prompt_ready_surfaces_terminal_output_on_timeout(
         "  at parse (unknown)\n"
     )
     monkeypatch.setattr(
-        "agent_meow.claude_native_bridge._capture_pane",
+        "omnigent.claude_native_bridge._capture_pane",
         lambda socket_path, tmux_target: crash_pane,
     )
     with pytest.raises(RuntimeError) as excinfo:
@@ -5241,12 +5241,12 @@ def test_wait_for_claude_prompt_ready_surfaces_terminal_output_on_timeout(
     assert "JSON Parse error: Unrecognized token '<'" in message
 
 
-# ── _hook_record_from_jsonl_record: background_task_count ────────────────────
+# â”€â”€ _hook_record_from_jsonl_record: background_task_count â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_hook_record_parses_stop_background_tasks() -> None:
     """
-    ``Stop`` with ``background_tasks`` → ``background_task_count`` is set.
+    ``Stop`` with ``background_tasks`` â†’ ``background_task_count`` is set.
 
     Claude Code fires the Stop hook with a ``background_tasks`` array when
     shells are still running. The forwarder uses the count to decide whether
@@ -5285,7 +5285,7 @@ def test_hook_record_stop_counts_only_running_background_tasks() -> None:
     Claude Code retains finished/stopped shells in the ``background_tasks``
     array (claude-code #67895/#59456/#14049). Counting the raw length would
     keep the "N background tasks still running" indicator lit after they exit,
-    so only non-terminal entries are counted — and an unknown/absent status
+    so only non-terminal entries are counted â€” and an unknown/absent status
     counts as running so a genuinely-live shell is never dropped.
     """
     record = _hook_record_from_jsonl_record(
@@ -5298,7 +5298,7 @@ def test_hook_record_stop_counts_only_running_background_tasks() -> None:
                     {"id": "c", "type": "shell", "status": "failed"},
                     {"id": "d", "type": "shell", "status": "stopped"},
                     {"id": "e", "type": "shell", "status": "killed"},
-                    # Unknown and absent statuses count as live (conservative —
+                    # Unknown and absent statuses count as live (conservative â€”
                     # never under-count and re-hide a running shell).
                     {"id": "f", "type": "shell", "status": "queued"},
                     {"id": "g", "type": "shell"},
@@ -5312,7 +5312,7 @@ def test_hook_record_stop_counts_only_running_background_tasks() -> None:
 
 
 def test_hook_record_stop_all_background_tasks_terminal_counts_zero() -> None:
-    """Every shell finished → count is 0, dropping the indicator."""
+    """Every shell finished â†’ count is 0, dropping the indicator."""
     record = _hook_record_from_jsonl_record(
         _make_jsonl_record(
             {
@@ -5329,7 +5329,7 @@ def test_hook_record_stop_all_background_tasks_terminal_counts_zero() -> None:
 
 def test_hook_record_stop_without_background_tasks() -> None:
     """
-    ``Stop`` without ``background_tasks`` → ``background_task_count`` is 0.
+    ``Stop`` without ``background_tasks`` â†’ ``background_task_count`` is 0.
     """
     record = _hook_record_from_jsonl_record(_make_jsonl_record({"hook_event_name": "Stop"}))
     assert record.event_name == "Stop"

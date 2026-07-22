@@ -8,8 +8,8 @@ import logging
 import httpx
 import pytest
 
-from agent_meow.runner.routing import RoutedRunner
-from agent_meow.server.routes.sessions import _handle_mcp_tools_list
+from omnigent.runner.routing import RoutedRunner
+from omnigent.server.routes.sessions import _handle_mcp_tools_list
 
 
 class _RaisingRunnerClient:
@@ -61,7 +61,7 @@ async def test_mcp_tools_list_runner_failure_is_genericized(
 
     :param caplog: Pytest log capture fixture.
     """
-    with caplog.at_level(logging.WARNING, logger="agent_meow.server.routes.sessions"):
+    with caplog.at_level(logging.WARNING, logger="omnigent.server.routes.sessions"):
         response = await _handle_mcp_tools_list(
             rpc_id=7,
             session_id="conv_test",
@@ -77,5 +77,5 @@ async def test_mcp_tools_list_runner_failure_is_genericized(
     # ...and the raw transport detail (internal host) is absent from it.
     assert _RaisingRunnerClient.raw_error not in json.dumps(payload)
     # ...but IS logged server-side for operators (the other half of the
-    # contract — if missing, the failure has no diagnostic record).
+    # contract â€” if missing, the failure has no diagnostic record).
     assert _RaisingRunnerClient.raw_error in caplog.text

@@ -1,4 +1,4 @@
-"""Phase 0 characterization test — debug overview toggle.
+"""Phase 0 characterization test â€” debug overview toggle.
 
 Submits one prompt so the session has at least one message,
 hits ``Ctrl+O`` to open the debug overview, and asserts the
@@ -12,12 +12,12 @@ opening and painting.
 
 The overview binding is ``Ctrl+O`` (it moved off ``Ctrl+G``, which
 Warp and some terminals intercept for their own search before the
-app sees it — see ``agent_meow/repl/_repl.py`` "Why Ctrl+O and not
+app sees it â€” see ``omnigent/repl/_repl.py`` "Why Ctrl+O and not
 Ctrl+G"). This file was renamed from ``test_repl_ctrl_g_overview``
 to match.
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
-REPL pexpect suite — "debug overview".
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
+REPL pexpect suite â€” "debug overview".
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
@@ -33,22 +33,22 @@ from tests.e2e.agent_meow._pexpect_harness import (
     submit_prompt,
     wait_for_ready,
 )
-from tests.e2e.agent_meow._repl_test_helpers import drain_for
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent._repl_test_helpers import drain_for
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _MODEL = "mock-model"
 _HARNESS = "openai-agents"
 _PROMPT = "say ok"
 
 # Substrings that identify overview mode. The overlay paints its title
-# ("Debug overview — <agent>") above the sidebar; the legacy "debug:" footer
+# ("Debug overview â€” <agent>") above the sidebar; the legacy "debug:" footer
 # string no longer renders, so key the second marker on the title instead.
 _OVERVIEW_SESSION_HEADER = "Session: main"
 _OVERVIEW_FOOTER_HINT = "Debug overview"
 
 _RUNNING_MARKER = r"working"
-_COMPLETION_MARKER = r"❯ "
+_COMPLETION_MARKER = r"â¯ "
 
 _SPAWN_TIMEOUT = 60.0
 _BOOT_TIMEOUT = 30.0
@@ -109,12 +109,12 @@ def test_repl_ctrl_o_overview_toggle(
             strip_ansi(child.before or "") + _OVERVIEW_SESSION_HEADER + strip_ansi(overview_tail)
         )
         # Close the overlay for teardown. The former "main mode restored after
-        # q" assertion was dropped: detecting it is unreliable in CI — the 'q'
+        # q" assertion was dropped: detecting it is unreliable in CI â€” the 'q'
         # keystroke can be dropped during a toolbar repaint (same fragility
         # clean_exit documents for Ctrl+D) and the idle status-bar text
         # wraps/mangles at the 120-col PTY boundary, so the signal is neither
         # reliably delivered nor matchable (29/30 CI flake). The load-bearing
-        # coverage — Ctrl+O opens and paints the overview — is asserted below.
+        # coverage â€” Ctrl+O opens and paints the overview â€” is asserted below.
         child.send("q")
         clean_exit(child, timeout=_EXIT_TIMEOUT)
         exit_code = child.exitstatus

@@ -22,7 +22,7 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.llms.types import (
+from omnigent.llms.types import (
     FunctionCallOutput,
     MessageOutput,
     OutputText,
@@ -31,22 +31,22 @@ from agent_meow.llms.types import (
     ResponseStreamEvent,
     ResponseTextDeltaEvent,
 )
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
-from agent_meow.runtime import init as init_runtime
-from agent_meow.runtime import pending_elicitations
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server import _elicitation_registry, presence
-from agent_meow.server.app import create_app
-from agent_meow.server.routes import sessions as sessions_routes
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from omnigent.runtime import init as init_runtime
+from omnigent.runtime import pending_elicitations
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server import _elicitation_registry, presence
+from omnigent.server.app import create_app
+from omnigent.server.routes import sessions as sessions_routes
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
 
-# ── Controllable mock LLM ─────────────────────────────
+# â”€â”€ Controllable mock LLM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -89,17 +89,17 @@ class MockCall:
     # threading.Event (not asyncio.Event) so the test event loop
     # can ``set()`` cross-loop into DBOS's background event loop
     # where the workflow body runs. asyncio.Event's internal
-    # futures are loop-bound — calling ``set()`` from loop A
+    # futures are loop-bound â€” calling ``set()`` from loop A
     # never wakes a ``wait()`` parked on loop B (silent hang
     # under any block=True mock LLM scenario).
     block_before_response: threading.Event | None = None
     call_event: threading.Event = field(default_factory=threading.Event)
     stream_tokens: bool = False
     exception: Exception | None = None
-    # Callable[[dict[str, Any]], list[dict[str, str]]] — generates
+    # Callable[[dict[str, Any]], list[dict[str, str]]] â€” generates
     # tool_calls dynamically from create() kwargs.
     tool_calls_fn: Any = None
-    # Callable[[dict[str, Any]], Exception | None] — predicate
+    # Callable[[dict[str, Any]], Exception | None] â€” predicate
     # that conditionally raises based on inspecting the call's
     # kwargs. Returning None means "do not raise". Useful when
     # parent and sub-agent share the FIFO mock queue and only
@@ -125,7 +125,7 @@ class MockCall:
         cross-loop) into an awaitable the test can use.
 
         :param timeout: Max seconds to wait. ``TimeoutError`` is
-            raised if exceeded — matches the prior behavior of
+            raised if exceeded â€” matches the prior behavior of
             ``asyncio.wait_for(call.call_event.wait(), timeout)``.
         """
         await asyncio.to_thread(self.call_event.wait, timeout)
@@ -318,7 +318,7 @@ class _MockResponsesNamespace:
 
         Async to match the real client's ``await create()``.
 
-        :param kwargs: Responses API kwargs — captured on the
+        :param kwargs: Responses API kwargs â€” captured on the
             ``MockCall.received_kwargs`` for test inspection.
         :returns: A ``Response`` if ``stream`` is falsy, or an
             async iterator of ``ResponseStreamEvent`` if
@@ -335,7 +335,7 @@ class _MockResponsesNamespace:
             if dynamic is not None:
                 call.tool_calls = dynamic
         # Signal that this call has been entered. threading.Event
-        # is thread-safe — set() from any loop wakes wait() in
+        # is thread-safe â€” set() from any loop wakes wait() in
         # any other loop, which matters because the workflow
         # body runs on DBOS's _background_event_loop while the
         # test runs on pytest-asyncio's loop.
@@ -343,7 +343,7 @@ class _MockResponsesNamespace:
         # Optionally block until the test releases us. Use
         # asyncio.to_thread to bridge a sync threading.Event
         # wait into the async event loop without parking the
-        # loop — the offloaded thread blocks; the loop yields.
+        # loop â€” the offloaded thread blocks; the loop yields.
         if call.block_before_response is not None:
             await asyncio.to_thread(call.block_before_response.wait)
         # Raise configured exception (simulates retryable errors).
@@ -385,7 +385,7 @@ class _MockResponsesNamespace:
         )
 
 
-# ── Fixtures ──────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -473,7 +473,7 @@ def pytest_runtest_teardown(item: pytest.Item) -> None:
     for name in leaked:
         setattr(sessions_routes, name, _GUARDED_SESSIONS_GLOBALS[name])
     raise RuntimeError(
-        f"agent_meow.server.routes.sessions.{', '.join(leaked)} left monkeypatched "
+        f"omnigent.server.routes.sessions.{', '.join(leaked)} left monkeypatched "
         f"after {item.nodeid}: a fixture finalizer (monkeypatch undo) did not run. "
         "The original has been restored for subsequent tests. If no test in this "
         "file patches it, suspect rerun/fixture-teardown plugin breakage "
@@ -518,7 +518,7 @@ def runtime_init(
     )
     # Patch the LLM client so the mock is used everywhere.
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow._get_llm_client",
+        "omnigent.runtime.workflow._get_llm_client",
         lambda: mock_llm,
     )
     yield
@@ -542,7 +542,7 @@ def _first_party_origin_on_asgi(monkeypatch: pytest.MonkeyPatch) -> None:
     Patching :meth:`httpx.ASGITransport.handle_async_request` injects the
     sentinel in one place instead of on every ad-hoc client. It is scoped
     to ``ASGITransport`` so it never touches real outbound HTTP, and it only
-    fills in a *missing* ``Origin`` — a test that sets its own (the
+    fills in a *missing* ``Origin`` â€” a test that sets its own (the
     cross-origin / loopback CSRF cases) is left untouched.
 
     :param monkeypatch: pytest attribute patcher (auto-reverted per test).
@@ -571,7 +571,7 @@ def app(runtime_init: None, db_uri: str, tmp_path: Path) -> FastAPI:
     Build the FastAPI app with real stores and real workflow
     execution (mock LLM is patched in via runtime_init fixture).
 
-    No legacy ``/v1/responses`` router — that path was removed
+    No legacy ``/v1/responses`` router â€” that path was removed
     with the DBOS execution layer. Tests that still need to drive
     a session end-to-end use ``/v1/sessions``.
 
@@ -613,8 +613,8 @@ async def client(
     """
     # Initialize the HarnessProcessManager for tests that hit the
     # fallback executor path (when _runner_client is not set).
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()

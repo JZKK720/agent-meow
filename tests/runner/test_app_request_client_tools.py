@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_meow.runner.app import (
+from omnigent.runner.app import (
     TurnDispatch,
     _merge_request_client_tools,
     _schema_tool_name,

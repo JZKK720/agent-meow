@@ -21,13 +21,13 @@ import yaml
 from websockets.exceptions import ConnectionClosedError
 from websockets.frames import Close
 
-from agent_meow import claude_native
-from agent_meow._runner_startup import RunnerStartupProgress
-from agent_meow._startup_profile import StartupProfiler
-from agent_meow._terminal_picker_theme import PICKER_ACCENT, PICKER_MUTED
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
-from agent_meow.spec import load_omnigent_yaml
-from agent_meow.terminals.ws_bridge import (
+from omnigent import claude_native
+from omnigent._runner_startup import RunnerStartupProgress
+from omnigent._startup_profile import StartupProfiler
+from omnigent._terminal_picker_theme import PICKER_ACCENT, PICKER_MUTED
+from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from omnigent.spec import load_omnigent_yaml
+from omnigent.terminals.ws_bridge import (
     WS_CLOSE_TERMINAL_DETACHED,
     WS_CLOSE_TERMINAL_NOT_FOUND,
 )
@@ -60,7 +60,7 @@ def test_claude_terminal_request_pins_launch_cwd(tmp_path, monkeypatch) -> None:
 
     assert body["terminal"] == "claude"
     assert body["session_key"] == "main"
-    # Boolean opt-in only — sending the path string would resurrect the
+    # Boolean opt-in only â€” sending the path string would resurrect the
     # directory-traversal vector the runner now ignores.
     assert body["bridge_inject_dir"] is True
     spec = body["spec"]
@@ -86,13 +86,13 @@ def test_claude_terminal_request_pins_launch_cwd(tmp_path, monkeypatch) -> None:
     assert mcp_config["mcpServers"]["agent-meow"]["args"] == [
         "-I",
         "-m",
-        "agent_meow.claude_native_bridge",
+        "omnigent.claude_native_bridge",
         "serve-mcp",
         "--bridge-dir",
         "/tmp/omnigent-test-bridge",
     ]
     # The experimental Claude Channels flag is blocked at the org
-    # policy layer — the wrapper must not pass it. Web-UI input now
+    # policy layer â€” the wrapper must not pass it. Web-UI input now
     # goes through tmux send-keys.
     assert "--dangerously-load-development-channels" not in args
     settings = json.loads(args[args.index("--settings") + 1])
@@ -134,7 +134,7 @@ def test_claude_terminal_request_launcher_plugin_wraps(tmp_path, monkeypatch) ->
     argv.
     """
 
-    from agent_meow.claude_launcher import ClaudeLauncher
+    from omnigent.claude_launcher import ClaudeLauncher
 
     class _IsaacLauncher(ClaudeLauncher):
         def launch(self, command, args):
@@ -257,7 +257,7 @@ def test_ucode_config_for_profile_reads_allowlisted_claude_state(
     the native wrapper must not blindly forward arbitrary state-file
     environment values into the terminal launch body.
     """
-    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -275,11 +275,11 @@ def test_ucode_config_for_profile_reads_allowlisted_claude_state(
         },
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
+        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.ucode_state.read_ucode_state",
+        "omnigent.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -309,7 +309,7 @@ def test_ucode_config_for_profile_sets_model_tier_env_vars(
     picker natively shows Databricks gateway model IDs instead of normalising
     them to canonical Anthropic names.
     """
-    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -328,11 +328,11 @@ def test_ucode_config_for_profile_sets_model_tier_env_vars(
         },
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
+        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.ucode_state.read_ucode_state",
+        "omnigent.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -352,9 +352,9 @@ def test_ucode_config_for_profile_sets_only_present_tier_env_vars(
     Only tiers present in claude_models get ANTHROPIC_DEFAULT_* env vars.
 
     If ``claude_models`` only has one tier (e.g. ``"sonnet"``), only
-    ``ANTHROPIC_DEFAULT_SONNET_MODEL`` is set — the other three are absent.
+    ``ANTHROPIC_DEFAULT_SONNET_MODEL`` is set â€” the other three are absent.
     """
-    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -368,11 +368,11 @@ def test_ucode_config_for_profile_sets_only_present_tier_env_vars(
         },
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
+        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.ucode_state.read_ucode_state",
+        "omnigent.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -394,7 +394,7 @@ def test_ucode_config_for_profile_omits_model_tier_vars_when_no_claude_models(
     Older ucode state files may not include ``claude_models``.  In that
     case the env dict must not gain any spurious default model overrides.
     """
-    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -408,11 +408,11 @@ def test_ucode_config_for_profile_omits_model_tier_vars_when_no_claude_models(
         },
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
+        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.ucode_state.read_ucode_state",
+        "omnigent.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -437,7 +437,7 @@ def test_ucode_config_for_profile_defaults_model_when_ucode_omits_it(
     back to its host-config model (an Anthropic-direct id like ``opus[1m]``)
     that the Databricks gateway rejects with "model ... may not exist".
     """
-    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
@@ -451,11 +451,11 @@ def test_ucode_config_for_profile_defaults_model_when_ucode_omits_it(
         },
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
+        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.ucode_state.read_ucode_state",
+        "omnigent.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -470,18 +470,18 @@ def test_ucode_config_for_profile_fails_loud_on_malformed_claude_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A selected malformed Claude ucode entry surfaces a setup error."""
-    from agent_meow.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
+    from omnigent.onboarding.ucode_state import UcodeAgentState, UcodeWorkspaceState
 
     workspace_state = UcodeWorkspaceState(
         workspace_url="https://example.databricks.com",
         agents={"claude": UcodeAgentState(auth_command="printf token")},
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.databricks_config.get_workspace_url_for_profile",
+        "omnigent.onboarding.databricks_config.get_workspace_url_for_profile",
         lambda profile: "https://example.databricks.com",
     )
     monkeypatch.setattr(
-        "agent_meow.onboarding.ucode_state.read_ucode_state",
+        "omnigent.onboarding.ucode_state.read_ucode_state",
         lambda workspace_url: workspace_state,
     )
 
@@ -518,10 +518,10 @@ def test_materialized_session_spec_is_valid_terminal_metadata(tmp_path: Path) ->
     assert raw["prompt"].startswith("Claude Code is running in the session terminal.")
     # ``context_window`` is the conservative pre-first-turn default;
     # the statusLine forwarder overrides it once the real number is
-    # observed (see ``agent_meow.claude_native_status``).
+    # observed (see ``omnigent.claude_native_status``).
     assert raw["executor"] == {"harness": "claude-native", "context_window": 200_000}
     # os_env block is required for the runner's filesystem APIs not
-    # to 404 (see _require_os_env in agent_meow/runner/app.py).
+    # to 404 (see _require_os_env in omnigent/runner/app.py).
     assert raw["os_env"] == {
         "type": "caller_process",
         "cwd": ".",
@@ -711,7 +711,7 @@ def test_local_run_persists_launch_state_on_fresh_session(
     the call there would surface here without affecting the remote
     test (and vice versa).
     """
-    from agent_meow.claude_native_state import read_launch_state
+    from omnigent.claude_native_state import read_launch_state
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -755,11 +755,11 @@ def test_local_run_persists_launch_state_on_fresh_session(
         return True
 
     monkeypatch.chdir(workspace)
-    monkeypatch.setattr("agent_meow.chat._find_free_port", lambda: 12345)
-    monkeypatch.setattr("agent_meow.chat._start_local_server", fake_start_server)
-    monkeypatch.setattr("agent_meow.chat._stop_local_server", lambda server: None)
-    monkeypatch.setattr("agent_meow.chat._wait_for_server", lambda *a, **k: None)
-    monkeypatch.setattr("agent_meow.chat._bundle_agent", lambda path: b"bundle")
+    monkeypatch.setattr("omnigent.chat._find_free_port", lambda: 12345)
+    monkeypatch.setattr("omnigent.chat._start_local_server", fake_start_server)
+    monkeypatch.setattr("omnigent.chat._stop_local_server", lambda server: None)
+    monkeypatch.setattr("omnigent.chat._wait_for_server", lambda *a, **k: None)
+    monkeypatch.setattr("omnigent.chat._bundle_agent", lambda path: b"bundle")
     monkeypatch.setattr(claude_native, "_prepare_claude_terminal", fake_prepare)
     monkeypatch.setattr(claude_native, "attach_local_terminal", fake_attach)
     monkeypatch.setattr(
@@ -871,10 +871,10 @@ def test_local_resume_does_not_print_redundant_resume_hint(
         del attach_url, headers, terminal_gone_probe
         return True
 
-    monkeypatch.setattr("agent_meow.chat._find_free_port", lambda: 12346)
-    monkeypatch.setattr("agent_meow.chat._start_local_server", fake_start_server)
-    monkeypatch.setattr("agent_meow.chat._stop_local_server", lambda server: None)
-    monkeypatch.setattr("agent_meow.chat._wait_for_server", lambda *a, **k: None)
+    monkeypatch.setattr("omnigent.chat._find_free_port", lambda: 12346)
+    monkeypatch.setattr("omnigent.chat._start_local_server", fake_start_server)
+    monkeypatch.setattr("omnigent.chat._stop_local_server", lambda server: None)
+    monkeypatch.setattr("omnigent.chat._wait_for_server", lambda *a, **k: None)
     monkeypatch.setattr(claude_native, "_prepare_claude_terminal", fake_prepare)
     monkeypatch.setattr(claude_native, "attach_local_terminal", fake_attach)
 
@@ -944,15 +944,15 @@ def test_remote_daemon_run_attaches_without_cli_forwarder(
         captured_attach.update(kwargs)
         return claude_native._AttachOutcome.EXITED
 
-    monkeypatch.setattr("agent_meow.chat._bundle_agent", lambda path: b"bundle")
+    monkeypatch.setattr("omnigent.chat._bundle_agent", lambda path: b"bundle")
     monkeypatch.setattr(
-        "agent_meow.chat._remote_headers",
+        "omnigent.chat._remote_headers",
         lambda server_url=None: {"Authorization": "Bearer tok"},
     )
-    monkeypatch.setattr("agent_meow.chat._server_auth", lambda server_url=None: None)
-    monkeypatch.setattr("agent_meow.cli._ensure_host_daemon", lambda base_url: None)
+    monkeypatch.setattr("omnigent.chat._server_auth", lambda server_url=None: None)
+    monkeypatch.setattr("omnigent.cli._ensure_host_daemon", lambda base_url: None)
     monkeypatch.setattr(
-        "agent_meow.host.identity.load_or_create_host_identity",
+        "omnigent.host.identity.load_or_create_host_identity",
         lambda: SimpleNamespace(host_id="host_test"),
     )
     monkeypatch.setattr(claude_native, "_prepare_claude_terminal_via_daemon", fake_prepare)
@@ -1341,7 +1341,7 @@ async def test_attach_runs_cleanup_even_when_forwarder_raises(
     exceptions out of the shutdown ``await forwarder``. If the cleanup
     block re-raised them, ``_close_claude_terminal`` would be skipped
     and the web UI would show a phantom live terminal after the wrapper
-    exits — contradicting the DoD. The implementation must log the
+    exits â€” contradicting the DoD. The implementation must log the
     forwarder crash and still issue the DELETE.
     """
     close_calls: list[str] = []
@@ -1392,7 +1392,7 @@ async def test_attach_runs_cleanup_even_when_forwarder_raises(
         reattached=False,
     )
 
-    # Must not raise — the OSError from the forwarder is logged and
+    # Must not raise â€” the OSError from the forwarder is logged and
     # cleanup proceeds.
     await claude_native._attach_with_transcript_forwarder(
         base_url="https://example.com",
@@ -1415,7 +1415,7 @@ async def test_attach_skips_terminal_close_when_reattached(
     Reattached terminals are owned by their launching invocation.
 
     A second wrapper that simply joins an existing terminal must not
-    issue a stop on exit — that would tear down the terminal under
+    issue a stop on exit â€” that would tear down the terminal under
     the launcher's feet. Failure here would let `--session` reattach
     + clean exit silently kill the launcher's live Claude session.
     """
@@ -1601,7 +1601,7 @@ async def test_prepare_reattaches_existing_claude_terminal(
         :param _session_id: Existing session id.
         :returns: Labels containing the bridge id.
         """
-        return {"agent_meow.claude_native.bridge_id": "bridge_abc"}
+        return {"omnigent.claude_native.bridge_id": "bridge_abc"}
 
     monkeypatch.setattr(claude_native, "_find_running_claude_terminal", fake_find)
     monkeypatch.setattr(claude_native, "_bind_session_runner", fail_bind)
@@ -1695,7 +1695,7 @@ async def test_find_running_claude_terminal_miss_statuses_relaunch(
     assert found is None
 
 
-# ── same-machine tmux attach (Phase 4) ─────────────────────
+# â”€â”€ same-machine tmux attach (Phase 4) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_fake_tmux(directory: Path) -> None:
@@ -1703,7 +1703,7 @@ def _make_fake_tmux(directory: Path) -> None:
     Create an executable ``tmux`` stub in *directory*.
 
     Lets a test make ``shutil.which("tmux")`` resolve deterministically
-    by putting *directory* on ``PATH`` — without depending on whether a
+    by putting *directory* on ``PATH`` â€” without depending on whether a
     real tmux is installed, and without clobbering the ``shutil``
     module singleton.
 
@@ -1723,7 +1723,7 @@ async def test_read_claude_terminal_tmux_parses_metadata() -> None:
     Proves the socket string is wrapped to a ``Path`` and the target is
     carried through. If the runner stopped advertising these (or the
     key names drift), the parse would yield ``None`` and the CLI would
-    silently lose the direct-attach fast path — falling back to the
+    silently lose the direct-attach fast path â€” falling back to the
     WebSocket relay the feature is meant to avoid.
     """
     terminal_id = claude_native.claude_terminal_resource_id()
@@ -1801,7 +1801,7 @@ def test_can_attach_direct_tmux_true_when_socket_local_and_tmux_present(
     This is the same-machine fast path: the runner shares this host (its
     tmux socket is on the local filesystem) so the local TTY can attach
     straight to the pane. A ``False`` here would send the user back to
-    the WebSocket relay even on their own machine — the exact regression
+    the WebSocket relay even on their own machine â€” the exact regression
     this feature fixes.
     """
     socket = tmp_path / "tmux.sock"
@@ -1824,7 +1824,7 @@ def test_can_attach_direct_tmux_false_when_socket_absent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A non-existent socket means the runner is remote → WebSocket path.
+    A non-existent socket means the runner is remote â†’ WebSocket path.
 
     The socket lives on the runner's filesystem; if it isn't present
     locally the runner is on another machine and a direct attach is
@@ -1848,7 +1848,7 @@ def test_can_attach_direct_tmux_false_when_tmux_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Without ``tmux`` on PATH the direct attach can't run → WebSocket path.
+    Without ``tmux`` on PATH the direct attach can't run â†’ WebSocket path.
 
     PATH is pointed at an empty dir (no tmux stub), so
     ``shutil.which("tmux")`` returns ``None`` even though the socket
@@ -1872,7 +1872,7 @@ def test_can_attach_direct_tmux_false_when_tmux_missing(
 
 def test_can_attach_direct_tmux_false_when_fields_none(tmp_path: Path) -> None:
     """
-    A terminal that advertised no tmux coordinates → WebSocket path.
+    A terminal that advertised no tmux coordinates â†’ WebSocket path.
 
     The fresh-launch / reattach paths leave ``tmux_socket`` /
     ``tmux_target`` ``None`` when the runner exposed nothing; the guard
@@ -1899,7 +1899,7 @@ async def test_ensure_local_claude_resume_transcript_uses_workspace_dir(
     This is what lets a runner-side cold resume work: the runner passes
     its ``OMNIGENT_RUNNER_WORKSPACE`` (not the runner process's actual
     cwd), so the synthesized transcript sits where the ``claude``
-    process — launched with that workspace as cwd — will look for it. If
+    process â€” launched with that workspace as cwd â€” will look for it. If
     the helper ignored ``workspace`` and used ``Path.cwd()``, the file
     would land in the wrong project dir and ``--resume`` would find
     nothing.
@@ -1950,7 +1950,7 @@ async def test_ensure_local_claude_resume_transcript_returns_none_when_no_record
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Empty agent-meow history → ``None`` and no transcript file written.
+    Empty agent-meow history â†’ ``None`` and no transcript file written.
 
     ``claude --resume`` against a zero-record transcript exits with "No
     conversation found with session ID" instead of starting; for claude-
@@ -1992,11 +1992,11 @@ async def test_create_claude_session_omits_title_for_generic_seed_path() -> None
 
     The previous placeholder-title carve-out has been removed: claude-
     native sessions now go through the same generic title-seed path as
-    every other session — created with no title, then populated by
+    every other session â€” created with no title, then populated by
     ``_seed_missing_title_from_user_message`` on the first forwarded
     user message. The sidebar fills the create-to-first-message gap
     by rendering a default label off the
-    ``agent_meow.wrapper = claude-code-native-ui`` label
+    ``omnigent.wrapper = claude-code-native-ui`` label
     (see ``web/src/shell/sidebarNav.ts::conversationDisplayLabel``).
     The labels must still reach the server unchanged because that
     sidebar fallback keys off the wrapper label.
@@ -2022,7 +2022,7 @@ async def test_create_claude_session_omits_title_for_generic_seed_path() -> None
             return httpx.Response(200, json={"session_id": session_id_returned})
         raise AssertionError(
             f"unexpected request: {request.method} {request.url}; "
-            "_create_claude_session must not PATCH the title — the server's "
+            "_create_claude_session must not PATCH the title â€” the server's "
             "seed helper now populates an empty title on the first user message."
         )
 
@@ -2049,7 +2049,7 @@ async def test_create_claude_session_omits_title_for_generic_seed_path() -> None
         **claude_native._SESSION_LABELS,
         claude_native.BRIDGE_ID_LABEL_KEY: "bridge_abc",
     }, (
-        "_SESSION_LABELS must reach the server unchanged — the sidebar "
+        "_SESSION_LABELS must reach the server unchanged â€” the sidebar "
         "uses the wrapper label to render 'Claude Code' as the default "
         "display name until the seed helper populates an actual title."
     )
@@ -2061,10 +2061,10 @@ async def test_create_claude_session_omits_title_for_generic_seed_path() -> None
 # These tests cover the reconnect loop that lets ``agent-meow claude``
 # survive a remote-server bounce. The bug they guard against:
 # previously, a single transient WebSocket close took down the entire
-# TUI session — the user had to relaunch and lost their live Claude
+# TUI session â€” the user had to relaunch and lost their live Claude
 # state. After the fix, the wrapper retries the WS attach with capped
 # exponential backoff and invokes a recovery callback so the runner
-# subprocess and session→runner binding are restored before each
+# subprocess and sessionâ†’runner binding are restored before each
 # reconnect attempt.
 # ---------------------------------------------------------------------------
 
@@ -2077,7 +2077,7 @@ class _AttachCallRecord:
     :param attach_url: URL the helper passed in. Stable across attempts
         because the reconnect loop reuses the URL it was constructed with.
     :param headers: Auth headers the helper passed in. Same stability
-        guarantee as ``attach_url`` — headers are not re-resolved per
+        guarantee as ``attach_url`` â€” headers are not re-resolved per
         attempt by the reconnect loop itself (the optional ``recover``
         callback owns header refresh).
     """
@@ -2097,7 +2097,7 @@ class _ScriptedAttach:
 
     :param script: List of outcomes the fake will produce one per
         invocation, in order. Test must size the script so it lasts as
-        many attempts as the loop will make — extra entries are ignored,
+        many attempts as the loop will make â€” extra entries are ignored,
         a too-short script raises ``IndexError`` to fail loudly.
     :param calls: Captured record of each invocation, in order. Tests
         assert on this to verify the loop's retry shape.
@@ -2151,7 +2151,7 @@ async def test_attach_with_reconnect_exits_immediately_on_user_request(
     """
     # Patch sleep so the test never waits in the backoff branch (if the
     # loop were buggy, a wrong branch would hit asyncio.sleep with the
-    # initial 0.5s delay — 100ms × n is fast but visible).
+    # initial 0.5s delay â€” 100ms Ã— n is fast but visible).
     monkeypatch.setattr(claude_native, "_sleep", _noop_sleep)
     attach = _ScriptedAttach(script=[True])
 
@@ -2162,7 +2162,7 @@ async def test_attach_with_reconnect_exits_immediately_on_user_request(
         recover=lambda: _noop_async(),
     )
 
-    # Exactly one attach call — no retries after a clean user exit.
+    # Exactly one attach call â€” no retries after a clean user exit.
     # If two calls land here, the loop is treating "user exit" as
     # "server bounce" and the user can't actually leave the session.
     assert len(attach.calls) == 1, (
@@ -2274,7 +2274,7 @@ async def test_attach_with_reconnect_retries_after_websocket_exception(
     """
     monkeypatch.setattr(claude_native, "_sleep", _noop_sleep)
     # First two attempts raise a non-terminal abnormal-close error
-    # (1011 is a server-side internal error — exactly the kind of
+    # (1011 is a server-side internal error â€” exactly the kind of
     # close a uvicorn restart can produce). Third attempt succeeds
     # with a user exit so the loop terminates.
     attach = _ScriptedAttach(
@@ -2294,7 +2294,7 @@ async def test_attach_with_reconnect_retries_after_websocket_exception(
 
     # Three attach calls = two failures + one success. Anything less
     # (e.g. 1) means the loop is propagating the exception instead of
-    # retrying — i.e. the reconnect bug is back.
+    # retrying â€” i.e. the reconnect bug is back.
     assert len(attach.calls) == 3, (
         f"expected 3 attach calls (2 fail + 1 succeed), got {len(attach.calls)}; "
         "the reconnect loop is not retrying after a transient WS error"
@@ -2307,8 +2307,8 @@ async def test_attach_with_reconnect_exits_silently_on_terminal_not_found_close(
 ) -> None:
     """
     Close code 4404 (``WS_CLOSE_TERMINAL_NOT_FOUND``) means the terminal
-    resource is gone — typically Claude exited and the tmux session
-    died — so reconnecting is futile. The helper must return cleanly
+    resource is gone â€” typically Claude exited and the tmux session
+    died â€” so reconnecting is futile. The helper must return cleanly
     without raising and without further attach attempts.
 
     A regression here would either spin the loop forever against a
@@ -2318,7 +2318,7 @@ async def test_attach_with_reconnect_exits_silently_on_terminal_not_found_close(
     monkeypatch.setattr(claude_native, "_sleep", _noop_sleep)
     attach = _ScriptedAttach(script=[_make_connection_closed(WS_CLOSE_TERMINAL_NOT_FOUND)])
 
-    # No exception should escape — terminal-gone is a clean end state.
+    # No exception should escape â€” terminal-gone is a clean end state.
     await claude_native._attach_with_reconnect(
         attach=attach,
         attach_url="wss://example.com/attach",
@@ -2326,7 +2326,7 @@ async def test_attach_with_reconnect_exits_silently_on_terminal_not_found_close(
         recover=lambda: _noop_async(),
     )
 
-    # Single attach — the loop must not retry after 4404 because the
+    # Single attach â€” the loop must not retry after 4404 because the
     # server has authoritatively said "no such resource". If 2 land
     # here, the loop is wasting backoff time on a doomed reconnect.
     assert len(attach.calls) == 1, (
@@ -2341,7 +2341,7 @@ async def test_attach_with_reconnect_reports_detached_on_4405_close(
 ) -> None:
     """
     Close code 4405 (``WS_CLOSE_TERMINAL_DETACHED``) means the user
-    detached from tmux — the session and Claude are still alive. The
+    detached from tmux â€” the session and Claude are still alive. The
     loop must end WITHOUT reconnecting and report ``DETACHED`` so the
     launcher keeps the runner serving the web UI.
 
@@ -2432,14 +2432,14 @@ async def test_attach_with_reconnect_invokes_recover_between_attempts(
     )
 
     # Three attaches, two recoveries. Recovery fires before attempts 2
-    # and 3 only — never before attempt 1. If recover_calls is 3, the
+    # and 3 only â€” never before attempt 1. If recover_calls is 3, the
     # loop is calling recover on first connect (wasteful, breaks the
     # local-server flow if it ever wires recover in). If 1, the loop
     # is only calling recover on the first failure, leaving subsequent
     # retries without runner / binding recovery.
     assert len(attach.calls) == 3
     assert len(recover_calls) == 2, (
-        f"expected 2 recovery calls (between attempts 1→2 and 2→3), got {len(recover_calls)}"
+        f"expected 2 recovery calls (between attempts 1â†’2 and 2â†’3), got {len(recover_calls)}"
     )
 
 
@@ -2484,7 +2484,7 @@ async def test_attach_with_reconnect_recovery_failure_is_non_fatal(
 
     # The loop must keep attempting attaches even after the first
     # recovery raised. If attach.calls is 1, the recovery's exception
-    # propagated and killed the session — exactly the brittleness this
+    # propagated and killed the session â€” exactly the brittleness this
     # test guards against.
     assert len(attach.calls) == 3
     assert recover_calls == 2
@@ -2500,13 +2500,13 @@ async def test_attach_with_reconnect_recover_none_does_not_retry_on_clean_close(
 
     Rationale: the local-server flow owns the server subprocess via
     ``_start_local_server``. If that server dies, there is nothing
-    to reconnect to — retrying would just spin forever against a dead
+    to reconnect to â€” retrying would just spin forever against a dead
     port. The remote-server flow is the one that wires a recover
     callback and gets reconnection.
     """
     monkeypatch.setattr(claude_native, "_sleep", _noop_sleep)
     # First attach returns False (server-initiated clean close). With
-    # recover=None the loop must NOT make a second attempt — even
+    # recover=None the loop must NOT make a second attempt â€” even
     # though False would normally mean "server bounce, reconnect".
     attach = _ScriptedAttach(script=[False])
 
@@ -2519,7 +2519,7 @@ async def test_attach_with_reconnect_recover_none_does_not_retry_on_clean_close(
 
     assert len(attach.calls) == 1, (
         f"expected 1 attach call when recover=None, got {len(attach.calls)}; "
-        "the loop is retrying without a recovery callback — the local-server "
+        "the loop is retrying without a recovery callback â€” the local-server "
         "flow would spin forever against a dead local server"
     )
 
@@ -2557,14 +2557,14 @@ async def test_attach_with_reconnect_recover_none_still_returns_on_terminal_not_
 ) -> None:
     """
     Even without a recovery callback, the 4404 close code must end the
-    loop cleanly. That code means the terminal resource is gone — a
-    normal end of session — so the wrapper exits without surfacing an
+    loop cleanly. That code means the terminal resource is gone â€” a
+    normal end of session â€” so the wrapper exits without surfacing an
     error to the caller.
     """
     monkeypatch.setattr(claude_native, "_sleep", _noop_sleep)
     attach = _ScriptedAttach(script=[_make_connection_closed(WS_CLOSE_TERMINAL_NOT_FOUND)])
 
-    # Returns cleanly — no exception escapes.
+    # Returns cleanly â€” no exception escapes.
     await claude_native._attach_with_reconnect(
         attach=attach,
         attach_url="wss://example.com/attach",
@@ -2611,13 +2611,13 @@ async def test_attach_with_reconnect_caps_backoff(
 
     # The first sleep is the initial delay; each subsequent is at
     # most _ATTACH_MAX_RECONNECT_DELAY_S. The cap is what prevents
-    # runaway exponential growth — if it's broken the last entry
+    # runaway exponential growth â€” if it's broken the last entry
     # would be 256s or more.
     assert sleeps[0] == claude_native._ATTACH_INITIAL_RECONNECT_DELAY_S
     assert all(s <= claude_native._ATTACH_MAX_RECONNECT_DELAY_S for s in sleeps), (
         f"backoff exceeded cap {claude_native._ATTACH_MAX_RECONNECT_DELAY_S}: {sleeps}"
     )
-    # And the cap is actually reached — proves the doubling logic
+    # And the cap is actually reached â€” proves the doubling logic
     # ran far enough to hit the ceiling at least once.
     assert sleeps[-1] == claude_native._ATTACH_MAX_RECONNECT_DELAY_S
 
@@ -2630,7 +2630,7 @@ async def test_attach_with_reconnect_caps_backoff(
 # than rebind the nonlocal name. The reconnect loop holds the dict
 # reference, so an in-place mutation is the only way the next WS
 # handshake sees the refreshed bearer. These tests guard that
-# invariant — they would fail under the original "rebind" shape.
+# invariant â€” they would fail under the original "rebind" shape.
 # ---------------------------------------------------------------------------
 
 
@@ -2639,7 +2639,7 @@ class _HeaderRecordingAttach:
     """
     Attach fake that snapshots the headers dict it received per call.
 
-    :param outcomes: One outcome per call — ``True`` for user exit,
+    :param outcomes: One outcome per call â€” ``True`` for user exit,
         ``False`` for server-initiated close, or an exception to raise.
     :param header_snapshots: One snapshot per call, captured by
         copy so later in-place mutations of the upstream dict don't
@@ -2651,7 +2651,7 @@ class _HeaderRecordingAttach:
 
     async def __call__(self, attach_url: str, *, headers: dict[str, str]) -> bool:
         """
-        :param attach_url: Ignored — captured by the integration test
+        :param attach_url: Ignored â€” captured by the integration test
             but irrelevant to this header-focused fake.
         :param headers: Headers dict the reconnect loop forwards.
             Snapshotted by ``dict(...)`` so a subsequent mutation
@@ -2678,7 +2678,7 @@ async def test_attach_with_reconnect_sees_in_place_header_mutation(
     nonlocal ``headers`` variable in its closure scope, but the
     reconnect loop received the *original* dict reference at start
     time. A rotated Databricks bearer would not reach the new WS
-    handshake — every reconnect would fail with 401 and the loop
+    handshake â€” every reconnect would fail with 401 and the loop
     would spin forever printing "reconnecting...".
 
     The fix is to mutate the dict (``clear() + update()``). This
@@ -2715,7 +2715,7 @@ async def test_attach_with_reconnect_sees_in_place_header_mutation(
     )
     # Second attach must see the refreshed bearer. If this is still
     # "Bearer original", the recover callback's mutation did not
-    # propagate to the loop's view of headers — exactly the bug
+    # propagate to the loop's view of headers â€” exactly the bug
     # the PR review caught.
     assert attach.header_snapshots[1] == {"Authorization": "Bearer refreshed"}, (
         f"second attach should see the mutated bearer, got {attach.header_snapshots[1]}"
@@ -2739,7 +2739,7 @@ async def test_attach_with_reconnect_exits_when_probe_says_terminal_is_gone(
     """
     A clean server-side close (no exception) plus a probe response of
     "terminal gone" ends the loop. Without the probe the loop would
-    treat that close as a server bounce and reconnect forever — the
+    treat that close as a server bounce and reconnect forever â€” the
     exact failure mode the manual REPL verification hit when tmux
     exited because Claude quit.
     """
@@ -2765,7 +2765,7 @@ async def test_attach_with_reconnect_exits_when_probe_says_terminal_is_gone(
         terminal_id="terminal_claude_main",
     )
 
-    # Exactly one attach — the probe after that call said the
+    # Exactly one attach â€” the probe after that call said the
     # terminal is gone, so the loop returned without retrying.
     # A second attach would mean the probe is being ignored and
     # the wrapper is spinning against a dead terminal.
@@ -2783,11 +2783,11 @@ async def test_attach_with_reconnect_reconnects_when_probe_says_terminal_alive(
     """
     A clean close plus a probe response showing the terminal is still
     running keeps the loop alive. The complementary path to the
-    previous test — without it the loop would short-circuit even when
+    previous test â€” without it the loop would short-circuit even when
     the cause was a server bounce that the terminal will survive.
     """
     monkeypatch.setattr(claude_native, "_sleep", _noop_sleep)
-    # First attach: clean close → probe → still alive → retry.
+    # First attach: clean close â†’ probe â†’ still alive â†’ retry.
     # Second attach: user exits, loop terminates.
     attach = _ScriptedAttach(script=[False, True])
 
@@ -2808,7 +2808,7 @@ async def test_attach_with_reconnect_reconnects_when_probe_says_terminal_alive(
         terminal_id="terminal_claude_main",
     )
 
-    # Two attach calls — first was a clean close, probe said the
+    # Two attach calls â€” first was a clean close, probe said the
     # terminal is alive, so the loop reconnected. The second
     # (user exit) ended the loop. If only 1, the loop is treating
     # any clean close as terminal-gone, which would prematurely end
@@ -2863,7 +2863,7 @@ async def test_is_terminal_resource_gone_reports_running_false_as_gone(
     """
     The probe treats ``metadata.running == False`` as definitive evidence
     the terminal is stopped. This is the runner-side signal for "tmux
-    exited, the resource still exists but the process is dead" — the
+    exited, the resource still exists but the process is dead" â€” the
     wrapper uses it to end cleanly after a normal Claude exit.
     """
 
@@ -2904,7 +2904,7 @@ async def test_is_terminal_resource_gone_treats_transport_errors_as_not_gone(
 ) -> None:
     """
     A bouncing server (HTTP unreachable) must not be misread as
-    "terminal gone" — that would end the loop right when it should
+    "terminal gone" â€” that would end the loop right when it should
     be retrying the WS attach against the new server.
     """
 
@@ -2929,7 +2929,7 @@ async def test_is_terminal_resource_gone_treats_transport_errors_as_not_gone(
         terminal_id="terminal_claude_main",
     )
 
-    # False means "keep retrying" — the loop tries the attach again,
+    # False means "keep retrying" â€” the loop tries the attach again,
     # and either the attach succeeds (server is back) or it fails
     # with 4404 (terminal really is gone) and exits authoritatively.
     assert gone is False
@@ -2962,7 +2962,7 @@ class _FakeTerminalServer:
         open server-side connections (so the test can wind down).
     :param port: Actual port the server bound to. Populated by
         :func:`_run_fake_ws_server` after the server starts so tests
-        avoid the bind→use race of allocating a port separately and
+        avoid the bindâ†’use race of allocating a port separately and
         passing it to ``websockets.serve``.
     """
 
@@ -3013,7 +3013,7 @@ async def _run_fake_ws_server(state: _FakeTerminalServer) -> Any:
             if code is not None:
                 await ws.close(code=code, reason="bounce")
                 return
-        # No scripted close → hold open until released.
+        # No scripted close â†’ hold open until released.
         await state.release_event.wait()
         await ws.close(code=1000, reason="test done")
 
@@ -3083,7 +3083,7 @@ async def test_attach_reconnects_through_real_websocket_bounce(
 
     async def _recover() -> None:
         """
-        No-op recovery for the test — the fake server already accepts
+        No-op recovery for the test â€” the fake server already accepts
         any reconnect attempt, so there is no runner subprocess to
         restart. We only count invocations to prove the recovery hook
         is wired into the loop.
@@ -3134,14 +3134,14 @@ async def test_attach_reconnects_through_real_websocket_bounce(
             attach_url=f"ws://127.0.0.1:{state.port}/attach",
             headers={},
             recover=_recover,
-            # base_url/session_id/terminal_id deliberately omitted —
+            # base_url/session_id/terminal_id deliberately omitted â€”
             # the fake server has no /v1/sessions/... HTTP endpoint
             # to probe, so the terminal-gone probe must be inactive
             # for this test. Stdin EOF still drives the clean exit.
         )
     finally:
-        # Best-effort cleanup. ``stdin_w`` may already be closed —
-        # the EOF driver closes it as part of the success path — so
+        # Best-effort cleanup. ``stdin_w`` may already be closed â€”
+        # the EOF driver closes it as part of the success path â€” so
         # suppress the resulting OSError on the duplicate close. The
         # other three descriptors are owned by this test and stay open
         # until here.
@@ -3164,7 +3164,7 @@ async def test_attach_reconnects_through_real_websocket_bounce(
         f"got {state.accept_count}; the reconnect loop did not "
         "reconnect after the server-side close"
     )
-    # Two recoveries — once before each reconnect attempt, never
+    # Two recoveries â€” once before each reconnect attempt, never
     # before the first attempt. A count of 3 would mean the loop is
     # calling recover unnecessarily on first connect.
     assert len(recover_calls) == 2, (
@@ -3187,7 +3187,7 @@ async def test_attach_exits_on_real_websocket_close_with_4404(
     client side. Before the fix, ``_websocket_to_stdout``'s
     ``async for message in ws`` swallowed the close, ``attach``
     returned normally, and the outer loop went down the "clean
-    server close → retry" branch — forever.
+    server close â†’ retry" branch â€” forever.
 
     Asserts ``accept_count == 1`` and an empty ``recover_calls`` so a
     regression that retries even once surfaces here.
@@ -3239,7 +3239,7 @@ async def test_attach_exits_on_real_websocket_close_with_4404(
 
     assert state.accept_count == 1, (
         f"Expected exactly 1 connection (loop exited on 4404), got {state.accept_count}. "
-        "If >1, the client is not recognizing the 4404 close code and is retrying — "
+        "If >1, the client is not recognizing the 4404 close code and is retrying â€” "
         "the endless 'Claude session connection closed by server; reconnecting...' bug."
     )
     assert recover_calls == [], (
@@ -3569,10 +3569,10 @@ async def _noop_sleep(_delay: float) -> None:
     Stand-in for :func:`asyncio.sleep` that returns immediately.
 
     The reconnect-loop tests must not pay the real backoff cost
-    (0.5s → 5s); fast-forwarding the sleeps keeps the suite snappy
+    (0.5s â†’ 5s); fast-forwarding the sleeps keeps the suite snappy
     while still exercising the loop's call shape.
 
-    :param _delay: Ignored — kept for signature parity.
+    :param _delay: Ignored â€” kept for signature parity.
     """
 
 
@@ -3583,7 +3583,7 @@ async def _noop_async() -> None:
     """
 
 
-# ── _strip_resume_from_claude_args ──────────────────────────
+# â”€â”€ _strip_resume_from_claude_args â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -3624,7 +3624,7 @@ def test_strip_resume_from_claude_args_removes_recognized_forms(
     assert claude_native._strip_resume_from_claude_args(args) == expected
 
 
-# ── _resolve_cold_resume_args ───────────────────────────────
+# â”€â”€ _resolve_cold_resume_args â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _conversation_response_body(
@@ -3636,11 +3636,11 @@ def _conversation_response_body(
     Build a minimal agent-meow ``GET /v1/sessions/{id}`` response body.
 
     The route returns the full ``SessionResponse`` shape; the
-    cold-resume helper only reads two fields — ``labels`` and
-    ``external_session_id`` — so the fixture stays small.
+    cold-resume helper only reads two fields â€” ``labels`` and
+    ``external_session_id`` â€” so the fixture stays small.
 
     :param labels: ``labels`` field for the response payload, e.g.
-        ``{"agent_meow.wrapper": "claude-code-native-ui"}``.
+        ``{"omnigent.wrapper": "claude-code-native-ui"}``.
     :param external_session_id: ``external_session_id`` field or
         ``None``.
     :returns: JSON-encodable response dict.
@@ -3695,7 +3695,7 @@ async def _httpx_client_with_canned_response(
     :param status_code: HTTP status to return.
     :param items: Session items to return from the ``/items`` history
         fetch. Defaults to a single user message so cold resume has at
-        least one record to synthesize — an empty history now makes
+        least one record to synthesize â€” an empty history now makes
         ``_resolve_cold_resume_args`` decline ``--resume`` (launch
         fresh), so tests that exercise the ``--resume`` path must supply
         real history.
@@ -3740,7 +3740,7 @@ async def test_resolve_cold_resume_args_injects_external_session_id(
     Claude-native conv with external_session_id set yields
     ``("--resume", "<sid>")`` so the spawned terminal launches
     ``claude --resume <sid>`` and reattaches to the prior transcript.
-    Without this, cold resume would launch fresh claude — the user
+    Without this, cold resume would launch fresh claude â€” the user
     would keep the agent-meow conv id but lose claude-side context.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3750,7 +3750,7 @@ async def test_resolve_cold_resume_args_injects_external_session_id(
     monkeypatch.setattr(claude_native, "_CLAUDE_PROJECTS_DIR", tmp_path / "projects")
     client = await _httpx_client_with_canned_response(
         _conversation_response_body(
-            labels={"agent_meow.wrapper": "claude-code-native-ui"},
+            labels={"omnigent.wrapper": "claude-code-native-ui"},
             external_session_id="claude-uuid-abc",
         ),
         200,
@@ -3766,7 +3766,7 @@ async def test_resolve_cold_resume_args_declines_resume_when_no_history(
     tmp_path: Path,
 ) -> None:
     """
-    Empty agent-meow history → ``()`` (launch fresh), not ``("--resume", sid)``.
+    Empty agent-meow history â†’ ``()`` (launch fresh), not ``("--resume", sid)``.
 
     An ``external_session_id`` is set, but the conversation has no
     convertible items, so the synthesized transcript would be empty.
@@ -3783,7 +3783,7 @@ async def test_resolve_cold_resume_args_declines_resume_when_no_history(
     monkeypatch.setattr(claude_native, "_CLAUDE_PROJECTS_DIR", tmp_path / "projects")
     client = await _httpx_client_with_canned_response(
         _conversation_response_body(
-            labels={"agent_meow.wrapper": "claude-code-native-ui"},
+            labels={"omnigent.wrapper": "claude-code-native-ui"},
             external_session_id="claude-uuid-abc",
         ),
         200,
@@ -3867,7 +3867,7 @@ async def test_resolve_cold_resume_args_bootstraps_missing_local_claude_transcri
             return httpx.Response(
                 200,
                 json=_conversation_response_body(
-                    labels={"agent_meow.wrapper": "claude-code-native-ui"},
+                    labels={"omnigent.wrapper": "claude-code-native-ui"},
                     external_session_id="claude-uuid-abc",
                 ),
             )
@@ -3990,7 +3990,7 @@ async def test_resolve_cold_resume_args_replaces_existing_local_claude_transcrip
             return httpx.Response(
                 200,
                 json=_conversation_response_body(
-                    labels={"agent_meow.wrapper": "claude-code-native-ui"},
+                    labels={"omnigent.wrapper": "claude-code-native-ui"},
                     external_session_id="claude-uuid-abc",
                 ),
             )
@@ -4022,14 +4022,14 @@ async def test_resolve_cold_resume_args_warns_when_external_session_id_missing(
     """
     Claude-native conv with no captured external_session_id (crashed
     before first hook, etc.) returns ``()`` and prints a warning.
-    The agent-meow conv id still survives — the new terminal binds
-    to the same row — but Claude starts fresh. Critical: this
+    The agent-meow conv id still survives â€” the new terminal binds
+    to the same row â€” but Claude starts fresh. Critical: this
     branch MUST NOT raise so the user can recover the conv even
     when the prior claude side is unrecoverable.
     """
     client = await _httpx_client_with_canned_response(
         _conversation_response_body(
-            labels={"agent_meow.wrapper": "claude-code-native-ui"},
+            labels={"omnigent.wrapper": "claude-code-native-ui"},
             external_session_id=None,
         ),
         200,
@@ -4053,7 +4053,7 @@ async def test_resolve_cold_resume_args_rejects_non_claude_native_conv() -> None
     """
     client = await _httpx_client_with_canned_response(
         _conversation_response_body(
-            # Wrapper label absent → treated as "not claude-native".
+            # Wrapper label absent â†’ treated as "not claude-native".
             labels={},
             external_session_id=None,
         ),
@@ -4072,7 +4072,7 @@ async def test_resolve_cold_resume_args_rejects_non_claude_native_conv() -> None
 @pytest.mark.asyncio
 async def test_resolve_cold_resume_args_raises_on_missing_conversation() -> None:
     """
-    404 from the server is an unambiguous "no such conv" — surface
+    404 from the server is an unambiguous "no such conv" â€” surface
     a clear error so the user doesn't wait for a session that won't
     materialize. The error must include the conv id so the user can
     spot a typo.
@@ -4099,7 +4099,7 @@ async def test_resolve_cold_resume_args_warning_lands_in_logger(
     test enforces both channels stay wired.
 
     Patches ``_logger.warning`` directly rather than relying on
-    caplog — caplog is sensitive to logger propagation state set
+    caplog â€” caplog is sensitive to logger propagation state set
     up by other tests in the same session, which made earlier
     versions of this assertion order-dependent.
     """
@@ -4114,7 +4114,7 @@ async def test_resolve_cold_resume_args_warning_lands_in_logger(
 
     client = await _httpx_client_with_canned_response(
         _conversation_response_body(
-            labels={"agent_meow.wrapper": "claude-code-native-ui"},
+            labels={"omnigent.wrapper": "claude-code-native-ui"},
             external_session_id=None,
         ),
         200,
@@ -4122,7 +4122,7 @@ async def test_resolve_cold_resume_args_warning_lands_in_logger(
     async with client:
         result = await claude_native._resolve_cold_resume_args(client, "conv_abc")
     assert result == ()
-    # Warning was issued — if a regression replaced
+    # Warning was issued â€” if a regression replaced
     # ``_logger.warning(...)`` with ``pass`` or a print, this
     # assertion catches it.
     assert any("conv_abc" in m for m in captured_warnings), (
@@ -4130,7 +4130,7 @@ async def test_resolve_cold_resume_args_warning_lands_in_logger(
     )
 
 
-# ── _prepare_claude_terminal cold-resume integration ─────────
+# â”€â”€ _prepare_claude_terminal cold-resume integration â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -4146,7 +4146,7 @@ async def test_prepare_claude_terminal_cold_resume_injects_external_session_id(
     id end-to-end (no new id minted), AND the spawned terminal
     receives Claude's prior session id as the first two args. A
     regression that dropped the cold-resume args at the launch
-    seam would silently lose Claude-side context — the user keeps
+    seam would silently lose Claude-side context â€” the user keeps
     the agent-meow conv id but Claude starts fresh. Tests
     ``_resolve_cold_resume_args`` in isolation cannot catch this.
     """
@@ -4154,7 +4154,7 @@ async def test_prepare_claude_terminal_cold_resume_injects_external_session_id(
 
     async def _fake_find_running(_client: object, _session_id: str) -> str | None:
         """
-        No live terminal → force the cold-resume code path.
+        No live terminal â†’ force the cold-resume code path.
 
         :param _client: Unused HTTP client.
         :param _session_id: Unused conversation id.
@@ -4207,9 +4207,9 @@ async def test_prepare_claude_terminal_cold_resume_injects_external_session_id(
         Capture the launch args without invoking the real runner.
 
         :param _client: HTTP client (ignored).
-        :param session_id: agent-meow conversation id — captured
+        :param session_id: agent-meow conversation id â€” captured
             for the end-to-end assertion.
-        :param claude_args: Args the launch will pass to claude —
+        :param claude_args: Args the launch will pass to claude â€”
             this is the load-bearing capture.
         :param command: Executable name (ignored).
         :param bridge_dir: Bridge directory (ignored).
@@ -4272,7 +4272,7 @@ async def test_prepare_claude_terminal_cold_resume_injects_external_session_id(
         del http_client  # context-managed by the with block
 
     # agent-meow conv id survives end-to-end. If this assertion
-    # fails, the wrapper minted a new session id on cold resume —
+    # fails, the wrapper minted a new session id on cold resume â€”
     # exactly what the user told us NOT to do.
     assert prepared.session_id == "conv_abc"
     assert captured_terminal_args["session_id"] == "conv_abc"
@@ -4294,7 +4294,7 @@ async def test_prepare_claude_terminal_cold_resume_injects_external_session_id(
     # prior turn is POSTed back to AP. There is no server-side dedup
     # to collapse those re-posts, so seeking to the end is the only
     # thing preventing duplicate turns. ``reattached`` stays ``False``
-    # because we launched a new terminal — the wrapper still owns
+    # because we launched a new terminal â€” the wrapper still owns
     # teardown, unlike the hot-reattach case.
     assert prepared.cold_resumed is True, (
         "cold resume must set cold_resumed=True; without it the "
@@ -4318,8 +4318,8 @@ async def test_prepare_claude_terminal_fresh_session_is_not_cold_resumed(
     Counter-test for the cold-resume regression: a brand-new session
     has no prior transcript to skip, so the forwarder should read
     from offset 0 and surface every item as it arrives. Marking it
-    ``cold_resumed=True`` would silently swallow the first turn’s
-    transcript on a fresh launch — the user would type a prompt
+    ``cold_resumed=True`` would silently swallow the first turnâ€™s
+    transcript on a fresh launch â€” the user would type a prompt
     and see no assistant reply mirrored to the web UI.
     """
 
@@ -4380,7 +4380,7 @@ async def test_prepare_claude_terminal_fresh_session_is_not_cold_resumed(
 
     # Both flags must be False on a fresh session. ``cold_resumed=True``
     # here would mean the forwarder skips to the end of the (empty)
-    # transcript on first read — fine for empty files, but if the
+    # transcript on first read â€” fine for empty files, but if the
     # check ever changes to ``cold_resumed or reattached`` AND the
     # transcript has any pre-existing content (e.g. a system header
     # claude writes on cold start), the first turn would be dropped.
@@ -4434,7 +4434,7 @@ async def test_attach_passes_start_at_end_true_on_cold_resume(
         await asyncio.sleep(3600)
 
     async def fake_close(**kwargs: object) -> None:
-        """No-op terminal close — cold resume owns its terminal."""
+        """No-op terminal close â€” cold resume owns its terminal."""
         del kwargs
 
     monkeypatch.setattr(claude_native, "_close_claude_terminal", fake_close)
@@ -4458,8 +4458,8 @@ async def test_attach_passes_start_at_end_true_on_cold_resume(
 
     # The supervisor MUST have been started with start_at_end=True.
     # A regression that wired ``start_at_end=prepared.reattached``
-    # (the original buggy code) would land False here — cold resume
-    # has reattached=False — and the forwarder would replay the
+    # (the original buggy code) would land False here â€” cold resume
+    # has reattached=False â€” and the forwarder would replay the
     # prior transcript on first poll. ``True`` confirms the OR-of-
     # flags fix in ``_attach_with_transcript_forwarder``.
     assert captured.get("start_at_end") is True, (
@@ -4481,10 +4481,10 @@ async def test_attach_passes_start_at_end_false_on_fresh_launch(
 
     Counter-test bracketing the OR fix: if the wrapper ever
     short-circuited to ``start_at_end=True`` unconditionally, the
-    first turn of a brand-new session would be silently skipped —
+    first turn of a brand-new session would be silently skipped â€”
     the forwarder would seek past whatever claude writes during
     its startup (system banner, ``SessionStart`` echo) and miss the
-    user’s first message if it landed before the first poll.
+    userâ€™s first message if it landed before the first poll.
     """
     captured: dict[str, Any] = {}
     forwarder_started = asyncio.Event()
@@ -4494,7 +4494,7 @@ async def test_attach_passes_start_at_end_false_on_fresh_launch(
         Wait for the forwarder to record kwargs, then exit.
 
         See the cold-resume counterpart for why we have to yield
-        here — a synchronous return would cancel the forwarder
+        here â€” a synchronous return would cancel the forwarder
         task before its body runs.
         """
         del attach_url, headers
@@ -4537,21 +4537,21 @@ async def test_attach_passes_start_at_end_false_on_fresh_launch(
     )
 
 
-# ── _is_claude_native_conversation (chat-side redirect helper) ─
+# â”€â”€ _is_claude_native_conversation (chat-side redirect helper) â”€
 
 
 def test_is_claude_native_conversation_returns_true_on_matching_label(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    200 + ``agent_meow.wrapper=claude-code-native-ui`` → True.
+    200 + ``omnigent.wrapper=claude-code-native-ui`` â†’ True.
 
     This is the load-bearing decision for the chat-redirect path
     (``_chat_with_server`` calls this to decide whether to redirect
     a resume into the claude wrapper). A False negative here is
     exactly the resume misroute.
     """
-    from agent_meow import chat
+    from omnigent import chat
 
     def _fake_get(url: str, *, headers: dict[str, str], timeout: float) -> httpx.Response:
         """Canned 200 response with the claude-native wrapper label."""
@@ -4559,7 +4559,7 @@ def test_is_claude_native_conversation_returns_true_on_matching_label(
         return httpx.Response(
             200,
             json={
-                "labels": {"agent_meow.wrapper": "claude-code-native-ui"},
+                "labels": {"omnigent.wrapper": "claude-code-native-ui"},
             },
         )
 
@@ -4579,7 +4579,7 @@ def test_is_claude_native_conversation_returns_true_on_matching_label(
     "labels",
     [
         {},
-        {"agent_meow.wrapper": "some-other-wrapper"},
+        {"omnigent.wrapper": "some-other-wrapper"},
         {"unrelated": "x"},
     ],
 )
@@ -4588,12 +4588,12 @@ def test_is_claude_native_conversation_returns_false_on_non_matching_label(
     labels: dict[str, str],
 ) -> None:
     """
-    Non-claude wrapper / missing label / unrelated label → False.
+    Non-claude wrapper / missing label / unrelated label â†’ False.
 
     The chat REPL stays on its normal AP-REPL path for these
     conversations.
     """
-    from agent_meow import chat
+    from omnigent import chat
 
     def _fake_get(_url: str, *, headers: dict[str, str], timeout: float) -> httpx.Response:
         """Canned 200 response with the parametrized labels."""
@@ -4619,15 +4619,15 @@ def test_is_claude_native_conversation_logs_warning_on_non_200(
 ) -> None:
     """
     Non-200 returns False but ALSO logs a warning. Without the
-    warning a misrouted resume (auth failure → silent agent-meow REPL on
+    warning a misrouted resume (auth failure â†’ silent agent-meow REPL on
     top of a tmux session) would have zero breadcrumbs in logs.
 
     Patches ``logger.warning`` directly (not caplog) to keep the
-    assertion deterministic in the cross-file pytest sweep — caplog
+    assertion deterministic in the cross-file pytest sweep â€” caplog
     requires the right handler / propagation, which other tests'
     logging setup can disturb.
     """
-    from agent_meow import chat
+    from omnigent import chat
 
     def _fake_get(_url: str, *, headers: dict[str, str], timeout: float) -> httpx.Response:
         """Canned error response at the parametrized status code."""
@@ -4662,13 +4662,13 @@ def test_is_claude_native_conversation_returns_false_on_transport_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Connection / DNS / TLS failure → False, with a warning logged.
+    Connection / DNS / TLS failure â†’ False, with a warning logged.
 
     The caller falls back to the agent-meow REPL path, which surfaces its
     own connect-fail error; we just record what we saw so a flaky
     server doesn't cause a silent misroute.
     """
-    from agent_meow import chat
+    from omnigent import chat
 
     def _raises(*_args: object, **_kwargs: object) -> httpx.Response:
         """Pretend the connect fails."""
@@ -4695,21 +4695,21 @@ def test_is_claude_native_conversation_returns_false_on_transport_error(
     )
 
 
-# ── _align_working_directory_with_session (resume-time workspace prompt) ──
+# â”€â”€ _align_working_directory_with_session (resume-time workspace prompt) â”€â”€
 #
 # These tests drive ``_align_working_directory_with_session``
 # directly. The state module's roundtrip / persistence is covered
 # in ``tests/test_claude_native_state.py``; here we exercise the
-# decision-table behavior: matching cwd → no-op, mismatched +
-# switch → chdir, mismatched + move → transcript move,
-# mismatched + missing path → ClickException, legacy session →
+# decision-table behavior: matching cwd â†’ no-op, mismatched +
+# switch â†’ chdir, mismatched + move â†’ transcript move,
+# mismatched + missing path â†’ ClickException, legacy session â†’
 # silent skip.
 #
 # Each test writes the launch state for a specific conv id via the
 # real state module, then drives the helper. The autouse
 # ``_isolate_claude_native_state`` fixture in ``tests/conftest.py``
 # redirects the state root to a per-test tmp dir so writes never
-# touch the developer's real ``~/.agent_meow/``.
+# touch the developer's real ``~/.omnigent/``.
 
 
 @dataclass(frozen=True)
@@ -4832,7 +4832,7 @@ def test_align_working_directory_no_state_silent_skip(
     tmp_path: Path,
 ) -> None:
     """
-    Legacy session (no recorded state) → silent no-op.
+    Legacy session (no recorded state) â†’ silent no-op.
 
     Sessions created before this tracking landed, or sessions
     created on a different machine, have no client-side state for
@@ -4863,7 +4863,7 @@ def test_align_working_directory_matching_cwd_silent_skip(
     tmp_path: Path,
 ) -> None:
     """
-    Recorded cwd matches current cwd → silent no-op.
+    Recorded cwd matches current cwd â†’ silent no-op.
 
     Verifies the path equality check uses ``Path.resolve()`` so a
     symlink-equivalent path matches the recorded canonical form.
@@ -4872,7 +4872,7 @@ def test_align_working_directory_matching_cwd_silent_skip(
     ``/home/me/repo``) would prompt to chdir on every resume,
     which is noise the user has to dismiss every time.
     """
-    from agent_meow.claude_native_state import write_launch_state
+    from omnigent.claude_native_state import write_launch_state
 
     monkeypatch.chdir(tmp_path)
     starting_cwd = Path.cwd().resolve()
@@ -4898,7 +4898,7 @@ def test_align_working_directory_switch_action_chdirs(
     tmp_path: Path,
 ) -> None:
     """
-    Mismatched cwd, recorded path exists, user chooses switch → chdir.
+    Mismatched cwd, recorded path exists, user chooses switch â†’ chdir.
 
     This is the happy-path fix for the bug the user reported:
     ``agent-meow claude --resume`` invoked from a different
@@ -4908,7 +4908,7 @@ def test_align_working_directory_switch_action_chdirs(
     new value. If chdir is missing or points elsewhere, Claude
     will still exit on launch.
     """
-    from agent_meow.claude_native_state import write_launch_state
+    from omnigent.claude_native_state import write_launch_state
 
     recorded = tmp_path / "recorded-ws"
     recorded.mkdir()
@@ -4944,7 +4944,7 @@ def test_align_working_directory_switch_action_chdirs(
     claude_native._align_working_directory_with_session("conv_mismatch_switch")
 
     # Side-effect: cwd actually moved. If chdir is missing the
-    # picker UX is misleading — the user agrees to switch but
+    # picker UX is misleading â€” the user agrees to switch but
     # Claude still fails to resume because the wrapper never
     # acted on the answer.
     assert Path.cwd().resolve() == recorded.resolve(), (
@@ -5163,13 +5163,13 @@ def test_align_working_directory_leave_action_cancels_resume(
     tmp_path: Path,
 ) -> None:
     """
-    Mismatched cwd, user chooses leave → no chdir, clear exception.
+    Mismatched cwd, user chooses leave â†’ no chdir, clear exception.
 
     Continuing would hand Claude a known-bad cwd and crash, so the
     third action exits before launch instead. The wrapper must not
     mutate cwd when the user chooses to leave.
     """
-    from agent_meow.claude_native_state import write_launch_state
+    from omnigent.claude_native_state import write_launch_state
 
     recorded = tmp_path / "recorded-leave"
     recorded.mkdir()
@@ -5205,7 +5205,7 @@ def test_align_working_directory_move_without_external_id_fails_loud(
     but this runtime invariant must not rely on ``assert`` because
     Python strips asserts under ``-O``.
     """
-    from agent_meow.claude_native_state import write_launch_state
+    from omnigent.claude_native_state import write_launch_state
 
     recorded = tmp_path / "recorded-no-external"
     recorded.mkdir()
@@ -5233,7 +5233,7 @@ def test_align_working_directory_raises_when_recorded_path_missing(
     tmp_path: Path,
 ) -> None:
     """
-    Recorded path no longer exists → fail loud (no auto-create, no
+    Recorded path no longer exists â†’ fail loud (no auto-create, no
     silent skip).
 
     Letting the launch proceed would only delay the failure:
@@ -5245,7 +5245,7 @@ def test_align_working_directory_raises_when_recorded_path_missing(
     can choose to recreate it, move the project back, or start a
     fresh session.
     """
-    from agent_meow.claude_native_state import write_launch_state
+    from omnigent.claude_native_state import write_launch_state
 
     monkeypatch.chdir(tmp_path)
     missing = "/this/path/should/not/exist/anywhere/nope-abcxyz"
@@ -5287,7 +5287,7 @@ def test_align_working_directory_redirect_moves_transcript_and_updates_state(
     and update agent-meow launch state so future resumes treat the
     current cwd as the session home.
     """
-    from agent_meow.claude_native_state import read_launch_state, write_launch_state
+    from omnigent.claude_native_state import read_launch_state, write_launch_state
 
     projects_dir = tmp_path / ".claude" / "projects"
     old_workspace = tmp_path / "old workspace"
@@ -5366,7 +5366,7 @@ def test_align_working_directory_redirect_replaces_stale_target(
     fail on the stale target; it should make the current project the
     only owner of the Claude session id.
     """
-    from agent_meow.claude_native_state import read_launch_state, write_launch_state
+    from omnigent.claude_native_state import read_launch_state, write_launch_state
 
     projects_dir = tmp_path / ".claude" / "projects"
     old_workspace = tmp_path / "old"
@@ -5432,7 +5432,7 @@ def test_align_working_directory_redirect_works_when_recorded_path_missing(
     should offer redirect as the default and the helper should move
     the transcript instead of failing early.
     """
-    from agent_meow.claude_native_state import read_launch_state, write_launch_state
+    from omnigent.claude_native_state import read_launch_state, write_launch_state
 
     projects_dir = tmp_path / ".claude" / "projects"
     current_workspace = tmp_path / "current"
@@ -5503,7 +5503,7 @@ def test_align_working_directory_redirect_works_when_recorded_path_missing(
     assert state.working_directory == str(current_workspace.resolve())
 
 
-# ── _clone_claude_transcript (forked clone) ─────────
+# â”€â”€ _clone_claude_transcript (forked clone) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_clone_claude_transcript_rewrites_session_and_cwd_into_clone_project_dir(
@@ -5519,7 +5519,7 @@ def test_clone_claude_transcript_rewrites_session_and_cwd_into_clone_project_dir
     ``--fork-session`` could not handle, because Claude's ``--resume`` is
     cwd-scoped). The
     copied transcript must (1) be written under the clone workspace's
-    project dir — not the source's — so plain ``--resume <our_uuid>``
+    project dir â€” not the source's â€” so plain ``--resume <our_uuid>``
     finds it; (2) carry the clone's own ``sessionId`` on every record so
     the bridge tracks the clone, not the original; (3) carry the clone's
     ``cwd``; (4) preserve the ``uuid``/``parentUuid`` chain verbatim so
@@ -5539,7 +5539,7 @@ def test_clone_claude_transcript_rewrites_session_and_cwd_into_clone_project_dir
     source_project_dir.mkdir(parents=True)
     source_path = source_project_dir / f"{source_uuid}.jsonl"
     source_lines = [
-        # A meta record with neither cwd nor sessionId — must pass through
+        # A meta record with neither cwd nor sessionId â€” must pass through
         # untouched (proves we only rewrite the two fields, nothing else).
         json.dumps({"type": "summary", "leafUuid": "abc"}),
         # A user turn carrying cwd + sessionId + the chain root.
@@ -5578,7 +5578,7 @@ def test_clone_claude_transcript_rewrites_session_and_cwd_into_clone_project_dir
         / claude_native._sanitize_claude_project_name(str(clone_workspace.resolve()))
         / f"{target_uuid}.jsonl"
     )
-    # The clone must land in the CLONE's project dir, not the source's —
+    # The clone must land in the CLONE's project dir, not the source's â€”
     # this is the cross-dir fix that makes cwd-scoped --resume work in a
     # new worktree. A wrong path here means the worktree case still fails.
     assert result == expected_target
@@ -5592,19 +5592,19 @@ def test_clone_claude_transcript_rewrites_session_and_cwd_into_clone_project_dir
     # Meta record passes through verbatim (only cwd/sessionId are rewritten).
     assert cloned_payloads[0] == {"type": "summary", "leafUuid": "abc"}
     # sessionId rewritten to the clone's uuid on every record that had one
-    # — if any still said source_uuid, the bridge would track the original.
+    # â€” if any still said source_uuid, the bridge would track the original.
     assert all(p.get("sessionId") == target_uuid for p in cloned_payloads[1:])
-    # cwd rewritten to the clone workspace — if it still pointed at the
+    # cwd rewritten to the clone workspace â€” if it still pointed at the
     # source dir, Claude would reject the resume as a cwd mismatch.
     assert all(p["cwd"] == str(clone_workspace.resolve()) for p in cloned_payloads[1:])
-    # uuid/parentUuid chain preserved verbatim — Claude rebuilds history
+    # uuid/parentUuid chain preserved verbatim â€” Claude rebuilds history
     # from it; rewriting these would orphan the turns.
     assert [(p["uuid"], p["parentUuid"]) for p in cloned_payloads[1:]] == [
         ("u1", None),
         ("u2", "u1"),
     ]
 
-    # Source transcript untouched — a fork must not mutate the original.
+    # Source transcript untouched â€” a fork must not mutate the original.
     source_after = source_path.read_text(encoding="utf-8")
     assert f'"sessionId":"{source_uuid}"' in source_after.replace(" ", "")
     assert source_path.is_file()
@@ -5620,8 +5620,8 @@ def test_clone_claude_transcript_returns_none_when_source_missing(
 
     The runner relies on this to fall back to a FRESH launch (rather than
     pointing ``--resume`` at a file that doesn't exist, which would leave
-    ``external_session_id`` dangling). A non-None return — or a stray
-    written file — would mean the fallback never triggers.
+    ``external_session_id`` dangling). A non-None return â€” or a stray
+    written file â€” would mean the fallback never triggers.
     """
     projects_dir = tmp_path / ".claude" / "projects"
     projects_dir.mkdir(parents=True)
@@ -5635,7 +5635,7 @@ def test_clone_claude_transcript_returns_none_when_source_missing(
         clone_workspace=clone_workspace.resolve(),
     )
 
-    # No source → no clone; the runner launches fresh.
+    # No source â†’ no clone; the runner launches fresh.
     assert result is None
     # Nothing should have been written to the clone's project dir.
     clone_project_dir = projects_dir / claude_native._sanitize_claude_project_name(
@@ -5644,7 +5644,7 @@ def test_clone_claude_transcript_returns_none_when_source_missing(
     assert not clone_project_dir.exists() or not any(clone_project_dir.iterdir())
 
 
-# ── _record_launch_for_fresh_session ────────────────────────
+# â”€â”€ _record_launch_for_fresh_session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_record_launch_for_fresh_session_writes_resolved_cwd(
@@ -5660,7 +5660,7 @@ def test_record_launch_for_fresh_session_writes_resolved_cwd(
     in ``/home/me/repo`` (a symlink) and resumed from
     ``/repo`` (the canonical) won't falsely flag as mismatched.
     """
-    from agent_meow.claude_native_state import read_launch_state
+    from omnigent.claude_native_state import read_launch_state
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -5704,7 +5704,7 @@ def test_record_launch_for_fresh_session_swallows_oserror(
     claude_native._record_launch_for_fresh_session("conv_disk_full")
 
 
-# ── Provider-aware native Claude launch config (configure harnesses) ──────────
+# â”€â”€ Provider-aware native Claude launch config (configure harnesses) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _seed_config(config_home: Path, providers: dict[str, object]) -> None:
@@ -5733,7 +5733,7 @@ def _isolated_provider_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 
 def _no_auth_claude_spec() -> Any:
     """A minimal claude-sdk spec with no executor.auth/profile."""
-    from agent_meow.spec.types import AgentSpec, ExecutorSpec
+    from omnigent.spec.types import AgentSpec, ExecutorSpec
 
     return AgentSpec(
         spec_version=1,
@@ -5746,13 +5746,13 @@ def _no_auth_claude_spec() -> Any:
 def test_provider_config_for_native_claude_key_injects_base_url_and_helper() -> None:
     """A ``key`` provider becomes ANTHROPIC_BASE_URL + a printf apiKeyHelper.
 
-    Mirrors what ucode injects, but from a configured OSS key — so a native
+    Mirrors what ucode injects, but from a configured OSS key â€” so a native
     Claude Code terminal routes through the provider. The static key must be
     delivered via the helper (the runner env strips ANTHROPIC_API_KEY), and
     the base_url + default model carried through. Failure means a native
     launch would ignore the configured provider.
     """
-    from agent_meow.onboarding.provider_config import load_providers
+    from omnigent.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -5784,7 +5784,7 @@ def test_provider_config_for_native_claude_key_injects_base_url_and_helper() -> 
 
 def test_provider_config_for_native_claude_uses_auth_command_verbatim() -> None:
     """A provider ``auth_command`` is used as the apiKeyHelper verbatim."""
-    from agent_meow.onboarding.provider_config import load_providers
+    from omnigent.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -5816,7 +5816,7 @@ def test_bedrock_config_for_native_claude_static_key() -> None:
     ignores ``apiKeyHelper``, so a static key must land in the env (never a
     helper) and the base_url maps to ``ANTHROPIC_BEDROCK_BASE_URL``.
     """
-    from agent_meow.onboarding.provider_config import load_providers
+    from omnigent.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -5854,7 +5854,7 @@ def test_bedrock_config_for_native_claude_resolves_auth_command() -> None:
     tokens) silently fell back to Claude's own login. The command's stdout must
     become ``AWS_BEARER_TOKEN_BEDROCK`` since Bedrock mode ignores apiKeyHelper.
     """
-    from agent_meow.onboarding.provider_config import load_providers
+    from omnigent.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -5878,12 +5878,12 @@ def test_bedrock_config_for_native_claude_resolves_auth_command() -> None:
 
 
 def test_bedrock_config_for_native_claude_non_anthropic_returns_none() -> None:
-    """A ``bedrock`` provider not serving the anthropic surface → ``None``.
+    """A ``bedrock`` provider not serving the anthropic surface â†’ ``None``.
 
     The native Claude path only routes anthropic-surface providers; anything
     else falls back to Claude Code's own login.
     """
-    from agent_meow.onboarding.provider_config import load_providers
+    from omnigent.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -5905,7 +5905,7 @@ def test_bedrock_config_for_native_claude_non_anthropic_returns_none() -> None:
 def test_resolve_native_claude_config_spec_provider_default(
     _isolated_provider_config: Path,
 ) -> None:
-    """A spec with no auth + a configured anthropic key default → provider config.
+    """A spec with no auth + a configured anthropic key default â†’ provider config.
 
     The whole point of the P0: a native-claude session honors `configure
     harness` exactly like the in-process claude-sdk harness. Failure means
@@ -5935,11 +5935,11 @@ def test_resolve_native_claude_config_spec_provider_default(
 def test_resolve_native_claude_config_subscription_uses_cli_login(
     _isolated_provider_config: Path,
 ) -> None:
-    """A claude subscription default → None (use the CLI's own enterprise login).
+    """A claude subscription default â†’ None (use the CLI's own enterprise login).
 
     A subscription means "use whatever ~/.claude is logged into" (e.g. a
     Claude Enterprise seat), NOT a gateway. The resolver must return None so
-    the native launch leaves Claude's own login alone — and must NOT fall
+    the native launch leaves Claude's own login alone â€” and must NOT fall
     back to ucode.
     """
     _seed_config(
@@ -5954,7 +5954,7 @@ def test_resolve_native_claude_config_subscription_uses_cli_login(
 def test_resolve_native_claude_config_global_databricks_auth_uses_ucode(
     _isolated_provider_config: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Spec-less with a global ``auth: databricks`` block → ucode with its profile.
+    """Spec-less with a global ``auth: databricks`` block â†’ ucode with its profile.
 
     Preserves the Databricks behavior after the ``--profile`` flag removal:
     a databricks user (no OSS provider configured) who set up a global
@@ -6008,7 +6008,7 @@ def test_resolve_native_claude_config_databricks_provider_uses_ucode(
 def test_resolve_native_claude_config_ambient_key(
     _isolated_provider_config: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Spec-less with only an ambient ANTHROPIC_API_KEY → provider config.
+    """Spec-less with only an ambient ANTHROPIC_API_KEY â†’ provider config.
 
     First run without configure: a native `agent-meow claude` launch still
     routes through the detected env key. Failure means a fresh machine's
@@ -6042,7 +6042,7 @@ def test_resolve_native_claude_config_ambient_prefixed_key(
 
 def test_bedrock_config_auth_command_failure_returns_none() -> None:
     """A failing bedrock auth_command falls back to Claude's own login (None)."""
-    from agent_meow.onboarding.provider_config import load_providers
+    from omnigent.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {
@@ -6064,12 +6064,12 @@ def test_bedrock_config_auth_command_failure_returns_none() -> None:
 def test_bedrock_config_no_model_default_leaves_model_none() -> None:
     """A bedrock provider without models.default builds with model=None (+warns).
 
-    Claude Code then picks its own default model — usually not enabled on a
-    Bedrock account — so the function warns; the config is still returned.
+    Claude Code then picks its own default model â€” usually not enabled on a
+    Bedrock account â€” so the function warns; the config is still returned.
     """
     import logging
 
-    from agent_meow.onboarding.provider_config import load_providers
+    from omnigent.onboarding.provider_config import load_providers
 
     entry = load_providers(
         {

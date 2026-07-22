@@ -8,18 +8,18 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins import get_builtin_tool
-from agent_meow.tools.builtins.web_search import WebSearchTool
-from agent_meow.tools.builtins.web_search_keenable import (
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins import get_builtin_tool
+from omnigent.tools.builtins.web_search import WebSearchTool
+from omnigent.tools.builtins.web_search_keenable import (
     _resolve_max_results as _resolve_max_results_keenable,
 )
-from agent_meow.tools.builtins.web_search_nimble import _resolve_max_results
-from agent_meow.tools.builtins.web_search_tavily import (
+from omnigent.tools.builtins.web_search_nimble import _resolve_max_results
+from omnigent.tools.builtins.web_search_tavily import (
     _resolve_max_results as _resolve_max_results_tavily,
 )
 
-# ── Registry ─────────────────────────────────────────
+# â”€â”€ Registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_get_builtin_tool_returns_web_search() -> None:
@@ -37,11 +37,11 @@ def test_old_provider_names_not_registered() -> None:
     """Provider-specific names are removed from the registry."""
     for name in ("web_search_openai", "web_search_google", "web_search_perplexity"):
         assert get_builtin_tool(name) is None, (
-            f"{name!r} should not be in the registry — use 'web_search' instead."
+            f"{name!r} should not be in the registry â€” use 'web_search' instead."
         )
 
 
-# ── OpenAI passthrough mode ─────────────────────────
+# â”€â”€ OpenAI passthrough mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_openai_mode_schema_is_passthrough() -> None:
@@ -65,7 +65,7 @@ def test_openai_mode_invoke_raises(tool_ctx: ToolContext) -> None:
         tool.invoke("{}", tool_ctx)
 
 
-# ── Function tool mode (non-OpenAI) ─────────────────
+# â”€â”€ Function tool mode (non-OpenAI) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_non_openai_schema_is_function() -> None:
@@ -97,7 +97,7 @@ def test_missing_query_returns_error(tool_ctx: ToolContext) -> None:
     assert "query" in result.lower()
 
 
-# ── search_provider: google ──────────────────────────
+# â”€â”€ search_provider: google â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_google_backend_via_spec_config(tool_ctx: ToolContext) -> None:
@@ -124,7 +124,7 @@ def test_google_backend_via_spec_config(tool_ctx: ToolContext) -> None:
         },
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_google.httpx.get") as mock_get:
+    with patch("omnigent.tools.builtins.web_search_google.httpx.get") as mock_get:
         mock_get.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "python"}), tool_ctx)
 
@@ -148,7 +148,7 @@ def test_google_missing_credentials_returns_error(tool_ctx: ToolContext) -> None
     assert "engine_id" in result
 
 
-# ── search_provider: perplexity ──────────────────────
+# â”€â”€ search_provider: perplexity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_perplexity_backend_via_spec_config(tool_ctx: ToolContext) -> None:
@@ -171,7 +171,7 @@ def test_perplexity_backend_via_spec_config(tool_ctx: ToolContext) -> None:
         },
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_perplexity.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_perplexity.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "python"}), tool_ctx)
 
@@ -192,7 +192,7 @@ def test_perplexity_missing_key_returns_error(tool_ctx: ToolContext) -> None:
     assert "api_key" in result
 
 
-# ── search_provider: nimble ──────────────────────────
+# â”€â”€ search_provider: nimble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_nimble_backend_via_spec_config(tool_ctx: ToolContext) -> None:
@@ -220,7 +220,7 @@ def test_nimble_backend_via_spec_config(tool_ctx: ToolContext) -> None:
         },
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_nimble.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_nimble.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "nimble"}), tool_ctx)
 
@@ -246,7 +246,7 @@ def test_nimble_answer_shown_first_when_present(tool_ctx: ToolContext) -> None:
         config={"search_provider": "nimble", "api_key": "k"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_nimble.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_nimble.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "nimble"}), tool_ctx)
 
@@ -282,7 +282,7 @@ def test_nimble_spec_config_used_in_http_call(tool_ctx: ToolContext) -> None:
         },
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_nimble.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_nimble.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -307,7 +307,7 @@ def test_nimble_sends_x_client_source_header(tool_ctx: ToolContext) -> None:
         config={"search_provider": "nimble", "api_key": "spec-nimble"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_nimble.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_nimble.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -325,7 +325,7 @@ def test_nimble_http_error_returns_error_string(tool_ctx: ToolContext) -> None:
         config={"search_provider": "nimble", "api_key": "k"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_nimble.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_nimble.httpx.post") as mock_post:
         mock_post.side_effect = httpx.HTTPStatusError(
             "401", request=MagicMock(), response=fake_response
         )
@@ -342,7 +342,7 @@ def test_nimble_answer_kept_when_no_results(tool_ctx: ToolContext) -> None:
         config={"search_provider": "nimble", "api_key": "k"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_nimble.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_nimble.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "test"}), tool_ctx)
     assert result == "Direct answer.", f"Answer must not be dropped, got {result!r}"
@@ -354,21 +354,21 @@ def test_nimble_rejects_unsupported_search_depth(tool_ctx: ToolContext) -> None:
         config={"search_provider": "nimble", "api_key": "k", "search_depth": "fast"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_nimble.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_nimble.httpx.post") as mock_post:
         result = tool.invoke(json.dumps({"query": "test"}), tool_ctx)
     assert "search_depth" in result
     assert mock_post.call_count == 0, "Must not call the API for an invalid search_depth."
 
 
 def test_nimble_max_results_clamped() -> None:
-    """``max_results`` is coerced + clamped to Nimble's 1-100 range; junk → default."""
-    assert _resolve_max_results({}) == 5  # missing → default
-    assert _resolve_max_results({"max_results": "0"}) == 1  # below min → clamped up
-    assert _resolve_max_results({"max_results": "500"}) == 100  # above max → clamped down
-    assert _resolve_max_results({"max_results": "abc"}) == 5  # non-numeric → default
+    """``max_results`` is coerced + clamped to Nimble's 1-100 range; junk â†’ default."""
+    assert _resolve_max_results({}) == 5  # missing â†’ default
+    assert _resolve_max_results({"max_results": "0"}) == 1  # below min â†’ clamped up
+    assert _resolve_max_results({"max_results": "500"}) == 100  # above max â†’ clamped down
+    assert _resolve_max_results({"max_results": "abc"}) == 5  # non-numeric â†’ default
 
 
-# ── search_provider: tavily ──────────────────────────
+# â”€â”€ search_provider: tavily â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_tavily_backend_via_spec_config(tool_ctx: ToolContext) -> None:
@@ -395,7 +395,7 @@ def test_tavily_backend_via_spec_config(tool_ctx: ToolContext) -> None:
         },
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_tavily.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_tavily.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "tavily"}), tool_ctx)
 
@@ -419,7 +419,7 @@ def test_tavily_answer_shown_first_when_present(tool_ctx: ToolContext) -> None:
         config={"search_provider": "tavily", "api_key": "k"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_tavily.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_tavily.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "tavily"}), tool_ctx)
 
@@ -453,7 +453,7 @@ def test_tavily_spec_config_used_in_http_call(tool_ctx: ToolContext) -> None:
         },
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_tavily.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_tavily.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -478,7 +478,7 @@ def test_tavily_sends_x_client_source_header(tool_ctx: ToolContext) -> None:
         config={"search_provider": "tavily", "api_key": "spec-tavily"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_tavily.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_tavily.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -496,7 +496,7 @@ def test_tavily_http_error_returns_error_string(tool_ctx: ToolContext) -> None:
         config={"search_provider": "tavily", "api_key": "k"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_tavily.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_tavily.httpx.post") as mock_post:
         mock_post.side_effect = httpx.HTTPStatusError(
             "401", request=MagicMock(), response=fake_response
         )
@@ -513,7 +513,7 @@ def test_tavily_empty_results_returns_no_results(tool_ctx: ToolContext) -> None:
         config={"search_provider": "tavily", "api_key": "k"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_tavily.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_tavily.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "test"}), tool_ctx)
     assert result == "No results found."
@@ -527,7 +527,7 @@ def test_tavily_answer_kept_when_no_results(tool_ctx: ToolContext) -> None:
         config={"search_provider": "tavily", "api_key": "k"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_tavily.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_tavily.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "test"}), tool_ctx)
     assert result == "Direct answer.", f"Answer must not be dropped, got {result!r}"
@@ -539,21 +539,21 @@ def test_tavily_rejects_unsupported_search_depth(tool_ctx: ToolContext) -> None:
         config={"search_provider": "tavily", "api_key": "k", "search_depth": "fast"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_tavily.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_tavily.httpx.post") as mock_post:
         result = tool.invoke(json.dumps({"query": "test"}), tool_ctx)
     assert "search_depth" in result
     assert mock_post.call_count == 0, "Must not call the API for an invalid search_depth."
 
 
 def test_tavily_max_results_clamped() -> None:
-    """``max_results`` is coerced + clamped to Tavily's 1-20 range; junk → default."""
-    assert _resolve_max_results_tavily({}) == 5  # missing → default
-    assert _resolve_max_results_tavily({"max_results": "0"}) == 1  # below min → clamped up
-    assert _resolve_max_results_tavily({"max_results": "500"}) == 20  # above max → clamped down
-    assert _resolve_max_results_tavily({"max_results": "abc"}) == 5  # non-numeric → default
+    """``max_results`` is coerced + clamped to Tavily's 1-20 range; junk â†’ default."""
+    assert _resolve_max_results_tavily({}) == 5  # missing â†’ default
+    assert _resolve_max_results_tavily({"max_results": "0"}) == 1  # below min â†’ clamped up
+    assert _resolve_max_results_tavily({"max_results": "500"}) == 20  # above max â†’ clamped down
+    assert _resolve_max_results_tavily({"max_results": "abc"}) == 5  # non-numeric â†’ default
 
 
-# ── No search_provider set ───────────────────────────
+# â”€â”€ No search_provider set â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_no_search_provider_fails_loudly(
@@ -561,11 +561,11 @@ def test_no_search_provider_fails_loudly(
 ) -> None:
     """
     Without ``search_provider``, web_search returns a loud, helpful error
-    naming the available engines rather than silently picking one — so it is
+    naming the available engines rather than silently picking one â€” so it is
     always explicit which engine ran (per maintainer review). The DDG backend
     must not be invoked.
     """
-    import agent_meow.tools.builtins.web_search_duckduckgo as ddg
+    import omnigent.tools.builtins.web_search_duckduckgo as ddg
 
     monkeypatch.setattr(
         ddg, "_search_duckduckgo", lambda q, c: pytest.fail("must not auto-run DDG")
@@ -583,7 +583,7 @@ def test_no_search_provider_fails_loudly(
     assert "keenable" in result.lower()
 
 
-# ── search_provider: keenable ────────────────────────
+# â”€â”€ search_provider: keenable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_keenable_backend_via_spec_config(tool_ctx: ToolContext) -> None:
@@ -606,7 +606,7 @@ def test_keenable_backend_via_spec_config(tool_ctx: ToolContext) -> None:
         config={"search_provider": "keenable"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_keenable.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_keenable.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "keenable"}), tool_ctx)
 
@@ -618,7 +618,7 @@ def test_keenable_backend_via_spec_config(tool_ctx: ToolContext) -> None:
 def test_keenable_keyless_by_default(tool_ctx: ToolContext) -> None:
     """
     Without api_key, Keenable hits the keyless public endpoint and sends
-    no auth header — it must NOT error like the other backends do.
+    no auth header â€” it must NOT error like the other backends do.
     """
     fake_response = MagicMock()
     fake_response.json.return_value = {"results": []}
@@ -627,7 +627,7 @@ def test_keenable_keyless_by_default(tool_ctx: ToolContext) -> None:
         config={"search_provider": "keenable"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_keenable.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_keenable.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -647,7 +647,7 @@ def test_keenable_keyed_uses_x_api_key_and_authed_endpoint(tool_ctx: ToolContext
         config={"search_provider": "keenable", "api_key": "spec-keenable"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_keenable.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_keenable.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -669,7 +669,7 @@ def test_keenable_sends_x_keenable_title_header(tool_ctx: ToolContext) -> None:
         config={"search_provider": "keenable"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_keenable.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_keenable.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -688,7 +688,7 @@ def test_keenable_http_error_returns_error_string(tool_ctx: ToolContext) -> None
         config={"search_provider": "keenable"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_keenable.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_keenable.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -704,7 +704,7 @@ def test_keenable_empty_results_returns_no_results(tool_ctx: ToolContext) -> Non
         config={"search_provider": "keenable"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_keenable.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_keenable.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -724,7 +724,7 @@ def test_keenable_max_results_slices_output(tool_ctx: ToolContext) -> None:
         config={"search_provider": "keenable", "max_results": "2"},
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_keenable.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_keenable.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -734,14 +734,14 @@ def test_keenable_max_results_slices_output(tool_ctx: ToolContext) -> None:
 
 
 def test_keenable_max_results_clamped() -> None:
-    """``max_results`` is coerced + clamped to a 1-20 range; junk → default."""
-    assert _resolve_max_results_keenable({}) == 5  # missing → default
-    assert _resolve_max_results_keenable({"max_results": "0"}) == 1  # below min → clamped up
-    assert _resolve_max_results_keenable({"max_results": "500"}) == 20  # above max → clamped down
-    assert _resolve_max_results_keenable({"max_results": "abc"}) == 5  # non-numeric → default
+    """``max_results`` is coerced + clamped to a 1-20 range; junk â†’ default."""
+    assert _resolve_max_results_keenable({}) == 5  # missing â†’ default
+    assert _resolve_max_results_keenable({"max_results": "0"}) == 1  # below min â†’ clamped up
+    assert _resolve_max_results_keenable({"max_results": "500"}) == 20  # above max â†’ clamped down
+    assert _resolve_max_results_keenable({"max_results": "abc"}) == 5  # non-numeric â†’ default
 
 
-# ── Spec config passed through ───────────────────────
+# â”€â”€ Spec config passed through â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_google_spec_config_used_in_http_call(tool_ctx: ToolContext) -> None:
@@ -760,7 +760,7 @@ def test_google_spec_config_used_in_http_call(tool_ctx: ToolContext) -> None:
         },
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_google.httpx.get") as mock_get:
+    with patch("omnigent.tools.builtins.web_search_google.httpx.get") as mock_get:
         mock_get.return_value = fake_response
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -785,7 +785,7 @@ def test_perplexity_spec_config_used_in_http_call(tool_ctx: ToolContext) -> None
         },
         llm_provider="anthropic",
     )
-    with patch("agent_meow.tools.builtins.web_search_perplexity.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_perplexity.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         tool.invoke(json.dumps({"query": "test"}), tool_ctx)
 
@@ -801,7 +801,7 @@ def test_tool_name_is_web_search() -> None:
     assert WebSearchTool(llm_provider="openai").name() == "web_search"
 
 
-# ── Async dispatch contract ───────────────────────────────────────────────
+# â”€â”€ Async dispatch contract â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_non_openai_mode_is_sync_in_sessions_native_mode() -> None:

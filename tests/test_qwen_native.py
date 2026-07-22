@@ -13,7 +13,7 @@ import httpx
 import pytest
 import yaml
 
-from agent_meow import qwen_native as qn
+from omnigent import qwen_native as qn
 
 
 def test_resolve_qwen_executable_found() -> None:
@@ -134,7 +134,7 @@ async def test_create_qwen_session_returns_id_and_sends_labels() -> None:
     import json as _json
 
     meta = _json.loads(kw["data"]["metadata"])
-    assert meta["labels"]["agent_meow.wrapper"] == "qwen-native-ui"
+    assert meta["labels"]["omnigent.wrapper"] == "qwen-native-ui"
     assert meta["terminal_launch_args"] == ["-m", "x"]
 
 
@@ -178,26 +178,26 @@ async def test_ensure_qwen_terminal_on_runner() -> None:
 
 
 async def test_find_running_qwen_terminal_variants() -> None:
-    # 404 → not created yet.
+    # 404 â†’ not created yet.
     c404 = _FakeClient()
     c404.get_responses = [_resp(404)]
     assert await qn._find_running_qwen_terminal(c404, "conv") is None
-    # running:false metadata → treated as absent.
+    # running:false metadata â†’ treated as absent.
     cstopped = _FakeClient()
     cstopped.get_responses = [
         _resp(200, {"id": "terminal_qwen_main", "metadata": {"running": False}})
     ]
     assert await qn._find_running_qwen_terminal(cstopped, "conv") is None
-    # transient "offline"/"not bound" → None (caller keeps polling).
+    # transient "offline"/"not bound" â†’ None (caller keeps polling).
     coffline = _FakeClient()
     coffline.get_responses = [_resp(503, {"detail": "runner is offline"})]
     assert await qn._find_running_qwen_terminal(coffline, "conv") is None
-    # hard error → raise.
+    # hard error â†’ raise.
     cerr = _FakeClient()
     cerr.get_responses = [_resp(500, {"detail": "boom"})]
     with pytest.raises(click.ClickException):
         await qn._find_running_qwen_terminal(cerr, "conv")
-    # healthy → decoded terminal.
+    # healthy â†’ decoded terminal.
     cok = _FakeClient()
     cok.get_responses = [
         _resp(
@@ -214,7 +214,7 @@ async def test_wait_for_qwen_terminal_ready_returns_then_times_out() -> None:
     ready.get_responses = [_resp(200, {"id": "terminal_qwen_main", "metadata": {}})]
     launched = await qn._wait_for_qwen_terminal_ready(ready, "conv", timeout_s=1.0)
     assert launched.terminal_id == "terminal_qwen_main"
-    # Never appears → ClickException after the deadline.
+    # Never appears â†’ ClickException after the deadline.
     never = _FakeClient()  # get() returns 404 by default
     with pytest.raises(click.ClickException):
         await qn._wait_for_qwen_terminal_ready(never, "conv", timeout_s=0.05)
@@ -228,7 +228,7 @@ def test_resolve_session_id_for_resume_direct_and_no_picker() -> None:
         )
         == "conv_x"
     )
-    # No id and no picker → None (the CLI then creates a fresh session).
+    # No id and no picker â†’ None (the CLI then creates a fresh session).
     assert (
         qn._resolve_session_id_for_resume(
             base_url="http://t", headers={}, session_id=None, resume_picker=False
@@ -242,11 +242,11 @@ def test_preflight_local_tools_requires_tmux(monkeypatch: pytest.MonkeyPatch) ->
     with pytest.raises(click.ClickException, match="tmux"):
         qn._preflight_local_tools()
     monkeypatch.setattr(qn.shutil, "which", lambda _cmd: "/usr/bin/tmux")
-    qn._preflight_local_tools()  # present → no raise
+    qn._preflight_local_tools()  # present â†’ no raise
 
 
 def test_update_startup_progress_is_optional() -> None:
-    qn._update_startup_progress(None, "msg")  # no renderer → no-op
+    qn._update_startup_progress(None, "msg")  # no renderer â†’ no-op
 
     class _P:
         def __init__(self) -> None:
@@ -272,7 +272,7 @@ def _aret(value: object):
 
 async def test_prepare_reattaches_running_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        qn, "_fetch_qwen_session", _aret({"labels": {"agent_meow.wrapper": "qwen-native-ui"}})
+        qn, "_fetch_qwen_session", _aret({"labels": {"omnigent.wrapper": "qwen-native-ui"}})
     )
     term = qn.LaunchedQwenTerminal(
         terminal_id="terminal_qwen_main", tmux_socket=Path("/s"), tmux_target="t:0"
@@ -295,7 +295,7 @@ async def test_prepare_reattaches_running_terminal(monkeypatch: pytest.MonkeyPat
 
 async def test_prepare_rejects_non_qwen_session(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        qn, "_fetch_qwen_session", _aret({"labels": {"agent_meow.wrapper": "claude-code-native-ui"}})
+        qn, "_fetch_qwen_session", _aret({"labels": {"omnigent.wrapper": "claude-code-native-ui"}})
     )
     with pytest.raises(click.ClickException, match="not a qwen-native session"):
         await qn._prepare_qwen_terminal_via_daemon(
@@ -362,6 +362,6 @@ def test_direct_tmux_reason_target_missing_and_ok(
         session_id="c", terminal_id="t", tmux_socket=sock, tmux_target="x:0", reattached=False
     )
     monkeypatch.setattr(qn.shutil, "which", lambda _c: "/usr/bin/tmux")
-    assert qn._direct_tmux_unavailable_reason(good) is None  # all present → attachable
+    assert qn._direct_tmux_unavailable_reason(good) is None  # all present â†’ attachable
     monkeypatch.setattr(qn.shutil, "which", lambda _c: None)
     assert "PATH" in (qn._direct_tmux_unavailable_reason(good) or "")

@@ -10,10 +10,10 @@ from typing import Any
 
 import pytest
 
-from agent_meow.claude_native_bridge import REQUEST_SESSION_ID_ENV_VAR
-from agent_meow.inner import claude_native_executor
-from agent_meow.inner.claude_native_executor import ClaudeNativeExecutor
-from agent_meow.inner.executor import ExecutorError, TurnComplete
+from omnigent.claude_native_bridge import REQUEST_SESSION_ID_ENV_VAR
+from omnigent.inner import claude_native_executor
+from omnigent.inner.claude_native_executor import ClaudeNativeExecutor
+from omnigent.inner.executor import ExecutorError, TurnComplete
 
 # Minimal valid 1x1 white PNG used for multimodal attachment tests.
 _TINY_PNG_B64 = (

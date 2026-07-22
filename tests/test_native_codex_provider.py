@@ -1,7 +1,7 @@
 """Tests for native-Codex provider routing (configure harnesses parity).
 
-Covers :func:`~?agent_meow.inner.codex_executor._provider_codex_config_overrides`
-and :func:`~?agent_meow.codex_native_app_server.resolve_native_codex_launch` —
+Covers :func:`~?omnigent.inner.codex_executor._provider_codex_config_overrides`
+and :func:`~?omnigent.codex_native_app_server.resolve_native_codex_launch` â€”
 the path that makes a native Codex terminal route through a ``configure
 harness`` provider just like the in-process codex harness, instead of only
 the Databricks ucode profile. Providers are constructed via the real config
@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.codex_native_app_server import resolve_native_codex_launch
-from agent_meow.inner.codex_executor import _provider_codex_config_overrides
+from omnigent.codex_native_app_server import resolve_native_codex_launch
+from omnigent.inner.codex_executor import _provider_codex_config_overrides
 
 
 @pytest.fixture()
@@ -39,7 +39,7 @@ def _seed(config_home: Path, providers: dict[str, object]) -> None:
 def _write_codex_login(home: Path, *, logged_in: bool) -> None:
     """Write (or stub-empty) ``~/.codex/auth.json`` under the isolated HOME.
 
-    The native subscription routing resolves ``CODEX_HOME or ~/.codex`` — with
+    The native subscription routing resolves ``CODEX_HOME or ~/.codex`` â€” with
     HOME redirected to *home* by the ``_isolated`` fixture, this controls
     whether Codex is considered logged in.
 
@@ -108,7 +108,7 @@ def test_provider_codex_overrides_omit_model_line_when_none() -> None:
 def test_resolve_native_codex_launch_key_default_routes_via_overrides(
     _isolated: Path,
 ) -> None:
-    """An openai key default → provider overrides, profile None.
+    """An openai key default â†’ provider overrides, profile None.
 
     The P0 parity: native Codex honors `configure harnesses`. Failure means
     the native launch ignored the configured provider.
@@ -170,10 +170,10 @@ def test_resolve_native_codex_launch_openrouter_coerces_chat_wire(_isolated: Pat
 def test_resolve_native_codex_launch_subscription_logged_in_uses_cli_login(
     _isolated: Path,
 ) -> None:
-    """A subscription default + a logged-in Codex → CLI login, openai pinned.
+    """A subscription default + a logged-in Codex â†’ CLI login, openai pinned.
 
     When Codex actually has a stored login, deferring to its own auth is
-    correct — the bridged ``auth.json`` authenticates it. The launch still
+    correct â€” the bridged ``auth.json`` authenticates it. The launch still
     pins the built-in ``openai`` provider: the bridged config.toml may set a
     custom default ``model_provider`` (e.g. isaac's Databricks AI Gateway),
     which would otherwise silently hijack the Subscription selection. Failure
@@ -188,7 +188,7 @@ def test_resolve_native_codex_launch_subscription_logged_in_uses_cli_login(
     _write_codex_login(_isolated, logged_in=True)
 
     launch = resolve_native_codex_launch(model=None)
-    # Exactly the openai pin — no base_url/auth overrides (the login carries auth).
+    # Exactly the openai pin â€” no base_url/auth overrides (the login carries auth).
     assert launch.config_overrides == ['model_provider="openai"']
     assert launch.profile is None
 
@@ -238,18 +238,18 @@ def test_resolve_native_codex_launch_subscription_ignores_private_inherited_home
 def test_resolve_native_codex_launch_subscription_no_login_falls_through_to_key(
     _isolated: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Subscription default but Codex NOT logged in → falls through to a real key.
+    """Subscription default but Codex NOT logged in â†’ falls through to a real key.
 
     This is the core fix for the reported bug: a stale/dead subscription default
     must not strand the user at Codex's login screen when they have a real
     credential configured. The key is NOT the persisted default (the
     subscription is), so this proves the runtime fall-through, not a default
-    change. Failure means the dead subscription shadows the key → empty
-    overrides → Codex login prompt.
+    change. Failure means the dead subscription shadows the key â†’ empty
+    overrides â†’ Codex login prompt.
     """
     # No ambient providers, so the fall-through target is unambiguously the
     # explicitly-configured key (not a detected env key / Ollama).
-    monkeypatch.setattr("agent_meow.onboarding.ambient._ollama_reachable", lambda: False)
+    monkeypatch.setattr("omnigent.onboarding.ambient._ollama_reachable", lambda: False)
     _seed(
         _isolated,
         {
@@ -278,15 +278,15 @@ def test_resolve_native_codex_launch_subscription_no_login_falls_through_to_key(
 def test_resolve_native_codex_launch_subscription_no_login_no_alternative_uses_login(
     _isolated: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Subscription default, NOT logged in, no other provider → Codex login.
+    """Subscription default, NOT logged in, no other provider â†’ Codex login.
 
     With no usable Codex login and nothing to fall through to, dropping to
-    Codex's own login is the correct outcome (the user must re-authenticate) —
+    Codex's own login is the correct outcome (the user must re-authenticate) â€”
     still pinned to the built-in ``openai`` provider so the login screen the
     user lands on is ChatGPT's, not a custom config.toml provider's. Failure
     with base_url/auth overrides would mean we fabricated a route from nothing.
     """
-    monkeypatch.setattr("agent_meow.onboarding.ambient._ollama_reachable", lambda: False)
+    monkeypatch.setattr("omnigent.onboarding.ambient._ollama_reachable", lambda: False)
     _seed(
         _isolated,
         {"codex-subscription": {"kind": "subscription", "cli": "codex", "default": True}},
@@ -299,7 +299,7 @@ def test_resolve_native_codex_launch_subscription_no_login_no_alternative_uses_l
 
 
 def test_resolve_native_codex_launch_databricks_provider_uses_profile(_isolated: Path) -> None:
-    """A databricks provider default → the ucode profile path (its profile)."""
+    """A databricks provider default â†’ the ucode profile path (its profile)."""
     _seed(
         _isolated,
         {"databricks": {"kind": "databricks", "default": True, "profile": "oss"}},
@@ -312,7 +312,7 @@ def test_resolve_native_codex_launch_databricks_provider_uses_profile(_isolated:
 
 
 def test_resolve_native_codex_launch_global_auth_when_no_provider(_isolated: Path) -> None:
-    """No provider configured + a global Databricks ``auth:`` block → ucode.
+    """No provider configured + a global Databricks ``auth:`` block â†’ ucode.
 
     With the ``--profile`` flag removed, the global ``auth:`` block in
     ``config.yaml`` is the only spec-less way to route native Codex through a
@@ -332,7 +332,7 @@ def test_resolve_native_codex_launch_global_auth_when_no_provider(_isolated: Pat
 def test_resolve_native_codex_launch_ambient_key_routes(
     _isolated: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Spec-less with only an ambient OPENAI_API_KEY → provider overrides.
+    """Spec-less with only an ambient OPENAI_API_KEY â†’ provider overrides.
 
     First run without configure: native Codex still routes through the
     detected env key (api.openai.com), not the CLI login.
@@ -352,7 +352,7 @@ def test_resolve_native_codex_launch_cli_config_default_pins_provider(
     """A cli-config default routes native codex via a model_provider pin only.
 
     The provider table + credential live in ~/.codex/config.toml (bridged
-    into the session CODEX_HOME), so the launch must carry exactly the pin —
+    into the session CODEX_HOME), so the launch must carry exactly the pin â€”
     no synthesized base_url/auth overrides, no profile, no forced model.
     Failure on the pin means an adopted isaac-style provider launches the
     native terminal on codex's built-in (unauthenticated) path; extra
@@ -396,13 +396,13 @@ def test_resolve_native_codex_launch_dismissed_config_provider_pins_openai(
     """A Removed (dismissed) config.toml provider is neutralized at launch.
 
     With the detection dismissed and nothing else configured, the launch
-    resolves NO provider — but the bridged ~/.codex/config.toml still sets
+    resolves NO provider â€” but the bridged ~/.codex/config.toml still sets
     ``model_provider = "Databricks"``, so an unpinned launch would silently
     route through the very credential the user removed (the reported bug:
     codex kept answering through the gateway after Remove). The launch must
     pin codex's built-in ``openai`` provider instead.
     """
-    monkeypatch.setattr("agent_meow.onboarding.ambient._ollama_reachable", lambda: False)
+    monkeypatch.setattr("omnigent.onboarding.ambient._ollama_reachable", lambda: False)
     codex_dir = _isolated / ".codex"
     codex_dir.mkdir()
     (codex_dir / "config.toml").write_text(_DISMISSIBLE_CODEX_CONFIG)
@@ -427,7 +427,7 @@ def test_resolve_native_codex_launch_undismissed_config_provider_routes_via_pin(
     ``openai``. Failure here means the no-provider neutralization fires too
     broadly and breaks the feature's golden path.
     """
-    monkeypatch.setattr("agent_meow.onboarding.ambient._ollama_reachable", lambda: False)
+    monkeypatch.setattr("omnigent.onboarding.ambient._ollama_reachable", lambda: False)
     codex_dir = _isolated / ".codex"
     codex_dir.mkdir()
     (codex_dir / "config.toml").write_text(_DISMISSIBLE_CODEX_CONFIG)

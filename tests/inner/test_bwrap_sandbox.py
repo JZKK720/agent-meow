@@ -36,15 +36,15 @@ from unittest.mock import patch
 
 import pytest
 
-from agent_meow.inner.bwrap_sandbox import (
+from omnigent.inner.bwrap_sandbox import (
     _ALLOWED_SOCKET_FAMILIES,
     _CLONE_NEW_FLAG_BITS,
     _DEFAULT_CWD_ALLOW_HIDDEN,
     BwrapSandboxBackend,
     _bwrap_extra_seccomp_rules,
 )
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-from agent_meow.inner.sandbox import SandboxPolicy, with_denied_unix_sockets
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+from omnigent.inner.sandbox import SandboxPolicy, with_denied_unix_sockets
 
 BWRAP_AVAILABLE = shutil.which("bwrap") is not None
 
@@ -100,7 +100,7 @@ def _make_policy(
     :param cwd: Effective working directory for the helper.
     :param allow_hidden: Override for ``cwd_allow_hidden``; ``None``
         keeps the field as ``None`` (the bwrap argv builder treats
-        it as an empty allowlist when not supplied — the resolver is
+        it as an empty allowlist when not supplied â€” the resolver is
         what fills in the documented default).
     :param write_roots: Explicit write roots; defaults to ``[]``
         (cwd RO).
@@ -142,12 +142,12 @@ def _run_helper_probe(
 
     The probe runs as: ``[python, "-c", probe_script]`` wrapped by
     :meth:`wrap_launcher_argv`. Inside the script, the test must
-    call :func:`~?agent_meow.inner.sandbox.activate_sandbox` with the
+    call :func:`~?omnigent.inner.sandbox.activate_sandbox` with the
     deserialised policy itself if it wants the seccomp profile to
-    engage — :meth:`activate` is what installs the seccomp BPF.
+    engage â€” :meth:`activate` is what installs the seccomp BPF.
 
     The repository root is added to the policy's ``read_roots`` so
-    the probe can ``import agent_meow.*`` inside the sandbox even
+    the probe can ``import omnigent.*`` inside the sandbox even
     when ``cwd`` is a throwaway tempdir.
 
     :param cwd: Effective working directory; bind-mounted into the
@@ -221,7 +221,7 @@ def _repo_root() -> Path:
 
     :returns: The directory containing the ``agent-meow`` package.
     """
-    # tests/inner/test_bwrap_sandbox.py → tests/inner/ → tests/ → repo root
+    # tests/inner/test_bwrap_sandbox.py â†’ tests/inner/ â†’ tests/ â†’ repo root
     return Path(__file__).resolve().parents[2]
 
 
@@ -252,7 +252,7 @@ def test_resolve_default_keeps_cwd_read_only() -> None:
     assert policy.write_roots == [], (
         "bwrap resolve() must default write_roots to [] (cwd RO). "
         "If non-empty here, the resolver is silently elevating cwd "
-        "to writable — opposite of the documented default."
+        "to writable â€” opposite of the documented default."
     )
     assert policy.read_roots is None  # No spec-supplied read_paths.
 
@@ -288,7 +288,7 @@ def test_resolve_default_cwd_allow_hidden_is_dot_venv() -> None:
     )
     policy = backend.resolve(spec, Path.cwd())
     assert policy.cwd_allow_hidden == list(_DEFAULT_CWD_ALLOW_HIDDEN), (
-        "Default allowlist drift — _DEFAULT_CWD_ALLOW_HIDDEN is "
+        "Default allowlist drift â€” _DEFAULT_CWD_ALLOW_HIDDEN is "
         "the documented baseline; if this fails, either the constant "
         "moved or the resolver stopped substituting the default."
     )
@@ -297,7 +297,7 @@ def test_resolve_default_cwd_allow_hidden_is_dot_venv() -> None:
 def test_resolve_explicit_cwd_allow_hidden_overrides_default() -> None:
     """
     An explicit ``cwd_allow_hidden`` in the spec replaces the default
-    entirely (no merge). This matches the Fail-Loud contract — the
+    entirely (no merge). This matches the Fail-Loud contract â€” the
     spec-self-containment rule says the spec is the source of truth,
     not a delta against an invisible default.
     """
@@ -323,7 +323,7 @@ def test_resolve_raises_on_non_linux() -> None:
         type="caller_process",
         sandbox=OSEnvSandboxSpec(type="linux_bwrap"),
     )
-    with patch("agent_meow.inner.bwrap_sandbox.sys.platform", "darwin"):
+    with patch("omnigent.inner.bwrap_sandbox.sys.platform", "darwin"):
         with pytest.raises(OSError, match="only available on Linux"):
             backend.resolve(spec, Path.cwd())
 
@@ -340,7 +340,7 @@ def test_resolve_raises_when_bwrap_missing() -> None:
         type="caller_process",
         sandbox=OSEnvSandboxSpec(type="linux_bwrap"),
     )
-    with patch("agent_meow.inner.bwrap_sandbox.shutil.which", return_value=None):
+    with patch("omnigent.inner.bwrap_sandbox.shutil.which", return_value=None):
         with pytest.raises(OSError, match="bwrap"):
             backend.resolve(spec, Path.cwd())
 
@@ -359,14 +359,14 @@ def test_wrap_launcher_argv_starts_with_bwrap_and_ends_with_command(
     original command after ``--`` so bwrap forwards the rest as the
     inner argv.
 
-    Failure here means the wrap is structurally broken — Popen
+    Failure here means the wrap is structurally broken â€” Popen
     would either run the wrong binary or pass bwrap flags to the
     helper.
     """
     backend = _make_backend()
     policy = _make_policy(tmp_path)
     argv = backend.wrap_launcher_argv(
-        [sys.executable, "-m", "agent_meow.inner.os_env", "helper", "X"],
+        [sys.executable, "-m", "omnigent.inner.os_env", "helper", "X"],
         policy,
         tmp_path,
     )
@@ -377,7 +377,7 @@ def test_wrap_launcher_argv_starts_with_bwrap_and_ends_with_command(
     assert argv[dash_idx + 1 :] == [
         sys.executable,
         "-m",
-        "agent_meow.inner.os_env",
+        "omnigent.inner.os_env",
         "helper",
         "X",
     ]
@@ -391,7 +391,7 @@ def test_wrap_launcher_argv_includes_required_mounts_and_chdir(
     ``/lib*``, ``/bin``, ``/sbin``), the cwd bind, ``--proc /proc``,
     ``--dev /dev``, ``--tmpfs /tmp``, and the ``--chdir`` target.
 
-    A regression here means the hermetic root degraded — typical
+    A regression here means the hermetic root degraded â€” typical
     cause is dropping a default mount during a refactor and not
     noticing because the helper still launches (it just can't find
     libc, or sees a different /proc, etc.).
@@ -426,7 +426,7 @@ def test_wrap_launcher_argv_unshare_net_follows_allow_network(
     network namespace; with ``False`` bwrap creates a fresh empty
     namespace (no host interfaces).
 
-    Direction of the flag matters — flipping it would silently
+    Direction of the flag matters â€” flipping it would silently
     invert network policy for every spec.
     """
     backend = _make_backend()
@@ -442,7 +442,7 @@ def test_wrap_launcher_argv_cwd_writable_when_write_root_matches(
     When a ``write_root`` resolves to cwd, the cwd bind-mount must
     use ``--bind`` (read-write) instead of ``--ro-bind``.
 
-    Direct shape check on the argv slot following the cwd path —
+    Direct shape check on the argv slot following the cwd path â€”
     the ordering is fixed so the index of the cwd token tells us
     which bind variant landed.
     """
@@ -461,7 +461,7 @@ def test_wrap_launcher_argv_cwd_writable_when_write_root_matches(
         f"(--ro-bind would silently make cwd read-only)."
     )
     assert "--ro-bind" not in bind_verbs, (
-        "Both --bind and --ro-bind landed on the cwd — duplicate "
+        "Both --bind and --ro-bind landed on the cwd â€” duplicate "
         "mounts would shadow each other in bwrap."
     )
 
@@ -469,7 +469,7 @@ def test_wrap_launcher_argv_cwd_writable_when_write_root_matches(
 def test_wrap_launcher_argv_cwd_read_only_by_default(tmp_path: Path) -> None:
     """
     With an empty ``write_roots`` (the default), cwd is bound
-    ``--ro-bind`` — the bwrap-specific default the user
+    ``--ro-bind`` â€” the bwrap-specific default the user
     explicitly asked for.
     """
     backend = _make_backend()
@@ -532,7 +532,7 @@ def test_wrap_launcher_argv_no_socket_mask_when_deny_list_empty(
 ) -> None:
     """
     With no ``deny_unix_socket_paths`` the builder emits no
-    ``--bind-try /dev/null`` socket mask — the feature is opt-in and
+    ``--bind-try /dev/null`` socket mask â€” the feature is opt-in and
     must not perturb the argv for terminals that don't manage a tmux
     control socket.
     """
@@ -581,7 +581,7 @@ def test_wrap_launcher_argv_chdir_overrides_only_entry_directory(
 
     The workspace (``cwd``) still gets bound at its real absolute
     path so the agent can reach project files via absolute paths,
-    but ``--chdir`` points at the alternate directory — the
+    but ``--chdir`` points at the alternate directory â€” the
     expected behaviour for ``OSEnvSpec.start_in_scratch``, where
     the helper boots inside the scratch tmpdir while reads of the
     project tree keep working.
@@ -616,7 +616,7 @@ def test_wrap_launcher_argv_chdir_overrides_only_entry_directory(
     workspace_indices = [i for i, token in enumerate(argv) if token == str(workspace_resolved)]
     bind_verbs = [argv[i - 1] for i in workspace_indices if argv[i - 1] in {"--bind", "--ro-bind"}]
     assert "--ro-bind" in bind_verbs, (
-        "Workspace bind missing — start_in_scratch must keep the project reachable for reads."
+        "Workspace bind missing â€” start_in_scratch must keep the project reachable for reads."
     )
 
     # Scratch is added to write_roots so it appears as --bind-try later
@@ -686,7 +686,7 @@ def test_wrap_launcher_argv_binds_intermediate_symlink_at_literal_path(
 
     backend = _make_backend()
     # cwd is a separate scratch dir, so the venv-and-installs tree is
-    # outside cwd and outside the default mounts — _ensure_executable_visible
+    # outside cwd and outside the default mounts â€” _ensure_executable_visible
     # is the only path that can expose them.
     scratch = tmp_path / "scratch"
     scratch.mkdir()
@@ -778,7 +778,7 @@ def test_wrap_launcher_argv_target_none_no_extra_binds(
 ) -> None:
     """
     When ``target=None`` (the default), the argv must be identical to
-    the ``target``-free call — no spurious extra ``--ro-bind-try``
+    the ``target``-free call â€” no spurious extra ``--ro-bind-try``
     args are emitted.
 
     Regression guard: the target-visibility feature must be strictly
@@ -803,7 +803,7 @@ def test_wrap_launcher_argv_target_already_in_default_mounts(
     """
     When the target binary lives under a default RO mount (``/usr``,
     ``/bin``, ``/sbin``, etc.) no extra bind args are emitted for it
-    — ``_ensure_executable_visible`` already skips paths covered by
+    â€” ``_ensure_executable_visible`` already skips paths covered by
     :data:`_DEFAULT_RO_DIRS`.
 
     Ensures the target-visibility feature doesn't add redundant mounts
@@ -812,7 +812,7 @@ def test_wrap_launcher_argv_target_already_in_default_mounts(
     backend = _make_backend()
     policy = _make_policy(tmp_path)
     # /usr/bin/env is a regular binary directly under /usr, which is in
-    # _DEFAULT_RO_DIRS — no extra binds should land for it.
+    # _DEFAULT_RO_DIRS â€” no extra binds should land for it.
     env_path = "/usr/bin/env"
     argv_no_target = backend.wrap_launcher_argv([sys.executable, "-c", "pass"], policy, tmp_path)
     argv_with_target = backend.wrap_launcher_argv(
@@ -855,16 +855,16 @@ def test_dotfile_masking_hides_disallowed_dotfiles(tmp_path: Path) -> None:
     venv_path = str(cwd / ".venv")
     regular_path = str(cwd / "regular.txt")
 
-    # .env is a file → masked with --bind-try /dev/null
+    # .env is a file â†’ masked with --bind-try /dev/null
     assert _has_pair(argv, "--bind-try", "/dev/null", env_path), (
         f".env not masked with --bind-try /dev/null. argv slice: "
         f"{[t for t in argv if '.env' in t or 'null' in t]}"
     )
-    # .aws is a dir → masked with --tmpfs
+    # .aws is a dir â†’ masked with --tmpfs
     assert _has_pair_single_dest(argv, "--tmpfs", aws_path), (
         f".aws not masked with --tmpfs. argv slice: {[t for t in argv if '.aws' in t]}"
     )
-    # .venv is on the allowlist → no mask of any kind
+    # .venv is on the allowlist â†’ no mask of any kind
     assert not _argv_mentions(argv, venv_path, after_token="--tmpfs"), (
         ".venv is on the allowlist but a --tmpfs mask landed for it."
     )
@@ -881,13 +881,13 @@ def test_dotfile_masking_skips_target_that_vanished_after_scan(
 ) -> None:
     """
     A dotfile the scan saw but that vanished before the argv is built
-    produces NO mask triple — otherwise bwrap would try to create the
+    produces NO mask triple â€” otherwise bwrap would try to create the
     mountpoint inside the ro-bound cwd and abort (the flaky CI failure,
     where coverage.py's transient ``.coverage.*`` files raced the scan).
     A persistent dotfile alongside it is still masked.
     """
-    from agent_meow.inner import bwrap_sandbox
-    from agent_meow.inner._cwd_scan import MaskedEntry
+    from omnigent.inner import bwrap_sandbox
+    from omnigent.inner._cwd_scan import MaskedEntry
 
     cwd = tmp_path.resolve(strict=False)
     (tmp_path / ".env").write_text("SECRET=42")
@@ -911,7 +911,7 @@ def test_dotfile_masking_skips_target_that_vanished_after_scan(
         ".env (present) should still be masked with --bind-try /dev/null."
     )
     assert _index_of_triple(argv, "--bind-try", "/dev/null", str(vanished_path)) is None, (
-        "A vanished dotfile must NOT be masked — bwrap would have to "
+        "A vanished dotfile must NOT be masked â€” bwrap would have to "
         "create the mountpoint inside the read-only cwd bind and abort. "
         f"argv slice: {[t for t in argv if 'coverage' in t]}"
     )
@@ -924,7 +924,7 @@ def test_dotfile_masking_skips_target_that_vanished_after_scan(
 # verified once for both `linux_bwrap` and `darwin_seatbelt`. The
 # top-level dotfile / dotdir test above stays here to assert the
 # bwrap-specific emit translation
-# (``"file"`` → ``--bind-try /dev/null``, ``"dir"`` → ``--tmpfs``).
+# (``"file"`` â†’ ``--bind-try /dev/null``, ``"dir"`` â†’ ``--tmpfs``).
 
 
 def test_s5_read_paths_dotfile_masking_blocks_dot_aws_under_home_grant(
@@ -980,7 +980,7 @@ def test_s5_read_paths_dotfile_masking_blocks_dot_aws_under_home_grant(
     )
     assert not _argv_mentions(argv, code_path, after_token="--tmpfs"), (
         "Non-dotfile entries under a read_paths root must NOT be "
-        "masked — the whole point of granting the root is to "
+        "masked â€” the whole point of granting the root is to "
         "expose those files."
     )
 
@@ -1015,7 +1015,7 @@ def test_s5_read_paths_dotfile_masking_honors_cwd_allow_hidden(
     ssh_path = str(fake_home.resolve(strict=False) / ".ssh")
     assert not _argv_mentions(argv, aws_path, after_token="--tmpfs"), (
         ".aws is in cwd_allow_hidden but a --tmpfs mask still "
-        "landed for it under the read_paths root — the allowlist "
+        "landed for it under the read_paths root â€” the allowlist "
         "filter is not being applied to read_paths."
     )
     assert _has_pair_single_dest(argv, "--tmpfs", ssh_path), (
@@ -1055,7 +1055,7 @@ def test_s5_read_paths_dedup_skips_paths_under_cwd(tmp_path: Path) -> None:
         if argv[i] == "--bind-try" and argv[i + 1] == "/dev/null" and argv[i + 2] == env_path
     )
     assert occurrences == 1, (
-        f".env masked {occurrences}x — the read_paths walker should "
+        f".env masked {occurrences}x â€” the read_paths walker should "
         f"skip roots at-or-under cwd to avoid double-emission. "
         f"argv slice: {[t for t in argv if '.env' in t or t == '--bind-try' or t == '/dev/null']}"
     )
@@ -1080,12 +1080,12 @@ def test_seccomp_blocks_dangerous_socket_families_inside_helper(tmp_path: Path) 
     ``AF_INET`` / ``AF_INET6`` open.
 
     Spawns a real bwrap helper that activates the sandbox itself
-    and reports per-family results — the only honest way to
+    and reports per-family results â€” the only honest way to
     verify a kernel BPF filter actually engaged.
     """
     probe = """
 import base64, json, socket, sys
-from agent_meow.inner.sandbox import SandboxPolicy, activate_sandbox
+from omnigent.inner.sandbox import SandboxPolicy, activate_sandbox
 
 policy = SandboxPolicy.from_jsonable(
     json.loads(base64.urlsafe_b64decode(sys.argv[1]).decode("utf-8"))
@@ -1133,12 +1133,12 @@ def test_seccomp_blocks_unshare_and_setns_inside_helper(tmp_path: Path) -> None:
     """
     ``unshare(CLONE_NEWUSER)`` and ``setns()`` return ``EPERM``
     inside the helper. These are the canonical user-namespace
-    privesc primitives — blocking them is the central security
+    privesc primitives â€” blocking them is the central security
     invariant the bwrap backend exists to enforce.
     """
     probe = """
 import base64, ctypes, errno, json, sys
-from agent_meow.inner.sandbox import SandboxPolicy, activate_sandbox
+from omnigent.inner.sandbox import SandboxPolicy, activate_sandbox
 policy = SandboxPolicy.from_jsonable(
     json.loads(base64.urlsafe_b64decode(sys.argv[1]).decode("utf-8"))
 )
@@ -1191,7 +1191,7 @@ def test_seccomp_blocks_clone_with_namespace_flags_inside_helper(
     """
     probe = """
 import base64, ctypes, errno, json, signal, sys
-from agent_meow.inner.sandbox import SandboxPolicy, activate_sandbox
+from omnigent.inner.sandbox import SandboxPolicy, activate_sandbox
 policy = SandboxPolicy.from_jsonable(
     json.loads(base64.urlsafe_b64decode(sys.argv[1]).decode("utf-8"))
 )
@@ -1228,7 +1228,7 @@ def test_seccomp_extra_rules_include_one_clone_rule_per_namespace_bit() -> None:
     per :data:`_CLONE_NEW_FLAG_BITS` entry. Each rule is a
     ``MASKED_EQ`` filter on arg 0 with ``datum_a == datum_b == bit``.
 
-    Failure here means the per-bit fan-out logic regressed — easy to
+    Failure here means the per-bit fan-out logic regressed â€” easy to
     miss because bwrap would still launch and the shared baseline
     syscalls (mount, ptrace, etc.) would still be blocked, just not
     the namespace bits.
@@ -1257,7 +1257,7 @@ def test_seccomp_extra_rules_block_clone3_outright() -> None:
     to deny the entire syscall) and the action returns ``ENOSYS``
     rather than ``EPERM``. ``ENOSYS`` is the contract glibc's
     ``clone_internal`` checks before falling back to legacy
-    ``clone`` — returning ``EPERM`` here breaks ``pthread_create``
+    ``clone`` â€” returning ``EPERM`` here breaks ``pthread_create``
     on glibc 2.34+ (Ubuntu 22.04 ships 2.35) because glibc treats
     ``EPERM`` as a hard failure and propagates it instead of
     retrying. The in-helper egress relay thread depends on
@@ -1267,7 +1267,7 @@ def test_seccomp_extra_rules_block_clone3_outright() -> None:
     """
     import errno
 
-    from agent_meow.inner._seccomp import scmp_act_errno
+    from omnigent.inner._seccomp import scmp_act_errno
 
     rules = _bwrap_extra_seccomp_rules()
     clone3 = [r for r in rules if r.syscall == "clone3"]
@@ -1288,7 +1288,7 @@ def test_seccomp_extra_rules_socket_allowlist() -> None:
     using range-based deny rules: individual denies for the gaps plus
     a ``SCMP_CMP_GE`` rule that catches all families >= 11 (future-proof).
     """
-    from agent_meow.inner._seccomp import SCMP_CMP_EQ, SCMP_CMP_GE
+    from omnigent.inner._seccomp import SCMP_CMP_EQ, SCMP_CMP_GE
 
     rules = _bwrap_extra_seccomp_rules()
     socket_rules = [r for r in rules if r.syscall == "socket"]
@@ -1376,7 +1376,7 @@ def _argv_mentions(argv: list[str], path: str, *, after_token: str) -> bool:
     for i in range(len(argv) - 1):
         if argv[i] == after_token and argv[i + 1] == path:
             return True
-        # Triple form: --bind <src> <dest> — path can be the dest.
+        # Triple form: --bind <src> <dest> â€” path can be the dest.
         if i + 2 < len(argv) and argv[i] == after_token and argv[i + 2] == path:
             return True
     return False

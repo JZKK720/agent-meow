@@ -1,5 +1,5 @@
 """Tests for ``build_accept_content_from_schema`` in
-``agent_meow.tools._elicitation_schema``.
+``omnigent.tools._elicitation_schema``.
 
 Covers auto-fill logic for MCP elicitation ``requestedSchema`` objects:
 booleans, oneOf enums, plain enums, defaults, free-form fields, and
@@ -12,11 +12,11 @@ from typing import Any
 
 import pytest
 
-from agent_meow.tools._elicitation_schema import (
+from omnigent.tools._elicitation_schema import (
     build_accept_content_from_schema as _build_elicitation_content_from_schema,
 )
 
-# ── Empty / missing properties ────────────────────────────────
+# â”€â”€ Empty / missing properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -36,7 +36,7 @@ def test_returns_none_for_empty_or_missing_properties(
     description: str,
 ) -> None:
     """
-    Schemas without actionable properties return ``None`` — the
+    Schemas without actionable properties return ``None`` â€” the
     caller should treat this as a binary approve/decline with no
     content payload.
 
@@ -52,7 +52,7 @@ def test_returns_none_for_empty_or_missing_properties(
     )
 
 
-# ── Boolean properties ────────────────────────────────────────
+# â”€â”€ Boolean properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_boolean_property_auto_fills_true() -> None:
@@ -78,7 +78,7 @@ def test_boolean_property_auto_fills_true() -> None:
     )
 
 
-# ── oneOf enum properties ─────────────────────────────────────
+# â”€â”€ oneOf enum properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_oneof_enum_picks_allow_when_present() -> None:
@@ -115,7 +115,7 @@ def test_oneof_enum_picks_first_const_without_allow() -> None:
     When a oneOf enum has no ``"allow"`` const, the first const
     value is picked.
 
-    If this fails: the fallback in the oneOf branch is broken —
+    If this fails: the fallback in the oneOf branch is broken â€”
     it either returns None (can't auto-fill) or picks a wrong value.
     """
     schema: dict[str, Any] = {
@@ -163,7 +163,7 @@ def test_oneof_enum_returns_none_when_no_const() -> None:
     assert result is None, "oneOf entries without 'const' keys should not be auto-fillable"
 
 
-# ── Plain enum properties ─────────────────────────────────────
+# â”€â”€ Plain enum properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_plain_enum_picks_allow_when_present() -> None:
@@ -215,7 +215,7 @@ def test_plain_enum_picks_first_value_without_allow() -> None:
     )
 
 
-# ── Default values ─────────────────────────────────────────────
+# â”€â”€ Default values â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_string_with_default_uses_default() -> None:
@@ -241,7 +241,7 @@ def test_string_with_default_uses_default() -> None:
     )
 
 
-# ── Free-form fields (no default, no enum) ─────────────────────
+# â”€â”€ Free-form fields (no default, no enum) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -274,7 +274,7 @@ def test_freeform_without_default_returns_none(
     assert result is None, f"Free-form {description} without default should not be auto-fillable"
 
 
-# ── Mixed schemas ──────────────────────────────────────────────
+# â”€â”€ Mixed schemas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_mixed_boolean_and_enum_auto_fills_both() -> None:

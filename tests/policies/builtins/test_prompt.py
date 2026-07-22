@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agent_meow.policies.builtins.prompt import prompt_policy
+from omnigent.policies.builtins.prompt import prompt_policy
 
 
 def _make_event(

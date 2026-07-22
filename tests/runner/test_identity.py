@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from agent_meow.runner.identity import (
+from omnigent.runner.identity import (
     RUNNER_AUTH_SECRET_ENV_VARS,
     RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR,
     strip_runner_auth_secrets,
@@ -46,7 +46,7 @@ def test_strip_removes_every_registered_secret_name() -> None:
     Guards the contract between the registry and the helper: if a name
     is ever added to ``RUNNER_AUTH_SECRET_ENV_VARS`` but the stripping
     logic stops covering it (or vice versa), this fails. Also pins that
-    the binding token — the known control-plane secret — is registered,
+    the binding token â€” the known control-plane secret â€” is registered,
     so a future edit that empties the set is caught.
 
     :returns: None.
@@ -103,15 +103,15 @@ def test_strip_runner_auth_secrets_does_not_mutate_input() -> None:
 
 
 def test_importing_identity_does_not_pull_in_fastapi() -> None:
-    """``import agent_meow.runner.identity`` stays free of the FastAPI stack.
+    """``import omnigent.runner.identity`` stays free of the FastAPI stack.
 
-    The helper is imported at every runner→child spawn boundary —
+    The helper is imported at every runnerâ†’child spawn boundary â€”
     including the sandbox launcher, which re-execs a fresh interpreter
     per spawn. The runner package ``__init__`` resolves
     ``create_runner_app`` lazily (PEP 562) precisely so this stdlib-only
     submodule import does not drag in ``runner.app`` and ~0.5s of
     FastAPI import on that hot path. If someone reinstates an eager
-    ``from agent_meow.runner.app import create_runner_app`` in the package
+    ``from omnigent.runner.app import create_runner_app`` in the package
     ``__init__``, this fails.
 
     Runs in a fresh subprocess so an unrelated test in the same session
@@ -121,9 +121,9 @@ def test_importing_identity_does_not_pull_in_fastapi() -> None:
     """
     probe = (
         "import sys\n"
-        "import agent_meow.runner.identity\n"
+        "import omnigent.runner.identity\n"
         "assert 'fastapi' not in sys.modules, 'fastapi loaded via identity import'\n"
-        "assert 'agent_meow.unner.app' not in sys.modules, "
+        "assert 'omnigent.unner.app' not in sys.modules, "
         "'runner.app loaded via identity import'\n"
     )
     # Hand the child the same import roots as this process so it resolves

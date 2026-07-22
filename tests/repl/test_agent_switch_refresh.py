@@ -22,7 +22,7 @@ from omnigent_client._sessions import Session as SessionSnapshot
 from omnigent_ui_sdk import RichBlockFormatter
 from rich.text import Text
 
-from agent_meow.repl._repl import _refresh_session_metadata, _SessionsChatReplAdapter
+from omnigent.repl._repl import _refresh_session_metadata, _SessionsChatReplAdapter
 
 
 class _SnapshotSessions:
@@ -277,7 +277,7 @@ def test_both_triggers_spawn_metadata_refresh() -> None:
     import inspect
     import re
 
-    from agent_meow.repl import _repl
+    from omnigent.repl import _repl
 
     src = inspect.getsource(_repl.run_repl)
     # The spawn helper must schedule the real refresh coroutine; without

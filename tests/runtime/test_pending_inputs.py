@@ -1,5 +1,5 @@
 """
-Unit tests for :mod:`~?agent_meow.runtime.pending_inputs`.
+Unit tests for :mod:`~?omnigent.runtime.pending_inputs`.
 
 The pending-inputs index holds web-composer user messages on
 native-terminal sessions that haven't yet round-tripped back through
@@ -10,12 +10,12 @@ the session snapshot. Tests here pin its core invariants directly:
 * :func:`record` assigns a unique id and :func:`snapshot_for` replays
   entries in FIFO (insertion) order with their content verbatim.
 * :func:`resolve_oldest` drains the oldest entry (FIFO) and returns its
-  id, regardless of the persisted message's text — the transcript
+  id, regardless of the persisted message's text â€” the transcript
   reformats text (reply quotes, attachment markers), so order is the
   only reliable correlation signal. Returns ``None`` when empty.
 * :func:`resolve` removes an entry by id (the forward-failed rollback
   path) and is idempotent.
-* Stale entries are evicted after :data:`pending_inputs._TTL_S` — the
+* Stale entries are evicted after :data:`pending_inputs._TTL_S` â€” the
   ghost-cleanup backstop for a message the TUI never accepted.
 
 The wire-up between the route layer and the index (record on POST,
@@ -29,7 +29,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from agent_meow.runtime import pending_inputs
+from omnigent.runtime import pending_inputs
 
 
 @pytest.fixture(autouse=True)
@@ -62,14 +62,14 @@ def test_record_then_snapshot_preserves_order_and_content() -> None:
 
     Proves a (re)connecting client re-hydrates exactly what it posted,
     in submission order. A failure here means the snapshot lost an
-    entry, reordered them, or mangled the content blocks — the bubble
+    entry, reordered them, or mangled the content blocks â€” the bubble
     would render wrong or vanish on re-bind.
     """
     first = pending_inputs.record("conv_a", [_text_block("first")])
     second = pending_inputs.record("conv_a", [_text_block("second")])
 
     snap = pending_inputs.snapshot_for("conv_a")
-    # Two distinct ids in insertion order — not deduped, not reordered.
+    # Two distinct ids in insertion order â€” not deduped, not reordered.
     assert [e["pending_id"] for e in snap] == [first, second]
     assert first != second
     # Content round-trips verbatim (real file ids / text survive replay).
@@ -136,7 +136,7 @@ def test_resolve_oldest_drains_regardless_of_reformatted_text() -> None:
     reformats its text (reply-quote / attachment markers / whitespace).
 
     The bug: matching the pending entry to the persisted item *by text*
-    broke when the native transcript reformatted the message — e.g. a
+    broke when the native transcript reformatted the message â€” e.g. a
     reply-quote POSTed as ``"> quoted\\n\\nmy question"`` round-tripped
     back as differently-formatted text. The text match then failed, the
     entry never drained, and the message double-rendered (committed
@@ -149,7 +149,7 @@ def test_resolve_oldest_drains_regardless_of_reformatted_text() -> None:
     quoted = [_text_block("> modeling a crash where set_offline never ran)\n\nIs this the only?")]
     pid = pending_inputs.record("conv_a", quoted)
 
-    # The persisted/round-tripped text is irrelevant to draining — order
+    # The persisted/round-tripped text is irrelevant to draining â€” order
     # is the only signal. The entry drains and is gone (no ghost).
     drained = pending_inputs.resolve_oldest("conv_a")
     assert drained is not None and drained.pending_id == pid
@@ -219,7 +219,7 @@ def test_resolve_removes_entry_idempotently() -> None:
 
     pending_inputs.resolve("conv_a", drop)
     assert [e["pending_id"] for e in pending_inputs.snapshot_for("conv_a")] == [keep]
-    # Idempotent — resolving an already-removed id does nothing.
+    # Idempotent â€” resolving an already-removed id does nothing.
     pending_inputs.resolve("conv_a", drop)
     assert [e["pending_id"] for e in pending_inputs.snapshot_for("conv_a")] == [keep]
 
@@ -318,7 +318,7 @@ def test_stale_entries_evicted_after_ttl(monkeypatch: pytest.MonkeyPatch) -> Non
     """
     clock = {"t": 1000.0}
     # Patch the module's own _now seam (not time.monotonic globally) so
-    # only this index sees the advanced clock — see testing rule 14.
+    # only this index sees the advanced clock â€” see testing rule 14.
     monkeypatch.setattr(pending_inputs, "_now", lambda: clock["t"])
 
     pid = pending_inputs.record("conv_a", [_text_block("ghost")])

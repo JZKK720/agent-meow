@@ -1,11 +1,11 @@
 """
 Tests for the ``conversation_labels`` table + store API
-(POLICIES.md §6, Phase 1 of the guardrails implementation).
+(POLICIES.md Â§6, Phase 1 of the guardrails implementation).
 
 Covers the store-level contract (CRUD, batched UPSERT
 semantics, survival across conversation_items compaction,
 cascade delete). Schema validation (``values`` / ``monotonic``
-checks) lives in the runtime engine, not the store — those
+checks) lives in the runtime engine, not the store â€” those
 tests land in Phase 3+.
 """
 
@@ -13,26 +13,26 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.entities import (
+from omnigent.entities import (
     MessageData,
     NewConversationItem,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
-# ── Happy-path CRUD ────────────────────────────────────
+# â”€â”€ Happy-path CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_new_conversation_has_empty_labels(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """A fresh conversation has no labels — empty dict, not
+    """A fresh conversation has no labels â€” empty dict, not
     None. If this regresses, downstream code that iterates
     ``conv.labels.items()`` would crash instead of no-op."""
     conv = conversation_store.create_conversation()
     got = conversation_store.get_conversation(conv.id)
-    # Exact equality (not truthiness) — regression guard
+    # Exact equality (not truthiness) â€” regression guard
     # against returning None or sentinel.
     assert got is not None
     assert got.labels == {}
@@ -51,7 +51,7 @@ def test_set_labels_persists_values(
     )
     got = conversation_store.get_conversation(conv.id)
     assert got is not None
-    # Both keys must be present with exact values — the
+    # Both keys must be present with exact values â€” the
     # assertion proves the string coercion + UPSERT round-
     # tripped without corrupting either payload.
     assert got.labels == {"integrity": "1", "sensitivity": "public"}
@@ -62,7 +62,7 @@ def test_set_labels_overwrites_existing(
 ) -> None:
     """Second set_labels on the same key overwrites rather
     than errors or appends. Overwrite semantics are required
-    by POLICIES.md §4 last-writer-wins composition."""
+    by POLICIES.md Â§4 last-writer-wins composition."""
     conv = conversation_store.create_conversation()
     conversation_store.set_labels(conv.id, {"integrity": "1"})
     conversation_store.set_labels(conv.id, {"integrity": "0"})
@@ -111,17 +111,17 @@ def test_set_labels_clamps_overlong_value_to_column_width(
     chokepoint so no writer can raise ``DataError`` on PostgreSQL.
 
     SQLite (used here) doesn't enforce ``VARCHAR`` length, so this proves
-    the Python-side clamp in ``_upsert_labels`` — not the DB — does the
+    the Python-side clamp in ``_upsert_labels`` â€” not the DB â€” does the
     trimming, which is exactly what protects the Postgres production path.
     """
-    from agent_meow.db.db_models import LABEL_VALUE_MAX_LEN
+    from omnigent.db.db_models import LABEL_VALUE_MAX_LEN
 
     conv = conversation_store.create_conversation()
     overlong = "z" * (LABEL_VALUE_MAX_LEN + 50)
-    conversation_store.set_labels(conv.id, {"agent_meow.last_task_error_message": overlong})
+    conversation_store.set_labels(conv.id, {"omnigent.last_task_error_message": overlong})
     got = conversation_store.get_conversation(conv.id)
     assert got is not None
-    stored = got.labels["agent_meow.last_task_error_message"]
+    stored = got.labels["omnigent.last_task_error_message"]
     assert len(stored) == LABEL_VALUE_MAX_LEN
     # Head preserved (the clamp keeps the front, not a tail or empty string).
     assert stored == overlong[:LABEL_VALUE_MAX_LEN]
@@ -135,19 +135,19 @@ def test_set_labels_many_keys_atomic(
 ) -> None:
     """All keys land in a single transaction. Concurrent
     readers should never see a partial write (not tested
-    directly here — see concurrency test in Phase 2).
+    directly here â€” see concurrency test in Phase 2).
     Covers: N > 2 keys upserted together."""
     conv = conversation_store.create_conversation()
     updates = {f"key_{i}": str(i) for i in range(20)}
     conversation_store.set_labels(conv.id, updates)
     got = conversation_store.get_conversation(conv.id)
     assert got is not None
-    # All 20 keys present — partial commits would leave some
+    # All 20 keys present â€” partial commits would leave some
     # missing; transaction rollback would leave none.
     assert got.labels == updates
 
 
-# ── Survival across conversation_items churn ───────────
+# â”€â”€ Survival across conversation_items churn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_labels_survive_item_appends(
@@ -155,7 +155,7 @@ def test_labels_survive_item_appends(
 ) -> None:
     """Appending conversation_items does not touch labels.
     If this fails, a label set in turn 1 would vanish when
-    the agent replies in turn 2 — critical invariant."""
+    the agent replies in turn 2 â€” critical invariant."""
     conv = conversation_store.create_conversation()
     conversation_store.set_labels(conv.id, {"integrity": "1"})
     # Simulate a few turns of conversation.
@@ -175,7 +175,7 @@ def test_labels_survive_item_appends(
         )
     got = conversation_store.get_conversation(conv.id)
     assert got is not None
-    # Label state unchanged after 5 appends — the two tables
+    # Label state unchanged after 5 appends â€” the two tables
     # are truly independent.
     assert got.labels == {"integrity": "1"}
 
@@ -185,17 +185,17 @@ def test_labels_survive_item_compaction_proxy(
 ) -> None:
     """Deleting (not re-appending) all conversation_items
     leaves labels intact. This is the Phase 1 proxy for
-    POLICIES.md §6.3 compaction-survival: compaction
+    POLICIES.md Â§6.3 compaction-survival: compaction
     rewrites items (effectively DELETE + INSERT), so
     verifying labels survive a bulk item delete is the
     same property at a lower layer.
 
     If this fails, ``conversation_labels`` has a
-    non-obvious dependency on item rows — a hidden trigger,
+    non-obvious dependency on item rows â€” a hidden trigger,
     a cascade pointed the wrong way, or someone routed
     ``delete_items`` through the label table by mistake.
     """
-    from agent_meow.db.db_models import SqlConversationItem
+    from omnigent.db.db_models import SqlConversationItem
 
     conv = conversation_store.create_conversation()
     conversation_store.set_labels(conv.id, {"integrity": "1", "confidentiality": "0"})
@@ -213,7 +213,7 @@ def test_labels_survive_item_compaction_proxy(
             ),
         ],
     )
-    # Raw-SQL delete through the store's engine — matches
+    # Raw-SQL delete through the store's engine â€” matches
     # what a compaction implementation would do, minus the
     # summary-item replacement. Using the store's internal
     # session for test plumbing only; production code should
@@ -228,12 +228,12 @@ def test_labels_survive_item_compaction_proxy(
         )
     got = conversation_store.get_conversation(conv.id)
     assert got is not None
-    # Labels persisted across the item-table wipe — matches
-    # the §6.3 guarantee.
+    # Labels persisted across the item-table wipe â€” matches
+    # the Â§6.3 guarantee.
     assert got.labels == {"integrity": "1", "confidentiality": "0"}
 
 
-# ── Cascade delete ─────────────────────────────────────
+# â”€â”€ Cascade delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -253,13 +253,13 @@ async def test_delete_conversation_cascades_to_labels(
     # existence).
     deleted = await conversation_store.delete_conversation(conv.id)
     assert deleted is True
-    # Post-condition: no conversation → no labels to fetch.
+    # Post-condition: no conversation â†’ no labels to fetch.
     # We verify via a direct count rather than reading via
     # get_conversation (which now returns None and gives us
     # no label snapshot).
     from sqlalchemy import func, select
 
-    from agent_meow.db.db_models import SqlConversationLabel
+    from omnigent.db.db_models import SqlConversationLabel
 
     with conversation_store._session() as session:
         count = session.execute(
@@ -275,7 +275,7 @@ async def test_delete_conversation_cascades_to_labels(
     assert count == 0
 
 
-# ── Isolation across conversations ─────────────────────
+# â”€â”€ Isolation across conversations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_labels_isolated_across_conversations(
@@ -291,13 +291,13 @@ def test_labels_isolated_across_conversations(
     got_a = conversation_store.get_conversation(a.id)
     got_b = conversation_store.get_conversation(b.id)
     assert got_a is not None and got_b is not None
-    # Each conversation has its own label state — proves
+    # Each conversation has its own label state â€” proves
     # both SELECT and UPSERT filter by conversation_id.
     assert got_a.labels == {"integrity": "0"}
     assert got_b.labels == {"integrity": "1"}
 
 
-# ── get_conversation semantics ─────────────────────────
+# â”€â”€ get_conversation semantics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_get_conversation_missing_returns_none(
@@ -310,7 +310,7 @@ def test_get_conversation_missing_returns_none(
     assert got is None
 
 
-# ── list_conversations + update_conversation parity ──
+# â”€â”€ list_conversations + update_conversation parity â”€â”€
 
 
 def test_list_conversations_populates_labels(
@@ -341,7 +341,7 @@ def test_update_conversation_returns_labels(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """After update_conversation, the returned Conversation
-    has labels populated — parity with get_conversation.
+    has labels populated â€” parity with get_conversation.
     Callers mixing update_conversation and label inspection
     must not get stale empty labels."""
     conv = conversation_store.create_conversation()
@@ -349,12 +349,12 @@ def test_update_conversation_returns_labels(
     updated = conversation_store.update_conversation(conv.id, title="Renamed")
     assert updated is not None
     assert updated.title == "Renamed"
-    # Proves the label fetch runs in the update path too —
+    # Proves the label fetch runs in the update path too â€”
     # not just in get_conversation.
     assert updated.labels == {"integrity": "1"}
 
 
-# ── Caller-supplied updated_at ─────────────────────────
+# â”€â”€ Caller-supplied updated_at â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_set_labels_honors_caller_timestamp(
@@ -364,7 +364,7 @@ def test_set_labels_honors_caller_timestamp(
     store records that exact value. Required for the policy
     engine to align audit timestamps with evaluation time
     rather than wall-clock drift between evaluate() and the
-    DB write (POLICIES.md §6.3).
+    DB write (POLICIES.md Â§6.3).
 
     If this regresses, the timestamp would come from
     `now_epoch()` regardless, and replay / audit would
@@ -372,7 +372,7 @@ def test_set_labels_honors_caller_timestamp(
     """
     from sqlalchemy import select
 
-    from agent_meow.db.db_models import SqlConversationLabel
+    from omnigent.db.db_models import SqlConversationLabel
 
     conv = conversation_store.create_conversation()
     caller_stamp = 1_700_000_042  # arbitrary historical epoch
@@ -384,7 +384,7 @@ def test_set_labels_honors_caller_timestamp(
                 SqlConversationLabel.key == "integrity",
             )
         ).scalar()
-    # Store persisted the caller's timestamp verbatim — if
+    # Store persisted the caller's timestamp verbatim â€” if
     # this shows `now_epoch()`, the override isn't wired.
     assert row == caller_stamp
 
@@ -393,7 +393,7 @@ def test_upsert_refreshes_timestamp_on_overwrite(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """UPSERT must refresh the timestamp column on re-write
-    even when the value is unchanged — matches the
+    even when the value is unchanged â€” matches the
     SqlConversationLabel docstring invariant + POLICIES.md
     audit requirement. Using caller-supplied timestamps to
     deterministically prove the refresh (wall-clock epoch-
@@ -402,11 +402,11 @@ def test_upsert_refreshes_timestamp_on_overwrite(
 
     If this regresses, the ``on_conflict_do_update`` ``set_``
     clause dropped ``updated_at`` and old stamps would
-    persist forever — audit timelines would silently skew.
+    persist forever â€” audit timelines would silently skew.
     """
     from sqlalchemy import select
 
-    from agent_meow.db.db_models import SqlConversationLabel
+    from omnigent.db.db_models import SqlConversationLabel
 
     conv = conversation_store.create_conversation()
     # Two deliberate timestamps far enough apart that any
@@ -431,7 +431,7 @@ def test_upsert_refreshes_timestamp_on_overwrite(
                 SqlConversationLabel.key == "x",
             )
         ).scalar()
-    # Must be the LATER stamp — proves UPSERT updated both
+    # Must be the LATER stamp â€” proves UPSERT updated both
     # `value` and `updated_at`. If this reads first_stamp,
     # the `set_` clause forgot `updated_at`.
     assert stamp == second_stamp

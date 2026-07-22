@@ -1,4 +1,4 @@
-"""Tests for :mod:`~?agent_meow.onboarding.harness_install`."""
+"""Tests for :mod:`~?omnigent.onboarding.harness_install`."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import subprocess
 
 import pytest
 
-from agent_meow.onboarding import harness_install as hi
-from agent_meow.onboarding.provider_config import ANTHROPIC_FAMILY, GEMINI_FAMILY, OPENAI_FAMILY
+from omnigent.onboarding import harness_install as hi
+from omnigent.onboarding.provider_config import ANTHROPIC_FAMILY, GEMINI_FAMILY, OPENAI_FAMILY
 
 
 @pytest.mark.parametrize(
@@ -23,7 +23,7 @@ def test_install_spec_and_command(key: str, binary: str, package: str) -> None:
     """Each known harness maps to the ucode-matching binary + npm package.
 
     A drift in binary/package (e.g. a wrong npm name) would install the wrong
-    thing or check the wrong PATH entry — caught here.
+    thing or check the wrong PATH entry â€” caught here.
     """
     spec = hi.harness_install_spec(key)
     assert spec is not None
@@ -61,7 +61,7 @@ def test_kimi_only_upstream_binary_satisfies_readiness(
 ) -> None:
     """Only ``kimi`` (the upstream MoonshotAI/Kimi-Code binary) counts as
     installed. The legacy pypi ``kimi-cli`` package is intentionally NOT
-    accepted — its command-line surface is incompatible with what the
+    accepted â€” its command-line surface is incompatible with what the
     executor drives, so falsely reading it as configured would crash at
     the first turn."""
     monkeypatch.setattr(
@@ -110,7 +110,7 @@ def test_kiro_install_spec_is_manual_installer_no_npm() -> None:
 
 def test_antigravity_install_spec_status_only_no_npm() -> None:
     """Antigravity (agy) ships via a shell installer (no npm) and has no login
-    subcommand — the user signs in by launching ``agy`` once. It DOES expose a
+    subcommand â€” the user signs in by launching ``agy`` once. It DOES expose a
     status check (``agy models``), so the spec carries ``status_args`` +
     ``install_hint`` but no ``package`` / ``login_args`` / ``logout_args``.
 
@@ -134,7 +134,7 @@ def test_antigravity_install_spec_status_only_no_npm() -> None:
 def test_harness_setup_hint_antigravity_surfaces_sign_in() -> None:
     """A not-yet-signed-in agy can't be fixed by ``agy login`` (no such
     command), so the launch hint names the installer AND the "run agy to sign
-    in" step — otherwise a user who already has agy installed gets a misleading
+    in" step â€” otherwise a user who already has agy installed gets a misleading
     install-only hint.
     """
     hint = hi.harness_setup_hint("antigravity-native")
@@ -169,7 +169,7 @@ def test_install_harness_cli_noop_for_non_npm(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_unknown_key_has_no_spec_and_is_not_installed() -> None:
-    """A family with no dedicated CLI (e.g. a gateway-only family) → None / False,
+    """A family with no dedicated CLI (e.g. a gateway-only family) â†’ None / False,
     never a crash."""
     assert hi.harness_install_spec("gateway") is None
     assert hi.harness_cli_installed("gateway") is False
@@ -182,7 +182,7 @@ def test_unknown_key_has_no_spec_and_is_not_installed() -> None:
         ("codex-native", "codex"),
         ("pi", "pi"),
         # Native Cursor wraps the cursor-agent CLI (distinct from the SDK
-        # ``cursor`` harness, which needs no binary — see the test below).
+        # ``cursor`` harness, which needs no binary â€” see the test below).
         ("cursor-native", "cursor-agent"),
         ("native-cursor", "cursor-agent"),
         ("kiro-native", "kiro-cli"),
@@ -204,7 +204,7 @@ def test_required_cli_for_cli_backed_harness(harness: str, binary: str) -> None:
 @pytest.mark.parametrize("harness", ["cursor-native", "native-cursor"])
 def test_setup_hint_for_native_cursor_points_at_vendor_installer(harness: str) -> None:
     """Native Cursor's "not configured" hint names the curl installer + login,
-    never ``agent-meow setup`` — which only configures the SDK ``cursor`` harness
+    never ``agent-meow setup`` â€” which only configures the SDK ``cursor`` harness
     (``cursor-sdk`` + ``CURSOR_API_KEY``) and never installs ``cursor-agent``.
 
     A regression to the generic hint sends a native-Cursor user down a dead end
@@ -228,8 +228,8 @@ def test_setup_hint_for_native_kiro_points_at_vendor_installer(harness: str) -> 
 
 @pytest.mark.parametrize("harness", ["claude-native", "codex", "pi", "claude-sdk", None])
 def test_setup_hint_defaults_to_omnigent_setup(harness: str | None) -> None:
-    """Harnesses whose CLI ``agent-meow setup`` installs (npm CLIs) — and the
-    SDK / unknown / ``None`` cases — route to the ``agent-meow setup`` hint."""
+    """Harnesses whose CLI ``agent-meow setup`` installs (npm CLIs) â€” and the
+    SDK / unknown / ``None`` cases â€” route to the ``agent-meow setup`` hint."""
     hint = hi.harness_setup_hint(harness)
     assert "agent-meow setup" in hint
 
@@ -238,7 +238,7 @@ def test_setup_hint_defaults_to_omnigent_setup(harness: str | None) -> None:
 def test_sdk_harnesses_require_no_cli(harness: str) -> None:
     """SDK-based harnesses (incl. ``cursor``, which drives the cursor-sdk Python
     package) require no CLI binary, so the sub-agent dispatch preflight must not
-    flag them — otherwise it would block a launch that needs no CLI (and, for
+    flag them â€” otherwise it would block a launch that needs no CLI (and, for
     cursor, print ``npm install -g None`` for its package-less spec)."""
     assert hi.required_cli_for_harness(harness) is None
     assert hi.missing_harness_cli(harness) is None
@@ -249,7 +249,7 @@ def test_sdk_harnesses_require_no_cli(harness: str) -> None:
     ["claude-sdk", "codex", "openai-agents-sdk", "unknown"],
 )
 def test_required_cli_none_for_sdk_or_unknown_harness(harness: str) -> None:
-    """SDK-based / unknown harnesses need no CLI binary → ``None``.
+    """SDK-based / unknown harnesses need no CLI binary â†’ ``None``.
 
     A false positive here would block a perfectly launchable in-process
     harness (e.g. the claude-sdk orchestrator brain) at dispatch.
@@ -258,7 +258,7 @@ def test_required_cli_none_for_sdk_or_unknown_harness(harness: str) -> None:
 
 
 def test_missing_harness_cli_present_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Binary on PATH → no missing-CLI verdict (dispatch proceeds).
+    """Binary on PATH â†’ no missing-CLI verdict (dispatch proceeds).
 
     A failure here would mean the guard blocks a worker whose CLI is actually
     installed.
@@ -268,7 +268,7 @@ def test_missing_harness_cli_present_returns_none(monkeypatch: pytest.MonkeyPatc
 
 
 def test_missing_harness_cli_absent_returns_spec(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Binary absent from PATH → returns the spec so dispatch can fail loud.
+    """Binary absent from PATH â†’ returns the spec so dispatch can fail loud.
 
     This is exactly the pi-not-installed case the guard catches; a failure
     means the missing CLI would slip through to a lazy boot failure instead.
@@ -295,7 +295,7 @@ def test_missing_harness_cli_none_for_sdk_harness(monkeypatch: pytest.MonkeyPatc
 def test_cli_installed_reflects_which(monkeypatch: pytest.MonkeyPatch) -> None:
     """``harness_cli_installed`` is exactly ``shutil.which(binary) is not None``.
 
-    Present → True; absent → False — the signal the configure ✗ marker and the
+    Present â†’ True; absent â†’ False â€” the signal the configure âœ— marker and the
     run gating both read.
     """
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
@@ -306,7 +306,7 @@ def test_cli_installed_reflects_which(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_install_harness_cli_requires_npm(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No npm on PATH → install short-circuits to False without shelling out."""
+    """No npm on PATH â†’ install short-circuits to False without shelling out."""
     monkeypatch.setattr(hi.shutil, "which", lambda name: None)
 
     def _explode(*a: object, **k: object) -> None:
@@ -350,7 +350,7 @@ def test_harness_login_skips_when_already_logged_in(monkeypatch: pytest.MonkeyPa
     """
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(
-        "agent_meow.onboarding.harness_install.harness_cli_logged_in", lambda key: True
+        "omnigent.onboarding.harness_install.harness_cli_logged_in", lambda key: True
     )
 
     def _explode(*a: object, **k: object) -> None:
@@ -370,7 +370,7 @@ def test_harness_login_skips_when_already_logged_in(monkeypatch: pytest.MonkeyPa
 def test_harness_login_runs_cli_login_then_verifies(
     monkeypatch: pytest.MonkeyPatch, key: str, expected_argv: list[str]
 ) -> None:
-    """Not logged in → runs the harness's first-class login argv, then verifies.
+    """Not logged in â†’ runs the harness's first-class login argv, then verifies.
 
     Asserts the exact argv so a drift away from ``claude auth login --claudeai``
     / ``codex login`` (e.g. back to a TUI hack) is caught, and that the result
@@ -378,12 +378,12 @@ def test_harness_login_runs_cli_login_then_verifies(
     """
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
     # Pin stdin to a TTY so this test stays focused on argv and never touches a
-    # real /dev/tty — the non-TTY branch is exercised separately below.
+    # real /dev/tty â€” the non-TTY branch is exercised separately below.
     monkeypatch.setattr(hi.sys.stdin, "isatty", lambda: True)
     calls: list[list[str]] = []
     state = {"logged_in": False}
     monkeypatch.setattr(
-        "agent_meow.onboarding.harness_install.harness_cli_logged_in",
+        "omnigent.onboarding.harness_install.harness_cli_logged_in",
         lambda k: state["logged_in"],
     )
 
@@ -400,7 +400,7 @@ def test_harness_login_runs_cli_login_then_verifies(
 def test_harness_login_wires_dev_tty_when_stdin_not_a_tty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No TTY on stdin → open /dev/tty, pass it as the child's std* fds, then close it.
+    """No TTY on stdin â†’ open /dev/tty, pass it as the child's std* fds, then close it.
 
     When the parent's stdio is piped (e.g. launched via ``uv tool run``) the
     harness CLI sees ``isatty() == False`` and refuses to open the browser,
@@ -412,7 +412,7 @@ def test_harness_login_wires_dev_tty_when_stdin_not_a_tty(
     monkeypatch.setattr(hi.sys.stdin, "isatty", lambda: False)
     state = {"logged_in": False}
     monkeypatch.setattr(
-        "agent_meow.onboarding.harness_install.harness_cli_logged_in",
+        "omnigent.onboarding.harness_install.harness_cli_logged_in",
         lambda k: state["logged_in"],
     )
 
@@ -439,7 +439,7 @@ def test_harness_login_wires_dev_tty_when_stdin_not_a_tty(
 def test_harness_login_falls_back_when_dev_tty_unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No controlling terminal → swallow the OSError and inherit parent stdio.
+    """No controlling terminal â†’ swallow the OSError and inherit parent stdio.
 
     Headless / CI runs have no ``/dev/tty``; the login must still proceed with
     the parent's inherited stdio rather than crash, and must not pass any
@@ -449,7 +449,7 @@ def test_harness_login_falls_back_when_dev_tty_unavailable(
     monkeypatch.setattr(hi.sys.stdin, "isatty", lambda: False)
     state = {"logged_in": False}
     monkeypatch.setattr(
-        "agent_meow.onboarding.harness_install.harness_cli_logged_in",
+        "omnigent.onboarding.harness_install.harness_cli_logged_in",
         lambda k: state["logged_in"],
     )
 
@@ -473,14 +473,14 @@ def test_harness_login_falls_back_when_dev_tty_unavailable(
 
 
 def test_harness_login_false_when_login_not_completed(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Login ran but the CLI still reports no login → False.
+    """Login ran but the CLI still reports no login â†’ False.
 
     This is what stops the caller from recording a phantom subscription when the
     user bails out of (or fails) the OAuth flow.
     """
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
     monkeypatch.setattr(
-        "agent_meow.onboarding.harness_install.harness_cli_logged_in", lambda k: False
+        "omnigent.onboarding.harness_install.harness_cli_logged_in", lambda k: False
     )
     monkeypatch.setattr(
         hi.subprocess,
@@ -491,7 +491,7 @@ def test_harness_login_false_when_login_not_completed(monkeypatch: pytest.Monkey
 
 
 def test_harness_login_false_when_binary_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No CLI binary on PATH → False without spawning anything."""
+    """No CLI binary on PATH â†’ False without spawning anything."""
     monkeypatch.setattr(hi.shutil, "which", lambda name: None)
 
     def _explode(*a: object, **k: object) -> None:
@@ -502,7 +502,7 @@ def test_harness_login_false_when_binary_missing(monkeypatch: pytest.MonkeyPatch
 
 
 def test_harness_login_false_for_harness_without_login(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A harness with no login command (Pi) → False without spawning anything."""
+    """A harness with no login command (Pi) â†’ False without spawning anything."""
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
 
     def _explode(*a: object, **k: object) -> None:
@@ -527,7 +527,7 @@ def test_harness_logout_runs_cli_logout_then_verifies(
     calls: list[list[str]] = []
     state = {"logged_in": True}
     monkeypatch.setattr(
-        "agent_meow.onboarding.harness_install.harness_cli_logged_in",
+        "omnigent.onboarding.harness_install.harness_cli_logged_in",
         lambda k: state["logged_in"],
     )
 
@@ -547,7 +547,7 @@ def test_harness_logout_runs_cli_logout_then_verifies(
         # Claude prints JSON; loggedIn is the verdict regardless of exit code.
         ('{"loggedIn": true, "authMethod": "claude.ai"}', 0, True),
         ('{"loggedIn": false}', 1, False),
-        # Exit 0 but loggedIn false → the structured verdict still wins.
+        # Exit 0 but loggedIn false â†’ the structured verdict still wins.
         ('{"loggedIn": false}', 0, False),
     ],
 )
@@ -617,7 +617,7 @@ def test_harness_cli_logged_in_uses_cursor_json_verdict(
 
     Unlike Claude (``loggedIn``) it uses a different key, so the spec's
     ``login_status_key`` selects it. A regression would misread cursor login
-    state in the setup menu's ✓/✗ marker.
+    state in the setup menu's âœ“/âœ— marker.
     """
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
 
@@ -641,7 +641,7 @@ def test_harness_cli_logged_in_uses_cursor_json_verdict(
         # that happens to be a JSON object with ``loggedIn`` must NOT override
         # it, so an exit-0 run still reads as signed in.
         ('{"loggedIn": false}', 0, True),
-        # Empty stdout (e.g. the list went to stderr) → exit code decides.
+        # Empty stdout (e.g. the list went to stderr) â†’ exit code decides.
         ("", 0, True),
         ("", 1, False),
     ],
@@ -653,7 +653,7 @@ def test_harness_cli_logged_in_agy_uses_exit_code(
 
     ``agy`` has no ``login status`` subcommand; ``agy models`` exits 0 only when
     signed in (else exits non-zero with "Please sign in"). A regression would
-    misread agy login state in the setup menu's ✓/✗ marker.
+    misread agy login state in the setup menu's âœ“/âœ— marker.
     """
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
 
@@ -668,7 +668,7 @@ def test_harness_cli_logged_in_agy_uses_exit_code(
 
 
 def test_harness_cli_logged_in_false_when_binary_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No CLI binary on PATH → False without spawning a status check."""
+    """No CLI binary on PATH â†’ False without spawning a status check."""
     monkeypatch.setattr(hi.shutil, "which", lambda name: None)
 
     def _explode(*a: object, **k: object) -> None:
@@ -681,7 +681,7 @@ def test_harness_cli_logged_in_false_when_binary_missing(monkeypatch: pytest.Mon
 def test_harness_cli_logged_in_false_for_harness_without_status(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A harness with no status command (Pi) → False without spawning anything."""
+    """A harness with no status command (Pi) â†’ False without spawning anything."""
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
 
     def _explode(*a: object, **k: object) -> None:

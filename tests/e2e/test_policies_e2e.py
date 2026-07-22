@@ -6,8 +6,8 @@ at INPUT that DENYs messages containing a sentinel token),
 posts responses with real LLM calls through the server, and
 verifies:
 
-- Clean messages pass through → real LLM response.
-- Sentinel-containing messages hit the policy DENY path →
+- Clean messages pass through â†’ real LLM response.
+- Sentinel-containing messages hit the policy DENY path â†’
   assistant sentinel text, no LLM call.
 - The DENY sentinel is persisted to conversation_items so a
   follow-up turn sees it.
@@ -15,7 +15,7 @@ verifies:
   (the agent didn't crash, it just replied with the
   sentinel).
 - Agents without any guardrails block run unchanged (the
-  archer agent is the regression test for this — if the
+  archer agent is the regression test for this â€” if the
   no-op engine path broke, every non-policy agent would
   too).
 
@@ -63,14 +63,14 @@ _LABEL_GATE_EXTRA_CONFIG: dict = {
     "policies": {
         "taint_on_banana": {
             "type": "function",
-            "handler": "agent_meow._e2e_policy_callables.taint_on_banana",
+            "handler": "omnigent._e2e_policy_callables.taint_on_banana",
         },
         "deny_when_tainted": {
             "type": "function",
             "on": ["request"],
             "condition": {"tainted": "1"},
             "function": {
-                "path": "agent_meow.policies.function.make_fixed_action_callable",
+                "path": "omnigent.policies.function.make_fixed_action_callable",
                 "arguments": {
                     "action": "deny",
                     "reason": "Conversation is tainted from a prior turn.",
@@ -114,7 +114,7 @@ def label_gate_agent(
 
 @pytest.fixture(scope="session")
 def ask_demo_agent(http_client: httpx.Client) -> str:
-    """Upload the ``ask-demo`` example agent — always-ASK on INPUT."""
+    """Upload the ``ask-demo`` example agent â€” always-ASK on INPUT."""
     return upload_agent(http_client, _ASK_DEMO_DIR)
 
 
@@ -165,7 +165,7 @@ def _post_user_message(client: httpx.Client, session_id: str, text: str) -> http
     )
 
 
-# ── Clean-path: no policy trigger ─────────────────────
+# â”€â”€ Clean-path: no policy trigger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_policy_gate_allows_clean_message(
@@ -174,7 +174,7 @@ def test_policy_gate_allows_clean_message(
     mock_llm_server_url: str,
 ) -> None:
     """A normal message (no sentinel) passes through the
-    policy → reaches the LLM → gets a real response. If
+    policy â†’ reaches the LLM â†’ gets a real response. If
     this regresses, the policy is over-firing and blocking
     legitimate traffic."""
     model = f"mock-pg-clean-{uuid.uuid4().hex[:6]}"
@@ -191,7 +191,7 @@ def test_policy_gate_allows_clean_message(
             "policies": {
                 "block_sentinel": {
                     "type": "function",
-                    "handler": "agent_meow._e2e_policy_callables.block_on_sentinel",
+                    "handler": "omnigent._e2e_policy_callables.block_on_sentinel",
                 },
             },
         },
@@ -212,17 +212,17 @@ def test_policy_gate_allows_clean_message(
     body = poll_session_until_terminal(
         http_client, session_id=session_id, response_id=rid, timeout=120
     )
-    # Terminal status must be completed — policy ALLOW should
+    # Terminal status must be completed â€” policy ALLOW should
     # not turn the turn into a failure.
     assert body["status"] == "completed", f"Unexpected status: {body.get('error')}"
     text = _extract_all_assistant_text(body)
     assert len(text.strip()) > 0, "Expected LLM output after policy ALLOW; got empty response."
-    # Sentinel must NOT appear — the clean path doesn't
+    # Sentinel must NOT appear â€” the clean path doesn't
     # invoke the DENY branch.
     assert "[Denied by policy" not in text
 
 
-# ── DENY path: sentinel-containing message ────────────
+# â”€â”€ DENY path: sentinel-containing message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_policy_gate_denies_sentinel_message(
@@ -232,7 +232,7 @@ def test_policy_gate_denies_sentinel_message(
 ) -> None:
     """A message containing the sentinel token hits the
     FunctionPolicy DENY. The events endpoint resolves the DENY
-    synchronously — the turn is not queued and the deny reason
+    synchronously â€” the turn is not queued and the deny reason
     is returned inline, with no LLM call. If this regresses, the
     policy system is not wired into the events path and policies
     are effectively no-ops in production."""
@@ -247,14 +247,14 @@ def test_policy_gate_denies_sentinel_message(
     # ``denied: true`` (no ``item_id``) proves the DENY fired
     # synchronously and the turn was never queued to the runner.
     assert verdict.get("denied") is True, f"expected synchronous DENY verdict; got {verdict}"
-    # The policy's reason is carried inline — drives the UI's
+    # The policy's reason is carried inline â€” drives the UI's
     # "why was this blocked?" surface.
     assert "BLOCK_THIS_TOKEN" in verdict.get("reason", ""), (
         f"expected reason mentioning BLOCK_THIS_TOKEN; got {verdict}"
     )
 
 
-# ── DENY persisted for follow-up turns ────────────────
+# â”€â”€ DENY persisted for follow-up turns â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_policy_gate_deny_persists_to_history(
@@ -282,7 +282,7 @@ def test_policy_gate_deny_persists_to_history(
         f"expected reason mentioning BLOCK_THIS_TOKEN; got {verdict}"
     )
 
-    # Fetch conversation items — the turn-1 sentinel MUST
+    # Fetch conversation items â€” the turn-1 sentinel MUST
     # be persisted so replay sees it.
     items_resp = http_client.get(
         f"/v1/sessions/{session_id}/items",
@@ -303,10 +303,10 @@ def test_policy_gate_deny_persists_to_history(
     )
 
 
-# ── Regression: no-guardrails agents still work ──────
+# â”€â”€ Regression: no-guardrails agents still work â”€â”€â”€â”€â”€â”€
 
 
-# ── Multi-policy composition via labels across turns ─
+# â”€â”€ Multi-policy composition via labels across turns â”€
 
 
 def test_label_gate_taint_persists_across_turns(
@@ -316,12 +316,12 @@ def test_label_gate_taint_persists_across_turns(
 ) -> None:
     """Turn 1: user triggers FunctionPolicy that writes
     ``tainted: "1"``. Turn 2: clean input, but
-    The condition ``tainted: "1"`` now matches →
+    The condition ``tainted: "1"`` now matches â†’
     DENY.
 
     End-to-end proof that FunctionPolicy set_labels reach
     the store, persist across workflow restarts, and drive
-    condition gates on the next turn — the core IFC-through-
+    condition gates on the next turn â€” the core IFC-through-
     labels pattern. Both turns run on the same runner-bound
     session so turn 2 sees turn 1's persisted label."""
     model = f"mock-lg-taint-{uuid.uuid4().hex[:6]}"
@@ -345,10 +345,10 @@ def test_label_gate_taint_persists_across_turns(
         http_client, agent_name=agent_name, runner_id=live_runner_id
     )
     # Turn 1: trigger the taint. ALLOW-with-set_labels, so the message
-    # is queued and the LLM runs (deny_when_tainted hasn't fired yet —
+    # is queued and the LLM runs (deny_when_tainted hasn't fired yet â€”
     # its condition is evaluated against the pre-turn-1 label snapshot).
     rid1 = send_user_message_to_session(
-        http_client, session_id=session_id, content="BANANA_TRIGGER — say hi briefly."
+        http_client, session_id=session_id, content="BANANA_TRIGGER â€” say hi briefly."
     )
     body1 = poll_session_until_terminal(
         http_client, session_id=session_id, response_id=rid1, timeout=120
@@ -358,7 +358,7 @@ def test_label_gate_taint_persists_across_turns(
     assert "[Denied by policy" not in text1
     assert len(text1.strip()) > 0
 
-    # Turn 2: clean input on the SAME session — no trigger, but the
+    # Turn 2: clean input on the SAME session â€” no trigger, but the
     # label persisted from turn 1. deny_when_tainted now matches at
     # INPUT and the events endpoint resolves the DENY synchronously
     # with an inline verdict (no queued turn).
@@ -381,7 +381,7 @@ def test_label_gate_untainted_conversation_passes(
     mock_llm_server_url: str,
 ) -> None:
     """A conversation that never triggers taint_on_banana
-    should pass every turn — the condition
+    should pass every turn â€” the condition
     ``tainted: "1"`` never matches against the default
     ``tainted: "0"`` seed."""
     model = f"mock-lg-clean-{uuid.uuid4().hex[:6]}"
@@ -424,11 +424,11 @@ def test_label_gate_persisted_labels_in_store(
     mock_llm_server_url: str,
 ) -> None:
     """After the taint turn, the ``tainted`` label is
-    persisted to ``conversation_labels`` — verifiable via
+    persisted to ``conversation_labels`` â€” verifiable via
     a follow-up turn whose engine is rebuilt from persisted
     state.
 
-    Not just an in-memory snapshot — the labels survive
+    Not just an in-memory snapshot â€” the labels survive
     workflow restarts, which is what Phase 1's store API
     guarantees."""
     model = f"mock-lg-persist-{uuid.uuid4().hex[:6]}"
@@ -461,7 +461,7 @@ def test_label_gate_persisted_labels_in_store(
     assert body1["status"] == "completed"
 
     # Turn 2 on the SAME session. The engine rebuilds from persisted
-    # state — if the label didn't persist, the condition wouldn't
+    # state â€” if the label didn't persist, the condition wouldn't
     # match and turn 2 would pass through. The synchronous DENY proves
     # tainted=1 survived to this turn.
     resp2 = _post_user_message(http_client, session_id, "ok.")
@@ -475,7 +475,7 @@ def test_no_guardrails_agent_unaffected(
     live_runner_id: str,
     mock_llm_server_url: str,
 ) -> None:
-    """An agent with no guardrails block — the engine is a
+    """An agent with no guardrails block â€” the engine is a
     no-op, every INPUT ALLOWs, workflow runs normally.
 
     Regression test for the Phase 6 wiring: if
@@ -514,12 +514,12 @@ def test_no_guardrails_agent_unaffected(
     )
     assert body["status"] == "completed", f"No-guardrails agent failed: {body.get('error')}"
     text = _extract_all_assistant_text(body)
-    # Mock LLM output — not a policy sentinel.
+    # Mock LLM output â€” not a policy sentinel.
     assert len(text.strip()) > 0
     assert "[Denied by policy" not in text
 
 
-# ── Prompt policy (Phase 9): LLM classifier end-to-end ──────
+# â”€â”€ Prompt policy (Phase 9): LLM classifier end-to-end â”€â”€â”€â”€â”€â”€
 #
 # The ``prompt_policy`` builtin calls ``event["llm_client"]``,
 # a ``PolicyLLMClient`` pre-bound to the server-level ``llm:``
@@ -535,7 +535,7 @@ _DENY_CANADA_POLICY_CONFIG = {
         "deny_canada": {
             "type": "function",
             "function": {
-                "path": "agent_meow.policies.builtins.prompt.prompt_policy",
+                "path": "omnigent.policies.builtins.prompt.prompt_policy",
                 "arguments": {
                     "prompt": (
                         "You are a strict content filter. Look at the user's "
@@ -551,7 +551,7 @@ _DENY_CANADA_POLICY_CONFIG = {
     },
 }
 
-# Server-level LLM model key — the PolicyLLMClient uses the
+# Server-level LLM model key â€” the PolicyLLMClient uses the
 # model from the server's ``llm:`` config, which in mock mode
 # is always ``"mock-model"``.
 _SERVER_LLM_MODEL = "_policy_llm_"
@@ -563,7 +563,7 @@ def test_prompt_policy_allow_path_reaches_llm(
     mock_llm_server_url: str,
 ) -> None:
     """
-    Non-Canadian input → classifier ALLOWs → agent LLM runs →
+    Non-Canadian input â†’ classifier ALLOWs â†’ agent LLM runs â†’
     assistant text comes back.
 
     The ``live_server`` fixture sets a non-resettable ALLOW fallback on
@@ -612,7 +612,7 @@ def test_prompt_policy_allow_path_reaches_llm(
 
 
 # Synchronous prompt-policy DENY (short-circuit, no queued item) is server-side
-# behavior that shipped after v0.2.0 — a v0.2.0 server returns {queued: True}
+# behavior that shipped after v0.2.0 â€” a v0.2.0 server returns {queued: True}
 # instead, so main's test fails against it (co-evolution, not a regression).
 # Skip against servers < 0.3.0; runs on main + the gate.
 @pytest.mark.min_server_version("0.3.0")
@@ -622,7 +622,7 @@ def test_prompt_policy_deny_path_short_circuits(
     mock_llm_server_url: str,
 ) -> None:
     """
-    Canadian-topic input → classifier DENYs → events endpoint
+    Canadian-topic input â†’ classifier DENYs â†’ events endpoint
     short-circuits with an inline deny verdict; agent LLM never runs.
 
     The mock server's ``"mock-model"`` queue is pre-seeded with a

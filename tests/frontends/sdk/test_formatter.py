@@ -36,11 +36,11 @@ from rich.text import Text
 
 
 def test_format_response_start() -> None:
-    """ResponseStartBlock → newline, sets diamond flag for first text chunk."""
+    """ResponseStartBlock â†’ newline, sets diamond flag for first text chunk."""
     fmt = RichBlockFormatter()
     items = fmt.format(ResponseStartBlock(model="coder", response_id="r1"))
     assert len(items) == 1
-    # Should be a blank newline separator — the ◆ diamond is deferred
+    # Should be a blank newline separator â€” the â—† diamond is deferred
     # until the first text chunk so it appears on the same line as the
     # assistant's response.
     assert isinstance(items[0], Text)
@@ -48,10 +48,10 @@ def test_format_response_start() -> None:
 
 
 def test_format_text_chunk_returns_stream_live() -> None:
-    """TextChunk → StreamLive marker (rendered Markdown, not raw text)."""
+    """TextChunk â†’ StreamLive marker (rendered Markdown, not raw text)."""
     fmt = RichBlockFormatter()
     items = fmt.format(TextChunk(text="hello "))
-    # A single StreamLive for the unstable tail — no StreamingText for
+    # A single StreamLive for the unstable tail â€” no StreamingText for
     # text content in the new two-region model.
     assert len(items) == 1, (
         f"Expected 1 item (StreamLive for the unstable tail), got {len(items)}: {items!r}."
@@ -70,7 +70,7 @@ def test_format_text_done_empty_buffer_returns_nothing() -> None:
     In the two-region model, all text is rendered through Markdown
     from the first token (via ``StreamLive``). When the buffer is
     empty at ``TextDone`` (response ended on a boundary, or had no
-    text), there's nothing left to commit — the live region was
+    text), there's nothing left to commit â€” the live region was
     already cleared by the last ``StreamReplace``.
     """
     fmt = RichBlockFormatter()
@@ -87,7 +87,7 @@ def test_text_done_flushes_buffered_paragraph_as_stream_replace() -> None:
     interprets as "atomically clear the live region and render this
     Rich renderable in its place, committed".
 
-    The legacy ``TextDone.has_code_blocks`` field is ignored — the
+    The legacy ``TextDone.has_code_blocks`` field is ignored â€” the
     formatter renders every paragraph through the same Markdown panel
     path because incremental rendering handles fenced code blocks
     naturally.
@@ -97,7 +97,7 @@ def test_text_done_flushes_buffered_paragraph_as_stream_replace() -> None:
     # accumulates this into ``_paragraph_buffer``.
     fmt.format(TextChunk(text="```python\nprint('hi')\n```"))
 
-    # End-of-response — the uncommitted buffer contents should be
+    # End-of-response â€” the uncommitted buffer contents should be
     # emitted as a StreamReplace (commit).
     items = fmt.format(TextDone(full_text="```python\nprint('hi')\n```", has_code_blocks=True))
     assert len(items) == 1, (
@@ -118,8 +118,8 @@ def test_paragraph_boundary_emits_stream_replace_mid_chunk() -> None:
     emit a ``StreamReplace`` for the just-completed paragraph (committed)
     followed by a ``StreamLive`` for the unstable tail.
 
-    In the two-region model: stable prefix → ``StreamReplace``,
-    unstable tail → ``StreamLive``. No raw ``StreamingText`` is
+    In the two-region model: stable prefix â†’ ``StreamReplace``,
+    unstable tail â†’ ``StreamLive``. No raw ``StreamingText`` is
     emitted for text content.
     """
     fmt = RichBlockFormatter()
@@ -144,7 +144,7 @@ def test_paragraph_boundary_spanning_two_chunks() -> None:
     """
     A paragraph boundary split across chunks (``...\\n`` then ``\\n...``)
     is correctly recognized: the first chunk gets only a ``StreamLive``
-    (unstable — no boundary yet), and the second chunk emits a
+    (unstable â€” no boundary yet), and the second chunk emits a
     ``StreamReplace`` (commits the paragraph) + ``StreamLive`` (new tail).
 
     This exercises the boundary detection when the ``\\n\\n`` straddles
@@ -154,7 +154,7 @@ def test_paragraph_boundary_spanning_two_chunks() -> None:
     items1 = fmt.format(TextChunk(text="Para 1.\n"))
     items2 = fmt.format(TextChunk(text="\nPara 2"))
 
-    # First chunk: no boundary yet → just a StreamLive for the tail.
+    # First chunk: no boundary yet â†’ just a StreamLive for the tail.
     assert len(items1) == 1, (
         f"Expected 1 item from the first chunk (no boundary yet), got {len(items1)}: {items1!r}."
     )
@@ -185,14 +185,14 @@ def test_format_message_done_flushes_buffer_and_restores_diamond() -> None:
     ``StreamReplace``, clears ``_paragraph_buffer`` /
     ``_committed_offset``, and restores ``_needs_diamond`` to
     ``True`` so a follow-up message in the same response renders
-    its own ``◆`` header.
+    its own ``â—†`` header.
 
     If the leftover is not committed, a follow-up
     :meth:`format_text_chunk` would render it again concatenated
-    with the new text — the duplicated-text bug. If
+    with the new text â€” the duplicated-text bug. If
     ``_needs_diamond`` were not restored, the follow-up message
     would render without a diamond header, breaking the
-    "one ◆ per message" convention shared with the resume
+    "one â—† per message" convention shared with the resume
     renderer.
     """
     fmt = RichBlockFormatter()
@@ -229,11 +229,11 @@ def test_format_message_done_flushes_buffer_and_restores_diamond() -> None:
     )
     # The diamond was consumed when ``_markdown_replace`` produced
     # the commit; ``format_message_done`` restores it so message 2
-    # renders its own ◆.
+    # renders its own â—†.
     assert fmt._needs_diamond is True, (
         "Expected _needs_diamond restored to True after "
         "format_message_done. If False, message 2 in the same "
-        "response would render without a ◆ header."
+        "response would render without a â—† header."
     )
 
 
@@ -245,7 +245,7 @@ def test_format_message_done_empty_buffer_only_restores_diamond() -> None:
     """
     fmt = RichBlockFormatter()
     fmt.format(ResponseStartBlock(model="coder", response_id="r1"))
-    # No TextChunks → buffer is empty. The previous response start
+    # No TextChunks â†’ buffer is empty. The previous response start
     # already set _needs_diamond True; consume it manually to
     # mimic a prior committed paragraph having already cleared it.
     fmt._needs_diamond = False
@@ -279,10 +279,10 @@ def test_streamed_message_then_message_done_then_streamed_message_isolated() -> 
     fmt = RichBlockFormatter()
     fmt.format(ResponseStartBlock(model="coder", response_id="r1"))
 
-    # Message 1 — single paragraph, no ``\\n\\n``, so stays in tail.
+    # Message 1 â€” single paragraph, no ``\\n\\n``, so stays in tail.
     fmt.format(TextChunk(text="Hi! What would you like to work on?"))
 
-    # Message 1 done → flush the tail, reset buffer, restore diamond.
+    # Message 1 done â†’ flush the tail, reset buffer, restore diamond.
     flush_items = fmt.format_message_done()
     rendered_flush = _render(flush_items[0].renderable)
     # Sanity: the committed paragraph contains exactly message 1's text.
@@ -290,7 +290,7 @@ def test_streamed_message_then_message_done_then_streamed_message_isolated() -> 
         f"Expected message 1's text committed in the flush, got {rendered_flush!r}."
     )
 
-    # Message 2 — first delta arrives after tool calls.
+    # Message 2 â€” first delta arrives after tool calls.
     items = fmt.format(TextChunk(text="I'll take a quick inventory."))
 
     # Exactly one StreamLive for the new tail.
@@ -330,7 +330,7 @@ def test_format_response_start_resets_paragraph_buffer() -> None:
     # Start a new response.
     fmt.format(ResponseStartBlock(model="coder", response_id="r2"))
 
-    # The next TextDone should return nothing — buffer was reset.
+    # The next TextDone should return nothing â€” buffer was reset.
     items = fmt.format(TextDone(full_text="", has_code_blocks=False))
     assert items == [], (
         f"Expected empty list after ResponseStartBlock reset the buffer, "
@@ -340,7 +340,7 @@ def test_format_response_start_resets_paragraph_buffer() -> None:
 
 
 def test_format_tool_group() -> None:
-    """ToolGroup → tool call line + result panel per execution."""
+    """ToolGroup â†’ tool call line + result panel per execution."""
     fmt = RichBlockFormatter(show_tool_output=True)
     group = ToolGroup(
         executions=[
@@ -361,7 +361,7 @@ def test_format_tool_group() -> None:
 
 
 def test_format_tool_group_no_output() -> None:
-    """ToolGroup with no output → only the tool call line."""
+    """ToolGroup with no output â†’ only the tool call line."""
     fmt = RichBlockFormatter()
     group = ToolGroup(
         executions=[
@@ -383,15 +383,15 @@ def test_format_tool_group_no_output() -> None:
 
 def test_duplicate_tool_call_renders_call_line_once() -> None:
     """
-    Regression: sessions API emits ``function_call`` twice per tool —
+    Regression: sessions API emits ``function_call`` twice per tool â€”
     once at dispatch (``in_progress``) and again at completion
     (``completed``).  Both produce a ``ToolGroup`` with the same
-    ``call_id``. The formatter must render the ``⏵`` call line only
+    ``call_id``. The formatter must render the ``âµ`` call line only
     on the first occurrence; the second should be suppressed.
 
     Reproduces the bug observed in the debug log at
-    ``~/.agent_meow/debug/events-fresh-1778791015.jsonl``: every tool
-    call's ``⏵ tool_name(args)`` line appeared twice in the TUI.
+    ``~/.omnigent/debug/events-fresh-1778791015.jsonl``: every tool
+    call's ``âµ tool_name(args)`` line appeared twice in the TUI.
     """
     fmt = RichBlockFormatter()
     call_id = "call_dIeDFiBbJixbbeQqsYzvIjeE"
@@ -412,7 +412,7 @@ def test_duplicate_tool_call_renders_call_line_once() -> None:
     items1 = fmt.format_tool_group(group1)
 
     # The call line renders for the first occurrence.
-    # 1 item = the ⏵ call line (output is None → no result panel).
+    # 1 item = the âµ call line (output is None â†’ no result panel).
     assert len(items1) == 1, (
         f"Expected 1 item (call line) on first format_tool_group, "
         f"got {len(items1)}: {items1!r}. If 0, the call line was "
@@ -434,12 +434,12 @@ def test_duplicate_tool_call_renders_call_line_once() -> None:
     )
     items2 = fmt.format_tool_group(group2)
 
-    # The call line must NOT render again — the duplicate is suppressed.
+    # The call line must NOT render again â€” the duplicate is suppressed.
     assert items2 == [], (
         f"Expected empty list on second format_tool_group with the same "
         f"call_id (duplicate suppression), got {len(items2)} item(s): "
-        f"{items2!r}. If 1, the ⏵ call line rendered twice for the same "
-        f"tool call — this is the sessions-API duplicate bug."
+        f"{items2!r}. If 1, the âµ call line rendered twice for the same "
+        f"tool call â€” this is the sessions-API duplicate bug."
     )
 
 
@@ -520,7 +520,7 @@ def test_tool_call_dedup_resets_on_new_response() -> None:
         )
     )
 
-    # Start a new response — the dedup set must reset.
+    # Start a new response â€” the dedup set must reset.
     fmt.format_response_start(ResponseStartBlock(model="coder", response_id="r2"))
 
     # Same call_id in the new turn should render normally.
@@ -548,7 +548,7 @@ def test_tool_call_dedup_resets_on_new_response() -> None:
 
 
 def test_format_reasoning_start() -> None:
-    """ReasoningStartBlock → thinking indicator."""
+    """ReasoningStartBlock â†’ thinking indicator."""
     fmt = RichBlockFormatter()
     items = fmt.format(ReasoningStartBlock())
     assert len(items) == 1
@@ -556,7 +556,7 @@ def test_format_reasoning_start() -> None:
 
 
 def test_format_reasoning_with_text() -> None:
-    """ReasoningBlock with text → panel."""
+    """ReasoningBlock with text â†’ panel."""
     fmt = RichBlockFormatter()
     items = fmt.format(
         ReasoningBlock(
@@ -568,21 +568,21 @@ def test_format_reasoning_with_text() -> None:
 
 
 def test_format_reasoning_empty() -> None:
-    """ReasoningBlock with no text → nothing."""
+    """ReasoningBlock with no text â†’ nothing."""
     fmt = RichBlockFormatter()
     items = fmt.format(ReasoningBlock(reasoning_text="", summary_text=""))
     assert items == []
 
 
 def test_format_error() -> None:
-    """ErrorBlock → error panel."""
+    """ErrorBlock â†’ error panel."""
     fmt = RichBlockFormatter()
     items = fmt.format(ErrorBlock(message="something broke", source="llm"))
     assert len(items) == 1
 
 
 def test_format_retry() -> None:
-    """RetryBlock → retry indicator."""
+    """RetryBlock â†’ retry indicator."""
     fmt = RichBlockFormatter()
     items = fmt.format(
         RetryBlock(
@@ -597,7 +597,7 @@ def test_format_retry() -> None:
 
 
 def test_format_compaction() -> None:
-    """CompactionBlock → compacting indicator."""
+    """CompactionBlock â†’ compacting indicator."""
     fmt = RichBlockFormatter()
     items = fmt.format(CompactionBlock())
     assert len(items) == 1
@@ -605,7 +605,7 @@ def test_format_compaction() -> None:
 
 
 def test_format_file() -> None:
-    """FileBlock → file indicator."""
+    """FileBlock â†’ file indicator."""
     fmt = RichBlockFormatter()
     items = fmt.format(FileBlock(file_id="f1", filename="photo.png"))
     assert len(items) == 1
@@ -613,14 +613,14 @@ def test_format_file() -> None:
 
 
 def test_format_response_end_completed() -> None:
-    """Completed response → nothing (no status message)."""
+    """Completed response â†’ nothing (no status message)."""
     fmt = RichBlockFormatter()
     items = fmt.format(ResponseEndBlock(status="completed"))
     assert items == []
 
 
 def test_format_response_end_failed() -> None:
-    """Failed response → status message."""
+    """Failed response â†’ status message."""
     fmt = RichBlockFormatter()
     items = fmt.format(ResponseEndBlock(status="failed"))
     assert len(items) == 1
@@ -690,14 +690,14 @@ def test_user_message_preserves_all_lines() -> None:
 def test_user_message_uses_no_explicit_background_color() -> None:
     """
     The user-message echo card must not paint an explicit
-    background color on the typed text — a hardcoded dark
+    background color on the typed text â€” a hardcoded dark
     background looks like a glaring black blob on
     light-themed terminals (iTerm light theme, ``xterm``
     defaults). Foreground-only styling adapts to whatever
     background the terminal provides.
 
     Pre-fix the formatter wrapped the message in
-    ``[on #1a1a1a]…[/on #1a1a1a]`` Rich markup, which
+    ``[on #1a1a1a]â€¦[/on #1a1a1a]`` Rich markup, which
     Rich resolves into an ANSI 48;2;<r>;<g>;<b> background
     sequence on the rendered :class:`Text`. This test pins
     the absence of any background color span so a future
@@ -731,21 +731,21 @@ def test_user_message_uses_no_explicit_background_color() -> None:
     # 256-color background; ESC[40-47;100-107m are the named
     # background colors. None should appear for an unstyled
     # echo card. ``\x1b[7m`` (reverse-video) is also a way to
-    # paint a background — explicitly check that's absent too.
+    # paint a background â€” explicitly check that's absent too.
     assert "\x1b[48;2;" not in output, (
         f"User-message echo card paints an RGB background. "
-        f"Pre-fix this was ``[on #1a1a1a]…[/on #1a1a1a]`` and looked "
+        f"Pre-fix this was ``[on #1a1a1a]â€¦[/on #1a1a1a]`` and looked "
         f"like a black blob on light terminals.\nrender:\n{output!r}"
     )
     assert "\x1b[48;5;" not in output, (
         f"User-message echo card paints a 256-color background.\nrender:\n{output!r}"
     )
     assert "\x1b[7m" not in output, (
-        f"User-message echo card uses reverse video — would still "
+        f"User-message echo card uses reverse video â€” would still "
         f"flip the terminal's background under the typed text.\n"
         f"render:\n{output!r}"
     )
-    # Sanity: the typed text DOES appear in the render —
+    # Sanity: the typed text DOES appear in the render â€”
     # otherwise the absence-of-bg assertion above would pass
     # vacuously.
     assert "hello world" in output
@@ -765,7 +765,7 @@ def test_subclass_override() -> None:
     assert "CUSTOM ERROR" in items[0].text
 
 
-# ── tool result truncation + JSON pretty-print ───────────────
+# â”€â”€ tool result truncation + JSON pretty-print â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _render(item: object, *, width: int = 200) -> str:
@@ -810,7 +810,7 @@ def _tool_group_with_output(output: str) -> ToolGroup:
 def test_tool_result_long_single_line_truncated_by_chars() -> None:
     """
     A single physical line longer than ``max_result_chars`` is
-    truncated and the panel shows a "… N more chars" footer.
+    truncated and the panel shows a "â€¦ N more chars" footer.
     Reproduces the user-reported case where a JSON-stringified
     terminal scrollback was one giant line, defeating the line cap.
     """
@@ -825,7 +825,7 @@ def test_tool_result_long_single_line_truncated_by_chars() -> None:
     assert "400 more chars" in rendered, (
         f"expected '400 more chars' footer (500 input - 100 cap), got:\n{rendered!r}"
     )
-    # The full 500 x's must NOT all appear — the truncation is what's
+    # The full 500 x's must NOT all appear â€” the truncation is what's
     # under test. If 400 of them leaked through, the cap is bypassed.
     assert "x" * 200 not in rendered
 
@@ -833,7 +833,7 @@ def test_tool_result_long_single_line_truncated_by_chars() -> None:
 def test_tool_result_many_lines_truncated_by_lines() -> None:
     """
     Multi-line output exceeding ``max_result_lines`` is line-truncated
-    and the panel shows a "… N more lines" footer.
+    and the panel shows a "â€¦ N more lines" footer.
     """
     fmt = RichBlockFormatter(max_result_lines=5, max_result_chars=10000, show_tool_output=True)
     body = "\n".join(f"line-{i}" for i in range(20))
@@ -849,7 +849,7 @@ def test_tool_result_many_lines_truncated_by_lines() -> None:
 
 
 def test_tool_result_short_output_not_truncated() -> None:
-    """Outputs under both caps render in full with no '… N more' footer."""
+    """Outputs under both caps render in full with no 'â€¦ N more' footer."""
     fmt = RichBlockFormatter(max_result_lines=30, max_result_chars=2000, show_tool_output=True)
     items = fmt.format(_tool_group_with_output("hello world"))
     rendered = _render(items[1])
@@ -865,23 +865,23 @@ def test_tool_result_json_object_pretty_printed() -> None:
     separate lines (so the line-cap can do useful work), and non-ASCII
     characters render as themselves rather than ``\\uXXXX`` escapes.
     Mirrors the user-reported ``sys_terminal_read`` payload where
-    ``─`` (U+2500) showed up as ``\\u2500``.
+    ``â”€`` (U+2500) showed up as ``\\u2500``.
     """
     fmt = RichBlockFormatter(max_result_lines=30, max_result_chars=2000, show_tool_output=True)
-    # ensure_ascii=True is Python's json.dumps default — this is
+    # ensure_ascii=True is Python's json.dumps default â€” this is
     # exactly what the producer-side serializer emits.
-    raw = json.dumps({"terminal": "zsh:r-3", "border": "─" * 4})
+    raw = json.dumps({"terminal": "zsh:r-3", "border": "â”€" * 4})
     assert "\\u2500" in raw  # sanity: producer escapes the box char
     items = fmt.format(_tool_group_with_output(raw))
     rendered = _render(items[1])
     # The literal Unicode escape must NOT appear post-format.
     assert "\\u2500" not in rendered, (
-        f"box-drawing char rendered as ASCII escape — JSON pretty-print "
+        f"box-drawing char rendered as ASCII escape â€” JSON pretty-print "
         f"didn't run or used ensure_ascii=True. rendered:\n{rendered!r}"
     )
     # The actual U+2500 character must render.
-    assert "─" in rendered
-    # Pretty-print broke the object onto multiple lines — the key
+    assert "â”€" in rendered
+    # Pretty-print broke the object onto multiple lines â€” the key
     # quoting proves we're looking at indented JSON, not the raw blob.
     assert '"terminal"' in rendered
     assert '"border"' in rendered
@@ -901,7 +901,7 @@ def test_tool_result_invalid_json_passes_through() -> None:
     raw = '{"unterminated": "string'
     items = fmt.format(_tool_group_with_output(raw))
     rendered = _render(items[1])
-    # Raw text appears verbatim — we did NOT raise or substitute.
+    # Raw text appears verbatim â€” we did NOT raise or substitute.
     assert "unterminated" in rendered
 
 
@@ -911,7 +911,7 @@ def test_tool_result_json_scalar_passes_through() -> None:
     items = fmt.format(_tool_group_with_output("42"))
     rendered = _render(items[1])
     assert "42" in rendered
-    # Scalars don't trigger pretty-printing — there's no structure to
+    # Scalars don't trigger pretty-printing â€” there's no structure to
     # expand. We rely on the helper's ``isinstance(parsed, (dict, list))``
     # guard. The footer must be absent for such a tiny input.
     assert "more lines" not in rendered
@@ -923,7 +923,7 @@ def test_tool_result_both_caps_apply() -> None:
     When both caps trip (many lines AND the survivor still exceeds
     char cap), the footer mentions both, in lines-then-chars order.
     """
-    # 50 lines of 100 chars each. Line cap=10 keeps 10 lines × 100 chars =
+    # 50 lines of 100 chars each. Line cap=10 keeps 10 lines Ã— 100 chars =
     # ~1000 chars (plus 9 newlines). Char cap=100 then trims to 100.
     fmt = RichBlockFormatter(max_result_lines=10, max_result_chars=100, show_tool_output=True)
     body = "\n".join("a" * 100 for _ in range(50))
@@ -937,7 +937,7 @@ def test_tool_result_both_caps_apply() -> None:
     assert "more chars" in rendered
 
 
-# ── Two-region streaming model tests ─────────────────────────
+# â”€â”€ Two-region streaming model tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_text_chunk_code_fence_emits_stream_live() -> None:
@@ -1011,7 +1011,7 @@ def test_response_start_resets_committed_offset() -> None:
     fmt.format(TextChunk(text="Prior para.\n\nLeftover tail"))
     # _committed_offset is now > 0 from the boundary in the prior turn.
 
-    # Start a new response — must reset offset.
+    # Start a new response â€” must reset offset.
     fmt.format(ResponseStartBlock(model="coder", response_id="r3"))
 
     # New turn text should start fresh.
@@ -1029,7 +1029,7 @@ def test_response_start_resets_committed_offset() -> None:
     )
 
 
-# ── _LeftHeading style tests ─────────────────────────────
+# â”€â”€ _LeftHeading style tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _render_heading(level: int) -> str:
@@ -1059,7 +1059,7 @@ def _render_heading(level: int) -> str:
     ids=["h1", "h2", "h3", "h4", "h5", "h6"],
 )
 def test_left_heading_renders_text(level: int) -> None:
-    """Every heading level (h1–h6) renders its text content.
+    """Every heading level (h1â€“h6) renders its text content.
 
     The _LeftHeading patch on Markdown.elements means all Markdown()
     instances use our custom heading class. If a heading level is
@@ -1098,7 +1098,7 @@ def test_left_heading_is_left_aligned(level: int) -> None:
         if "Heading Text" in plain:
             leading = len(plain) - len(plain.lstrip())
             assert leading < 10, (
-                f"h{level} heading has {leading} leading spaces — "
+                f"h{level} heading has {leading} leading spaces â€” "
                 f"looks center-aligned. _LeftHeading should left-align.\n"
                 f"line: {line!r}"
             )
@@ -1125,7 +1125,7 @@ def test_left_heading_h1_is_bold() -> None:
 
 
 def test_left_heading_h3_is_bold_no_underline() -> None:
-    """h3 style is bold-only — no underline, no italic."""
+    """h3 style is bold-only â€” no underline, no italic."""
     output = _render_heading(3)
     # Bold present.
     assert "\x1b[1m" in output or "\x1b[1;" in output, f"h3 missing bold. render:\n{output!r}"
@@ -1141,7 +1141,7 @@ def test_left_heading_h3_is_bold_no_underline() -> None:
 
 @pytest.mark.parametrize("level", [4, 5, 6], ids=["h4", "h5", "h6"])
 def test_left_heading_gray_levels_have_color(level: int) -> None:
-    """h4–h6 are styled with #888888 (gray). The ANSI output should
+    """h4â€“h6 are styled with #888888 (gray). The ANSI output should
     contain an RGB color sequence for that gray.
     """
     output = _render_heading(level)
@@ -1154,13 +1154,13 @@ def test_left_heading_gray_levels_have_color(level: int) -> None:
 
 
 def test_left_heading_styles_dict_covers_all_levels() -> None:
-    """_HEADING_STYLES has entries for h1–h6. If one is missing,
+    """_HEADING_STYLES has entries for h1â€“h6. If one is missing,
     the heading silently vanishes (the method yields nothing for
     unknown tags).
     """
     for tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
         assert tag in _LeftHeading._HEADING_STYLES, (
-            f"{tag!r} missing from _HEADING_STYLES — headings at this "
+            f"{tag!r} missing from _HEADING_STYLES â€” headings at this "
             f"level would silently disappear in rendered Markdown."
         )
 
@@ -1173,7 +1173,7 @@ def test_left_heading_styles_are_all_style_instances() -> None:
         )
 
 
-# ── Diamond paragraph splitting tests ────────────────────
+# â”€â”€ Diamond paragraph splitting tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_diamond_split_multi_paragraph() -> None:
@@ -1200,11 +1200,11 @@ def test_diamond_split_multi_paragraph() -> None:
     # At least 2 StreamReplace items: diamond para + regular para.
     assert len(replaces) >= 2, (
         f"Expected at least 2 StreamReplace items (diamond + regular), "
-        f"got {len(replaces)}. If 1, the diamond split didn't fire — "
+        f"got {len(replaces)}. If 1, the diamond split didn't fire â€” "
         f"both paragraphs were rendered as a single block."
     )
 
-    # First replace: diamond — Padding with top=0, left=1.
+    # First replace: diamond â€” Padding with top=0, left=1.
     first_pad = replaces[0].renderable
     assert isinstance(first_pad, Padding), (
         f"First StreamReplace should wrap a Padding, got {type(first_pad).__name__}."
@@ -1215,7 +1215,7 @@ def test_diamond_split_multi_paragraph() -> None:
         f"({first_pad.top},{first_pad.right},{first_pad.bottom},{first_pad.left})."
     )
 
-    # Second replace: regular — Padding with top=1, left=3.
+    # Second replace: regular â€” Padding with top=1, left=3.
     second_pad = replaces[1].renderable
     assert isinstance(second_pad, Padding), (
         f"Second StreamReplace should wrap a Padding, got {type(second_pad).__name__}."
@@ -1237,7 +1237,7 @@ def test_diamond_split_multi_paragraph() -> None:
 
 def test_diamond_no_split_single_paragraph() -> None:
     """When diamond is pending and stable text has no \\n\\n, the
-    entire text gets diamond styling — no splitting occurs.
+    entire text gets diamond styling â€” no splitting occurs.
     """
     fmt = RichBlockFormatter()
     fmt.format(ResponseStartBlock(model="test", response_id="r1"))
@@ -1275,14 +1275,14 @@ def test_diamond_consumed_after_first_paragraph() -> None:
     assert len(replaces1) == 1, f"Expected 1 StreamReplace (diamond commit), got {len(replaces1)}."
     assert replaces1[0].renderable.top == 0, "First commit should be diamond (top=0)."
 
-    # Second chunk: regular paragraph — diamond already consumed.
+    # Second chunk: regular paragraph â€” diamond already consumed.
     items2 = fmt.format(TextChunk(text=" text.\n\nMore"))
 
     replaces2 = [it for it in items2 if isinstance(it, StreamReplace)]
     for r in replaces2:
         pad = r.renderable
         assert isinstance(pad, Padding)
-        # All should be regular (1, 1, 0, 3) — never diamond (0, 1, 0, 1).
+        # All should be regular (1, 1, 0, 3) â€” never diamond (0, 1, 0, 1).
         actual = (pad.top, pad.right, pad.bottom, pad.left)
         assert actual == (1, 1, 0, 3), (
             f"Post-diamond paragraph should have (1,1,0,3) padding, "
@@ -1291,12 +1291,12 @@ def test_diamond_consumed_after_first_paragraph() -> None:
         )
 
 
-# ── Padding / inter-block gap tests ──────────────────────
+# â”€â”€ Padding / inter-block gap tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_non_diamond_replace_has_top_padding() -> None:
     """_markdown_replace for non-diamond paragraphs uses (1,1,0,3)
-    padding — the 1-top reproduces the blank-line gap Rich inserts
+    padding â€” the 1-top reproduces the blank-line gap Rich inserts
     between blocks within a single Markdown() render.
 
     Without top=1, separate StreamReplace renders would abut with
@@ -1328,10 +1328,10 @@ def test_non_diamond_replace_has_top_padding() -> None:
 def test_tail_padding_zero_when_no_committed_content() -> None:
     """When no content has been committed yet (_committed_offset == 0),
     the StreamLive tail has top=0 padding. This is the first piece of
-    content in the response — no gap above needed.
+    content in the response â€” no gap above needed.
     """
     fmt = RichBlockFormatter()
-    # No ResponseStartBlock — just stream text directly.
+    # No ResponseStartBlock â€” just stream text directly.
     # _committed_offset starts at 0.
     items = fmt.format(TextChunk(text="First words"))
 
@@ -1349,7 +1349,7 @@ def test_tail_padding_zero_when_no_committed_content() -> None:
 
 def test_tail_padding_one_when_committed_content_exists() -> None:
     """After content has been committed (_committed_offset > 0),
-    the StreamLive tail has top=1 padding — matching the inter-block
+    the StreamLive tail has top=1 padding â€” matching the inter-block
     gap that non-diamond StreamReplace uses.
     """
     fmt = RichBlockFormatter()

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-import agent_meow.onboarding.opencode_auth as oc
+import omnigent.onboarding.opencode_auth as oc
 
 
 @pytest.fixture(autouse=True)

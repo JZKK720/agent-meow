@@ -8,12 +8,12 @@ from typing import Any
 
 import pytest
 
-from agent_meow.entities.comment import Comment, CommentsFingerprint
-from agent_meow.stores.comment_store import CommentStore
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins.list_comments import ListCommentsTool
+from omnigent.entities.comment import Comment, CommentsFingerprint
+from omnigent.stores.comment_store import CommentStore
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins.list_comments import ListCommentsTool
 
-# ── In-memory store stub ──────────────────────────────────────────────────────
+# â”€â”€ In-memory store stub â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _InMemoryCommentStore(CommentStore):
@@ -188,7 +188,7 @@ class _InMemoryCommentStore(CommentStore):
             del self._comments[cid]
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _ctx(conversation_id: str | None = "conv-123") -> ToolContext:
@@ -217,7 +217,7 @@ def _invoke(
     return json.loads(tool.invoke(json.dumps(args), _ctx(conversation_id)))
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -235,7 +235,7 @@ def tool(store: _InMemoryCommentStore, monkeypatch: pytest.MonkeyPatch) -> ListC
     """
     :class:`ListCommentsTool` wired to an in-memory comment store.
 
-    Patches ``agent_meow.runtime.get_comment_store`` so that the tool
+    Patches ``omnigent.runtime.get_comment_store`` so that the tool
     uses *store* without needing the real runtime initialised.
     The import is lazy (inside ``invoke``), so we patch the source module.
 
@@ -243,13 +243,13 @@ def tool(store: _InMemoryCommentStore, monkeypatch: pytest.MonkeyPatch) -> ListC
     :param monkeypatch: pytest monkeypatching fixture.
     :returns: Configured :class:`ListCommentsTool` instance.
     """
-    import agent_meow.runtime as _runtime
+    import omnigent.runtime as _runtime
 
     monkeypatch.setattr(_runtime, "get_comment_store", lambda: store)
     return ListCommentsTool()
 
 
-# ── Identity tests ─────────────────────────────────────────────────────────────
+# â”€â”€ Identity tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_name() -> None:
@@ -262,7 +262,7 @@ def test_description_non_empty() -> None:
     assert ListCommentsTool.description()
 
 
-# ── Schema tests ───────────────────────────────────────────────────────────────
+# â”€â”€ Schema tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_schema_shape() -> None:
@@ -287,7 +287,7 @@ def test_schema_shape() -> None:
     assert set(params["properties"]["status"]["enum"]) == {"draft", "addressed"}
 
 
-# ── Error-path tests ───────────────────────────────────────────────────────────
+# â”€â”€ Error-path tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_no_conversation_id(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -298,14 +298,14 @@ def test_no_conversation_id(monkeypatch: pytest.MonkeyPatch) -> None:
     returning an error prevents the tool from leaking another session's
     comments or crashing on a ``None`` store key.
     """
-    import agent_meow.runtime as _runtime
+    import omnigent.runtime as _runtime
 
     monkeypatch.setattr(_runtime, "get_comment_store", lambda: _InMemoryCommentStore())
     t = ListCommentsTool()
     result = json.loads(t.invoke("{}", _ctx(conversation_id=None)))
     assert "error" in result
     # Verify the error is specifically about missing conversation context,
-    # not a store error — both return "error" but the messages differ.
+    # not a store error â€” both return "error" but the messages differ.
     assert "conversation" in result["error"]
 
 
@@ -317,7 +317,7 @@ def test_no_store_configured(monkeypatch: pytest.MonkeyPatch) -> None:
     (e.g. standalone REPL without agent-meow server). The tool must surface a
     clear message rather than raising AttributeError.
     """
-    import agent_meow.runtime as _runtime
+    import omnigent.runtime as _runtime
 
     monkeypatch.setattr(_runtime, "get_comment_store", lambda: None)
     t = ListCommentsTool()
@@ -326,7 +326,7 @@ def test_no_store_configured(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "comment store" in result["error"]
 
 
-# ── Happy-path tests ───────────────────────────────────────────────────────────
+# â”€â”€ Happy-path tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_returns_empty_when_no_comments(tool: ListCommentsTool) -> None:
@@ -350,12 +350,12 @@ def test_returns_all_comments_for_session(
     """
     Returns all comments belonging to the current session.
 
-    Comments from other sessions must not appear — they are a different
+    Comments from other sessions must not appear â€” they are a different
     user's data. If the store leaks cross-session data this test fails.
     """
     c1 = store.add("conv-123", "app.py", "Fix typo", 0, 10)
     c2 = store.add("conv-123", "util.py", "Rename variable", 50, 60)
-    # Comment from a different session — must not appear.
+    # Comment from a different session â€” must not appear.
     store.add("conv-OTHER", "app.py", "Other session comment", 0, 5)
 
     result = _invoke(tool, {})
@@ -443,10 +443,10 @@ def test_filter_by_path_and_status(
     from the wrong file or with the wrong status.
     """
     target = store.add("conv-123", "app.py", "Draft on app.py", 0, 10)
-    # Same file, addressed — must be excluded by status filter.
+    # Same file, addressed â€” must be excluded by status filter.
     other_status = store.add("conv-123", "app.py", "Addressed on app.py", 20, 30)
     store.update_comment(other_status.id, "conv-123", status="addressed")
-    # Same status, different file — must be excluded by path filter.
+    # Same status, different file â€” must be excluded by path filter.
     store.add("conv-123", "util.py", "Draft on util.py", 0, 5)
 
     result = _invoke(tool, {"path": "app.py", "status": "draft"})
@@ -521,7 +521,7 @@ def test_empty_arguments_string(
     store.add("conv-123", "app.py", "comment", 0, 5)
     result = json.loads(tool.invoke("", _ctx()))
     assert "comments" in result
-    # The single comment must appear — empty args means "no filter", not "nothing".
+    # The single comment must appear â€” empty args means "no filter", not "nothing".
     assert len(result["comments"]) == 1, (
         f"Expected 1 comment for empty-args call, got {len(result['comments'])}. "
         "If 0, the tool may be treating '' as an error instead of 'no filter'."

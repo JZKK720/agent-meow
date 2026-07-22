@@ -2,24 +2,24 @@
 
 Both ``agent-meow claude`` and ``agent-meow codex`` support resuming a prior
 conversation (``--resume <conv_id>``). The regression these tests guard: a
-resumed session must come back with its **history intact** — sending a new
+resumed session must come back with its **history intact** â€” sending a new
 message to the resumed session must let the model answer from the earlier
 turns. (The original bug: the runner auto-created a fresh terminal for
 CLI-driven sessions, so the resumed Claude/Codex started empty.)
 
 The check here is harness-agnostic and outcome-based, which matters because
-the two harnesses resume by different mechanisms — Claude relaunches with a
+the two harnesses resume by different mechanisms â€” Claude relaunches with a
 ``--resume <claude_session_id>`` CLI flag; Codex re-opens a thread via its
 app-server ``thread_id``. Asserting on launch args would only work for one of
 them. Instead both tests verify the outcome:
 
-1. **fresh** — a one-shot ``-p`` run that makes the model *emit* a distinctive
+1. **fresh** â€” a one-shot ``-p`` run that makes the model *emit* a distinctive
    passphrase as its own reply, so the passphrase lands in the model's own
    transcript output (the most reliably recalled context) and the server
    captures the conversation's ``external_session_id`` (the native
    session/thread id).
-2. **resume** — launch ``--resume <conv_id>`` as a kept-alive session, send a
-   recall message **through the server** (``POST /v1/sessions/{id}/events`` —
+2. **resume** â€” launch ``--resume <conv_id>`` as a kept-alive session, send a
+   recall message **through the server** (``POST /v1/sessions/{id}/events`` â€”
    the path the web UI uses) asking the model to repeat its own earlier
    passphrase, and poll the persisted items until an assistant reply echoes
    it. The passphrase coming back proves the resumed session actually had the
@@ -56,7 +56,7 @@ from pathlib import Path
 
 import httpx
 
-from agent_meow.entities.session_resources import terminal_resource_id
+from omnigent.entities.session_resources import terminal_resource_id
 from tests.e2e.helpers import POLL_INTERVAL_S
 
 # Worktree root: tests/e2e/<this file> -> parents[2]. Threaded onto the CLI
@@ -65,12 +65,12 @@ from tests.e2e.helpers import POLL_INTERVAL_S
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Generous PTY width so the CLI's "agent-meow: <url>/c/<conv_id>" and
-# "Resume with: … --resume <conv_id>" lines (which carry the full id) are not
+# "Resume with: â€¦ --resume <conv_id>" lines (which carry the full id) are not
 # wrapped/truncated by the terminal.
 _PTY_ROWS = 60
 _PTY_COLS = 220
 
-# Env vars that, leaked from a parent agent_meow/Claude/Codex process into the
+# Env vars that, leaked from a parent omnigent/Claude/Codex process into the
 # code under test, would mis-route the runner or shadow the harness's own auth.
 # Stripped from every CLI subprocess env.
 _STALE_ENV_VARS = (
@@ -99,7 +99,7 @@ def omnigent_console_script() -> Path:
 
     :returns: Absolute path to the ``agent-meow`` entry point next to the
         running interpreter, e.g.
-        ``"/Users/…/agent_meow/.venv/bin/agent-meow"``.
+        ``"/Users/â€¦/omnigent/.venv/bin/agent-meow"``.
     :raises RuntimeError: If the console script is not found beside
         ``sys.executable``.
     """
@@ -120,15 +120,15 @@ def cli_env(*, profile: str | None = None) -> dict[str, str]:
     load the fixed code; sets a wide PTY geometry so id lines are not
     truncated; and strips runner/tmux/credential env vars that would
     otherwise leak from this (possibly agent-meow-hosted) process into the
-    code under test (:data:`_STALE_ENV_VARS`). ``HOME`` is left intact — the
+    code under test (:data:`_STALE_ENV_VARS`). ``HOME`` is left intact â€” the
     native harness's interactive login (Claude Code's OAuth) is anchored to
     the real ``HOME`` and is NOT recoverable by symlinking ``~/.claude`` into
     a relocated one (a temp ``HOME`` yields "Not logged in").
 
     :param profile: Databricks profile for the LLM gateway. When set, an
         isolated ``OMNIGENT_CONFIG_HOME`` is created containing an
-        ``auth: {type: databricks, profile: …}`` block — the supported
-        replacement for the removed ``--profile`` CLI flag — and
+        ``auth: {type: databricks, profile: â€¦}`` block â€” the supported
+        replacement for the removed ``--profile`` CLI flag â€” and
         ``DATABRICKS_CONFIG_PROFILE`` is exported for ambient
         ``~/.databrickscfg`` lookups.
     :returns: The environment dict for ``pty``/``subprocess`` execution.
@@ -155,20 +155,20 @@ def cli_env(*, profile: str | None = None) -> dict[str, str]:
 
 def run_cli_oneshot(args: list[str], *, env: dict[str, str], timeout: float) -> str:
     """
-    Run ``agent-meow <harness> … -p <prompt>`` under a PTY until it exits.
+    Run ``agent-meow <harness> â€¦ -p <prompt>`` under a PTY until it exits.
 
     The native CLIs attach a tmux-backed terminal and need a real TTY to
     render, so they are driven through a pseudo-terminal. With a one-shot
     ``-p`` prompt the model runs a single turn and the CLI exits on its own
-    (the attach ends when the terminal closes) — no interactive keystrokes.
+    (the attach ends when the terminal closes) â€” no interactive keystrokes.
 
     :param args: Full argv, e.g.
-        ``["/…/agent-meow", "claude", "--server", url, "-p", "hi"]``.
+        ``["/â€¦/agent-meow", "claude", "--server", url, "-p", "hi"]``.
     :param env: Subprocess environment from :func:`cli_env`.
     :param timeout: Max seconds to wait for the child to exit.
     :returns: The full decoded PTY output (ANSI sequences retained).
     :raises AssertionError: If the CLI does not exit within *timeout* (it was
-        killed) — a hang usually means the launch or attach wedged.
+        killed) â€” a hang usually means the launch or attach wedged.
     """
     pid, fd = pty.fork()
     if pid == 0:
@@ -239,7 +239,7 @@ class PtyHandle:
         """
         Kill the CLI process and stop the drain thread.
 
-        Idempotent and exception-safe — used in test teardown, so it must not
+        Idempotent and exception-safe â€” used in test teardown, so it must not
         raise even if the child already exited.
 
         :returns: None.
@@ -256,15 +256,15 @@ def spawn_cli_background(
     args: list[str], *, env: dict[str, str], cwd: str | None = None
 ) -> PtyHandle:
     """
-    Spawn ``agent-meow <harness> …`` under a PTY and keep it running.
+    Spawn ``agent-meow <harness> â€¦`` under a PTY and keep it running.
 
-    The session stays running (this does not wait for exit) — it returns a
+    The session stays running (this does not wait for exit) â€” it returns a
     :class:`PtyHandle` whose reader thread drains output while the test sends
     the session a message over HTTP. The caller MUST
     :meth:`PtyHandle.terminate` it in a ``finally``.
 
-    :param args: Full argv (no ``-p`` — the session stays interactive), e.g.
-        ``["/…/agent-meow", "codex", "--server", url, "--resume", "conv_abc"]``.
+    :param args: Full argv (no ``-p`` â€” the session stays interactive), e.g.
+        ``["/â€¦/agent-meow", "codex", "--server", url, "--resume", "conv_abc"]``.
     :param env: Subprocess environment from :func:`cli_env`.
     :param cwd: Working directory to ``chdir`` into before exec, e.g.
         ``"/tmp/x/pwd"``. ``None`` inherits the parent's cwd. The native
@@ -333,8 +333,8 @@ def conversation_id_from_output(output: str) -> str:
     """
     Extract the conversation id from a finished one-shot run's output.
 
-    The CLI prints ``Resume with: … --resume conv_<hex>`` on exit (the full,
-    un-truncated id); falls back to the ``…/c/conv_<hex>`` web link.
+    The CLI prints ``Resume with: â€¦ --resume conv_<hex>`` on exit (the full,
+    un-truncated id); falls back to the ``â€¦/c/conv_<hex>`` web link.
 
     :param output: Captured PTY output of a fresh ``-p`` run.
     :returns: The conversation id.
@@ -412,7 +412,7 @@ def _assistant_text(item: dict[str, object]) -> str:
 
     :param item: One element of ``GET /v1/sessions/{id}/items`` data, e.g.
         ``{"role": "assistant", "content": [{"type": "output_text",
-        "text": "…"}]}``.
+        "text": "â€¦"}]}``.
     :returns: The joined text of all text blocks, or ``""`` for non-assistant
         items or items without text blocks.
     """
@@ -459,7 +459,7 @@ def poll_for_assistant_marker(
         time.sleep(POLL_INTERVAL_S)
     raise AssertionError(
         f"no assistant message containing {marker!r} for {conversation_id} within "
-        f"{timeout}s — the resumed session did not answer from prior history."
+        f"{timeout}s â€” the resumed session did not answer from prior history."
     )
 
 
@@ -620,14 +620,14 @@ def assert_native_cli_resume_restores_history(
 
     Harness-agnostic regression check for ``agent-meow <harness> --resume``:
 
-    1. **fresh** — a one-shot ``-p`` run that makes the model *emit* a
+    1. **fresh** â€” a one-shot ``-p`` run that makes the model *emit* a
        distinctive passphrase as its own reply (so the passphrase lands in the
        model's own transcript output, the most reliably recalled context);
        then confirm ``external_session_id`` was captured (a resumable session
        was produced).
-    2. **resume** — start a kept-alive ``--resume`` session and, once its
+    2. **resume** â€” start a kept-alive ``--resume`` session and, once its
        terminal is ready, send a recall message **through the server**
-       (``/events`` — the web-UI path) asking the model to repeat the
+       (``/events`` â€” the web-UI path) asking the model to repeat the
        passphrase from its own earlier message; poll the persisted items until
        an assistant reply echoes it.
 
@@ -651,7 +651,7 @@ def assert_native_cli_resume_restores_history(
         transcript and must instead go through agent-meow' cold-resume
         *synthesis* (rebuild the transcript from server-side items). This is
         the cross-context scenario a real user hits when resuming a
-        conversation created elsewhere / in another cwd / on another machine —
+        conversation created elsewhere / in another cwd / on another machine â€”
         the path that was silently losing history. When ``False`` the test
         exercises the same-machine fast path (the harness resumes its own
         transcript).
@@ -660,10 +660,10 @@ def assert_native_cli_resume_restores_history(
     omni = str(omnigent_console_script())
     # Use the real ``HOME`` so the native harness's interactive login resolves
     # (Claude Code's credentials are anchored to the real HOME and are NOT
-    # captured by symlinking ``~/.claude`` into a temp HOME — a relocated HOME
+    # captured by symlinking ``~/.claude`` into a temp HOME â€” a relocated HOME
     # yields "Not logged in"). The cost is that a *concurrent* ``agent-meow``
     # process on the same machine can thrash the shared host daemon
-    # (``~/.agent_meow/host.pid``); run this opt-in test on an otherwise-idle
+    # (``~/.omnigent/host.pid``); run this opt-in test on an otherwise-idle
     # machine.
     env = cli_env(profile=profile)
     # Distinctive passphrase (uppercase + digits, unique per run) so a match in
@@ -671,8 +671,8 @@ def assert_native_cli_resume_restores_history(
     passphrase = f"ZEPHYR-{uuid.uuid4().hex[:8].upper()}"
     base = [omni, harness, "--server", server]
 
-    # ── fresh: one-shot turn where the model EMITS the passphrase, so it is
-    #    part of the model's own transcript output (reliably recalled) ──
+    # â”€â”€ fresh: one-shot turn where the model EMITS the passphrase, so it is
+    #    part of the model's own transcript output (reliably recalled) â”€â”€
     fresh_output = run_cli_oneshot(
         [
             *base,
@@ -695,7 +695,7 @@ def assert_native_cli_resume_restores_history(
             # session so the resume can't take the same-machine fast path
             # (``_ensure_local_claude_resume_transcript`` returns early when
             # the file already exists). Forcing its absence makes the runner
-            # synthesize the transcript from server-side items — the exact
+            # synthesize the transcript from server-side items â€” the exact
             # cross-context path that was dropping history. Delete wherever it
             # landed (the project dir is keyed by the launch cwd's realpath,
             # which the harness resolves) by globbing the session-id stem.
@@ -703,13 +703,13 @@ def assert_native_cli_resume_restores_history(
             assert removed, (
                 f"force_cold_resume: expected a local transcript for "
                 f"{external_session_id!r} from the fresh run to delete, but found "
-                f"none — the fresh run may not have written one, so the resume "
+                f"none â€” the fresh run may not have written one, so the resume "
                 f"would not exercise the cold-resume synthesis path."
             )
 
-        # ── resume: reopen the conversation and ask the model to repeat its own
+        # â”€â”€ resume: reopen the conversation and ask the model to repeat its own
         #    earlier passphrase via the server; only a session that loaded the
-        #    prior turn can answer ──
+        #    prior turn can answer â”€â”€
         resumed = spawn_cli_background([*base, "--resume", conversation_id], env=env)
         try:
             wait_for_terminal_ready(
@@ -725,7 +725,7 @@ def assert_native_cli_resume_restores_history(
             )
             # The passphrase was the model's own reply in the fresh turn. It can
             # reappear in an assistant reply now only if the resumed session
-            # loaded that earlier turn — i.e. history was restored. Its absence
+            # loaded that earlier turn â€” i.e. history was restored. Its absence
             # is the regression (resume launched an empty session).
             reply = poll_for_assistant_marker(
                 client, conversation_id=conversation_id, marker=passphrase, timeout=180.0
@@ -733,7 +733,7 @@ def assert_native_cli_resume_restores_history(
             assert passphrase in reply, (
                 f"resumed {harness} session did not recall the passphrase "
                 f"{passphrase!r}; assistant said {reply!r}. The resume launched an "
-                f"empty session (history lost) — the bug this guards."
+                f"empty session (history lost) â€” the bug this guards."
             )
         finally:
             resumed.terminate()

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.codex_native_bridge import (
+from omnigent.codex_native_bridge import (
     CodexNativeBridgeState,
     clear_active_turn_id_if_matches,
     clear_bridge_state,
@@ -52,7 +52,7 @@ def bridge_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     :param monkeypatch: pytest monkeypatch fixture.
     :returns: Prepared bridge directory.
     """
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path / "codex-native")
     return prepare_bridge_dir("bridge_test")
 
 
@@ -81,19 +81,19 @@ def test_read_codex_config_model_returns_top_level_model(bridge_dir: Path) -> No
 
 
 def test_read_codex_config_model_none_when_missing(bridge_dir: Path) -> None:
-    """No ``config.toml`` → ``None`` (fail-safe), so the caller falls back."""
+    """No ``config.toml`` â†’ ``None`` (fail-safe), so the caller falls back."""
     assert read_codex_config_model(bridge_dir) is None
 
 
 def test_read_codex_config_model_none_when_no_model_key(bridge_dir: Path) -> None:
-    """A config without a top-level ``model`` key → ``None`` (no invented value)."""
+    """A config without a top-level ``model`` key â†’ ``None`` (no invented value)."""
     _write_config(bridge_dir, 'model_reasoning_effort = "medium"\n')
 
     assert read_codex_config_model(bridge_dir) is None
 
 
 def test_read_codex_config_model_none_when_unparsable(bridge_dir: Path) -> None:
-    """Malformed TOML → ``None``, not a crash (guards a partial write)."""
+    """Malformed TOML â†’ ``None``, not a crash (guards a partial write)."""
     _write_config(bridge_dir, 'model = "gpt-5.4\n[broken')
 
     assert read_codex_config_model(bridge_dir) is None
@@ -133,20 +133,20 @@ def test_policy_hook_config_absent_returns_none(bridge_dir: Path) -> None:
 @pytest.mark.parametrize(
     ("active_turn_id", "completed_turn_id", "expected_return", "expected_active_after"),
     [
-        # Matching terminal: the active turn really ended → clear + report
+        # Matching terminal: the active turn really ended â†’ clear + report
         # cleared, so the forwarder posts idle.
         ("turn_1", "turn_1", True, None),
-        # Stale terminal for an older turn while a newer one is live → ignore,
+        # Stale terminal for an older turn while a newer one is live â†’ ignore,
         # leaving the newer turn intact (no premature idle).
         ("turn_1", "turn_2", False, "turn_1"),
-        # No-id terminal while a turn is live is ambiguous → ignore. This is
+        # No-id terminal while a turn is live is ambiguous â†’ ignore. This is
         # the fix: clearing here posted a premature idle that hid the
         # "working" spinner mid-turn while Codex kept streaming.
         ("turn_1", None, False, "turn_1"),
-        # No-id terminal with no active turn: nothing to protect → clear is a
+        # No-id terminal with no active turn: nothing to protect â†’ clear is a
         # no-op and reports cleared (the session is already idle).
         (None, None, True, None),
-        # Id terminal with no active turn: it matches nothing → ignore.
+        # Id terminal with no active turn: it matches nothing â†’ ignore.
         (None, "turn_1", False, None),
     ],
 )
@@ -171,7 +171,7 @@ def test_clear_active_turn_id_if_matches(
     :param completed_turn_id: Terminal event's turn id, e.g. ``"turn_1"``,
         or ``None`` when Codex omitted it.
     :param expected_return: Expected ``clear_active_turn_id_if_matches``
-        return — ``True`` means the forwarder will post idle.
+        return â€” ``True`` means the forwarder will post idle.
     :param expected_active_after: Expected ``active_turn_id`` afterward.
     :returns: None.
     """

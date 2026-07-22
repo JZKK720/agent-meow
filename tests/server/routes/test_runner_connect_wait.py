@@ -13,8 +13,8 @@ import asyncio
 
 import pytest
 
-from agent_meow.server.host_registry import RunnerExitReports
-from agent_meow.server.routes.sessions import _wait_for_runner_client
+from omnigent.server.host_registry import RunnerExitReports
+from omnigent.server.routes.sessions import _wait_for_runner_client
 
 pytestmark = pytest.mark.asyncio
 

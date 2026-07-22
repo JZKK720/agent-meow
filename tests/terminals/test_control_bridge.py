@@ -1,5 +1,5 @@
 """
-Unit + integration tests for :mod:`~?agent_meow.terminals.control_bridge`.
+Unit + integration tests for :mod:`~?omnigent.terminals.control_bridge`.
 
 Covers the pure helpers (``unescape_control_output`` octal round-trip,
 ``_hex_send_keys_commands`` chunking) and an end-to-end drive of
@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.terminals.control_bridge import (
+from omnigent.terminals.control_bridge import (
     _SEND_KEYS_HEX_BYTES_PER_CALL,
     _hex_send_keys_commands,
     bridge_tmux_control_to_websocket,
@@ -65,7 +65,7 @@ class _FakeWebSocket:
         self.close_reason: str | None = None
         self._recv_gate = asyncio.Event()
         # Per-send delay simulates a real network so a burst backlogs behind the
-        # send — the condition under which the forwarder coalesces.
+        # send â€” the condition under which the forwarder coalesces.
         self._send_delay_s = send_delay_s
 
     async def send_bytes(self, data: bytes) -> None:
@@ -77,7 +77,7 @@ class _FakeWebSocket:
         if self._inbound:
             return self._inbound.pop(0)
         # Block forever once scripted input is exhausted so the bridge's other
-        # task (control→ws) decides when the attach ends.
+        # task (controlâ†’ws) decides when the attach ends.
         await self._recv_gate.wait()
         return {"type": "websocket.disconnect"}
 
@@ -153,7 +153,7 @@ async def _kill_and_join(sock: Path, task: asyncio.Task[None]) -> None:
         await asyncio.wait_for(task, timeout=5)
     if not task.done():
         task.cancel()
-        # ``await`` blocks until the cancelled task finishes unwinding — the
+        # ``await`` blocks until the cancelled task finishes unwinding â€” the
         # return value is discarded but the wait is the point.
         with contextlib.suppress(asyncio.CancelledError):
             await task
@@ -169,7 +169,7 @@ async def test_control_bridge_streams_large_output_burst() -> None:
     a ~200 KiB live burst reaches the browser fully rather than dropping the
     connection.
     """
-    # Hold the pane quiet for 1s, THEN emit ~200 KiB in one burst — so the
+    # Hold the pane quiet for 1s, THEN emit ~200 KiB in one burst â€” so the
     # payload arrives as live post-attach %output (the readline path), not via
     # the capture-pane seed.
     payload_len = 200_000
@@ -237,13 +237,13 @@ async def test_control_bridge_coalesces_burst_when_send_lags() -> None:
     total_x = sum(f.count(b"X") for f in ws.sent)
     assert total_x >= payload_len, f"burst truncated: got {total_x} X bytes of {payload_len}"
     # Coalesced frames are far larger than a single ``%output`` line (~1 KB).
-    # Require a comfortably-above-per-line average — proves merging without
+    # Require a comfortably-above-per-line average â€” proves merging without
     # depending on the exact (scheduling-dependent) frame count. Without
     # coalescing this average would be ~1 KB; merged it is many KB.
     avg_frame = total_x / max(1, len(burst_frames))
     assert avg_frame > 4000, (
         f"expected coalesced frames (avg > 4 KB), got avg {avg_frame:.0f}B over "
-        f"{len(burst_frames)} frames — forwarder is not merging the backlog"
+        f"{len(burst_frames)} frames â€” forwarder is not merging the backlog"
     )
 
     await _kill_and_join(sock, task)
@@ -264,11 +264,11 @@ async def test_control_bridge_burst_then_exit_delivers_full_tail() -> None:
     """
     # The backlog must be too big to fully drain before the reader hits %exit,
     # or the forwarder finishes on its own and the race never triggers. 2 MB
-    # behind a 5 ms/frame send leaves a large queued tail at %exit time — the
+    # behind a 5 ms/frame send leaves a large queued tail at %exit time â€” the
     # pre-fix code (cancel forwarder on reader-done) drops ~35% of it.
     payload_len = 2_000_000
     sock, target = await _new_private_tmux(
-        # Sleep first so the control client attaches BEFORE the burst — the
+        # Sleep first so the control client attaches BEFORE the burst â€” the
         # payload then arrives as live %output. Then burst and exit immediately
         # (no trailing sleep) so %exit races the still-draining slow send: the
         # regression window. (A burst emitted before attach is gone at the tmux
@@ -291,7 +291,7 @@ async def test_control_bridge_burst_then_exit_delivers_full_tail() -> None:
     total_y = sum(f.count(b"Y") for f in ws.sent)
     assert total_y >= payload_len, (
         f"burst-then-exit dropped the tail: got {total_y} Y bytes of {payload_len} "
-        "— forwarder was cancelled before draining the queued backlog"
+        "â€” forwarder was cancelled before draining the queued backlog"
     )
 
     await _kill_and_join(sock, task)
@@ -301,7 +301,7 @@ async def test_control_bridge_burst_then_exit_delivers_full_tail() -> None:
 @pytest.mark.asyncio
 async def test_control_bridge_seeds_streams_and_detaches() -> None:
     """End-to-end: seed the pre-attach screen, stream typed input, detach clean."""
-    # `cat` echoes input back to the pane (→ %output); the printf lands before
+    # `cat` echoes input back to the pane (â†’ %output); the printf lands before
     # attach so it can only reach the browser via the capture-pane seed.
     sock, target = await _new_private_tmux("printf 'SEEDED-LINE\\n'; cat")
     await asyncio.sleep(0.3)  # let the printf render before we attach
@@ -332,10 +332,10 @@ async def test_control_bridge_seeds_streams_and_detaches() -> None:
     seed_frame = ws.sent[0]
     assert seed_frame.startswith(b"\x1b[H\x1b[2J"), "seed did not start with home+clear"
     assert b"\n" not in seed_frame.replace(b"\r\n", b""), (
-        "seed frame contains a bare LF — rows will staircase in xterm"
+        "seed frame contains a bare LF â€” rows will staircase in xterm"
     )
 
-    # Kill the server → the control client's stdout closes → bridge exits.
+    # Kill the server â†’ the control client's stdout closes â†’ bridge exits.
     await _kill_and_join(sock, task)
 
 
@@ -348,7 +348,7 @@ async def test_seed_restores_cursor_position() -> None:
     reposition it explicitly or the browser cursor sits at the end of the
     seeded text instead of inside the app's prompt.
     """
-    from agent_meow.terminals.control_bridge import _run_tmux_capture
+    from omnigent.terminals.control_bridge import _run_tmux_capture
 
     # Park the cursor at row 9, col 8 (1-based) and hold the pane open.
     sock, target = await _new_private_tmux(
@@ -359,9 +359,9 @@ async def test_seed_restores_cursor_position() -> None:
     try:
         seed = await _run_tmux_capture(str(sock), target)
         assert seed is not None
-        # tmux reports 0-based cursor_x=7, cursor_y=8 → CUP is 1-based [9;8H.
+        # tmux reports 0-based cursor_x=7, cursor_y=8 â†’ CUP is 1-based [9;8H.
         assert b"\x1b[9;8H" in seed, f"cursor CUP escape missing from seed: {seed[-24:]!r}"
-        # Visible cursor → show-cursor tail.
+        # Visible cursor â†’ show-cursor tail.
         assert seed.endswith(b"\x1b[?25h"), f"seed did not end with show-cursor: {seed[-12:]!r}"
     finally:
         await _kill_tmux(sock)
@@ -379,7 +379,7 @@ async def test_seed_full_height_pane_does_not_scroll_or_shift_cursor() -> None:
     """
     import pyte
 
-    from agent_meow.terminals.control_bridge import _run_tmux_capture
+    from omnigent.terminals.control_bridge import _run_tmux_capture
 
     # Fill all 24 rows (row1..row24) and park the cursor at row24 col6.
     sock, target = await _new_private_tmux(
@@ -412,13 +412,13 @@ async def test_seed_full_height_pane_does_not_scroll_or_shift_cursor() -> None:
 @pytest.mark.asyncio
 async def test_seed_recovers_primary_screen_scrollback() -> None:
     """On the primary screen the seed captures full history, not just the screen."""
-    from agent_meow.terminals.control_bridge import _run_tmux_capture
+    from omnigent.terminals.control_bridge import _run_tmux_capture
 
     sock, target = await _new_private_tmux("bash --norc")
     await asyncio.sleep(0.2)
     tmux = shutil.which("tmux")
     assert tmux
-    # Emit 100 history lines — far more than the 24-row visible screen.
+    # Emit 100 history lines â€” far more than the 24-row visible screen.
     proc = await asyncio.create_subprocess_exec(
         tmux,
         "-S",
@@ -452,10 +452,10 @@ async def test_seed_alternate_screen_does_not_leak_primary_history() -> None:
     """On the alternate screen the seed must not include stale primary history.
 
     ``capture-pane -S -`` on an alt-screen pane returns the primary buffer's
-    scrollback from before the app switched — lines that were never part of
+    scrollback from before the app switched â€” lines that were never part of
     the app's UI. The bridge must capture the visible screen only there.
     """
-    from agent_meow.terminals.control_bridge import _run_tmux_capture
+    from omnigent.terminals.control_bridge import _run_tmux_capture
 
     # 50 primary-screen "OLD" lines, then enter the alternate screen and draw.
     sock, target = await _new_private_tmux(

@@ -1,4 +1,4 @@
-"""Tests for :mod:`~?agent_meow.onboarding.sandboxes.modal`."""
+"""Tests for :mod:`~?omnigent.onboarding.sandboxes.modal`."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 import click
 import pytest
 
-from agent_meow.onboarding.sandboxes.base import SandboxCapabilityError
-from agent_meow.onboarding.sandboxes.modal import (
+from omnigent.onboarding.sandboxes.base import SandboxCapabilityError
+from omnigent.onboarding.sandboxes.modal import (
     DEFAULT_HOST_IMAGE,
     HOST_IMAGE_ENV_VAR,
     MAX_SANDBOX_LIFETIME_S,
@@ -21,10 +21,10 @@ from agent_meow.onboarding.sandboxes.modal import (
     ModalSandboxLauncher,
 )
 
-# ── Fake Modal SDK ──────────────────────────────────────────
+# â”€â”€ Fake Modal SDK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # The Modal SDK is an optional dependency the test environment doesn't
-# install, and real Sandbox objects only exist server-side anyway — so
+# install, and real Sandbox objects only exist server-side anyway â€” so
 # these are hand-rolled stub classes (never MagicMock: the launcher's
 # attribute access must hit explicitly defined recorders, not silently
 # succeed). The fake module is injected via sys.modules so the
@@ -341,7 +341,7 @@ def _seed_sandbox(state: _FakeModalState, sandbox_id: str = "sb-1") -> _FakeSand
     return sandbox
 
 
-# ── prepare ─────────────────────────────────────────────────
+# â”€â”€ prepare â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_prepare_raises_with_install_hint_when_sdk_missing(
@@ -349,7 +349,7 @@ def test_prepare_raises_with_install_hint_when_sdk_missing(
 ) -> None:
     """
     Without the optional SDK, prepare must fail with the exact install
-    remediation (extras name + auth command) — not a raw ImportError.
+    remediation (extras name + auth command) â€” not a raw ImportError.
     ``sys.modules[name] = None`` makes ``import modal`` raise
     ImportError regardless of whether the package is installed.
     """
@@ -363,7 +363,7 @@ def test_prepare_raises_with_install_hint_when_sdk_missing(
 def test_prepare_raises_without_credentials(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """No env token pair and no token file → fail loud with the fix."""
+    """No env token pair and no token file â†’ fail loud with the fix."""
     _install_fake_modal(monkeypatch)
     monkeypatch.delenv("MODAL_TOKEN_ID", raising=False)
     monkeypatch.delenv("MODAL_TOKEN_SECRET", raising=False)
@@ -395,7 +395,7 @@ def test_prepare_accepts_token_file(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     ModalSandboxLauncher().prepare()
 
 
-# ── provision / attach / keep_alive ─────────────────────────
+# â”€â”€ provision / attach / keep_alive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_provision_creates_max_lifetime_sandbox_under_shared_app(
@@ -404,7 +404,7 @@ def test_provision_creates_max_lifetime_sandbox_under_shared_app(
     """
     Provision must create the sandbox under the shared auto-created
     App, at Modal's 24h maximum lifetime, with a hold-open entrypoint
-    and the official prebaked host image — and label it via tags (names
+    and the official prebaked host image â€” and label it via tags (names
     must be unique per App, so the label can't be the sandbox name).
     """
     state = _install_fake_modal(monkeypatch)
@@ -416,14 +416,14 @@ def test_provision_creates_max_lifetime_sandbox_under_shared_app(
 
     assert state.lookup_calls == [_LookupCall(name=MODAL_APP_NAME, create_if_missing=True)]
     create = state.create_calls[0]
-    # sleep infinity holds the sandbox open for the full window — with
+    # sleep infinity holds the sandbox open for the full window â€” with
     # no entrypoint, liveness would depend on exec activity.
     assert create.entrypoint == ["sleep", "infinity"]
     assert create.timeout == MAX_SANDBOX_LIFETIME_S
     # The app handle from lookup must flow into create.
     assert create.app is state.app
     # Image: the official prebaked host image (agent-meow + git/tmux
-    # baked in — sandbox creation must not pay an in-sandbox dependency
+    # baked in â€” sandbox creation must not pay an in-sandbox dependency
     # install), pulled anonymously by default.
     assert create.image.tag == DEFAULT_HOST_IMAGE
     assert create.image.secret is None
@@ -433,7 +433,7 @@ def test_provision_creates_max_lifetime_sandbox_under_shared_app(
 
 def test_provision_honors_image_override_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    OMNIGENT_MODAL_HOST_IMAGE must replace the default image ref —
+    OMNIGENT_MODAL_HOST_IMAGE must replace the default image ref â€”
     it's the escape hatch for org-internal copies of the host image.
     """
     state = _install_fake_modal(monkeypatch)
@@ -449,7 +449,7 @@ def test_provision_passes_registry_secret_for_private_pulls(
 ) -> None:
     """
     OMNIGENT_MODAL_REGISTRY_SECRET must thread the named Modal secret
-    into the image pull — without it, a private host image fails with
+    into the image pull â€” without it, a private host image fails with
     an unauthorized pull at sandbox start.
     """
     state = _install_fake_modal(monkeypatch)
@@ -461,7 +461,7 @@ def test_provision_passes_registry_secret_for_private_pulls(
 
 
 def test_attach_accepts_running_sandbox(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A running sandbox (poll → None) attaches without error."""
+    """A running sandbox (poll â†’ None) attaches without error."""
     state = _install_fake_modal(monkeypatch)
     _seed_sandbox(state)
     ModalSandboxLauncher().attach("sb-1")
@@ -470,7 +470,7 @@ def test_attach_accepts_running_sandbox(monkeypatch: pytest.MonkeyPatch) -> None
 def test_attach_rejects_terminated_sandbox(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     A terminated sandbox must be rejected with the 24h-cap explanation
-    — silently proceeding would fail later with opaque exec errors.
+    â€” silently proceeding would fail later with opaque exec errors.
     """
     state = _install_fake_modal(monkeypatch)
     _seed_sandbox(state).poll_result = 137
@@ -504,7 +504,7 @@ def test_keep_alive_surfaces_lifetime_cap(
     assert "24 hours" in capsys.readouterr().out
 
 
-# ── run / put / stream_exec ─────────────────────────────────
+# â”€â”€ run / put / stream_exec â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_run_wraps_bash_lc_and_captures_output(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -551,7 +551,7 @@ def test_put_ships_file_via_filesystem_api(
 def test_stream_exec_merges_stderr_without_pty(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Without a PTY, stdout/stderr are separate SDK streams but the
-    RemoteProcess contract promises combined output — the launcher must
+    RemoteProcess contract promises combined output â€” the launcher must
     merge in-shell (2>&1).
     """
     state = _install_fake_modal(monkeypatch)
@@ -571,7 +571,7 @@ def test_stream_exec_merges_stderr_without_pty(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_stream_exec_pty_skips_shell_merge(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A PTY already interleaves the streams — no 2>&1 rewrite."""
+    """A PTY already interleaves the streams â€” no 2>&1 rewrite."""
     state = _install_fake_modal(monkeypatch)
     sandbox = _seed_sandbox(state)
     ModalSandboxLauncher().stream_exec("sb-1", "databricks auth login", pty=True)
@@ -580,12 +580,12 @@ def test_stream_exec_pty_skips_shell_merge(monkeypatch: pytest.MonkeyPatch) -> N
     ]
 
 
-# ── forward_local_port (unsupported) ────────────────────────
+# â”€â”€ forward_local_port (unsupported) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_forward_local_port_raises_capability_error() -> None:
     """
-    Modal has no local→sandbox path; the launcher must keep the base
+    Modal has no localâ†’sandbox path; the launcher must keep the base
     default (capability error naming --no-auth) and advertise the gap
     via the flag the bootstrap fail-fasts on.
     """
@@ -597,7 +597,7 @@ def test_forward_local_port_raises_capability_error() -> None:
     assert "modal" in str(exc.value)
 
 
-# ── exec_foreground ─────────────────────────────────────────
+# â”€â”€ exec_foreground â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_exec_foreground_records_pid_and_streams_output(
@@ -605,7 +605,7 @@ def test_exec_foreground_records_pid_and_streams_output(
 ) -> None:
     """
     The foreground command must run under a PTY with the pid recorded
-    (the kill path needs it — Modal has no kill handle) and TERM forced
+    (the kill path needs it â€” Modal has no kill handle) and TERM forced
     (in-sandbox tmux refuses to start under a dumb terminal).
     """
     state = _install_fake_modal(monkeypatch)
@@ -629,7 +629,7 @@ def test_exec_foreground_records_pid_and_streams_output(
 def test_exec_foreground_kills_remote_on_interrupt(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Ctrl-C must kill the remote process (via the pidfile) and re-raise
-    — without the kill, the host would keep running headless in the
+    â€” without the kill, the host would keep running headless in the
     sandbox for up to 24 hours.
     """
     state = _install_fake_modal(monkeypatch)
@@ -644,7 +644,7 @@ def test_exec_foreground_kills_remote_on_interrupt(monkeypatch: pytest.MonkeyPat
     assert "kill $(cat /tmp/oa-foreground.pid)" in sandbox.exec_calls[1].argv[-1]
 
 
-# ── wheel_install_command ───────────────────────────────────
+# â”€â”€ wheel_install_command â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_wheel_install_command_overlays_baked_install() -> None:
@@ -668,7 +668,7 @@ def test_provision_explicit_image_overrides_env_and_gets_secret(
     """
     An explicit constructor image (the server's managed-host
     ``sandbox.modal.image`` config) wins over the env override AND
-    still threads the registry secret — a private custom image must
+    still threads the registry secret â€” a private custom image must
     not silently fall back to an anonymous pull.
     """
     state = _install_fake_modal(monkeypatch)
@@ -687,7 +687,7 @@ def test_provision_injects_configured_sandbox_secrets(
     """
     Constructor secret names (the server's managed-host
     ``sandbox.modal.secrets`` config) become workload secrets on
-    ``Sandbox.create`` — this is how harness LLM credentials reach the
+    ``Sandbox.create`` â€” this is how harness LLM credentials reach the
     sandbox env without transiting our config/DB.
     """
     state = _install_fake_modal(monkeypatch)
@@ -706,7 +706,7 @@ def test_provision_resolves_sandbox_secrets_env_var(
     """
     Without constructor names, OMNIGENT_MODAL_SANDBOX_SECRETS
     (comma-separated, whitespace tolerated) supplies the workload
-    secrets — the CLI flow's path to the same feature.
+    secrets â€” the CLI flow's path to the same feature.
     """
     state = _install_fake_modal(monkeypatch)
     monkeypatch.setenv(SANDBOX_SECRETS_ENV_VAR, "omnigent-llm, extra-creds")
@@ -722,7 +722,7 @@ def test_provision_constructor_secrets_override_env_var(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Explicit constructor names win over the env var — server config
+    Explicit constructor names win over the env var â€” server config
     must not be silently widened by ambient environment.
     """
     state = _install_fake_modal(monkeypatch)
@@ -734,7 +734,7 @@ def test_provision_constructor_secrets_override_env_var(
 
 def test_provision_without_secrets_passes_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    No configured secrets → ``secrets=None`` reaches the SDK (its
+    No configured secrets â†’ ``secrets=None`` reaches the SDK (its
     default), not an empty list with different semantics.
     """
     state = _install_fake_modal(monkeypatch)

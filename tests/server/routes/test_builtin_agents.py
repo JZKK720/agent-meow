@@ -10,8 +10,8 @@ from __future__ import annotations
 import httpx
 import pytest_asyncio
 
-from agent_meow.db.utils import builtin_agent_id, generate_agent_id
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.db.utils import builtin_agent_id, generate_agent_id
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
 
 
 @pytest_asyncio.fixture()

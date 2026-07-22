@@ -1,12 +1,12 @@
 """
-Tests for :mod:`~?agent_meow.repl._session_log` — the JSON dump
+Tests for :mod:`~?omnigent.repl._session_log` â€” the JSON dump
 helper that ports the legacy ``--log`` flag to agent-meow mode.
 
 Two layers:
 
-1. **Path composition** — :func:`default_log_path` produces a
+1. **Path composition** â€” :func:`default_log_path` produces a
    stable, sortable path with the expected components.
-2. **Store-backed dump** —
+2. **Store-backed dump** â€”
    :func:`write_session_log_from_store` against a real
    :class:`SqlAlchemyConversationStore`. Covers the happy
    path (one user item + one assistant item dump correctly),
@@ -25,26 +25,26 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from agent_meow.entities import (
+from omnigent.entities import (
     FunctionCallOutputData,
     MessageData,
     NewConversationItem,
 )
-from agent_meow.repl._session_log import (
+from omnigent.repl._session_log import (
     DEFAULT_LOG_DIR,
     default_log_path,
     write_session_log_from_store,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
-# ── 1. Path composition ──────────────────────────────────
+# â”€â”€ 1. Path composition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_default_log_path_uses_default_dir_when_none() -> None:
     """
-    ``log_dir=None`` resolves to ``~/.agent_meow/logs/`` — the same
+    ``log_dir=None`` resolves to ``~/.omnigent/logs/`` â€” the same
     directory the legacy non-AP path writes to. Keeps the
     user's mental model consistent across paths.
     """
@@ -89,7 +89,7 @@ def test_default_log_path_strips_path_separators(tmp_path: Path) -> None:
     Defensive: a conversation id that somehow contains a ``/``
     must not produce a file path that escapes the log directory.
     Mirrors the legacy ``session.id.replace("/", "_")`` defense in
-    ``agent_meow/inner/cli.py::_default_session_log_path``.
+    ``omnigent/inner/cli.py::_default_session_log_path``.
     """
     path = default_log_path("conv/with/slashes", tmp_path)
     assert "/" not in path.name, (
@@ -99,7 +99,7 @@ def test_default_log_path_strips_path_separators(tmp_path: Path) -> None:
     )
 
 
-# ── 2. Store-backed dump ─────────────────────────────────
+# â”€â”€ 2. Store-backed dump â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_write_session_log_from_store_dumps_basic_conversation(
@@ -144,7 +144,7 @@ def test_write_session_log_from_store_dumps_basic_conversation(
     payload = json.loads(path.read_text())
 
     assert payload["version"] == 1, (
-        f"Schema version must be 1 — readers gate on it. Got {payload.get('version')!r}."
+        f"Schema version must be 1 â€” readers gate on it. Got {payload.get('version')!r}."
     )
     assert payload["format"] == "omnigent-conversation"
     assert payload["agent_name"] == "resume_test"
@@ -218,7 +218,7 @@ def test_write_session_log_from_store_pages_long_conversations(
     )
 
 
-# ── 3. Sub-agent children walk ────────────────────────────
+# â”€â”€ 3. Sub-agent children walk â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_write_session_log_walks_sub_agent_children(
@@ -235,7 +235,7 @@ def test_write_session_log_walks_sub_agent_children(
 
     Without this walk, a supervisor agent's log captures the
     user's transcript with the supervisor but loses every
-    sub-agent's work — the legacy non-AP mode log includes
+    sub-agent's work â€” the legacy non-AP mode log includes
     them via ``session._agent_sessions`` recursion in
     ``_session_log_dict``, so this is the parity equivalent.
 
@@ -309,7 +309,7 @@ def test_write_session_log_walks_sub_agent_children(
         f"handle, got {len(children)}: {children!r}. If 0, the parser "
         f"didn't recognize the sub_agent handle (check that the JSON "
         f"shape still matches `_parse_sub_agent_handle` in "
-        f"agent_meow/repl/_repl.py — the format the spawn tool "
+        f"omnigent/repl/_repl.py â€” the format the spawn tool "
         f"persists may have changed)."
     )
     child_node = children[0]
@@ -338,7 +338,7 @@ def test_write_session_log_dedupes_repeated_spawns_to_same_child(
 ) -> None:
     """
     A supervisor that calls ``sys_session_send`` multiple times to
-    the same child (the continuation pattern — first call to spawn,
+    the same child (the continuation pattern â€” first call to spawn,
     subsequent calls to send follow-up messages) emits multiple
     function_call_output items all carrying the SAME
     conversation_id. The walker must dedupe so the child appears

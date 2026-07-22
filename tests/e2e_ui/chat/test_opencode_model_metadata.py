@@ -1,7 +1,7 @@
 """E2E: opencode-native surfaces its live model as a read-only pill.
 
 opencode owns its model (the user switches it inside the opencode TUI), but it
-mirrors the live model into the session's ``model_override`` — set at launch and
+mirrors the live model into the session's ``model_override`` â€” set at launch and
 updated by the forwarder on every in-TUI switch. The web UI must surface *that*
 in the model pill so the indicator tracks the TUI, even though opencode ships no
 switchable web model list (the dropdown stays empty / display-only).
@@ -17,7 +17,7 @@ from playwright.sync_api import Page, Route, expect
 # Launch-resolved default the runner booted opencode with.
 LAUNCH_MODEL = "openrouter/nemotron"
 # The model the user switched to inside the opencode TUI; the forwarder mirrored
-# it into ``model_override``. This — not the launch default — must show.
+# it into ``model_override``. This â€” not the launch default â€” must show.
 LIVE_TUI_MODEL = "openrouter/llama-3.3-70b-instruct"
 
 
@@ -47,7 +47,7 @@ def _patch_session_as_opencode_native(page: Page, session_id: str) -> None:
         payload = response.json()
         payload["labels"] = {
             **payload.get("labels", {}),
-            "agent_meow.wrapper": "opencode-native-ui",
+            "omnigent.wrapper": "opencode-native-ui",
         }
         payload["harness"] = "opencode"
         payload["llm_model"] = LAUNCH_MODEL

@@ -6,7 +6,7 @@ that into a ``sub_agent`` payload in the parent's async inbox (``sys_read_inbox`
 so the orchestrator wakes instead of busy-polling ``sys_session_get_history``.
 
 Delivery is dropped whenever the runner's in-memory work entry for the child is
-missing — a reconnect / restart wiped ``_subagent_work_by_child`` mid-turn, or a
+missing â€” a reconnect / restart wiped ``_subagent_work_by_child`` mid-turn, or a
 ``sys_session_create`` child never registered one (the server records a
 ``parent_session_id`` but no ``sub_agent_name``). The old code then returned
 HTTP 204 and lost the completion. The fix rebuilds the entry from the server
@@ -22,9 +22,9 @@ from typing import Any
 
 import pytest
 
-from agent_meow.runner import app as runner_app
-from agent_meow.runner import create_runner_app
-from agent_meow.spec.types import AgentSpec, ExecutorSpec
+from omnigent.runner import app as runner_app
+from omnigent.runner import create_runner_app
+from omnigent.spec.types import AgentSpec, ExecutorSpec
 
 # Reuse the proven runner-turn stubs from the sessions-native suite.
 from tests.runner.helpers import NullServerClient
@@ -43,7 +43,7 @@ def _clean_subagent_registry() -> Iterator[None]:
     """Snapshot and restore the process-wide sub-agent / inbox maps.
 
     The sub-agent work registry and inbox queues live in module-level dicts on
-    ``agent_meow.runner.app`` that otherwise leak across tests. Clear them before
+    ``omnigent.runner.app`` that otherwise leak across tests. Clear them before
     the test and restore the originals after.
     """
     saved = (
@@ -264,7 +264,7 @@ async def test_undeliverable_native_completion_returns_503_not_silent_204(
     When the parent inbox is not on this runner (the parent lives on a different
     runner, or the runner restarted and lost it), delivery cannot be confirmed.
     The handler must return 503 so the forwarder retries and server-side recovery
-    re-routes to the parent's runner — instead of a silent 204 that drops it.
+    re-routes to the parent's runner â€” instead of a silent 204 that drops it.
     """
     http, items = await _post_native_idle(
         child_body=_child_snapshot(sub_agent_name="reviewer", parent_session_id=PARENT_SESSION_ID),
@@ -287,7 +287,7 @@ async def test_replayed_idle_after_drain_does_not_redeliver(
     Guards the snapshot-recovery arm against a duplicate: once a completion was
     delivered and the parent drained it, the runner keeps a delivered tombstone.
     A replayed idle whose snapshot *does* carry a ``parent_session_id`` (the
-    production shape) must NOT rebuild the work entry and re-enqueue — it stays a
+    production shape) must NOT rebuild the work entry and re-enqueue â€” it stays a
     benign already-delivered 204. (The existing suite's dedup test uses a stub
     snapshot with no parent, so it would not catch a recovery-induced re-deliver.)
     """
@@ -303,7 +303,7 @@ async def test_replayed_idle_after_drain_does_not_redeliver(
     runner_app.unregister_subagent_work(CHILD_SESSION_ID, remember_drained_delivery=True)
     assert runner_app.get_subagent_work(CHILD_SESSION_ID) is None
 
-    # Replay the idle — snapshot carries a parent, so a naive recovery would
+    # Replay the idle â€” snapshot carries a parent, so a naive recovery would
     # rebuild the entry and re-deliver. The tombstone guard must prevent that.
     pm = _FakeProcessManager(_ScriptedHarnessClient([]))
 

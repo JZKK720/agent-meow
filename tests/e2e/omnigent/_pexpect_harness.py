@@ -7,10 +7,10 @@ Ctrl+G debug overview). Driving it from tests requires:
 1. A PTY-backed subprocess (``pexpect.spawn``) with a real
    ``TERM`` so prompt-toolkit draws its layout instead of
    erroring out on CPR probes.
-2. Deterministic synchronization — the status bar text
+2. Deterministic synchronization â€” the status bar text
    (``state: sleeping`` / ``state: running``) is the most stable
    turn-boundary signal because it's printed on every redraw.
-3. Keystroke-level input — ``pexpect.sendline`` sends
+3. Keystroke-level input â€” ``pexpect.sendline`` sends
    ``\\r\\n`` which prompt-toolkit interprets as two distinct
    Enter presses in some builds; ``send(...) + send("\\r")``
    is what reliably submits a prompt.
@@ -18,7 +18,7 @@ Ctrl+G debug overview). Driving it from tests requires:
 The helpers here encapsulate that ceremony so individual tests
 stay focused on the behavior they exercise.
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
 shared infrastructure.
 """
 
@@ -62,7 +62,7 @@ STATE_RUNNING = r"state: running"
 # combinations the bottom toolbar is not rendered even though the
 # input prompt itself is ready. Several REPL e2e tests already use
 # this as the visible readiness signal.
-PROMPT_READY = r"❯ "
+PROMPT_READY = r"â¯ "
 
 # Persisted test theme used to bypass the first-run interactive theme
 # picker. REPL tests already exercise prompt-toolkit interactions; the
@@ -106,7 +106,7 @@ def ensure_repl_test_theme_env(env: Mapping[str, str]) -> dict[str, str]:
     Return an env dict whose HOME contains a persisted TUI theme.
 
     The startup REPL shows an interactive theme picker when
-    ``$HOME/.agent_meow/config.yaml`` has no ``tui.theme`` entry.
+    ``$HOME/.omnigent/config.yaml`` has no ``tui.theme`` entry.
     That is correct for users but breaks pexpect tests that expect
     the normal REPL prompt to be the first interactive surface.
 
@@ -119,7 +119,7 @@ def ensure_repl_test_theme_env(env: Mapping[str, str]) -> dict[str, str]:
     :param env: Base subprocess environment, e.g. the
         ``omnigent_credentials_env`` fixture.
     :returns: A copy of *env* with ``HOME`` pointing at a directory
-        that has ``.agent_meow/config.yaml`` seeded.
+        that has ``.omnigent/config.yaml`` seeded.
     """
     prepared = dict(env)
     real_home = Path.home()
@@ -179,7 +179,7 @@ def spawn_omnigent_run(
 
     :param omnigent_python: Python interpreter with agent-meow
         installed, e.g.
-        ``Path("/Users/.../agent_meow/.venv/bin/python")``.
+        ``Path("/Users/.../omnigent/.venv/bin/python")``.
     :param yaml_path: Absolute path to the agent YAML, e.g.
         ``examples/hello_world.yaml``. Pass ``None`` to exercise
         ``agent-meow run --harness ...`` without an explicit
@@ -188,7 +188,7 @@ def spawn_omnigent_run(
         ``"databricks-gpt-5-mini"``.
     :param harness: Harness override passed via ``--harness``,
         e.g. ``"openai-agents"``.
-    :param env: Environment dict for the subprocess — supplied
+    :param env: Environment dict for the subprocess â€” supplied
         by the ``omnigent_credentials_env`` fixture so PAT
         and base URL propagate.
     :param cwd: Working directory for the subprocess. Must be
@@ -281,7 +281,7 @@ def wait_for_ready(child: pexpect.spawn, *, timeout: float) -> None:
     The preferred signal is the bottom toolbar's
     ``state: sleeping`` status line. Some prompt-toolkit/PTY
     combinations suppress the toolbar while still showing the
-    actual ``❯`` input prompt, so fall back to that visible prompt
+    actual ``â¯`` input prompt, so fall back to that visible prompt
     marker.
 
     :param child: The spawn returned by
@@ -320,9 +320,9 @@ def await_turn_complete(
     completion signal; return everything it printed from the
     ``running`` transition forward.
 
-    The ``running`` transition is used as a handshake only — its
+    The ``running`` transition is used as a handshake only â€” its
     appearance proves the prompt submission was accepted by the
-    Session — so we concatenate the pre-running and post-running
+    Session â€” so we concatenate the pre-running and post-running
     frame buffers. By default completion is the next
     ``state: sleeping`` toolbar render; tests whose terminal setup
     suppresses the toolbar can pass a visible response marker as
@@ -331,10 +331,10 @@ def await_turn_complete(
     :param child: Live ``pexpect.spawn`` child.
     :param running_timeout: Max seconds to wait for the
         ``running`` transition after a prompt was submitted.
-        Short — if this elapses the REPL almost certainly
+        Short â€” if this elapses the REPL almost certainly
         failed to register the prompt.
     :param completion_timeout: Max seconds to wait for the
-        turn to finish. Long — real LLM latency sits here.
+        turn to finish. Long â€” real LLM latency sits here.
     :param running_marker: Regex marker that proves the submitted
         prompt was accepted and the turn started. Defaults to the
         bottom-toolbar ``state: running`` text; tests may pass a
@@ -347,7 +347,7 @@ def await_turn_complete(
     child.expect(running_marker, timeout=running_timeout)
     # ``child.before`` here is everything rendered between the
     # previous expect (startup's ready signal) and the ``running``
-    # transition — includes the echoed prompt text and the ``You>``
+    # transition â€” includes the echoed prompt text and the ``You>``
     # banner. We must snapshot it before the next expect overwrites
     # ``before``.
     pre_running = child.before or ""
@@ -371,9 +371,9 @@ def clean_exit(child: pexpect.spawn, *, timeout: float) -> None:
 
     If both the Ctrl+D gesture and the ``/quit`` fallback fail to
     produce EOF within ``timeout``, force-kill the child instead of
-    raising. ``clean_exit`` is a teardown helper — every caller runs
+    raising. ``clean_exit`` is a teardown helper â€” every caller runs
     it as the final step after the test's real assertions have already
-    passed — so a slow shutdown handshake should not fail an otherwise
+    passed â€” so a slow shutdown handshake should not fail an otherwise
     green test. The shutdown work (session-log write, task
     cancellation, ``app.exit()``) occasionally exceeds ``timeout`` on a
     loaded ``xdist`` worker, especially for workflows that leave parked
@@ -383,7 +383,7 @@ def clean_exit(child: pexpect.spawn, *, timeout: float) -> None:
     :param timeout: Max seconds to wait for the child to
         terminate after each exit attempt. The REPL writes its
         session log, cancels pending tasks, and then calls
-        ``app.exit()`` — all of which can take a few seconds on
+        ``app.exit()`` â€” all of which can take a few seconds on
         shutdown.
     """
     try:
@@ -406,7 +406,7 @@ def clean_exit(child: pexpect.spawn, *, timeout: float) -> None:
                 return
         child.close()
     except OSError:
-        # Child already exited (closed PTY → [Errno 5] on the exit gesture);
+        # Child already exited (closed PTY â†’ [Errno 5] on the exit gesture);
         # a headless one-shot like ``claude -p`` self-terminates after
         # replying. Assertions ran before teardown, so treat as a clean exit.
         with contextlib.suppress(Exception):

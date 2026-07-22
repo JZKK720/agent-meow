@@ -1,9 +1,9 @@
-"""Sync ``agent_meow/version.py``'s ``VERSION`` to the canonical pyproject version.
+"""Sync ``omnigent/version.py``'s ``VERSION`` to the canonical pyproject version.
 
 The root ``pyproject.toml``'s ``[project].version`` is the single source of
 truth for the release version (stamped in lockstep with the SDK packages by
 ``scripts/update_versions.py``). The runtime, however, reads
-``agent_meow.version.VERSION`` — a plain constant it can import without touching
+``omnigent.version.VERSION`` â€” a plain constant it can import without touching
 package metadata. This script keeps that constant equal to the canonical
 pyproject version so the two never drift.
 
@@ -37,7 +37,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 _PYPROJECT = _REPO_ROOT / "pyproject.toml"
 _VERSION_PY = _REPO_ROOT / "agent-meow" / "version.py"
 
-# The ``VERSION = "..."`` assignment (its own line) in agent_meow/version.py.
+# The ``VERSION = "..."`` assignment (its own line) in omnigent/version.py.
 _VERSION_ASSIGN = re.compile(r'^VERSION = "[^"]*"$', re.MULTILINE)
 
 
@@ -49,7 +49,7 @@ def _canonical_version() -> str:
 def _current_constant(text: str) -> str:
     """Return the ``VERSION`` literal currently in *text*.
 
-    :param text: Contents of ``agent_meow/version.py``.
+    :param text: Contents of ``omnigent/version.py``.
     :returns: The quoted value of the ``VERSION`` assignment.
     :raises ValueError: If the assignment is missing or not unique.
     """
@@ -65,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     """Sync (or, with ``--check``, verify) the ``VERSION`` constant.
 
     :param argv: Argument list (defaults to ``sys.argv[1:]``).
-    :returns: Process exit code — ``0`` when already in sync, ``1`` when a
+    :returns: Process exit code â€” ``0`` when already in sync, ``1`` when a
         rewrite was needed (fix mode) or a drift was found (check mode).
     """
     parser = argparse.ArgumentParser(description=__doc__)

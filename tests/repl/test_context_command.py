@@ -1,7 +1,7 @@
 """Unit tests for the REPL's ``/context`` slash command.
 
 Mirrors :mod:`tests.repl.test_model_command`. Drives
-:func:`~?agent_meow.repl._repl.handle_slash_command` against a host /
+:func:`~?omnigent.repl._repl.handle_slash_command` against a host /
 session stub and asserts on the rendered output for both the
 unknown-context-window and known-context-window paths.
 
@@ -24,7 +24,7 @@ from dataclasses import dataclass
 import pytest
 from omnigent_ui_sdk import RichBlockFormatter
 
-from agent_meow.repl._repl import (
+from omnigent.repl._repl import (
     COMMANDS,
     _items_for_context_token_count,
     _update_context_ring_estimate,
@@ -37,8 +37,8 @@ class _Session:
     """Minimal stub matching the surface ``/context`` reads.
 
     Concrete class (not MagicMock) so unexpected attribute access fails
-    loudly — required by the project's test-integrity rules
-    (testing skill §3).
+    loudly â€” required by the project's test-integrity rules
+    (testing skill Â§3).
 
     :param agent_name: Value returned by the ``model`` property,
         e.g. ``"my-agent"``.
@@ -91,12 +91,12 @@ def _patch_count_tokens(
     """
     Monkeypatch ``count_tokens`` to return a fixed value.
 
-    ``count_tokens`` is imported with a local ``from … import`` statement
+    ``count_tokens`` is imported with a local ``from â€¦ import`` statement
     inside ``_cmd_context``; patching the source module attribute ensures
     the local binding picks up the replacement on each function call.
 
     ``context_window`` is now resolved server-side and supplied directly
-    via ``_Session.context_window`` — there is no ``_get_model_context_window``
+    via ``_Session.context_window`` â€” there is no ``_get_model_context_window``
     call in ``_cmd_context`` to patch.
 
     :param monkeypatch: pytest monkeypatch fixture.
@@ -104,7 +104,7 @@ def _patch_count_tokens(
         e.g. ``35_000``.
     """
     monkeypatch.setattr(
-        "agent_meow.runtime.compaction.count_tokens",
+        "omnigent.runtime.compaction.count_tokens",
         lambda messages, model: message_tokens,
     )
 
@@ -148,7 +148,7 @@ async def test_context_no_model_override_shows_fallback(
     # count_tokens still called for the raw message count
     _patch_count_tokens(monkeypatch, message_tokens=0)
     host = CapturingHost()
-    session = _Session()  # context_window=None → fallback path
+    session = _Session()  # context_window=None â†’ fallback path
     await handle_slash_command(
         "/context",
         session,
@@ -157,14 +157,14 @@ async def test_context_no_model_override_shows_fallback(
         RichBlockFormatter(),  # type: ignore[arg-type]
     )
     output = host.text
-    # Fallback hint must be present — tells the user why no bar is shown.
+    # Fallback hint must be present â€” tells the user why no bar is shown.
     assert "Context window size unknown" in output
     # A token count must still appear even on the fallback path.
     assert "tokens" in output
-    # Coin bar characters must NOT appear — no bar without a known window.
-    assert "█" not in output
-    assert "░" not in output
-    assert "▓" not in output
+    # Coin bar characters must NOT appear â€” no bar without a known window.
+    assert "â–ˆ" not in output
+    assert "â–‘" not in output
+    assert "â–“" not in output
 
 
 # ---------------------------------------------------------------------------
@@ -176,8 +176,8 @@ async def test_context_no_model_override_shows_fallback(
 async def test_context_coin_bar_low_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     """At 10 % usage, bar shows 1 used coin, 7 free coins, 2 buffer coins.
 
-    Arithmetic: used = round(0.1 × 10) = 1; buf = round(0.2 × 10) = 2;
-    free = max(10 − 1 − 2, 0) = 7; buf reassignment = 10 − 1 − 7 = 2.
+    Arithmetic: used = round(0.1 Ã— 10) = 1; buf = round(0.2 Ã— 10) = 2;
+    free = max(10 âˆ’ 1 âˆ’ 2, 0) = 7; buf reassignment = 10 âˆ’ 1 âˆ’ 7 = 2.
 
     Fails if the coin-bar computation or the ``round()`` calls change
     in a way that shifts the zone boundaries.
@@ -194,9 +194,9 @@ async def test_context_coin_bar_low_usage(monkeypatch: pytest.MonkeyPatch) -> No
     )
     output = host.text
     # All three zones appear in the coin bar.
-    assert "█" in output  # used zone
-    assert "░" in output  # free zone
-    assert "▓" in output  # compaction-buffer zone
+    assert "â–ˆ" in output  # used zone
+    assert "â–‘" in output  # free zone
+    assert "â–“" in output  # compaction-buffer zone
     # Summary line: 10.0k / 100k tokens (10%)
     assert "10.0k" in output
     assert "100k" in output
@@ -215,7 +215,7 @@ async def test_context_free_space_count_matches_its_percentage(
 
     Regression for the count/percent mismatch: free space used to be
     ``window - messages`` (omitting the 20% compaction buffer) while its
-    percentage subtracted the buffer — so it read e.g. "920,150 tokens (72%)",
+    percentage subtracted the buffer â€” so it read e.g. "920,150 tokens (72%)",
     a count that is 92% of the window. With window=100k, messages=10k, buffer
     20k, free must be 70k (70%): count and percent now agree, and the three
     rows sum to the window.
@@ -233,7 +233,7 @@ async def test_context_free_space_count_matches_its_percentage(
     output = host.text
     # Compute the expected partition the way the renderer does (the buffer
     # fraction is 1 - trigger, i.e. ~0.2 with float wobble).
-    from agent_meow.repl._repl import _CONTEXT_COMPACTION_TRIGGER
+    from omnigent.repl._repl import _CONTEXT_COMPACTION_TRIGGER
 
     window, msgs = 100_000, 10_000
     buf = int(window * (1.0 - _CONTEXT_COMPACTION_TRIGGER))
@@ -252,14 +252,14 @@ async def test_context_coin_bar_over_trigger_threshold(
 ) -> None:
     """At 90 % usage the free zone collapses to zero coins.
 
-    Arithmetic: used = round(0.9 × 10) = 9; buf = round(0.2 × 10) = 2;
-    free = max(10 − 9 − 2, 0) = 0; buf reassigned = 10 − 9 − 0 = 1.
-    So the bar holds 9 used coins and 1 buffer coin — no free coins.
+    Arithmetic: used = round(0.9 Ã— 10) = 9; buf = round(0.2 Ã— 10) = 2;
+    free = max(10 âˆ’ 9 âˆ’ 2, 0) = 0; buf reassigned = 10 âˆ’ 9 âˆ’ 0 = 1.
+    So the bar holds 9 used coins and 1 buffer coin â€” no free coins.
 
     Fails if the ``max(..., 0)`` clamp or buf reassignment is removed,
     which would produce a bar wider than 10 positions.
 
-    Note: ``░`` and ``▓`` always appear in the legend rows regardless of
+    Note: ``â–‘`` and ``â–“`` always appear in the legend rows regardless of
     zone sizes, so assertions check the coin bar *sequence* rather than
     using ``not in output``.
     """
@@ -276,7 +276,7 @@ async def test_context_coin_bar_over_trigger_threshold(
     output = host.text
     # Coin bar sequence: 9 used coins + 1 buffer coin, no free coins.
     # Fails if clamping is removed (bar would be wider than 10 positions).
-    assert "█████████▓" in output
+    assert "â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–“" in output
     # Summary: 90.0k / 100k (90%)
     assert "90.0k" in output
     assert "90%" in output
@@ -288,13 +288,13 @@ async def test_context_coin_bar_over_trigger_threshold(
 async def test_context_coin_bar_full_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     """At 100 % usage both free and buffer zones collapse to zero coins.
 
-    Arithmetic: used = round(1.0 × 10) = 10; free = 0; buf = 0.
+    Arithmetic: used = round(1.0 Ã— 10) = 10; free = 0; buf = 0.
     The bar is all 10 used coins.
 
     Fails if the ``min(used_frac, 1.0)`` clamp before the coin
     computation is removed, which would let used_coins exceed 10.
 
-    Note: ``░`` and ``▓`` always appear in the legend rows regardless of
+    Note: ``â–‘`` and ``â–“`` always appear in the legend rows regardless of
     zone sizes, so assertions check the coin bar *sequence* rather than
     using ``not in output``.
     """
@@ -310,8 +310,8 @@ async def test_context_coin_bar_full_usage(monkeypatch: pytest.MonkeyPatch) -> N
     )
     output = host.text
     # Coin bar sequence: exactly 10 used coins, no free or buffer.
-    # Fails if the min(used_frac, 1.0) clamp is removed (would produce > 10 █ chars).
-    assert "██████████" in output
+    # Fails if the min(used_frac, 1.0) clamp is removed (would produce > 10 â–ˆ chars).
+    assert "â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ" in output
     assert "100%" in output
 
 
@@ -362,7 +362,7 @@ async def test_context_header_shows_agent_name(
     """Agent name appears (humanized) in the tree header.
 
     ``_humanize_agent_name`` converts ``"my-coding-agent"`` to
-    ``"my coding agent"`` (hyphens → spaces, no title-casing).
+    ``"my coding agent"`` (hyphens â†’ spaces, no title-casing).
 
     Fails if the header-label construction drops the agent name or the
     ``_humanize_agent_name`` call is removed.
@@ -381,7 +381,7 @@ async def test_context_header_shows_agent_name(
         host,
         RichBlockFormatter(),  # type: ignore[arg-type]
     )
-    # "my-coding-agent" humanized → "my coding agent"
+    # "my-coding-agent" humanized â†’ "my coding agent"
     assert "my coding agent" in host.text
 
 
@@ -454,32 +454,32 @@ async def test_context_uses_host_tokens_used_when_set(
 
     The test verifies the priority by:
     1. Setting ``host.tokens_used = 37_000`` (simulating a cached ring value).
-    2. Patching ``count_tokens`` to raise if called — proving it is NOT called
+    2. Patching ``count_tokens`` to raise if called â€” proving it is NOT called
        when ``tokens_used`` is already set.
-    3. Patching ``_fetch_context_items`` to raise if called — proving no
+    3. Patching ``_fetch_context_items`` to raise if called â€” proving no
        extra HTTP round-trip is made.
 
     Fails if ``_cmd_context`` ignores ``host.tokens_used`` and recomputes,
     which would regress the performance contract.
     """
 
-    # Patch count_tokens to raise — it must NOT be called when tokens_used is set
+    # Patch count_tokens to raise â€” it must NOT be called when tokens_used is set
     def _should_not_count(*_args, **_kwargs):
         raise AssertionError(
             "count_tokens was called even though host.tokens_used is set. "
             "/context must use the cached value instead of recomputing."
         )
 
-    monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", _should_not_count)
+    monkeypatch.setattr("omnigent.runtime.compaction.count_tokens", _should_not_count)
 
-    # Patch _fetch_context_items to raise — no HTTP call should happen
+    # Patch _fetch_context_items to raise â€” no HTTP call should happen
     async def _should_not_fetch(*_args, **_kwargs):
         raise AssertionError(
             "_fetch_context_items was called even though host.tokens_used is set. "
             "/context must use the cached value instead of fetching items."
         )
 
-    monkeypatch.setattr("agent_meow.repl._repl._fetch_context_items", _should_not_fetch)
+    monkeypatch.setattr("omnigent.repl._repl._fetch_context_items", _should_not_fetch)
 
     host = CapturingHost()
     # Simulate the idle-event fallback having set tokens_used after a completed turn.
@@ -495,7 +495,7 @@ async def test_context_uses_host_tokens_used_when_set(
         RichBlockFormatter(),  # type: ignore[arg-type]
     )
 
-    # 37 000 tokens shown as "37.0k" — proves host.tokens_used was used, not recomputed
+    # 37 000 tokens shown as "37.0k" â€” proves host.tokens_used was used, not recomputed
     assert "37.0k" in host.text, (
         f"Expected '37.0k' (from host.tokens_used=37000) in output, got: {host.text!r}. "
         "The cached token count from the idle-event fallback was not used."
@@ -522,7 +522,7 @@ def test_context_ring_state_initialized_to_false() -> None:
     """
     import inspect
 
-    from agent_meow.repl import _repl
+    from omnigent.repl import _repl
 
     src = inspect.getsource(_repl.run_repl)
     # The initialiser line must set the flag to False (not True).
@@ -536,7 +536,7 @@ def test_context_ring_state_initialized_to_false() -> None:
     # The flag must be set to True in the _Completed handler when the
     # provider reported usage.  The assignment is `= True` (not
     # `= usage is not None`) because it lives inside the
-    # `if usage is not None and cw:` guard — the condition is already
+    # `if usage is not None and cw:` guard â€” the condition is already
     # verified before we reach the assignment line.
     assert "_context_ring_state[0] = True" in src, (
         "_context_ring_state[0] must be set to True in the _Completed handler "
@@ -549,7 +549,7 @@ def test_context_ring_state_initialized_to_false() -> None:
     assert "not _context_ring_state[0]" in src, (
         "The idle-event fallback must gate on 'not _context_ring_state[0]' "
         "instead of 'host.tokens_used is None', so it re-estimates every turn "
-        "that lacks provider usage — not just the first turn."
+        "that lacks provider usage â€” not just the first turn."
     )
 
 
@@ -645,7 +645,7 @@ class _ItemsClient:
     [
         # Native-harness agent (e.g. claude-native-ui after a mid-session
         # agent switch): spec pins no LLM model, so the fallback must use
-        # the agent name. Regression — the old inline
+        # the agent name. Regression â€” the old inline
         # closure referenced an unbound `agent_name` local here and the
         # idle event crashed with NameError instead of updating the ring.
         (None, "claude-native-ui"),
@@ -661,8 +661,8 @@ async def test_idle_ring_estimate_model_fallback(
     """The idle fallback counts tokens and updates the ring for any llm_model.
 
     Exercises ``_update_context_ring_estimate`` end-to-end against stub
-    client/host: fetch items → compaction-aware reduction → count_tokens
-    → ``host.update_context_usage``. Fails if the ``llm_model is None``
+    client/host: fetch items â†’ compaction-aware reduction â†’ count_tokens
+    â†’ ``host.update_context_usage``. Fails if the ``llm_model is None``
     path raises (the original crash) or if the wrong model id is
     passed to ``count_tokens``.
     """
@@ -680,10 +680,10 @@ async def test_idle_ring_estimate_model_fallback(
         counted_models.append(model)
         return 1_234
 
-    # count_tokens is imported with a local `from … import` inside the
+    # count_tokens is imported with a local `from â€¦ import` inside the
     # helper, so patching the source module attribute takes effect.
     monkeypatch.setattr(
-        "agent_meow.runtime.compaction.count_tokens",
+        "omnigent.runtime.compaction.count_tokens",
         _recording_count_tokens,
     )
 
@@ -697,9 +697,9 @@ async def test_idle_ring_estimate_model_fallback(
     client = _ItemsClient([{"id": "item_1", "type": "message", "role": "user", "content": "hi"}])
 
     await _update_context_ring_estimate(
-        session,  # type: ignore[arg-type] — duck-typed stub
-        client,  # type: ignore[arg-type] — duck-typed stub
-        host,  # type: ignore[arg-type] — duck-typed stub
+        session,  # type: ignore[arg-type] â€” duck-typed stub
+        client,  # type: ignore[arg-type] â€” duck-typed stub
+        host,  # type: ignore[arg-type] â€” duck-typed stub
         200_000,
     )
 

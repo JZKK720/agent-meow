@@ -1,26 +1,26 @@
-"""Drift guard: every agent — dir-shaped ``examples/<name>/`` or
+"""Drift guard: every agent â€” dir-shaped ``examples/<name>/`` or
 ``tests/resources/examples/<name>/`` (containing ``config.yaml``),
 single-YAML ``examples/<name>.yaml`` or
 ``tests/resources/examples/<name>.yaml``, or test-only
-``tests/resources/agents/<name>/`` — must have a dedicated
-``test_example_<name>.py`` file under ``tests/e2e/agent_meow/``.
+``tests/resources/agents/<name>/`` â€” must have a dedicated
+``test_example_<name>.py`` file under ``tests/e2e/omnigent/``.
 
 The set of agent roots scanned here is kept in lock-step with the
 resolution order in
-``tests/e2e/agent_meow/_example_helpers.py::example_yaml_path`` — the
+``tests/e2e/omnigent/_example_helpers.py::example_yaml_path`` â€” the
 helper the per-example tests use to find their YAML. If the guard
 scans fewer roots than the helper resolves, a ``test_example_*.py``
 that points at a real agent in the un-scanned root looks "orphaned"
-to the guard even though it runs fine. (That exact skew —
+to the guard even though it runs fine. (That exact skew â€”
 ``tests/resources/examples/`` being resolvable by the helper but
-invisible to the guard — is what this file historically tripped on.)
+invisible to the guard â€” is what this file historically tripped on.)
 
 When a new agent lands in any of those roots, the author should
 add a test file in the same commit. This test fails loud if an
 agent ships without one, and loud again if a test file points
 at an agent that no longer exists.
 
-Not a functional test — just a structural cross-check so the
+Not a functional test â€” just a structural cross-check so the
 coverage-per-agent rule can't silently drift.
 """
 
@@ -35,7 +35,7 @@ def _is_agent_yaml(path: Path) -> bool:
     """
     Whether a top-level ``.yaml`` is an agent spec (has a ``name:``)
     rather than a non-agent config that merely lives alongside the
-    examples — e.g. ``server_config_with_policies.yaml``, which is a
+    examples â€” e.g. ``server_config_with_policies.yaml``, which is a
     ``agent-meow server --config`` file (only ``policies:``), not an
     agent. Mirrors the ``missing required key 'name'`` check the spec
     loader itself uses to reject non-agent YAMLs.
@@ -57,7 +57,7 @@ def _scan_agent_root(root: Path, *, require_config_yaml: bool) -> set[str]:
 
     :param root: Directory to scan (skipped if it does not exist).
     :param require_config_yaml: When ``True``, a directory counts
-        only if it contains ``config.yaml`` (AGENTSPEC bundles —
+        only if it contains ``config.yaml`` (AGENTSPEC bundles â€”
         excludes non-agent dirs like ``examples/databricks_apps/``).
         When ``False``, any directory counts (test-only fixtures
         under ``tests/resources/agents/`` may be single-file
@@ -82,13 +82,13 @@ def _scan_agent_root(root: Path, *, require_config_yaml: bool) -> set[str]:
 # Agents that have e2e tests in files other than the
 # ``test_example_<name>.py`` naming convention (historical, pre-
 # unification). Kept as an explicit allow-list so *new* agents
-# can't slip past this guard by accident — expanding the list
+# can't slip past this guard by accident â€” expanding the list
 # requires editing it here.
 _ALT_COVERED: frozenset[str] = frozenset(
     {
         # Covered by test_yaml_hello_world.py (via agent_with_tools
         # fixture) and many dedicated hello_world-named e2e tests
-        # under tests/e2e/agent_meow/test_run_omnigent_* etc.
+        # under tests/e2e/omnigent/test_run_omnigent_* etc.
         "hello_world",
         # Covered by test_yaml_hello_world.py's tool-dispatch test.
         "agent_with_tools",
@@ -97,14 +97,14 @@ _ALT_COVERED: frozenset[str] = frozenset(
         # Covered by tests/e2e/test_coder_subagent.py +
         # tests/e2e/test_chat_e2e.py.
         "coder",
-        # Covered by tests/e2e/agent_meow/test_run_omnigent_coding_supervisor.py
+        # Covered by tests/e2e/omnigent/test_run_omnigent_coding_supervisor.py
         # (seven test functions).
         "coding_supervisor",
         # Covered by tests/e2e/test_openai_coder_*.py.
         "openai-coder",
-        # Covered by tests/e2e/agent_meow/test_repl_overview_terminal_visibility.py.
+        # Covered by tests/e2e/omnigent/test_repl_overview_terminal_visibility.py.
         "terminal_workers",
-        # Pre-existing coverage gaps — ``chat_model`` is exercised
+        # Pre-existing coverage gaps â€” ``chat_model`` is exercised
         # by ``web/``'s integration flow (``web/README.md`` leads
         # the dev-server README with it) and ``coding_supervisor_openai``
         # is the OpenAI-model sibling of ``coding_supervisor`` that
@@ -114,7 +114,7 @@ _ALT_COVERED: frozenset[str] = frozenset(
         "chat_model",
         "coding_supervisor_openai",
         # Test-only fixtures under tests/resources/agents/ that
-        # don't have test_example_<name>.py files — these are
+        # don't have test_example_<name>.py files â€” these are
         # loaded ad-hoc by specific test files (e.g.
         # claude-coder, coding-supervisor, terminal_supervisor are
         # loaded by tests/e2e/conftest.py fixtures; ask-demo,
@@ -126,16 +126,16 @@ _ALT_COVERED: frozenset[str] = frozenset(
         "compaction-test",
         # Test-only fixtures added with OMNIGENT_TERMINAL_BRIDGE (commits
         # 3d9dd0a / 1f9a3a8). Loaded by:
-        # - sys-terminal-test → tests/e2e/test_sys_terminal_e2e.py
+        # - sys-terminal-test â†’ tests/e2e/test_sys_terminal_e2e.py
         #   via the sys_terminal_test_agent fixture in
         #   tests/e2e/conftest.py.
-        # - supervisor-terminal-test → tests/e2e/test_repl_terminal_overview_e2e.py
+        # - supervisor-terminal-test â†’ tests/e2e/test_repl_terminal_overview_e2e.py
         #   for the parametrized parent+sub-agent terminal sidebar
         #   test.
         "supervisor-terminal-test",
         "sys-terminal-test",
         # Bundled @tool-source fixtures (config.yaml + tools/python/) loaded by
-        # register_dir_agent_with_mock_llm — covered by the shared tests
+        # register_dir_agent_with_mock_llm â€” covered by the shared tests
         # test_decorated_tools_e2e.py / test_async_tools_e2e.py /
         # test_tool_call_policy_e2e.py, not test_example_<name>.py files.
         "decorator-tools",
@@ -162,7 +162,7 @@ _ALT_COVERED: frozenset[str] = frozenset(
         "timer-test",
         # ralph_loop is a loop-mode demo; no dedicated e2e yet.
         "ralph_loop",
-        # ── tests/resources/examples/ agents covered by name elsewhere ──
+        # â”€â”€ tests/resources/examples/ agents covered by name elsewhere â”€â”€
         # agent_with_client_tools: client-tool knobs are asserted in
         # tests/spec/test_tool_runtime.py (loads the YAML directly).
         "agent_with_client_tools",
@@ -176,7 +176,7 @@ _ALT_COVERED: frozenset[str] = frozenset(
         # qwen_perm_test: qwen-harness permission fixture exercised by
         # tests/inner/test_qwen_agent_integration.py against a mocked ACP
         # subprocess. The live qwen round-trip lives in
-        # tests/e2e/agent_meow/test_per_harness_qwen.py (skipped without a
+        # tests/e2e/omnigent/test_per_harness_qwen.py (skipped without a
         # qwen CLI), not a test_example_<name>.py file.
         "qwen_perm_test",
         # kimi_hello: single-YAML launcher for the SDK kimi harness. The
@@ -184,16 +184,16 @@ _ALT_COVERED: frozenset[str] = frozenset(
         # unit tests with a stubbed kimi subprocess) and the native picker
         # flows in tests/e2e_ui/start_session/test_start_session.py. A live
         # round-trip needs the kimi CLI + Moonshot auth (not available in
-        # CI), so there is no test_example_<name>.py file — same shape as
+        # CI), so there is no test_example_<name>.py file â€” same shape as
         # qwen_perm_test above.
         "kimi_hello",
-        # ── tests/resources/agents/ fixtures covered by name elsewhere ──
+        # â”€â”€ tests/resources/agents/ fixtures covered by name elsewhere â”€â”€
         # workspace-file-writer: loaded by the changed-files e2e tests
         # (test_filesystem_changed_files_e2e.py /
         # test_non_git_changed_files_e2e.py).
         "workspace-file-writer",
         # sdk-chat-builtin: single-YAML fixture loaded by name as the
-        # fork-switch target in the native→SDK e2e tests
+        # fork-switch target in the nativeâ†’SDK e2e tests
         # (test_host_claude_native_fork_e2e.py, test_switch_agent_e2e.py,
         # test_switch_agent_native_e2e.py, test_sessions_fork_e2e.py).
         "sdk-chat-builtin",
@@ -225,7 +225,7 @@ def test_every_agent_has_a_dedicated_test_file() -> None:
     # order in ``_example_helpers.example_yaml_path`` (see the module
     # docstring): the helper resolves ``examples/``,
     # ``tests/resources/examples/`` (single-YAML + dir-shaped), and
-    # ``tests/resources/agents/`` — so the guard must scan all three,
+    # ``tests/resources/agents/`` â€” so the guard must scan all three,
     # or a real per-example test in an un-scanned root reads as an
     # orphan. Both ``examples/`` and ``tests/resources/examples/``
     # carry shipped/demo agents, so each contributes dir-shaped
@@ -237,7 +237,7 @@ def test_every_agent_has_a_dedicated_test_file() -> None:
         _scan_agent_root(repo_root / "tests" / "resources" / "examples", require_config_yaml=True)
         - _FIXTURE_ONLY_EXAMPLES
     )
-    # Test-only fixture agents under ``tests/resources/agents/`` —
+    # Test-only fixture agents under ``tests/resources/agents/`` â€”
     # any directory counts (single-file bundles are valid here).
     on_disk |= _scan_agent_root(
         repo_root / "tests" / "resources" / "agents", require_config_yaml=False
@@ -254,7 +254,7 @@ def test_every_agent_has_a_dedicated_test_file() -> None:
     missing = on_disk - named_covered - _ALT_COVERED
     assert missing == set(), (
         f"Agents without a dedicated test file: {sorted(missing)}. "
-        f"Create tests/e2e/agent_meow/test_example_<name>.py for "
+        f"Create tests/e2e/omnigent/test_example_<name>.py for "
         f"each, or add the name to _ALT_COVERED above if coverage "
         f"lives in a differently-named test file."
     )

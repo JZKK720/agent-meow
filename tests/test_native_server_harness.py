@@ -1,4 +1,4 @@
-"""Unit tests for :class:`~?agent_meow.native_server_harness.NativeServerHarness`.
+"""Unit tests for :class:`~?omnigent.native_server_harness.NativeServerHarness`.
 
 Drives the transport-agnostic base directly over an in-memory fake transport,
 covering the run-turn / interrupt / enqueue orchestration (boot-poll, model
@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_meow.inner.executor import ExecutorConfig, ExecutorError, TurnComplete
-from agent_meow.native_server_harness import NativeServerHarness
-from agent_meow.native_server_transport import NativePrompt
+from omnigent.inner.executor import ExecutorConfig, ExecutorError, TurnComplete
+from omnigent.native_server_harness import NativeServerHarness
+from omnigent.native_server_transport import NativePrompt
 
 
 class _FakeTransport:
@@ -72,7 +72,7 @@ async def _drive(harness: NativeServerHarness, content: Any = "hello", config: A
     ]
 
 
-# ── capabilities ────────────────────────────────────────────────────────────
+# â”€â”€ capabilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_capabilities() -> None:
@@ -85,7 +85,7 @@ def test_capabilities() -> None:
     )
 
 
-# ── run_turn ────────────────────────────────────────────────────────────────
+# â”€â”€ run_turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_run_turn_injects_and_completes() -> None:
@@ -108,7 +108,7 @@ async def test_run_turn_no_user_input_errors() -> None:
 
 
 async def test_run_turn_missing_session_errors_after_boot_poll() -> None:
-    # Resolver always None → boot-poll exhausts → bridge-missing error.
+    # Resolver always None â†’ boot-poll exhausts â†’ bridge-missing error.
     events = await _drive(_harness(_FakeTransport(), resolver=_const_resolver(None)))
     assert [type(e) for e in events] == [ExecutorError]
     assert "bridge state is missing" in events[0].message
@@ -132,7 +132,7 @@ async def test_run_turn_send_failure_becomes_error_event() -> None:
     assert "executor error" in events[0].message
 
 
-# ── interrupt_session ───────────────────────────────────────────────────────
+# â”€â”€ interrupt_session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_interrupt_aborts() -> None:
@@ -149,7 +149,7 @@ async def test_interrupt_swallows_abort_error() -> None:
     assert await _harness(_FakeTransport(abort_raises=True)).interrupt_session("k") is False
 
 
-# ── enqueue_session_message ─────────────────────────────────────────────────
+# â”€â”€ enqueue_session_message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_enqueue_injects_prompt() -> None:

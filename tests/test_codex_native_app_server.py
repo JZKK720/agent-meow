@@ -14,17 +14,17 @@ try:
 except ImportError:  # pragma: no cover - Python < 3.11
     import tomli as tomllib  # type: ignore[no-redef]
 
-from agent_meow.codex_native_app_server import (
+from omnigent.codex_native_app_server import (
     _POLICY_HOOK_TIMEOUT_SECONDS,
     CodexNativeAppServer,
     _codex_policy_hooks_settings,
     build_codex_native_server,
     trust_native_policy_hooks,
 )
-from agent_meow.codex_native_hook import _EVALUATE_POLICY_TIMEOUT_S
+from omnigent.codex_native_hook import _EVALUATE_POLICY_TIMEOUT_S
 
 _CWD = "/home/user/repo"
-_OUR_COMMAND = "/venv/bin/python -m agent_meow.codex_native_hook evaluate-policy --bridge-dir /b"
+_OUR_COMMAND = "/venv/bin/python -m omnigent.codex_native_hook evaluate-policy --bridge-dir /b"
 _USER_COMMAND = "bash /home/user/.config/llm-cli/hooks/guard.sh"
 
 
@@ -153,11 +153,11 @@ def test_build_codex_native_server_profile_error_names_profile(
     stale/missing runner env apart from a generic Codex startup failure.
     """
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server._find_codex_cli",
+        "omnigent.codex_native_app_server._find_codex_cli",
         lambda: sys.executable,
     )
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server._read_databrickscfg",
+        "omnigent.codex_native_app_server._read_databrickscfg",
         lambda _profile: None,
     )
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(tmp_path / "missing-databrickscfg"))
@@ -189,11 +189,11 @@ def test_build_codex_native_server_uses_profile_host_without_static_token(
     time.
     """
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server._find_codex_cli",
+        "omnigent.codex_native_app_server._find_codex_cli",
         lambda: sys.executable,
     )
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server._read_databrickscfg",
+        "omnigent.codex_native_app_server._read_databrickscfg",
         lambda _profile: None,
     )
     cfg_path = tmp_path / "databrickscfg"
@@ -240,7 +240,7 @@ def test_build_codex_native_server_without_bypass_emits_no_bypass_config(
     native Codex session.
     """
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server._find_codex_cli",
+        "omnigent.codex_native_app_server._find_codex_cli",
         lambda: sys.executable,
     )
     app_server = build_codex_native_server(
@@ -269,14 +269,14 @@ def test_build_codex_native_server_bypass_emits_full_access_config(
     The ``--remote`` TUI launched with
     ``--dangerously-bypass-approvals-and-sandbox`` fixes the thread's
     approval/sandbox stance, but the chat/forwarder seam drives the SAME
-    thread through the app-server, so the app-server config must match —
+    thread through the app-server, so the app-server config must match â€”
     ``approval_policy="never"`` (no prompts a headless seam can't answer)
     and ``sandbox_mode="danger-full-access"`` (commands run with no command
     sandbox, the #657 ask). Without these the app-server-driven turns would
     keep prompting / keep the sandbox even though the TUI bypassed it.
     """
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server._find_codex_cli",
+        "omnigent.codex_native_app_server._find_codex_cli",
         lambda: sys.executable,
     )
     app_server = build_codex_native_server(
@@ -343,7 +343,7 @@ trust_level = "trusted"
 command = "/old/python"
 args = ["old"]
 
-[mcp_servers.agent_meow.env] # stale generated env
+[mcp_servers.omnigent.env] # stale generated env
 OLD = "1"
 
 [mcp_servers.other]
@@ -370,7 +370,7 @@ args = []
     assert not config_path.is_symlink()
     rendered = config_path.read_text(encoding="utf-8")
     assert rendered.count("[mcp_servers.agent-meow]") == 1
-    assert "[mcp_servers.agent_meow.env]" not in rendered
+    assert "[mcp_servers.omnigent.env]" not in rendered
     parsed = tomllib.loads(rendered)
     assert parsed["mcp_servers"]["other"]["command"] == "other"
     assert parsed["mcp_servers"]["agent-meow"] == {
@@ -378,7 +378,7 @@ args = []
         "args": [
             "-I",
             "-m",
-            "agent_meow.claude_native_bridge",
+            "omnigent.claude_native_bridge",
             "serve-mcp",
             "--bridge-dir",
             str(bridge_dir),
@@ -417,7 +417,7 @@ async def test_start_writes_fresh_mcp_config_without_leading_blanks(
         "args": [
             "-I",
             "-m",
-            "agent_meow.claude_native_bridge",
+            "omnigent.claude_native_bridge",
             "serve-mcp",
             "--bridge-dir",
             str(bridge_dir),
@@ -429,7 +429,7 @@ async def test_untrusted_hook_is_trusted_via_batchwrite() -> None:
     """
     An untrusted agent-meow hook is trusted with its currentHash.
 
-    This is the core flow: list → write trusted_hash → verify trusted.
+    This is the core flow: list â†’ write trusted_hash â†’ verify trusted.
     It fails if the batchWrite omits our key, writes the wrong hash, or
     skips the re-verification (which would let a still-untrusted hook
     through, silently disabling enforcement).
@@ -457,7 +457,7 @@ async def test_already_trusted_hook_skips_batchwrite() -> None:
     """
     client = _FakeCodexClient(hooks=[_hook("k1", _OUR_COMMAND, "trusted")])
     await trust_native_policy_hooks(client, cwd=_CWD)
-    assert _batchwrite_calls(client) == []  # nothing to trust → no write
+    assert _batchwrite_calls(client) == []  # nothing to trust â†’ no write
 
 
 async def test_missing_hook_raises() -> None:
@@ -521,7 +521,7 @@ async def test_missing_hook_error_reports_zero_hooks_loaded() -> None:
     Discovery failure with no hooks loaded names the likely cause.
 
     When codex loads zero hooks (the symptom of an invalid per-session
-    config.toml → codex falls back to defaults), the "not discovered"
+    config.toml â†’ codex falls back to defaults), the "not discovered"
     error must say so, not just report the bare cwd. Fails if the
     diagnostic suffix is dropped, which is what made the original report
     impossible to triage.
@@ -601,7 +601,7 @@ def _set_codex_version(
     async def _fake_version(_codex_path: str) -> tuple[int, int, int] | None:
         return version
 
-    monkeypatch.setattr("agent_meow.codex_native_app_server._codex_cli_version", _fake_version)
+    monkeypatch.setattr("omnigent.codex_native_app_server._codex_cli_version", _fake_version)
 
 
 async def test_old_codex_skips_policy_hook_and_records_reason(
@@ -627,7 +627,7 @@ async def test_old_codex_skips_policy_hook_and_records_reason(
     _set_codex_version(monkeypatch, (0, 128, 0))
 
     server = _test_app_server(tmp_path, codex_home, bridge_dir, workspace)
-    # ap_server_url present → enforcement was intended → this is the
+    # ap_server_url present â†’ enforcement was intended â†’ this is the
     # security-relevant degrade path.
     server.ap_server_url = "http://127.0.0.1:9999"
     await server.start()
@@ -679,7 +679,7 @@ async def test_unknown_codex_version_treated_as_supported(
     An unparseable codex version does not disable enforcement.
 
     A flaky/odd ``codex --version`` must not silently drop policy
-    enforcement — we proceed to register + trust (a real trust failure is
+    enforcement â€” we proceed to register + trust (a real trust failure is
     then caught separately). Fails if ``None`` is treated as "too old".
     """
     real_codex_home = tmp_path / "real-codex-home"
@@ -709,7 +709,7 @@ async def test_trust_failure_is_fail_open_with_reason(
 
     This is the core behavior change: a hook that can't be trusted (e.g.
     "not discovered" on an otherwise-supported codex) must NOT raise out
-    of start() — the session runs, the reason is recorded for a web-UI
+    of start() â€” the session runs, the reason is recorded for a web-UI
     notice. Fails if start() re-raises (the old blocking behavior) or
     leaves the reason unset.
     """
@@ -732,7 +732,7 @@ async def test_trust_failure_is_fail_open_with_reason(
     server.ap_server_url = "http://127.0.0.1:9999"
     await server.start()  # must NOT raise
     try:
-        # Hook was registered (supported codex) but trust failed → degrade.
+        # Hook was registered (supported codex) but trust failed â†’ degrade.
         assert (codex_home / "hooks.json").exists()
         assert server.policy_hook_disabled_reason is not None
         # The underlying trust error is carried into the reason.
@@ -750,7 +750,7 @@ def test_policy_hooks_timeout_outlasts_the_hooks_request_budget() -> None:
     the server parks the gate as a URL elicitation. Codex kills the hook
     subprocess after the ``timeout`` it reads from ``hooks.json``. If that
     timeout were shorter than the request budget, codex would kill the hook
-    mid-park and run the tool before the ASK verdict arrived — the regression
+    mid-park and run the tool before the ASK verdict arrived â€” the regression
     that let sub-agent tool calls slip past the cost gate (it was 30s).
     """
     settings = _codex_policy_hooks_settings(Path("/b"), "/venv/bin/python")
@@ -795,10 +795,10 @@ class TestPinCodexConfigModel:
         """The top-level ``model`` line is replaced; lookalike keys survive.
 
         ``model_provider`` / ``model_reasoning_effort`` also start with
-        "model", and keys inside tables must never be touched — both were
+        "model", and keys inside tables must never be touched â€” both were
         plausible regressions for a line-match implementation.
         """
-        from agent_meow.codex_native_app_server import _pin_codex_config_model
+        from omnigent.codex_native_app_server import _pin_codex_config_model
 
         config = tmp_path / "config.toml"
         config.write_text(
@@ -819,7 +819,7 @@ class TestPinCodexConfigModel:
 
     def test_inserts_model_when_absent(self, tmp_path: Path) -> None:
         """A config with no top-level ``model`` gains one as the first line."""
-        from agent_meow.codex_native_app_server import _pin_codex_config_model
+        from omnigent.codex_native_app_server import _pin_codex_config_model
 
         config = tmp_path / "config.toml"
         config.write_text("[profiles.default]\nx = 1\n", encoding="utf-8")
@@ -831,7 +831,7 @@ class TestPinCodexConfigModel:
     def test_materializes_symlink_without_touching_source(self, tmp_path: Path) -> None:
         """A symlinked config.toml is copied per-session; the shared source
         keeps its own model line (the live-caught clobber scenario)."""
-        from agent_meow.codex_native_app_server import _pin_codex_config_model
+        from omnigent.codex_native_app_server import _pin_codex_config_model
 
         shared = tmp_path / "shared-config.toml"
         shared.write_text('model = "gpt-5.5"\n', encoding="utf-8")
@@ -852,8 +852,8 @@ class TestPinCodexConfigModel:
         reported the shared file's stale model and overwrote the child's
         ``model_override``.
         """
-        from agent_meow.codex_native_app_server import _pin_codex_config_model
-        from agent_meow.codex_native_bridge import read_codex_config_model
+        from omnigent.codex_native_app_server import _pin_codex_config_model
+        from omnigent.codex_native_bridge import read_codex_config_model
 
         home = tmp_path / "codex-home"
         home.mkdir()
@@ -882,7 +882,7 @@ class TestModelFlagHelpers:
     )
     def test_model_flag_enabled_reads_truthy_env(self, value: str, expected: bool) -> None:
         """The opt-in flag honors the shared truthy-string convention."""
-        from agent_meow.codex_native_app_server import (
+        from omnigent.codex_native_app_server import (
             _MODEL_FLAG_ENV_VAR,
             _model_flag_enabled,
         )
@@ -891,44 +891,44 @@ class TestModelFlagHelpers:
 
     def test_model_flag_disabled_when_env_absent(self) -> None:
         """An unset flag defaults OFF (config.toml pin remains the only route)."""
-        from agent_meow.codex_native_app_server import _model_flag_enabled
+        from omnigent.codex_native_app_server import _model_flag_enabled
 
         assert _model_flag_enabled({}) is False
 
     async def test_supports_model_flag_true_when_help_lists_it(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """``--model`` in ``codex --help`` output → flag supported."""
-        from agent_meow.codex_native_app_server import _codex_supports_model_flag
+        """``--model`` in ``codex --help`` output â†’ flag supported."""
+        from omnigent.codex_native_app_server import _codex_supports_model_flag
 
         async def _fake_exec(*_args: Any, **_kwargs: Any) -> Any:
             return _HelpProc(b"Options:\n  -m, --model <MODEL>\n      Model to use\n")
 
-        monkeypatch.setattr("agent_meow.codex_native_app_server._create_subprocess_exec", _fake_exec)
+        monkeypatch.setattr("omnigent.codex_native_app_server._create_subprocess_exec", _fake_exec)
         assert await _codex_supports_model_flag("/usr/bin/codex") is True
 
     async def test_supports_model_flag_false_when_help_omits_it(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A codex build whose ``--help`` lacks ``--model`` → unsupported."""
-        from agent_meow.codex_native_app_server import _codex_supports_model_flag
+        """A codex build whose ``--help`` lacks ``--model`` â†’ unsupported."""
+        from omnigent.codex_native_app_server import _codex_supports_model_flag
 
         async def _fake_exec(*_args: Any, **_kwargs: Any) -> Any:
             return _HelpProc(b"Options:\n  -c, --config <key=value>\n")
 
-        monkeypatch.setattr("agent_meow.codex_native_app_server._create_subprocess_exec", _fake_exec)
+        monkeypatch.setattr("omnigent.codex_native_app_server._create_subprocess_exec", _fake_exec)
         assert await _codex_supports_model_flag("/usr/bin/codex") is False
 
     async def test_supports_model_flag_false_when_probe_cannot_run(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """An OSError spawning the probe is treated as unsupported (flag skipped)."""
-        from agent_meow.codex_native_app_server import _codex_supports_model_flag
+        from omnigent.codex_native_app_server import _codex_supports_model_flag
 
         async def _fake_exec(*_args: Any, **_kwargs: Any) -> Any:
             raise OSError("no codex")
 
-        monkeypatch.setattr("agent_meow.codex_native_app_server._create_subprocess_exec", _fake_exec)
+        monkeypatch.setattr("omnigent.codex_native_app_server._create_subprocess_exec", _fake_exec)
         assert await _codex_supports_model_flag("/usr/bin/codex") is False
 
     async def test_supports_model_flag_ignores_lookalike_options_and_prose(
@@ -940,7 +940,7 @@ class TestModelFlagHelpers:
         flag or the word in prose; the matcher must not false-positive on
         either and pass an unsupported flag to the launch.
         """
-        from agent_meow.codex_native_app_server import _codex_supports_model_flag
+        from omnigent.codex_native_app_server import _codex_supports_model_flag
 
         async def _fake_exec(*_args: Any, **_kwargs: Any) -> Any:
             return _HelpProc(
@@ -951,7 +951,7 @@ class TestModelFlagHelpers:
                 b"          e.g. set the --model in config.toml\n"
             )
 
-        monkeypatch.setattr("agent_meow.codex_native_app_server._create_subprocess_exec", _fake_exec)
+        monkeypatch.setattr("omnigent.codex_native_app_server._create_subprocess_exec", _fake_exec)
         assert await _codex_supports_model_flag("/usr/bin/codex") is False
 
 
@@ -996,7 +996,7 @@ class _SpawnRecorder:
 
     @property
     def stderr(self) -> None:
-        """No stderr stream — the patched ``_stderr_loop`` never reads it."""
+        """No stderr stream â€” the patched ``_stderr_loop`` never reads it."""
         return None
 
     async def wait(self) -> int:
@@ -1040,13 +1040,13 @@ def _patch_start_spawn(monkeypatch: pytest.MonkeyPatch, recorder: _SpawnRecorder
     """Stub the subprocess spawn + readiness waits used by ``start()``.
 
     The version probe is stubbed to an old (pre-policy-hook) codex so
-    ``start`` skips hook registration — fewer side effects — and so its own
+    ``start`` skips hook registration â€” fewer side effects â€” and so its own
     subprocess spawn never reaches the recorder. The recorder is wired only
     to the final app-server spawn.
 
     The spawn is captured by patching the module-level
     ``_create_subprocess_exec`` indirection (which ``start`` now calls),
-    NOT ``…app_server.asyncio.create_subprocess_exec`` — the latter walks the
+    NOT ``â€¦app_server.asyncio.create_subprocess_exec`` â€” the latter walks the
     real asyncio module singleton and leaks the mock into every other test in
     the process.
 
@@ -1056,13 +1056,13 @@ def _patch_start_spawn(monkeypatch: pytest.MonkeyPatch, recorder: _SpawnRecorder
     _disable_codex_startup_rpc(monkeypatch)
     _set_codex_version(monkeypatch, (0, 100, 0))
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server._create_subprocess_exec", recorder._record
+        "omnigent.codex_native_app_server._create_subprocess_exec", recorder._record
     )
     # The crash-reap registration path (added alongside this flag) is exercised
     # by the process-registry tests; these flag tests only assert argv/env, so
     # skip registration by denying the owner lock (the recorder has no pid).
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server.acquire_codex_native_process_owner_lock",
+        "omnigent.codex_native_app_server.acquire_codex_native_process_owner_lock",
         lambda: None,
     )
 
@@ -1082,7 +1082,7 @@ class TestModelFlagPlumbing:
 
         The config.toml pin (asserted below) remains the only route.
         """
-        from agent_meow.codex_native_app_server import _MODEL_FLAG_ENV_VAR
+        from omnigent.codex_native_app_server import _MODEL_FLAG_ENV_VAR
 
         # The opt-in is read from the server's own process env (os.environ);
         # ensure it isn't ambiently set so "off" is genuinely off.
@@ -1104,18 +1104,18 @@ class TestModelFlagPlumbing:
     async def test_flag_on_with_cli_support_passes_global_model_flag(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Opt-in + a codex that supports ``--model`` → global ``--model <id>``.
+        """Opt-in + a codex that supports ``--model`` â†’ global ``--model <id>``.
 
         The flag must precede the ``app-server`` subcommand (it is a codex
         global option).
         """
-        from agent_meow.codex_native_app_server import _MODEL_FLAG_ENV_VAR
+        from omnigent.codex_native_app_server import _MODEL_FLAG_ENV_VAR
 
         async def _supports(_codex_path: str) -> bool:
             return True
 
         monkeypatch.setattr(
-            "agent_meow.codex_native_app_server._codex_supports_model_flag", _supports
+            "omnigent.codex_native_app_server._codex_supports_model_flag", _supports
         )
         # The opt-in lives in the server's process env, NOT the cleaned codex
         # spawn env (env={}): _clean_codex_env strips OMNIGENT_* keys, so a
@@ -1148,13 +1148,13 @@ class TestModelFlagPlumbing:
         doesn't get ``--model``; the always-on config.toml pin still launches
         it on the right model.
         """
-        from agent_meow.codex_native_app_server import _MODEL_FLAG_ENV_VAR
+        from omnigent.codex_native_app_server import _MODEL_FLAG_ENV_VAR
 
         async def _unsupported(_codex_path: str) -> bool:
             return False
 
         monkeypatch.setattr(
-            "agent_meow.codex_native_app_server._codex_supports_model_flag", _unsupported
+            "omnigent.codex_native_app_server._codex_supports_model_flag", _unsupported
         )
         # Opt-in lives in the server process env, not the cleaned spawn env.
         monkeypatch.setenv(_MODEL_FLAG_ENV_VAR, "1")
@@ -1186,13 +1186,13 @@ class TestModelFlagPlumbing:
         reverts to reading ``self.env``, this fails: the flag would appear to
         work in a unit test that injects it via ``env=`` but be dead in prod.
         """
-        from agent_meow.codex_native_app_server import _MODEL_FLAG_ENV_VAR
+        from omnigent.codex_native_app_server import _MODEL_FLAG_ENV_VAR
 
         async def _supports(_codex_path: str) -> bool:
             return True
 
         monkeypatch.setattr(
-            "agent_meow.codex_native_app_server._codex_supports_model_flag", _supports
+            "omnigent.codex_native_app_server._codex_supports_model_flag", _supports
         )
         # NOT set in os.environ -- only smuggled into the spawn env.
         monkeypatch.delenv(_MODEL_FLAG_ENV_VAR, raising=False)

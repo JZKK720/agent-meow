@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from agent_meow.spec.types import (
+from omnigent.spec.types import (
     AgentSpec,
     ExecutorSpec,
     LLMConfig,
 )
-from agent_meow.tools.builtins.web_fetch import (
+from omnigent.tools.builtins.web_fetch import (
     RESEARCHER_NAME,
     WebFetchTool,
     build_researcher_spec,
 )
 
-# ── Helpers ──────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_parent_spec(
@@ -39,7 +39,7 @@ def _make_parent_spec(
     )
 
 
-# ── Schema ───────────────────────────────────────────
+# â”€â”€ Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_web_fetch_schema_is_function() -> None:
@@ -61,7 +61,7 @@ def test_web_fetch_name() -> None:
     assert WebFetchTool.name() == "web_fetch"
 
 
-# ── Researcher spec ──────────────────────────────────
+# â”€â”€ Researcher spec â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_researcher_inherits_parent_model() -> None:
@@ -74,7 +74,7 @@ def test_researcher_inherits_parent_model() -> None:
     tool = WebFetchTool(parent_spec=parent)
     researcher = tool.researcher_spec
     assert researcher.llm is not None, (
-        "Researcher spec must have an llm block — "
+        "Researcher spec must have an llm block â€” "
         "without it, the workflow fails with 'no LLM configuration'."
     )
     assert researcher.llm.model == "anthropic/claude-sonnet-4-20250514", (
@@ -84,7 +84,7 @@ def test_researcher_inherits_parent_model() -> None:
 
 def test_researcher_has_os_env_for_sys_os_shell() -> None:
     """
-    The researcher must declare an ``os_env`` block — that's what
+    The researcher must declare an ``os_env`` block â€” that's what
     registers ``sys_os_shell``, the only tool the researcher uses
     to fetch URLs (curl, python3 one-liners).
 
@@ -118,7 +118,7 @@ def test_researcher_inherits_parent_sandbox_egress() -> None:
     a sandbox-less child silently bypassed an egress-restricted parent's
     allowlist (e.g. reaching localhost / IMDS the parent blocked).
     """
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     sandbox = OSEnvSandboxSpec(
         egress_rules=["GET api.example.com/**"],
@@ -135,7 +135,7 @@ def test_researcher_inherits_parent_sandbox_egress() -> None:
 
     assert researcher.os_env is not None
     assert researcher.os_env.sandbox is not None, (
-        "Researcher dropped the parent's sandbox — egress enforcement "
+        "Researcher dropped the parent's sandbox â€” egress enforcement "
         "would be silently disabled for the web_fetch child."
     )
     assert researcher.os_env.sandbox.egress_rules == ["GET api.example.com/**"]
@@ -145,7 +145,7 @@ def test_researcher_inherits_parent_sandbox_egress() -> None:
 def test_researcher_os_env_without_parent_sandbox() -> None:
     """
     When the parent declares no os_env, the researcher still gets a
-    valid os_env (so ``sys_os_shell`` registers) with no sandbox —
+    valid os_env (so ``sys_os_shell`` registers) with no sandbox â€”
     matching the parent's (absent) policy rather than inventing one.
     """
     parent = _make_parent_spec()
@@ -211,7 +211,7 @@ def test_researcher_has_instructions() -> None:
     assert "web" in instructions.lower()
 
 
-# ── Runner-side dispatch ─────────────────────────────
+# â”€â”€ Runner-side dispatch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_web_fetch_is_runner_dispatched() -> None:
@@ -221,13 +221,13 @@ def test_web_fetch_is_runner_dispatched() -> None:
     The Tool itself owns only the schema and the researcher
     sub-agent spec; the actual spawn runs through
     ``_execute_subagent_tool`` from
-    ``agent_meow/runner/tool_dispatch.py``. If a future change
+    ``omnigent/runner/tool_dispatch.py``. If a future change
     drops web_fetch from ``_ALL_LOCAL_TOOLS`` the LLM would call
-    ``Tool.invoke`` which now raises ``NotImplementedError`` — a
+    ``Tool.invoke`` which now raises ``NotImplementedError`` â€” a
     silent regression. Pinning the membership here keeps the two
     sides honest.
     """
-    from agent_meow.runner.tool_dispatch import should_dispatch_locally
+    from omnigent.runner.tool_dispatch import should_dispatch_locally
 
     assert should_dispatch_locally("web_fetch") is True
 
@@ -245,7 +245,7 @@ def test_runner_handler_validates_query_required() -> None:
     """
     import asyncio
 
-    from agent_meow.runner.tool_dispatch import _execute_web_fetch_tool
+    from omnigent.runner.tool_dispatch import _execute_web_fetch_tool
 
     result = asyncio.run(
         _execute_web_fetch_tool(
@@ -259,13 +259,13 @@ def test_runner_handler_validates_query_required() -> None:
     assert "query" in result.lower()
 
 
-# ── build_researcher_spec standalone ────────────────
+# â”€â”€ build_researcher_spec standalone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def testbuild_researcher_spec_copies_llm() -> None:
     """
     build_researcher_spec must copy the parent's LLM config
-    exactly — same model string, same object reference for
+    exactly â€” same model string, same object reference for
     connection details.
     """
     llm = LLMConfig(
@@ -274,7 +274,7 @@ def testbuild_researcher_spec_copies_llm() -> None:
     )
     parent = AgentSpec(spec_version=1, llm=llm)
     researcher = build_researcher_spec(parent)
-    # Same LLM config object (reference copy, not deep copy —
+    # Same LLM config object (reference copy, not deep copy â€”
     # the researcher doesn't modify it).
     assert researcher.llm is parent.llm
     assert researcher.llm.model == "groq/llama-4-scout"
@@ -301,7 +301,7 @@ def test_web_fetch_is_sync_in_sessions_native_mode() -> None:
     parent = _make_parent_spec()
     tool = WebFetchTool(parent_spec=parent)
     assert tool.is_async() is False
-    # ``dispatch_async`` is no longer overridden — the base
+    # ``dispatch_async`` is no longer overridden â€” the base
     # ``Tool.dispatch_async`` raises ``NotImplementedError``.
     # Calling it would be a routing bug because ``is_async`` is
     # False; we don't exercise that path here.

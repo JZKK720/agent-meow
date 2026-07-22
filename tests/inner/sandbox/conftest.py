@@ -5,10 +5,10 @@ The tests under :mod:`tests.inner.sandbox` exercise the *observable*
 contract every active sandbox backend must uphold: cwd RO-by-default,
 writable scratch tmpdir, dotfile masking, env passthrough, hard
 network deny, etc. They run against whichever spawn-time backend the
-current host can use — ``linux_bwrap`` on Linux + ``bwrap`` installed,
+current host can use â€” ``linux_bwrap`` on Linux + ``bwrap`` installed,
 ``darwin_seatbelt`` on macOS + ``sandbox-exec`` on ``PATH``. A host
 that satisfies neither (e.g. a bare Linux box without ``bwrap``)
-simply skips every test in the suite — the assertions stay correct,
+simply skips every test in the suite â€” the assertions stay correct,
 they just don't run.
 
 The fixtures here are the one source of truth for:
@@ -17,7 +17,7 @@ The fixtures here are the one source of truth for:
   (:func:`active_sandbox_type`),
 - how to build an :class:`OSEnvSandboxSpec` for that backend with the
   repo root pre-added to ``read_paths`` so helper subprocesses can
-  ``import agent_meow.*`` from a tempdir cwd
+  ``import omnigent.*`` from a tempdir cwd
   (:func:`active_sandbox_spec_factory`),
 - how to materialise the PYTHONPATH env var the helper inherits
   (:func:`sandbox_pythonpath_env`),
@@ -40,7 +40,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.inner.datamodel import CredentialProxySpec, OSEnvSandboxSpec
+from omnigent.inner.datamodel import CredentialProxySpec, OSEnvSandboxSpec
 
 _BWRAP_AVAILABLE = shutil.which("bwrap") is not None
 _SANDBOX_EXEC_AVAILABLE = shutil.which("sandbox-exec") is not None
@@ -52,14 +52,14 @@ def _repo_root_for_pythonpath() -> str:
     reach the ``agent-meow`` package via ``PYTHONPATH``.
 
     Helper subprocesses run with ``cwd`` set to a throwaway tempdir
-    in these tests, so they can't ``import agent_meow`` unless the
+    in these tests, so they can't ``import omnigent`` unless the
     repo root is on ``sys.path`` and visible inside the sandbox.
 
     :returns: Absolute path to the repository root containing the
-        ``agent_meow/`` package.
+        ``omnigent/`` package.
     """
-    # tests/inner/sandbox/conftest.py → tests/inner/sandbox/ →
-    # tests/inner/ → tests/ → repo root.
+    # tests/inner/sandbox/conftest.py â†’ tests/inner/sandbox/ â†’
+    # tests/inner/ â†’ tests/ â†’ repo root.
     return str(Path(__file__).resolve().parents[3])
 
 
@@ -108,7 +108,7 @@ def active_sandbox_spec_factory(
     currently parametrized backend.
 
     The factory pre-adds the repo root to ``read_paths`` so the
-    helper subprocess can ``import agent_meow.*`` from a tempdir
+    helper subprocess can ``import omnigent.*`` from a tempdir
     cwd. Both backends need this because they otherwise hide
     everything outside cwd / the default system mounts.
 
@@ -157,7 +157,7 @@ def sandbox_pythonpath_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
     Helpers spawned with ``cwd`` set to a tempdir would otherwise
     fail with ``ModuleNotFoundError`` because the agent's own
-    bootstrap runs ``import agent_meow.inner.os_env`` in the helper.
+    bootstrap runs ``import omnigent.inner.os_env`` in the helper.
     The active backend's ``env_passthrough`` is filtered, but
     ``PYTHONPATH`` is set explicitly on the spawn env so this
     fixture just preserves it for the parent process.

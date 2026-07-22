@@ -24,8 +24,8 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.server.auth import create_auth_provider
-from agent_meow.stores.permission_store.sqlalchemy_store import (
+from omnigent.server.auth import create_auth_provider
+from omnigent.stores.permission_store.sqlalchemy_store import (
     SqlAlchemyPermissionStore,
 )
 
@@ -69,21 +69,21 @@ def _build_app(
 
     db_url = f"sqlite:///{tmp_path}/test.db"
 
-    from agent_meow.db.utils import get_or_create_engine
-    from agent_meow.runtime import init as init_runtime
-    from agent_meow.runtime import telemetry
-    from agent_meow.runtime.agent_cache import AgentCache
-    from agent_meow.runtime.caps import RuntimeCaps
-    from agent_meow.server.accounts_store import SqlAlchemyAccountStore
-    from agent_meow.server.app import create_app
-    from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-    from agent_meow.stores.artifact_store.local import LocalArtifactStore
-    from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-    from agent_meow.stores.conversation_store.sqlalchemy_store import (
+    from omnigent.db.utils import get_or_create_engine
+    from omnigent.runtime import init as init_runtime
+    from omnigent.runtime import telemetry
+    from omnigent.runtime.agent_cache import AgentCache
+    from omnigent.runtime.caps import RuntimeCaps
+    from omnigent.server.accounts_store import SqlAlchemyAccountStore
+    from omnigent.server.app import create_app
+    from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+    from omnigent.stores.artifact_store.local import LocalArtifactStore
+    from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+    from omnigent.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
-    from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-    from agent_meow.stores.host_store import HostStore
+    from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+    from omnigent.stores.host_store import HostStore
 
     get_or_create_engine(db_url)
     telemetry.init()
@@ -136,7 +136,7 @@ def setup_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FastAPI:
 @pytest_asyncio.fixture()
 async def client(accounts_app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
     """Async HTTP client wired to the pre-seeded accounts app."""
-    from agent_meow.db.utils import clear_engine_cache
+    from omnigent.db.utils import clear_engine_cache
 
     transport = httpx.ASGITransport(app=accounts_app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
@@ -147,7 +147,7 @@ async def client(accounts_app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
 @pytest_asyncio.fixture()
 async def setup_client(setup_app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
     """Async HTTP client wired to the needs-setup accounts app."""
-    from agent_meow.db.utils import clear_engine_cache
+    from omnigent.db.utils import clear_engine_cache
 
     transport = httpx.ASGITransport(app=setup_app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:

@@ -12,15 +12,15 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.inner.loader import load_agent_def
-from agent_meow.inner.tools import FunctionTool
-from agent_meow.spec.types import (
+from omnigent.inner.loader import load_agent_def
+from omnigent.inner.tools import FunctionTool
+from omnigent.spec.types import (
     AgentSpec,
     ExecutorSpec,
     LocalToolInfo,
     ToolRuntime,
 )
-from agent_meow.spec.validator import validate
+from omnigent.spec.validator import validate
 
 
 def _load_tool(name: str, tool_data: object) -> FunctionTool:

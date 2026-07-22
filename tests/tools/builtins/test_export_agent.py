@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.tools.builtins.export_agent`."""
+"""Unit tests for :mod:`~?omnigent.tools.builtins.export_agent`."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins.export_agent import ExportAgentTool
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins.export_agent import ExportAgentTool
 
 
 @pytest.fixture()
@@ -30,7 +30,7 @@ def tool_ctx(workspace: Path) -> ToolContext:
     )
 
 
-# ── Schema ───────────────────────────────────────────────
+# â”€â”€ Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_schema_shape() -> None:
@@ -51,7 +51,7 @@ def test_name_and_description() -> None:
     assert len(ExportAgentTool.description()) > 0
 
 
-# ── Invoke: success ──────────────────────────────────────
+# â”€â”€ Invoke: success â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_invoke_copies_directory(
@@ -95,7 +95,7 @@ def test_invoke_refuses_existing_target(
     assert not (target / "config.yaml").exists()
 
 
-# ── Invoke: error cases ──────────────────────────────────
+# â”€â”€ Invoke: error cases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_invoke_missing_source(tool_ctx: ToolContext) -> None:
@@ -151,7 +151,7 @@ def test_invoke_no_workspace() -> None:
     assert "Error" in result and "workspace" in result.lower()
 
 
-# ── Invoke: containment / exfiltration ───────────────────
+# â”€â”€ Invoke: containment / exfiltration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_invoke_rejects_source_escaping_workspace(

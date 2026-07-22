@@ -1,4 +1,4 @@
-"""Unit tests for agent_meow.onboarding.ucode_setup."""
+"""Unit tests for omnigent.onboarding.ucode_setup."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from unittest.mock import patch
 import pytest
 from click import ClickException
 
-from agent_meow.onboarding.setup import ProfileSpec
-from agent_meow.onboarding.ucode_setup import (
+from omnigent.onboarding.setup import ProfileSpec
+from omnigent.onboarding.ucode_setup import (
     build_ucode_configure_command,
     configure_ucode_for_workspace,
     find_ucode_command,
@@ -146,9 +146,9 @@ def test_model_gateway_workspace_urls_excludes_mcp_only_workspaces(
             is_model_gateway=False,
         ),
     )
-    stub = types.ModuleType("agent_meow.onboarding.internal_beta")
+    stub = types.ModuleType("omnigent.onboarding.internal_beta")
     stub.DEFAULT_PROFILES = profiles
-    monkeypatch.setitem(sys.modules, "agent_meow.onboarding.internal_beta", stub)
+    monkeypatch.setitem(sys.modules, "omnigent.onboarding.internal_beta", stub)
 
     urls = model_gateway_workspace_urls()
 
@@ -161,7 +161,7 @@ def test_model_gateway_workspace_urls_excludes_mcp_only_workspaces(
 
 def test_ucode_workspace_exists_checks_single_workspace() -> None:
     """Delegates a single workspace existence check to the state reader."""
-    with patch("agent_meow.onboarding.ucode_setup.read_ucode_state", return_value=object()):
+    with patch("omnigent.onboarding.ucode_setup.read_ucode_state", return_value=object()):
         assert ucode_workspace_exists("https://example.databricks.com")
 
 
@@ -169,7 +169,7 @@ def test_configure_ucode_for_workspace_targets_single_workspace() -> None:
     """``configure_ucode_for_workspace`` runs ``ucode configure`` for exactly the
     one workspace it is given, with all three coding agents.
 
-    This is the per-workspace path behind ``configure harnesses → Databricks``:
+    This is the per-workspace path behind ``configure harnesses â†’ Databricks``:
     a regression that passed multiple workspaces (the retired multi-profile
     behavior) or dropped an agent would change the recorded argv and fail here.
     """
@@ -180,8 +180,8 @@ def test_configure_ucode_for_workspace_targets_single_workspace() -> None:
         return subprocess.CompletedProcess(args=argv, returncode=0)
 
     with (
-        patch("agent_meow.onboarding.ucode_setup.find_ucode_command", return_value=["ucode"]),
-        patch("agent_meow.onboarding.ucode_setup.subprocess.run", _run),
+        patch("omnigent.onboarding.ucode_setup.find_ucode_command", return_value=["ucode"]),
+        patch("omnigent.onboarding.ucode_setup.subprocess.run", _run),
     ):
         # Trailing slash on input must be stripped in the emitted command.
         configure_ucode_for_workspace("https://example.cloud.databricks.com/")
@@ -209,8 +209,8 @@ def test_configure_ucode_for_workspace_raises_on_nonzero_exit() -> None:
         return subprocess.CompletedProcess(args=argv, returncode=3)
 
     with (
-        patch("agent_meow.onboarding.ucode_setup.find_ucode_command", return_value=["ucode"]),
-        patch("agent_meow.onboarding.ucode_setup.subprocess.run", _run),
+        patch("omnigent.onboarding.ucode_setup.find_ucode_command", return_value=["ucode"]),
+        patch("omnigent.onboarding.ucode_setup.subprocess.run", _run),
         pytest.raises(ClickException, match="exited with code 3"),
     ):
         configure_ucode_for_workspace("https://example.cloud.databricks.com")

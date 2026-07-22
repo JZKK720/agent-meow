@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.entities.comment import CommentsFingerprint
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.entities.comment import CommentsFingerprint
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
 
 
 @pytest.fixture()
@@ -26,7 +26,7 @@ def store(db_uri: str) -> SqlAlchemyCommentStore:
     return SqlAlchemyCommentStore(db_uri)
 
 
-# ── add ───────────────────────────────────────────────────────────────────────
+# â”€â”€ add â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_add_returns_comment_with_id(store: SqlAlchemyCommentStore) -> None:
@@ -70,7 +70,7 @@ def test_add_stores_created_by(store: SqlAlchemyCommentStore) -> None:
     """``add`` with created_by= persists the value and returns it on round-trip.
 
     Verifies the author email survives the add() call, the _to_entity()
-    mapping, and a subsequent get() fetch — the full persistence round-trip.
+    mapping, and a subsequent get() fetch â€” the full persistence round-trip.
     If this fails, created_by is either not written to the DB or not mapped
     back onto the entity.
     """
@@ -123,7 +123,7 @@ def test_add_is_persisted_and_retrievable(store: SqlAlchemyCommentStore) -> None
     assert listed[0].body == "Add type hint"
 
 
-# ── list_for_conversation ─────────────────────────────────────────────────────
+# â”€â”€ list_for_conversation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_list_for_conversation_returns_all_comments(store: SqlAlchemyCommentStore) -> None:
@@ -250,7 +250,7 @@ def test_list_for_conversation_ordered_by_created_at(store: SqlAlchemyCommentSto
     assert listed[1].id == c2.id
 
 
-# ── get ───────────────────────────────────────────────────────────────────────
+# â”€â”€ get â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_get_returns_comment_by_id(store: SqlAlchemyCommentStore) -> None:
@@ -280,7 +280,7 @@ def test_get_returns_comment_by_id(store: SqlAlchemyCommentStore) -> None:
     assert fetched.start_index == 2
     assert fetched.end_index == 15
     assert fetched.body == "Checked via get"
-    # Status must still be draft — get() must not mutate anything.
+    # Status must still be draft â€” get() must not mutate anything.
     assert fetched.status == "draft", (
         f"Expected status 'draft' (get must not mutate), got {fetched.status!r}"
     )
@@ -350,12 +350,12 @@ def test_get_does_not_mutate_status(store: SqlAlchemyCommentStore) -> None:
     listed = store.list_for_conversation("conv_get_immut")
     assert len(listed) == 1
     assert listed[0].status == "draft", (
-        f"Status changed after get() calls — expected 'draft', got {listed[0].status!r}. "
+        f"Status changed after get() calls â€” expected 'draft', got {listed[0].status!r}. "
         "get() must be read-only."
     )
 
 
-# ── update_comment ────────────────────────────────────────────────────────────
+# â”€â”€ update_comment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_update_comment_status(store: SqlAlchemyCommentStore) -> None:
@@ -457,7 +457,7 @@ def test_update_comment_wrong_conversation_is_noop(store: SqlAlchemyCommentStore
     )
 
 
-# ── delete ────────────────────────────────────────────────────────────────────
+# â”€â”€ delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_delete_returns_comment_and_removes_it(store: SqlAlchemyCommentStore) -> None:
@@ -548,7 +548,7 @@ def test_delete_does_not_affect_other_comments(store: SqlAlchemyCommentStore) ->
     assert remaining[0].body == "Will survive"
 
 
-# ── remove_conversation ───────────────────────────────────────────────────────
+# â”€â”€ remove_conversation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_remove_conversation_deletes_all_comments(store: SqlAlchemyCommentStore) -> None:
@@ -611,14 +611,14 @@ def test_remove_conversation_is_noop_for_unknown_conversation(
     store: SqlAlchemyCommentStore,
 ) -> None:
     """``remove_conversation`` does not raise when no comments exist for the id."""
-    # Should not raise — idempotent delete.
+    # Should not raise â€” idempotent delete.
     store.remove_conversation("conv_nobody_here")
 
 
-# ── updated_at & get_comments_fingerprints ──────────────────────────────────────
+# â”€â”€ updated_at & get_comments_fingerprints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
-# One second in microseconds — updated_at is stored in epoch-µs while
+# One second in microseconds â€” updated_at is stored in epoch-Âµs while
 # created_at stays epoch-seconds, so expectations scale by this factor.
 _US = 1_000_000
 
@@ -637,7 +637,7 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
     """
     state = {"now": 1_000}
     monkeypatch.setattr(
-        "agent_meow.stores.comment_store.sqlalchemy_store.now_epoch_us",
+        "omnigent.stores.comment_store.sqlalchemy_store.now_epoch_us",
         lambda: state["now"] * _US,
     )
     return state
@@ -676,7 +676,7 @@ def test_update_comment_bumps_updated_at_and_persists(
 
     assert updated is not None
     # updated_at must move to the mutation time while created_at is
-    # untouched — if it stayed at the creation instant the session
+    # untouched â€” if it stayed at the creation instant the session
     # fingerprint would never change on edits and clients would miss
     # the mutation.
     assert updated.updated_at == 2_000 * _US
@@ -702,7 +702,7 @@ def test_update_comment_with_no_fields_does_not_bump_updated_at(
     updated = store.update_comment(comment.id, "conv_fp")
 
     assert updated is not None
-    # Nothing changed, so the fingerprint input must not move — a bump
+    # Nothing changed, so the fingerprint input must not move â€” a bump
     # here would push spurious "comments changed" frames to clients.
     assert updated.updated_at == 1_000 * _US
 
@@ -726,7 +726,7 @@ def test_get_comments_fingerprints_omits_conversations_without_comments(
         end_index=1,
     )
     result = store.get_comments_fingerprints(["conv_with", "conv_without"])
-    # Absent (not a zero-count entry) is the contract — the route maps
+    # Absent (not a zero-count entry) is the contract â€” the route maps
     # absence to the comments_count=0 / comments_updated_at=None shape.
     assert set(result) == {"conv_with"}
 
@@ -762,7 +762,7 @@ def test_get_comments_fingerprints_reflects_edit(
     after = store.get_comments_fingerprints(["conv_fp"])["conv_fp"]
 
     # The edit is invisible to the count, so the timestamp alone must
-    # carry it — this is the reason the updated_at column exists.
+    # carry it â€” this is the reason the updated_at column exists.
     assert before == CommentsFingerprint(count=1, last_updated_at=1_000 * _US)
     assert after == CommentsFingerprint(count=1, last_updated_at=2_000 * _US)
 
@@ -781,6 +781,6 @@ def test_get_comments_fingerprints_reflects_delete_of_older_comment(
     after = store.get_comments_fingerprints(["conv_fp"])["conv_fp"]
 
     # max(updated_at) is blind to this delete (the surviving comment is
-    # the newest) — the count drop is what makes the fingerprint move.
+    # the newest) â€” the count drop is what makes the fingerprint move.
     # This is the reason the fingerprint carries a count at all.
     assert after == CommentsFingerprint(count=1, last_updated_at=2_000 * _US)

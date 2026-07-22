@@ -10,24 +10,24 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.entities import Policy as StoredPolicy
-from agent_meow.errors import ErrorCode, OmnigentError
-from agent_meow.policies.function import FunctionPolicy
-from agent_meow.runtime.policies.builder import (
+from omnigent.entities import Policy as StoredPolicy
+from omnigent.errors import ErrorCode, OmnigentError
+from omnigent.policies.function import FunctionPolicy
+from omnigent.runtime.policies.builder import (
     _load_session_policy_specs,
     _stored_policy_to_spec,
     build_policy_engine,
 )
-from agent_meow.spec.types import (
+from omnigent.spec.types import (
     AgentSpec,
     FunctionPolicySpec,
     FunctionRef,
     GuardrailsSpec,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
+from omnigent.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
 
 # ── _stored_policy_to_spec ──────────────────────────────────────────────────
 

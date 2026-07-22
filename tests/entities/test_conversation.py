@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.entities.conversation import (
+from omnigent.entities.conversation import (
     ConversationItem,
     MessageData,
     synthesize_conversation_title,
@@ -84,16 +84,16 @@ def test_to_api_dict_exposes_interrupted_assistant_marker() -> None:
         ([], None),
         ([{"type": "input_file", "file_id": "file_123"}], None),
         ([{"type": "input_text", "text": "   \n  "}], None),
-        ([{"type": "input_text", "text": "a" * 100}], "a" * 59 + "…"),
+        ([{"type": "input_text", "text": "a" * 100}], "a" * 59 + "â€¦"),
         # claude-native attachment marker (claude_native_executor
-        # prepends "[Attached: <path>]\n\n<text>") — the marker line is
+        # prepends "[Attached: <path>]\n\n<text>") â€” the marker line is
         # dropped so the title is the user's text, not a temp-file path.
         (
             [
                 {
                     "type": "input_text",
                     "text": (
-                        "[Attached: /tmp/agent_meow/claude-native/0a1b/uploads/shot.png]"
+                        "[Attached: /tmp/omnigent/claude-native/0a1b/uploads/shot.png]"
                         "\n\nfix this layout bug"
                     ),
                 }
@@ -104,19 +104,19 @@ def test_to_api_dict_exposes_interrupted_assistant_marker() -> None:
         # arrives as its own text block alongside the user's text.
         (
             [
-                {"type": "input_text", "text": "[Attached file: /tmp/agent_meow/u/report.bin]"},
+                {"type": "input_text", "text": "[Attached file: /tmp/omnigent/u/report.bin]"},
                 {"type": "input_text", "text": "summarize this"},
             ],
             "summarize this",
         ),
-        # Image-only message: every line is a marker, so no title —
+        # Image-only message: every line is a marker, so no title â€”
         # the next user message seeds it instead of a temp-file path.
         (
-            [{"type": "input_text", "text": "[Attached: /tmp/agent_meow/u/img.png]"}],
+            [{"type": "input_text", "text": "[Attached: /tmp/omnigent/u/img.png]"}],
             None,
         ),
         # A marker mid-line is user prose, not an executor-emitted
-        # attachment line — it must survive into the title.
+        # attachment line â€” it must survive into the title.
         (
             [{"type": "input_text", "text": "why does [Attached: x.png] render twice?"}],
             "why does [Attached: x.png] render twice?",
@@ -134,4 +134,4 @@ def test_synthesize_conversation_title(
 def test_synthesize_conversation_title_respects_custom_limit() -> None:
     """Custom ``limit`` is honored."""
     content = [{"type": "input_text", "text": "a" * 50}]
-    assert synthesize_conversation_title(content, limit=10) == "a" * 9 + "…"
+    assert synthesize_conversation_title(content, limit=10) == "a" * 9 + "â€¦"

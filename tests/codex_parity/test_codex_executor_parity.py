@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.inner.executor import (
+from omnigent.inner.executor import (
     ExecutorConfig,
     ExecutorError,
     TextChunk,

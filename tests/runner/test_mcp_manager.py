@@ -26,14 +26,14 @@ from typing import Any
 import pytest
 from mcp.types import Tool as McpToolDef
 
-from agent_meow.runner import mcp_manager as _mcp_manager_module
-from agent_meow.runner.mcp_manager import (
+from omnigent.runner import mcp_manager as _mcp_manager_module
+from omnigent.runner.mcp_manager import (
     _POOL_SPEC_CAPACITY,
     McpSchemasResult,
     RunnerMcpManager,
     compute_spec_hash,
 )
-from agent_meow.spec.types import AgentSpec, MCPServerConfig
+from omnigent.spec.types import AgentSpec, MCPServerConfig
 
 
 def _make_spec(*configs: MCPServerConfig) -> AgentSpec:
@@ -59,7 +59,7 @@ def _make_tool_def(name: str, description: str = "test tool") -> McpToolDef:
     )
 
 
-# ── Helpers to stub McpServerConnection without spawning subprocesses ──
+# â”€â”€ Helpers to stub McpServerConnection without spawning subprocesses â”€â”€
 
 
 class _FakeConn:
@@ -95,7 +95,7 @@ def patch_connection(
 ) -> dict[str, _FakeConn]:
     """Patch ``McpServerConnection`` so each instance is a recordable _FakeConn.
 
-    Returns a dict keyed by config.name → _FakeConn so each test can
+    Returns a dict keyed by config.name â†’ _FakeConn so each test can
     decide per-server behavior (success vs raise) before calling
     ``schemas_for``.
     """
@@ -127,7 +127,7 @@ def patch_connection(
             return await self._inner.call_tool(name, arguments)
 
     monkeypatch.setattr(
-        "agent_meow.runner.mcp_manager.McpServerConnection",
+        "omnigent.runner.mcp_manager.McpServerConnection",
         _PatchedConn,
     )
     # Tests script per-server behavior by mutating these dicts BEFORE
@@ -137,7 +137,7 @@ def patch_connection(
     return conns
 
 
-# ── Tests ─────────────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -200,8 +200,8 @@ async def test_pool_separate_entries_for_different_specs(
 ) -> None:
     """Two specs with different MCP configs get independent pool entries.
 
-    Same MCP server NAME, different command/args → different spec_hash →
-    different pool entry → two connect calls.
+    Same MCP server NAME, different command/args â†’ different spec_hash â†’
+    different pool entry â†’ two connect calls.
     """
     patch_connection["__tools_for__"]["jira"] = [_make_tool_def("jira_search")]
 
@@ -236,7 +236,7 @@ async def test_pool_separate_entries_for_different_specs(
     try:
         await manager.schemas_for(spec_a)
         await manager.schemas_for(spec_b)
-        # Snapshot before shutdown — shutdown() clears the pool.
+        # Snapshot before shutdown â€” shutdown() clears the pool.
         snapshot = manager.status_snapshot()
     finally:
         await manager.shutdown()
@@ -257,12 +257,12 @@ async def test_invalid_tool_name_is_filtered(
     filter at schema-injection time and log a warning instead.
     """
     # Force the `agent-meow` package logger to propagate so caplog
-    # captures warnings. Defensive: ``agent_meow.cli_diagnostics
-    # .setup_cli_logging`` sets ``agent_meow.propagate = False`` and
+    # captures warnings. Defensive: ``omnigent.cli_diagnostics
+    # .setup_cli_logging`` sets ``omnigent.propagate = False`` and
     # if a sibling test on this xdist worker invoked it via a fixture
     # that didn't tear down (e.g. crash mid-test), the False sticks
-    # for the rest of the worker — caplog's root handler then misses
-    # every ``agent_meow.*`` warning.
+    # for the rest of the worker â€” caplog's root handler then misses
+    # every ``omnigent.*`` warning.
     logging.getLogger("agent-meow").propagate = True
     patch_connection["__tools_for__"]["jira"] = [
         _make_tool_def("ok_tool"),
@@ -274,17 +274,17 @@ async def test_invalid_tool_name_is_filtered(
     spec = _make_spec(_make_config("jira"))
     manager = RunnerMcpManager()
     # Capture at the source logger directly. Another test in the same
-    # xdist worker may have set ``agent_meow.propagate = False`` (the CLI
+    # xdist worker may have set ``omnigent.propagate = False`` (the CLI
     # diagnostics setup does), which severs propagation to the root logger
-    # where caplog listens — capturing nothing. Attaching caplog's handler
+    # where caplog listens â€” capturing nothing. Attaching caplog's handler
     # to the mcp_manager logger makes capture independent of the propagate
     # chain, so the assertion below is robust to that state leak.
-    mcp_logger = logging.getLogger("agent_meow.runner.mcp_manager")
+    mcp_logger = logging.getLogger("omnigent.runner.mcp_manager")
     mcp_logger.addHandler(caplog.handler)
     try:
-        # Bare ``at_level(WARNING)`` — no ``logger=`` arg. We've forced
+        # Bare ``at_level(WARNING)`` â€” no ``logger=`` arg. We've forced
         # propagation above, so records reach the root logger where
-        # caplog's handler lives. Passing ``logger="agent_meow.runner.
+        # caplog's handler lives. Passing ``logger="omnigent.runner.
         # mcp_manager"`` here in addition would double-attach the
         # handler (root + that named logger), capturing each warning
         # twice.
@@ -436,8 +436,8 @@ async def test_lru_eviction_at_pool_capacity(
     monkeypatch.setattr(_mcp_manager_module, "McpServerConnection", _CountingConn)
 
     manager = RunnerMcpManager()
-    # Build capacity + 1 distinct specs (different server.name → different
-    # spec_hash → distinct pool entry). First spec is the LRU and should
+    # Build capacity + 1 distinct specs (different server.name â†’ different
+    # spec_hash â†’ distinct pool entry). First spec is the LRU and should
     # be evicted when the (capacity+1)-th arrives.
     specs: list[AgentSpec] = []
     for i in range(_POOL_SPEC_CAPACITY + 1):
@@ -508,7 +508,7 @@ async def test_prewarm_is_idempotent(
         # Wait until the first connect is actually executing so the
         # second prewarm hits the "task in flight" branch.
         await started.wait()
-        # Second prewarm — must NOT spawn another connect.
+        # Second prewarm â€” must NOT spawn another connect.
         await manager.prewarm(spec)
         # Let prewarm finish so shutdown is clean.
         release.set()
@@ -545,7 +545,7 @@ async def test_shutdown_cancels_in_flight_prewarm(
             """Signal start, then wait forever (until cancelled)."""
             started.set()
             await never_release.wait()
-            return []  # pragma: no cover — cancelled before reaching
+            return []  # pragma: no cover â€” cancelled before reaching
 
         async def close(self) -> None:
             """No-op."""
@@ -644,11 +644,11 @@ def test_strip_mcp_tool_prefix_preserves_bare_double_underscore() -> None:
     """``_strip_mcp_tool_prefix`` only strips ``mcp__<server>__`` shape.
 
     Regression: the old impl ``rsplit("__", 1)[-1]`` clobbered any tool
-    name with a ``__`` in it (e.g. ``my__weird_tool`` → ``weird_tool``).
+    name with a ``__`` in it (e.g. ``my__weird_tool`` â†’ ``weird_tool``).
     Only strip Claude-SDK MCP-prefixed names; pass everything else
     through.
     """
-    from agent_meow.runtime.workflow import _strip_mcp_tool_prefix
+    from omnigent.runtime.workflow import _strip_mcp_tool_prefix
 
     # Claude-SDK shape: stripped to the bare name.
     assert _strip_mcp_tool_prefix("mcp__jira__jira_search_issues") == "jira_search_issues"

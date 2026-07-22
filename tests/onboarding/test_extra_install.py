@@ -1,4 +1,4 @@
-"""Tests for ``agent_meow/onboarding/extra_install.py``."""
+"""Tests for ``omnigent/onboarding/extra_install.py``."""
 
 from __future__ import annotations
 
@@ -8,11 +8,11 @@ from types import SimpleNamespace
 import pytest
 import tomllib
 
-from agent_meow.onboarding import extra_install
-from agent_meow.onboarding.antigravity_auth import ANTIGRAVITY_EXTRA
-from agent_meow.onboarding.copilot_auth import COPILOT_EXTRA
-from agent_meow.onboarding.cursor_auth import CURSOR_EXTRA
-from agent_meow.onboarding.extra_install import (
+from omnigent.onboarding import extra_install
+from omnigent.onboarding.antigravity_auth import ANTIGRAVITY_EXTRA
+from omnigent.onboarding.copilot_auth import COPILOT_EXTRA
+from omnigent.onboarding.cursor_auth import CURSOR_EXTRA
+from omnigent.onboarding.extra_install import (
     _installed_vcs_url,
     _is_uv_tool_install,
     extra_install_command,
@@ -26,15 +26,15 @@ from agent_meow.onboarding.extra_install import (
     "prefix, expected",
     [
         # Default Linux/macOS layout
-        ("/home/user/.local/share/uv/tools/agent_meow/bin/python", True),
+        ("/home/user/.local/share/uv/tools/omnigent/bin/python", True),
         # Windows layout (forward-slash normalized)
-        ("C:/Users/user/AppData/Local/uv/tools/agent_meow/Scripts/python", True),
-        # Regular virtualenv — not a uv tool install
-        ("/home/user/repos/agent_meow/.venv", False),
+        ("C:/Users/user/AppData/Local/uv/tools/omnigent/Scripts/python", True),
+        # Regular virtualenv â€” not a uv tool install
+        ("/home/user/repos/omnigent/.venv", False),
         # System Python
         ("/usr", False),
         # pipx venv (should NOT be detected as uv tool)
-        ("/home/user/.local/pipx/venvs/agent_meow/bin/python", False),
+        ("/home/user/.local/pipx/venvs/omnigent/bin/python", False),
     ],
     ids=["linux-uv-tool", "windows-uv-tool", "venv", "system", "pipx"],
 )
@@ -50,7 +50,7 @@ def test_installed_vcs_url_git_source(monkeypatch: pytest.MonkeyPatch) -> None:
     """Surfaces the ``vcs_url`` recorded for a git-source install."""
     url = "git+https://github.com/JZKK720/agent-meow.git"
     monkeypatch.setattr(
-        "agent_meow.update_check._read_installed_wheel_info",
+        "omnigent.update_check._read_installed_wheel_info",
         lambda: SimpleNamespace(vcs_url=url),
     )
     assert _installed_vcs_url() == url
@@ -63,7 +63,7 @@ def test_installed_vcs_url_git_source(monkeypatch: pytest.MonkeyPatch) -> None:
 )
 def test_installed_vcs_url_none(monkeypatch: pytest.MonkeyPatch, info: object) -> None:
     """Returns ``None`` for registry installs and when the dist is absent."""
-    monkeypatch.setattr("agent_meow.update_check._read_installed_wheel_info", lambda: info)
+    monkeypatch.setattr("omnigent.update_check._read_installed_wheel_info", lambda: info)
     assert _installed_vcs_url() is None
 
 
@@ -148,7 +148,7 @@ def test_harness_extra_is_a_real_pyproject_extra(extra: str) -> None:
     """
     pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
     if not pyproject.is_file():
-        # Installed wheel with no source tree — nothing to check.
+        # Installed wheel with no source tree â€” nothing to check.
         return
     extras = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"][
         "optional-dependencies"

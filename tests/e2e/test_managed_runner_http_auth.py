@@ -1,6 +1,6 @@
 """End-to-end proof of the managed-sandbox runner HTTP-auth fix (#357 HTTP half).
 
-A server-managed sandbox runner has no user credential of its own — only its
+A server-managed sandbox runner has no user credential of its own â€” only its
 tunnel binding token. Under accounts/OIDC auth every runner->server HTTP
 callback gates on ``require_user``, so before this fix those callbacks went out
 bare and 401'd (the runner connected its tunnel but could never fetch its own
@@ -10,20 +10,20 @@ it as ``Authorization: Bearer`` on every callback.
 
 This test proves that fix works against a **real** ``agent-meow server``
 subprocess with accounts auth enabled, driving the runner's **real** outbound
-code over a **real** TCP socket — no transports are stubbed:
+code over a **real** TCP socket â€” no transports are stubbed:
 
 * ``_make_auth_token_factory`` -> ``_make_managed_mint_factory`` ->
   ``_mint_managed_owner_token`` (a real ``httpx`` POST to the mint endpoint), and
 * ``_RunnerDatabricksAuth`` on a real ``httpx.AsyncClient`` GET.
 
-The only thing simulated is the managed-sandbox *condition* — no ``agent-meow
-login`` token and no Databricks config on disk — which is exactly what makes the
+The only thing simulated is the managed-sandbox *condition* â€” no ``agent-meow
+login`` token and no Databricks config on disk â€” which is exactly what makes the
 fix necessary (and what a fresh sandbox actually looks like).
 
 The differential is asserted in one test, so the mint is provably the cause of
 the flip:
 
-* WITHOUT a minted token (``_RunnerDatabricksAuth(None)`` — precisely what
+* WITHOUT a minted token (``_RunnerDatabricksAuth(None)`` â€” precisely what
   ``_make_auth_token_factory`` returns for a managed sandbox on ``main``):
   ``GET /v1/sessions/{id}/agent/contents`` -> **401**.
 * WITH the fix: the same GET -> **200**, returning the agent bundle.
@@ -42,21 +42,21 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow.runner._entry import _make_auth_token_factory, _RunnerDatabricksAuth
-from agent_meow.runner.identity import (
+from omnigent.runner._entry import _make_auth_token_factory, _RunnerDatabricksAuth
+from omnigent.runner.identity import (
     OMNIGENT_INTERNAL_WS_ORIGIN,
     RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR,
     token_bound_runner_id,
 )
-from agent_meow.server.oidc import mint_session_cookie
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.server.oidc import mint_session_cookie
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 from tests._helpers.compat import apply_server_env, compat_server_cwd, server_executable
 from tests._helpers.live_server import find_free_port
 from tests.server.helpers import build_agent_bundle
 
-# Repo root — this file lives at tests/e2e/<name>.py.
+# Repo root â€” this file lives at tests/e2e/<name>.py.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # 32-byte cookie secret (64 hex chars), shared between this test process and the
@@ -105,7 +105,7 @@ def accounts_server(tmp_path: Path) -> Iterator[tuple[str, str]]:
     needs an accounts-auth server and no LLM, so it owns its own subprocess.
 
     :param tmp_path: Per-test temp dir for the DB, artifacts, and server log.
-    :returns: ``(base_url, db_uri)`` — the running server's URL and the SQLite
+    :returns: ``(base_url, db_uri)`` â€” the running server's URL and the SQLite
         URI the test opens directly to bind the managed runner id.
     """
     port = find_free_port()
@@ -126,12 +126,12 @@ def accounts_server(tmp_path: Path) -> Iterator[tuple[str, str]]:
     # Import the server package from this worktree, not an installed copy.
     apply_server_env(env, _REPO_ROOT)
 
-    log_handle = open(log_path, "w")  # noqa: SIM115 — handle lives for the subprocess
+    log_handle = open(log_path, "w")  # noqa: SIM115 â€” handle lives for the subprocess
     proc = subprocess.Popen(
         [
             server_executable(),
             "-m",
-            "agent_meow.cli",
+            "omnigent.cli",
             "server",
             "--port",
             str(port),
@@ -171,7 +171,7 @@ async def _get_agent_contents(
 
     :param base_url: Live server base URL.
     :param path: Request path, e.g. ``"/v1/sessions/<id>/agent/contents"``.
-    :param auth: The runner's httpx auth — ``_RunnerDatabricksAuth(None)`` for
+    :param auth: The runner's httpx auth â€” ``_RunnerDatabricksAuth(None)`` for
         the bare (pre-fix) leg, or one wired to the managed-mint factory.
     :returns: The HTTP response.
     """
@@ -194,7 +194,7 @@ def test_managed_runner_callback_authenticates_end_to_end(
     End-to-end against a live accounts-auth server, driving the runner's real
     outbound auth code over a real socket. Reverting the runner-side managed
     mint tier (or the server-side mint endpoint) turns the 200 assertion back
-    into a 401 — that is the exact gap this change closes.
+    into a 401 â€” that is the exact gap this change closes.
 
     :param accounts_server: ``(base_url, db_uri)`` from the live-server fixture.
     :param monkeypatch: Puts this process into the managed-sandbox posture
@@ -204,7 +204,7 @@ def test_managed_runner_callback_authenticates_end_to_end(
     base_url, db_uri = accounts_server
 
     # 1. Alice owns a real session. Her identity comes from a directly-minted
-    #    accounts cookie signed with the server's shared secret — the same JWT
+    #    accounts cookie signed with the server's shared secret â€” the same JWT
     #    the password login flow issues; only the password dance is skipped.
     #    The session-create, agent registration, and owner grant are all real.
     owner_cookie = mint_session_cookie(_OWNER, bytes.fromhex(_COOKIE_SECRET_HEX), 8, "accounts")
@@ -222,7 +222,7 @@ def test_managed_runner_callback_authenticates_end_to_end(
     assert create.status_code in (200, 201), (create.status_code, create.text)
     session_id = create.json()["session_id"]
 
-    # 2. Bind a managed runner id to Alice's session — what the managed-launch
+    # 2. Bind a managed runner id to Alice's session â€” what the managed-launch
     #    path does at spawn time via replace_runner_id. WAL journaling + a 20s
     #    busy_timeout make this cross-process write safe against the running
     #    server, which then resolves runner_id -> owner from this row.
@@ -230,11 +230,11 @@ def test_managed_runner_callback_authenticates_end_to_end(
     SqlAlchemyConversationStore(db_uri).replace_runner_id(session_id, runner_id)
 
     # 3. Put this process in a managed-sandbox posture: the runner holds ONLY
-    #    its binding token and the server URL — no omnigent-login token, no
+    #    its binding token and the server URL â€” no omnigent-login token, no
     #    Databricks config. Forcing both credential sources to miss is what a
     #    fresh sandbox actually is, and it routes _make_auth_token_factory to
     #    the managed-mint tier under test.
-    from agent_meow.inner.databricks_executor import DatabricksAuthError
+    from omnigent.inner.databricks_executor import DatabricksAuthError
 
     def _no_databricks_creds(*args: object, **kwargs: object) -> tuple[object, str]:
         """Stand in for _resolve_databricks_auth in a credential-less sandbox."""
@@ -242,9 +242,9 @@ def test_managed_runner_callback_authenticates_end_to_end(
 
     monkeypatch.setenv("RUNNER_SERVER_URL", base_url)
     monkeypatch.setenv(RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR, _BINDING_TOKEN)
-    monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
+    monkeypatch.setattr("omnigent.cli_auth.load_token", lambda _url: None)
     monkeypatch.setattr(
-        "agent_meow.inner.databricks_executor._resolve_databricks_auth",
+        "omnigent.inner.databricks_executor._resolve_databricks_auth",
         _no_databricks_creds,
     )
 

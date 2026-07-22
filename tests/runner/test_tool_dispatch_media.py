@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agent_meow.runner.tool_dispatch import (
+from omnigent.runner.tool_dispatch import (
     _execute_image_generate,
     _execute_image_remove_bg,
     _execute_video_generate,

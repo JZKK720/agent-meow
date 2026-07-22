@@ -19,10 +19,10 @@ import httpx
 import jwt
 import pytest
 
-from agent_meow.server.admin_list import AdminList
-from agent_meow.server.auth import UnifiedAuthProvider
-from agent_meow.server.oidc import OIDCConfig
-from agent_meow.server.routes.auth import (
+from omnigent.server.admin_list import AdminList
+from omnigent.server.auth import UnifiedAuthProvider
+from omnigent.server.oidc import OIDCConfig
+from omnigent.server.routes.auth import (
     _CLI_TICKET_TTL_SECONDS,
     _CliTicket,
     _evict_expired_tickets,
@@ -129,7 +129,7 @@ def _mock_httpx_client_for_github(
     return mock_cm
 
 
-# ── 1. Login redirect ──────────────────────────────────────────────
+# â”€â”€ 1. Login redirect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_login_redirects_to_idp_with_pkce_params() -> None:
@@ -161,7 +161,7 @@ async def test_login_redirects_to_idp_with_pkce_params() -> None:
     assert "ap_auth_state" in resp.cookies
 
 
-# ── 2. CLI login ───────────────────────────────────────────────────
+# â”€â”€ 2. CLI login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_cli_login_creates_ticket() -> None:
@@ -177,7 +177,7 @@ async def test_cli_login_creates_ticket() -> None:
     assert body["login_url"].startswith("/auth/login?ticket=")
 
 
-# ── 3. CLI poll (pending) ─────────────────────────────────────────
+# â”€â”€ 3. CLI poll (pending) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_cli_poll_returns_pending_before_callback() -> None:
@@ -204,7 +204,7 @@ async def test_cli_poll_returns_410_for_unknown_ticket() -> None:
     assert resp.status_code == 410
 
 
-# ── 4. Callback with mocked IdP ───────────────────────────────────
+# â”€â”€ 4. Callback with mocked IdP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_callback_exchanges_code_and_sets_session_cookie() -> None:
@@ -223,7 +223,7 @@ async def test_callback_exchanges_code_and_sets_session_cookie() -> None:
     async with httpx.AsyncClient(
         transport=transport, base_url="http://test", follow_redirects=False
     ) as client:
-        with patch("agent_meow.server.routes.auth.httpx.AsyncClient", return_value=mock_cm):
+        with patch("omnigent.server.routes.auth.httpx.AsyncClient", return_value=mock_cm):
             resp = await client.get(
                 "/auth/callback",
                 params={"code": "auth-code-123", "state": state},
@@ -277,7 +277,7 @@ async def test_callback_returns_400_on_token_exchange_failure() -> None:
     state_cookie = _mint_state_cookie(state)
 
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        with patch("agent_meow.server.routes.auth.httpx.AsyncClient", return_value=mock_cm):
+        with patch("omnigent.server.routes.auth.httpx.AsyncClient", return_value=mock_cm):
             resp = await client.get(
                 "/auth/callback",
                 params={"code": "bad-code", "state": state},
@@ -288,7 +288,7 @@ async def test_callback_returns_400_on_token_exchange_failure() -> None:
     assert "Token exchange failed" in resp.json()["error"]
 
 
-# ── 5. Logout ──────────────────────────────────────────────────────
+# â”€â”€ 5. Logout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_logout_clears_cookie_and_redirects() -> None:
@@ -310,7 +310,7 @@ async def test_logout_clears_cookie_and_redirects() -> None:
     )
 
 
-# ── 6. Expired ticket eviction ─────────────────────────────────────
+# â”€â”€ 6. Expired ticket eviction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_evict_expired_tickets_removes_old_entries() -> None:

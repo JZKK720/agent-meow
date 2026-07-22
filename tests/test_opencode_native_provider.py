@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.opencode_native_provider import (
+from omnigent.opencode_native_provider import (
     DEFAULT_DATABRICKS_GATEWAY_MODEL,
     OpenCodeGatewayResolution,
     _gateway_endpoint_for_model,
@@ -34,7 +34,7 @@ def test_build_omnigent_mcp_server_points_serve_mcp_at_bridge_dir() -> None:
     cmd = entry["command"]
     # Launches the SHARED serve-mcp relay, pointed at THIS bridge dir.
     assert cmd[-3:] == ["serve-mcp", "--bridge-dir", "/tmp/bridge-xyz"]
-    assert "agent_meow.claude_native_bridge" in cmd
+    assert "omnigent.claude_native_bridge" in cmd
     assert entry.get("environment", {}).get("PYTHONUNBUFFERED") == "1"
 
 
@@ -165,7 +165,7 @@ def test_resolve_gateway_none_when_no_token(monkeypatch: pytest.MonkeyPatch) -> 
 def test_build_mcp_block_stdio_and_http() -> None:
     from types import SimpleNamespace as N
 
-    from agent_meow.opencode_native_provider import build_opencode_mcp_block
+    from omnigent.opencode_native_provider import build_opencode_mcp_block
 
     servers = [
         N(
@@ -188,7 +188,7 @@ def test_build_mcp_block_stdio_and_http() -> None:
             args=[],
             env={},
         ),
-        # Unrepresentable (stdio without a command) → skipped.
+        # Unrepresentable (stdio without a command) â†’ skipped.
         N(name="bad", transport="stdio", command=None, args=[], env={}, url=None, headers={}),
     ]
     block = build_opencode_mcp_block(servers)
@@ -210,7 +210,7 @@ def test_build_mcp_block_stdio_and_http() -> None:
 def test_build_mcp_block_http_databricks_injects_bearer(monkeypatch: pytest.MonkeyPatch) -> None:
     from types import SimpleNamespace as N
 
-    import agent_meow.opencode_native_provider as prov
+    import omnigent.opencode_native_provider as prov
 
     monkeypatch.setattr(prov, "_databricks_bearer_token", lambda _p: "tok123")
     servers = [
@@ -263,7 +263,7 @@ def test_strip_jsonc_comments_does_not_corrupt_urls() -> None:
 def test_merge_user_provider_config_noop_without_user_config(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """No user config file → config returned unchanged."""
+    """No user config file â†’ config returned unchanged."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "nonexistent"))
 
     config = {"model": "anthropic/claude-sonnet-4-5"}

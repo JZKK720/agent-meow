@@ -1,4 +1,4 @@
-"""Tests for pi-native fork/resume wiring in ``agent_meow/runner/app.py``.
+"""Tests for pi-native fork/resume wiring in ``omnigent/runner/app.py``.
 
 Covers reading the fork labels into ``_PiNativeLaunchConfig`` and the
 ``_resolve_pi_resume_session`` decision (cold resume, fork rebuild, fresh).
@@ -12,12 +12,12 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.runner.app import (
+from omnigent.runner.app import (
     _pi_native_launch_config,
     _PiNativeLaunchConfig,
     _resolve_pi_resume_session,
 )
-from agent_meow.stores.conversation_store import (
+from omnigent.stores.conversation_store import (
     FORK_CARRY_HISTORY_LABEL_KEY,
     FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY,
 )
@@ -155,7 +155,7 @@ async def test_resolve_cold_resume_no_resumable_history_launches_fresh(tmp_path:
     ``ensure_local_pi_resume_session`` produced no file (empty/cleared bridge
     dir, empty history, or a transient fetch/write failure). That id is then
     emitted as ``pi --session <id>``, which Pi treats as "open an existing
-    session file" and exits when the file is absent — failing the launch
+    session file" and exits when the file is absent â€” failing the launch
     instead of falling back to a fresh session. With no resumable items, the
     cold-resume path must return ``None`` (no ``--session``) and write no file.
     """

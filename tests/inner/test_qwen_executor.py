@@ -4,7 +4,7 @@ Tests cover:
 - Executor construction and attribute defaults
 - ACP protocol helpers (_rpc, _notify, _send)
 - Session lifecycle (_ensure_initialized, _ensure_session)
-- run_turn event translation (agent_message_chunk → TextChunk, TurnComplete)
+- run_turn event translation (agent_message_chunk â†’ TextChunk, TurnComplete)
 - run_turn error paths (ACP error response, session-not-found retry reset)
 - Process cleanup (close())
 - Harness registry and alias wiring
@@ -21,8 +21,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agent_meow.inner.executor import ExecutorError, TextChunk, TurnComplete
-from agent_meow.inner.qwen_executor import QwenExecutor
+from omnigent.inner.executor import ExecutorError, TextChunk, TurnComplete
+from omnigent.inner.qwen_executor import QwenExecutor
 
 # ---------------------------------------------------------------------------
 # Construction / attribute defaults
@@ -142,7 +142,7 @@ async def test_rpc_id_increments_monotonically() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _read_stdout — dispatches responses vs notifications
+# _read_stdout â€” dispatches responses vs notifications
 # ---------------------------------------------------------------------------
 
 
@@ -235,7 +235,7 @@ async def test_read_stdout_does_not_resolve_future_for_colliding_request() -> No
 
     # The colliding request must NOT resolve our future with a result; it
     # routes to the queue instead. (The trailing EOF wakes the still-pending
-    # future with EOFError so callers fail fast — see the EOF path — so the
+    # future with EOFError so callers fail fast â€” see the EOF path â€” so the
     # future may be done, but never with a result.)
     assert fut.exception() is not None and not fut.cancelled()
     assert isinstance(fut.exception(), EOFError)
@@ -250,7 +250,7 @@ async def test_read_stdout_wakes_pending_futures_on_eof() -> None:
 
     Without this, a qwen process that dies mid-turn closes stdout (an EOF, not
     an exception), the reader exits normally, and the pending session/prompt
-    future never resolves — run_turn blocks until the idle timeout instead of
+    future never resolves â€” run_turn blocks until the idle timeout instead of
     failing fast.
     """
     executor = QwenExecutor()
@@ -259,7 +259,7 @@ async def test_read_stdout_wakes_pending_futures_on_eof() -> None:
     fut: asyncio.Future = loop.create_future()
     executor._pending[7] = fut  # in-flight session/prompt
 
-    # stdout closes immediately (process died) — first readline is EOF.
+    # stdout closes immediately (process died) â€” first readline is EOF.
     mock_stdout = AsyncMock()
     mock_stdout.readline = AsyncMock(side_effect=[b""])
     mock_proc = MagicMock()
@@ -273,13 +273,13 @@ async def test_read_stdout_wakes_pending_futures_on_eof() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _sandbox_launch_path — confine the qwen process tree per os_env.sandbox
+# _sandbox_launch_path â€” confine the qwen process tree per os_env.sandbox
 # ---------------------------------------------------------------------------
 
 
 def test_sandbox_launch_path_bare_when_no_sandbox() -> None:
     """No os_env, or sandbox type 'none', spawns the bare qwen binary."""
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     # os_env not provided at all.
     bare = QwenExecutor(qwen_path="/usr/bin/qwen")
@@ -301,9 +301,9 @@ def test_sandbox_launch_path_wraps_active_policy(
     tool call can't escape the spec's read/write roots. Asserts the launcher is
     returned and the policy carries qwen's own paths and our spawn env names.
     """
-    from agent_meow.inner import sandbox as sandbox_mod
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-    from agent_meow.inner.sandbox import SandboxPolicy
+    from omnigent.inner import sandbox as sandbox_mod
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner.sandbox import SandboxPolicy
 
     captured: dict = {}
 
@@ -347,8 +347,8 @@ def test_sandbox_launch_path_falls_back_when_backend_unavailable(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
     """A backend failure degrades to the bare binary, never blocks startup."""
-    from agent_meow.inner import sandbox as sandbox_mod
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner import sandbox as sandbox_mod
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     def _boom(_os_env, _cwd) -> None:
         raise NotImplementedError("no bwrap on this platform")
@@ -370,7 +370,7 @@ async def test_start_process_resets_handshake_state(
     """A (re)start clears the one-way init latch so the fresh process re-handshakes.
 
     After a crash the error paths reset session state but ``_initialized`` is a
-    one-way latch — without resetting it on restart, ``_ensure_initialized``
+    one-way latch â€” without resetting it on restart, ``_ensure_initialized``
     would skip ``initialize`` against the new subprocess and qwen would reject
     the subsequent ``session/new``. ``_image_supported`` (derived from the init
     response) is stale for the same reason.
@@ -443,7 +443,7 @@ async def test_ensure_session_cached_after_first_call() -> None:
 
 
 # ---------------------------------------------------------------------------
-# run_turn — success path
+# run_turn â€” success path
 # ---------------------------------------------------------------------------
 
 
@@ -517,7 +517,7 @@ async def test_run_turn_yields_text_chunks_and_turn_complete() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Token usage — parsed from qwen's _meta.usage and emitted on TurnComplete
+# Token usage â€” parsed from qwen's _meta.usage and emitted on TurnComplete
 # ---------------------------------------------------------------------------
 
 
@@ -555,7 +555,7 @@ def test_accumulate_usage_maps_and_splits_cached() -> None:
 def test_accumulate_usage_sums_across_calls_and_ignores_non_usage() -> None:
     """Multiple emissions sum; updates without _meta.usage are ignored."""
     acc: dict[str, int] = {}
-    # A plain text chunk carries no usage — must not perturb the accumulator.
+    # A plain text chunk carries no usage â€” must not perturb the accumulator.
     QwenExecutor._accumulate_usage(acc, {"content": {"type": "text", "text": "hi"}})
     assert acc == {}
     for _ in range(2):
@@ -583,7 +583,7 @@ async def test_run_turn_emits_usage_on_turn_complete(monkeypatch: pytest.MonkeyP
     """A usage-bearing chunk surfaces as TurnComplete.usage and notifies cost."""
     notified: list[dict] = []
     monkeypatch.setattr(
-        "agent_meow.inner.qwen_executor._notify_usage_from_dict",
+        "omnigent.inner.qwen_executor._notify_usage_from_dict",
         lambda model, usage: notified.append({"model": model, "usage": usage}),
     )
 
@@ -659,10 +659,10 @@ async def test_run_turn_emits_usage_on_turn_complete(monkeypatch: pytest.MonkeyP
 
 @pytest.mark.asyncio
 async def test_run_turn_usage_none_when_unreported(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No usage chunk → TurnComplete.usage is None and the observer isn't called."""
+    """No usage chunk â†’ TurnComplete.usage is None and the observer isn't called."""
     notified: list[dict] = []
     monkeypatch.setattr(
-        "agent_meow.inner.qwen_executor._notify_usage_from_dict",
+        "omnigent.inner.qwen_executor._notify_usage_from_dict",
         lambda model, usage: notified.append({"model": model, "usage": usage}),
     )
 
@@ -735,7 +735,7 @@ async def test_run_turn_drains_all_chunks_before_completing() -> None:
                         },
                     }
                 )
-            # Resolve immediately — chunks are still buffered in the queue.
+            # Resolve immediately â€” chunks are still buffered in the queue.
             fut = executor._pending.get(msg["id"])
             if fut and not fut.done():
                 fut.set_result(
@@ -761,7 +761,7 @@ async def test_run_turn_approval_does_not_count_against_idle_timeout(
     With a tiny timeout and an elicitation handler slower than it, the turn must
     still complete: the idle deadline resets after the approval round-trip.
     """
-    monkeypatch.setattr("agent_meow.inner.qwen_executor._PROMPT_TIMEOUT_SECONDS", 0.05)
+    monkeypatch.setattr("omnigent.inner.qwen_executor._PROMPT_TIMEOUT_SECONDS", 0.05)
 
     executor = QwenExecutor()
     executor._initialized = True
@@ -790,7 +790,7 @@ async def test_run_turn_approval_does_not_count_against_idle_timeout(
                 }
             )
         elif "result" in msg and msg.get("id") == 999:
-            # Our approval reply went out — now qwen completes the prompt.
+            # Our approval reply went out â€” now qwen completes the prompt.
             rid = executor._rpc_id
             fut = executor._pending.get(rid)
             if fut and not fut.done():
@@ -804,7 +804,7 @@ async def test_run_turn_approval_does_not_count_against_idle_timeout(
 
 
 # ---------------------------------------------------------------------------
-# run_turn — ACP error response
+# run_turn â€” ACP error response
 # ---------------------------------------------------------------------------
 
 
@@ -881,28 +881,28 @@ async def test_run_turn_resets_session_on_not_found_error() -> None:
 
 def test_qwen_in_harness_registry() -> None:
     """'qwen' must be in the _HARNESS_MODULES dispatch table."""
-    from agent_meow.runtime.harnesses import _HARNESS_MODULES
+    from omnigent.runtime.harnesses import _HARNESS_MODULES
 
     assert "qwen" in _HARNESS_MODULES
 
 
 def test_qwen_in_harness_allowlist() -> None:
     """'qwen' must be in OMNIGENT_HARNESSES."""
-    from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+    from omnigent.spec._omnigent_compat import OMNIGENT_HARNESSES
 
     assert "qwen" in OMNIGENT_HARNESSES
 
 
 def test_qwen_code_alias_resolves_to_qwen() -> None:
     """'qwen-code' alias maps to the canonical 'qwen' harness id."""
-    from agent_meow.harness_aliases import canonicalize_harness
+    from omnigent.harness_aliases import canonicalize_harness
 
     assert canonicalize_harness("qwen-code") == "qwen"
 
 
 def test_qwen_code_in_harness_aliases() -> None:
     """'qwen-code' must be in OMNIGENT_HARNESS_ALIASES."""
-    from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESS_ALIASES
+    from omnigent.spec._omnigent_compat import OMNIGENT_HARNESS_ALIASES
 
     assert "qwen-code" in OMNIGENT_HARNESS_ALIASES
 
@@ -914,7 +914,7 @@ def test_qwen_code_in_harness_aliases() -> None:
 
 def test_qwen_harness_creates_fastapi_app() -> None:
     """create_app() returns a FastAPI app with at least a /health route."""
-    from agent_meow.inner.qwen_harness import create_app
+    from omnigent.inner.qwen_harness import create_app
 
     app = create_app()
     assert app is not None
@@ -925,14 +925,14 @@ def test_qwen_harness_creates_fastapi_app() -> None:
 
 def test_qwen_harness_module_importable() -> None:
     """qwen_harness can be imported and exposes create_app."""
-    from agent_meow.inner import qwen_harness
+    from omnigent.inner import qwen_harness
 
     assert hasattr(qwen_harness, "create_app")
 
 
 def test_wrap_passes_gateway_env_to_executor(monkeypatch: pytest.MonkeyPatch) -> None:
     """_build_qwen_executor threads HARNESS_QWEN_GATEWAY_* into the executor."""
-    from agent_meow.inner import qwen_harness
+    from omnigent.inner import qwen_harness
 
     monkeypatch.setenv("HARNESS_QWEN_MODEL", "qwen/qwen3-coder")
     monkeypatch.setenv("HARNESS_QWEN_GATEWAY_BASE_URL", "https://gw.example/v1")
@@ -948,7 +948,7 @@ def test_wrap_gateway_env_absent_leaves_executor_ungated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Without the gateway env vars, the executor has no gateway config."""
-    from agent_meow.inner import qwen_harness
+    from omnigent.inner import qwen_harness
 
     monkeypatch.delenv("HARNESS_QWEN_GATEWAY_BASE_URL", raising=False)
     monkeypatch.delenv("HARNESS_QWEN_GATEWAY_AUTH_COMMAND", raising=False)
@@ -1064,10 +1064,10 @@ async def test_run_turn_resends_system_prompt_after_session_reset() -> None:
 
     executor._send = fake_send  # type: ignore[method-assign]
 
-    # Turn 1: folds the prompt, then errors with "Session not found" → reset.
+    # Turn 1: folds the prompt, then errors with "Session not found" â†’ reset.
     async for _ in executor.run_turn([{"role": "user", "content": "first"}], [], "SYSTEM"):
         pass
-    # Turn 2: fresh session — the system prompt must be re-folded.
+    # Turn 2: fresh session â€” the system prompt must be re-folded.
     async for _ in executor.run_turn([{"role": "user", "content": "second"}], [], "SYSTEM"):
         pass
 
@@ -1185,7 +1185,7 @@ async def test_run_turn_no_replay_on_continuing_session() -> None:
     async for _ in executor.run_turn(messages, [], "SYS"):
         pass
 
-    # No history prefix, no system-prompt re-fold — just the latest message.
+    # No history prefix, no system-prompt re-fold â€” just the latest message.
     assert sent_prompts[0] == "latest turn"
 
 
@@ -1238,7 +1238,7 @@ async def test_respond_to_fs_read_text_file_unsupported_without_os_env() -> None
     stray ``fs/read_text_file`` must get a JSON-RPC method-not-found error
     rather than a fabricated (and dangerous) empty/real-file response.
     """
-    executor = QwenExecutor()  # no os_env → delegation off
+    executor = QwenExecutor()  # no os_env â†’ delegation off
     assert executor._fs_delegation is False
     sent: list[dict] = []
     executor._send = AsyncMock(side_effect=lambda m: sent.append(m))  # type: ignore[method-assign]
@@ -1281,11 +1281,11 @@ class _FakeOSEnv:
 
 def test_fs_delegation_flag_tracks_os_env() -> None:
     """Delegation is on with an os_env, off without one or for a fork env."""
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     assert QwenExecutor()._fs_delegation is False  # no os_env
     assert QwenExecutor(os_env=OSEnvSpec(type="caller_process"))._fs_delegation is True
-    # A fork env operates on a copied tree → path would diverge from the qwen
+    # A fork env operates on a copied tree â†’ path would diverge from the qwen
     # subprocess cwd, so delegation must stay off.
     assert QwenExecutor(os_env=OSEnvSpec(type="caller_process", fork=True))._fs_delegation is False
 
@@ -1293,7 +1293,7 @@ def test_fs_delegation_flag_tracks_os_env() -> None:
 @pytest.mark.asyncio
 async def test_initialize_advertises_fs_capability_per_delegation() -> None:
     """initialize advertises clientCapabilities.fs matching the delegation flag."""
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     init_result = {"result": {"agentCapabilities": {"promptCapabilities": {}}}}
 
@@ -1314,8 +1314,8 @@ async def test_initialize_advertises_fs_capability_per_delegation() -> None:
 
 @pytest.mark.asyncio
 async def test_fs_read_returns_content_and_maps_window() -> None:
-    """fs/read_text_file reads through the OSEnvironment; line/limit → offset/limit."""
-    from agent_meow.inner.datamodel import OSEnvSpec
+    """fs/read_text_file reads through the OSEnvironment; line/limit â†’ offset/limit."""
+    from omnigent.inner.datamodel import OSEnvSpec
 
     executor = QwenExecutor(os_env=OSEnvSpec(type="caller_process"))
     fake = _FakeOSEnv(read_result={"content": "hello\nworld\n", "encoding": "utf-8"})
@@ -1333,13 +1333,13 @@ async def test_fs_read_returns_content_and_maps_window() -> None:
     )
 
     assert sent[0]["result"] == {"content": "hello\nworld\n"}
-    assert fake.read_calls == [("a.txt", 2, 5)]  # line→offset, limit→limit
+    assert fake.read_calls == [("a.txt", 2, 5)]  # lineâ†’offset, limitâ†’limit
 
 
 @pytest.mark.asyncio
 async def test_fs_read_whole_file_when_no_window() -> None:
     """Absent line/limit reads the whole file (offset=1, limit=None)."""
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     executor = QwenExecutor(os_env=OSEnvSpec(type="caller_process"))
     fake = _FakeOSEnv(read_result={"content": "x", "encoding": "utf-8"})
@@ -1356,7 +1356,7 @@ async def test_fs_read_whole_file_when_no_window() -> None:
 @pytest.mark.asyncio
 async def test_fs_read_missing_file_maps_to_enoent() -> None:
     """A 'no such file' read error maps to qwen's ENOENT code (-32002)."""
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     executor = QwenExecutor(os_env=OSEnvSpec(type="caller_process"))
     executor._os_environment = _FakeOSEnv(  # type: ignore[assignment]
@@ -1376,7 +1376,7 @@ async def test_fs_read_missing_file_maps_to_enoent() -> None:
 @pytest.mark.asyncio
 async def test_fs_read_binary_file_is_rejected() -> None:
     """A non-utf-8 (binary) file is refused rather than returned as bytes."""
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     executor = QwenExecutor(os_env=OSEnvSpec(type="caller_process"))
     executor._os_environment = _FakeOSEnv(  # type: ignore[assignment]
@@ -1396,7 +1396,7 @@ async def test_fs_read_binary_file_is_rejected() -> None:
 @pytest.mark.asyncio
 async def test_fs_write_writes_through_os_env() -> None:
     """fs/write_text_file writes via the OSEnvironment and returns an empty result."""
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     executor = QwenExecutor(os_env=OSEnvSpec(type="caller_process"))
     fake = _FakeOSEnv(write_result={"path": "out.txt", "bytes": 3})
@@ -1420,7 +1420,7 @@ async def test_fs_write_writes_through_os_env() -> None:
 @pytest.mark.asyncio
 async def test_fs_write_error_surfaces_as_internal_error() -> None:
     """A write failure surfaces as a JSON-RPC internal error (-32603)."""
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     executor = QwenExecutor(os_env=OSEnvSpec(type="caller_process"))
     executor._os_environment = _FakeOSEnv(  # type: ignore[assignment]
@@ -1445,7 +1445,7 @@ async def test_fs_write_error_surfaces_as_internal_error() -> None:
 @pytest.mark.asyncio
 async def test_fs_write_rejects_missing_args() -> None:
     """Missing path / non-string content is an invalid-params error (-32602)."""
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     executor = QwenExecutor(os_env=OSEnvSpec(type="caller_process"))
     executor._os_environment = _FakeOSEnv()  # type: ignore[assignment]
@@ -1462,7 +1462,7 @@ async def test_fs_write_rejects_missing_args() -> None:
 @pytest.mark.asyncio
 async def test_close_releases_fs_os_environment() -> None:
     """close() tears down a lazily-created fs-delegation OSEnvironment."""
-    from agent_meow.inner.datamodel import OSEnvSpec
+    from omnigent.inner.datamodel import OSEnvSpec
 
     executor = QwenExecutor(os_env=OSEnvSpec(type="caller_process"))
     fake = _FakeOSEnv()
@@ -1513,7 +1513,7 @@ async def test_respond_to_permission_allows_when_no_gates_wired() -> None:
 
 @pytest.mark.asyncio
 async def test_respond_to_permission_denied_by_policy() -> None:
-    """A POLICY_ACTION_DENY verdict selects a reject option — no elicitation."""
+    """A POLICY_ACTION_DENY verdict selects a reject option â€” no elicitation."""
     executor = QwenExecutor()
     executor._policy_evaluator = AsyncMock(  # type: ignore[attr-defined]
         return_value=MagicMock(action="POLICY_ACTION_DENY")
@@ -1535,7 +1535,7 @@ async def test_respond_to_permission_denied_by_policy() -> None:
 @pytest.mark.asyncio
 async def test_respond_to_permission_elicitation_allow_and_deny() -> None:
     """With only elicitation wired, the user's accept/deny maps to allow/reject."""
-    # Accept → allow_once.
+    # Accept â†’ allow_once.
     allow_exec = QwenExecutor()
     allow_exec._elicitation_handler = AsyncMock(return_value=True)  # type: ignore[attr-defined]
     sent_a: list[dict] = []
@@ -1546,7 +1546,7 @@ async def test_respond_to_permission_elicitation_allow_and_deny() -> None:
         "run_shell_command", {"command": "rm -f victim.txt"}
     )
 
-    # Deny → reject_once.
+    # Deny â†’ reject_once.
     deny_exec = QwenExecutor()
     deny_exec._elicitation_handler = AsyncMock(return_value=False)  # type: ignore[attr-defined]
     sent_d: list[dict] = []
@@ -1703,7 +1703,7 @@ def test_image_blocks_from_content_uses_file_data_fallback() -> None:
 
 def test_parse_image_data_uri_edge_cases() -> None:
     """Malformed / non-image data URIs return None rather than raising."""
-    from agent_meow.inner.qwen_executor import _parse_image_data_uri
+    from omnigent.inner.qwen_executor import _parse_image_data_uri
 
     assert _parse_image_data_uri("data:image/png;base64") is None  # no comma
     assert _parse_image_data_uri("data:image/png;base64,") is None  # empty payload
@@ -1718,7 +1718,7 @@ def test_text_from_blocks_marks_image_only_when_requested() -> None:
         {"type": "input_text", "text": "what is this"},
         {"type": "input_image", "image_url": "data:image/png;base64,iVBOR", "filename": "p.png"},
     ]
-    # Default: image handled as a real block elsewhere → no marker here.
+    # Default: image handled as a real block elsewhere â†’ no marker here.
     assert QwenExecutor._text_from_blocks(content) == "what is this"
     # Capability off: leave a marker so the image isn't silently dropped.
     marked = QwenExecutor._text_from_blocks(content, emit_image_marker=True)
@@ -1728,7 +1728,7 @@ def test_text_from_blocks_marks_image_only_when_requested() -> None:
 
 @pytest.mark.asyncio
 async def test_resolve_gateway_env_runs_auth_command() -> None:
-    """A wired gateway → OPENAI_* env with the token from the auth command."""
+    """A wired gateway â†’ OPENAI_* env with the token from the auth command."""
     executor = QwenExecutor(
         model="qwen/qwen3-coder",
         gateway_base_url="https://gw.example/v1",
@@ -1744,7 +1744,7 @@ async def test_resolve_gateway_env_runs_auth_command() -> None:
 
 @pytest.mark.asyncio
 async def test_resolve_gateway_env_empty_without_config() -> None:
-    """No gateway configured → no OPENAI_* overrides (ambient auth path)."""
+    """No gateway configured â†’ no OPENAI_* overrides (ambient auth path)."""
     assert await QwenExecutor(model="m")._resolve_gateway_env() == {}
     # base URL without an auth command is also inert.
     only_url = QwenExecutor(gateway_base_url="https://gw/v1")

@@ -1,7 +1,7 @@
-"""Tests for :mod:`~?agent_meow.runtime.filesystem_registry`.
+"""Tests for :mod:`~?omnigent.runtime.filesystem_registry`.
 
 Covers the ``list_changed_files`` merge logic for :class:`AgentEditFilesystemRegistry`
-— specifically the invariant that a file first created in a session keeps status
+â€” specifically the invariant that a file first created in a session keeps status
 ``"created"`` even when subsequently edited within the same session.
 
 Also covers ``seed_snapshot``, ``get_baseline`` for both implementations, and
@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.runtime.filesystem_registry import (
+from omnigent.runtime.filesystem_registry import (
     AgentEditFilesystemRegistry,
     GitFilesystemRegistry,
     GitStatusUnavailable,
@@ -78,7 +78,7 @@ def test_created_then_modified_shows_added(registry: AgentEditFilesystemRegistry
         "Duplicate entries suggest the dedup merge didn't fire."
     )
 
-    # Status must be "created" — the file is new to this session regardless of edits.
+    # Status must be "created" â€” the file is new to this session regardless of edits.
     # If "modified", the modified event overwrote the created event (the bug).
     assert results[0]["status"] == "created", (
         f"Expected status 'created' (file is newly created this session), "
@@ -95,7 +95,7 @@ def test_modified_only_shows_modified(registry: AgentEditFilesystemRegistry) -> 
 
     results = registry.list_changed_files(conv_id, limit=10)
 
-    # Exactly one record — the single injected event for existing.md.
+    # Exactly one record â€” the single injected event for existing.md.
     # More than 1 would mean dedup is broken; 0 would mean the event was filtered.
     assert len(results) == 1
     # Pre-existing file touched in this session should remain "modified".
@@ -108,7 +108,7 @@ def test_modified_only_shows_modified(registry: AgentEditFilesystemRegistry) -> 
 def test_created_then_deleted_is_hidden(registry: AgentEditFilesystemRegistry) -> None:
     """A file created and then deleted in the same session must not appear at all.
 
-    The file never existed before the session started, and it is gone now —
+    The file never existed before the session started, and it is gone now â€”
     from the user's perspective it never existed.  Showing it as ``"D"``
     would be misleading because there is nothing to diff or open.
     """
@@ -136,7 +136,7 @@ def test_ephemeral_files_are_suppressed(registry: AgentEditFilesystemRegistry) -
     # Inject one event per ephemeral pattern; also inject a real file to
     # confirm the filter is selective.
     ephemeral_files = [
-        "pyproject.toml.tmp.12345",  # write-then-rename temp (uv, pip, …)
+        "pyproject.toml.tmp.12345",  # write-then-rename temp (uv, pip, â€¦)
         "pyproject.toml.tmp",  # plain *.tmp
         "notes.md~",  # editor backup
         ".main.py.swp",  # vim swap
@@ -203,7 +203,7 @@ def test_deleted_then_created_shows_modified(registry: AgentEditFilesystemRegist
     """A file deleted then recreated in the same session shows status ``"modified"``.
 
     Exercises the ``_net_operation("deleted", "created") -> "modified"`` branch:
-    the file existed before the session, was removed, then put back — the net
+    the file existed before the session, was removed, then put back â€” the net
     effect from the user's perspective is a modification of a pre-existing file.
     If this fails with ``"created"``, the replace-within-session path is broken.
     """
@@ -244,7 +244,7 @@ def test_session_isolation_events_not_shared_between_sessions(
     assert any(r["path"] == "shared.md" for r in results_a), (
         f"Session A should see 'shared.md' (its own event), but results_a = {results_a}."
     )
-    # Session B must see nothing — the event was attributed to session A.
+    # Session B must see nothing â€” the event was attributed to session A.
     assert results_b == [], (
         f"Session B should see no events (no events attributed to it), "
         f"but results_b = {results_b}. "
@@ -273,7 +273,7 @@ def test_limit_parameter_caps_results(registry: AgentEditFilesystemRegistry) -> 
     )
 
 
-# ── seed_snapshot / get_baseline ─────────────────────────────────────────────
+# â”€â”€ seed_snapshot / get_baseline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_seed_snapshot_stores_content(tmp_path: Path) -> None:
@@ -302,7 +302,7 @@ def test_seed_snapshot_is_no_op_if_already_exists(tmp_path: Path) -> None:
     """A second ``seed_snapshot`` call with different content must not overwrite the first.
 
     First-write-wins semantics guarantee that the snapshot always reflects
-    the state *before* the very first write — subsequent writes should not
+    the state *before* the very first write â€” subsequent writes should not
     corrupt it.  Failure means the guard ``if norm not in self._snapshots``
     is missing or broken.
     """
@@ -312,7 +312,7 @@ def test_seed_snapshot_is_no_op_if_already_exists(tmp_path: Path) -> None:
     reg.seed_snapshot("bar.py", "second")  # must be a no-op
 
     result = reg.get_baseline("bar.py")
-    # Must still be 'first' — the second call must not overwrite.
+    # Must still be 'first' â€” the second call must not overwrite.
     assert result == "first", (
         f"Expected 'first' (first-write-wins), got {result!r}. "
         "The second seed_snapshot call overwrote the first snapshot."
@@ -329,7 +329,7 @@ def test_get_baseline_returns_none_when_no_snapshot(tmp_path: Path) -> None:
     reg = AgentEditFilesystemRegistry(watch_path=tmp_path)
 
     result = reg.get_baseline("never_seeded.py")
-    # No snapshot, no git → must return None.
+    # No snapshot, no git â†’ must return None.
     assert result is None, f"Expected None (no snapshot, no git), got {result!r}."
 
 
@@ -346,7 +346,7 @@ def test_get_baseline_returns_snapshot_for_non_git_workspace(tmp_path: Path) -> 
     reg.seed_snapshot("src/lib.py", "lib original")
 
     result = reg.get_baseline("src/lib.py")
-    # Must match what was seeded — proves the non-git snapshot fallback works.
+    # Must match what was seeded â€” proves the non-git snapshot fallback works.
     assert result == "lib original", (
         f"Expected 'lib original', got {result!r}. "
         "Non-git get_baseline fallback is not returning the seeded snapshot."
@@ -392,7 +392,7 @@ def test_get_baseline_uses_git_show_for_committed_file(tmp_path: Path) -> None:
     reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
 
     result = reg.get_baseline("committed.py")
-    # Must return exactly what was committed — confirms git show is being called
+    # Must return exactly what was committed â€” confirms git show is being called
     # and its stdout is decoded correctly.
     assert result == "committed content", (
         f"Expected 'committed content', got {result!r}. "
@@ -423,7 +423,7 @@ def test_get_baseline_returns_none_for_new_untracked_file(tmp_path: Path) -> Non
     reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
 
     result = reg.get_baseline("untracked.py")
-    # untracked.py is not in git — git show must return non-zero, so None.
+    # untracked.py is not in git â€” git show must return non-zero, so None.
     assert result is None, (
         f"Expected None for an untracked file, got {result!r}. "
         "get_baseline returned a non-None baseline for a file not in git."
@@ -461,7 +461,7 @@ def test_git_list_changed_files_excludes_terminals_dir(tmp_path: Path) -> None:
     results = reg.list_changed_files("any-conv", limit=100)
 
     paths = [r["path"] for r in results]
-    # The real source file must appear — confirms list_changed_files is working.
+    # The real source file must appear â€” confirms list_changed_files is working.
     assert "real_change.py" in paths, (
         f"Expected 'real_change.py' in results but got {paths}. "
         "list_changed_files may not be returning untracked source files."
@@ -527,7 +527,7 @@ def test_git_list_changed_files_raises_on_timeout(tmp_path: Path, monkeypatch) -
     """A ``git status`` timeout must raise, not silently return an empty list.
 
     The old code swallowed ``TimeoutExpired`` to ``[]``, so the Files panel
-    showed "No workspace changes yet" even with real modifications — a state
+    showed "No workspace changes yet" even with real modifications â€” a state
     indistinguishable from a clean tree. The failure must surface so the
     endpoint can report it and the cause is no longer hidden.
     """
@@ -537,7 +537,7 @@ def test_git_list_changed_files_raises_on_timeout(tmp_path: Path, monkeypatch) -
     def _raise_timeout(*_args, **_kwargs):
         raise subprocess.TimeoutExpired(cmd="git status", timeout=5)
 
-    monkeypatch.setattr("agent_meow.runtime.filesystem_registry.subprocess.run", _raise_timeout)
+    monkeypatch.setattr("omnigent.runtime.filesystem_registry.subprocess.run", _raise_timeout)
 
     reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
     with pytest.raises(GitStatusUnavailable, match="timed out"):
@@ -548,7 +548,7 @@ def test_git_list_changed_files_raises_on_nonzero_exit(tmp_path: Path, monkeypat
     """A non-zero ``git status`` exit must raise, not silently return ``[]``.
 
     e.g. "detected dubious ownership" when the runner uid differs from the
-    checkout owner — previously swallowed to an empty list.
+    checkout owner â€” previously swallowed to an empty list.
     """
     env = _git_env()
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, env=env)
@@ -561,7 +561,7 @@ def test_git_list_changed_files_raises_on_nonzero_exit(tmp_path: Path, monkeypat
             stderr=b"fatal: detected dubious ownership in repository",
         )
 
-    monkeypatch.setattr("agent_meow.runtime.filesystem_registry.subprocess.run", _nonzero)
+    monkeypatch.setattr("omnigent.runtime.filesystem_registry.subprocess.run", _nonzero)
 
     reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
     with pytest.raises(GitStatusUnavailable, match="exited 128"):
@@ -571,8 +571,8 @@ def test_git_list_changed_files_raises_on_nonzero_exit(tmp_path: Path, monkeypat
 def test_git_get_changed_file_raises_on_timeout(tmp_path: Path, monkeypatch) -> None:
     """A ``git status`` timeout in the single-file lookup must raise, not return ``None``.
 
-    Swallowing it to ``None`` made the diff endpoint answer 404 — a state
-    indistinguishable from "this path has no changes" — for a read that
+    Swallowing it to ``None`` made the diff endpoint answer 404 â€” a state
+    indistinguishable from "this path has no changes" â€” for a read that
     *could not run*. The failure must surface like the list path.
     """
     env = _git_env()
@@ -581,7 +581,7 @@ def test_git_get_changed_file_raises_on_timeout(tmp_path: Path, monkeypatch) -> 
     def _raise_timeout(*_args, **_kwargs):
         raise subprocess.TimeoutExpired(cmd="git status", timeout=5)
 
-    monkeypatch.setattr("agent_meow.runtime.filesystem_registry.subprocess.run", _raise_timeout)
+    monkeypatch.setattr("omnigent.runtime.filesystem_registry.subprocess.run", _raise_timeout)
 
     reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
     with pytest.raises(GitStatusUnavailable, match="timed out"):
@@ -601,7 +601,7 @@ def test_git_get_changed_file_raises_on_nonzero_exit(tmp_path: Path, monkeypatch
             stderr=b"fatal: detected dubious ownership in repository",
         )
 
-    monkeypatch.setattr("agent_meow.runtime.filesystem_registry.subprocess.run", _nonzero)
+    monkeypatch.setattr("omnigent.runtime.filesystem_registry.subprocess.run", _nonzero)
 
     reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
     with pytest.raises(GitStatusUnavailable, match="exited 128"):
@@ -609,7 +609,7 @@ def test_git_get_changed_file_raises_on_nonzero_exit(tmp_path: Path, monkeypatch
 
 
 def test_git_get_changed_file_returns_none_when_unchanged(tmp_path: Path) -> None:
-    """A clean ``git status`` (exit 0, no output) still means "no changes" → ``None``.
+    """A clean ``git status`` (exit 0, no output) still means "no changes" â†’ ``None``.
 
     Guards against the raise paths swallowing the legitimate empty case: a
     tracked, unmodified file must return ``None``, not raise.
@@ -669,7 +669,7 @@ def test_git_list_changed_files_expands_untracked_nested_dir(tmp_path: Path) -> 
     )
 
 
-# ── _normalize_path ──────────────────────────────────────────────────────────
+# â”€â”€ _normalize_path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_normalize_path_absolute_path_is_made_relative(tmp_path: Path) -> None:
@@ -761,7 +761,7 @@ def test_normalize_path_relative_dotdot_within_cwd_is_normalized(tmp_path: Path)
     )
 
 
-# ── create_filesystem_registry factory ───────────────────────────────────────
+# â”€â”€ create_filesystem_registry factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_create_filesystem_registry_git_workspace(tmp_path: Path) -> None:
@@ -809,46 +809,46 @@ def test_create_filesystem_registry_nested_git_workspace(tmp_path: Path) -> None
     )
 
 
-# ── _parse_git_porcelain_line ─────────────────────────────────────────────────
+# â”€â”€ _parse_git_porcelain_line â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
     "line, expected",
     [
-        # Untracked file (both columns '?') → created
+        # Untracked file (both columns '?') â†’ created
         ("?? new_file.py", ("new_file.py", "created")),
-        # Staged new file (index 'A') → created
+        # Staged new file (index 'A') â†’ created
         ("A  staged.py", ("staged.py", "created")),
-        # Staged new + modified in worktree (index 'A' takes precedence) → created
+        # Staged new + modified in worktree (index 'A' takes precedence) â†’ created
         ("AM staged_then_modified.py", ("staged_then_modified.py", "created")),
-        # Staged modification (index 'M') → modified
+        # Staged modification (index 'M') â†’ modified
         ("M  staged_mod.py", ("staged_mod.py", "modified")),
-        # Unstaged modification (worktree 'M') → modified
+        # Unstaged modification (worktree 'M') â†’ modified
         (" M unstaged_mod.py", ("unstaged_mod.py", "modified")),
-        # Both staged and unstaged modifications → modified
+        # Both staged and unstaged modifications â†’ modified
         ("MM both_mod.py", ("both_mod.py", "modified")),
-        # Staged deletion (index 'D') → deleted
+        # Staged deletion (index 'D') â†’ deleted
         ("D  staged_del.py", ("staged_del.py", "deleted")),
-        # Unstaged deletion (worktree 'D') → deleted
+        # Unstaged deletion (worktree 'D') â†’ deleted
         (" D unstaged_del.py", ("unstaged_del.py", "deleted")),
         # Rename: destination path (after ' -> ') is used, operation is modified
         ("R  old.py -> new.py", ("new.py", "modified")),
-        # git-quoted path (spaces in filename) → quotes are stripped
+        # git-quoted path (spaces in filename) â†’ quotes are stripped
         ('?? "dir/file with spaces.py"', ("dir/file with spaces.py", "created")),
         # Quoted rename destination
         ('R  old.py -> "new with spaces.py"', ("new with spaces.py", "modified")),
         # Both source and destination git-quoted (both paths have spaces).
-        # The outer-quote strip must NOT fire before the ' -> ' split —
+        # The outer-quote strip must NOT fire before the ' -> ' split â€”
         # 'R  "old name.py" -> "new name.py"' starts and ends with '"' so
         # a naive strip would corrupt the separator and leave a dangling quote.
         ('R  "old name.py" -> "new name.py"', ("new name.py", "modified")),
         # Non-rename file whose name literally contains ' -> ': must NOT be
-        # treated as a rename — the old path-content heuristic would misfire here.
+        # treated as a rename â€” the old path-content heuristic would misfire here.
         (" M file -> backup.py", ("file -> backup.py", "modified")),
         # Git C-quoted non-ASCII filename (UTF-8 bytes as octal sequences).
-        # git encodes 'é' (U+00E9) as the two UTF-8 bytes \303\251.
-        ('?? "caf\\303\\251.py"', ("café.py", "created")),
-        # Lines shorter than 4 characters → None (no valid XY + space + path)
+        # git encodes 'Ã©' (U+00E9) as the two UTF-8 bytes \303\251.
+        ('?? "caf\\303\\251.py"', ("cafÃ©.py", "created")),
+        # Lines shorter than 4 characters â†’ None (no valid XY + space + path)
         ("", None),
         ("??", None),
         ("M ", None),
@@ -887,13 +887,13 @@ def test_parse_git_porcelain_line(line: str, expected: tuple[str, str] | None) -
     )
 
 
-# ── _unquote_git_path ─────────────────────────────────────────────────────────
+# â”€â”€ _unquote_git_path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
     "raw, expected",
     [
-        # Plain ASCII — no escaping needed
+        # Plain ASCII â€” no escaping needed
         ("hello.py", "hello.py"),
         # Escaped double-quote and backslash
         (r"say \"hi\"", 'say "hi"'),
@@ -901,10 +901,10 @@ def test_parse_git_porcelain_line(line: str, expected: tuple[str, str] | None) -
         # Simple escape sequences
         ("tab\\there", "tab\there"),
         ("new\\nline", "new\nline"),
-        # UTF-8 non-ASCII via octal (é = 0xC3 0xA9 = \303\251)
-        ("caf\\303\\251.py", "café.py"),
-        # Multi-byte sequence: ñ = 0xC3 0xB1 = \303\261
-        ("ma\\303\\261ana", "mañana"),
+        # UTF-8 non-ASCII via octal (Ã© = 0xC3 0xA9 = \303\251)
+        ("caf\\303\\251.py", "cafÃ©.py"),
+        # Multi-byte sequence: Ã± = 0xC3 0xB1 = \303\261
+        ("ma\\303\\261ana", "maÃ±ana"),
     ],
     ids=[
         "plain-ascii",

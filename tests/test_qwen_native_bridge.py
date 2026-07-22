@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow import qwen_native_bridge
+from omnigent import qwen_native_bridge
 
 
 @pytest.fixture
@@ -28,14 +28,14 @@ def test_write_mcp_config_writes_into_bridge_dir_not_workspace(bridge_dir: Path)
     """``write_mcp_config`` writes the ``--mcp-config`` file inside the bridge dir."""
     path = qwen_native_bridge.write_mcp_config(bridge_dir)
 
-    # The config lives in the bridge dir — never the workspace (no repo pollution).
+    # The config lives in the bridge dir â€” never the workspace (no repo pollution).
     assert path == bridge_dir / "mcp_config.json"
     assert path.parent == bridge_dir
 
     data = json.loads(path.read_text(encoding="utf-8"))
     server = data["mcpServers"]["agent-meow"]
     # Points at the shared stdio relay implemented in claude_native_bridge.
-    assert server["args"][:4] == ["-I", "-m", "agent_meow.claude_native_bridge", "serve-mcp"]
+    assert server["args"][:4] == ["-I", "-m", "omnigent.claude_native_bridge", "serve-mcp"]
     assert str(bridge_dir) in server["args"]
     # trust:true auto-approves qwen's own MCP gate (agent-meow gates separately).
     assert server["trust"] is True
@@ -91,7 +91,7 @@ def test_write_mcp_bridge_config_is_idempotent(bridge_dir: Path) -> None:
 def test_write_mcp_bridge_config_rejects_symlinked_ancestor(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A symlinked bridge-tree ancestor is refused — the token is never written.
+    """A symlinked bridge-tree ancestor is refused â€” the token is never written.
 
     bridge.json holds a bearer token, so the dir must pass owner-only ancestor
     validation. If an attacker pre-creates an ancestor as a symlink, writing the

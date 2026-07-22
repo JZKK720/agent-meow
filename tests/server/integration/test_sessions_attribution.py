@@ -22,21 +22,21 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from agent_meow.entities import MessageData, NewConversationItem
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.server.app import create_app
-from agent_meow.server.auth import LEVEL_EDIT
-from agent_meow.server.routes._auth_helpers import attribution_user
-from agent_meow.server.routes.sessions import _build_new_item
-from agent_meow.server.schemas import SessionEventInput
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.entities import MessageData, NewConversationItem
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.server.app import create_app
+from omnigent.server.auth import LEVEL_EDIT
+from omnigent.server.routes._auth_helpers import attribution_user
+from omnigent.server.routes.sessions import _build_new_item
+from omnigent.server.schemas import SessionEventInput
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
-from agent_meow.stores.permission_store.sqlalchemy_store import (
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.permission_store.sqlalchemy_store import (
     SqlAlchemyPermissionStore,
 )
 from tests.server.conftest import ControllableMockClient
@@ -150,7 +150,7 @@ def auth_app(runtime_init: None, db_uri: str, tmp_path: Path) -> FastAPI:
     sentinel (exercised by the attribution tests below) instead of
     being rejected with 401 as on a deployed multi-user server.
     """
-    from agent_meow.server.auth import UnifiedAuthProvider
+    from omnigent.server.auth import UnifiedAuthProvider
 
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     return create_app(
@@ -175,8 +175,8 @@ async def auth_client(
     tmp_path: Path,
 ) -> AsyncIterator[httpx.AsyncClient]:
     """Async HTTP client wired to the auth-enabled app."""
-    from agent_meow.runtime import set_harness_process_manager
-    from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
+    from omnigent.runtime import set_harness_process_manager
+    from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
 
     pm = HarnessProcessManager(tmp_parent=tmp_path / "harness_pm")
     await pm.start()
@@ -259,7 +259,7 @@ async def test_post_event_records_authenticated_poster(
     persisted ``created_by``. If the route stopped threading the
     user_id, the read-back below would be ``None``.
     """
-    from agent_meow.server.routes import sessions as sessions_mod
+    from omnigent.server.routes import sessions as sessions_mod
 
     async def _stub(*_: Any, **__: Any) -> _CaptureRunnerClient:
         return _CaptureRunnerClient()
@@ -298,7 +298,7 @@ async def test_input_consumed_event_carries_created_by(
     would omit it (``None``) and the other client's bubble would stay
     unlabeled until refresh.
     """
-    from agent_meow.server.routes import sessions as sessions_mod
+    from omnigent.server.routes import sessions as sessions_mod
 
     async def _stub(*_: Any, **__: Any) -> _CaptureRunnerClient:
         return _CaptureRunnerClient()
@@ -420,7 +420,7 @@ async def test_external_conversation_item_direct_terminal_attributes_request_act
     argument, so items persisted with ``None`` and the author label never
     appeared in the web UI for terminal-typed messages.
     """
-    from agent_meow.runtime import pending_inputs
+    from omnigent.runtime import pending_inputs
 
     session_id = _seed_shared_session(db_uri, {"alice@example.com": LEVEL_EDIT})
 

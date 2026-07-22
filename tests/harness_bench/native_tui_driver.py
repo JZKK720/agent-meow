@@ -1,11 +1,11 @@
 """Native-TUI transport driver (phase-2, walking skeleton).
 
-Drives a native-tui harness — a resident vendor CLI (``claude``, ``codex``,
-``pi``, ``cursor-agent``, ...) running in a runner-owned tmux pane — through
+Drives a native-tui harness â€” a resident vendor CLI (``claude``, ``codex``,
+``pi``, ``cursor-agent``, ...) running in a runner-owned tmux pane â€” through
 the bench's :class:`~tests.harness_bench.transport.Driver` protocol.
 
 The research finding this is built on: a native-tui turn rides the *same*
-HTTP surface as the full server — ``POST /v1/sessions/{id}/events`` to send,
+HTTP surface as the full server â€” ``POST /v1/sessions/{id}/events`` to send,
 ``GET /v1/sessions/{id}/stream`` for ``response.output_text.delta`` events,
 ``/v1/sessions/{id}/policies`` for a tool-call deny, and item polling for the
 assistant reply. So ~90% of this driver is shared with
@@ -13,15 +13,15 @@ assistant reply. So ~90% of this driver is shared with
 things genuinely diverge, and they are the entire reason this is a separate
 driver:
 
-1. **Provisioning** — instead of registering an agent tarball, a native
+1. **Provisioning** â€” instead of registering an agent tarball, a native
    harness needs a **host daemon** (``agent-meow host``) registered with the
    server, the auto-registered ``<harness>-native-ui`` agent, and a session
    created with ``{agent_id, host_id, workspace}``. The runner then launches
    the vendor CLI in tmux itself.
-2. **Interrupt detection** — native turns do not persist an "interrupted"
+2. **Interrupt detection** â€” native turns do not persist an "interrupted"
    user-message marker; cancellation surfaces as a ``session.interrupted``
    event / status, so the interrupt probe keys off that.
-3. **Auth + login** — the vendor CLI must be interactively logged in on the
+3. **Auth + login** â€” the vendor CLI must be interactively logged in on the
    host. ``OMNIGENT_CREDENTIAL`` vendors (claude, codex) can take a minted
    bearer; ``OWN_AUTH`` vendors (cursor, kiro, ...) must be pre-logged-in.
    Either way the bench cannot provision a fresh login, so this transport is
@@ -29,7 +29,7 @@ driver:
 
 Per-vendor differences beyond auth (tmux paste vs app-server RPC delivery,
 readiness signal, tool-deny surface) are captured in :class:`NativeVendor`
-records, so adding a harness is a config entry, not a new driver — until a
+records, so adding a harness is a config entry, not a new driver â€” until a
 vendor diverges in kind (codex-native is RPC-delivered; opencode-native is
 ``native-server`` not ``native-tui``), which will want its own handling.
 
@@ -57,13 +57,13 @@ from typing import Any
 
 import httpx
 
-from agent_meow.host.daemon_launch import (
+from omnigent.host.daemon_launch import (
     launch_or_reuse_daemon_runner,
     wait_for_host_online,
     wait_for_runner_online,
 )
-from agent_meow.native_terminal import bind_session_runner
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from omnigent.native_terminal import bind_session_runner
+from omnigent.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 from tests._helpers.compat import apply_runner_env, compat_runner_cwd, runner_executable
 from tests.e2e.helpers import lookup_databricks_host
 from tests.harness_bench.driver import TurnResult
@@ -89,8 +89,8 @@ _LONG_PROMPT = "Write a detailed 500-word essay about the history of computing."
 
 # Session SSE event names (confirmed live against claude-native with a
 # per-event diagnostic). Critical native-tui quirk: ``response.completed``
-# fires EARLY — right after the turn is accepted, seconds before the
-# assistant's text deltas — so it marks the orchestration round, not the
+# fires EARLY â€” right after the turn is accepted, seconds before the
+# assistant's text deltas â€” so it marks the orchestration round, not the
 # reply. The real end-of-output is ``response.output_item.done``, which
 # arrives immediately after the final delta. Treating ``response.completed``
 # as terminal makes the SSE reader exit before any delta streams, so every
@@ -180,7 +180,7 @@ class NativeTuiDriver:
             )
         # The vendor CLI must exist AND be interactively logged in on this
         # host; the bench cannot provision a login. Presence on PATH is the
-        # cheapest precondition we can check — a missing login still fails the
+        # cheapest precondition we can check â€” a missing login still fails the
         # live turn, reported as a capability-neutral skip by the probes.
         from tests.e2e._harness_probes import cli_unavailable_reason
 
@@ -191,7 +191,7 @@ class NativeTuiDriver:
                 return reason
         return None
 
-    # ── async driver protocol ────────────────────────────────
+    # â”€â”€ async driver protocol â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     async def __aenter__(self) -> NativeTuiDriver:
         await asyncio.to_thread(self._provision)
@@ -221,7 +221,7 @@ class NativeTuiDriver:
     async def run_interrupt_turn(self) -> TurnResult:
         return await asyncio.to_thread(self._drive_interrupt_turn)
 
-    # ── provisioning ─────────────────────────────────────────
+    # â”€â”€ provisioning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _provision(self) -> None:
         self._tmp.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -239,7 +239,7 @@ class NativeTuiDriver:
             "DATABRICKS_CONFIG_PROFILE": self._db_profile,
             "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token,
         }
-        # codex reads its provider from agent_meow's global config, not from
+        # codex reads its provider from omnigent's global config, not from
         # DATABRICKS_CONFIG_PROFILE; without it the TUI hits the vendor login
         # screen and never starts a thread.
         if self._vendor.needs_terminal_ensure:
@@ -339,7 +339,7 @@ class NativeTuiDriver:
         # (auth cannot be relocated for native harnesses).
         log = (self._tmp / "host-daemon.log").open("wb")
         return subprocess.Popen(
-            [runner_executable(), "-m", "agent_meow.host._daemon_entry", "--server", self._base_url],
+            [runner_executable(), "-m", "omnigent.host._daemon_entry", "--server", self._base_url],
             env=apply_runner_env(base_env),
             cwd=compat_runner_cwd(),
             stdout=subprocess.DEVNULL,
@@ -393,7 +393,7 @@ class NativeTuiDriver:
 
         shutil.rmtree(self._tmp, ignore_errors=True)
 
-    # ── turns ────────────────────────────────────────────────
+    # â”€â”€ turns â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _post_message(self, prompt: str) -> None:
         assert self._client is not None
@@ -413,15 +413,15 @@ class NativeTuiDriver:
         Two sources, each for what it reliably provides:
 
         - **Stream** (subscribe-first, background thread): the delta count,
-          scoped to this turn. Subscribing before posting is required — the
+          scoped to this turn. Subscribing before posting is required â€” the
           stream is not replayed. The reader stops on
           ``response.output_item.done`` (the true end-of-output), NOT on
-          ``response.completed`` — on native-tui that fires seconds early
+          ``response.completed`` â€” on native-tui that fires seconds early
           (see ``_READER_TERMINAL``), so stopping there would count zero
           deltas.
         - **Item poll**: the assistant reply text. A short reply may arrive as
           a single ``response.output_item.done`` with no text deltas, so
-          delta-accumulated text is unreliable for basic turns — the persisted
+          delta-accumulated text is unreliable for basic turns â€” the persisted
           item is authoritative. The driver reuses one session across probes,
           so the poll must ignore items that predate this turn: it records the
           assistant-item count *before* posting and waits for a NEW one.
@@ -461,7 +461,7 @@ class NativeTuiDriver:
         if text is not None:
             result.completed = True
         elif _OUTPUT_DONE_EVENT in events:
-            # Output finished but no new assistant item surfaced — treat as a
+            # Output finished but no new assistant item surfaced â€” treat as a
             # completed-but-empty turn rather than a hang.
             result.completed = True
         else:
@@ -511,7 +511,7 @@ class NativeTuiDriver:
         delta): on native-tui the text deltas arrive in a burst at the very
         *end* of the turn, after seconds of the vendor CLI working. Waiting
         for a delta to fire the interrupt would leave a fraction of a second
-        before the turn finishes — too late to land mid-turn. The turn is
+        before the turn finishes â€” too late to land mid-turn. The turn is
         in-flight from ``response.in_progress`` onward, so the reader signals
         that, and the main thread interrupts after a short hold while the CLI
         is still working.

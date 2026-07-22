@@ -1,29 +1,29 @@
-"""Per-harness live characterization test — cursor harness, one-shot prompt.
+"""Per-harness live characterization test â€” cursor harness, one-shot prompt.
 
 Runs ``agent-meow run hello_world.yaml --harness cursor -p "..."`` as a real
 subprocess and asserts structural invariants (exit 0, a non-trivial assistant
 reply). This is the end-to-end gate for the cursor harness: the full path
-from CLI parse → spec materialize → spawn the ``cursor`` harness subprocess
-→ :class:`CursorExecutor` driving a persistent Cursor SDK (``cursor-sdk``) agent
-over a local bridge (``agent.send`` → streamed ``run.messages()``) →
-``TurnComplete`` → the ``-p`` one-shot printer.
+from CLI parse â†’ spec materialize â†’ spawn the ``cursor`` harness subprocess
+â†’ :class:`CursorExecutor` driving a persistent Cursor SDK (``cursor-sdk``) agent
+over a local bridge (``agent.send`` â†’ streamed ``run.messages()``) â†’
+``TurnComplete`` â†’ the ``-p`` one-shot printer.
 
 **Prerequisites (skipped when absent):**
 - The ``cursor-sdk`` package installed (a baseline dependency).
-- ``CURSOR_API_KEY`` set — the SDK requires an API key and does NOT reuse a
+- ``CURSOR_API_KEY`` set â€” the SDK requires an API key and does NOT reuse a
   ``cursor-agent login``. The subprocess receives this key with surrounding
   newlines to prove the CLI/spawn-env path strips env-detected keys before
   forwarding them to the cursor SDK (F103).
 
 Unlike the other per-harness e2e tests, the Cursor SDK talks only to Cursor's
-own backend — there is no Databricks-gateway path, so this test does NOT use
+own backend â€” there is no Databricks-gateway path, so this test does NOT use
 ``patched_databrickscfg`` / ``omnigent_credentials_env``. Because a Cursor API
 key is not provisioned on CI, the test **skips** (rather than fails) when
 ``CURSOR_API_KEY`` is absent so the e2e shards stay green; it runs for real
 wherever a key is present.
 
 **Why this test cannot use the mock LLM server:** The ``cursor-sdk`` connects
-directly to Cursor's proprietary backend using ``CURSOR_API_KEY`` — it does not
+directly to Cursor's proprietary backend using ``CURSOR_API_KEY`` â€” it does not
 honour ``OPENAI_BASE_URL`` the way the ``openai-agents`` harness does. There is
 no OpenAI-compatible shim path in the Cursor SDK, so pointing
 ``OPENAI_BASE_URL`` at the mock server has no effect. This harness can only be
@@ -31,12 +31,12 @@ exercised with a real Cursor API key; the ``pytest.skip`` below gates the test
 cleanly when the key is absent.
 
 **What breaks if this fails (with prerequisites present):**
-- ``CursorExecutor`` regresses (the ``SDKMessage`` → ExecutorEvent translation,
+- ``CursorExecutor`` regresses (the ``SDKMessage`` â†’ ExecutorEvent translation,
   the ``custom_tools`` tool bridge, persistent-agent reuse, or the system-prompt
   injection).
 - The ``cursor-sdk`` API contract changes (``AsyncAgent`` / ``AsyncClient`` /
   ``run.messages()`` shape).
-- ``agent_meow.cli`` for the ``-p`` one-shot path stops printing assistant text
+- ``omnigent.cli`` for the ``-p`` one-shot path stops printing assistant text
   to stdout on turn complete, or harness dispatch for ``cursor`` regresses.
 """
 

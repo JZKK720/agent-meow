@@ -17,21 +17,21 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 
-from agent_meow.llms.client import Client
-from agent_meow.llms.errors import (
+from omnigent.llms.client import Client
+from omnigent.llms.errors import (
     ContextWindowExceededError,
     LLMErrorDetail,
     PermanentLLMError,
     RetryableLLMError,
 )
-from agent_meow.llms.types import (
+from omnigent.llms.types import (
     MessageOutput,
     OutputText,
     Response,
 )
-from agent_meow.spec.types import RetryPolicy
+from omnigent.spec.types import RetryPolicy
 
-# ── Helpers ──────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -107,7 +107,7 @@ class _MockAdapter:
                 if isinstance(item, BaseException):
                     raise item
                 return item
-            # Single exception — raise on every call
+            # Single exception â€” raise on every call
             raise self.side_effect
         return self.return_value
 
@@ -128,24 +128,24 @@ def _patch_client_deps(
     # Route model parsing to a fake routed model
     routed = MagicMock(provider="test", model="test-model")
     monkeypatch.setattr(
-        "agent_meow.llms.client.parse_model_string",
+        "omnigent.llms.client.parse_model_string",
         lambda model: routed,
     )
 
     # Return the mock adapter (not OpenAIAdapter, so we hit
     # the chat_completions path instead of responses_create)
     monkeypatch.setattr(
-        "agent_meow.llms.client.get_adapter",
+        "omnigent.llms.client.get_adapter",
         lambda provider: mock_adapter,
     )
 
     # Stub the responses-to-chat conversion helpers
     monkeypatch.setattr(
-        "agent_meow.llms.client.responses_input_to_chat_messages",
+        "omnigent.llms.client.responses_input_to_chat_messages",
         lambda input, instructions: [{"role": "user", "content": "test"}],
     )
     monkeypatch.setattr(
-        "agent_meow.llms.client.chat_response_to_response",
+        "omnigent.llms.client.chat_response_to_response",
         lambda result: _make_response(),
     )
 
@@ -162,7 +162,7 @@ def _patch_client_deps(
         tracker.calls.append(duration)
 
     monkeypatch.setattr(
-        "agent_meow.llms.client._sleep",
+        "omnigent.llms.client._sleep",
         _fake_sleep,
     )
 
@@ -181,7 +181,7 @@ def _default_create_kwargs() -> dict[str, Any]:
     }
 
 
-# ── Fixtures ─────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -189,7 +189,7 @@ def retry_config() -> RetryPolicy:
     """
     A retry config with 3 total attempts (1 initial + 2 retries)
     and fast backoff for testing. ``max_retries`` is the
-    "retries beyond the first attempt" — see RetryPolicy.
+    "retries beyond the first attempt" â€” see RetryPolicy.
     """
     return RetryPolicy(
         max_retries=2,
@@ -198,7 +198,7 @@ def retry_config() -> RetryPolicy:
     )
 
 
-# ── Tests ────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -252,7 +252,7 @@ async def test_create_with_retry_success_first_attempt(
     # No backoff sleep when the first attempt succeeds.
     assert tracker.calls == []
 
-    # Only one call to the adapter — no retries needed.
+    # Only one call to the adapter â€” no retries needed.
     assert mock_adapter.call_count == 1
 
 
@@ -356,10 +356,10 @@ async def test_create_with_retry_permanent_error_no_retry(
     assert exc_info.value.detail is not None
     assert exc_info.value.detail.status_code == 401
 
-    # No backoff sleeps — permanent errors abort immediately.
+    # No backoff sleeps â€” permanent errors abort immediately.
     assert tracker.calls == []
 
-    # Only one adapter call — no retry attempted.
+    # Only one adapter call â€” no retry attempted.
     assert mock_adapter.call_count == 1
 
 
@@ -426,10 +426,10 @@ async def test_create_with_retry_already_classified_reraise(
     assert exc_info.value is original_error
     assert exc_info.value.code == "auth_error"
 
-    # No backoff sleeps — already-classified errors bypass retry.
+    # No backoff sleeps â€” already-classified errors bypass retry.
     assert tracker.calls == []
 
-    # Only one adapter call — no retry for pre-classified errors.
+    # Only one adapter call â€” no retry for pre-classified errors.
     assert mock_adapter.call_count == 1
 
 
@@ -493,7 +493,7 @@ async def test_create_with_retry_connection_error_is_retryable(
     assert exc_info.value.code == "connection_error"
     assert "connection refused" in str(exc_info.value)
 
-    # Retryable errors are retried — backoff sleeps must have fired.
+    # Retryable errors are retried â€” backoff sleeps must have fired.
     assert len(tracker.calls) == retry_config.max_retries
 
     # 1 initial + max_retries retries.
@@ -503,21 +503,21 @@ async def test_create_with_retry_connection_error_is_retryable(
 @pytest.mark.parametrize(
     ("status_code", "expected_error_type"),
     [
-        # 429 is in default retryable retryable_status_codes — should retry
+        # 429 is in default retryable retryable_status_codes â€” should retry
         (429, RetryableLLMError),
-        # 500 is in default retryable retryable_status_codes — should retry
+        # 500 is in default retryable retryable_status_codes â€” should retry
         (500, RetryableLLMError),
-        # 502 is in default retryable retryable_status_codes — should retry
+        # 502 is in default retryable retryable_status_codes â€” should retry
         (502, RetryableLLMError),
-        # 503 is in default retryable retryable_status_codes — should retry
+        # 503 is in default retryable retryable_status_codes â€” should retry
         (503, RetryableLLMError),
-        # 400 is NOT retryable — should be permanent
+        # 400 is NOT retryable â€” should be permanent
         (400, PermanentLLMError),
-        # 401 is NOT retryable — should be permanent
+        # 401 is NOT retryable â€” should be permanent
         (401, PermanentLLMError),
-        # 403 is NOT retryable — should be permanent
+        # 403 is NOT retryable â€” should be permanent
         (403, PermanentLLMError),
-        # 404 is NOT retryable — should be permanent
+        # 404 is NOT retryable â€” should be permanent
         (404, PermanentLLMError),
     ],
     ids=[
@@ -566,7 +566,7 @@ async def test_create_with_retry_http_status_classification(
     assert exc_info.value.detail.status_code == status_code
 
 
-# ── ContextWindowExceededError tests ──────────────────
+# â”€â”€ ContextWindowExceededError tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -777,7 +777,7 @@ async def test_unrecognized_400_not_context_overflow(
     assert exc_info.value.code == "400"
 
 
-# ── Structured output translation (text → response_format) ──────────
+# â”€â”€ Structured output translation (text â†’ response_format) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _CapturingAdapter:
@@ -804,7 +804,7 @@ class _CapturingAdapter:
         :param model: Model id (ignored).
         :param tools: Tool schemas (ignored).
         :param stream: Streaming flag (ignored).
-        :param extra: The extra kwargs dict — this is what we capture.
+        :param extra: The extra kwargs dict â€” this is what we capture.
         :param kwargs: Additional kwargs (ignored).
         :returns: Minimal chat completion response.
         """
@@ -827,20 +827,20 @@ async def test_text_json_schema_translated_to_response_format(
     recognise it (e.g. Databricks). A failure here means the structured
     output schema is lost or malformed in the Chat Completions path.
     """
-    from agent_meow.llms.routing import RoutedModel
+    from omnigent.llms.routing import RoutedModel
 
     captured: list[dict[str, Any]] = []
     adapter = _CapturingAdapter(captured)
     routed = RoutedModel(provider="databricks", model="test-model")
 
-    monkeypatch.setattr("agent_meow.llms.client.parse_model_string", lambda model: routed)
-    monkeypatch.setattr("agent_meow.llms.client.get_adapter", lambda provider: adapter)
+    monkeypatch.setattr("omnigent.llms.client.parse_model_string", lambda model: routed)
+    monkeypatch.setattr("omnigent.llms.client.get_adapter", lambda provider: adapter)
     monkeypatch.setattr(
-        "agent_meow.llms.client.responses_input_to_chat_messages",
+        "omnigent.llms.client.responses_input_to_chat_messages",
         lambda input, instructions: [{"role": "user", "content": "test"}],
     )
     monkeypatch.setattr(
-        "agent_meow.llms.client.chat_response_to_response",
+        "omnigent.llms.client.chat_response_to_response",
         lambda result: _make_response(),
     )
 
@@ -871,7 +871,7 @@ async def test_text_json_schema_translated_to_response_format(
     )
     assert "response_format" in extra, (
         f"Expected 'response_format' in extra, got keys: {list(extra.keys())}. "
-        "The text→response_format translation did not fire."
+        "The textâ†’response_format translation did not fire."
     )
     rf = extra["response_format"]
     assert rf["type"] == "json_schema", (
@@ -893,20 +893,20 @@ async def test_text_without_json_schema_not_translated(
     Only ``json_schema``-typed text should be translated. Other shapes
     (e.g. ``{"format": {"type": "text"}}``) must not be mangled.
     """
-    from agent_meow.llms.routing import RoutedModel
+    from omnigent.llms.routing import RoutedModel
 
     captured: list[dict[str, Any]] = []
     adapter = _CapturingAdapter(captured)
     routed = RoutedModel(provider="databricks", model="test-model")
 
-    monkeypatch.setattr("agent_meow.llms.client.parse_model_string", lambda model: routed)
-    monkeypatch.setattr("agent_meow.llms.client.get_adapter", lambda provider: adapter)
+    monkeypatch.setattr("omnigent.llms.client.parse_model_string", lambda model: routed)
+    monkeypatch.setattr("omnigent.llms.client.get_adapter", lambda provider: adapter)
     monkeypatch.setattr(
-        "agent_meow.llms.client.responses_input_to_chat_messages",
+        "omnigent.llms.client.responses_input_to_chat_messages",
         lambda input, instructions: [{"role": "user", "content": "test"}],
     )
     monkeypatch.setattr(
-        "agent_meow.llms.client.chat_response_to_response",
+        "omnigent.llms.client.chat_response_to_response",
         lambda result: _make_response(),
     )
 
@@ -919,7 +919,7 @@ async def test_text_without_json_schema_not_translated(
 
     assert len(captured) == 1
     extra = captured[0]
-    # Non-json_schema text should not be translated — it stays absent
+    # Non-json_schema text should not be translated â€” it stays absent
     # (popped from extra but no response_format injected).
     assert "response_format" not in extra
     assert "text" not in extra

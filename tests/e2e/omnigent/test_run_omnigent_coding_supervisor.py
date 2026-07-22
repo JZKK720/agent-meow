@@ -5,16 +5,16 @@ Exercises the full pipeline that was failing in user-reported bugs:
 
 1. agent-meow YAML with ``async: true``, ``cancellable: true``, and
    inline ``AgentTool`` declarations (``claude_worker``,
-   ``codex_worker``) — previously the adapter fail-loud-rejected
+   ``codex_worker``) â€” previously the adapter fail-loud-rejected
    these as "AgentTool: expected FunctionTool after fail-loud
    filtering" and "async_enabled not modeled by AgentSpec."
-2. Non-interactive ``run -p <prompt>`` path — POSTs to
+2. Non-interactive ``run -p <prompt>`` path â€” POSTs to
    ``/v1/responses`` on an in-process agent-meow server.
-3. The bidirectional translator: YAML → AgentDef →
-   :func:`agent_def_to_agent_spec` → AgentSpec → (registered with
-   agent-meow server) → :func:`agent_spec_to_agent_def` (inside
-   :class:`OmnigentExecutor.from_spec`) → AgentDef → agent-meow
-   executor_factory → actual harness.
+3. The bidirectional translator: YAML â†’ AgentDef â†’
+   :func:`agent_def_to_agent_spec` â†’ AgentSpec â†’ (registered with
+   agent-meow server) â†’ :func:`agent_spec_to_agent_def` (inside
+   :class:`OmnigentExecutor.from_spec`) â†’ AgentDef â†’ agent-meow
+   executor_factory â†’ actual harness.
 
 Two test scenarios:
 
@@ -22,25 +22,25 @@ Two test scenarios:
   plumbing works end-to-end. Completes in ~15s on a warm box.
 - **Interactive REPL boot** (pexpect): ``run`` without
   ``-p`` must delegate to the SSE-bridged REPL (chat shim). This
-  was the second user-reported regression — the original phase 5
+  was the second user-reported regression â€” the original phase 5
   shim treated ``run`` as one-shot-only, hard-erroring with
   "requires a prompt" when no prompt was given.
 
 **What breaks if this fails:**
 - Someone reintroduces a fail-loud for ``AgentTool`` in the
-  translator — coding-supervisor-shaped YAMLs with inline
+  translator â€” coding-supervisor-shaped YAMLs with inline
   sub-agent-as-tool declarations stop loading under agent-meow mode.
 - ``_run_agent_via_omnigent`` regresses to the "requires a prompt"
-  hard-error path — interactive ``agent-meow run <yaml>``
+  hard-error path â€” interactive ``agent-meow run <yaml>``
   starts exiting non-zero instead of opening the REPL.
-- The plain ``FunctionTool`` → ``LocalToolInfo`` translation
-  breaks — YAMLs with ``type: function`` tools (``sleep``-style)
+- The plain ``FunctionTool`` â†’ ``LocalToolInfo`` translation
+  breaks â€” YAMLs with ``type: function`` tools (``sleep``-style)
   stop loading. Author-time runner-protocol tools were retired
   in step (c); cancellable behavior now flows through
   ``sys_call_async`` + ``sys_cancel_task`` for plain callables.
 - The
-  :func:`~?agent_meow.spec.agent_meow._sub_spec_to_agent_tool`
-  reverse translation stops emitting ``AgentTool`` entries —
+  :func:`~?omnigent.spec.omnigent._sub_spec_to_agent_tool`
+  reverse translation stops emitting ``AgentTool`` entries â€”
   :class:`OmnigentExecutor.from_spec` reconstructs an
   ``AgentDef`` without the sub-agent tools, and the supervisor
   LLM has no way to delegate to ``claude_worker`` /
@@ -56,16 +56,16 @@ import pexpect
 import pytest
 
 from tests.e2e._run_with_group_timeout import run_with_group_timeout
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     clean_exit,
     spawn_omnigent_run,
 )
-from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
 
 # coding_supervisor's declared openai-agents harness + mock model.
 # We don't pass ``--model`` here; the YAML's model wins.
 _YAML_PATH_REL = "tests/resources/examples/coding_supervisor.yaml"
-# Mock model name — the mock LLM server uses the "default" queue
+# Mock model name â€” the mock LLM server uses the "default" queue
 # for any model string not explicitly keyed.
 _MODEL = "mock-model"
 _HARNESS = "openai-agents"
@@ -86,7 +86,7 @@ _MIN_STDOUT_CHARS = 10
 # flakes on loaded boxes. Increase only if you have a specific
 # reproducible slowdown to investigate.
 _ONESHOT_TIMEOUT_SEC = 60
-# Cold-boot of ``coding_supervisor.yaml`` under agent-meow mode —
+# Cold-boot of ``coding_supervisor.yaml`` under agent-meow mode â€”
 # spawns the in-process agent-meow server and registers supervisor +
 # two sub-agents. Without agent-meow mode boot is <10s; with agent-meow mode
 # the in-process FastAPI + uvicorn + DBOS + alembic stack adds
@@ -108,7 +108,7 @@ _LEGACY_HARD_ERROR = "requires a prompt"
 # The filename is deliberately long and repo-scoped so a stray
 # file after a crash is obvious, and so we don't collide with any
 # real repo TODO.md. The content marker is a string the LLM can't
-# plausibly generate on its own — if it appears in stdout the
+# plausibly generate on its own â€” if it appears in stdout the
 # codex sub-agent must have actually read the file.
 _CODEX_REGRESSION_TODO_NAME = "_codex_shell_regression_TODO.md"
 _CODEX_REGRESSION_CONTENT_MARKER = "CODEX_SHELL_REGRESSION_MARKER_XYZQ"
@@ -166,7 +166,7 @@ def test_run_omnigent_coding_supervisor_oneshot(
             "agent-meow",
             "run",
             str(yaml_path),
-            # Ephemeral DBOS state — see comment in
+            # Ephemeral DBOS state â€” see comment in
             # test_run_omnigent_example_agents.py for the
             # HarnessProcessManager rationale.
             "--no-session",
@@ -184,9 +184,9 @@ def test_run_omnigent_coding_supervisor_oneshot(
         timeout=_ONESHOT_TIMEOUT_SEC,
     )
 
-    # Exit 0 proves the full chain (YAML load → adapter →
-    # validator → registration → executor construction →
-    # /v1/responses → assistant text extraction) succeeded.
+    # Exit 0 proves the full chain (YAML load â†’ adapter â†’
+    # validator â†’ registration â†’ executor construction â†’
+    # /v1/responses â†’ assistant text extraction) succeeded.
     assert result.returncode == 0, (
         f"`agent-meow run --agent-meow` exited {result.returncode}. "
         f"stderr tail:\n{result.stderr[-2000:]}\n"
@@ -196,7 +196,7 @@ def test_run_omnigent_coding_supervisor_oneshot(
     # the shim exits 0 but printed nothing because assistant text
     # extraction broke.
     assert len(result.stdout) >= _MIN_STDOUT_CHARS, (
-        f"stdout shorter than {_MIN_STDOUT_CHARS} chars — likely "
+        f"stdout shorter than {_MIN_STDOUT_CHARS} chars â€” likely "
         f"the assistant-text extraction or response parsing broke. "
         f"stdout={result.stdout!r}"
     )
@@ -217,7 +217,7 @@ def test_run_omnigent_coding_supervisor_exposes_subagent_tools(
     Ask the LLM to list its tools. The response must include both
     the inline ``AgentTool`` sub-agents (``claude_worker``,
     ``codex_worker``) AND at least one agent-meow task-lifecycle
-    builtin (``check_task``) — proves :class:`OmnigentExecutor`
+    builtin (``check_task``) â€” proves :class:`OmnigentExecutor`
     advertises both surfaces to the inner agent-meow harness.
 
     The mock LLM is configured to return a response listing
@@ -258,7 +258,7 @@ def test_run_omnigent_coding_supervisor_exposes_subagent_tools(
             "agent-meow",
             "run",
             str(yaml_path),
-            # Ephemeral DBOS state — see comment in
+            # Ephemeral DBOS state â€” see comment in
             # test_run_omnigent_example_agents.py for the
             # HarnessProcessManager rationale.
             "--no-session",
@@ -292,7 +292,7 @@ def test_run_omnigent_coding_supervisor_exposes_subagent_tools(
     )
     # Agent-plane task-lifecycle builtins must appear.
     assert any(marker in stdout_lower for marker in ("list_tasks", "sys_cancel_task")), (
-        f"task-lifecycle builtins missing — neither ``list_tasks`` "
+        f"task-lifecycle builtins missing â€” neither ``list_tasks`` "
         f"nor ``sys_cancel_task`` showed up in the LLM's tool list. "
         f"stdout={result.stdout!r}"
     )
@@ -311,7 +311,7 @@ def test_run_omnigent_coding_supervisor_spawns_codex_worker_to_list_files(
     supervisor LLM responds with a file listing, and that listing
     flows through stdout without error.
 
-    This is **not** a regression test — the mock LLM returns the
+    This is **not** a regression test â€” the mock LLM returns the
     expected root entries directly; the real codex binary (if
     present) is not asked to list files. What this test validates
     is that the agent-meow boot path, sub-agent tool registration,
@@ -328,7 +328,7 @@ def test_run_omnigent_coding_supervisor_spawns_codex_worker_to_list_files(
 
     :param omnigent_python: Shared session fixture pointing at
         the repo's ``.venv`` Python.
-    :param omnigent_repo_root: agent-meow repo root — used as
+    :param omnigent_repo_root: agent-meow repo root â€” used as
         cwd so ``examples/coding_supervisor.yaml`` resolves.
     :param mock_credentials_env: Mock-LLM env vars pointing at the
         mock server.
@@ -339,7 +339,7 @@ def test_run_omnigent_coding_supervisor_spawns_codex_worker_to_list_files(
 
     if _shutil.which("codex") is None:
         pytest.skip(
-            "'codex' binary not on PATH — the coding_supervisor's "
+            "'codex' binary not on PATH â€” the coding_supervisor's "
             "codex_worker can't boot without it, so the regression "
             "path can't be exercised here."
         )
@@ -379,7 +379,7 @@ def test_run_omnigent_coding_supervisor_spawns_codex_worker_to_list_files(
             "agent-meow",
             "run",
             str(yaml_path),
-            # Ephemeral DBOS state — see comment in
+            # Ephemeral DBOS state â€” see comment in
             # test_run_omnigent_example_agents.py for the
             # HarnessProcessManager rationale.
             "--no-session",
@@ -398,13 +398,13 @@ def test_run_omnigent_coding_supervisor_spawns_codex_worker_to_list_files(
     # the generic "expected filenames not found".
     combined = result.stdout + result.stderr
     assert "Codex App Server error" not in combined, (
-        f"Codex App Server error surfaced — profile propagation "
+        f"Codex App Server error surfaced â€” profile propagation "
         f"regressed. Check _propagate_profile_to_environment in "
-        f"agent_meow/cli.py. "
+        f"omnigent/cli.py. "
         f"stderr tail:\n{result.stderr[-2000:]}"
     )
     assert "403 Invalid access token" not in combined, (
-        f"403 auth failure on a sub-agent — profile propagation "
+        f"403 auth failure on a sub-agent â€” profile propagation "
         f"regressed. "
         f"stderr tail:\n{result.stderr[-2000:]}"
     )
@@ -441,7 +441,7 @@ def test_run_omnigent_coding_supervisor_interactive_enters_repl(
     cleanly on Ctrl+D.
 
     Catches the user-reported regression where ``run``
-    without a prompt hard-errored with "requires a prompt" —
+    without a prompt hard-errored with "requires a prompt" â€”
     the shim must instead delegate to
     :func:`_run_chat_via_omnigent` so interactive semantics match the
     legacy ``agent-meow run`` no-prompt behavior.
@@ -520,7 +520,7 @@ def test_run_omnigent_coding_supervisor_codex_shell_not_disabled(
     sub-agent boots and the output pipeline delivers its response
     without emitting the ``/nonexistent`` workspace-hydration error.
 
-    This is **not** a regression test — the mock LLM returns the
+    This is **not** a regression test â€” the mock LLM returns the
     sentinel content directly; the real codex binary (if present)
     is never asked to read the fixture file. What this test
     validates is that the infrastructure plumbing (agent-meow mode
@@ -532,14 +532,14 @@ def test_run_omnigent_coding_supervisor_codex_shell_not_disabled(
     ``shell_tool`` whenever any tools were passed. Under agent-meow
     mode, :class:`OmnigentExecutor` always injects agent-meow
     builtins (``check_task``, ``sys_session_send``, etc.) into the
-    tools list — even for codex sub-agents whose YAML declares no
+    tools list â€” even for codex sub-agents whose YAML declares no
     tools of their own. This test exercises that path to confirm the
     server boots and the mock response flows through without a
     ``/nonexistent`` error surfacing.
 
     :param omnigent_python: Interpreter with agent-meow +
         agent-meow installed.
-    :param omnigent_repo_root: agent-meow repo root — also the
+    :param omnigent_repo_root: agent-meow repo root â€” also the
         cwd the supervisor YAML's ``os_env: {cwd: .}`` resolves
         to.
     :param mock_credentials_env: Mock-LLM env vars pointing at the
@@ -551,7 +551,7 @@ def test_run_omnigent_coding_supervisor_codex_shell_not_disabled(
 
     if _shutil.which("codex") is None:
         pytest.skip(
-            "'codex' binary not on PATH — the coding_supervisor's "
+            "'codex' binary not on PATH â€” the coding_supervisor's "
             "codex_worker can't boot without it, so the regression "
             "path can't be exercised here."
         )
@@ -598,9 +598,9 @@ def test_run_omnigent_coding_supervisor_codex_shell_not_disabled(
     combined = result.stdout + result.stderr
     assert _CODEX_NONEXISTENT_ERROR not in combined, (
         f"codex sub-agent emitted the {_CODEX_NONEXISTENT_ERROR!r} "
-        f"workspace-hydration error — shell_tool was disabled and "
+        f"workspace-hydration error â€” shell_tool was disabled and "
         f"codex had nothing to read the file with. Regression in "
-        f"agent_meow/codex_executor.py.\n"
+        f"omnigent/codex_executor.py.\n"
         f"stdout tail:\n{result.stdout[-2500:]}\n"
         f"stderr tail:\n{result.stderr[-1500:]}"
     )
@@ -611,7 +611,7 @@ def test_run_omnigent_coding_supervisor_codex_shell_not_disabled(
     )
     assert _CODEX_REGRESSION_CONTENT_MARKER in result.stdout, (
         f"Sentinel {_CODEX_REGRESSION_CONTENT_MARKER!r} missing "
-        f"from stdout — codex didn't actually read the fixture "
+        f"from stdout â€” codex didn't actually read the fixture "
         f"file. Either shell_tool is still disabled, or the "
         f"supervisor never delegated to the codex_worker.\n"
         f"stdout tail:\n{result.stdout[-2500:]}"

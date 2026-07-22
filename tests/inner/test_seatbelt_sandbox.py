@@ -34,9 +34,9 @@ from unittest.mock import patch
 
 import pytest
 
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-from agent_meow.inner.sandbox import SandboxPolicy, with_denied_unix_sockets
-from agent_meow.inner.seatbelt_sandbox import (
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+from omnigent.inner.sandbox import SandboxPolicy, with_denied_unix_sockets
+from omnigent.inner.seatbelt_sandbox import (
     _DEFAULT_CWD_ALLOW_HIDDEN,
     _DEFAULT_READ_SUBPATHS,
     _SANDBOX_EXEC_PATH,
@@ -143,7 +143,7 @@ def test_resolve_default_keeps_cwd_read_only() -> None:
     assert policy.write_roots == [], (
         "seatbelt resolve() must default write_roots to [] (cwd RO). "
         "If non-empty here, the resolver is silently elevating cwd "
-        "to writable — opposite of the documented default."
+        "to writable â€” opposite of the documented default."
     )
     assert policy.read_roots is None  # No spec-supplied read_paths.
 
@@ -184,7 +184,7 @@ def test_resolve_default_cwd_allow_hidden_is_dot_venv() -> None:
     )
     policy = backend.resolve(spec, Path.cwd())
     assert policy.cwd_allow_hidden == list(_DEFAULT_CWD_ALLOW_HIDDEN), (
-        "Default allowlist drift — _DEFAULT_CWD_ALLOW_HIDDEN is "
+        "Default allowlist drift â€” _DEFAULT_CWD_ALLOW_HIDDEN is "
         "the documented baseline; if this fails, either the constant "
         "moved or the resolver stopped substituting the default."
     )
@@ -193,7 +193,7 @@ def test_resolve_default_cwd_allow_hidden_is_dot_venv() -> None:
 def test_resolve_explicit_cwd_allow_hidden_overrides_default() -> None:
     """
     An explicit ``cwd_allow_hidden`` in the spec replaces the default
-    entirely (no merge). This matches the Fail-Loud contract — the
+    entirely (no merge). This matches the Fail-Loud contract â€” the
     spec-self-containment rule says the spec is the source of truth,
     not a delta against an invisible default.
     """
@@ -242,7 +242,7 @@ def test_resolve_raises_on_non_darwin() -> None:
         type="caller_process",
         sandbox=OSEnvSandboxSpec(type="darwin_seatbelt"),
     )
-    with patch("agent_meow.inner.seatbelt_sandbox.sys.platform", "linux"):
+    with patch("omnigent.inner.seatbelt_sandbox.sys.platform", "linux"):
         with pytest.raises(OSError, match="only available on macOS"):
             backend.resolve(spec, Path.cwd())
 
@@ -259,8 +259,8 @@ def test_resolve_raises_when_sandbox_exec_missing() -> None:
         type="caller_process",
         sandbox=OSEnvSandboxSpec(type="darwin_seatbelt"),
     )
-    with patch("agent_meow.inner.seatbelt_sandbox.sys.platform", "darwin"):
-        with patch("agent_meow.inner.seatbelt_sandbox.shutil.which", return_value=None):
+    with patch("omnigent.inner.seatbelt_sandbox.sys.platform", "darwin"):
+        with patch("omnigent.inner.seatbelt_sandbox.shutil.which", return_value=None):
             with pytest.raises(OSError, match="sandbox-exec"):
                 backend.resolve(spec, Path.cwd())
 
@@ -290,7 +290,7 @@ def _safe_helper_argv(tmp_path: Path) -> list[str]:
     check evaluates both the literal path (``argv[0]``) and the
     resolved path (``Path(argv[0]).resolve()``). A symlink to
     ``sys.executable`` would resolve to ``/Users/...`` on macOS dev
-    or ``/home/runner/...`` on Linux CI — both unsafe — and the
+    or ``/home/runner/...`` on Linux CI â€” both unsafe â€” and the
     widen guard would refuse. A regular file resolves to itself
     under *tmp_path*, so both checks land under cwd and the guard
     passes on every host. None of the tests using this helper
@@ -312,7 +312,7 @@ def _safe_helper_argv(tmp_path: Path) -> list[str]:
         # ``/Users`` (macOS dev).
         interpreter.write_text("#!/usr/bin/env python3\n")
         interpreter.chmod(0o755)
-    return [str(interpreter), "-m", "agent_meow.inner.os_env", "helper", "X"]
+    return [str(interpreter), "-m", "omnigent.inner.os_env", "helper", "X"]
 
 
 def test_wrap_launcher_argv_starts_with_sandbox_exec_and_appends_inner_argv(
@@ -334,7 +334,7 @@ def test_wrap_launcher_argv_starts_with_sandbox_exec_and_appends_inner_argv(
       not a bare name, so the spawn doesn't go through ``$PATH``
       lookup at Popen time.
 
-    Failure here means the wrap is structurally broken — Popen
+    Failure here means the wrap is structurally broken â€” Popen
     would either run the wrong binary or pass sandbox-exec flags to
     the helper.
     """
@@ -370,7 +370,7 @@ def test_wrap_launcher_argv_chdir_is_ignored_for_seatbelt(tmp_path: Path) -> Non
     """
     ``sandbox-exec`` has no ``--chdir`` analogue; the wrap ignores
     the ``chdir`` parameter regardless of value. The helper does its
-    own ``os.chdir`` from the JSON config — this test pins the
+    own ``os.chdir`` from the JSON config â€” this test pins the
     contract so a future refactor doesn't accidentally turn
     ``chdir`` into a profile-shape difference.
     """
@@ -388,7 +388,7 @@ def test_wrap_launcher_argv_chdir_is_ignored_for_seatbelt(tmp_path: Path) -> Non
     assert argv_no_chdir[1] == argv_with_chdir[1] == "-f"
     assert argv_no_chdir[3:] == argv_with_chdir[3:]
     assert Path(argv_no_chdir[2]).read_text() == Path(argv_with_chdir[2]).read_text(), (
-        "chdir must be a no-op for seatbelt — the helper subprocess "
+        "chdir must be a no-op for seatbelt â€” the helper subprocess "
         "chdirs itself from its JSON config. Differing profile "
         "contents here mean the profile shape now depends on chdir, "
         "which would silently diverge from the bwrap path."
@@ -442,7 +442,7 @@ def test_profile_starts_with_default_deny_baseline(tmp_path: Path) -> None:
 def test_profile_includes_each_default_read_subpath(tmp_path: Path) -> None:
     """
     Every entry in :data:`_DEFAULT_READ_SUBPATHS` (``/usr``, ``/System``,
-    ``/Library``, …) gets a corresponding
+    ``/Library``, â€¦) gets a corresponding
     ``(allow file-read* (subpath "<path>"))`` rule. These are the
     minimum system mounts the helper needs (dyld, libSystem, Python
     stdlib, system CA bundle); a missing one would make Python fail
@@ -490,7 +490,7 @@ def test_profile_cwd_write_allow_only_when_write_root_matches(tmp_path: Path) ->
         'write_paths: ["."].'
     )
 
-    # Opt-in: write_paths=["."] → cwd writable.
+    # Opt-in: write_paths=["."] â†’ cwd writable.
     policy_rw = _make_policy(tmp_path, write_roots=[cwd])
     assert write_rule in _build_profile(policy_rw, cwd)
 
@@ -498,7 +498,7 @@ def test_profile_cwd_write_allow_only_when_write_root_matches(tmp_path: Path) ->
 def test_profile_no_explicit_home_deny(tmp_path: Path) -> None:
     """
     HOME isolation is achieved by the global ``(deny default)`` plus
-    selective allows — NOT by an explicit ``(deny ... (subpath HOME))``.
+    selective allows â€” NOT by an explicit ``(deny ... (subpath HOME))``.
     SBPL's deny-wins semantics would make a blanket HOME deny
     silently override any cwd / venv / read_paths allow under HOME
     (the common case), so this is a load-bearing invariant.
@@ -527,7 +527,7 @@ def test_profile_scratch_tmpdir_gets_read_and_write_allows(tmp_path: Path) -> No
     This is what makes ``$TMPDIR`` usable inside the sandbox.
 
     L2 (security): the path is canonicalised before emission so the
-    kernel's canonicalised match (``/var/folders/...`` →
+    kernel's canonicalised match (``/var/folders/...`` â†’
     ``/private/var/folders/...`` on macOS) hits our allow rule. A
     non-canonical literal in the profile would silently miss.
     """
@@ -540,7 +540,7 @@ def test_profile_scratch_tmpdir_gets_read_and_write_allows(tmp_path: Path) -> No
     canonical_scratch = str(scratch.resolve(strict=False))
     assert f'(allow file-read* (subpath "{canonical_scratch}"))' in profile, (
         "Scratch RO allow uses the un-canonicalised path; the kernel "
-        "canonicalises /var/folders → /private/var/folders before "
+        "canonicalises /var/folders â†’ /private/var/folders before "
         "matching, so a non-canonical literal silently misses."
     )
     assert f'(allow file-write* (subpath "{canonical_scratch}"))' in profile
@@ -564,7 +564,7 @@ def test_profile_network_section_for_allow_network_true_no_egress(
     tmp_path: Path,
 ) -> None:
     """
-    ``allow_network=True`` and no egress rules → ``(allow network*)``
+    ``allow_network=True`` and no egress rules â†’ ``(allow network*)``
     is emitted so the helper sees the host's full network stack.
     """
     policy = _make_policy(tmp_path, allow_network=True)
@@ -576,7 +576,7 @@ def test_profile_network_section_for_allow_network_false_no_egress(
     tmp_path: Path,
 ) -> None:
     """
-    ``allow_network=False`` with no egress → the default-deny handles
+    ``allow_network=False`` with no egress â†’ the default-deny handles
     the block; NO ``network`` allow rules are emitted. The profile
     instead carries a marker comment so a reader can see this was a
     deliberate "rely on (deny default)" decision rather than a bug.
@@ -601,7 +601,7 @@ def test_profile_denies_unix_control_socket_after_allow_network(
     allow would otherwise let the pane ``connect(2)`` to the tmux
     control socket. The deny must come last to win. We assert the rule
     text uses the canonical realpath (the kernel canonicalises before
-    matching, e.g. ``/var`` → ``/private/var``) and that its line index
+    matching, e.g. ``/var`` â†’ ``/private/var``) and that its line index
     is greater than the allow's.
     """
     sock = tmp_path / "inst" / "tmux.sock"
@@ -616,7 +616,7 @@ def test_profile_denies_unix_control_socket_after_allow_network(
     assert deny_rule in lines, f"missing socket deny rule; profile was:\n{profile}"
     assert "(allow network*)" in lines
     assert lines.index(deny_rule) > lines.index("(allow network*)"), (
-        "socket deny rule must follow (allow network*) — SBPL last-match-wins, "
+        "socket deny rule must follow (allow network*) â€” SBPL last-match-wins, "
         "so a deny emitted before the broad allow would be overridden and the "
         "tmux control socket would stay reachable."
     )
@@ -625,7 +625,7 @@ def test_profile_denies_unix_control_socket_after_allow_network(
 def test_profile_no_unix_socket_deny_when_list_empty(tmp_path: Path) -> None:
     """
     With no ``deny_unix_socket_paths`` the profile emits no
-    ``unix-socket`` deny rule — the containment is opt-in and must not
+    ``unix-socket`` deny rule â€” the containment is opt-in and must not
     appear for ordinary sandboxes (a stray deny could break a
     legitimate egress unix-socket allow).
     """
@@ -657,7 +657,7 @@ def test_profile_network_section_for_active_egress_emits_narrow_allows(
     fails listen() with EPERM, outbound-ip without outbound-unix
     silently fails the Unix-socket connect, and the un-canonicalised
     socket path doesn't match the kernel's canonicalised AF_UNIX
-    target (``/var/folders`` → ``/private/var/folders``).
+    target (``/var/folders`` â†’ ``/private/var/folders``).
     """
     import tempfile
 
@@ -690,8 +690,8 @@ def test_profile_network_section_for_active_egress_emits_narrow_allows(
         in profile
     ), (
         "Missing network-outbound allow on the canonical Unix-socket "
-        "path. Note the path MUST be the realpath — kernel "
-        "canonicalises /var/folders → /private/var/folders before "
+        "path. Note the path MUST be the realpath â€” kernel "
+        "canonicalises /var/folders â†’ /private/var/folders before "
         "matching, and an un-canonicalised rule silently misses."
     )
     assert "(allow network*)" not in profile, (
@@ -724,14 +724,14 @@ def test_profile_dotfile_mask_uses_deny_rules(tmp_path: Path) -> None:
     venv_deny_subpath = f'(deny file-read* file-write* (subpath "{cwd / ".venv"}"))'
 
     assert env_deny in profile, (
-        ".env file not masked with a literal deny — the dotfile "
+        ".env file not masked with a literal deny â€” the dotfile "
         "mask either skipped it or used the wrong rule form. SBPL "
         "deny-wins is the mechanism that lets per-path denies "
         "override the cwd allow, so the rule MUST be present and "
         "MUST follow the cwd subpath allow."
     )
     assert aws_deny in profile, (
-        ".aws directory not masked with a subpath deny — a literal "
+        ".aws directory not masked with a subpath deny â€” a literal "
         "deny would only block the directory itself, not files "
         "underneath it (so .aws/credentials would still be readable)."
     )
@@ -744,7 +744,7 @@ def test_profile_dotfile_mask_uses_deny_rules(tmp_path: Path) -> None:
 
     # Ordering: the dotfile deny rules must appear AFTER the cwd
     # allow, otherwise the cwd allow could (in principle) re-grant
-    # access — SBPL evaluates rules independently for matching, but
+    # access â€” SBPL evaluates rules independently for matching, but
     # the documented intent is "mask wins over cwd", reflected in
     # rule order.
     cwd_allow_idx = profile.index(f'(allow file-read* (subpath "{cwd}"))')
@@ -763,7 +763,7 @@ def test_profile_dotfile_mask_uses_deny_rules(tmp_path: Path) -> None:
 # called ``realpath(sys.executable)`` and the kernel denied the
 # parent-component walk under the default-deny because
 # ``(allow file-read* (subpath cwd))`` covers the cwd subtree but NOT
-# the strict ancestors above cwd (``/Users``, ``/Users/<me>``, …).
+# the strict ancestors above cwd (``/Users``, ``/Users/<me>``, â€¦).
 #
 # The bug was masked by the existing test setup: pytest's ``tmp_path``
 # resolves to ``/private/var/folders/.../pytest-XXX`` whose ancestors
@@ -784,7 +784,7 @@ def test_profile_dotfile_mask_uses_deny_rules(tmp_path: Path) -> None:
 # 1. Unit assertion that the ancestor-traversal block IS emitted for
 #    a venv-under-cwd setup.
 # 2. Unit assertion that the block uses the narrow
-#    ``file-read-metadata`` permission (``stat`` only — not
+#    ``file-read-metadata`` permission (``stat`` only â€” not
 #    ``file-read*`` which would also grant directory listing) so
 #    the leak is bounded to "this parent exists".
 # 3. End-to-end spawn test under ``sandbox-exec`` with cwd under
@@ -805,7 +805,7 @@ def test_profile_emits_stat_only_ancestor_allows_for_cwd_under_home(
     Without this, ``realpath()`` walks fail at the first uncovered
     component and Python aborts during ``Py_InitializeFromConfig``
     before the helper boots. ``file-read-metadata`` is the narrow
-    ``stat``-only permission — strictly weaker than ``file-read*``
+    ``stat``-only permission â€” strictly weaker than ``file-read*``
     on a subpath, so the only thing leaked is "this parent directory
     exists" (e.g. ``/Users``, ``/Users/<me>``).
 
@@ -836,7 +836,7 @@ def test_profile_emits_stat_only_ancestor_allows_for_cwd_under_home(
     forbidden_subpath = '(allow file-read* (subpath "/Users"))'
     assert forbidden_subpath not in profile, (
         "Ancestor traversal allow widened from a per-ancestor "
-        "literal to a (subpath /Users) — that grants read access to "
+        "literal to a (subpath /Users) â€” that grants read access to "
         "every other user's home directory, every other project, "
         "every dotfile, defeating the whole HOME deny-by-default."
     )
@@ -847,9 +847,9 @@ def test_profile_skips_ancestor_allows_already_covered_by_default_subpaths(
 ) -> None:
     """
     When the ancestor walker finds a path that's already covered by
-    a default RO subpath (``/usr``, ``/System``, ``/opt``, …), it
+    a default RO subpath (``/usr``, ``/System``, ``/opt``, â€¦), it
     must skip emitting a redundant ``file-read-metadata`` allow for
-    that path — the existing subpath rule already covers traversal
+    that path â€” the existing subpath rule already covers traversal
     by containment.
 
     Pre-S1 hardening this test used ``/private/var/folders`` as the
@@ -860,7 +860,7 @@ def test_profile_skips_ancestor_allows_already_covered_by_default_subpaths(
     longer a default and the walker correctly DOES emit a metadata
     allow for it (so the kernel can stat the cwd chain). The
     invariant the test pins is still "skip redundant ancestors",
-    so we use ``/usr`` instead — anything under ``/usr`` does NOT
+    so we use ``/usr`` instead â€” anything under ``/usr`` does NOT
     need a per-ancestor metadata allow.
     """
     # Use a cwd under ``/usr`` (a real default RO subpath) so the
@@ -874,7 +874,7 @@ def test_profile_skips_ancestor_allows_already_covered_by_default_subpaths(
         "Ancestor-traversal block emitted a metadata allow for "
         "/usr even though /usr is already in _DEFAULT_READ_SUBPATHS "
         "as a broad file-read* subpath. The walker should skip "
-        "ancestors covered by an existing subpath rule — emitting "
+        "ancestors covered by an existing subpath rule â€” emitting "
         "both is noise in the profile."
     )
 
@@ -884,7 +884,7 @@ def test_ensure_executable_visible_does_not_widen_when_venv_is_under_cwd() -> No
     When the helper interpreter (``sys.executable``) lives UNDER
     cwd (the canonical production shape: ``~/proj/.venv/bin/python3``
     with cwd ``~/proj``), :func:`_ensure_executable_visible` MUST
-    return ``[]`` — no broad ``(subpath /Users)`` rule may be
+    return ``[]`` â€” no broad ``(subpath /Users)`` rule may be
     added.
 
     This guards against a fix-the-symptom regression: someone hits
@@ -898,7 +898,7 @@ def test_ensure_executable_visible_does_not_widen_when_venv_is_under_cwd() -> No
     """
     cwd = Path("/Users/me/proj")
     venv_python = cwd / ".venv" / "bin" / "python3"
-    argv = [str(venv_python), "-m", "agent_meow.inner.os_env", "helper"]
+    argv = [str(venv_python), "-m", "omnigent.inner.os_env", "helper"]
     extras = _ensure_executable_visible(argv, cwd)
     assert extras == [], (
         f"Got extra_read_paths={extras!r} for a venv UNDER cwd; "
@@ -914,38 +914,38 @@ def test_ensure_executable_visible_does_not_widen_when_venv_is_under_cwd() -> No
 def test_helper_boots_when_cwd_lives_under_home_regression() -> None:
     """
     End-to-end regression: spawn a real ``sandbox-exec`` subprocess
-    in the production shape — cwd under ``$HOME`` AND the helper
+    in the production shape â€” cwd under ``$HOME`` AND the helper
     interpreter living UNDER cwd (i.e. ``cwd/.venv/bin/python3``).
     Python startup must succeed and the subprocess must reach user
     code. This is the only test layer that catches the
     realpath-EPERM bug the way the user hit it.
 
     Two test-harness artifacts hid this bug for the entire feature
-    branch — this test reproduces production by undoing both:
+    branch â€” this test reproduces production by undoing both:
 
     1. **pytest's ``tmp_path`` lives under ``/private/var/folders``**,
        whose ancestors are covered by the default
        ``/private/var/folders`` subpath. ``realpath()`` walks the
-       chain ``/`` → ``/private`` → ``/private/var`` →
+       chain ``/`` â†’ ``/private`` â†’ ``/private/var`` â†’
        ``/private/var/folders`` and every step has an ancestor allow
-       by accident. Real cwds under ``$HOME`` don't get that. → Fix:
+       by accident. Real cwds under ``$HOME`` don't get that. â†’ Fix:
        use a directory directly under ``Path.home()``.
 
     2. **The test runner's ``sys.executable`` lives at
-       ``~/repos/.../.venv/bin/python3``** — i.e. OUTSIDE pytest's
+       ``~/repos/.../.venv/bin/python3``** â€” i.e. OUTSIDE pytest's
        ``tmp_path``. :func:`_ensure_executable_visible` notices this
        and emits a broad ``(allow file-read* (subpath /Users))``
        rule for interpreter visibility, which ALSO satisfies the
        realpath ancestor walk by accident. In production the venv
        lives UNDER cwd, that broad rule is NOT emitted, and the
-       bug surfaces. → Fix: symlink the test runner's interpreter
+       bug surfaces. â†’ Fix: symlink the test runner's interpreter
        into ``<cwd>/.venv/bin/python3`` and exec via that path so
        ``_ensure_executable_visible`` returns ``[]``.
 
     With both artifacts removed, removing the ancestor-traversal
     block from :func:`_build_profile` makes this test fail with
     ``python3: realpath: <cwd>/.venv/bin/: Operation not permitted``
-    — exactly the production failure mode.
+    â€” exactly the production failure mode.
     """
     import shutil
     import subprocess
@@ -996,7 +996,7 @@ def test_helper_boots_when_cwd_lives_under_home_regression() -> None:
         assert wrapped[1] == "-f"
         profile = Path(wrapped[2]).read_text()
         assert '(allow file-read* (subpath "/Users"))' not in profile, (
-            "Profile contains the broad /Users subpath allow — "
+            "Profile contains the broad /Users subpath allow â€” "
             "_ensure_executable_visible widened when it shouldn't "
             "have. This test relies on the helper interpreter "
             "living under cwd; check the symlink setup."
@@ -1102,7 +1102,7 @@ def test_helper_boots_when_interpreter_lives_under_home_uv_layout(
         wrapped = backend.wrap_launcher_argv(argv, policy, cwd.resolve(strict=False))
 
         # Profile must contain a narrow subpath on the fake install
-        # root — NOT a broad ``(subpath /Users)``. This is the
+        # root â€” NOT a broad ``(subpath /Users)``. This is the
         # security-critical invariant: the auto-fallback widening
         # replaces (never coexists with) the topmost-ancestor grant.
         profile = Path(wrapped[2]).read_text()
@@ -1116,7 +1116,7 @@ def test_helper_boots_when_interpreter_lives_under_home_uv_layout(
             "the kernel EPERMs the exec. Generated profile:\n" + profile
         )
         assert '(allow file-read* (subpath "/Users"))' not in profile, (
-            "Profile widened to (subpath /Users) — the narrow "
+            "Profile widened to (subpath /Users) â€” the narrow "
             "fallback degenerated into the broad widening the "
             "H1/H2/H3 hardening explicitly prohibits. This grants "
             "the sandboxed helper read access to every other "
@@ -1155,7 +1155,7 @@ def test_helper_boots_when_interpreter_lives_under_home_uv_layout(
 # One test per hardening item from the security audit so a future
 # edit that re-introduces the unsafe behavior fails loud rather than
 # silently widening the sandbox. Each test docstring names the
-# vulnerability id (H1, M1, …) so a triage reviewer can cross-reference
+# vulnerability id (H1, M1, â€¦) so a triage reviewer can cross-reference
 # with the audit report.
 # ---------------------------------------------------------------------------
 
@@ -1168,7 +1168,7 @@ def test_h1_ensure_executable_visible_refuses_unsafe_topmost_ancestor(
     H1/H2/H3: ``_ensure_executable_visible`` MUST raise
     :class:`OSError` (not silently emit a broad ``(subpath ...)``
     rule) when the helper interpreter's topmost non-root ancestor
-    is on the unsafe list (``/Users``, ``/private``, ``/var``, …).
+    is on the unsafe list (``/Users``, ``/private``, ``/var``, â€¦).
 
     Pre-fix behaviour: silently appended the topmost ancestor as a
     read subpath, granting the sandboxed helper read access to every
@@ -1200,7 +1200,7 @@ def test_h1_ensure_executable_visible_accepts_when_spec_grants_read_path(
     """
     H1: when the operator explicitly grants ``read_paths`` covering
     the venv interpreter, ``_ensure_executable_visible`` returns ``[]``
-    and does NOT raise — the spec-supplied path makes the widen
+    and does NOT raise â€” the spec-supplied path makes the widen
     unnecessary.
 
     This is the documented remediation #3 in the OSError message.
@@ -1272,7 +1272,7 @@ def test_interpreter_install_root_detects_uv_python_layout(tmp_path: Path) -> No
 def test_interpreter_install_root_detects_libpython_marker(tmp_path: Path) -> None:
     """
     The ``<root>/lib/libpython*.dylib`` marker is sufficient on its
-    own — some slimmed-down CPython distributions ship the runtime
+    own â€” some slimmed-down CPython distributions ship the runtime
     dylib without a ``lib/python<X>.<Y>/`` stdlib directory (the
     stdlib is zipped into the binary or kept elsewhere). The shape
     check accepts either marker so it doesn't false-negative on
@@ -1288,7 +1288,7 @@ def test_interpreter_install_root_detects_libpython_marker(tmp_path: Path) -> No
     exe.chmod(0o755)
     detected = _interpreter_install_root(exe)
     assert detected is not None, (
-        "libpython*.dylib marker should match — slim CPython distributions "
+        "libpython*.dylib marker should match â€” slim CPython distributions "
         "without a lib/python*/ stdlib directory still need to be detected."
     )
 
@@ -1316,7 +1316,7 @@ def test_interpreter_install_root_rejects_arbitrary_home_directory(
     # a CPython marker (no ``python*`` dir, no ``libpython*`` file).
     (fake_root / "lib" / "node_modules").mkdir()
     (fake_root / "lib" / "libfoo.dylib").write_bytes(b"\x00")
-    exe = fake_root / "bin" / "python"  # name doesn't matter — shape does
+    exe = fake_root / "bin" / "python"  # name doesn't matter â€” shape does
     exe.write_text("#!fake\n")
     exe.chmod(0o755)
     detected = _interpreter_install_root(exe)
@@ -1368,7 +1368,7 @@ def test_interpreter_install_root_rejects_when_parent_is_not_bin(
     exe.chmod(0o755)
     detected = _interpreter_install_root(exe)
     assert detected is None, (
-        "Parent directory not named 'bin' must not match — only the "
+        "Parent directory not named 'bin' must not match â€” only the "
         "canonical CPython ``<root>/bin/python*`` layout qualifies."
     )
 
@@ -1385,8 +1385,8 @@ def test_ensure_executable_visible_falls_back_to_install_root_for_uv_layout(
     and return a narrow widening on it instead of raising OSError.
 
     The test stages the install layout under ``tmp_path`` (which on
-    macOS lives under ``/private/var/folders`` — covered by default
-    RO subpaths — but we explicitly thread an unsafe-ancestor case
+    macOS lives under ``/private/var/folders`` â€” covered by default
+    RO subpaths â€” but we explicitly thread an unsafe-ancestor case
     via the policy_read_roots argument so the test is
     platform-agnostic). A WARNING must be emitted naming both the
     refused ancestor and the granted install root so the auto-widen
@@ -1425,10 +1425,10 @@ def test_ensure_executable_visible_falls_back_to_install_root_for_uv_layout(
     # ``/tmp/...``. Either way the topmost is a real path on disk.
     topmost_str = "/" + str(install_root).lstrip("/").split("/", 1)[0]
     with patch(
-        "agent_meow.inner.seatbelt_sandbox._UNSAFE_WIDEN_ANCESTORS",
+        "omnigent.inner.seatbelt_sandbox._UNSAFE_WIDEN_ANCESTORS",
         frozenset({topmost_str}),
     ):
-        with caplog.at_level("WARNING", logger="agent_meow.inner.seatbelt_sandbox"):
+        with caplog.at_level("WARNING", logger="omnigent.inner.seatbelt_sandbox"):
             extras = _ensure_executable_visible(argv, cwd)
 
     assert extras, (
@@ -1445,7 +1445,7 @@ def test_ensure_executable_visible_falls_back_to_install_root_for_uv_layout(
     assert all(str(p) != topmost_str for p in extras), (
         f"Extras={extras!r} contains the unsafe topmost ancestor "
         f"{topmost_str!r}. The narrow fallback must REPLACE the "
-        "topmost grant, never coexist with it — otherwise the "
+        "topmost grant, never coexist with it â€” otherwise the "
         "broad allow re-introduces the bypass the H1/H2/H3 "
         "hardening exists to prevent."
     )
@@ -1490,7 +1490,7 @@ def test_ensure_executable_visible_still_raises_for_non_python_home_layouts(
 
     topmost_str = "/" + str(fake_root).lstrip("/").split("/", 1)[0]
     with patch(
-        "agent_meow.inner.seatbelt_sandbox._UNSAFE_WIDEN_ANCESTORS",
+        "omnigent.inner.seatbelt_sandbox._UNSAFE_WIDEN_ANCESTORS",
         frozenset({topmost_str}),
     ):
         with pytest.raises(OSError) as exc:
@@ -1524,9 +1524,9 @@ def test_h4_resolve_root_does_not_expand_env_vars_and_warns(
     emitted so over-broad expansions stand out in logs.
     """
     monkeypatch.setenv("LOG_DIR", "/")
-    with caplog.at_level("WARNING", logger="agent_meow.inner.seatbelt_sandbox"):
+    with caplog.at_level("WARNING", logger="omnigent.inner.seatbelt_sandbox"):
         resolved = _resolve_root(tmp_path, "$LOG_DIR/audit")
-    # The literal ``$LOG_DIR`` survives — resolved path ends with
+    # The literal ``$LOG_DIR`` survives â€” resolved path ends with
     # the unexpanded segment, NOT with ``/audit`` rooted at ``/``.
     assert "$LOG_DIR" in str(resolved), (
         f"Got {resolved!r}; expected the literal ``$LOG_DIR`` to "
@@ -1547,10 +1547,10 @@ def test_l5_resolve_root_warns_on_broad_paths(
     """
     L5: ``_resolve_root`` MUST emit a warning when the resolved path
     matches one of the documented over-broad roots (``/``, ``/Users``,
-    ``/var``, …). Not blocked — some legitimate agents need a wide
-    grant — but the warning makes the choice auditable in logs.
+    ``/var``, â€¦). Not blocked â€” some legitimate agents need a wide
+    grant â€” but the warning makes the choice auditable in logs.
     """
-    with caplog.at_level("WARNING", logger="agent_meow.inner.seatbelt_sandbox"):
+    with caplog.at_level("WARNING", logger="omnigent.inner.seatbelt_sandbox"):
         _resolve_root(tmp_path, "/")
     assert any("near-unrestricted" in record.message for record in caplog.records), (
         "Resolver should warn when a spec path resolves to a "
@@ -1585,11 +1585,11 @@ def test_m1_m2_profile_excludes_mach_priv_host_port_and_iokit_open(
     # comments documenting the hardening choice. We only care that
     # they aren't actually granted.
     assert "(allow mach-priv-host-port" not in profile, (
-        "Profile contains mach-priv-host-port allow — M1 regression. "
+        "Profile contains mach-priv-host-port allow â€” M1 regression. "
         "Grants kernel-task IPC, common sandbox-escape lever."
     )
     assert "(allow iokit-open" not in profile, (
-        "Profile contains iokit-open allow — M2 regression. Grants "
+        "Profile contains iokit-open allow â€” M2 regression. Grants "
         "access to every IOKit driver including camera / mic / GPU."
     )
 
@@ -1603,13 +1603,13 @@ def test_m4_profile_narrows_dev_write_to_specific_literals(tmp_path: Path) -> No
     character / block devices (e.g. ``/dev/disk*`` for direct disk
     access, ``/dev/console`` for system log spoofing).
 
-    Reads on ``/dev`` stay broad — needed for ``/dev/urandom``,
-    ``/dev/fd/N`` etc. — but writes must be per-literal.
+    Reads on ``/dev`` stay broad â€” needed for ``/dev/urandom``,
+    ``/dev/fd/N`` etc. â€” but writes must be per-literal.
     """
     policy = _make_policy(tmp_path)
     profile = _build_profile(policy, tmp_path)
     assert '(allow file-write* (subpath "/dev"))' not in profile, (
-        'Profile contains broad (subpath "/dev") write allow — '
+        'Profile contains broad (subpath "/dev") write allow â€” '
         "M4 regression. Lets the helper write through arbitrary "
         "devices including disk character / block devices."
     )
@@ -1707,14 +1707,14 @@ def test_s1_default_read_subpaths_omits_broad_private_var_folders(
     is per-user, not per-helper, and granting it lets one
     concurrent helper read every OTHER same-user helper's scratch
     tmpdir (mkdtemp 0700 doesn't protect against same-UID
-    processes — only the sandbox does). Cross-helper scratch
+    processes â€” only the sandbox does). Cross-helper scratch
     isolation breaks if this constant returns.
 
     The helper's own scratch is still granted via its specific
     subpath; this test only pins the absence of the broad allow.
     """
     assert "/private/var/folders" not in _DEFAULT_READ_SUBPATHS, (
-        "/private/var/folders is back in _DEFAULT_READ_SUBPATHS — "
+        "/private/var/folders is back in _DEFAULT_READ_SUBPATHS â€” "
         "every concurrent same-user helper can now read every "
         "other helper's scratch tmpdir. S1 regression."
     )
@@ -1759,8 +1759,8 @@ def test_m7_resolve_warns_when_cwd_allow_hidden_contains_sensitive_dotfile(
     """
     M7: the resolver MUST emit a warning when ``cwd_allow_hidden``
     includes a basename matching the documented sensitive set
-    (``.aws``, ``.ssh``, ``.netrc``, …). Not blocked — some agents
-    legitimately need these — but the warning makes the choice
+    (``.aws``, ``.ssh``, ``.netrc``, â€¦). Not blocked â€” some agents
+    legitimately need these â€” but the warning makes the choice
     auditable so an unintended grant doesn't go unnoticed.
     """
     if sys.platform != "darwin":
@@ -1773,7 +1773,7 @@ def test_m7_resolve_warns_when_cwd_allow_hidden_contains_sensitive_dotfile(
             cwd_allow_hidden=[".aws", ".ssh", ".venv"],
         ),
     )
-    with caplog.at_level("WARNING", logger="agent_meow.inner.seatbelt_sandbox"):
+    with caplog.at_level("WARNING", logger="omnigent.inner.seatbelt_sandbox"):
         backend.resolve(spec, Path.cwd())
     msgs = " ".join(record.message for record in caplog.records)
     assert ".aws" in msgs and ".ssh" in msgs, (
@@ -1782,7 +1782,7 @@ def test_m7_resolve_warns_when_cwd_allow_hidden_contains_sensitive_dotfile(
     )
     assert ".venv" not in msgs, (
         ".venv is the default opt-in and is NOT on the sensitive "
-        "list — warning on it would flood operator logs."
+        "list â€” warning on it would flood operator logs."
     )
 
 
@@ -1791,8 +1791,8 @@ def test_m7_resolve_warns_when_cwd_allow_hidden_contains_sensitive_dotfile(
 #
 # Threat: a broad ``read_paths`` grant (typically ``["~/"]`` for an
 # agent that needs project siblings) used to silently expose the
-# operator's credential stores — ``~/.aws/credentials``,
-# ``~/.ssh/id_*``, ``~/Library/Cookies``, etc. — because:
+# operator's credential stores â€” ``~/.aws/credentials``,
+# ``~/.ssh/id_*``, ``~/Library/Cookies``, etc. â€” because:
 #
 # 1. The dotfile masker was cwd-only, so it never walked ``read_paths``.
 # 2. ``~/Library`` isn't dotfile-shaped, so the dotfile masker
@@ -1805,7 +1805,7 @@ def test_m7_resolve_warns_when_cwd_allow_hidden_contains_sensitive_dotfile(
 #    allowlist. So ``read_paths: ["~/"]`` masks ``~/.aws`` etc.
 # 2. macOS-specific: ``$HOME/Library`` is denied by default unless
 #    the spec explicitly names ``~/Library`` (or a path under it)
-#    in ``read_paths`` — naming an ancestor like ``~/`` does NOT
+#    in ``read_paths`` â€” naming an ancestor like ``~/`` does NOT
 #    count as opt-in.
 # ---------------------------------------------------------------------------
 
@@ -1817,7 +1817,7 @@ def test_s5_home_library_denied_by_default_when_home_in_read_paths(
     With ``read_paths: ["~/"]`` granted, the profile MUST still
     contain a ``(deny ... (subpath "$HOME/Library"))`` rule. SBPL
     deny-wins-over-allow means this deny overrides the broad HOME
-    read grant exactly for the Library subtree — the operator's
+    read grant exactly for the Library subtree â€” the operator's
     browser cookies / Slack tokens / app keychains stay invisible
     to the helper even when HOME is otherwise readable.
 
@@ -1880,7 +1880,7 @@ def test_s5_home_library_allowed_when_explicitly_opted_in(
     unwanted_deny = f'(deny file-read* file-write* (subpath "{library.resolve(strict=False)}"))'
     assert unwanted_deny not in profile, (
         "Explicit read_paths entry for $HOME/Library should "
-        "suppress the default deny — the operator opted in."
+        "suppress the default deny â€” the operator opted in."
     )
 
 
@@ -1889,7 +1889,7 @@ def test_s5_home_library_deny_suppressed_by_under_path_grant(
 ) -> None:
     """
     Naming a narrower subtree (``~/Library/Logs``) should also
-    suppress the default deny — operators don't have to grant the
+    suppress the default deny â€” operators don't have to grant the
     whole ``~/Library`` tree to opt into a specific subdir. The
     suppression rule is "at-or-under the candidate".
     """
@@ -1920,7 +1920,7 @@ def test_s5_home_library_deny_not_suppressed_by_ancestor_grant(
     """
     The opt-in must be "at-or-under" the candidate, NOT "ancestor
     of". Granting ``~/`` (an ANCESTOR of ``~/Library``) does NOT
-    count as opting into ``~/Library`` — otherwise the whole point
+    count as opting into ``~/Library`` â€” otherwise the whole point
     of the default-deny would be defeated by the most common spec
     shape.
     """
@@ -1938,7 +1938,7 @@ def test_s5_home_library_deny_not_suppressed_by_ancestor_grant(
     )
     assert expected_deny in profile, (
         "Granting an ancestor of $HOME/Library (e.g. ~/) must NOT "
-        "suppress the default deny — that would defeat the protection."
+        "suppress the default deny â€” that would defeat the protection."
     )
 
 
@@ -1948,13 +1948,13 @@ def test_s5_read_paths_dotfile_masking_blocks_dot_aws_under_home_grant(
     """
     With ``read_paths: [<dir-with-dotfiles>]``, the per-path dotfile
     masker MUST also walk that directory and emit deny rules for the
-    dotfiles found there — not just for cwd. The pre-fix behaviour
+    dotfiles found there â€” not just for cwd. The pre-fix behaviour
     was cwd-only, so a broad ``read_paths`` grant would silently
     expose ``.aws``, ``.ssh``, ``.netrc`` etc. living under the
     granted path.
     """
     # Fake-home shape: dotfiles + a regular file. We don't touch
-    # ``$HOME`` here — this test is purely about the dotfile masker
+    # ``$HOME`` here â€” this test is purely about the dotfile masker
     # walking read_paths roots, independent of the macOS Library
     # default-deny.
     fake_home = tmp_path / "home"
@@ -1964,7 +1964,7 @@ def test_s5_read_paths_dotfile_masking_blocks_dot_aws_under_home_grant(
     (fake_home / ".ssh").mkdir()
     (fake_home / ".ssh" / "id_ed25519").write_text("-----BEGIN")
     (fake_home / ".env").write_text("SECRET=1")
-    (fake_home / "code").mkdir()  # non-dotfile — must NOT be masked
+    (fake_home / "code").mkdir()  # non-dotfile â€” must NOT be masked
     cwd = tmp_path / "work"
     cwd.mkdir()
 
@@ -1989,7 +1989,7 @@ def test_s5_read_paths_dotfile_masking_blocks_dot_aws_under_home_grant(
     )
 
     assert aws_deny in profile, (
-        "Dotfile masker did not walk read_paths root — .aws/ is "
+        "Dotfile masker did not walk read_paths root â€” .aws/ is "
         "still exposed. Regression of the S5 fix that extended the "
         "walker beyond cwd."
     )
@@ -2001,7 +2001,7 @@ def test_s5_read_paths_dotfile_masking_blocks_dot_aws_under_home_grant(
         "walker should emit a (literal ...) deny for regular files."
     )
     assert code_deny_subpath not in profile, (
-        "Non-dotfile entries under read_paths must NOT be masked — "
+        "Non-dotfile entries under read_paths must NOT be masked â€” "
         "the whole point of granting the read_paths root is to "
         "expose the project files."
     )
@@ -2013,7 +2013,7 @@ def test_s5_read_paths_dotfile_masking_honors_cwd_allow_hidden(
     """
     Operators opt into a specific dotfile-shaped path by naming its
     basename in ``cwd_allow_hidden``. That allowlist MUST be honored
-    for read_paths roots too — otherwise the only way to grant
+    for read_paths roots too â€” otherwise the only way to grant
     ``.aws`` through would be to drop the whole walker, which would
     re-open the bigger hole.
     """
@@ -2043,7 +2043,7 @@ def test_s5_read_paths_dotfile_masking_honors_cwd_allow_hidden(
     )
     assert aws_deny_literal not in profile and aws_deny_subpath not in profile, (
         ".aws is in cwd_allow_hidden but a deny rule still landed "
-        "for it under the read_paths root — the allowlist filter "
+        "for it under the read_paths root â€” the allowlist filter "
         "is not being applied to read_paths."
     )
     assert ssh_deny in profile, (
@@ -2054,7 +2054,7 @@ def test_s5_read_paths_dotfile_masking_honors_cwd_allow_hidden(
 def test_s5_read_paths_dedup_skips_paths_under_cwd(tmp_path: Path) -> None:
     """
     A ``read_paths`` entry that lives at-or-under ``cwd`` is fully
-    covered by the cwd dotfile scan — the read_paths walker must
+    covered by the cwd dotfile scan â€” the read_paths walker must
     skip it to avoid emitting the same per-path deny twice (which
     is harmless to SBPL but bloats the profile and risks tripping
     :data:`_MAX_PROFILE_BYTES` on big workspaces).
@@ -2077,6 +2077,6 @@ def test_s5_read_paths_dedup_skips_paths_under_cwd(tmp_path: Path) -> None:
 
     env_deny = f'(deny file-read* file-write* (literal "{cwd.resolve(strict=False) / ".env"}"))'
     assert profile.count(env_deny) == 1, (
-        ".env masked more than once — the dedup that skips "
+        ".env masked more than once â€” the dedup that skips "
         "read_paths roots at-or-under cwd regressed."
     )

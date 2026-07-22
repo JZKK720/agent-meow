@@ -15,8 +15,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agent_meow.inner.databricks_executor import DatabricksCredentials
-from agent_meow.inner.executor import (
+from omnigent.inner.databricks_executor import DatabricksCredentials
+from omnigent.inner.executor import (
     ExecutorConfig,
     ExecutorError,
     ReasoningChunk,
@@ -26,7 +26,7 @@ from agent_meow.inner.executor import (
     ToolCallStatus,
     TurnComplete,
 )
-from agent_meow.inner.pi_executor import (
+from omnigent.inner.pi_executor import (
     PiExecutor,
     _build_models_json,
     _generate_extension_js,
@@ -38,8 +38,8 @@ from agent_meow.inner.pi_executor import (
     _split_pi_prompt,
     _ToolServer,
 )
-from agent_meow.onboarding.databricks_config import DATABRICKS_CLAUDE_DEFAULT_MODEL
-from agent_meow.runtime.harnesses._scaffold import PolicyVerdictPayload
+from omnigent.onboarding.databricks_config import DATABRICKS_CLAUDE_DEFAULT_MODEL
+from omnigent.runtime.harnesses._scaffold import PolicyVerdictPayload
 
 
 def _run(coro):
@@ -205,12 +205,12 @@ def test_sanitize_union_prefers_object_branch(union_key: str) -> None:
     ``additionalProperties`` stripped.
 
     If the string branch wins instead, the pi LLM sees the param as a
-    plain string and serializes structured args as a JSON string —
+    plain string and serializes structured args as a JSON string â€”
     this is exactly how nessie's purpose-guard policy ended up
     denying every sub-agent dispatch on pi.
 
     :param union_key: The JSON Schema union keyword under test,
-        e.g. ``"anyOf"`` — all three must collapse identically.
+        e.g. ``"anyOf"`` â€” all three must collapse identically.
     """
     schema = {
         union_key: [
@@ -261,7 +261,7 @@ def test_sanitize_union_nested_in_properties_keeps_object_branch() -> None:
     """
     A union nested inside an outer object's ``properties`` collapses
     to its object branch while sibling properties pass through
-    untouched — the recursion into ``properties`` must apply the same
+    untouched â€” the recursion into ``properties`` must apply the same
     object-preference as the top level.
     """
     schema = {
@@ -302,12 +302,12 @@ def test_sanitize_real_sys_session_send_args_collapses_to_object() -> None:
     string | {input, purpose} object) must collapse to the object
     branch so the model emits structured args.
 
-    Uses the actual schema builder from spawn.py, not a copy — if the
+    Uses the actual schema builder from spawn.py, not a copy â€” if the
     spawn schema's shape drifts, this test follows it. A string-typed
     ``args`` result reproduces the nessie-on-pi dispatch denial
     ("Missing object args with purpose").
     """
-    from agent_meow.tools.builtins.spawn import _build_sys_session_send_schema
+    from omnigent.tools.builtins.spawn import _build_sys_session_send_schema
 
     params = _build_sys_session_send_schema({})["function"]["parameters"]
     object_branch = next(
@@ -322,7 +322,7 @@ def test_sanitize_real_sys_session_send_args_collapses_to_object() -> None:
     assert set(sanitized_args["properties"]) == {"input", "purpose", "model", "cost_budget"}
     assert sanitized_args["required"] == ["input"]
     # Exact dict: the chosen object branch minus its stripped
-    # additionalProperties — anything else means extra keys leaked or
+    # additionalProperties â€” anything else means extra keys leaked or
     # the wrong branch was picked.
     expected = {k: v for k, v in object_branch.items() if k != "additionalProperties"}
     assert sanitized_args == expected
@@ -383,7 +383,7 @@ def test_split_pi_prompt_rejects_non_data_uri_image():
 
 def test_split_pi_prompt_inlines_text_input_file():
     # #516 review: a text-like input_file is decoded into the message (so the
-    # model can read it) rather than dropped or hard-failed — mirroring codex.
+    # model can read it) rather than dropped or hard-failed â€” mirroring codex.
     import base64 as _b64
 
     payload = _b64.b64encode(b"hello from a file").decode()
@@ -399,7 +399,7 @@ def test_split_pi_prompt_inlines_text_input_file():
 
 def test_split_pi_prompt_skips_binary_input_file():
     # A binary input_file (e.g. PDF) can't be inlined as text; it's skipped
-    # (with a logged warning), not raised — the turn still runs.
+    # (with a logged warning), not raised â€” the turn still runs.
     message, images = _split_pi_prompt(
         [
             {"type": "input_text", "text": "hi"},
@@ -792,7 +792,7 @@ class TestToolServer(unittest.TestCase):
         Regression for F03: serialization happens on the response path
         *outside* ``_execute``'s try, so a tool returning a ``datetime`` (or
         ``set``) used to raise ``TypeError`` there, close the socket with zero
-        bytes, and hang the JS ``callTool`` promise — wedging the whole turn.
+        bytes, and hang the JS ``callTool`` promise â€” wedging the whole turn.
         The handler must instead always write a valid frame: here an
         ``{"error": ...}`` envelope, correlated by ``id``, delivered well
         within the timeout (proving it did not hang).
@@ -1001,7 +1001,7 @@ class TestToolServer(unittest.TestCase):
             a = _ToolServer()
             b = _ToolServer()
             self.assertNotEqual(a.token, b.token)
-            # token_urlsafe(32) → 256 bits → ~43 url-safe chars.
+            # token_urlsafe(32) â†’ 256 bits â†’ ~43 url-safe chars.
             self.assertGreaterEqual(len(a.token), 40)
 
         _run(_test())
@@ -1015,7 +1015,7 @@ class TestToolServer(unittest.TestCase):
         ``_policy_gate`` (not ``_tool_executor``) and surface
         ``{"block": True, ...}``. If the dispatch branch were missing, the
         frame would fall through to ``_execute`` and the tool executor would
-        run — so we assert the executor never fired.
+        run â€” so we assert the executor never fired.
         """
 
         async def _test():
@@ -1112,7 +1112,7 @@ class TestToolServer(unittest.TestCase):
         """With no ``_policy_gate`` wired, the verdict is ALLOW (fail-open).
 
         Single-process / test paths never install a gate. The native tool
-        must still run rather than wedge — so an unset gate yields
+        must still run rather than wedge â€” so an unset gate yields
         ``block=False`` rather than an error.
         """
 
@@ -1147,7 +1147,7 @@ class TestToolServer(unittest.TestCase):
         _run(_test())
 
     def test_policy_eval_gate_exception_fails_open(self):
-        """A gate that raises must not wedge Pi — the verdict is ALLOW.
+        """A gate that raises must not wedge Pi â€” the verdict is ALLOW.
 
         Mirrors the runner/scaffold contract: a transient policy-evaluation
         failure defaults to ALLOW. If this raised instead, every native tool
@@ -1271,20 +1271,20 @@ class TestPiRpcSession(unittest.TestCase):
 
 class TestPiExecutorConstructor(unittest.TestCase):
     def test_constructor_finds_pi(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         self.assertEqual(executor._pi_path, "/usr/bin/pi")
 
     def test_constructor_raises_when_pi_not_found(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value=None):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value=None):
             with self.assertRaises(ImportError):
                 PiExecutor()
 
     def test_constructor_databricks_with_env(self):
         with (
-            patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
+            patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
             patch(
-                "agent_meow.inner.pi_executor._read_databrickscfg",
+                "omnigent.inner.pi_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(host="https://h.example.com", token="tok"),
             ),
         ):
@@ -1295,8 +1295,8 @@ class TestPiExecutorConstructor(unittest.TestCase):
 
     def test_constructor_databricks_with_host_override_requires_auth_command(self):
         with (
-            patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
-            patch("agent_meow.inner.pi_executor._read_databrickscfg") as read_cfg,
+            patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
+            patch("omnigent.inner.pi_executor._read_databrickscfg") as read_cfg,
         ):
             with self.assertRaisesRegex(OSError, "requires a gateway auth command"):
                 PiExecutor(
@@ -1309,10 +1309,10 @@ class TestPiExecutorConstructor(unittest.TestCase):
 
     def test_constructor_databricks_with_auth_command(self):
         with (
-            patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
-            patch("agent_meow.inner.pi_executor._read_databrickscfg") as read_cfg,
+            patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
+            patch("omnigent.inner.pi_executor._read_databrickscfg") as read_cfg,
             patch(
-                "agent_meow.inner.pi_executor._fetch_shell_command_token",
+                "omnigent.inner.pi_executor._fetch_shell_command_token",
                 return_value="command-token",
             ) as fetch_command_token,
         ):
@@ -1337,40 +1337,40 @@ class TestPiExecutorConstructor(unittest.TestCase):
 
     def test_constructor_databricks_no_creds_raises(self):
         with (
-            patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
+            patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
             patch.dict("os.environ", {}, clear=True),
-            patch("agent_meow.inner.pi_executor._read_databrickscfg", return_value=None),
+            patch("omnigent.inner.pi_executor._read_databrickscfg", return_value=None),
         ):
             with self.assertRaises(EnvironmentError):
                 PiExecutor(gateway=True)
 
     def test_constructor_with_model_override(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor(model="my-model")
         self.assertEqual(executor._model_override, "my-model")
 
     def test_supports_streaming(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         self.assertTrue(executor.supports_streaming())
 
     def test_supports_tool_calling(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         self.assertTrue(executor.supports_tool_calling())
 
     def test_handles_tools_internally(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         self.assertTrue(executor.handles_tools_internally())
 
     def test_supports_live_message_queue(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         self.assertTrue(executor.supports_live_message_queue())
 
     def test_no_tools_flag_in_extra_args(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         self.assertIn("--no-tools", executor._extra_args)
 
@@ -1392,7 +1392,7 @@ class TestGateNativeTool(unittest.TestCase):
 
     @staticmethod
     def _executor():
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             return PiExecutor()
 
     def test_deny_verdict_blocks_with_reason(self):
@@ -1408,11 +1408,11 @@ class TestGateNativeTool(unittest.TestCase):
 
         verdict = _run(executor._gate_native_tool("read", {"path": "/etc/secret"}))
 
-        # DENY → block, carrying the policy's human-readable reason so the
+        # DENY â†’ block, carrying the policy's human-readable reason so the
         # model sees why. A False here means a denied native tool would run.
         self.assertEqual(verdict, {"block": True, "reason": "no /etc reads"})
         # The evaluator was invoked at the TOOL_CALL phase with the real
-        # tool name + args (not a fixed stub) — proving the native call's
+        # tool name + args (not a fixed stub) â€” proving the native call's
         # identity reaches the policy engine.
         self.assertEqual(seen["phase"], "PHASE_TOOL_CALL")
         self.assertEqual(seen["data"], {"name": "read", "arguments": {"path": "/etc/secret"}})
@@ -1426,7 +1426,7 @@ class TestGateNativeTool(unittest.TestCase):
         executor._policy_evaluator = fake_evaluator
 
         verdict = _run(executor._gate_native_tool("read", {"path": "/tmp/ok"}))
-        # ALLOW must not block — otherwise every native tool call is broken.
+        # ALLOW must not block â€” otherwise every native tool call is broken.
         self.assertEqual(verdict, {"block": False, "reason": ""})
 
     def test_deny_without_reason_uses_fallback(self):
@@ -1466,7 +1466,7 @@ class TestResolveModel(unittest.TestCase):
         # precedence, mid-session model overrides would silently
         # no-op on the pi harness. Mirrors ``cfg.model`` precedence
         # in claude-sdk / codex / openai-agents.
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor(model="constructor-default")
         self.assertEqual(
             executor._resolve_model(ExecutorConfig(model="cfg-override")), "cfg-override"
@@ -1476,18 +1476,18 @@ class TestResolveModel(unittest.TestCase):
         # Constructor value acts as the spec-level default when
         # ``cfg.model`` is None (no per-turn ``/model`` override
         # in effect).
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor(model="constructor-default")
         self.assertEqual(
             executor._resolve_model(ExecutorConfig(model=None)), "constructor-default"
         )
 
     def test_cfg_model_used_when_no_constructor_default(self):
-        # Existing case — preserved from prior behavior. With
+        # Existing case â€” preserved from prior behavior. With
         # neither a constructor default nor a per-turn override
         # actively set on the spec, ``cfg.model`` still flows
         # through unchanged.
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         self.assertEqual(
             executor._resolve_model(ExecutorConfig(model="config-model")), "config-model"
@@ -1502,9 +1502,9 @@ class TestResolveModel(unittest.TestCase):
 class TestBuildEnvAndDir(unittest.TestCase):
     def test_databricks_creates_models_json(self):
         with (
-            patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
+            patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
             patch(
-                "agent_meow.inner.pi_executor._read_databrickscfg",
+                "omnigent.inner.pi_executor._read_databrickscfg",
                 return_value=DatabricksCredentials(host="https://h.example.com", token="tok"),
             ),
         ):
@@ -1530,7 +1530,7 @@ class TestBuildEnvAndDir(unittest.TestCase):
             shutil.rmtree(config.tmp_dir, ignore_errors=True)
 
     def test_tools_generate_extension_js(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
 
         tools = [
@@ -1571,13 +1571,13 @@ def test_gateway_seeds_managed_settings_from_global_agent(
     )
     (global_agent / "npm").mkdir()
     monkeypatch.setattr(
-        "agent_meow.inner.pi_settings.DEFAULT_PI_AGENT_DIR",
+        "omnigent.inner.pi_settings.DEFAULT_PI_AGENT_DIR",
         global_agent,
     )
     with (
-        patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
+        patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
         patch(
-            "agent_meow.inner.pi_executor._read_databrickscfg",
+            "omnigent.inner.pi_executor._read_databrickscfg",
             return_value=DatabricksCredentials(host="https://h.example.com", token="tok"),
         ),
     ):
@@ -1595,7 +1595,7 @@ def test_gateway_seeds_managed_settings_from_global_agent(
 
 
 # ---------------------------------------------------------------------------
-# Pi tool allowlist (--no-tools + --tools) tests — function-based per
+# Pi tool allowlist (--no-tools + --tools) tests â€” function-based per
 # the project's testing rules. ``--no-tools`` alone disables every tool
 # in pi 0.68+ (built-in AND extension); the executor must pair it with
 # ``--tools <names>`` for the bridge to actually expose anything.
@@ -1606,17 +1606,17 @@ def test_pi_extra_args_disable_native_tools_by_default() -> None:
     """
     A turn with no bridged tools must still pass ``--no-tools`` so
     pi's native read/bash/edit/write stay disabled. ``--tools`` is
-    intentionally absent — passing an empty allowlist would be a
+    intentionally absent â€” passing an empty allowlist would be a
     no-op, but pi parses ``--tools `` as an error in some flag
     parsers, so we just omit it.
     """
-    with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+    with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
         executor = PiExecutor()
     config = executor._build_env_and_dir([], None, None, None)
     try:
         # Native tools off by default.
         assert "--no-tools" in config.extra_args, (
-            "--no-tools missing → pi's native read/bash/edit/write would be exposed"
+            "--no-tools missing â†’ pi's native read/bash/edit/write would be exposed"
         )
         # No allowlist when no tools are bridged.
         assert "--tools" not in config.extra_args, (
@@ -1637,7 +1637,7 @@ def test_pi_tools_arg_allowlists_bridged_tool_names() -> None:
     alone wiped out extension tools and the model reported "I
     don't have a calculate tool available."
     """
-    with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+    with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
         executor = PiExecutor()
     tools = [
         {"name": "calculate", "description": "x", "parameters": {"type": "object"}},
@@ -1647,14 +1647,14 @@ def test_pi_tools_arg_allowlists_bridged_tool_names() -> None:
     try:
         assert "--no-tools" in config.extra_args
         assert "--tools" in config.extra_args, (
-            "--tools missing → pi 0.68+ keeps extension tools disabled, model "
+            "--tools missing â†’ pi 0.68+ keeps extension tools disabled, model "
             "won't see calculate/get_current_time"
         )
         names_arg = config.extra_args[config.extra_args.index("--tools") + 1]
         # Comma-separated, both bridged names + ``read`` (injected
         # by the skills layer so Pi's ``formatSkillsForPrompt``
         # sees it and injects the skill index into the system
-        # prompt — Pi gates skill-prompt injection on
+        # prompt â€” Pi gates skill-prompt injection on
         # ``selectedTools.includes("read")``).
         actual = sorted(names_arg.split(","))
         assert actual == ["calculate", "get_current_time", "read"], (
@@ -1676,7 +1676,7 @@ def test_pi_tools_arg_skips_unnamed_entries() -> None:
     can't drift apart and produce a name in one but not the
     other.
     """
-    with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+    with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
         executor = PiExecutor()
     tools = [
         {"name": "good", "description": "x", "parameters": {"type": "object"}},
@@ -1690,7 +1690,7 @@ def test_pi_tools_arg_skips_unnamed_entries() -> None:
         assert "--tools" in config.extra_args
         names_arg = config.extra_args[config.extra_args.index("--tools") + 1]
         # ``read`` is also present (injected by the skills layer for
-        # Pi's skill-prompt gating — see ``_build_env_and_dir``).
+        # Pi's skill-prompt gating â€” see ``_build_env_and_dir``).
         assert sorted(names_arg.split(",")) == ["good", "read"], (
             f"unnamed / non-string-named tools must be filtered; got {names_arg!r}"
         )
@@ -1707,7 +1707,7 @@ def test_pi_tools_arg_skips_unnamed_entries() -> None:
 
 class TestRunTurn(unittest.TestCase):
     def _make_executor(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             return PiExecutor()
 
     def test_empty_user_message_returns_turn_complete(self):
@@ -2076,7 +2076,7 @@ class TestRunTurn(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Pi thinking-delta → ReasoningChunk tests — function-based per the
+# Pi thinking-delta â†’ ReasoningChunk tests â€” function-based per the
 # project's testing rules. Event dicts mirror pi-ai's
 # ``AssistantMessageEvent`` union: ``thinking_start`` /
 # ``thinking_delta`` / ``thinking_end`` each carry ``contentIndex``
@@ -2097,7 +2097,7 @@ def _executor_with_scripted_rpc(lines: list[str], model: str | None = None) -> P
     :returns: Executor with ``_ensure_rpc`` patched to a fake session
         pre-loaded with ``lines``.
     """
-    with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+    with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
         executor = PiExecutor(model=model)
     fake_rpc = _PiRpcSession()
     fake_rpc._line_queue = asyncio.Queue()
@@ -2115,7 +2115,7 @@ def _executor_with_scripted_rpc(lines: list[str], model: str | None = None) -> P
 
 def test_pi_thinking_deltas_stream_as_reasoning_chunks() -> None:
     """
-    A pi thinking block (``thinking_start`` → ``thinking_delta``\\* →
+    A pi thinking block (``thinking_start`` â†’ ``thinking_delta``\\* â†’
     ``thinking_end``) streams as ReasoningChunk events: a
     ``reasoning_started`` marker, then one ``reasoning_text`` chunk per
     delta. Reasoning text must NOT leak into the final response text.
@@ -2141,7 +2141,7 @@ def test_pi_thinking_deltas_stream_as_reasoning_chunks() -> None:
                         },
                     }
                 ),
-                # Empty delta — must be dropped, not emitted as a no-op chunk.
+                # Empty delta â€” must be dropped, not emitted as a no-op chunk.
                 json.dumps(
                     {
                         "type": "message_update",
@@ -2201,7 +2201,7 @@ def test_pi_thinking_deltas_stream_as_reasoning_chunks() -> None:
         # events were dropped (the pre-fix behavior).
         assert len(reasoning) == 3, f"expected 3 ReasoningChunks, got {reasoning}"
         assert reasoning[0].event_type == "reasoning_started"
-        # The started marker carries no text — it only anchors the rail.
+        # The started marker carries no text â€” it only anchors the rail.
         assert reasoning[0].delta == ""
         assert reasoning[1].event_type == "reasoning_text"
         assert reasoning[1].delta == "Let me "
@@ -2214,7 +2214,7 @@ def test_pi_thinking_deltas_stream_as_reasoning_chunks() -> None:
 
         turn_complete = [e for e in events if isinstance(e, TurnComplete)]
         assert len(turn_complete) == 1
-        # Reasoning must stay out of the final text — "Let me reason."
+        # Reasoning must stay out of the final text â€” "Let me reason."
         # appearing here means thinking deltas were concatenated into
         # response_text.
         assert turn_complete[0].response == "Answer"
@@ -2290,13 +2290,13 @@ def test_pi_thinking_and_text_delta_ordering_preserved() -> None:
 
 class TestSessionManagement(unittest.TestCase):
     def test_session_key_from_session_id(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         key = executor._session_key([{"role": "user", "content": "hi", "session_id": "abc"}])
         self.assertEqual(key, "abc")
 
     def test_session_key_from_metadata(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         key = executor._session_key(
             [{"role": "user", "content": "hi", "metadata": {"session_id": "xyz"}}]
@@ -2304,19 +2304,19 @@ class TestSessionManagement(unittest.TestCase):
         self.assertEqual(key, "xyz")
 
     def test_session_key_default(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         key = executor._session_key([{"role": "user", "content": "hi"}])
         self.assertEqual(key, "__default__")
 
     def test_close_session(self):
         async def _test():
-            with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+            with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
                 executor = PiExecutor()
 
             mock_rpc = MagicMock()
             mock_rpc.close = AsyncMock()
-            from agent_meow.inner.pi_executor import _PiSessionState
+            from omnigent.inner.pi_executor import _PiSessionState
 
             executor._session_states["test"] = _PiSessionState(rpc=mock_rpc)
 
@@ -2328,12 +2328,12 @@ class TestSessionManagement(unittest.TestCase):
 
     def test_enqueue_session_message(self):
         async def _test():
-            with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+            with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
                 executor = PiExecutor()
 
             mock_rpc = MagicMock()
             mock_rpc.send_command = AsyncMock()
-            from agent_meow.inner.pi_executor import _PiSessionState
+            from omnigent.inner.pi_executor import _PiSessionState
 
             executor._session_states["test"] = _PiSessionState(rpc=mock_rpc)
 
@@ -2348,7 +2348,7 @@ class TestSessionManagement(unittest.TestCase):
 
     def test_enqueue_session_message_no_session(self):
         async def _test():
-            with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+            with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
                 executor = PiExecutor()
 
             result = await executor.enqueue_session_message("nonexistent", "STOP")
@@ -2368,13 +2368,13 @@ class TestSessionManagement(unittest.TestCase):
         """
 
         async def _test():
-            with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+            with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
                 executor = PiExecutor()
 
             mock_rpc = MagicMock()
             mock_rpc.send_command = AsyncMock()
             mock_rpc.close = AsyncMock()
-            from agent_meow.inner.pi_executor import _PiSessionState
+            from omnigent.inner.pi_executor import _PiSessionState
 
             executor._session_states["test"] = _PiSessionState(rpc=mock_rpc)
 
@@ -2400,14 +2400,14 @@ class TestSessionManagement(unittest.TestCase):
 class TestClose(unittest.TestCase):
     def test_close_all_sessions_and_tool_server(self):
         async def _test():
-            with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+            with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
                 executor = PiExecutor()
 
             mock_rpc1 = MagicMock()
             mock_rpc1.close = AsyncMock()
             mock_rpc2 = MagicMock()
             mock_rpc2.close = AsyncMock()
-            from agent_meow.inner.pi_executor import _PiSessionState
+            from omnigent.inner.pi_executor import _PiSessionState
 
             executor._session_states["s1"] = _PiSessionState(rpc=mock_rpc1)
             executor._session_states["s2"] = _PiSessionState(rpc=mock_rpc2)
@@ -2433,7 +2433,7 @@ class TestBlockedToolDetection(unittest.TestCase):
     """Verify that policy-blocked tool results are detected and mapped to BLOCKED status."""
 
     def _make_executor(self):
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             return PiExecutor()
 
     def _run_with_events(self, event_lines):
@@ -2596,7 +2596,7 @@ def test_resolve_pi_skill_args_all(tmp_path: Path) -> None:
     Failing this test means the resolver's ``"all"`` branch dropped
     bundle skills, host skills, or both.
     """
-    from agent_meow.inner.pi_executor import _resolve_pi_skill_args
+    from omnigent.inner.pi_executor import _resolve_pi_skill_args
 
     bundle = tmp_path / "bundle"
     skills_root = bundle / "skills"
@@ -2623,11 +2623,11 @@ def test_resolve_pi_skill_args_all(tmp_path: Path) -> None:
 def test_resolve_pi_skill_args_none(tmp_path: Path) -> None:
     """``skills_filter='none'`` produces exactly ``['--no-skills']``.
 
-    No ``--skill`` flags either — explicit paths would override
+    No ``--skill`` flags either â€” explicit paths would override
     ``--no-skills`` per Pi's flag semantics, so the hermetic case
     must be empty everywhere.
     """
-    from agent_meow.inner.pi_executor import _resolve_pi_skill_args
+    from omnigent.inner.pi_executor import _resolve_pi_skill_args
 
     bundle = tmp_path / "bundle"
     skills_root = bundle / "skills"
@@ -2649,11 +2649,11 @@ def test_resolve_pi_skill_args_named_subset(tmp_path: Path) -> None:
     """``skills_filter=[name, ...]`` produces ``--no-skills`` plus
     one ``--skill <path>`` per named bundle skill.
 
-    Names not present in the bundle are silently skipped — adding
+    Names not present in the bundle are silently skipped â€” adding
     a ``--skill`` flag pointing at a non-existent path would crash
     Pi at startup.
     """
-    from agent_meow.inner.pi_executor import _resolve_pi_skill_args
+    from omnigent.inner.pi_executor import _resolve_pi_skill_args
 
     bundle = tmp_path / "bundle"
     skills_root = bundle / "skills"
@@ -2683,9 +2683,9 @@ def test_resolve_pi_skill_args_no_bundle() -> None:
     runs), ``["--no-skills"]`` for the suppression cases.
 
     Catches a regression where the resolver would crash on missing
-    bundle — the agent would fail to spawn at all.
+    bundle â€” the agent would fail to spawn at all.
     """
-    from agent_meow.inner.pi_executor import _resolve_pi_skill_args
+    from omnigent.inner.pi_executor import _resolve_pi_skill_args
 
     assert _resolve_pi_skill_args("all", None) == []
     assert _resolve_pi_skill_args("none", None) == ["--no-skills"]
@@ -2695,7 +2695,7 @@ def test_resolve_pi_skill_args_no_bundle() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Databricks gateway default-model + models.json parity tests — the pi
+# Databricks gateway default-model + models.json parity tests â€” the pi
 # mirror of the claude-sdk default plumbing. The ucode-cached
 # path gets its default from the producer (workflow.py); these cover the
 # executor's own profile-derived path and the models.json invariants.
@@ -2704,18 +2704,18 @@ def test_resolve_pi_skill_args_no_bundle() -> None:
 
 def test_profile_gateway_resolves_databricks_default_model() -> None:
     """
-    On the profile-derived gateway path (no gateway host / base URL — the
+    On the profile-derived gateway path (no gateway host / base URL â€” the
     producer's ucode lookup early-returned), a missing model resolves to
     the shared Databricks default instead of ``None``.
 
-    Failure means pi falls back to its own host default — an
+    Failure means pi falls back to its own host default â€” an
     Anthropic-direct id the Databricks AI gateway rejects, surfacing as a
     model error on the agent's first turn.
     """
     with (
-        patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
+        patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
         patch(
-            "agent_meow.inner.pi_executor._read_databrickscfg",
+            "omnigent.inner.pi_executor._read_databrickscfg",
             return_value=DatabricksCredentials(host="https://h.example.com", token="tok"),
         ),
     ):
@@ -2725,16 +2725,16 @@ def test_profile_gateway_resolves_databricks_default_model() -> None:
 
 def test_profile_gateway_default_does_not_clobber_explicit_model() -> None:
     """
-    The profile-path default only fills a gap — an explicit constructor
+    The profile-path default only fills a gap â€” an explicit constructor
     model (``HARNESS_PI_MODEL``) is used as-is.
 
     Failure means the fallback overrides a model the spec or ucode
     state pinned deliberately.
     """
     with (
-        patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
+        patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
         patch(
-            "agent_meow.inner.pi_executor._read_databrickscfg",
+            "omnigent.inner.pi_executor._read_databrickscfg",
             return_value=DatabricksCredentials(host="https://h.example.com", token="tok"),
         ),
     ):
@@ -2746,16 +2746,16 @@ def test_ucode_gateway_host_path_does_not_inject_default_model() -> None:
     """
     On the ucode-cached gateway path (gateway host + auth command supplied
     by the producer) the executor must NOT invent a model: the producer
-    already applied the default via ``UcodeHarnessConfig`` — mirrors
+    already applied the default via ``UcodeHarnessConfig`` â€” mirrors
     claude-sdk's gating, so the two layers can't fight over precedence.
 
     Failure (a non-None resolve here) means the executor would mask
     producer-side model resolution bugs instead of failing visibly.
     """
     with (
-        patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
+        patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"),
         patch(
-            "agent_meow.inner.pi_executor._fetch_shell_command_token",
+            "omnigent.inner.pi_executor._fetch_shell_command_token",
             return_value="command-token",
         ),
     ):
@@ -2770,10 +2770,10 @@ def test_ucode_gateway_host_path_does_not_inject_default_model() -> None:
 def test_non_gateway_path_does_not_inject_default_model() -> None:
     """
     Off the gateway entirely (direct Anthropic / pi-native auth), a missing
-    model stays ``None`` so pi picks its own default — a ``databricks-*``
+    model stays ``None`` so pi picks its own default â€” a ``databricks-*``
     id would not resolve outside the gateway's models.json.
     """
-    with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+    with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
         executor = PiExecutor()
     assert executor._resolve_model(ExecutorConfig(model=None)) is None
 
@@ -2781,7 +2781,7 @@ def test_non_gateway_path_does_not_inject_default_model() -> None:
 def test_databricks_default_model_is_resolvable_in_models_json() -> None:
     """
     The shared Databricks default must route to the anthropic provider AND
-    be listed in that provider's models — otherwise the default the
+    be listed in that provider's models â€” otherwise the default the
     producer/executor inject can't be resolved by pi at spawn time.
 
     Failure means the default-model constant and pi's models.json drifted
@@ -2848,7 +2848,7 @@ def test_build_models_json_registers_unknown_model_with_routed_provider() -> Non
 
     Reproduces the OpenRouter failure: ``moonshotai/kimi-k2.6`` routes to
     the ``databricks-completions`` catch-all, whose static model list is
-    empty — without registration Pi rejects the
+    empty â€” without registration Pi rejects the
     ``databricks-completions/moonshotai/kimi-k2.6`` selector with
     "Model not found" before the first turn. A regression that drops the
     registration brings that startup failure back for every non-Databricks
@@ -2866,7 +2866,7 @@ def test_build_models_json_registers_unknown_model_with_routed_provider() -> Non
     # doesn't strip attached images (#515).
     entry = next((e for e in completions["models"] if e["id"] == "moonshotai/kimi-k2.6"), None)
     assert entry == {"id": "moonshotai/kimi-k2.6", "input": ["text", "image"]}
-    # …and that provider points at the generic gateway with the
+    # â€¦and that provider points at the generic gateway with the
     # Chat-Completions dialect OpenRouter speaks.
     assert completions["baseUrl"] == "https://openrouter.ai/api/v1"
     assert completions["api"] == "openai-completions"
@@ -2883,7 +2883,7 @@ def test_build_models_json_known_model_not_duplicated_and_lists_not_mutated() ->
     module-level lists never absorb a run's model id.
 
     The second build (no model) must not contain the first build's foreign
-    id — if it does, the registration mutated the shared module-level list
+    id â€” if it does, the registration mutated the shared module-level list
     instead of rebinding, leaking one run's model into every later
     subprocess config.
     """
@@ -2891,7 +2891,7 @@ def test_build_models_json_known_model_not_duplicated_and_lists_not_mutated() ->
         "https://host.example.com", "tok", model="databricks-claude-sonnet-4-6"
     )
     anthropic_ids = [m["id"] for m in result["providers"]["databricks-anthropic"]["models"]]
-    # Exactly one entry for the already-listed id — no duplicate appended.
+    # Exactly one entry for the already-listed id â€” no duplicate appended.
     assert anthropic_ids.count("databricks-claude-sonnet-4-6") == 1
 
     _build_models_json("https://host.example.com", "tok", model="moonshotai/kimi-k2.6")
@@ -2916,7 +2916,7 @@ def test_clean_pi_env_excludes_host_secrets(monkeypatch) -> None:
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.inner.pi_executor import _clean_pi_env
+    from omnigent.inner.pi_executor import _clean_pi_env
 
     monkeypatch.setenv("DATABRICKS_TOKEN", "dapi-secret")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "aws-secret")
@@ -2942,23 +2942,23 @@ def test_clean_pi_env_excludes_host_secrets(monkeypatch) -> None:
 def test_clean_pi_env_extra_allowed_is_exact_opt_in(monkeypatch) -> None:
     """``extra_allowed`` admits exactly the named variables, nothing more.
 
-    This is the ``os_env.sandbox.env_passthrough`` hook — e.g. a
+    This is the ``os_env.sandbox.env_passthrough`` hook â€” e.g. a
     direct (non-gateway) run that authenticates Pi via
     ``ANTHROPIC_API_KEY`` names it in the spec. Other credentials in
     the host env must stay excluded.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.inner.pi_executor import _clean_pi_env
+    from omnigent.inner.pi_executor import _clean_pi_env
 
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     monkeypatch.setenv("DATABRICKS_TOKEN", "dapi-secret")
 
     env = _clean_pi_env(["ANTHROPIC_API_KEY"])
 
-    # The opted-in key passes through with its value intact…
+    # The opted-in key passes through with its value intactâ€¦
     assert env.get("ANTHROPIC_API_KEY") == "sk-ant-test"
-    # …without widening the allowlist for anything else.
+    # â€¦without widening the allowlist for anything else.
     assert "DATABRICKS_TOKEN" not in env
 
 
@@ -2966,12 +2966,12 @@ def test_clean_pi_env_passes_pi_and_proxy_config(monkeypatch) -> None:
     """Pi's own config and proxy/TLS settings survive the scrub.
 
     These are the categories the Pi CLI actually reads (``PI_*`` knobs,
-    proxy env, node's CA override) — dropping them would break
+    proxy env, node's CA override) â€” dropping them would break
     corp-proxy and custom-agent-dir setups.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.inner.pi_executor import _clean_pi_env
+    from omnigent.inner.pi_executor import _clean_pi_env
 
     monkeypatch.setenv("PI_SKIP_VERSION_CHECK", "1")
     monkeypatch.setenv("HTTPS_PROXY", "http://proxy:8080")
@@ -2993,8 +2993,8 @@ def test_clean_pi_env_includes_omnigent_session_marker(monkeypatch) -> None:
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.inner.pi_executor import _clean_pi_env
-    from agent_meow.runner.identity import (
+    from omnigent.inner.pi_executor import _clean_pi_env
+    from omnigent.runner.identity import (
         OMNIGENT_SESSION_ENV_VALUE,
         OMNIGENT_SESSION_ENV_VAR,
     )
@@ -3017,7 +3017,7 @@ def test_rpc_start_spawns_with_exact_env(monkeypatch) -> None:
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.inner import pi_executor as pi_mod
+    from omnigent.inner import pi_executor as pi_mod
 
     monkeypatch.setenv("FAKE_HOST_SECRET", "PWNED")
     captured: dict[str, dict[str, str]] = {}
@@ -3038,7 +3038,7 @@ def test_rpc_start_spawns_with_exact_env(monkeypatch) -> None:
 
     _run(_test())
 
-    # Exactly the executor-built env — nothing merged from os.environ.
+    # Exactly the executor-built env â€” nothing merged from os.environ.
     assert captured["env"] == {"PATH": "/usr/bin", "PI_CODING_AGENT_DIR": "/tmp/pi-agent"}
 
 
@@ -3118,7 +3118,7 @@ def test_rpc_start_log_does_not_leak_system_prompt(monkeypatch, caplog) -> None:
     :param monkeypatch: Pytest monkeypatch fixture.
     :param caplog: Pytest log-capture fixture.
     """
-    from agent_meow.inner import pi_executor as pi_mod
+    from omnigent.inner import pi_executor as pi_mod
 
     test_prompt = "TOP-SECRET-SYSTEM-PROMPT-DO-NOT-LOG-12345"
 
@@ -3138,7 +3138,7 @@ def test_rpc_start_log_does_not_leak_system_prompt(monkeypatch, caplog) -> None:
         )
         await rpc.close()
 
-    with caplog.at_level(logging.DEBUG, logger="agent_meow.inner.pi_executor"):
+    with caplog.at_level(logging.DEBUG, logger="omnigent.inner.pi_executor"):
         _run(_test())
 
     spawn_logs = [
@@ -3165,7 +3165,7 @@ def test_run_turn_spawn_log_redacts_system_prompt_end_to_end(monkeypatch, caplog
     :param monkeypatch: Pytest monkeypatch fixture.
     :param caplog: Pytest log-capture fixture.
     """
-    from agent_meow.inner import pi_executor as pi_mod
+    from omnigent.inner import pi_executor as pi_mod
 
     test_prompt = "END-TO-END-SYSTEM-PROMPT-LEAK-SENTINEL-67890"
     captured: dict[str, list[str]] = {}
@@ -3202,7 +3202,7 @@ def test_run_turn_spawn_log_redacts_system_prompt_end_to_end(monkeypatch, caplog
         finally:
             await executor.close()
 
-    with caplog.at_level(logging.DEBUG, logger="agent_meow.inner.pi_executor"):
+    with caplog.at_level(logging.DEBUG, logger="omnigent.inner.pi_executor"):
         events = _run(_test())
 
     turn_complete = [e for e in events if isinstance(e, TurnComplete)]
@@ -3230,14 +3230,14 @@ def test_run_turn_spawn_env_has_no_host_secrets(monkeypatch) -> None:
     Pi process through the full real path (reproduces the leak PoC).
 
     Unlike the unit tests above, this drives ``run_turn`` through the
-    REAL ``_ensure_rpc`` → ``_build_env_and_dir`` → ``start`` chain with
+    REAL ``_ensure_rpc`` â†’ ``_build_env_and_dir`` â†’ ``start`` chain with
     only the module-level subprocess seam stubbed, so it fails if ANY
     layer regresses (``__init__`` reverting to ``os.environ.copy()``,
     the spawn merge coming back, etc.).
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.inner import pi_executor as pi_mod
+    from omnigent.inner import pi_executor as pi_mod
 
     monkeypatch.setenv("FAKE_HOST_SECRET", "PWNED")
     captured: dict[str, dict[str, str]] = {}
@@ -3261,7 +3261,7 @@ def test_run_turn_spawn_env_has_no_host_secrets(monkeypatch) -> None:
     monkeypatch.setattr(pi_mod, "_create_subprocess_exec", _fake_spawn)
 
     async def _test():
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         try:
             return [
@@ -3300,8 +3300,8 @@ def test_run_turn_spawn_env_honors_spec_env_passthrough(monkeypatch) -> None:
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.inner import pi_executor as pi_mod
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner import pi_executor as pi_mod
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
     monkeypatch.setenv("MY_OPTED_TOKEN", "opted-in-value")
     monkeypatch.setenv("FAKE_HOST_SECRET", "PWNED")
@@ -3320,7 +3320,7 @@ def test_run_turn_spawn_env_honors_spec_env_passthrough(monkeypatch) -> None:
     monkeypatch.setattr(pi_mod, "_create_subprocess_exec", _fake_spawn)
 
     async def _test():
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             # ``type="none"`` skips the sandbox wrap so the test stays
             # platform-independent; env scrubbing applies either way.
             executor = PiExecutor(
@@ -3356,7 +3356,7 @@ def test_pi_sandbox_launcher_policy_carries_spawn_env_allowlist(monkeypatch, tmp
     Defense in depth: ``_clean_pi_env`` already filters the spawn env,
     and the launcher (``run_launcher``) additionally prunes its
     inherited environment to ``SandboxPolicy.spawn_env_allowlist``.
-    This test pins the wiring between the two — if ``PiExecutor`` stops
+    This test pins the wiring between the two â€” if ``PiExecutor`` stops
     passing ``spawn_env_names`` (or drops ``PI_CODING_AGENT_DIR``, which
     only joins the env per-spawn on the gateway path), the launcher
     prune would strip vars the executor deliberately set, silently
@@ -3366,9 +3366,9 @@ def test_pi_sandbox_launcher_policy_carries_spawn_env_allowlist(monkeypatch, tmp
     :param tmp_path: Pytest tmp dir used as the sandbox cwd so the
         policy resolve walks a tiny tree.
     """
-    from agent_meow.inner import sandbox as sandbox_mod
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-    from agent_meow.inner.sandbox import SandboxPolicy
+    from omnigent.inner import sandbox as sandbox_mod
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.inner.sandbox import SandboxPolicy
 
     monkeypatch.setenv("FAKE_HOST_SECRET", "PWNED")
     captured: dict[str, SandboxPolicy] = {}
@@ -3393,7 +3393,7 @@ def test_pi_sandbox_launcher_policy_carries_spawn_env_allowlist(monkeypatch, tmp
     monkeypatch.setattr(sandbox_mod, "resolve_sandbox", _fake_resolve_sandbox)
     monkeypatch.setattr(sandbox_mod, "create_exec_launcher", _fake_create_exec_launcher)
 
-    with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+    with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
         executor = PiExecutor(
             cwd=str(tmp_path),
             os_env=OSEnvSpec(sandbox=OSEnvSandboxSpec(type="linux_bwrap")),
@@ -3418,18 +3418,18 @@ def test_pi_sandbox_launcher_policy_carries_spawn_env_allowlist(monkeypatch, tmp
 
 def test_run_turn_bridge_extension_carries_live_server_token(monkeypatch) -> None:
     """The generated bridge extension carries the live server's token
-    through the full ``run_turn`` → ``_ensure_tool_server`` →
-    ``_ensure_rpc`` → ``_build_env_and_dir`` chain.
+    through the full ``run_turn`` â†’ ``_ensure_tool_server`` â†’
+    ``_ensure_rpc`` â†’ ``_build_env_and_dir`` chain.
 
     Bridging a tool starts a real ``_ToolServer`` with its own minted
     token; this drives the real wiring (only the subprocess seam stubbed)
     and reads the on-disk extension. If ``_ensure_rpc`` passed a
     stale/blank token, the embedded ``TOKEN`` would no longer equal the
-    server's secret — so this asserts they match exactly.
+    server's secret â€” so this asserts they match exactly.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.inner import pi_executor as pi_mod
+    from omnigent.inner import pi_executor as pi_mod
 
     captured: dict[str, str] = {}
 
@@ -3453,7 +3453,7 @@ def test_run_turn_bridge_extension_carries_live_server_token(monkeypatch) -> Non
     tools = [{"name": "lookup", "description": "x", "parameters": {"type": "object"}}]
 
     async def _test():
-        with patch("agent_meow.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
+        with patch("omnigent.inner.pi_executor._find_pi_cli", return_value="/usr/bin/pi"):
             executor = PiExecutor()
         try:
             events = [
@@ -3474,7 +3474,7 @@ def test_run_turn_bridge_extension_carries_live_server_token(monkeypatch) -> Non
 
     # The turn ran end-to-end (the spawn path executed, extension written).
     assert any(isinstance(e, TurnComplete) for e in events)
-    # The token embedded in the bridge must be the SERVER's actual secret —
+    # The token embedded in the bridge must be the SERVER's actual secret â€”
     # a mismatch (or empty token) would make Pi's tool calls unauthorized.
     assert f"const TOKEN = {json.dumps(live_token)};" in captured["extension"]
     # Sanity: a freshly minted token is non-trivial (not "" or a stub).
@@ -3482,7 +3482,7 @@ def test_run_turn_bridge_extension_carries_live_server_token(monkeypatch) -> Non
 
 
 # ---------------------------------------------------------------------------
-# Pi token-usage → TurnComplete.usage tests
+# Pi token-usage â†’ TurnComplete.usage tests
 #
 # pi (``@mariozechner/pi-coding-agent``) forwards assistant messages whose
 # ``usage`` object carries ``input`` / ``output`` / ``cacheRead`` /
@@ -3544,7 +3544,7 @@ def test_pi_usage_captured_from_message_end() -> None:
     A ``message_end`` event whose assistant message carries a ``usage``
     object surfaces on ``TurnComplete.usage`` with each pi field mapped to
     the agent-meow schema key. Asserts the actual numbers so a swapped or
-    dropped mapping (e.g. cacheRead→cache_creation instead of cache_read)
+    dropped mapping (e.g. cacheReadâ†’cache_creation instead of cache_read)
     fails loud rather than passing on mere presence.
     """
 
@@ -3575,10 +3575,10 @@ def test_pi_usage_captured_from_message_end() -> None:
         turn_complete = [e for e in events if isinstance(e, TurnComplete)]
         assert len(turn_complete) == 1
         usage = turn_complete[0].usage
-        # usage must be populated — None here means the message_end capture
+        # usage must be populated â€” None here means the message_end capture
         # site never ran or the mapping returned None for a real usage dict.
         assert usage is not None, "pi usage was not threaded onto TurnComplete"
-        # Each value proves a specific pi-field → omnigent-key mapping:
+        # Each value proves a specific pi-field â†’ omnigent-key mapping:
         assert usage["input_tokens"] == 1200  # <- usage.input
         assert usage["output_tokens"] == 350  # <- usage.output
         assert usage["total_tokens"] == 2414  # <- usage.totalTokens
@@ -3604,7 +3604,7 @@ def test_pi_usage_fallback_from_agent_end() -> None:
         executor = _executor_with_scripted_rpc(
             [
                 json.dumps({"type": "response", "success": True}),
-                # No message_end frame — usage must come from agent_end.
+                # No message_end frame â€” usage must come from agent_end.
                 json.dumps(
                     {
                         "type": "agent_end",
@@ -3755,7 +3755,7 @@ def test_pi_usage_sums_across_multiple_message_end() -> None:
         assert len(turn_complete) == 1
         usage = turn_complete[0].usage
         assert usage is not None, "usage was not aggregated across message_end events"
-        # Summed across both calls — last-only capture would give 1200 / 350.
+        # Summed across both calls â€” last-only capture would give 1200 / 350.
         assert usage["input_tokens"] == 2200  # 1000 + 1200
         assert usage["output_tokens"] == 550  # 200 + 350
         assert usage["total_tokens"] == 4164  # 1750 + 2414
@@ -3804,7 +3804,7 @@ def test_pi_turn_without_usage_leaves_usage_none() -> None:
 
         turn_complete = [e for e in events if isinstance(e, TurnComplete)]
         assert len(turn_complete) == 1
-        # No usage anywhere → usage stays None rather than a zero-filled dict.
+        # No usage anywhere â†’ usage stays None rather than a zero-filled dict.
         assert turn_complete[0].usage is None
         # The turn still completes normally with its streamed text.
         assert turn_complete[0].response == "Hi there"

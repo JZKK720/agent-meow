@@ -12,7 +12,7 @@ These tests exercise the pure parsing / classification helpers and
 verify the subprocess command shape produced by the registration
 flow. The end-to-end "actually fires the chooser when prefix + " is
 pressed in a real tmux" check lives in the manual verification step
-documented in ``designs/REPL_TMUX_PANE_SPLIT.md`` § 6 phase 5.
+documented in ``designs/REPL_TMUX_PANE_SPLIT.md`` Â§ 6 phase 5.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.repl._tmux_pane import (
+from omnigent.repl._tmux_pane import (
     OPT_AGENT_NAME,
     OPT_AGENT_YAML,
     OPT_CONV_ID,
@@ -41,7 +41,7 @@ from agent_meow.repl._tmux_pane import (
     register_pane,
 )
 
-# ── shared subprocess.run stub helpers ───────────────────────
+# â”€â”€ shared subprocess.run stub helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_capturing_runner(captured: list[list[str]]) -> Any:
@@ -49,7 +49,7 @@ def _make_capturing_runner(captured: list[list[str]]) -> Any:
     Build a ``subprocess.run``-shaped function that records each
     invocation's argv into *captured* and returns a stub result.
 
-    Avoids the ``lambda cmd, **_: captured.append(cmd) or …`` hack
+    Avoids the ``lambda cmd, **_: captured.append(cmd) or â€¦`` hack
     that mypy flags (``list.append`` returns ``None``).
     """
 
@@ -64,7 +64,7 @@ def _make_capturing_runner(captured: list[list[str]]) -> Any:
     return runner
 
 
-# ── _parse_bind_line ──────────────────────────────────────────
+# â”€â”€ _parse_bind_line â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_bind_line_default_quote_binding() -> None:
@@ -75,7 +75,7 @@ def test_parse_bind_line_default_quote_binding() -> None:
 
     Claim: parsing the default binding succeeds. A regression that
     drops the backslash-decoding (or breaks shlex token boundaries
-    around the embedded ``#{...}``) would fail this — the parser
+    around the embedded ``#{...}``) would fail this â€” the parser
     is the seam every later step relies on.
     """
     line = 'bind-key -T prefix \\" split-window -c "#{pane_current_path}"'
@@ -117,7 +117,7 @@ def test_parse_bind_line_returns_none_when_shlex_raises() -> None:
     propagate would crash ``_discover_split_bindings`` on any
     pathological line in ``list-keys`` output.
     """
-    # Unterminated quote — shlex.split raises ValueError on this.
+    # Unterminated quote â€” shlex.split raises ValueError on this.
     line = 'bind-key -T prefix x split-window -c "unclosed'
     assert _parse_bind_line(line) is None
 
@@ -129,7 +129,7 @@ def test_lambda_block_line_does_not_produce_a_wrapper(
     Tmux's mouse-menu bindings (e.g. ``bind-key -T prefix
     MouseDown3Pane if-shell -F '...' { display-menu ... split-window
     ... }``) shlex-parse to a key=``MouseDown3Pane`` and a command
-    starting with ``if-shell`` — NOT ``split-window`` /
+    starting with ``if-shell`` â€” NOT ``split-window`` /
     ``new-window``. The classifier must reject them so they don't
     get wrapped (which would mangle the user's mouse menu).
 
@@ -167,21 +167,21 @@ def test_parse_bind_line_returns_none_for_non_bind_key_line() -> None:
     assert _parse_bind_line("set-option -g status on") is None
 
 
-# ── _classify ──────────────────────────────────────────────
+# â”€â”€ _classify â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
     ("tokens", "expected"),
     [
-        # Default ``split-window -c "<path>"`` → vertical (no -h flag).
+        # Default ``split-window -c "<path>"`` â†’ vertical (no -h flag).
         (["split-window", "-c", "#{pane_current_path}"], "v"),
-        # Explicit -v flag → vertical.
+        # Explicit -v flag â†’ vertical.
         (["split-window", "-v"], "v"),
-        # Explicit -h flag → horizontal.
+        # Explicit -h flag â†’ horizontal.
         (["split-window", "-h"], "h"),
-        # -h with extra args → horizontal.
+        # -h with extra args â†’ horizontal.
         (["split-window", "-h", "-c", "#{pane_current_path}"], "h"),
-        # ``new-window`` → window/tab.
+        # ``new-window`` â†’ window/tab.
         (["new-window"], "w"),
         (["new-window", "-c", "#{pane_current_path}"], "w"),
     ],
@@ -203,20 +203,20 @@ def test_classify_returns_correct_direction(tokens: list[str], expected: str) ->
 @pytest.mark.parametrize(
     "tokens",
     [
-        # Empty tokens → not classifiable.
+        # Empty tokens â†’ not classifiable.
         [],
         # Custom shell wrapper, not a top-level split-window.
         ["run-shell", "my-custom-split-script"],
-        # Lambda chain or display-menu — not a split-window.
+        # Lambda chain or display-menu â€” not a split-window.
         ["display-menu", "..."],
-        # ``kill-pane`` etc. — no direction.
+        # ``kill-pane`` etc. â€” no direction.
         ["kill-pane"],
     ],
 )
 def test_classify_returns_none_for_non_split_commands(tokens: list[str]) -> None:
     """
     Anything that isn't a top-level ``split-window`` or
-    ``new-window`` must classify as ``None`` (skip — leave the
+    ``new-window`` must classify as ``None`` (skip â€” leave the
     user's binding untouched).
 
     Claim: custom split wrappers, kill-pane, lambda blocks, and
@@ -228,7 +228,7 @@ def test_classify_returns_none_for_non_split_commands(tokens: list[str]) -> None
     assert _classify(tokens) is None
 
 
-# ── _wrap_binding ──────────────────────────────────────────
+# â”€â”€ _wrap_binding â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_wrap_binding_constructs_if_shell_wrapper(
@@ -283,7 +283,7 @@ def test_wrap_binding_constructs_if_shell_wrapper(
     assert cmd[5:8] == ["if-shell", "-F", "#{?#{@omnigent-conv-id},1,0}"], (
         f"if-shell -F format-string regressed; got {cmd[5:8]!r}. The "
         f"format must check truthiness of the @omnigent-conv-id pane "
-        f"option — anything else and the wrapper either always or never "
+        f"option â€” anything else and the wrapper either always or never "
         f"routes to the chooser."
     )
     # True branch: the chooser. Must use the absolute
@@ -303,7 +303,7 @@ def test_wrap_binding_constructs_if_shell_wrapper(
     assert cmd[9] == 'split-window -c "#{pane_current_path}"', (
         f"original-command branch regressed; got {cmd[9]!r}. The user's "
         f"binding must be preserved exactly so non-agent-meow panes get "
-        f"identical behavior to before — that's what makes the global "
+        f"identical behavior to before â€” that's what makes the global "
         f"prefix-table mutation behaviorally invisible."
     )
 
@@ -363,7 +363,7 @@ def test_wrap_binding_quotes_paths_with_spaces(
     Claim: the wrapper escapes spaces in the binary path so the
     embedded shell command stays a single token. A regression
     that used naive f-string interpolation would produce
-    ``run-shell '/Users/me/My Project/.venv/bin/agent-meow pane-split …'``
+    ``run-shell '/Users/me/My Project/.venv/bin/agent-meow pane-split â€¦'``
     where shell-word boundaries split the path mid-way and the
     binding fails.
     """
@@ -401,34 +401,34 @@ def test_wrap_binding_supports_python_m_fallback_argv(
 ) -> None:
     """
     When :func:`_resolve_omnigent_argv` falls back to
-    ``[sys.executable, "-m", "agent_meow.cli"]`` (no resolvable
+    ``[sys.executable, "-m", "omnigent.cli"]`` (no resolvable
     binary on the PATH the running process inherited), the
     wrapper must embed the full three-element argv into the
     chooser shell command.
 
     Claim: every prefix element appears, in order, in the
     rendered chooser. A regression that only used the first
-    element would launch ``/path/to/python pane-split …`` —
+    element would launch ``/path/to/python pane-split â€¦`` â€”
     Python with no module flag, which fails immediately.
     """
     captured: list[list[str]] = []
     monkeypatch.setattr(subprocess, "run", _make_capturing_runner(captured))
     _wrap_binding(
         SplitBinding(key='"', direction="v", original_command="split-window"),
-        ["/usr/bin/python3", "-m", "agent_meow.cli"],
+        ["/usr/bin/python3", "-m", "omnigent.cli"],
     )
     chooser = captured[0][8]
     # All three prefix tokens must appear, joined by spaces, BEFORE
     # the ``pane-split`` subcommand. If only the python path
     # appears, the fallback path was truncated.
-    assert "/usr/bin/python3 -m agent_meow.cli pane-split -v" in chooser, (
+    assert "/usr/bin/python3 -m omnigent.cli pane-split -v" in chooser, (
         f"python-m fallback prefix not propagated; got chooser={chooser!r}. "
-        f"If ``-m agent_meow.cli`` is missing, the wrapper would invoke "
+        f"If ``-m omnigent.cli`` is missing, the wrapper would invoke "
         f"the bare python interpreter without telling it what to run."
     )
 
 
-# ── _resolve_omnigent_argv ──────────────────────────────
+# â”€â”€ _resolve_omnigent_argv â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_argv_uses_abspath_when_argv0_is_path_shaped(
@@ -444,7 +444,7 @@ def test_resolve_argv_uses_abspath_when_argv0_is_path_shaped(
     would lose user-supplied paths that aren't on the PATH the
     Python process inherited.
     """
-    from agent_meow.repl._tmux_pane import _resolve_omnigent_argv
+    from omnigent.repl._tmux_pane import _resolve_omnigent_argv
 
     monkeypatch.setattr("sys.argv", ["/some/abs/path/agent-meow", "run"])
     argv = _resolve_omnigent_argv()
@@ -467,7 +467,7 @@ def test_resolve_argv_uses_which_when_argv0_is_bare_name(
     would fall through to the python-m fallback even though a
     perfectly good binary is on PATH.
     """
-    from agent_meow.repl._tmux_pane import _resolve_omnigent_argv
+    from omnigent.repl._tmux_pane import _resolve_omnigent_argv
 
     monkeypatch.setattr("sys.argv", ["agent-meow", "run"])
     monkeypatch.setattr(shutil, "which", lambda name: "/resolved/bin/agent-meow")
@@ -482,21 +482,21 @@ def test_resolve_argv_falls_back_to_python_m_when_which_misses(
     When neither argv[0] inspection nor ``shutil.which`` can find a
     binary (degraded environment, sandboxed PATH, etc.), the
     resolver falls back to ``[sys.executable, "-m",
-    "agent_meow.cli"]`` — bulletproof because if Python is
-    running this code, ``agent_meow.cli`` is importable.
+    "omnigent.cli"]`` â€” bulletproof because if Python is
+    running this code, ``omnigent.cli`` is importable.
 
     Claim: the fallback is exactly three elements with the
     running interpreter and the correct module path. A regression
     that returned a bare name would propagate the 127 ("command
     not found") error the original bug report described.
     """
-    from agent_meow.repl._tmux_pane import _resolve_omnigent_argv
+    from omnigent.repl._tmux_pane import _resolve_omnigent_argv
 
     monkeypatch.setattr("sys.argv", ["agent-meow", "run"])
     monkeypatch.setattr(shutil, "which", lambda name: None)
     monkeypatch.setattr("sys.executable", "/path/to/python")
     argv = _resolve_omnigent_argv()
-    assert argv == ["/path/to/python", "-m", "agent_meow.cli"], (
+    assert argv == ["/path/to/python", "-m", "omnigent.cli"], (
         f"python-m fallback regressed; got {argv!r}. The fallback is "
         f"the only path that works in environments where the agent-meow "
         f"binary isn't directly findable, so silent breakage here means "
@@ -504,7 +504,7 @@ def test_resolve_argv_falls_back_to_python_m_when_which_misses(
     )
 
 
-# ── _discover_split_bindings ──────────────────────────────
+# â”€â”€ _discover_split_bindings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_discover_unwraps_existing_wrapper_to_recover_original(
@@ -513,11 +513,11 @@ def test_discover_unwraps_existing_wrapper_to_recover_original(
     """
     When ``register_pane`` is invoked a SECOND time on a pane that
     already has our wrapper installed, ``tmux list-keys -T prefix``
-    returns the wrapper itself — not the user's original binding.
+    returns the wrapper itself â€” not the user's original binding.
     Discovery must peel the wrapper off and recover the original
     command from the false branch, then re-classify it. Without
     this, repeat registration silently leaves an out-of-date
-    wrapper in place — the live regression that prompted this
+    wrapper in place â€” the live regression that prompted this
     code path (a pre-fix bare-name wrapper survived all subsequent
     register_pane runs because the new code didn't recognize the
     wrapper as wrappable).
@@ -543,7 +543,7 @@ def test_discover_unwraps_existing_wrapper_to_recover_original(
         lambda cmd, **_: type("R", (), {"stdout": fake_output, "returncode": 0})(),
     )
 
-    from agent_meow.repl._tmux_pane import _discover_split_bindings
+    from omnigent.repl._tmux_pane import _discover_split_bindings
 
     bindings = _discover_split_bindings()
     assert len(bindings) == 1, (
@@ -554,15 +554,15 @@ def test_discover_unwraps_existing_wrapper_to_recover_original(
     )
     b = bindings[0]
     assert b.key == '"', f"key regressed: {b.key!r}"
-    # The classifier looked at the UNWRAPPED original command —
-    # ``split-window`` (no -h) → vertical.
+    # The classifier looked at the UNWRAPPED original command â€”
+    # ``split-window`` (no -h) â†’ vertical.
     assert b.direction == "v", (
         f"direction code didn't carry through unwrap; got {b.direction!r}. "
         f"This means the next ``register_pane`` would reinstall a wrapper "
         f"with the wrong direction."
     )
     # The user's original command is preserved for the next wrapper's
-    # else branch — bit-identical to what was bound before our first
+    # else branch â€” bit-identical to what was bound before our first
     # register_pane ran.
     assert "split-window" in b.original_command, (
         f"original command not recovered: {b.original_command!r}"
@@ -576,16 +576,16 @@ def test_register_pane_strips_existing_python_m_prefix_idempotently(
     """
     Register-twice scenario: the second invocation receives a
     launch_argv that ALREADY starts with
-    ``[<python>, -m, agent_meow.cli, ...]`` (because the first
+    ``[<python>, -m, omnigent.cli, ...]`` (because the first
     invocation normalized it and the user's REPL is now running
-    via ``python -m agent_meow.cli``). The second invocation must
+    via ``python -m omnigent.cli``). The second invocation must
     NOT re-prepend, which would produce a doubled
-    ``-m agent_meow.cli -m agent_meow.cli`` and break the picker
+    ``-m omnigent.cli -m omnigent.cli`` and break the picker
     when it tries to ``os.execvp`` the duplicated argv.
 
     Claim: after a second ``register_pane`` call, the stored
-    ``@omnigent-launch-argv`` has exactly one ``-m agent_meow.cli``
-    marker in the prefix — same shape as a first-time call.
+    ``@omnigent-launch-argv`` has exactly one ``-m omnigent.cli``
+    marker in the prefix â€” same shape as a first-time call.
     A regression that re-prepended the prefix would store a
     doubled form and crash the picker on subsequent splits.
     """
@@ -610,13 +610,13 @@ def test_register_pane_strips_existing_python_m_prefix_idempotently(
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     # Simulate the second register_pane invocation: launch_argv is
-    # ALREADY in [python, -m, agent_meow.cli, run, ...] form —
+    # ALREADY in [python, -m, omnigent.cli, run, ...] form â€”
     # what a pane-picker-launched REPL would see at boot.
     register_pane(
         conv_id="conv_x",
         agent_name="a",
         agent_yaml=None,
-        launch_argv=["/p/python", "-m", "agent_meow.cli", "run", "/x.yaml", "--agent-meow"],
+        launch_argv=["/p/python", "-m", "omnigent.cli", "run", "/x.yaml", "--agent-meow"],
         server_url=None,
     )
 
@@ -626,14 +626,14 @@ def test_register_pane_strips_existing_python_m_prefix_idempotently(
     assert stored_argv == [
         "/p/python",
         "-m",
-        "agent_meow.cli",
+        "omnigent.cli",
         "run",
         "/x.yaml",
         "--agent-meow",
     ], (
         f"launch-argv regressed to a doubled form: {stored_argv!r}. The "
         f"picker calls ``os.execvp(argv[0], argv)``, so a doubled "
-        f"``-m agent_meow.cli`` would crash with a Python module-import "
+        f"``-m omnigent.cli`` would crash with a Python module-import "
         f"error or invoke a wrong subcommand."
     )
 
@@ -644,9 +644,9 @@ def test_register_pane_repairs_already_doubled_prefix(
 ) -> None:
     """
     Regression test for the live state observed on a real pane:
-    ``[python, -m, agent_meow.cli, -m, agent_meow.cli, run, ...]``
-    — left there by an earlier register_pane that stripped only
-    one ``-m agent_meow.cli`` prefix and re-prepended a fresh
+    ``[python, -m, omnigent.cli, -m, omnigent.cli, run, ...]``
+    â€” left there by an earlier register_pane that stripped only
+    one ``-m omnigent.cli`` prefix and re-prepended a fresh
     one. The new normalization scans for the user's first
     subcommand (``run``) and slices from there, so any number
     of leading launcher tokens get collapsed to exactly one
@@ -675,7 +675,7 @@ def test_register_pane_repairs_already_doubled_prefix(
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    # Doubled form — exactly the shape the live pane had after
+    # Doubled form â€” exactly the shape the live pane had after
     # one buggy register_pane invocation chained onto a previous one.
     register_pane(
         conv_id="conv_x",
@@ -684,9 +684,9 @@ def test_register_pane_repairs_already_doubled_prefix(
         launch_argv=[
             "/p/python",
             "-m",
-            "agent_meow.cli",
+            "omnigent.cli",
             "-m",
-            "agent_meow.cli",
+            "omnigent.cli",
             "run",
             "/x.yaml",
             "--agent-meow",
@@ -702,7 +702,7 @@ def test_register_pane_repairs_already_doubled_prefix(
     assert stored_argv == [
         "/p/python",
         "-m",
-        "agent_meow.cli",
+        "omnigent.cli",
         "run",
         "/x.yaml",
         "--agent-meow",
@@ -793,7 +793,7 @@ def test_discover_split_bindings_picks_user_custom_keys(
     ]
 
 
-# ── register_pane ──────────────────────────────────────────
+# â”€â”€ register_pane â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -809,12 +809,12 @@ def _pane_integration_enabled(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]
     Flip ``PANE_INTEGRATION_ENABLED`` on for tests that exercise
     the wrapper-installation path.
 
-    The constant defaults to ``False`` (kill-switch — feature is
+    The constant defaults to ``False`` (kill-switch â€” feature is
     disabled by default in production). Tests that need the
     wrapper logic to actually run must explicitly enable it; this
     fixture makes the dependency obvious at the test signature.
     """
-    monkeypatch.setattr("agent_meow.repl._tmux_pane.PANE_INTEGRATION_ENABLED", True)
+    monkeypatch.setattr("omnigent.repl._tmux_pane.PANE_INTEGRATION_ENABLED", True)
     yield
 
 
@@ -853,7 +853,7 @@ def test_register_pane_unmarks_pane_when_kill_switch_disabled_inside_tmux(
 
     Claim: ``register_pane`` issues exactly one ``set-option -u
     <opt>`` invocation per ``@omnigent-*`` option, targeting the
-    current pane — and does NOT install any wrapper bindings,
+    current pane â€” and does NOT install any wrapper bindings,
     write new options, or run discovery. This is the cleanup path
     that makes "the feature is disabled" mean what users expect:
     pressing the split key in an agent-meow pane stops opening
@@ -876,7 +876,7 @@ def test_register_pane_unmarks_pane_when_kill_switch_disabled_inside_tmux(
 
     # Every captured call must be an unset of an ``@omnigent-*``
     # option targeting our pane. No bind-key, no list-keys, no
-    # version probe — the kill-switch path skips all of those.
+    # version probe â€” the kill-switch path skips all of those.
     for cmd in captured:
         assert cmd[:5] == ["tmux", "set-option", "-p", "-t", "%5"], (
             f"unexpected tmux call on kill-switch path: {cmd!r}. The "
@@ -890,7 +890,7 @@ def test_register_pane_unmarks_pane_when_kill_switch_disabled_inside_tmux(
     unset_options = {cmd[6] for cmd in captured if cmd[5] == "-u"}
     # All five options must be unset. If any is missing, leftover
     # wrapper bindings could still find a truthy value on the pane
-    # and route to the chooser — defeating the kill-switch.
+    # and route to the chooser â€” defeating the kill-switch.
     assert unset_options == {
         OPT_CONV_ID,
         OPT_AGENT_NAME,
@@ -911,7 +911,7 @@ def test_register_pane_no_op_outside_tmux(
 ) -> None:
     """
     When ``$TMUX`` is unset, ``register_pane`` MUST NOT issue any
-    subprocess calls — the REPL is running in a plain terminal
+    subprocess calls â€” the REPL is running in a plain terminal
     and the integration is invisible.
 
     Claim: zero subprocess invocations. A regression that always
@@ -944,7 +944,7 @@ def test_register_pane_skips_when_tmux_pane_unset(
     """
     ``$TMUX`` set but ``$TMUX_PANE`` unset is a degenerate
     environment (some sandbox / pseudo-tmux wrappers). Skip the
-    registration — we can't identify which pane to mark.
+    registration â€” we can't identify which pane to mark.
 
     Claim: zero subprocess invocations even with $TMUX set, when
     $TMUX_PANE is missing.
@@ -980,7 +980,7 @@ def test_register_pane_advertises_options_and_wraps_bindings(
     2. Invoke ``list-keys -T prefix`` once to discover bindings.
     3. Issue one ``bind-key`` wrapper per discovered split.
 
-    The end-to-end shape is what the design doc § 5.2 documents
+    The end-to-end shape is what the design doc Â§ 5.2 documents
     and what the chooser depends on. A regression here would
     either skip pane-option setup (chooser can't read context)
     or skip wrapper installation (split key still does plain
@@ -1069,7 +1069,7 @@ def test_register_pane_advertises_options_and_wraps_bindings(
             f"other than the ``prefix`` table is a regression."
         )
         # The wrapper's conditional must be the ``@omnigent-conv-id``
-        # truthy check — that's what keeps the wrapper inert in
+        # truthy check â€” that's what keeps the wrapper inert in
         # non-agent-meow panes.
         if_shell_idx = call.index("if-shell")
         assert call[if_shell_idx + 1] == "-F"

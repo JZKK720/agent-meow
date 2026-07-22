@@ -11,18 +11,18 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent_meow.entities import DEFAULT_ENVIRONMENT_ID
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from agent_meow.inner.os_env import EditEntry, OpResult, OSEnvironment
-from agent_meow.inner.terminal import TerminalInstance
-from agent_meow.runner.resource_registry import (
+from omnigent.entities import DEFAULT_ENVIRONMENT_ID
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
+from omnigent.inner.os_env import EditEntry, OpResult, OSEnvironment
+from omnigent.inner.terminal import TerminalInstance
+from omnigent.runner.resource_registry import (
     CLAUDE_NATIVE_TERMINAL_ROLE,
     CODEX_NATIVE_TERMINAL_ROLE,
     SessionResourceRegistry,
     TerminalExitEvent,
     TerminalLifecycle,
 )
-from agent_meow.terminals import TerminalRegistry
+from omnigent.terminals import TerminalRegistry
 from tests.runner.helpers import make_test_terminal_instance
 
 
@@ -403,7 +403,7 @@ async def test_required_terminal_exit_while_idle_is_clean_shutdown(tmp_path: Pat
     The native agent terminal is long-lived: it goes ``idle`` when its turn
     finishes. A pane exit observed while idle means the work was already
     delivered and the process simply shut down, so the exit event must carry
-    ``session_was_idle=True`` — the runner uses that to avoid flipping the chat
+    ``session_was_idle=True`` â€” the runner uses that to avoid flipping the chat
     to ``failed`` (the spurious-"failed"-session bug).
 
     :param tmp_path: Temporary directory for fake terminal paths.
@@ -424,7 +424,7 @@ async def test_required_terminal_exit_while_idle_is_clean_shutdown(tmp_path: Pat
         registry, terminal_registry, instance, "conv_idle"
     )
 
-    # The agent worked, then its turn completed (pane quiesced → idle).
+    # The agent worked, then its turn completed (pane quiesced â†’ idle).
     on_activity = callbacks["on_activity"]
     on_idle = callbacks["on_idle"]
     assert callable(on_activity) and callable(on_idle)
@@ -446,7 +446,7 @@ async def test_required_terminal_exit_while_running_is_failure(tmp_path: Path) -
     """A required terminal that vanishes mid-turn is still a failure.
 
     When the last PTY-status edge was ``running``, the pane disappeared while
-    a turn was in flight — a genuine crash — so the exit event reports
+    a turn was in flight â€” a genuine crash â€” so the exit event reports
     ``session_was_idle=False`` and the runner keeps failing the session.
 
     :param tmp_path: Temporary directory for fake terminal paths.
@@ -485,7 +485,7 @@ async def test_required_terminal_exit_without_observed_status_is_failure(tmp_pat
 
     A boot failure (the process dies before producing any pane activity) leaves
     no recorded status, so the exit defaults to ``session_was_idle=False`` and
-    the session still fails — only a positively-observed ``idle`` suppresses the
+    the session still fails â€” only a positively-observed ``idle`` suppresses the
     failure.
 
     :param tmp_path: Temporary directory for fake terminal paths.
@@ -682,7 +682,7 @@ def test_resolve_environment_default_pins_none_sandbox_when_no_agent_spec(
     default (which would raise when no backend was available). We
     stub ``shutil.which`` to report ``bwrap`` IS present so that, if
     the default env wrongly routed through the platform default, it
-    would resolve to an active ``linux_bwrap`` policy — the assertion
+    would resolve to an active ``linux_bwrap`` policy â€” the assertion
     below proves it pins ``none`` instead.
 
     :param tmp_path: Per-test workspace dir.
@@ -690,7 +690,7 @@ def test_resolve_environment_default_pins_none_sandbox_when_no_agent_spec(
     :returns: None.
     """
     monkeypatch.setattr(
-        "agent_meow.inner.sandbox.shutil.which",
+        "omnigent.inner.sandbox.shutil.which",
         lambda name: "/usr/bin/bwrap",
     )
     monkeypatch.setenv("OMNIGENT_RUNNER_OS_ENV_ROOT", str(tmp_path))
@@ -785,7 +785,7 @@ async def test_cleanup_session_closes_primary_env(
         os.environ.pop("OMNIGENT_RUNNER_OS_ENV_ROOT", None)
 
 
-# ── Phase 4: cleanup endpoint tests ─────────────────────────────
+# â”€â”€ Phase 4: cleanup endpoint tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -795,7 +795,7 @@ async def test_cleanup_endpoint_returns_confirmation(
     """DELETE /v1/sessions/{id}/resources returns cleanup confirmation."""
     import httpx
 
-    from agent_meow.runner import create_runner_app
+    from omnigent.runner import create_runner_app
 
     os.environ["OMNIGENT_RUNNER_OS_ENV_ROOT"] = str(tmp_path)
     try:
@@ -833,7 +833,7 @@ async def test_cleanup_idempotent_for_unknown_session() -> None:
     """DELETE /v1/sessions/{id}/resources is safe for unknown sessions."""
     import httpx
 
-    from agent_meow.runner import create_runner_app
+    from omnigent.runner import create_runner_app
     from tests.runner.helpers import NullServerClient
 
     reg = SessionResourceRegistry()
@@ -853,7 +853,7 @@ async def test_cleanup_idempotent_for_unknown_session() -> None:
     assert resp.json()["cleaned"] is True
 
 
-# ── os_env gate: list_resources ──────────────────────────────────────────────
+# â”€â”€ os_env gate: list_resources â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_list_resources_suppresses_default_env_when_spec_has_no_os_env() -> None:
@@ -869,7 +869,7 @@ def test_list_resources_suppresses_default_env_when_spec_has_no_os_env() -> None
     page = reg.list_resources("conv_no_env", agent_spec=spec)
 
     ids = [r.id for r in page.data]
-    # Default environment must be absent — the spec has no os_env so there
+    # Default environment must be absent â€” the spec has no os_env so there
     # is no primary filesystem environment to expose.  If this assertion
     # fails, the gate was not applied and the UI would show a "Working
     # folder" panel that can never return any files.
@@ -888,7 +888,7 @@ def test_list_resources_includes_default_env_when_spec_has_os_env(
     page = reg.list_resources("conv_with_env", agent_spec=spec)
 
     ids = [r.id for r in page.data]
-    # Default environment must be present — the spec has an os_env configured
+    # Default environment must be present â€” the spec has an os_env configured
     # so a primary filesystem environment exists and must be advertised.
     assert DEFAULT_ENVIRONMENT_ID in ids, (
         f"Default environment should be present when os_env is set, but found ids: {ids}"
@@ -913,14 +913,14 @@ def test_list_resources_includes_default_env_when_no_spec() -> None:
     )
 
 
-# ── os_env gate: resolve_environment ────────────────────────────────────────
+# â”€â”€ os_env gate: resolve_environment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_environment_raises_when_spec_has_no_os_env() -> None:
     """resolve_environment raises ValueError when agent_spec.os_env is None.
 
     The registry must not silently fall back to a synthetic default
-    environment when the spec explicitly has no os_env configured —
+    environment when the spec explicitly has no os_env configured â€”
     that would create an environment the agent cannot use.
     """
     reg = SessionResourceRegistry()
@@ -930,7 +930,7 @@ def test_resolve_environment_raises_when_spec_has_no_os_env() -> None:
         reg.resolve_environment("conv_no_env", DEFAULT_ENVIRONMENT_ID, spec)
 
 
-# ── Runner workspace overrides agent spec cwd ────────────────────────────
+# â”€â”€ Runner workspace overrides agent spec cwd â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_compute_default_env_root_runner_workspace_overrides_relative_cwd(
@@ -974,7 +974,7 @@ def test_compute_default_env_root_runner_workspace_overrides_absolute_cwd(
     designs/SESSION_WORKSPACE_SELECTION.md: an absolute cwd in the
     spec is a session-create-time *boundary*, not a runtime
     override. Host-launched sessions pick a workspace inside the
-    boundary and that pick — not the boundary itself — drives the
+    boundary and that pick â€” not the boundary itself â€” drives the
     runtime cwd. Without this rule, a user picking
     ``~/universe/src/foo`` for an agent declaring ``cwd: ~/universe``
     would be silently relocated up to ``~/universe``.
@@ -1080,5 +1080,5 @@ def test_resolve_environment_runner_workspace_overrides_absolute_spec_cwd(
 
     assert env is not None
     # Compare via realpath because tmp_path on macOS goes through
-    # /var → /private/var symlinks.
+    # /var â†’ /private/var symlinks.
     assert os.path.realpath(env.cwd) == os.path.realpath(workspace)

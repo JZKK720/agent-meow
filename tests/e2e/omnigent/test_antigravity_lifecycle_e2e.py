@@ -12,19 +12,19 @@ lifecycle* rather than a single assistant reply.
 
 Three properties are covered, all against STABLE-on-main behavior:
 
-1. **Parallel turns / no state bleed** — two concurrent ``agent-meow run``
+1. **Parallel turns / no state bleed** â€” two concurrent ``agent-meow run``
    invocations, each a distinct ephemeral session (``--no-session``) carrying a
    distinct sentinel token in its prompt. Each session's transcript must contain
-   ONLY its own sentinel — proving the per-session SDK ``Agent``/``Conversation``
+   ONLY its own sentinel â€” proving the per-session SDK ``Agent``/``Conversation``
    reuse (keyed by ``session_key`` in
-   :class:`~?agent_meow.inner.antigravity_executor.AntigravityExecutor`) does not
+   :class:`~?omnigent.inner.antigravity_executor.AntigravityExecutor`) does not
    leak one conversation's content into another's.
-2. **No orphaned ``localharness``** — snapshot the live ``localharness`` PIDs
+2. **No orphaned ``localharness``** â€” snapshot the live ``localharness`` PIDs
    before a turn and again after it ends cleanly; the turn must not leave a NEW
    native subprocess behind (the SDK ``Agent`` is closed on session teardown via
-   ``close_session`` / ``close`` → ``Agent.__aexit__``, which must reap the
+   ``close_session`` / ``close`` â†’ ``Agent.__aexit__``, which must reap the
    native binary).
-3. **Session cleanup reaps the runner/harness** — after a single ``agent-meow
+3. **Session cleanup reaps the runner/harness** â€” after a single ``agent-meow
    run`` turn's process tree exits, no native subprocess that this run started
    may linger.
 
@@ -32,16 +32,16 @@ Three properties are covered, all against STABLE-on-main behavior:
 
 - ``google-antigravity`` importable in the *agent-meow* venv (the test shells
   out, so the subprocess interpreter is what matters, not the test's own).
-- A Gemini API key resolvable — either a configured ``antigravity:`` block
+- A Gemini API key resolvable â€” either a configured ``antigravity:`` block
   (``agent-meow setup``) or an ambient ``GEMINI_API_KEY`` / ``ANTIGRAVITY_API_KEY``.
   Antigravity is Gemini-native (no Databricks gateway / ``base_url`` path), so
   unlike the gateway harnesses this test does NOT use ``patched_databrickscfg``
-  / ``omnigent_credentials_env`` — a missing key is a clean SKIP so the e2e
+  / ``omnigent_credentials_env`` â€” a missing key is a clean SKIP so the e2e
   shards stay green, and it runs for real wherever a key is present.
 
 **Why this test cannot use the mock LLM server:** The ``google-antigravity``
 SDK has no OpenAI-compatible ``base_url`` and no Databricks-gateway path.
-Setting ``OPENAI_BASE_URL`` to the mock server has no effect on this harness —
+Setting ``OPENAI_BASE_URL`` to the mock server has no effect on this harness â€”
 the SDK always connects directly to Google's Gemini backend. Furthermore,
 assertions 2 and 3 verify the lifecycle of a real native ``localharness``
 binary process; a mock LLM could not exercise this at all. The ``pytest.skip``
@@ -51,8 +51,8 @@ is absent.
 .. note::
    **glibc >= ~2.36 caveat.** The native ``localharness`` binary is linked
    against a recent glibc (needs ``GLIBC_ABI_DT_RELR``). On an older host (e.g.
-   glibc 2.31) a live turn fails at SDK setup with ``RuntimeError: …
-   localharness: … version 'GLIBC_ABI_DT_RELR' not found``, surfaced as an
+   glibc 2.31) a live turn fails at SDK setup with ``RuntimeError: â€¦
+   localharness: â€¦ version 'GLIBC_ABI_DT_RELR' not found``, surfaced as an
    ``ExecutorError``. There is a dev-only loader-shim workaround
    (``ANTIGRAVITY_HARNESS_PATH`` pointing at a newer glibc's loader), but this
    test never depends on it: the lifecycle assertions (2, 3) hold even when the
@@ -65,8 +65,8 @@ is absent.
 
 - :class:`AntigravityExecutor`'s per-session agent isolation regresses and one
   conversation's state bleeds into another (assertion 1).
-- The SDK ``Agent`` teardown (``close_session`` / ``close`` →
-  ``_close_agent`` → ``Agent.__aexit__``) stops reaping the native
+- The SDK ``Agent`` teardown (``close_session`` / ``close`` â†’
+  ``_close_agent`` â†’ ``Agent.__aexit__``) stops reaping the native
   ``localharness`` subprocess, leaking a process per turn (assertions 2, 3).
 - The ``agent-meow run`` one-shot path stops tearing down its local server /
   runner / harness process tree on exit.
@@ -94,7 +94,7 @@ _MODEL = "gemini-2.5-flash"
 
 # The native binary is matched on its on-disk path substring. ``pgrep``'s
 # default (process-name) match misses it because the visible argv[0] is the
-# dynamic loader (``ld-linux-…``); ``pgrep -f`` against the full command line
+# dynamic loader (``ld-linux-â€¦``); ``pgrep -f`` against the full command line
 # is the SDK's documented way to find the ``localharness`` process.
 _LOCALHARNESS_PGREP_PATTERN = "antigravity/bin/localharness"
 
@@ -129,7 +129,7 @@ def _antigravity_prereqs_missing(omnigent_python: Path) -> str | None:
 
     Probes the *agent-meow* venv (the interpreter the subprocess uses), not the
     test's own interpreter: the SDK import and the key resolution both have to
-    hold for the spawned ``agent-meow run`` to do anything. Booleans only — the
+    hold for the spawned ``agent-meow run`` to do anything. Booleans only â€” the
     key is never printed.
 
     :param omnigent_python: Interpreter with agent-meow installed, from the
@@ -145,7 +145,7 @@ def _antigravity_prereqs_missing(omnigent_python: Path) -> str | None:
             # from either the dedicated antigravity config block or ambient env.
             # ``find_spec`` is wrapped because for a namespace package it can
             # *raise* ModuleNotFoundError (not just return None) when the
-            # ``google`` parent fails to resolve — treat any such failure as
+            # ``google`` parent fails to resolve â€” treat any such failure as
             # "not importable" so the gate SKIPs cleanly instead of crashing the
             # probe (which would read as an inconclusive "could not probe").
             "import importlib.util as u, os\n"
@@ -154,7 +154,7 @@ def _antigravity_prereqs_missing(omnigent_python: Path) -> str | None:
             "except Exception:\n"
             "    sdk = False\n"
             "try:\n"
-            "    from agent_meow.onboarding.antigravity_auth import "
+            "    from omnigent.onboarding.antigravity_auth import "
             "antigravity_api_key_configured as c\n"
             "    cfg = c()\n"
             "except Exception:\n"
@@ -194,7 +194,7 @@ def _write_antigravity_bundle(bundle_dir: Path, *, name: str) -> Path:
     """Materialize a minimal antigravity agent bundle directory.
 
     A spec carrying ``spec_version`` must be a *directory* containing
-    ``config.yaml`` — the antigravity harness rejects a single ``.yaml`` file.
+    ``config.yaml`` â€” the antigravity harness rejects a single ``.yaml`` file.
     No ``auth:`` block is written so the key resolves from the ambient
     ``antigravity:`` config / env (see :func:`_antigravity_prereqs_missing`).
 
@@ -287,13 +287,13 @@ def _localharness_pids() -> set[int]:
     """Return the set of currently-live native ``localharness`` PIDs.
 
     Uses ``pgrep -f`` against the binary's on-disk path substring (the SDK's
-    documented way — the default process-name match misses it because argv[0] is
+    documented way â€” the default process-name match misses it because argv[0] is
     the dynamic loader). A non-zero ``pgrep`` exit with no match means "none",
     which maps to an empty set.
 
     Returning the PID *set* (not a count) is deliberate: the lifecycle
     assertions take a before/after set difference so they are robust to
-    unrelated ``localharness`` processes from other work on the same host — only
+    unrelated ``localharness`` processes from other work on the same host â€” only
     PIDs this turn newly created are considered, and pre-existing ones are
     ignored.
 
@@ -350,7 +350,7 @@ def test_antigravity_parallel_turns_no_state_bleed(
     Each run is a distinct ephemeral session (distinct bundle dir +
     ``--no-session``) whose prompt embeds a unique sentinel and asks the model
     to echo exactly that sentinel. The load-bearing property: each run's
-    transcript contains ONLY its own sentinel — never the other run's — so the
+    transcript contains ONLY its own sentinel â€” never the other run's â€” so the
     per-session ``Agent``/``Conversation`` keyed by ``session_key`` in
     :class:`AntigravityExecutor` does not bleed state across concurrent
     sessions.
@@ -407,7 +407,7 @@ def test_antigravity_parallel_turns_no_state_bleed(
 
     produced_own_sentinel = sentinel_a in out_a or sentinel_b in out_b
     if not produced_own_sentinel:
-        # Neither turn emitted real model output — only an infra failure makes
+        # Neither turn emitted real model output â€” only an infra failure makes
         # the no-bleed invariant unobservable, so require that signature before
         # skipping (otherwise a genuine "no output" regression would hide here).
         infra = _looks_like_infra_failure(results["a"]) or _looks_like_infra_failure(results["b"])
@@ -450,12 +450,12 @@ def test_antigravity_no_orphaned_localharness(
 
     Snapshots the live ``localharness`` PID set before the turn, runs one turn,
     then polls until the post-turn set returns to baseline (allowing for an
-    asynchronous shutdown). The assertion is on the set DIFFERENCE — PIDs this
-    turn created that are still alive — so unrelated ``localharness`` processes
+    asynchronous shutdown). The assertion is on the set DIFFERENCE â€” PIDs this
+    turn created that are still alive â€” so unrelated ``localharness`` processes
     from other work on the host (which are in the baseline) never affect it.
 
     A leaked PID here means the SDK ``Agent`` teardown
-    (``close_session`` / ``close`` → ``_close_agent`` → ``Agent.__aexit__``)
+    (``close_session`` / ``close`` â†’ ``_close_agent`` â†’ ``Agent.__aexit__``)
     stopped reaping the native subprocess, so every turn would leak one.
 
     Holds even when the turn fails at setup (glibc/quota): a turn that never
@@ -506,14 +506,14 @@ def test_antigravity_session_cleanup_reaps_runner(
     """After a turn's process tree exits, its native subprocess is reaped.
 
     A single ``agent-meow run`` turn owns a self-contained process tree (local
-    server → runner → native ``localharness``). Once the CLI process exits, that
+    server â†’ runner â†’ native ``localharness``). Once the CLI process exits, that
     tree must be torn down: no ``localharness`` PID this run created may survive.
     Asserts on the before/after PID set difference (robust to unrelated host
     processes) after polling for an async teardown.
 
     Note (deliberately the *weaker, true* invariant): a separate bug-bash found
     a "session DELETE leaves the runner alive" leak, but it reproduces on the
-    claude-sdk harness too — i.e. it is shared session-infra behavior, not an
+    claude-sdk harness too â€” i.e. it is shared session-infra behavior, not an
     antigravity-specific contract. This test therefore does NOT exercise an
     explicit ``DELETE /v1/sessions/{id}`` and assert reaping (which would be a
     known shared-infra failure). It asserts the antigravity-relevant invariant

@@ -20,17 +20,17 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agent_meow.policies.function import FunctionPolicy, _build_event
-from agent_meow.policies.types import EvaluationContext, PolicyLLMClient
-from agent_meow.runtime.caps import RuntimeCaps
-from agent_meow.runtime.policies.builder import (
+from omnigent.policies.function import FunctionPolicy, _build_event
+from omnigent.policies.types import EvaluationContext, PolicyLLMClient
+from omnigent.runtime.caps import RuntimeCaps
+from omnigent.runtime.policies.builder import (
     _build_policy_llm_client,
     _resolve_server_llm_connection,
     build_policy_engine,
 )
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec import parse_server_llm
-from agent_meow.spec.types import (
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec import parse_server_llm
+from omnigent.spec.types import (
     AgentSpec,
     FunctionPolicySpec,
     FunctionRef,
@@ -39,11 +39,11 @@ from agent_meow.spec.types import (
     Phase,
     PhaseSelector,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_server_llm() -> LLMConfig:
@@ -76,7 +76,7 @@ class _FakeClient:
     """
     Stub LLM client that records ``responses.create()`` calls.
 
-    Does not use MagicMock — attributes are explicit so any
+    Does not use MagicMock â€” attributes are explicit so any
     unexpected access raises ``AttributeError`` loudly.
 
     :param response: The fixed value ``responses.create()``
@@ -109,7 +109,7 @@ def _llm_capturing_policy(bucket: dict[str, Any]) -> FunctionPolicy:
     return FunctionPolicy(spec, _evaluate)
 
 
-# ── RuntimeCaps.llm field ────────────────────────────────────────────────────
+# â”€â”€ RuntimeCaps.llm field â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_runtime_caps_llm_defaults_to_none() -> None:
@@ -139,12 +139,12 @@ def test_runtime_caps_accepts_llm_config() -> None:
     assert caps.llm.model == "openai/gpt-4o-mini"
 
 
-# ── parse_server_llm ────────────────────────────────────────────────────────
+# â”€â”€ parse_server_llm â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_server_llm_none_returns_none() -> None:
     """
-    ``parse_server_llm(None)`` returns ``None`` — the server
+    ``parse_server_llm(None)`` returns ``None`` â€” the server
     config has no ``llm:`` block.
 
     What breaks if this fails: absent ``llm:`` key is
@@ -174,7 +174,7 @@ def test_parse_server_llm_parses_valid_block() -> None:
     assert result.request_timeout == 45
 
 
-# ── PolicyLLMClient ─────────────────────────────────────────────────────────
+# â”€â”€ PolicyLLMClient â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -248,7 +248,7 @@ async def test_policy_llm_client_create_allows_overrides() -> None:
     assert call_kwargs["timeout"] == 120
 
 
-# ── EvaluationContext.llm_client ────────────────────────────────────────────
+# â”€â”€ EvaluationContext.llm_client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_evaluation_context_llm_client_defaults_to_none() -> None:
@@ -279,7 +279,7 @@ def test_evaluation_context_accepts_llm_client() -> None:
     assert ctx.llm_client is sentinel
 
 
-# ── _build_event includes llm_client ────────────────────────────────────────
+# â”€â”€ _build_event includes llm_client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_event_includes_llm_client_none() -> None:
@@ -313,11 +313,11 @@ def test_build_event_includes_llm_client_object() -> None:
         llm_client=sentinel,
     )
     event = _build_event(ctx)
-    # Same object — not copied, since it's a shared client.
+    # Same object â€” not copied, since it's a shared client.
     assert event["llm_client"] is sentinel
 
 
-# ── PolicyEngine injects llm_client ─────────────────────────────────────────
+# â”€â”€ PolicyEngine injects llm_client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -380,7 +380,7 @@ async def test_engine_injects_none_when_no_llm_client(
     assert bucket["llm_client"] is None
 
 
-# ── _build_policy_llm_client ────────────────────────────────────────────────
+# â”€â”€ _build_policy_llm_client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_policy_llm_client_none_returns_none() -> None:
@@ -415,7 +415,7 @@ def test_build_policy_llm_client_constructs_from_config() -> None:
     assert result._request_timeout == 60
 
 
-# ── build_policy_engine wiring ──────────────────────────────────────────────
+# â”€â”€ build_policy_engine wiring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_policy_engine_without_server_llm(
@@ -435,7 +435,7 @@ def test_build_policy_engine_without_server_llm(
         conversation_id=conv.id,
         conversation_store=conversation_store,
     )
-    # No server_llm → no llm_client on the engine.
+    # No server_llm â†’ no llm_client on the engine.
     assert engine._llm_client is None
 
 
@@ -488,14 +488,14 @@ async def test_build_policy_engine_llm_client_reaches_callable(
     that injects a :class:`PolicyLLMClient` into the callable's
     ``event["llm_client"]``.
 
-    What breaks if this fails: the full pipeline (builder →
-    engine → evaluate → _build_event → callable) has a gap.
+    What breaks if this fails: the full pipeline (builder â†’
+    engine â†’ evaluate â†’ _build_event â†’ callable) has a gap.
     """
     bucket: dict[str, Any] = {}
     capturing = _llm_capturing_policy(bucket)
     conv = conversation_store.create_conversation()
 
-    # Build engine with server_llm — we can't use the real
+    # Build engine with server_llm â€” we can't use the real
     # build_policy_engine because the capturing policy's spec
     # has a fake function.path. Instead, build the client and
     # engine directly.
@@ -522,7 +522,7 @@ async def test_build_policy_engine_llm_client_reaches_callable(
     assert captured._request_timeout == 60
 
 
-# ── Databricks profile support ──────────────────────────────────────────────
+# â”€â”€ Databricks profile support â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_server_llm_with_profile() -> None:
@@ -549,7 +549,7 @@ def test_parse_server_llm_with_profile() -> None:
 
 def test_parse_server_llm_profile_not_in_extra() -> None:
     """
-    ``profile:`` is a reserved key — it must not appear in
+    ``profile:`` is a reserved key â€” it must not appear in
     ``extra`` alongside model kwargs.
 
     What breaks if this fails: ``profile`` is passed through to
@@ -575,14 +575,14 @@ def test_resolve_server_llm_connection_resolves_databricks_profile(
     to connection params when ``connection`` is absent.
 
     What breaks if this fails: specifying ``profile:`` in the
-    server config has no effect — the classifier and PolicyLLMClient
+    server config has no effect â€” the classifier and PolicyLLMClient
     get ``connection=None`` and fall back to env var / OpenAI
     defaults instead of the gateway.
     """
-    from agent_meow.runtime.credentials.databricks import WorkspaceCreds
+    from omnigent.runtime.credentials.databricks import WorkspaceCreds
 
     monkeypatch.setattr(
-        "agent_meow.runtime.policies.builder.resolve_databricks_workspace",
+        "omnigent.runtime.policies.builder.resolve_databricks_workspace",
         lambda profile: WorkspaceCreds(
             host="https://example.cloud.databricks.com",
             token="dapi-test-token",
@@ -605,7 +605,7 @@ def test_resolve_server_llm_connection_resolves_databricks_profile(
 def test_resolve_server_llm_connection_connection_wins_over_profile() -> None:
     """
     When both ``connection`` and ``profile`` are set, ``connection``
-    wins — the profile is not resolved.
+    wins â€” the profile is not resolved.
 
     What breaks if this fails: explicit connection params are
     overwritten by the profile, causing auth to go to the wrong

@@ -5,7 +5,7 @@ via ``catalog_path:`` entries (``ai_query`` and a dotted
 three-level ``my_catalog.my_schema.classify_sentiment``). Executing
 those tools end-to-end needs a live workspace, a running SQL
 warehouse (``DATABRICKS_WAREHOUSE_ID``), and the named UC functions
-actually existing in that workspace's catalog — none of which the
+actually existing in that workspace's catalog â€” none of which the
 e2e shard (or a developer laptop) has. The previous one-shot run
 under the ``ai-oss`` gateway profile timed out on the slow model
 and could never satisfy the ``profile: oss`` auth block the YAML
@@ -17,7 +17,7 @@ translation for ``catalog_path:`` tool entries and the
 ``executor`` harness/model resolution. UC tool *parameters* are
 author-supplied in the YAML and are NOT resolved against a
 workspace at registration time (see
-``agent_meow/runner/uc_function.py`` — metadata fetch at agent-build
+``omnigent/runner/uc_function.py`` â€” metadata fetch at agent-build
 time is called out there as a future enhancement), so loading the
 def is a faithful, infra-free check of everything the spec layer
 owns.
@@ -40,7 +40,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.e2e.agent_meow._example_helpers import validate_agent_def_structure
+from tests.e2e.omnigent._example_helpers import validate_agent_def_structure
 
 
 def test_agent_with_uc_tools_structure(

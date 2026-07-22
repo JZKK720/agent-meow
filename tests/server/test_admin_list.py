@@ -1,13 +1,13 @@
-"""Tests for the file-backed admin roster (:mod:`~?agent_meow.server.admin_list`).
+"""Tests for the file-backed admin roster (:mod:`~?omnigent.server.admin_list`).
 
 Covers three layers:
 
 1. The mtime-cached file loader (``MtimeCachedIdentitySet`` / ``AdminList``)
-   — parsing, comments, lowercasing, missing/unreadable files, and the
+   â€” parsing, comments, lowercasing, missing/unreadable files, and the
    reload-on-mtime-change behavior that lets an operator edit the file
    without restarting the server.
 2. Path resolution (``resolve_data_dir`` / ``resolve_admin_list_path``)
-   — the env override and the credentials-dir co-location default.
+   â€” the env override and the credentials-dir co-location default.
 3. ``promote_if_listed`` against the two real stores it serves
    (``SqlAlchemyPermissionStore`` for OIDC, ``SqlAlchemyAccountStore``
    for accounts) plus an end-to-end check through the accounts login
@@ -29,9 +29,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from agent_meow.server.accounts_config import AccountsConfig
-from agent_meow.server.accounts_store import SqlAlchemyAccountStore
-from agent_meow.server.admin_list import (
+from omnigent.server.accounts_config import AccountsConfig
+from omnigent.server.accounts_store import SqlAlchemyAccountStore
+from omnigent.server.admin_list import (
     AdminList,
     MtimeCachedIdentitySet,
     load_admin_list,
@@ -39,12 +39,12 @@ from agent_meow.server.admin_list import (
     resolve_admin_list_path,
     resolve_data_dir,
 )
-from agent_meow.server.auth import UnifiedAuthProvider
-from agent_meow.server.passwords import hash_password
-from agent_meow.server.routes.accounts_auth import create_accounts_auth_router
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from omnigent.server.auth import UnifiedAuthProvider
+from omnigent.server.passwords import hash_password
+from omnigent.server.routes.accounts_auth import create_accounts_auth_router
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
-# ── File loader: parsing ──────────────────────────────────────────
+# â”€â”€ File loader: parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_loader_parses_one_identity_per_line(tmp_path: Path) -> None:
@@ -77,7 +77,7 @@ def test_loader_ignores_comments_and_blanks(tmp_path: Path) -> None:
     """``#`` comments (inline + whole-line) and blank lines are dropped.
 
     Without this, a ``# comment`` line would be treated as an admin
-    identity ``"# comment"`` — harmless but wrong, and an inline
+    identity ``"# comment"`` â€” harmless but wrong, and an inline
     ``alice  # founder`` would store the comment as part of the id and
     never match.
     """
@@ -113,7 +113,7 @@ def test_loader_picks_up_file_created_after_construction(tmp_path: Path) -> None
 
 
 def test_loader_reloads_on_mtime_change(tmp_path: Path) -> None:
-    """Editing the file (new mtime) reloads the set — no restart needed.
+    """Editing the file (new mtime) reloads the set â€” no restart needed.
 
     This is the whole point of the mtime cache: operator edits take
     effect on the next login. We force a distinct mtime with os.utime
@@ -150,13 +150,13 @@ def test_loader_unreadable_file_is_empty(tmp_path: Path) -> None:
         f.chmod(0o600)  # let tmp cleanup remove it
 
 
-# ── Path resolution ───────────────────────────────────────────────
+# â”€â”€ Path resolution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_admin_list_path_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     """``OMNIGENT_ADMIN_LIST_PATH`` wins over the default."""
-    monkeypatch.setenv("OMNIGENT_ADMIN_LIST_PATH", "/etc/agent_meow/admins")
-    assert resolve_admin_list_path() == Path("/etc/agent_meow/admins")
+    monkeypatch.setenv("OMNIGENT_ADMIN_LIST_PATH", "/etc/omnigent/admins")
+    assert resolve_admin_list_path() == Path("/etc/omnigent/admins")
 
 
 def test_resolve_data_dir_uses_credentials_parent(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -182,7 +182,7 @@ def test_load_admin_list_binds_resolved_path(monkeypatch: pytest.MonkeyPatch) ->
     assert al.path == Path("/tmp/omnigent-admins-test")
 
 
-# ── config admins (the `extra` set) + file union ──────────────────
+# â”€â”€ config admins (the `extra` set) + file union â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_admin_list_extra_from_config(tmp_path: Path) -> None:
@@ -204,13 +204,13 @@ def test_admin_list_unions_config_and_file(tmp_path: Path) -> None:
 
 
 def test_load_admin_list_passes_extra(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``load_admin_list(extra=…)`` threads the config admins through."""
+    """``load_admin_list(extra=â€¦)`` threads the config admins through."""
     monkeypatch.setenv("OMNIGENT_ADMIN_LIST_PATH", "/tmp/omnigent-admins-absent")
     al = load_admin_list(extra=frozenset({"carol@example.com"}))
     assert al.is_admin("carol@example.com")
 
 
-# ── promote_if_listed against the permission store (OIDC path) ─────
+# â”€â”€ promote_if_listed against the permission store (OIDC path) â”€â”€â”€â”€â”€
 
 
 def test_promote_if_listed_permission_store(tmp_path: Path, db_uri: str) -> None:
@@ -262,7 +262,7 @@ def test_admin_list_removal_does_not_demote(tmp_path: Path, db_uri: str) -> None
     """Additive invariant: removing an id from the file never demotes.
 
     This is the safety property that lets operators edit the file
-    freely — you cannot lock the deploy out of its bootstrap admin by
+    freely â€” you cannot lock the deploy out of its bootstrap admin by
     forgetting to list them.
     """
     store = SqlAlchemyPermissionStore(db_uri)
@@ -279,7 +279,7 @@ def test_admin_list_removal_does_not_demote(tmp_path: Path, db_uri: str) -> None
     os.utime(f, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000))
 
     # A subsequent login does not promote (returns False) but the
-    # existing admin flag is untouched — no demotion path exists.
+    # existing admin flag is untouched â€” no demotion path exists.
     assert promote_if_listed(admin_list, store, "alice@example.com") is False
     assert store.is_admin("alice@example.com") is True
 
@@ -297,7 +297,7 @@ def test_set_admin_promotes_existing_user(db_uri: str) -> None:
     assert store.is_admin("alice@example.com") is True
 
 
-# ── promote_if_listed against the account store (accounts path) ────
+# â”€â”€ promote_if_listed against the account store (accounts path) â”€â”€â”€â”€
 
 
 def test_promote_if_listed_account_store(tmp_path: Path, db_uri: str) -> None:
@@ -314,7 +314,7 @@ def test_promote_if_listed_account_store(tmp_path: Path, db_uri: str) -> None:
     assert store.is_admin("carol") is True
 
 
-# ── End-to-end: accounts login promotes a listed user ─────────────
+# â”€â”€ End-to-end: accounts login promotes a listed user â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture

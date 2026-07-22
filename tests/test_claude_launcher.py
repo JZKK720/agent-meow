@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.claude_launcher`."""
+"""Unit tests for :mod:`~?omnigent.claude_launcher`."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import importlib.metadata
 
 import pytest
 
-from agent_meow.claude_launcher import (
+from omnigent.claude_launcher import (
     CLAUDE_LAUNCHER_ENTRY_POINT_GROUP,
     CLAUDE_LAUNCHER_ENV_VAR,
     ClaudeLauncher,

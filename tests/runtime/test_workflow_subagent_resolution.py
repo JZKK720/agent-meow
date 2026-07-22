@@ -21,15 +21,15 @@ the child boots as the intended ``max_iterations=5`` curl helper instead.
 
 from __future__ import annotations
 
-from agent_meow.runtime.workflow import _find_spec_by_name
-from agent_meow.spec.types import (
+from omnigent.runtime.workflow import _find_spec_by_name
+from omnigent.spec.types import (
     AgentSpec,
     BuiltinToolConfig,
     ExecutorSpec,
     LLMConfig,
     ToolsConfig,
 )
-from agent_meow.tools.builtins.web_fetch import RESEARCHER_NAME, build_researcher_spec
+from omnigent.tools.builtins.web_fetch import RESEARCHER_NAME, build_researcher_spec
 
 
 def _coordinator_parent(*, web_fetch: bool = True) -> AgentSpec:

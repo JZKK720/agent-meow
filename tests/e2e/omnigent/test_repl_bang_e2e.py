@@ -1,7 +1,7 @@
 """End-to-end coverage for the REPL "!" shell passthrough.
 
 The unit suite (``tests/repl/test_bang_command.py``) covers the extracted
-helpers — the clip/context builders and the ``_run_bang_command`` runner. What
+helpers â€” the clip/context builders and the ``_run_bang_command`` runner. What
 it cannot reach is the wiring inside ``run_repl.on_input``: the ``!`` / ``!!`` /
 bare-``!`` dispatch and the buffer that folds a command's output into the *next*
 agent turn. Those only exist as a closure over the live REPL, so they are
@@ -22,24 +22,24 @@ from pathlib import Path
 
 import httpx
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     submit_prompt,
 )
-from tests.e2e.agent_meow._repl_test_helpers import drain_for
-from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.omnigent._repl_test_helpers import drain_for
+from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
 
 _MODEL = "mock-model"
 _HARNESS = "openai-agents"
 
-# Visible turn-synchronization markers — same ones the green smoke / model /
-# effort e2e tests use. ``working`` is the streaming activity line; ``❯ `` is
+# Visible turn-synchronization markers â€” same ones the green smoke / model /
+# effort e2e tests use. ``working`` is the streaming activity line; ``â¯ `` is
 # the input prompt the REPL re-renders when a turn settles.
 _RUNNING_MARKER = r"working"
-_COMPLETION_MARKER = r"❯ "
+_COMPLETION_MARKER = r"â¯ "
 
 _SPAWN_TIMEOUT = 60.0
 _BOOT_TIMEOUT = 30.0
@@ -183,7 +183,7 @@ def test_repl_bang_bare_shows_hint_and_double_bang_escapes(
         "'!!' prompt was wrongly executed as a shell command"
     )
     assert "exit 0" not in turn.stripped, (
-        "'!!' prompt rendered a shell exit footer — it was executed, not escaped"
+        "'!!' prompt rendered a shell exit footer â€” it was executed, not escaped"
     )
 
 
@@ -195,7 +195,7 @@ def test_repl_bang_buffer_dropped_on_new_conversation(
 ) -> None:
     """
     Buffered ``!`` output is discarded when a new conversation starts (``/clear``)
-    — it belonged to the prior conversation and must not leak into the fresh
+    â€” it belonged to the prior conversation and must not leak into the fresh
     conversation's first turn.
     """
     reset_mock_llm(mock_llm_server_url)
@@ -217,7 +217,7 @@ def test_repl_bang_buffer_dropped_on_new_conversation(
         submit_prompt(child, "!echo LEAK_SENTINEL_QQQ")
         child.expect(r"exit 0", timeout=_BANG_TIMEOUT)
 
-        # /clear starts a new conversation — it must drop the buffered output.
+        # /clear starts a new conversation â€” it must drop the buffered output.
         # Re-sync on the freshly re-rendered prompt before sending the next
         # line, otherwise it races the /clear redraw and never submits.
         submit_prompt(child, "/clear")

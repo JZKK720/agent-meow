@@ -1,18 +1,18 @@
 """
-Tests for the LLM-facing async-handle shape — ``_AsyncToolHandle`` and
-``_async_handle_message`` in :mod:`~?agent_meow.runtime.workflow`.
+Tests for the LLM-facing async-handle shape â€” ``_AsyncToolHandle`` and
+``_async_handle_message`` in :mod:`~?omnigent.runtime.workflow`.
 """
 
 from __future__ import annotations
 
 import json
 
-from agent_meow.runtime.workflow import (
+from omnigent.runtime.workflow import (
     _async_handle_message,
     _AsyncToolHandle,
 )
 
-# ─── _AsyncToolHandle / _async_handle_message ────────────────
+# â”€â”€â”€ _AsyncToolHandle / _async_handle_message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_handle_message_names_task_id_and_tool_name() -> None:
@@ -26,7 +26,7 @@ def test_handle_message_names_task_id_and_tool_name() -> None:
     text = _async_handle_message("tsk_async_42", "train_model")
     assert "tsk_async_42" in text
     assert "train_model" in text
-    # Mentions sys_cancel_task so the LLM knows it can abort —
+    # Mentions sys_cancel_task so the LLM knows it can abort â€”
     # check_task was dropped per design step 11; results
     # auto-deliver via the inbox instead.
     assert "sys_cancel_task" in text
@@ -41,7 +41,7 @@ def test_handle_serializes_to_json_with_required_fields() -> None:
         message="msg body",
     )
     parsed = json.loads(handle.to_handle_json())
-    # All four documented fields must be present — missing any of
+    # All four documented fields must be present â€” missing any of
     # them would force the LLM to guess (e.g. status defaulting
     # silently to "completed" if the field is absent).
     assert parsed == {

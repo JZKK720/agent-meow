@@ -14,9 +14,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agent_meow import qwen_native_bridge as qnb
-from agent_meow import qwen_native_forwarder as fwd
-from agent_meow.qwen_native_bridge import (
+from omnigent import qwen_native_bridge as qnb
+from omnigent import qwen_native_forwarder as fwd
+from omnigent.qwen_native_bridge import (
     BRIDGE_DIR_ENV_VAR,
     bridge_dir_for_session_id,
     build_qwen_native_spawn_env,
@@ -31,7 +31,7 @@ from agent_meow.qwen_native_bridge import (
     wait_for_ready,
     write_tmux_target,
 )
-from agent_meow.qwen_native_forwarder import (
+from omnigent.qwen_native_forwarder import (
     _DEDUP_WINDOW,
     _compaction_status_from_record,
     _event_to_item,
@@ -130,7 +130,7 @@ def test_read_new_events_incremental_and_partial_line(tmp_path: Path) -> None:
         fh.flush()
     items, off2 = _read_new_events(f, off, {"u1"}, _AGENT)
     assert [i.uuid for i in items] == ["a1"]
-    # Offset stops at the last newline — the partial line is not consumed.
+    # Offset stops at the last newline â€” the partial line is not consumed.
     assert off2 == complete_size
 
 
@@ -175,7 +175,7 @@ def _compression_record(status: int) -> dict:
 
 def test_compaction_status_from_record() -> None:
     assert _compaction_status_from_record(_compression_record(1)) == "completed"
-    # COMPRESSION_FAILED_* statuses → failed.
+    # COMPRESSION_FAILED_* statuses â†’ failed.
     assert _compaction_status_from_record(_compression_record(2)) == "failed"
     assert _compaction_status_from_record(_compression_record(3)) == "failed"
     # Other recording lines are ignored.
@@ -190,7 +190,7 @@ def test_read_new_compaction_statuses_incremental_and_ignores_other_lines(tmp_pa
     statuses, off = _read_new_compaction_statuses(rec, 0)
     assert statuses == ["completed"]
     assert off == rec.stat().st_size
-    # No new lines → nothing.
+    # No new lines â†’ nothing.
     assert _read_new_compaction_statuses(rec, off) == ([], off)
 
 
@@ -206,14 +206,14 @@ def test_read_new_compaction_statuses_detects_truncation(tmp_path: Path) -> None
 
 
 def test_read_new_compaction_statuses_missing_file(tmp_path: Path) -> None:
-    # Recording not created yet → no statuses, offset unchanged (retry next poll).
+    # Recording not created yet â†’ no statuses, offset unchanged (retry next poll).
     assert _read_new_compaction_statuses(tmp_path / "absent.jsonl", 0) == ([], 0)
 
 
 def test_wait_for_ready_times_out_without_boot_signal(tmp_path: Path) -> None:
     bridge = tmp_path / "bridge"
     prepare_bridge_files(bridge)
-    # No events written → never ready; returns False fast (tiny timeout).
+    # No events written â†’ never ready; returns False fast (tiny timeout).
     assert wait_for_ready(bridge, timeout_s=0.05, poll_interval_s=0.01) is False
 
 
@@ -231,7 +231,7 @@ def test_wait_for_ready_ignores_system_substring_in_non_system_event(tmp_path: P
     bridge = tmp_path / "bridge"
     prepare_bridge_files(bridge)
     # An assistant event whose text payload contains the bytes '"type":"system"'
-    # must NOT be read as the boot signal — readiness parses per-line and checks
+    # must NOT be read as the boot signal â€” readiness parses per-line and checks
     # event["type"], so a substring inside another event can't latch ready early.
     events_file_path(bridge).write_bytes(
         _ev_bytes(_asst_ev("a1", [{"type": "text", "text": 'note "type":"system" inside'}]))
@@ -243,7 +243,7 @@ def test_qwen_session_id_is_deterministic_and_uuid() -> None:
     a = qwen_session_id_for_conversation("conv_abc123")
     b = qwen_session_id_for_conversation("conv_abc123")
     c = qwen_session_id_for_conversation("conv_other")
-    assert a == b  # stable across calls → resume can recompute it
+    assert a == b  # stable across calls â†’ resume can recompute it
     assert a != c  # distinct per conversation
     # Valid UUID (qwen requires one for --session-id / --resume).
     import uuid as _uuid
@@ -254,7 +254,7 @@ def test_qwen_session_id_is_deterministic_and_uuid() -> None:
 def test_qwen_session_recording_exists_is_workspace_scoped(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from agent_meow.qwen_native_bridge import _qwen_project_slug
+    from omnigent.qwen_native_bridge import _qwen_project_slug
 
     monkeypatch.setenv("HOME", str(tmp_path))
     ws_a = tmp_path / "repo_a"
@@ -262,7 +262,7 @@ def test_qwen_session_recording_exists_is_workspace_scoped(
     ws_b = tmp_path / "repo_b"
     ws_b.mkdir()
     sid = qwen_session_id_for_conversation("conv_resume_me")
-    # No recording yet → fresh launch (--session-id).
+    # No recording yet â†’ fresh launch (--session-id).
     assert qwen_session_recording_exists(sid, ws_a) is False
     # qwen records under the LAUNCH workspace's project slug.
     chats = tmp_path / ".qwen" / "projects" / _qwen_project_slug(ws_a) / "chats"
@@ -280,7 +280,7 @@ def test_qwen_session_recording_exists_is_workspace_scoped(
 def test_qwen_session_recording_path_is_workspace_scoped(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from agent_meow.qwen_native_bridge import _qwen_project_slug, qwen_session_recording_path
+    from omnigent.qwen_native_bridge import _qwen_project_slug, qwen_session_recording_path
 
     monkeypatch.setenv("HOME", str(tmp_path))
     ws = tmp_path / "repo"
@@ -331,15 +331,15 @@ def test_seen_dedup_window_keeps_most_recent_in_insertion_order(tmp_path: Path) 
 
     Regression: ``seen`` used to be a ``set``, so the forwarder's
     ``list(seen)`` at persist time was hash-ordered and ``_write_state``'s
-    ``[-_DEDUP_WINDOW:]`` cap kept an arbitrary subset — not the most recent.
+    ``[-_DEDUP_WINDOW:]`` cap kept an arbitrary subset â€” not the most recent.
     On a qwen relaunch past ``_DEDUP_WINDOW`` events (offset rewinds to 0 and
     the file is re-read from the top), recent uuids evicted from the window
     were re-posted as duplicate bubbles. Building ``seen`` through
     :func:`_new_seen` (an insertion-ordered ``dict``) keeps the real tail.
 
-    This exercises the forwarder's own reload/persist path — ``_new_seen`` (the
+    This exercises the forwarder's own reload/persist path â€” ``_new_seen`` (the
     line-301 ``seen = _new_seen(persisted.seen_uuids)`` idiom) then
-    ``list(seen)`` — so a revert to a ``set`` fails the ordering assertion here
+    ``list(seen)`` â€” so a revert to a ``set`` fails the ordering assertion here
     (unlike ``test_forward_state_caps_seen_uuids``, which feeds an
     already-ordered list straight into ``_write_state`` and so never sees the
     ordering bug).
@@ -350,7 +350,7 @@ def test_seen_dedup_window_keeps_most_recent_in_insertion_order(tmp_path: Path) 
     assert _write_state(tmp_path, _ForwardState(offset=7, seen_uuids=list(seen))) is True
 
     kept = _read_state(tmp_path).seen_uuids or []
-    # The cap must keep the most-recent _DEDUP_WINDOW uuids, in order — not an
+    # The cap must keep the most-recent _DEDUP_WINDOW uuids, in order â€” not an
     # arbitrary hash-ordered subset (which a set-backed ``seen`` produced).
     assert kept == uuids[-_DEDUP_WINDOW:]
 
@@ -371,13 +371,13 @@ def test_spawn_env_carries_bridge_dir() -> None:
 
 
 def test_harness_registered_aliased_and_native() -> None:
-    from agent_meow.harness_aliases import canonicalize_harness, is_native_harness
-    from agent_meow.native_coding_agents import native_coding_agent_for_harness
-    from agent_meow.runtime.harnesses import _HARNESS_MODULES
-    from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+    from omnigent.harness_aliases import canonicalize_harness, is_native_harness
+    from omnigent.native_coding_agents import native_coding_agent_for_harness
+    from omnigent.runtime.harnesses import _HARNESS_MODULES
+    from omnigent.spec._omnigent_compat import OMNIGENT_HARNESSES
 
     # Registry entry resolves to the harness module.
-    assert _HARNESS_MODULES["qwen-native"] == "agent_meow.inner.qwen_native_harness"
+    assert _HARNESS_MODULES["qwen-native"] == "omnigent.inner.qwen_native_harness"
     # Allowlisted + recognized as a native-terminal harness (both spellings).
     assert "qwen-native" in OMNIGENT_HARNESSES
     assert is_native_harness("qwen-native") is True
@@ -392,7 +392,7 @@ def test_harness_registered_aliased_and_native() -> None:
 
 
 def test_harness_create_app_builds() -> None:
-    from agent_meow.inner.qwen_native_harness import create_app
+    from omnigent.inner.qwen_native_harness import create_app
 
     app = create_app()
     assert app is not None
@@ -438,7 +438,7 @@ def test_run_tmux_raises_on_nonzero(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_inject_interrupt_raises_when_target_unadvertised(tmp_path: Path) -> None:
-    # No tmux.json written → the wait times out fast and raises.
+    # No tmux.json written â†’ the wait times out fast and raises.
     with pytest.raises(RuntimeError):
         qnb.inject_interrupt(tmp_path, timeout_s=0.05)
 
@@ -564,8 +564,8 @@ async def test_supervise_restarts_then_propagates_cancel(
     async def _fake_forward(**_kw: object) -> None:
         calls["n"] += 1
         if calls["n"] == 1:
-            raise RuntimeError("boom")  # first run crashes → supervisor restarts
-        raise asyncio.CancelledError()  # second run cancelled → propagates out
+            raise RuntimeError("boom")  # first run crashes â†’ supervisor restarts
+        raise asyncio.CancelledError()  # second run cancelled â†’ propagates out
 
     async def _fake_sleep(seconds: float) -> None:
         sleeps.append(seconds)

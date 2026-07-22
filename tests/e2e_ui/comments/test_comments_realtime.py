@@ -5,10 +5,10 @@ the per-session fingerprint (``comments_count`` / ``comments_updated_at``)
 on the ``WS /v1/sessions/updates`` row, the SPA's
 ``SessionUpdatesProvider`` sees the fingerprint move in a ``changed``
 frame and invalidates the ``["comments", <session>]`` query cache, and an
-open CommentsPanel refetches — all without a reload.
+open CommentsPanel refetches â€” all without a reload.
 
 The "other user / agent" side is simulated with direct REST calls
-(``POST`` / ``PATCH /v1/sessions/{id}/comments``) — the same routes the
+(``POST`` / ``PATCH /v1/sessions/{id}/comments``) â€” the same routes the
 agent's ``update_comment`` tool and a collaborator's browser hit, so the
 browser under test cannot know about the change except via the push
 stream. No agent run is involved, keeping the test deterministic.
@@ -17,7 +17,7 @@ If this goes red, the likely regressions are:
 
 - the session-list builders stopped folding the comments fingerprint
   into list items (``_comments_fingerprints_for`` in
-  ``agent_meow/server/routes/sessions.py``), or
+  ``omnigent/server/routes/sessions.py``), or
 - ``SessionUpdatesProvider`` stopped invalidating ``["comments", id]``
   on fingerprint movement (``syncCommentsFingerprints``), or
 - the comment store stopped bumping ``updated_at`` on status changes
@@ -150,7 +150,7 @@ def test_external_comment_add_appears_without_reload(
 ) -> None:
     """A comment POSTed outside the browser appears in the open panel.
 
-    The count moving 1 → 2 is the fingerprint signal here. The page is
+    The count moving 1 â†’ 2 is the fingerprint signal here. The page is
     never reloaded after the panel opens, so the new card can only
     render if the updates stream delivered the fingerprint change and
     the provider invalidated the comments cache.
@@ -175,7 +175,7 @@ def test_external_comment_add_appears_without_reload(
     ).raise_for_status()
 
     # KEY ASSERTION: the externally-added comment renders without a
-    # reload. A timeout means the push → invalidate → refetch chain is
+    # reload. A timeout means the push â†’ invalidate â†’ refetch chain is
     # broken somewhere (see module docstring for the suspect list).
     file_viewer = page.locator('[data-testid="file-viewer"]:visible')
     expect(file_viewer).to_contain_text(marker, timeout=_PUSH_TIMEOUT_MS)
@@ -187,10 +187,10 @@ def test_external_status_change_clears_open_tab_without_reload(
 ) -> None:
     """A comment PATCHed to addressed leaves the Open tab live.
 
-    This is the agent flow (``update_comment`` → draft → addressed) and
+    This is the agent flow (``update_comment`` â†’ draft â†’ addressed) and
     the count-blind case: the row count stays 1, so only the
     ``updated_at`` bump can carry the change. The Open tab emptying
-    without a reload proves edits — not just adds — propagate.
+    without a reload proves edits â€” not just adds â€” propagate.
     """
     base_url, session_id, seeded_comment_id = commented_file_session
     _open_comments_panel(page, base_url, session_id)

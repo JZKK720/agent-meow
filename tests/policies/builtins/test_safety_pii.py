@@ -1,6 +1,6 @@
 """
 Tests for ``deny_pii_in_llm_request`` built-in policy
-(:mod:`~?agent_meow.policies.builtins.safety`).
+(:mod:`~?omnigent.policies.builtins.safety`).
 
 Covers:
 
@@ -17,10 +17,10 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.policies.builtins.safety import deny_pii_in_llm_request
+from omnigent.policies.builtins.safety import deny_pii_in_llm_request
 from tests.policies.builtins.helpers import llm_request_event, tool_call_event
 
-# ── Default patterns ─────────────────────────────────────────────────────────
+# â”€â”€ Default patterns â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_denies_ssn_in_system_prompt() -> None:
@@ -97,7 +97,7 @@ def test_allows_clean_system_prompt() -> None:
     )
 
 
-# ── REQUEST phase (universal, all harnesses) ─────────────────────────────────
+# â”€â”€ REQUEST phase (universal, all harnesses) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_denies_email_in_request_phase() -> None:
@@ -153,13 +153,13 @@ def test_denies_ssn_in_request_phase() -> None:
     assert result["result"] == "DENY"
 
 
-# ── LLM_REQUEST phase (user message field) ───────────────────────────────────
+# â”€â”€ LLM_REQUEST phase (user message field) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_denies_email_in_user_message() -> None:
     """PII in the user message (not just system prompt) triggers DENY.
 
-    This is the primary attack vector — users typing PII into the
+    This is the primary attack vector â€” users typing PII into the
     chat. If this returns ALLOW, the policy is only scanning the
     system prompt and missing user content entirely.
     """
@@ -195,7 +195,7 @@ def test_clean_user_message_allows() -> None:
     assert result["result"] == "ALLOW"
 
 
-# ── Phase filtering ──────────────────────────────────────────────────────────
+# â”€â”€ Phase filtering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_ignores_non_llm_request_events() -> None:
@@ -212,13 +212,13 @@ def test_ignores_non_llm_request_events() -> None:
     )
 
 
-# ── Selective PII types ──────────────────────────────────────────────────────
+# â”€â”€ Selective PII types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_selecting_only_ssn_ignores_email() -> None:
     """When only ``ssn`` is selected, email addresses pass through.
 
-    If this returns DENY, the pii_types filter is not working —
+    If this returns DENY, the pii_types filter is not working â€”
     unselected categories are leaking through.
     """
     policy = deny_pii_in_llm_request(pii_types=["ssn"])
@@ -227,7 +227,7 @@ def test_selecting_only_ssn_ignores_email() -> None:
     event_ssn = llm_request_event(system_prompt_preview="SSN is 123-45-6789")
     assert policy(event_ssn)["result"] == "DENY"
 
-    # Email should NOT match — only ssn is selected.
+    # Email should NOT match â€” only ssn is selected.
     event_email = llm_request_event(system_prompt_preview="Contact alice@example.com")
     result_email = policy(event_email)
     assert result_email["result"] == "ALLOW", (
@@ -239,14 +239,14 @@ def test_selecting_only_ssn_ignores_email() -> None:
 def test_empty_pii_types_enables_all() -> None:
     """An empty ``pii_types`` list enables all built-in categories.
 
-    This is the default behavior — admins who leave the field
+    This is the default behavior â€” admins who leave the field
     empty get full coverage.
     """
     policy = deny_pii_in_llm_request(pii_types=[])
     event = llm_request_event(system_prompt_preview="SSN 123-45-6789")
     assert policy(event)["result"] == "DENY", (
         "Empty pii_types should enable all categories. "
-        "If ALLOW, the empty-list → all-categories fallback is broken."
+        "If ALLOW, the empty-list â†’ all-categories fallback is broken."
     )
 
 
@@ -264,11 +264,11 @@ def test_unknown_pii_type_silently_ignored() -> None:
     """
     policy = deny_pii_in_llm_request(pii_types=["nonexistent_type"])
     event = llm_request_event(system_prompt_preview="SSN 123-45-6789 email alice@test.com")
-    # No valid categories selected → nothing to match → ALLOW.
+    # No valid categories selected â†’ nothing to match â†’ ALLOW.
     assert policy(event)["result"] == "ALLOW"
 
 
-# ── Action parameter ─────────────────────────────────────────────────────────
+# â”€â”€ Action parameter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_action_ask_returns_ask_on_match() -> None:
@@ -285,7 +285,7 @@ def test_action_ask_returns_ask_on_match() -> None:
     )
 
 
-# ── Edge cases ───────────────────────────────────────────────────────────────
+# â”€â”€ Edge cases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_empty_system_prompt_allows() -> None:

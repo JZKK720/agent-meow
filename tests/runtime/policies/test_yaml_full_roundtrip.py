@@ -1,14 +1,14 @@
 """
-YAML → engine full-roundtrip tests.
+YAML â†’ engine full-roundtrip tests.
 
-Verifies every YAML shape from POLICIES.md §3.1 loads via
+Verifies every YAML shape from POLICIES.md Â§3.1 loads via
 the real parser, builds a PolicyEngine, and evaluates to
 the expected decision. The closest approximation to "an
 agent author wrote this YAML and shipped it" without the
 live LLM + workflow wiring.
 
 These tests deliberately do NOT use the three pre-built
-fixture directories — they construct spec YAML inline, so
+fixture directories â€” they construct spec YAML inline, so
 each test demonstrates exactly which YAML shape produces
 which engine behavior. A future onboarding doc could port
 these test bodies verbatim as "copy-paste-ready examples".
@@ -21,15 +21,15 @@ from typing import Any
 
 import pytest
 
-from agent_meow.policies.types import EvaluationContext
-from agent_meow.runtime.policies import build_policy_engine
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.parser import parse
-from agent_meow.spec.types import (
+from omnigent.policies.types import EvaluationContext
+from omnigent.runtime.policies import build_policy_engine
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.parser import parse
+from omnigent.spec.types import (
     Phase,
     PolicyAction,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 
@@ -62,7 +62,7 @@ def _tool_ctx(name: str, args: dict[str, Any] | None = None) -> EvaluationContex
     )
 
 
-# ── Label YAML shapes ─────────────────────────────────
+# â”€â”€ Label YAML shapes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -70,7 +70,7 @@ async def test_yaml_bare_string_label_shorthand(
     tmp_path: Path,
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """``integrity: "1"`` — bare-string shorthand for
+    """``integrity: "1"`` â€” bare-string shorthand for
     initial value. Parser produces a LabelDef with only
     `initial` set; no schema constraints apply."""
     engine = _write_and_build(
@@ -111,7 +111,7 @@ guardrails:
       type: function
       on: [request]
       function:
-        path: agent_meow.policies.function.make_fixed_action_callable
+        path: omnigent.policies.function.make_fixed_action_callable
         arguments:
           action: allow
           set_labels:
@@ -133,7 +133,7 @@ guardrails:
     assert engine.labels["sensitivity"] == "confidential"
 
 
-# ── Policy YAML shapes ────────────────────────────────
+# â”€â”€ Policy YAML shapes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -141,7 +141,7 @@ async def test_yaml_label_policy_deny(
     tmp_path: Path,
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """YAML: function policy wrapping a fixed DENY action →
+    """YAML: function policy wrapping a fixed DENY action â†’
     DENY on request phase."""
     engine = _write_and_build(
         tmp_path,
@@ -155,7 +155,7 @@ guardrails:
       type: function
       on: [request]
       function:
-        path: agent_meow.policies.function.make_fixed_action_callable
+        path: omnigent.policies.function.make_fixed_action_callable
         arguments:
           action: deny
           reason: "nope"
@@ -171,7 +171,7 @@ async def test_yaml_function_policy_short_form(
     tmp_path: Path,
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """YAML: `type: function, function: dotted.path` →
+    """YAML: `type: function, function: dotted.path` â†’
     FunctionPolicy using the path directly as evaluator."""
     engine = _write_and_build(
         tmp_path,
@@ -196,7 +196,7 @@ async def test_yaml_function_policy_factory_form(
     tmp_path: Path,
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """YAML: dict-form `function: {path, arguments}` →
+    """YAML: dict-form `function: {path, arguments}` â†’
     factory called with arguments at build time."""
     engine = _write_and_build(
         tmp_path,
@@ -243,23 +243,23 @@ guardrails:
       type: function
       on: [request]
       function:
-        path: agent_meow.policies.builtins.prompt.prompt_policy
+        path: omnigent.policies.builtins.prompt.prompt_policy
         arguments:
           prompt: "Deny if mentions Canada."
 """,
     )
-    from agent_meow.spec.types import FunctionPolicySpec
+    from omnigent.spec.types import FunctionPolicySpec
 
     check_spec = engine.spec_for("check")
     assert check_spec is not None
     assert isinstance(check_spec, FunctionPolicySpec)
     assert check_spec.function is not None
-    assert check_spec.function.path == "agent_meow.policies.builtins.prompt.prompt_policy"
+    assert check_spec.function.path == "omnigent.policies.builtins.prompt.prompt_policy"
     assert check_spec.function.arguments is not None
     assert check_spec.function.arguments["prompt"] == "Deny if mentions Canada."
 
 
-# ── `on:` YAML 1.1 trap regression ────────────────────
+# â”€â”€ `on:` YAML 1.1 trap regression â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -272,7 +272,7 @@ async def test_yaml_on_key_stays_string(
     this regresses, every policy's `on:` key disappears
     and all policies silently stop firing.
 
-    Most critical regression guard in the parser suite —
+    Most critical regression guard in the parser suite â€”
     duplicated here at the full-roundtrip level so a
     workflow run would fail if the loader ever reverted."""
     engine = _write_and_build(
@@ -287,19 +287,19 @@ guardrails:
       type: function
       on: [request]
       function:
-        path: agent_meow.policies.function.make_fixed_action_callable
+        path: omnigent.policies.function.make_fixed_action_callable
         arguments:
           action: deny
 """,
     )
     # If on: got parsed as True, there'd be no policies
-    # with a matching selector → default ALLOW. DENY here
+    # with a matching selector â†’ default ALLOW. DENY here
     # proves the selector was preserved.
     r = await engine.evaluate(_input_ctx("x"))
     assert r.action == PolicyAction.DENY
 
 
-# ── Combined: multiple types in one YAML ──────────────
+# â”€â”€ Combined: multiple types in one YAML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_yaml_multiple_types_in_one_spec(
@@ -324,7 +324,7 @@ guardrails:
       type: function
       on: [tool_call:web]
       function:
-        path: agent_meow.policies.function.make_fixed_action_callable
+        path: omnigent.policies.function.make_fixed_action_callable
         arguments:
           action: allow
           set_labels:
@@ -338,7 +338,7 @@ guardrails:
       type: function
       on: [request]
       function:
-        path: agent_meow.policies.builtins.prompt.prompt_policy
+        path: omnigent.policies.builtins.prompt.prompt_policy
         arguments:
           prompt: "check"
 """,
@@ -347,10 +347,10 @@ guardrails:
     names = [p.spec.name for p in engine.policies]
     assert names == ["label_taint", "function_rate", "prompt_check", "__ask_on_add_policy"]
 
-    from agent_meow.spec.types import FunctionPolicySpec
+    from omnigent.spec.types import FunctionPolicySpec
 
     # prompt_check is a FunctionPolicySpec backed by the builtin.
     prompt_spec = engine.spec_for("prompt_check")
     assert isinstance(prompt_spec, FunctionPolicySpec)
     assert prompt_spec.function is not None
-    assert prompt_spec.function.path == "agent_meow.policies.builtins.prompt.prompt_policy"
+    assert prompt_spec.function.path == "omnigent.policies.builtins.prompt.prompt_policy"

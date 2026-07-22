@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-from agent_meow.runner.app import _build_opencode_policy_evaluator
+from omnigent.runner.app import _build_opencode_policy_evaluator
 
 
 class _FakeServerClient:

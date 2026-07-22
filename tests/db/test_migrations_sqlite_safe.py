@@ -9,7 +9,7 @@ supported way to do those on SQLite is *batch mode*
 
 A migration that calls ``op.drop_column`` / ``op.alter_column`` directly emits
 raw ``ALTER TABLE ... DROP COLUMN``, which crashes on older SQLite with
-``near "DROP": syntax error`` — exactly the failure a customer hit on
+``near "DROP": syntax error`` â€” exactly the failure a customer hit on
 ``5db033a3d4b7`` after the SQLite ``chat.db`` shipped. Modern SQLite (>= 3.35)
 accepts ``DROP COLUMN``, so a runtime "upgrade head" test on a new SQLite build
 (e.g. CI) passes even when the migration is broken for older clients. The
@@ -28,9 +28,9 @@ import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 
-import agent_meow.db
+import omnigent.db
 
-# DDL ops that SQLite's native ALTER TABLE cannot perform — they MUST be issued
+# DDL ops that SQLite's native ALTER TABLE cannot perform â€” they MUST be issued
 # through ``op.batch_alter_table`` (table recreate). Index ops
 # (``create_index`` / ``drop_index``) are intentionally absent: SQLite supports
 # ``CREATE INDEX`` / ``DROP INDEX`` directly, so calling them on the ``op``
@@ -46,7 +46,7 @@ _SQLITE_UNSAFE_OPS = frozenset(
     }
 )
 
-_VERSIONS_DIR = Path(agent_meow.db.__file__).parent / "migrations" / "versions"
+_VERSIONS_DIR = Path(omnigent.db.__file__).parent / "migrations" / "versions"
 
 
 def _raw_unsafe_op_calls(source: str) -> list[tuple[str, int]]:
@@ -54,7 +54,7 @@ def _raw_unsafe_op_calls(source: str) -> list[tuple[str, int]]:
 
     Only flags calls on the bare ``op`` proxy (``op.drop_column(...)``), not
     ``batch_op.drop_column(...)`` inside a ``with op.batch_alter_table(...)``
-    block — the latter is the correct, SQLite-safe form. Detection is the
+    block â€” the latter is the correct, SQLite-safe form. Detection is the
     receiver name (``op`` vs ``batch_op``), matching how Alembic routes the
     call.
 
@@ -80,7 +80,7 @@ def test_no_migration_uses_sqlite_unsafe_raw_ddl() -> None:
 
     Scans all version modules and fails if any issues ``op.drop_column`` /
     ``op.alter_column`` / a constraint op directly. This is the protection that
-    holds on EVERY SQLite version — a runtime ``upgrade head`` test passes on
+    holds on EVERY SQLite version â€” a runtime ``upgrade head`` test passes on
     SQLite >= 3.35 even when the migration is broken for older clients.
 
     A failure here means a migration will crash on older SQLite with
@@ -90,7 +90,7 @@ def test_no_migration_uses_sqlite_unsafe_raw_ddl() -> None:
     """
     version_files = sorted(_VERSIONS_DIR.glob("*.py"))
     # Sanity: the scan found the migration directory and it's populated. A 0
-    # here would make the test vacuously pass — i.e. the guard checks nothing.
+    # here would make the test vacuously pass â€” i.e. the guard checks nothing.
     assert len(version_files) > 20, (
         f"Expected the migrations/versions dir at {_VERSIONS_DIR} to hold the "
         f"full migration chain (>20 files); found {len(version_files)}. The "
@@ -112,8 +112,8 @@ def test_no_migration_uses_sqlite_unsafe_raw_ddl() -> None:
 def test_full_migration_chain_round_trips_on_sqlite() -> None:
     """Upgrade to head, downgrade to base, and re-upgrade on a fresh SQLite DB.
 
-    Exercises every migration's ``upgrade`` AND ``downgrade`` on SQLite —
-    including the batch ``drop_column`` blocks this change added — so a
+    Exercises every migration's ``upgrade`` AND ``downgrade`` on SQLite â€”
+    including the batch ``drop_column`` blocks this change added â€” so a
     malformed batch conversion (bad table name, wrong column, broken data
     migration) fails loudly. The downgrade leg matters because the
     ``get_or_create_engine`` fixtures elsewhere only ever run ``upgrade head``,
@@ -121,7 +121,7 @@ def test_full_migration_chain_round_trips_on_sqlite() -> None:
 
     On SQLite >= 3.35 this would also pass with raw ``DROP COLUMN``; it does NOT
     replace :func:`test_no_migration_uses_sqlite_unsafe_raw_ddl` (which is the
-    version-independent guard) — it verifies the conversions are valid SQL and
+    version-independent guard) â€” it verifies the conversions are valid SQL and
     that the chain is reversible.
     """
     with tempfile.TemporaryDirectory() as tmp:
@@ -131,7 +131,7 @@ def test_full_migration_chain_round_trips_on_sqlite() -> None:
         # so the test owns its invocation rather than reaching into the
         # production engine helper.
         config.set_main_option(
-            "script_location", str(Path(agent_meow.db.__file__).parent / "migrations")
+            "script_location", str(Path(omnigent.db.__file__).parent / "migrations")
         )
         config.set_main_option("sqlalchemy.url", uri)
 

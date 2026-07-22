@@ -22,7 +22,7 @@ rejects on purpose. The two together enumerate every example.
   (os_env, inline AgentTool, cancellable_function, etc.).
 - The agent-meow mode CLI shim loses a dispatch for a harness.
 - A new dependency lands in the example YAML (e.g. the example
-  starts requiring a binary the CI box doesn't have) — then the
+  starts requiring a binary the CI box doesn't have) â€” then the
   skip rule needs widening.
 
 Failures that aren't regressions (e.g. external network flakes,
@@ -39,24 +39,24 @@ from pathlib import Path
 
 import pytest
 
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _ONESHOT_TIMEOUT_SEC = 240
 
 
 # Each row:
-#   yaml_rel        — path to the example under the repo root.
-#   prompt          — LLM-facing prompt chosen to exercise the
+#   yaml_rel        â€” path to the example under the repo root.
+#   prompt          â€” LLM-facing prompt chosen to exercise the
 #                     agent's declared capabilities.
-#   required_bins   — vendor CLIs the harness needs on PATH;
+#   required_bins   â€” vendor CLIs the harness needs on PATH;
 #                     ``pytest.skip`` when any is missing.
-#   success_markers — one-of substrings that MUST appear in
+#   success_markers â€” one-of substrings that MUST appear in
 #                     stdout. Any one match passes. The mock LLM
 #                     is configured to return the first marker.
-#   forbidden       — substrings that would indicate a real
+#   forbidden       â€” substrings that would indicate a real
 #                     failure mode even if exit code is 0
 #                     (e.g. harness auth errors, missing tools).
-#   extra_args      — additional CLI args (e.g. ``--model``
+#   extra_args      â€” additional CLI args (e.g. ``--model``
 #                     override for YAMLs with no executor block).
 _CASES = [
     pytest.param(
@@ -79,7 +79,7 @@ _CASES = [
             "Call the calculate tool to compute 6 * 9, then reply "
             "with exactly 'answer=54' and nothing else."
         ),
-        # No vendor binary required — override to openai-agents so the
+        # No vendor binary required â€” override to openai-agents so the
         # mock LLM handles the call (the YAML's claude-sdk executor needs
         # gateway credentials we don't have in CI).
         (),
@@ -96,12 +96,12 @@ _CASES = [
             "``ls`` in its working directory. When it completes, "
             "include its listing verbatim in your final answer."
         ),
-        # No vendor binary required — override to openai-agents so the
+        # No vendor binary required â€” override to openai-agents so the
         # mock LLM handles all turns (the YAML's claude-sdk executor
         # needs gateway credentials we don't have in CI).
         (),
         # The fork's cwd is the repo root, so ``ls`` sees the
-        # real repo anchors. Any one match is enough — the mock
+        # real repo anchors. Any one match is enough â€” the mock
         # returns the first marker.
         ("pyproject.toml", "README.md", "agent-meow", "examples"),
         # Harness-side failure markers the supervisor can't
@@ -136,7 +136,7 @@ def test_run_omnigent_example_yaml(
     and assert the agent exercised the declared capability.
 
     :param omnigent_python: Shared interpreter fixture.
-    :param omnigent_repo_root: Repo root — subprocess cwd so
+    :param omnigent_repo_root: Repo root â€” subprocess cwd so
         relative example paths resolve.
     :param mock_credentials_env: Mock-LLM env vars.
     :param mock_llm_server_url: Mock server URL for configuring
@@ -163,7 +163,7 @@ def test_run_omnigent_example_yaml(
     for binary in required_bins:
         if shutil.which(binary) is None:
             pytest.skip(
-                f"{binary!r} binary not on PATH — this example's "
+                f"{binary!r} binary not on PATH â€” this example's "
                 f"harness can't boot; skipping to avoid an unrelated "
                 f"failure mode.",
             )
@@ -181,11 +181,11 @@ def test_run_omnigent_example_yaml(
         str(yaml_path),
         # ``--no-session`` so each test starts on a fresh
         # ephemeral DBOS db. Without it, every run shares
-        # ``~/.agent_meow/chat.db`` and DBOS may attempt to
+        # ``~/.omnigent/chat.db`` and DBOS may attempt to
         # recover stuck workflows from previous runs before the
         # FastAPI lifespan finishes initializing the
-        # HarnessProcessManager — manifests as
-        # ``HarnessProcessManager not initialized — agent-meow lifespan
+        # HarnessProcessManager â€” manifests as
+        # ``HarnessProcessManager not initialized â€” agent-meow lifespan
         # startup must call set_harness_process_manager() before
         # any workflow dispatches to a non-default harness``.
         "--no-session",
@@ -207,7 +207,7 @@ def test_run_omnigent_example_yaml(
     for marker in forbidden_markers:
         assert marker not in combined, (
             f"{yaml_rel}: forbidden marker {marker!r} appeared in "
-            f"output — a harness-specific failure path fired. "
+            f"output â€” a harness-specific failure path fired. "
             f"stderr tail:\n{result.stderr[-1500:]}"
         )
 

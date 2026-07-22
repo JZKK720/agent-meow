@@ -1,16 +1,16 @@
 """Small mock-LLM e2e smoke for the polly coding orchestrator (examples/polly).
 
 Mock mode: boots a throwaway LOCAL server from this working tree (which carries
-the in-tree ``agent_meow.inner.nessie.policies`` module that polly's guardrails
+the in-tree ``omnigent.inner.nessie.policies`` module that polly's guardrails
 resolve server-side), rewrites the polly bundle's executor to use
 ``openai-agents`` harness wired to the mock LLM server, and runs a one-shot
 ``agent-meow run`` subprocess against it. This exercises the parts a structural
-spec-load test can't — bundle load, server-side guardrail policy resolution,
-and a turn streaming back through the run path — without requiring real OAuth
+spec-load test can't â€” bundle load, server-side guardrail policy resolution,
+and a turn streaming back through the run path â€” without requiring real OAuth
 credentials or proprietary model access.
 
 Why a local server (not bare ``agent-meow run``): polly's guardrail policies
-(``agent_meow.inner.nessie.policies`` — the package keeps its historical
+(``omnigent.inner.nessie.policies`` â€” the package keeps its historical
 name) are resolved SERVER-SIDE when the workflow executes. Bare ``agent-meow
 run`` routes to the developer's configured default server (the shared
 ``agent-meow`` prod app), which may not carry the in-tree policy module, so
@@ -203,7 +203,7 @@ def _mock_polly_spec_dir(
         (``pi``, ``pi-native``, ``claude-native``, ``codex-native``, etc.)
         with ``openai-agents``.  Use this when a test only needs the child
         *session row* to be created (e.g. to verify ``model_override``) and
-        doesn't need the native binary to actually run — avoids failures on
+        doesn't need the native binary to actually run â€” avoids failures on
         machines where the binary is absent from ``PATH``.
     :returns: Path to the copied polly bundle directory.
     """
@@ -279,7 +279,7 @@ def local_polly_server(tmp_path: Path) -> Iterator[str]:
     """
     Start a throwaway local ``agent-meow server`` from this working tree.
 
-    The server carries the in-tree ``agent_meow.inner.nessie.policies`` module
+    The server carries the in-tree ``omnigent.inner.nessie.policies`` module
     that polly's guardrails resolve server-side, so the workflow doesn't 500
     the way it does against the shared prod app. Own sqlite DB + artifact dir
     under ``tmp_path`` keep it isolated from the developer's real state.
@@ -343,7 +343,7 @@ def test_polly_orchestrator_boots_and_responds(
     code: the openai-agents harness initialises, the sub-agents register
     without aborting startup, the server-side guardrail policies resolve, and
     a turn completes. A blank reply here is the exact failure that masqueraded
-    as "no output" before the auth fix — so this is the regression guard for
+    as "no output" before the auth fix â€” so this is the regression guard for
     the substrate.
 
     :param local_polly_server: Base URL of the in-tree local server fixture.

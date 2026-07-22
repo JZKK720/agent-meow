@@ -10,17 +10,17 @@ from fastapi import FastAPI
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
-from agent_meow.db.db_models import SqlHost
-from agent_meow.db.utils import get_or_create_engine, now_epoch
-from agent_meow.host.frames import (
+from omnigent.db.db_models import SqlHost
+from omnigent.db.utils import get_or_create_engine, now_epoch
+from omnigent.host.frames import (
     HostHelloFrame,
     HostLaunchRunnerResultFrame,
     encode_host_frame,
 )
-from agent_meow.server.auth import AuthProvider
-from agent_meow.server.host_registry import HostRegistry
-from agent_meow.server.routes.host_tunnel import create_host_tunnel_router
-from agent_meow.stores.host_store import HostStore
+from omnigent.server.auth import AuthProvider
+from omnigent.server.host_registry import HostRegistry
+from omnigent.server.routes.host_tunnel import create_host_tunnel_router
+from omnigent.stores.host_store import HostStore
 
 pytestmark = pytest.mark.asyncio
 
@@ -210,7 +210,7 @@ async def test_host_tunnel_ping_loop_persists_heartbeat(
     into the past and assert the heartbeat drags it back while the host
     stays ``online``.
     """
-    import agent_meow.server.routes.host_tunnel as tunnel_mod
+    import omnigent.server.routes.host_tunnel as tunnel_mod
 
     monkeypatch.setattr(tunnel_mod, "PING_INTERVAL_S", 0.02)
     # Never trip the ping-timeout path so the only writer of updated_at

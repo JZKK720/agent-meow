@@ -2,9 +2,9 @@
 
 These tests start a real server subprocess, connect a real host
 daemon, create sessions via the REST API, and verify the full
-launch-runner → exchange-messages flow.
+launch-runner â†’ exchange-messages flow.
 
-All tests run against the mock LLM server — no real credentials
+All tests run against the mock LLM server â€” no real credentials
 needed::
 
     .venv/bin/python -m pytest tests/e2e/test_host_e2e.py -v
@@ -116,7 +116,7 @@ def _spawn_host_daemon(
             # else the test process's python. apply_runner_env drops the inherited
             # worktree PYTHONPATH in that mode; the old host launches old runners
             # (colocated) from its own venv.
-            [runner_executable(), "-m", "agent_meow.host._daemon_entry", "--server", live_server],
+            [runner_executable(), "-m", "omnigent.host._daemon_entry", "--server", live_server],
             env=apply_runner_env(env),
             cwd=compat_runner_cwd(),
             stdout=subprocess.DEVNULL,
@@ -221,7 +221,7 @@ def test_host_connect_and_list(
     appears in ``GET /v1/hosts`` with status online, stop it, and
     verify it goes offline.
 
-    This is the basic registration smoke test — if the host never
+    This is the basic registration smoke test â€” if the host never
     appears online, the WS tunnel handshake or DB upsert is broken.
     """
     daemon = _spawn_host_daemon(
@@ -274,7 +274,7 @@ def test_host_launch_runner_and_session_round_trip(
     send a message, and verify the LLM responds.
 
     This exercises the complete Web UI flow from the design doc:
-    list hosts → create session → launch runner → exchange messages.
+    list hosts â†’ create session â†’ launch runner â†’ exchange messages.
     """
     # Configure mock LLM to reply with the marker for the round-trip.
     marker = "HOST_E2E_GOLDEN_PATH_OK"
@@ -449,7 +449,7 @@ def test_host_runner_survives_host_disconnect(
         assert body1["status"] == "completed"
         assert marker1 in final_assistant_text(body1)
 
-        # Kill the host daemon (but NOT the runner — it's a separate
+        # Kill the host daemon (but NOT the runner â€” it's a separate
         # process with start_new_session=True in the host daemon,
         # but since the daemon spawns runners as children, we need
         # to only kill the daemon, not its children).
@@ -477,7 +477,7 @@ def test_host_runner_survives_host_disconnect(
                 timeout=120,
             )
             assert body2["status"] == "completed", (
-                "Session should still work after host disconnect — "
+                "Session should still work after host disconnect â€” "
                 "runner has independent WS tunnel"
             )
             assert marker2 in final_assistant_text(body2)
@@ -562,7 +562,7 @@ def test_host_death_kills_runners(
         host_proc.wait()
 
         # The orphaned runner must exit (parent-PID watchdog). Assert on
-        # the runner PROCESS — the invariant this test protects (no orphan
+        # the runner PROCESS â€” the invariant this test protects (no orphan
         # accumulation). The server's online flag is a poor proxy here: it
         # only clears a dead runner on the next 30s keepalive ping, long
         # after the runner has actually exited.
@@ -587,9 +587,9 @@ def test_host_death_kills_runners(
         raise
 
 
-# ── Host-restart native round-trip ─────────────────────────────
+# â”€â”€ Host-restart native round-trip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
-# Skipped when ``claude`` or ``tmux`` are absent from PATH — the test
+# Skipped when ``claude`` or ``tmux`` are absent from PATH â€” the test
 # launches a real Claude Code TUI in a tmux session via the host daemon.
 # All LLM calls hit the shared mock server: the daemon's environment
 # carries ``ANTHROPIC_BASE_URL`` pointing at the mock and
@@ -600,7 +600,7 @@ def test_host_death_kills_runners(
 def _write_claude_native_agent_yaml(tmp_path: Path) -> Path:
     """Create a minimal ``claude-native`` agent dir for the host e2e.
 
-    No ``executor.auth`` — auth flows via ``ANTHROPIC_API_KEY`` /
+    No ``executor.auth`` â€” auth flows via ``ANTHROPIC_API_KEY`` /
     ``ANTHROPIC_BASE_URL`` injected into the daemon's environment (and
     therefore inherited by the runner's tmux session).
 
@@ -668,7 +668,7 @@ def _spawn_host_daemon_for_mock_claude(
     Like :func:`_spawn_host_daemon` but sets ``ANTHROPIC_BASE_URL`` and
     ``ANTHROPIC_API_KEY`` so the runner's Claude TUI hits the mock server
     instead of prompting for OAuth. Both vars are in
-    ``HARNESS_CREDENTIAL_ENV_VARS`` and flow daemon→runner automatically.
+    ``HARNESS_CREDENTIAL_ENV_VARS`` and flow daemonâ†’runner automatically.
 
     The Anthropic SDK appends ``/v1/messages`` to ``ANTHROPIC_BASE_URL``,
     so the URL must NOT include ``/v1``.
@@ -694,9 +694,9 @@ def _spawn_host_daemon_for_mock_claude(
         **os.environ,
         "HOME": str(tmp_path),
         # ANTHROPIC_BASE_URL is in HARNESS_CREDENTIAL_ENV_VARS so it flows
-        # daemon→runner. The Anthropic SDK appends /v1/messages; omit /v1.
+        # daemonâ†’runner. The Anthropic SDK appends /v1/messages; omit /v1.
         "ANTHROPIC_BASE_URL": mock_llm_server_url,
-        # ANTHROPIC_API_KEY bypasses the Claude CLI's OAuth login — no
+        # ANTHROPIC_API_KEY bypasses the Claude CLI's OAuth login â€” no
         # ~/.claude.json account is needed when an explicit API key is set.
         "ANTHROPIC_API_KEY": "mock-key",
         # Suppress beta headers so the mock server doesn't reject them.
@@ -709,7 +709,7 @@ def _spawn_host_daemon_for_mock_claude(
             # else the test process's python. apply_runner_env drops the inherited
             # worktree PYTHONPATH in that mode; the old host launches old runners
             # (colocated) from its own venv.
-            [runner_executable(), "-m", "agent_meow.host._daemon_entry", "--server", live_server],
+            [runner_executable(), "-m", "omnigent.host._daemon_entry", "--server", live_server],
             env=apply_runner_env(env),
             cwd=compat_runner_cwd(),
             stdout=subprocess.DEVNULL,
@@ -726,11 +726,11 @@ def _native_user_message_round_tripped(
 ) -> bool:
     """Whether the forwarder mirrored the marker user message back to AP.
 
-    Native web messages aren't persisted at POST time — they're injected
+    Native web messages aren't persisted at POST time â€” they're injected
     into the TUI and the transcript forwarder mirrors them back as
     persisted items. So a user-role item whose text carries *marker*
     appearing in ``GET /v1/sessions/{id}/items`` proves the round-trip
-    happened (terminal + forwarder were watching before injection — the
+    happened (terminal + forwarder were watching before injection â€” the
     fix). Without the fix the message is injected before the forwarder
     attaches and never persists.
 
@@ -782,7 +782,7 @@ def test_host_native_session_round_trips_after_runner_death(
     3. Wait for the runner to launch and its initial pid to appear in the
        daemon log.
     4. Hard-kill the runner (``SIGKILL``).
-    5. Send a web message — the server must relaunch the runner via the
+    5. Send a web message â€” the server must relaunch the runner via the
        host, run ``create_session`` (terminal + transcript forwarder) BEFORE
        forwarding the message, and the forwarder must mirror the user text
        back as a persisted item.
@@ -830,7 +830,7 @@ def test_host_native_session_round_trips_after_runner_death(
                 "agent_id": agent_id,
                 "host_id": host_id,
                 "workspace": str(workspace),
-                "labels": {"agent_meow.wrapper": "claude-code-native-ui"},
+                "labels": {"omnigent.wrapper": "claude-code-native-ui"},
             },
             timeout=60.0,
         )

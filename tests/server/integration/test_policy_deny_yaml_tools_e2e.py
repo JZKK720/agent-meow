@@ -10,11 +10,11 @@ LLM is called.
 Tests cover:
 
 - DENY on a specific tool_call: agent has a policy scoped to
-  ``tool_call:echo`` → evaluate returns DENY for ``echo``.
+  ``tool_call:echo`` â†’ evaluate returns DENY for ``echo``.
 - DENY doesn't block other tools: the same agent allows a
   different tool (``grep``).
 - DENY on request phase from YAML: agent has a REQUEST-phase
-  DENY → any user input is blocked (LLM never called).
+  DENY â†’ any user input is blocked (LLM never called).
 
 Uses the shared ``client`` fixture from ``tests/server/conftest.py``
 (real stores + mock LLM).
@@ -32,10 +32,10 @@ from tests.server.helpers import create_test_agent
 pytestmark = pytest.mark.asyncio
 
 
-_MAKE_FIXED = "agent_meow.policies.function.make_fixed_action_callable"
+_MAKE_FIXED = "omnigent.policies.function.make_fixed_action_callable"
 
 
-# ── Helpers ─────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def _create_session(client: httpx.AsyncClient, agent_id: str) -> str:
@@ -75,7 +75,7 @@ def _tool_call_request(
     }
 
 
-# ── Tests ───────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def test_deny_on_specific_tool_call(
@@ -222,7 +222,7 @@ async def test_deny_on_request_phase_blocks_input(
         "Request-phase policy should not fire on PHASE_TOOL_CALL events."
     )
 
-    # Send user message via session events — the REQUEST-phase policy
+    # Send user message via session events â€” the REQUEST-phase policy
     # must intercept and deny synchronously.
     resp_msg = await client.post(
         f"/v1/sessions/{session_id}/events",

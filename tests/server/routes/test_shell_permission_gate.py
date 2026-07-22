@@ -30,17 +30,17 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from agent_meow.entities import Conversation, ResolvedAccess, SessionPermission
-from agent_meow.errors import OmnigentError
-from agent_meow.runtime import _globals, set_runner_client, set_runner_router
-from agent_meow.server.auth import (
+from omnigent.entities import Conversation, ResolvedAccess, SessionPermission
+from omnigent.errors import OmnigentError
+from omnigent.runtime import _globals, set_runner_client, set_runner_router
+from omnigent.server.auth import (
     LEVEL_EDIT,
     LEVEL_OWNER,
     LEVEL_READ,
     RESERVED_USER_PUBLIC,
     UnifiedAuthProvider,
 )
-from agent_meow.server.routes.sessions import create_sessions_router
+from omnigent.server.routes.sessions import create_sessions_router
 
 # The server route is mounted under /v1 and proxies to the runner at the
 # same path, so the client URL and the recorded runner path are identical.

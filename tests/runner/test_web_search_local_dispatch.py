@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agent_meow.runner.tool_dispatch import (
+from omnigent.runner.tool_dispatch import (
     _ALL_LOCAL_TOOLS,
     _NATIVE_RELAY_BUILTIN_TOOLS,
     _execute_web_search_tool,
@@ -54,10 +54,10 @@ def test_web_search_not_relayed_to_native_harnesses() -> None:
 def test_dispatch_preserves_openai_passthrough_fence() -> None:
     """
     For an OpenAI model the handler builds the tool in passthrough mode, so
-    ``invoke()`` raises its fence — the third-party backend is NEVER called.
+    ``invoke()`` raises its fence â€” the third-party backend is NEVER called.
     """
-    spec = _spec_with_model("gpt-5.4-mini")  # provider → openai
-    with patch("agent_meow.tools.builtins.web_search_perplexity.httpx.post") as mock_post:
+    spec = _spec_with_model("gpt-5.4-mini")  # provider â†’ openai
+    with patch("omnigent.tools.builtins.web_search_perplexity.httpx.post") as mock_post:
         with pytest.raises(RuntimeError, match="passthrough"):
             asyncio.run(
                 _execute_web_search_tool({"query": "x"}, agent_spec=spec, conversation_id="c")
@@ -70,7 +70,7 @@ def test_dispatch_databricks_model_uses_function_mode() -> None:
     spec = _spec_with_model("databricks-claude-sonnet-4-6")
     fake_response = MagicMock()
     fake_response.json.return_value = {"choices": [{"message": {"content": "answer"}}]}
-    with patch("agent_meow.tools.builtins.web_search_perplexity.httpx.post") as mock_post:
+    with patch("omnigent.tools.builtins.web_search_perplexity.httpx.post") as mock_post:
         mock_post.return_value = fake_response
         result = asyncio.run(
             _execute_web_search_tool({"query": "x"}, agent_spec=spec, conversation_id="c")

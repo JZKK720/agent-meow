@@ -34,8 +34,8 @@ from pathlib import Path
 
 from fastapi import FastAPI
 
-from agent_meow.runtime.harnesses._scaffold import HarnessApp, TurnContext
-from agent_meow.server.schemas import CreateResponseRequest, OutputTextDeltaEvent
+from omnigent.runtime.harnesses._scaffold import HarnessApp, TurnContext
+from omnigent.server.schemas import CreateResponseRequest, OutputTextDeltaEvent
 
 _logger = logging.getLogger(__name__)
 

@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.repl import _repl as repl_mod
+from omnigent.repl import _repl as repl_mod
 
 pytestmark = pytest.mark.asyncio
 

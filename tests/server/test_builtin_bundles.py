@@ -1,4 +1,4 @@
-"""Tests for the built-in agent bundle builders in ``agent_meow/server/app.py``.
+"""Tests for the built-in agent bundle builders in ``omnigent/server/app.py``.
 
 The server seeds Web-UI-launchable agents (claude-native, codex-native, and
 the shipped ``debby`` / ``polly`` examples) by materializing each spec into a
@@ -19,9 +19,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
-from agent_meow.server import app
-from agent_meow.spec import load, materialize_bundle
+from omnigent.errors import OmnigentError
+from omnigent.server import app
+from omnigent.spec import load, materialize_bundle
 
 # (builder attribute, the spec entry that proves the bundle was assembled,
 # whether the source is a shipped example that a stripped deployment may omit)
@@ -90,17 +90,17 @@ def test_bundle_builder_is_reproducible(
     assert fn() == fn(), f"{builder} is not byte-for-byte reproducible across builds."
 
 
-# ── Backwards-compatible loading of the shipped sub-agent examples ──────────
+# â”€â”€ Backwards-compatible loading of the shipped sub-agent examples â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # polly and debby are the two shipped examples that ship *sub-agents*, so they
 # are the surface for the version-skew regression matei hit: a newer server
 # adds a sub-agent whose harness an older client can't validate, and the old
 # client must still launch the parent (dropping only the unsupported worker)
 # rather than failing every dispatch of the agent. These tests exercise the
-# REAL shipped definitions (not synthetic minimal specs — see
+# REAL shipped definitions (not synthetic minimal specs â€” see
 # tests/spec/test_load.py for those) so a regression in either the prune logic
 # OR the polly/debby structure (e.g. a parent that becomes un-prunable) is
-# caught here. See agent_meow.spec.load(..., prune_invalid_sub_agents=True).
+# caught here. See omnigent.spec.load(..., prune_invalid_sub_agents=True).
 
 # (name, bundle source dir, sub-agents the shipped definition declares today)
 _SHIPPED_SUB_AGENT_EXAMPLES = [
@@ -149,11 +149,11 @@ def test_shipped_example_survives_unknown_harness_sub_agent(
     definition with an ``opencode`` sub-agent, and older runners/hosts failed to
     launch *any* polly because the then-unknown ``opencode-native`` harness
     failed the whole spec's validation. ``opencode-native`` is a recognized
-    harness now, so we inject a deliberately-synthetic harness — the stand-in
-    for "whatever the next server adds that this client doesn't know yet" — as a
+    harness now, so we inject a deliberately-synthetic harness â€” the stand-in
+    for "whatever the next server adds that this client doesn't know yet" â€” as a
     worker referenced from the parent's ``tools.agents``, and assert:
 
-    - the strict (authoring/upload) load still fails loud — unchanged behavior;
+    - the strict (authoring/upload) load still fails loud â€” unchanged behavior;
     - the execution-path load (``prune_invalid_sub_agents=True``) drops ONLY the
       unsupported worker and keeps the parent plus every real sub-agent.
     """
@@ -177,7 +177,7 @@ def test_shipped_example_survives_unknown_harness_sub_agent(
             }
         )
     )
-    # Declare it on the parent exactly as a real newer-server spec would — an
+    # Declare it on the parent exactly as a real newer-server spec would â€” an
     # undeclared agents/ dir would be parsed but never referenced, so the
     # dangling-reference cleanup would go untested.
     parent_cfg = yaml.safe_load((bundle / "config.yaml").read_text())

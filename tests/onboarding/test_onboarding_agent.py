@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.spec.parser import parse
+from omnigent.spec.parser import parse
 
 
 def onboarding_agent_dir() -> Path:
     """
     Return the path to the built-in onboarding agent directory.
 
-    :returns: Absolute path to ``agent_meow/onboarding/agent/``.
+    :returns: Absolute path to ``omnigent/onboarding/agent/``.
     """
     return Path(__file__).parent.parent.parent / "agent-meow" / "onboarding" / "agent"
 

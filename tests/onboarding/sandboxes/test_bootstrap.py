@@ -1,4 +1,4 @@
-"""Tests for :mod:`~?agent_meow.onboarding.sandboxes.bootstrap`."""
+"""Tests for :mod:`~?omnigent.onboarding.sandboxes.bootstrap`."""
 
 from __future__ import annotations
 
@@ -15,14 +15,14 @@ import click
 import httpx
 import pytest
 
-from agent_meow.onboarding.sandboxes import bootstrap as bootstrap_mod
-from agent_meow.onboarding.sandboxes.base import (
+from omnigent.onboarding.sandboxes import bootstrap as bootstrap_mod
+from omnigent.onboarding.sandboxes.base import (
     RemoteCommandResult,
     RemoteProcess,
     SandboxCapabilityError,
     SandboxLauncher,
 )
-from agent_meow.onboarding.sandboxes.bootstrap import (
+from omnigent.onboarding.sandboxes.bootstrap import (
     DEFAULT_SANDBOX_NAME,
     DerivedWorkspace,
     _extract_oauth_url,
@@ -39,7 +39,7 @@ from agent_meow.onboarding.sandboxes.bootstrap import (
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-# ── Fake launcher plumbing ──────────────────────────────────
+# â”€â”€ Fake launcher plumbing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _FakeRemoteProcess(RemoteProcess):
@@ -207,7 +207,7 @@ class _NoForwardLauncher(_FakeLauncher):
     forward_local_port = SandboxLauncher.forward_local_port
 
 
-# ── OAuth URL/port parsing helpers ──────────────────────────
+# â”€â”€ OAuth URL/port parsing helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _AUTHORIZE_URL = (
     "https://example.databricks.com/oidc/v1/authorize?"
@@ -226,7 +226,7 @@ def test_extract_oauth_url_pulls_url_from_pty_line() -> None:
 def test_extract_oauth_url_ignores_non_authorize_lines() -> None:
     """Banner / prose lines (no authorize URL) yield ``None``."""
     assert _extract_oauth_url("Please continue in your browser:\r\n") is None
-    # A different https URL without the authorize path must not match —
+    # A different https URL without the authorize path must not match â€”
     # otherwise we'd forward against a port that isn't the callback.
     assert _extract_oauth_url("https://example.databricks.com/login\r\n") is None
 
@@ -258,7 +258,7 @@ def test_read_login_url_returns_first_authorize_url() -> None:
 
 def test_read_login_url_returns_none_when_no_url_printed() -> None:
     """
-    A stream that ends without an authorize URL yields ``None`` — not
+    A stream that ends without an authorize URL yields ``None`` â€” not
     an exception: ``agent-meow login`` legitimately completes without a
     browser step when a cached workspace grant verifies, and the
     caller decides success vs. failure from the exit code.
@@ -266,7 +266,7 @@ def test_read_login_url_returns_none_when_no_url_printed() -> None:
     assert _read_login_url(["some output\r\n", "another line\r\n"]) is None
 
 
-# ── login_app_oauth_in_sandbox ──────────────────────────────
+# â”€â”€ login_app_oauth_in_sandbox â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_login_skips_entirely_when_skip_flag() -> None:
@@ -324,7 +324,7 @@ def test_login_runs_in_sandbox_and_forwards_callback_port(
     monkeypatch.setattr(bootstrap_mod.webbrowser, "open", _fake_open)
 
     # The CLI derives the workspace once per command and threads it
-    # down — the login itself performs no derivation (and no HTTP).
+    # down â€” the login itself performs no derivation (and no HTTP).
     login_app_oauth_in_sandbox(
         launcher,
         "sb-1",
@@ -332,7 +332,7 @@ def test_login_runs_in_sandbox_and_forwards_callback_port(
         workspace=DerivedWorkspace(host="https://ws.example.com", workspace_id="123456"),
     )
 
-    # The login runs INSIDE the sandbox with a forced PTY — and it is
+    # The login runs INSIDE the sandbox with a forced PTY â€” and it is
     # `agent-meow login <server>` (which infers the fronting workspace
     # itself), NOT a raw `databricks auth login` with profile flags.
     assert launcher.stream_calls == [
@@ -342,7 +342,7 @@ def test_login_runs_in_sandbox_and_forwards_callback_port(
         )
     ]
     # The forward maps the DYNAMIC port parsed from the URL (8022), not
-    # a hardcoded 8020 — this is the core of the callback fix.
+    # a hardcoded 8020 â€” this is the core of the callback fix.
     assert launcher.forwarded_ports == [8022]
     # The browser must open inside the forward window: if it opens
     # before forward_enter, the OAuth redirect can race the tunnel.
@@ -379,7 +379,7 @@ def test_login_completes_without_browser_when_no_url_printed(
 ) -> None:
     """
     ``agent-meow login`` reuses a cached workspace grant when one
-    verifies against the server — it then exits 0 without printing an
+    verifies against the server â€” it then exits 0 without printing an
     authorize URL. The flow must treat that as success: no port
     forward, no browser, no error.
     """
@@ -399,7 +399,7 @@ def test_login_completes_without_browser_when_no_url_printed(
         server_url="https://app.example.com",
         workspace=DerivedWorkspace(host="https://ws.example.com", workspace_id="123456"),
     )
-    # No callback forward was stood up — there is no redirect to bridge.
+    # No callback forward was stood up â€” there is no redirect to bridge.
     assert launcher.forwarded_ports == []
     # The login process was still reaped.
     assert launcher.stream_processes[0].closed is True
@@ -410,7 +410,7 @@ def test_login_skips_cfg_seed_for_non_databricks_server() -> None:
     Accounts / OIDC / header-auth servers are not Databricks-fronted
     (the CLI's derivation returned ``None``, so it threads
     ``workspace=None`` down): the sandbox's ~/.databrickscfg must be
-    left alone — wiping the baked credential would cost in-sandbox
+    left alone â€” wiping the baked credential would cost in-sandbox
     workspace API access for zero auth benefit.
     """
     launcher = _FakeLauncher(
@@ -430,7 +430,7 @@ def test_login_seed_omits_workspace_id_line_when_unknown() -> None:
     """
     When the workspace didn't reveal its org id (``workspace_id`` is
     ``None``), the cfg seed must omit the ``workspace_id`` line while
-    keeping host + auth_type — writing ``workspace_id = None`` would
+    keeping host + auth_type â€” writing ``workspace_id = None`` would
     poison the profile, and dropping the whole seed would re-expose
     the baked-PAT shadowing the seed exists to fix.
     """
@@ -444,7 +444,7 @@ def test_login_seed_omits_workspace_id_line_when_unknown() -> None:
         server_url="https://app.example.com",
         workspace=DerivedWorkspace(host="https://ws.example.com", workspace_id=None),
     )
-    # Exactly one remote pre-step ran (the cfg seed) — zero would mean
+    # Exactly one remote pre-step ran (the cfg seed) â€” zero would mean
     # the missing org id wrongly disabled the seed entirely.
     assert len(launcher.run_commands) == 1
     seed_command = launcher.run_commands[0]
@@ -459,7 +459,7 @@ def test_derive_workspace_extracts_workspace_from_apps_redirect(
 ) -> None:
     """
     A Databricks Apps edge answers the unauthenticated probe with a
-    302 to the workspace OIDC authorize endpoint — the derived
+    302 to the workspace OIDC authorize endpoint â€” the derived
     coordinates must carry that workspace host (scheme + netloc only)
     plus the org id read from the workspace itself.
     """
@@ -480,7 +480,7 @@ def test_derive_workspace_extracts_workspace_from_apps_redirect(
         host="https://ws.example.com", workspace_id="654321"
     )
     # The org-id probe must target the DERIVED workspace host, not the
-    # app server — the Apps edge doesn't stamp the workspace org id.
+    # app server â€” the Apps edge doesn't stamp the workspace org id.
     assert org_probes == ["https://ws.example.com"]
 
 
@@ -488,7 +488,7 @@ def test_derive_workspace_none_when_server_unreachable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    An unreachable server yields ``None`` (no cfg seed) — the
+    An unreachable server yields ``None`` (no cfg seed) â€” the
     in-sandbox login then surfaces the real connectivity error instead
     of this pre-step guessing at one. The org-id probe must not run
     either: there is no workspace host to probe.
@@ -507,7 +507,7 @@ def test_derive_workspace_none_when_server_unreachable(
 def _login_page_server(org_id_header: str | None) -> Iterator[str]:
     """
     Serve ``GET /login.html`` on an ephemeral loopback port, optionally
-    stamping the ``x-databricks-org-id`` response header — a real-socket
+    stamping the ``x-databricks-org-id`` response header â€” a real-socket
     workspace stand-in so :func:`_workspace_org_id` (whose httpx.get
     has no module-local indirection to patch) is tested over a real
     HTTP round trip.
@@ -545,9 +545,9 @@ def _login_page_server(org_id_header: str | None) -> Iterator[str]:
 @pytest.mark.parametrize(
     ("org_id_header", "expected"),
     [
-        # Header present → its value is the workspace id.
+        # Header present â†’ its value is the workspace id.
         ("654321", "654321"),
-        # Header absent → None (cfg seed then omits workspace_id).
+        # Header absent â†’ None (cfg seed then omits workspace_id).
         (None, None),
     ],
 )
@@ -557,7 +557,7 @@ def test_workspace_org_id_reads_header_from_login_page(
     """
     ``_workspace_org_id`` must return exactly the
     ``x-databricks-org-id`` header from an unauthenticated GET of the
-    workspace's ``/login.html`` — and ``None`` when the workspace
+    workspace's ``/login.html`` â€” and ``None`` when the workspace
     doesn't stamp it. Exercised against a real loopback HTTP server
     (no httpx patching), so a wrong path or header name fails here.
     """
@@ -571,7 +571,7 @@ def test_login_raises_when_no_url_and_nonzero_exit(
     """
     A login that dies BEFORE printing the authorize URL (e.g. the
     server is unreachable from the sandbox) must surface the exit code
-    and the sandbox id — and must have echoed the login's own output,
+    and the sandbox id â€” and must have echoed the login's own output,
     which is the only evidence of WHY it died (a swallowed stream
     leaves the user with nothing but "exited with code 1").
     """
@@ -612,7 +612,7 @@ def test_login_fails_fast_for_unforwardable_provider() -> None:
     """
     A launcher without local-port forwarding (the Modal shape) must
     surface the SandboxCapabilityError naming --no-auth BEFORE touching
-    the sandbox — spawning the in-sandbox login first would strand a
+    the sandbox â€” spawning the in-sandbox login first would strand a
     process waiting on a callback that can never arrive.
     """
     launcher = _NoForwardLauncher(login_lines=[f"{_AUTHORIZE_URL}\r\n"])
@@ -630,14 +630,14 @@ def test_login_fails_fast_for_unforwardable_provider() -> None:
     assert launcher.log == []
 
 
-# ── build_wheels ────────────────────────────────────────────
+# â”€â”€ build_wheels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_wheels_rebuilds_over_stale_tarball(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """
-    A pre-existing tarball must NOT short-circuit the build — the
+    A pre-existing tarball must NOT short-circuit the build â€” the
     sandbox must always get the current checkout's code. (An earlier
     existence-based cache forced users to reason about a
     --rebuild-wheels flag, with silently shipping stale code as the
@@ -655,7 +655,7 @@ def test_build_wheels_rebuilds_over_stale_tarball(
 
     monkeypatch.setattr(bootstrap_mod.subprocess, "run", _fake_run)
     build_wheels(repo_root=tmp_path, tgz_path=tgz)
-    # The stale bytes are gone — the tarball was rebuilt from fresh wheels.
+    # The stale bytes are gone â€” the tarball was rebuilt from fresh wheels.
     assert tgz.read_bytes() != b"stale-cache"
 
 
@@ -681,7 +681,7 @@ def test_build_wheels_invokes_uv_for_each_package(
     def _fake_run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         """Stand-in that captures cwd + writes a fake wheel into out-dir."""
         captured.append(_UvCall(argv=argv, cwd=str(kwargs.get("cwd"))))
-        # uv writes wheels to the staging dir — fake one per call so
+        # uv writes wheels to the staging dir â€” fake one per call so
         # the tarball-packing step has something to pick up.
         out_dir = Path(argv[argv.index("--out-dir") + 1])
         (out_dir / f"pkg{len(captured)}-1.0-py3-none-any.whl").write_bytes(b"fake")
@@ -707,7 +707,7 @@ def test_build_wheels_raises_when_uv_missing(
     assert "astral.sh/uv/install.sh" in str(exc.value)
 
 
-# ── ship_wheels ─────────────────────────────────────────────
+# â”€â”€ ship_wheels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_ship_wheels_puts_installs_and_persists_path(tmp_path: Path) -> None:
@@ -725,7 +725,7 @@ def test_ship_wheels_puts_installs_and_persists_path(tmp_path: Path) -> None:
 
     assert launcher.puts == [_PutCall(local_path=wheels_tgz, remote_path="/tmp/oa-wheels.tgz")]
     # The marker command proves ship used launcher.wheel_install_command
-    # with the shipped tarball path — if a generic pip line appears
+    # with the shipped tarball path â€” if a generic pip line appears
     # instead, the provider's image-specific flags were bypassed.
     assert launcher.run_commands[0] == "FAKE-INSTALL /tmp/oa-wheels.tgz"
     # PATH persistence makes `agent-meow` resolvable for later
@@ -738,13 +738,13 @@ def test_ship_wheels_puts_installs_and_persists_path(tmp_path: Path) -> None:
     )
 
 
-# ── connect_sandbox_host ────────────────────────────────────
+# â”€â”€ connect_sandbox_host â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_connect_runs_bare_host_command() -> None:
     """
     The foreground command must be the bare ``agent-meow host --server
-    <url>`` — ``agent-meow host`` no longer takes ``--profile``, so any
+    <url>`` â€” ``agent-meow host`` no longer takes ``--profile``, so any
     extra flag here makes the remote command exit with
     "no such option" and the sandbox never registers.
     """
@@ -760,8 +760,8 @@ def test_connect_runs_bare_host_command() -> None:
 def test_connect_sets_host_name_before_connecting() -> None:
     """
     When ``host_name`` is set, connect must (a) edit the sandbox's
-    ``~/.agent_meow/config.yaml`` to use that name, and (b) THEN run
-    ``agent-meow host``. Order matters — the host reads config.yaml at
+    ``~/.omnigent/config.yaml`` to use that name, and (b) THEN run
+    ``agent-meow host``. Order matters â€” the host reads config.yaml at
     startup.
     """
     launcher = _FakeLauncher()
@@ -796,7 +796,7 @@ def test_connect_raises_on_nonzero_exit() -> None:
     assert "sb-1" in str(exc.value)
 
 
-# ── bootstrap_sandbox_host orchestration ────────────────────
+# â”€â”€ bootstrap_sandbox_host orchestration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _bootstrap_kwargs(tmp_path: Path) -> dict[str, Any]:
@@ -852,9 +852,9 @@ def test_bootstrap_runs_steps_in_order_and_returns_provisioned_id(
     assert sid == "sb-new"
     # Auth happens INSIDE the sandbox, after the wheels are shipped.
     # build's pypi_proxy must come from the launcher (None for the
-    # fake) — a hardcoded proxy here would leak the lakebox-only index
+    # fake) â€” a hardcoded proxy here would leak the lakebox-only index
     # into every provider. The login entry carries the CLI-derived
-    # workspace host — a missing/None segment there means the
+    # workspace host â€” a missing/None segment there means the
     # orchestrator dropped the workspace pin on its way to the login.
     assert launcher.log == [
         "prepare",
@@ -869,7 +869,7 @@ def test_bootstrap_runs_steps_in_order_and_returns_provisioned_id(
 def test_bootstrap_fails_fast_without_forward_capability(tmp_path: Path) -> None:
     """
     With auth requested, an unforwardable provider must fail BEFORE any
-    step runs — otherwise the user only learns about --no-auth after
+    step runs â€” otherwise the user only learns about --no-auth after
     paying for provisioning, the wheel build, and the ship.
     """
     launcher = _NoForwardLauncher()
@@ -885,7 +885,7 @@ def test_bootstrap_no_auth_unblocks_unforwardable_provider(
 ) -> None:
     """
     skip_auth (the --no-auth flag) is the documented path for providers
-    like Modal — the full bootstrap must run to completion with it.
+    like Modal â€” the full bootstrap must run to completion with it.
     """
     launcher = _NoForwardLauncher()
     monkeypatch.setattr(bootstrap_mod, "build_wheels", lambda repo_root, **kwargs: None)
@@ -919,7 +919,7 @@ def test_bootstrap_attaches_to_existing_sandbox(
         **{**_bootstrap_kwargs(tmp_path), "skip_auth": True},
     )
     assert sid == "existing-sb"
-    # Critical invariant: the attach flow must never provision — that
+    # Critical invariant: the attach flow must never provision â€” that
     # would create a fresh sandbox on every re-ship of an existing one.
     assert not any(entry.startswith("provision") for entry in launcher.log), launcher.log
     assert "attach:existing-sb" in launcher.log

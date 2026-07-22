@@ -1,5 +1,5 @@
 """
-Tests for the unified builtin tool registry (POLICIES.md §15.8).
+Tests for the unified builtin tool registry (POLICIES.md Â§15.8).
 
 Phase 2 unification: `BUILTIN_NAMES` and the instantiable
 subset both derive from a single `_BUILTIN_REGISTRY` dict,
@@ -16,9 +16,9 @@ from __future__ import annotations
 import importlib
 import pkgutil
 
-import agent_meow.tools.builtins as _builtins_pkg
-from agent_meow.tools.base import Tool
-from agent_meow.tools.builtins import (
+import omnigent.tools.builtins as _builtins_pkg
+from omnigent.tools.base import Tool
+from omnigent.tools.builtins import (
     BUILTIN_NAMES,
     INSTANTIABLE_BUILTINS,
     get_builtin_tool,
@@ -32,7 +32,7 @@ def test_builtin_names_excludes_request_approval() -> None:
     policy ASKs moved to MCP-shape elicitations
     (``response.elicitation_request`` SSE event +
     session ``approval`` event). User specs are
-    now free to declare a tool called ``request_approval`` —
+    now free to declare a tool called ``request_approval`` â€”
     no carve-out, no collision.
 
     A regression where ``request_approval`` reappears in
@@ -57,7 +57,7 @@ def test_instantiable_subset_excludes_framework_owned() -> None:
     """Framework-owned names are NOT in INSTANTIABLE_BUILTINS
     because they have no factory. The onboarding assistant
     uses this set to tell the agent author what they can
-    declare — listing framework-owned names there would be
+    declare â€” listing framework-owned names there would be
     confusing and wrong."""
     assert "web_fetch" not in INSTANTIABLE_BUILTINS
     assert "list_comments" not in INSTANTIABLE_BUILTINS
@@ -67,16 +67,16 @@ def test_instantiable_subset_excludes_framework_owned() -> None:
 def test_instantiable_is_subset_of_builtin_names() -> None:
     """Every instantiable name is also a reserved name. The
     two sets can't get out of sync because they derive from
-    the same dict — this test guards against a refactor that
+    the same dict â€” this test guards against a refactor that
     introduces drift."""
-    # subset check expressed via issubset — clearer than
+    # subset check expressed via issubset â€” clearer than
     # "for-in" iteration.
     assert INSTANTIABLE_BUILTINS.issubset(BUILTIN_NAMES)
 
 
 def test_get_builtin_tool_returns_none_for_framework_owned() -> None:
     """Calling get_builtin_tool on a framework-owned name
-    returns None — the caller must fall back to the special
+    returns None â€” the caller must fall back to the special
     constructor path. This is the same behavior as an
     unknown name, which is fine because BUILTIN_NAMES is
     the authoritative "is this reserved?" set."""
@@ -94,10 +94,10 @@ def test_get_builtin_tool_returns_none_for_unknown_name() -> None:
 
 def test_get_builtin_tool_instantiates_known_tools() -> None:
     """Instantiable tools produce a real Tool instance. Smoke
-    test — if this breaks, every agent with `web_search`
+    test â€” if this breaks, every agent with `web_search`
     declared starts failing at load time."""
     tool = get_builtin_tool("web_search")
-    # Not None + correct name — proves both the factory ran
+    # Not None + correct name â€” proves both the factory ran
     # and produced an instance with the expected identity.
     assert tool is not None
     assert tool.name() == "web_search"
@@ -125,7 +125,7 @@ def test_builtin_names_size_matches_registry() -> None:
                 # MCP-shape elicitations on the SSE stream and
                 # do NOT reserve a name in this registry.
                 # The ``sys_terminal_*`` family also lives outside
-                # this registry — registered by ToolManager when
+                # this registry â€” registered by ToolManager when
                 # the spec declares ``terminals:``.
                 "web_fetch",
                 # Comment tools: auto-registered by ToolManager so
@@ -147,7 +147,7 @@ def test_builtin_names_size_matches_registry() -> None:
 
 
 def _all_builtin_tool_subclasses() -> list[type[Tool]]:
-    """Concrete ``Tool`` subclasses defined under ``agent_meow.tools.builtins``."""
+    """Concrete ``Tool`` subclasses defined under ``omnigent.tools.builtins``."""
     for mod_info in pkgutil.iter_modules(_builtins_pkg.__path__):
         importlib.import_module(f"{_builtins_pkg.__name__}.{mod_info.name}")
 
@@ -176,14 +176,14 @@ def test_async_builtins_override_dispatch_async_or_are_runner_dispatched() -> No
     would crash the in-process agent-meow loop. After the DBOS removal,
     a class of async-namespace tools (``sys_call_async``,
     ``sys_read_inbox``, ``sys_cancel_async``) are dispatched by
-    the runner via ``agent_meow/runner/tool_dispatch.py`` —
+    the runner via ``omnigent/runner/tool_dispatch.py`` â€”
     ``dispatch_async`` is never reached on those, so leaving them
     on the base implementation is correct. Pin the contract: an
     async tool is permitted iff it either overrides
     ``dispatch_async`` or is listed in the runner's
     ``_ALL_LOCAL_TOOLS`` set.
     """
-    from agent_meow.runner.tool_dispatch import should_dispatch_locally
+    from omnigent.runner.tool_dispatch import should_dispatch_locally
 
     base_dispatch_async = Tool.dispatch_async
 
@@ -192,7 +192,7 @@ def test_async_builtins_override_dispatch_async_or_are_runner_dispatched() -> No
         try:
             instance = cls()
         except Exception:
-            # Tools that require constructor args are exempt — they
+            # Tools that require constructor args are exempt â€” they
             # can't be instantiated bare here; their own tests cover
             # the async contract.
             continue

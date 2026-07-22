@@ -1,22 +1,22 @@
-"""Tests for the pure RPC step→item mapper.
+"""Tests for the pure RPC stepâ†’item mapper.
 
-These exercise :func:`~?agent_meow.antigravity_native_steps.map_step_to_events`
+These exercise :func:`~?omnigent.antigravity_native_steps.map_step_to_events`
 using the real recorded fixtures captured from live agy sessions (Task 1).
 No I/O, no live agy: the mapper is driven with fixture dicts and event shapes
 are asserted exactly.
 
 Key assertions:
-- PLANNER_RESPONSE with text → exactly one ``external_conversation_item``
+- PLANNER_RESPONSE with text â†’ exactly one ``external_conversation_item``
   ``message`` (role assistant, ``output_text`` content). NO
   ``external_output_text_delta`` / ``output_text_delta`` event.
-- USER_INPUT → ``[]`` (skipped — fixes user-dup).
-- PLANNER_RESPONSE with tool_calls → ``function_call`` item(s) via allocator.
-- RUN_COMMAND DONE → ``function_call_output`` carrying
+- USER_INPUT â†’ ``[]`` (skipped â€” fixes user-dup).
+- PLANNER_RESPONSE with tool_calls â†’ ``function_call`` item(s) via allocator.
+- RUN_COMMAND DONE â†’ ``function_call_output`` carrying
   ``runCommand.combinedOutput.full``.
-- RUN_COMMAND WAITING → ``function_call`` only (no output yet).
-- ASK_QUESTION WAITING → ``function_call`` only (no output yet).
-- ASK_QUESTION DONE → ``function_call_output`` carrying the formatted answer.
-- CHECKPOINT / CONVERSATION_HISTORY → ``[]``.
+- RUN_COMMAND WAITING â†’ ``function_call`` only (no output yet).
+- ASK_QUESTION WAITING â†’ ``function_call`` only (no output yet).
+- ASK_QUESTION DONE â†’ ``function_call_output`` carrying the formatted answer.
+- CHECKPOINT / CONVERSATION_HISTORY â†’ ``[]``.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
-from agent_meow.antigravity_native_steps import (
+from omnigent.antigravity_native_steps import (
     OutboundEvent,
     _execution_discriminator,
     _ToolCallIdAllocator,
@@ -63,7 +63,7 @@ def _assert_no_delta(events: list[OutboundEvent]) -> None:
     Assert that none of the events are delta events.
 
     The double-render fix requires that map_step_to_events emits NO
-    ``external_output_text_delta`` events whatsoever — the old forwarder emitted
+    ``external_output_text_delta`` events whatsoever â€” the old forwarder emitted
     one delta per assistant text step; the new mapper drops it entirely.
     """
     for event in events:
@@ -73,7 +73,7 @@ def _assert_no_delta(events: list[OutboundEvent]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# USER_INPUT → committed user message (#1155)
+# USER_INPUT â†’ committed user message (#1155)
 # ---------------------------------------------------------------------------
 
 
@@ -88,7 +88,7 @@ class TestUserInputCommitted:
     """
 
     def test_user_input_commits_user_message(self) -> None:
-        """USER_INPUT step → exactly one committed user ``message`` item."""
+        """USER_INPUT step â†’ exactly one committed user ``message`` item."""
         step = _load("user_input")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         assert len(events) == 1
@@ -116,12 +116,12 @@ class TestUserInputCommitted:
 
 
 # ---------------------------------------------------------------------------
-# PLANNER_RESPONSE (text only) → one message, NO delta
+# PLANNER_RESPONSE (text only) â†’ one message, NO delta
 # ---------------------------------------------------------------------------
 
 
 class TestPlannerResponseText:
-    """PLANNER_RESPONSE with assistant text → exactly one message item, no delta."""
+    """PLANNER_RESPONSE with assistant text â†’ exactly one message item, no delta."""
 
     def test_returns_exactly_one_event(self) -> None:
         """
@@ -231,15 +231,15 @@ class TestPlannerResponseError:
 
 
 # ---------------------------------------------------------------------------
-# PLANNER_RESPONSE (tool_calls) → function_call events
+# PLANNER_RESPONSE (tool_calls) â†’ function_call events
 # ---------------------------------------------------------------------------
 
 
 class TestPlannerResponseToolCallRunCommand:
-    """PLANNER_RESPONSE with run_command tool call → function_call event(s)."""
+    """PLANNER_RESPONSE with run_command tool call â†’ function_call event(s)."""
 
     def test_returns_one_function_call(self) -> None:
-        """One tool call → one ``function_call`` event."""
+        """One tool call â†’ one ``function_call`` event."""
         step = _load("planner_response_tool_call_run_command")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         assert len(events) == 1
@@ -301,10 +301,10 @@ class TestPlannerResponseToolCallRunCommand:
 
 
 class TestPlannerResponseToolCallAskQuestion:
-    """PLANNER_RESPONSE with ask_question tool call → function_call event."""
+    """PLANNER_RESPONSE with ask_question tool call â†’ function_call event."""
 
     def test_returns_one_function_call(self) -> None:
-        """One ask_question tool call → one ``function_call`` event."""
+        """One ask_question tool call â†’ one ``function_call`` event."""
         step = _load("planner_response_tool_call_ask_question")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         assert len(events) == 1
@@ -334,15 +334,15 @@ class TestPlannerResponseToolCallAskQuestion:
 
 
 # ---------------------------------------------------------------------------
-# RUN_COMMAND DONE → function_call_output
+# RUN_COMMAND DONE â†’ function_call_output
 # ---------------------------------------------------------------------------
 
 
 class TestRunCommandDone:
-    """RUN_COMMAND DONE step → ``function_call_output`` with combinedOutput."""
+    """RUN_COMMAND DONE step â†’ ``function_call_output`` with combinedOutput."""
 
     def test_returns_one_event(self) -> None:
-        """One DONE run_command → one event."""
+        """One DONE run_command â†’ one event."""
         step = _load("run_command_done")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         assert len(events) == 1
@@ -396,13 +396,13 @@ class TestRunCommandDone:
 
 
 # ---------------------------------------------------------------------------
-# RUN_COMMAND WAITING → function_call only (no output yet)
+# RUN_COMMAND WAITING â†’ function_call only (no output yet)
 # ---------------------------------------------------------------------------
 
 
 class TestRunCommandWaiting:
     """
-    RUN_COMMAND WAITING step → no function_call_output.
+    RUN_COMMAND WAITING step â†’ no function_call_output.
 
     The command has been proposed but not yet approved/executed. The mapper must
     NOT emit a ``function_call_output`` (no result exists). Task 5 extracts the
@@ -410,7 +410,7 @@ class TestRunCommandWaiting:
     """
 
     def test_waiting_emits_no_output_event(self) -> None:
-        """WAITING run_command → empty list (no function_call_output)."""
+        """WAITING run_command â†’ empty list (no function_call_output)."""
         step = _load("run_command_waiting")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         assert events == []
@@ -423,7 +423,7 @@ class TestRunCommandWaiting:
 
 
 # ---------------------------------------------------------------------------
-# RUN_COMMAND ERROR → error-marker output (close the dangling call)
+# RUN_COMMAND ERROR â†’ error-marker output (close the dangling call)
 # ---------------------------------------------------------------------------
 
 
@@ -432,7 +432,7 @@ class TestRunCommandError:
 
     The invocation side emits a ``function_call`` for the tool unconditionally,
     so an ERROR result (e.g. an ignored/timed-out interactive prompt that flips
-    WAITING→ERROR) must emit a paired ``function_call_output`` keyed on the same
+    WAITINGâ†’ERROR) must emit a paired ``function_call_output`` keyed on the same
     id, or the web UI strands a perpetual in-progress tool card.
     """
 
@@ -448,7 +448,7 @@ class TestRunCommandError:
         step = _load("run_command_error")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         item_data = cast(dict[str, Any], events[0].data["item_data"])
-        # Fixture carries toolCall.id="cbawg2v8" — the same id the planner
+        # Fixture carries toolCall.id="cbawg2v8" â€” the same id the planner
         # invocation emits, so the pair correlates.
         assert item_data["call_id"] == "cbawg2v8"
 
@@ -484,7 +484,7 @@ class TestToolResultClosure:
     """
 
     def test_done_run_command_empty_output_still_closes(self) -> None:
-        """DONE run_command with no combinedOutput → one event, empty output."""
+        """DONE run_command with no combinedOutput â†’ one event, empty output."""
         step = _load("run_command_done")
         # Proto3 omits empty scalars: drop combinedOutput to simulate a
         # ``cd`` / ``mkdir`` / redirect that produced no captured output.
@@ -518,15 +518,15 @@ class TestToolResultClosure:
 
 
 # ---------------------------------------------------------------------------
-# LIST_DIRECTORY DONE → function_call_output
+# LIST_DIRECTORY DONE â†’ function_call_output
 # ---------------------------------------------------------------------------
 
 
 class TestListDirectoryDone:
-    """LIST_DIRECTORY DONE step → ``function_call_output``."""
+    """LIST_DIRECTORY DONE step â†’ ``function_call_output``."""
 
     def test_returns_one_function_call_output(self) -> None:
-        """DONE list_directory → one function_call_output event."""
+        """DONE list_directory â†’ one function_call_output event."""
         step = _load("list_directory_done")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         assert len(events) == 1
@@ -549,35 +549,35 @@ class TestListDirectoryDone:
 
 
 # ---------------------------------------------------------------------------
-# ASK_QUESTION WAITING → no output (pending interaction)
+# ASK_QUESTION WAITING â†’ no output (pending interaction)
 # ---------------------------------------------------------------------------
 
 
 class TestAskQuestionWaiting:
     """
-    ASK_QUESTION WAITING → no function_call_output.
+    ASK_QUESTION WAITING â†’ no function_call_output.
 
     The question is awaiting user response. Key on ``status`` NOT on the
     presence of ``requestedInteraction`` (which persists in the DONE fixture).
     """
 
     def test_waiting_emits_no_event(self) -> None:
-        """WAITING ask_question → empty list."""
+        """WAITING ask_question â†’ empty list."""
         step = _load("ask_question_waiting")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         assert events == []
 
 
 # ---------------------------------------------------------------------------
-# ASK_QUESTION DONE → function_call_output
+# ASK_QUESTION DONE â†’ function_call_output
 # ---------------------------------------------------------------------------
 
 
 class TestAskQuestionDone:
-    """ASK_QUESTION DONE step → function_call_output."""
+    """ASK_QUESTION DONE step â†’ function_call_output."""
 
     def test_returns_function_call_output(self) -> None:
-        """DONE ask_question → one function_call_output event."""
+        """DONE ask_question â†’ one function_call_output event."""
         step = _load("ask_question_done")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         assert len(events) == 1
@@ -600,7 +600,7 @@ class TestAskQuestionDone:
 
 
 # ---------------------------------------------------------------------------
-# CHECKPOINT and CONVERSATION_HISTORY → []
+# CHECKPOINT and CONVERSATION_HISTORY â†’ []
 # ---------------------------------------------------------------------------
 
 
@@ -608,20 +608,20 @@ class TestSystemStepsSkipped:
     """CHECKPOINT and CONVERSATION_HISTORY system steps produce no events."""
 
     def test_checkpoint_returns_empty(self) -> None:
-        """CHECKPOINT step → ``[]``."""
+        """CHECKPOINT step â†’ ``[]``."""
         step = _load("checkpoint")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         assert events == []
 
     def test_conversation_history_returns_empty(self) -> None:
-        """CONVERSATION_HISTORY step → ``[]``."""
+        """CONVERSATION_HISTORY step â†’ ``[]``."""
         step = _load("conversation_history")
         events = map_step_to_events(step, conversation_id=_CID, allocator=_allocator())
         assert events == []
 
 
 # ---------------------------------------------------------------------------
-# Slot-0 step index: absent stepIndex → treated as 0 (CDX-IMP1 + OPUS-MIN1)
+# Slot-0 step index: absent stepIndex â†’ treated as 0 (CDX-IMP1 + OPUS-MIN1)
 # ---------------------------------------------------------------------------
 
 
@@ -633,7 +633,7 @@ class TestSlotZeroStepIndex:
     """
 
     def test_absent_step_index_emits_event_at_zero(self) -> None:
-        """Slot-0 PLANNER_RESPONSE (no stepIndex) → message event with step_index=0."""
+        """Slot-0 PLANNER_RESPONSE (no stepIndex) â†’ message event with step_index=0."""
         import copy
 
         base = _load("planner_response_text")
@@ -740,23 +740,23 @@ class TestModifiedResponsePrecedence:
 
 
 # ---------------------------------------------------------------------------
-# Real-id pairing: planner → run_command sequence (OPUS-IMP1)
+# Real-id pairing: planner â†’ run_command sequence (OPUS-IMP1)
 # ---------------------------------------------------------------------------
 
 
 class TestRealIdPairing:
     """
-    Verify that real agy tool-call ids are used for invocation↔output pairing.
+    Verify that real agy tool-call ids are used for invocationâ†”output pairing.
 
     The RPC carries the same id on both the invocation
     (``plannerResponse.toolCalls[].id``) and the result
-    (``metadata.toolCall.id``).  The mapper uses those ids directly —
-    no FIFO position, no allocator — so pairing is order-independent.
+    (``metadata.toolCall.id``).  The mapper uses those ids directly â€”
+    no FIFO position, no allocator â€” so pairing is order-independent.
     """
 
     def test_planner_then_run_command_done_share_real_id(self) -> None:
         """
-        PLANNER_RESPONSE and RUN_COMMAND DONE → both carry the same real agy id.
+        PLANNER_RESPONSE and RUN_COMMAND DONE â†’ both carry the same real agy id.
 
         The invocation call_id and the output call_id must equal the fixture's
         agy-assigned id ("cbawg2v8"), not a positional allocator id.
@@ -775,7 +775,7 @@ class TestRealIdPairing:
         assert len(result_events) == 1
         result_item = result_events[0].data["item_data"]
         assert isinstance(result_item, dict)
-        # Same real id — not a FIFO-synthesized orphan id
+        # Same real id â€” not a FIFO-synthesized orphan id
         assert result_item["call_id"] == invocation_call_id
 
     def test_two_results_out_of_order_pair_by_real_id(self) -> None:
@@ -841,7 +841,7 @@ class TestRealIdPairing:
 
 class TestPendingInteractionAskQuestionWaiting:
     """
-    ASK_QUESTION WAITING step → PendingInteraction with kind="ask_question".
+    ASK_QUESTION WAITING step â†’ PendingInteraction with kind="ask_question".
 
     The spec comes from requestedInteraction.askQuestion (NOT from the top-level
     askQuestion field).  trajectory_id and step_index come from
@@ -936,7 +936,7 @@ class TestPendingInteractionAskQuestionWaiting:
 
 class TestPendingInteractionRunCommandWaiting:
     """
-    RUN_COMMAND WAITING step → PendingInteraction with kind="permission".
+    RUN_COMMAND WAITING step â†’ PendingInteraction with kind="permission".
 
     The spec comes from requestedInteraction.permission; resource.action and
     resource.target are the authoritative fields.
@@ -1017,7 +1017,7 @@ class TestPendingInteractionDoneReturnsNone:
     def test_ask_question_done_returns_none(self) -> None:
         """
         ask_question_done.json has status=DONE and still contains
-        requestedInteraction.askQuestion — must return None.
+        requestedInteraction.askQuestion â€” must return None.
         """
         step = _load("ask_question_done")
         assert pending_interaction(step) is None
@@ -1025,7 +1025,7 @@ class TestPendingInteractionDoneReturnsNone:
     def test_run_command_done_returns_none(self) -> None:
         """
         run_command_done.json has status=DONE and still contains
-        requestedInteraction.permission — must return None.
+        requestedInteraction.permission â€” must return None.
         """
         step = _load("run_command_done")
         assert pending_interaction(step) is None
@@ -1194,7 +1194,7 @@ class TestOutputReasoningDeltaEvent:
 
 
 class TestMapStepEmitsNoReasoning:
-    """The pure mapper never emits a reasoning item — reasoning is delta-only."""
+    """The pure mapper never emits a reasoning item â€” reasoning is delta-only."""
 
     def test_done_planner_with_thinking_emits_no_reasoning_item(self) -> None:
         """

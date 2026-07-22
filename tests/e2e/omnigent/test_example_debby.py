@@ -1,13 +1,13 @@
 """Structural test for the Debby two-headed brainstorming bundle (examples/debby).
 
 Debby never answers from a single model: every question is fanned out to BOTH a
-Claude sub-agent and a GPT sub-agent — two plain (non-coding) responders on the
-claude-sdk and codex harnesses — and the ``debate`` skill has them
-critique each other before converging. Pure spec-load — no LLM, no credentials —
+Claude sub-agent and a GPT sub-agent â€” two plain (non-coding) responders on the
+claude-sdk and codex harnesses â€” and the ``debate`` skill has them
+critique each other before converging. Pure spec-load â€” no LLM, no credentials â€”
 modeled on ``test_example_polly.py``.
 
 What breaks if this fails:
-- the two heads collapse onto one vendor (no cross-model contrast — Debby's whole
+- the two heads collapse onto one vendor (no cross-model contrast â€” Debby's whole
   point), or a head is dropped entirely,
 - a head silently switches harness (e.g. the GPT head ends up on claude-sdk),
 - the ``debate`` skill is dropped or renamed (the critique loop regresses),
@@ -21,10 +21,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.spec import load
-from agent_meow.spec.types import AgentSpec
+from omnigent.spec import load
+from omnigent.spec.types import AgentSpec
 
-# tests/e2e/agent_meow/test_example_debby.py -> repo root is 3 parents up.
+# tests/e2e/omnigent/test_example_debby.py -> repo root is 3 parents up.
 _DEBBY_BUNDLE = Path(__file__).resolve().parents[3] / "examples" / "debby"
 
 
@@ -36,8 +36,8 @@ def debby_spec() -> AgentSpec:
 
 def test_debby_is_two_headed_cross_vendor(debby_spec: AgentSpec) -> None:
     """
-    Debby has exactly two heads — ``claude`` on claude-sdk and ``gpt`` on
-    codex — so every answer contrasts two distinct vendors.
+    Debby has exactly two heads â€” ``claude`` on claude-sdk and ``gpt`` on
+    codex â€” so every answer contrasts two distinct vendors.
 
     A missing/renamed head, or both heads landing on the same harness, removes
     the cross-model contrast that is Debby's entire reason to exist.
@@ -47,7 +47,7 @@ def test_debby_is_two_headed_cross_vendor(debby_spec: AgentSpec) -> None:
     assert sorted(debby_spec.tools.agents) == ["claude", "gpt"]
     assert fam["claude"] == "claude-sdk"
     assert fam["gpt"] == "codex"
-    # Two distinct vendors → the heads always disagree across providers.
+    # Two distinct vendors â†’ the heads always disagree across providers.
     assert len(set(fam.values())) == 2
 
 
@@ -56,7 +56,7 @@ def test_debby_heads_are_unpinned(debby_spec: AgentSpec) -> None:
     Neither head pins a model: each inherits whatever Claude / OpenAI provider
     the user configured (Anthropic key, subscription, gateway, or Databricks).
 
-    Un-pinning is load-bearing for OSS — a Databricks-specific model id would
+    Un-pinning is load-bearing for OSS â€” a Databricks-specific model id would
     404 on a plain Anthropic / OpenAI key. Re-introducing a pin re-couples a
     head to one provider, so fail here if a model reappears.
     """

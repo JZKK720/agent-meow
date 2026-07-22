@@ -2,7 +2,7 @@
 Tests for the ``harness: pi`` wrap shape.
 
 Mirror of ``tests/inner/test_codex_harness.py`` and
-``tests/inner/test_claude_sdk_harness.py`` — verifies the wrap
+``tests/inner/test_claude_sdk_harness.py`` â€” verifies the wrap
 module has the same shape (registry entry, FastAPI app routes,
 env-var-driven lazy executor construction). Does NOT exercise
 the real Pi CLI; the inner ``PiExecutor.__init__`` is mocked so
@@ -20,8 +20,8 @@ from unittest.mock import patch
 
 import pytest
 
-from agent_meow.inner import pi_harness
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
+from omnigent.inner import pi_harness
+from omnigent.runtime.harnesses import _HARNESS_MODULES
 
 
 def test_harness_module_registered_in_module_registry() -> None:
@@ -30,7 +30,7 @@ def test_harness_module_registered_in_module_registry() -> None:
     Without this entry, the runner subprocess can't find the wrap
     when AP-side tries to spawn it for a ``harness: pi`` spec.
     """
-    assert _HARNESS_MODULES.get("pi") == "agent_meow.inner.pi_harness"
+    assert _HARNESS_MODULES.get("pi") == "omnigent.inner.pi_harness"
 
 
 def test_create_app_returns_fastapi_with_required_routes() -> None:
@@ -48,7 +48,7 @@ def test_create_app_returns_fastapi_with_required_routes() -> None:
     app = pi_harness.create_app()
     paths = {route.path for route in app.routes}  # type: ignore[attr-defined]
     # Session-keyed harness API: liveness probe + single
-    # discriminated-event endpoint per §The Harness API Subset.
+    # discriminated-event endpoint per Â§The Harness API Subset.
     assert "/health" in paths
     assert "/v1/sessions/{conversation_id}/events" in paths
 
@@ -113,7 +113,7 @@ def test_executor_factory_reads_env_vars(
         captured["gateway_auth_command"] = gateway_auth_command
 
     with patch(
-        "agent_meow.inner.pi_harness.PiExecutor.__init__",
+        "omnigent.inner.pi_harness.PiExecutor.__init__",
         _fake_init,
     ):
         pi_harness._build_pi_executor()
@@ -178,7 +178,7 @@ def test_executor_factory_decodes_os_env_json(
         captured["os_env"] = kwargs["os_env"]
 
     with patch(
-        "agent_meow.inner.pi_harness.PiExecutor.__init__",
+        "omnigent.inner.pi_harness.PiExecutor.__init__",
         _fake_init,
     ):
         pi_harness._build_pi_executor()
@@ -197,7 +197,7 @@ def test_executor_factory_falls_back_on_malformed_os_env_json(
 ) -> None:
     """Malformed ``HARNESS_PI_OS_ENV`` falls back to default.
 
-    A malformed payload should NOT crash the wrap — that would
+    A malformed payload should NOT crash the wrap â€” that would
     bring the whole subprocess down on first turn. The wrap
     instead logs a warning and defaults to the parity-preserving
     ``caller_process + sandbox=none``.
@@ -209,7 +209,7 @@ def test_executor_factory_falls_back_on_malformed_os_env_json(
         captured["os_env"] = kwargs["os_env"]
 
     with patch(
-        "agent_meow.inner.pi_harness.PiExecutor.__init__",
+        "omnigent.inner.pi_harness.PiExecutor.__init__",
         _fake_init,
     ):
         pi_harness._build_pi_executor()
@@ -251,7 +251,7 @@ def test_databricks_env_var_truthy_parsing(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.pi_harness.PiExecutor.__init__",
+        "omnigent.inner.pi_harness.PiExecutor.__init__",
         _fake_init,
     ):
         pi_harness._build_pi_executor()
@@ -279,7 +279,7 @@ def test_skills_filter_env_var_decodes(
     Mirrors the claude-sdk and codex env-var bridges. Without
     this bridge the harness wrap falls back to the constructor's
     ``"all"`` default and silently overrides explicit
-    ``skills: none`` from the spec — same regression that
+    ``skills: none`` from the spec â€” same regression that
     prompted the original bridge work.
     """
     monkeypatch.setenv("HARNESS_PI_SKILLS_FILTER", raw_value)
@@ -289,7 +289,7 @@ def test_skills_filter_env_var_decodes(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.pi_harness.PiExecutor.__init__",
+        "omnigent.inner.pi_harness.PiExecutor.__init__",
         _fake_init,
     ):
         pi_harness._build_pi_executor()
@@ -308,7 +308,7 @@ def test_skills_filter_env_var_missing_falls_back_to_all(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.pi_harness.PiExecutor.__init__",
+        "omnigent.inner.pi_harness.PiExecutor.__init__",
         _fake_init,
     ):
         pi_harness._build_pi_executor()
@@ -322,7 +322,7 @@ def test_bundle_dir_and_agent_name_env_vars_thread_through(
     """``HARNESS_PI_BUNDLE_DIR`` / ``_AGENT_NAME`` reach the inner
     executor.
 
-    Bundle dir gates the Pi resolver's bundle source — without it
+    Bundle dir gates the Pi resolver's bundle source â€” without it
     the agent-shipped skills are invisible to the executor, so
     ``"all"`` and named-list cases would silently drop them.
     """
@@ -336,7 +336,7 @@ def test_bundle_dir_and_agent_name_env_vars_thread_through(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.pi_harness.PiExecutor.__init__",
+        "omnigent.inner.pi_harness.PiExecutor.__init__",
         _fake_init,
     ):
         pi_harness._build_pi_executor()
@@ -349,7 +349,7 @@ def test_bundle_dir_unset_passes_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Missing ``HARNESS_PI_BUNDLE_DIR`` resolves to ``None``,
-    not ``Path("")`` — a bogus path would crash the resolver."""
+    not ``Path("")`` â€” a bogus path would crash the resolver."""
     monkeypatch.delenv("HARNESS_PI_BUNDLE_DIR", raising=False)
     monkeypatch.delenv("HARNESS_PI_AGENT_NAME", raising=False)
     captured: dict[str, Any] = {}
@@ -358,7 +358,7 @@ def test_bundle_dir_unset_passes_none(
         captured.update(kwargs)
 
     with patch(
-        "agent_meow.inner.pi_harness.PiExecutor.__init__",
+        "omnigent.inner.pi_harness.PiExecutor.__init__",
         _fake_init,
     ):
         pi_harness._build_pi_executor()

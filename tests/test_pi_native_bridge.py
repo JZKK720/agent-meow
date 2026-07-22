@@ -1,4 +1,4 @@
-"""Tests for agent_meow.pi_native_bridge inbox enqueue contract."""
+"""Tests for omnigent.pi_native_bridge inbox enqueue contract."""
 
 from __future__ import annotations
 
@@ -6,14 +6,14 @@ import json
 import stat
 from pathlib import Path
 
-from agent_meow import pi_native_bridge
+from omnigent import pi_native_bridge
 
 
 def _inbox_files(bridge_dir: Path) -> list[str]:
     """Return the inbox's ``*.json`` filenames in the extension's read order.
 
-    The Pi extension delivers files via ``readdirSync(...).sort()`` — plain
-    lexicographic order — so sorting the names here mirrors delivery order.
+    The Pi extension delivers files via ``readdirSync(...).sort()`` â€” plain
+    lexicographic order â€” so sorting the names here mirrors delivery order.
 
     :param bridge_dir: A prepared Pi bridge directory.
     :returns: Sorted inbox filenames.
@@ -26,7 +26,7 @@ def test_enqueue_preserves_send_order_across_types(tmp_path: Path) -> None:
 
     The extension delivers inbox files in lexicographic order. The payload id
     is a random uuid (no time ordering), and an ``interrupt_`` id sorts before
-    a ``msg_`` id — so without an ordering prefix a message queued before an
+    a ``msg_`` id â€” so without an ordering prefix a message queued before an
     interrupt would be delivered *after* it. This pins that send order is
     preserved even when a message is followed by an interrupt.
     """
@@ -65,7 +65,7 @@ def test_enqueue_compact_payload_shape(tmp_path: Path) -> None:
     assert compact_id.startswith("compact_")
     assert payload["type"] == "compact"
     assert isinstance(payload["created_at"], (int, float))
-    # No instructions given → key omitted so the extension uses Pi's default
+    # No instructions given â†’ key omitted so the extension uses Pi's default
     # summarisation rather than passing an empty customInstructions string.
     assert "custom_instructions" not in payload
 
@@ -114,7 +114,7 @@ def test_enqueue_user_message_payload_shape(tmp_path: Path) -> None:
 
 
 def test_enqueue_leaves_no_partial_tmp_files(tmp_path: Path) -> None:
-    """Only the final ``.json`` lands in the inbox — no ``.tmp`` residue.
+    """Only the final ``.json`` lands in the inbox â€” no ``.tmp`` residue.
 
     The atomic temp-write-then-rename exists so the 250 ms poller never reads a
     half-written file. A leftover ``.tmp`` (or a non-``.json`` name) would mean
@@ -135,7 +135,7 @@ def test_prepare_bridge_dir_is_owner_only(tmp_path: Path, monkeypatch) -> None:
     """The bridge dir and its inbox are created 0o700 (per-session isolation).
 
     The bearer token written alongside the inbox makes owner-only perms the
-    isolation boundary between sessions sharing ``~/.agent_meow/pi-native``.
+    isolation boundary between sessions sharing ``~/.omnigent/pi-native``.
     """
     monkeypatch.setattr(pi_native_bridge, "_BRIDGE_ROOT", tmp_path / "pi-native")
 
@@ -194,8 +194,8 @@ def test_write_extension_files_embeds_tools(tmp_path: Path) -> None:
     _ext, cfg = pi_native_bridge.write_extension_files(
         bridge_dir,
         session_id="conv_abc",
-        server_url="http://agent_meow.test/",
-        conversation_url="http://agent_meow.test/c/conv_abc",
+        server_url="http://omnigent.test/",
+        conversation_url="http://omnigent.test/c/conv_abc",
         auth_headers={"Authorization": "Bearer t"},
         tools=tools,
     )
@@ -203,7 +203,7 @@ def test_write_extension_files_embeds_tools(tmp_path: Path) -> None:
     payload = json.loads(cfg.read_text(encoding="utf-8"))
     assert payload["sessionId"] == "conv_abc"
     # serverUrl trailing slash is stripped so the extension can append paths.
-    assert payload["serverUrl"] == "http://agent_meow.test"
+    assert payload["serverUrl"] == "http://omnigent.test"
     assert payload["tools"] == tools
 
 
@@ -214,8 +214,8 @@ def test_write_extension_files_defaults_tools_to_empty(tmp_path: Path) -> None:
     _ext, cfg = pi_native_bridge.write_extension_files(
         bridge_dir,
         session_id="conv_abc",
-        server_url="http://agent_meow.test",
-        conversation_url="http://agent_meow.test/c/conv_abc",
+        server_url="http://omnigent.test",
+        conversation_url="http://omnigent.test/c/conv_abc",
     )
 
     payload = json.loads(cfg.read_text(encoding="utf-8"))
@@ -234,8 +234,8 @@ def test_refresh_config_auth_headers_replaces_only_auth(tmp_path: Path) -> None:
     pi_native_bridge.write_extension_files(
         bridge_dir,
         session_id="conv_abc",
-        server_url="http://agent_meow.test",
-        conversation_url="http://agent_meow.test/c/conv_abc",
+        server_url="http://omnigent.test",
+        conversation_url="http://omnigent.test/c/conv_abc",
         auth_headers={"Authorization": "Bearer stale"},
         tools=[{"name": "t"}],
     )
@@ -247,7 +247,7 @@ def test_refresh_config_auth_headers_replaces_only_auth(tmp_path: Path) -> None:
     payload = json.loads(pi_native_bridge.config_path(bridge_dir).read_text(encoding="utf-8"))
     assert payload["authHeaders"] == {"Authorization": "Bearer fresh"}
     # Untouched: the static fields the extension reads once at startup.
-    assert payload["serverUrl"] == "http://agent_meow.test"
+    assert payload["serverUrl"] == "http://omnigent.test"
     assert payload["tools"] == [{"name": "t"}]
 
 
@@ -260,8 +260,8 @@ def test_refresh_config_auth_headers_noops(tmp_path: Path) -> None:
     pi_native_bridge.write_extension_files(
         bridge_dir,
         session_id="conv_abc",
-        server_url="http://agent_meow.test",
-        conversation_url="http://agent_meow.test/c/conv_abc",
+        server_url="http://omnigent.test",
+        conversation_url="http://omnigent.test/c/conv_abc",
         auth_headers={"Authorization": "Bearer x"},
     )
     # Empty headers (local/unauthenticated) must never blank out a live token.

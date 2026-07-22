@@ -52,33 +52,33 @@ from omnigent_client._events import ResponseCompleted, ResponseFailed
 from omnigent_client._files import FilesNamespace
 from omnigent_client._sessions import SessionsNamespace
 
-from agent_meow.repl._repl import _SessionsChatReplAdapter
-from agent_meow.runner.app import create_runner_app
-from agent_meow.runner.transports.ws_tunnel.frames import (
+from omnigent.repl._repl import _SessionsChatReplAdapter
+from omnigent.runner.app import create_runner_app
+from omnigent.runner.transports.ws_tunnel.frames import (
     HelloFrame,
     RequestFrame,
     decode_frame,
     encode_frame,
 )
-from agent_meow.runner.transports.ws_tunnel.serve import dispatch_via_asgi
-from agent_meow.runner.transports.ws_tunnel.transport import WSTunnelTransport
-from agent_meow.runtime import (
+from omnigent.runner.transports.ws_tunnel.serve import dispatch_via_asgi
+from omnigent.runner.transports.ws_tunnel.transport import WSTunnelTransport
+from omnigent.runtime import (
     init as init_runtime,
 )
-from agent_meow.runtime import (
+from omnigent.runtime import (
     set_harness_process_manager,
     set_runner_id,
     set_runner_router,
 )
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
-from agent_meow.server.app import create_app
-from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.runtime.harnesses import _HARNESS_MODULES
+from omnigent.server.app import create_app
+from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+from omnigent.stores.artifact_store.local import LocalArtifactStore
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
-from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
 from tests.runner.helpers import NullServerClient
 from tests.runtime.harnesses._test_scaffold_harnesses import _EchoHarness
 
@@ -835,9 +835,9 @@ async def test_on_runner_connect_restarts_relay_via_router(
     routed client, and (c) leaves a sibling session bound to a
     different runner alone (per-conv ``runner_id`` filter).
     """
-    from agent_meow.runner.routing import RoutedRunner
-    from agent_meow.server.routes import sessions as sessions_routes
-    from agent_meow.server.routes.sessions import _runner_relay_tasks
+    from omnigent.runner.routing import RoutedRunner
+    from omnigent.server.routes import sessions as sessions_routes
+    from omnigent.server.routes.sessions import _runner_relay_tasks
 
     ap_client = tunnel_three_layer_stack.ap_client
     ap_app = tunnel_three_layer_stack.ap_app
@@ -867,7 +867,7 @@ async def test_on_runner_connect_restarts_relay_via_router(
     # ``runner_id`` filter has something to skip. Written via the
     # store directly because PATCH-bind would spawn a relay against
     # a runner that has no WS pump, hanging teardown.
-    from agent_meow.runtime import get_conversation_store
+    from omnigent.runtime import get_conversation_store
 
     other_runner_id = "runner-other-irrelevant"
     other_create_resp = await ap_client.post(
@@ -1059,8 +1059,8 @@ async def _reconnect_fires_connect_hook(
 
     :yields: The list of session ids the recovery helper ran for.
     """
-    from agent_meow.runner.routing import RoutedRunner
-    from agent_meow.server.routes import sessions as sessions_routes
+    from omnigent.runner.routing import RoutedRunner
+    from omnigent.server.routes import sessions as sessions_routes
 
     router = ap_app.state.runner_router
     real_resolver = router.client_for_session_resources
@@ -1172,9 +1172,9 @@ async def _bind_failed_session(
     ``last_task_error`` labels a real disconnect / task failure leaves
     behind, so the reconnect hook sees an authentic pre-recovery state.
     """
-    from agent_meow.runtime import get_conversation_store
-    from agent_meow.server.routes import sessions as sessions_module
-    from agent_meow.server.schemas import ErrorDetail
+    from omnigent.runtime import get_conversation_store
+    from omnigent.server.routes import sessions as sessions_module
+    from omnigent.server.schemas import ErrorDetail
 
     create_resp = await ap_client.post(
         "/v1/sessions",
@@ -1213,7 +1213,7 @@ def _isolated_session_status_cache() -> Iterator[None]:
     suite runs. Start each guarded test from an empty cache and restore
     the pre-test contents afterward so nothing leaks in either direction.
     """
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.server.routes import sessions as sessions_module
 
     saved = dict(sessions_module._session_status_cache)
     sessions_module._session_status_cache.clear()
@@ -1240,8 +1240,8 @@ async def test_on_runner_connect_clears_disconnect_failure_on_idle_reconnect(
     the session leaves ``failed`` and the disconnect labels are cleared —
     WITHOUT sending any message.
     """
-    from agent_meow.runtime import get_conversation_store
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.runtime import get_conversation_store
+    from omnigent.server.routes import sessions as sessions_module
 
     ap_client = tunnel_three_layer_stack.ap_client
     ap_app = tunnel_three_layer_stack.ap_app
@@ -1292,8 +1292,8 @@ async def test_on_runner_connect_preserves_genuine_failure_on_reconnect(
     its ``failed`` state and error labels across the reconnect. Drives the
     real ``_on_runner_connect`` and asserts the failure survives.
     """
-    from agent_meow.runtime import get_conversation_store
-    from agent_meow.server.routes import sessions as sessions_module
+    from omnigent.runtime import get_conversation_store
+    from omnigent.server.routes import sessions as sessions_module
 
     ap_client = tunnel_three_layer_stack.ap_client
     ap_app = tunnel_three_layer_stack.ap_app

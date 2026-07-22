@@ -1,4 +1,4 @@
-"""Tests for agent_meow.tools.client_specified."""
+"""Tests for omnigent.tools.client_specified."""
 
 from __future__ import annotations
 
@@ -6,15 +6,15 @@ from typing import Any
 
 import pytest
 
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.client_specified import (
+from omnigent.tools.base import ToolContext
+from omnigent.tools.client_specified import (
     ClientSideTool,
     ClientSideToolSpec,
     parse_client_side_tool_spec,
     parse_client_side_tool_specs,
 )
 
-# ── Fixtures ──────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -83,7 +83,7 @@ def weather_spec() -> ClientSideToolSpec:
     )
 
 
-# ── parse_client_side_tool_spec ───────────────────────────
+# â”€â”€ parse_client_side_tool_spec â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_parse_minimal_tool(minimal_raw_tool: dict[str, Any]) -> None:
@@ -95,7 +95,7 @@ def test_parse_minimal_tool(minimal_raw_tool: dict[str, Any]) -> None:
 
     # Name extracted from function.name
     assert spec.name == "get_weather"
-    # Schema stored as-is — no keys stripped
+    # Schema stored as-is â€” no keys stripped
     assert spec.schema == minimal_raw_tool
 
 
@@ -103,7 +103,7 @@ def test_parse_schema_stored_verbatim(minimal_raw_tool: dict[str, Any]) -> None:
     """
     parse_client_side_tool_spec stores the schema dict verbatim.
 
-    There is no ``agent-meow`` extension key to strip — the raw dict
+    There is no ``agent-meow`` extension key to strip â€” the raw dict
     IS the schema that gets stored and later returned to the LLM.
     """
     spec = parse_client_side_tool_spec(minimal_raw_tool)
@@ -180,13 +180,13 @@ def test_parse_client_side_tool_specs_multiple(
     assert specs[1].name == "search"
 
 
-# ── ClientSideTool.get_schema ─────────────────────────────
+# â”€â”€ ClientSideTool.get_schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_get_schema_returns_spec_schema(weather_spec: ClientSideToolSpec) -> None:
     """
     ClientSideTool.get_schema returns exactly the schema stored in the
-    spec — the LLM sees a standard OpenAI function schema.
+    spec â€” the LLM sees a standard OpenAI function schema.
     """
     tool = ClientSideTool(weather_spec)
 
@@ -206,14 +206,14 @@ def test_name_property(weather_spec: ClientSideToolSpec) -> None:
     assert tool.name() == "get_weather"
 
 
-# ── ClientSideTool.invoke ─────────────────────────────────
+# â”€â”€ ClientSideTool.invoke â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_invoke_raises_runtime_error(
     weather_spec: ClientSideToolSpec, tool_ctx: ToolContext
 ) -> None:
     """
-    ClientSideTool.invoke raises RuntimeError — client-side tools
+    ClientSideTool.invoke raises RuntimeError â€” client-side tools
     must never be executed server-side.
 
     The agent loop uses ToolManager.is_client_side_tool() to detect
@@ -230,7 +230,7 @@ def test_invoke_raises_runtime_error(
         tool.invoke('{"city": "San Francisco"}', tool_ctx)
 
 
-# ── Tool name validation ─────────────────────────────────
+# â”€â”€ Tool name validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(

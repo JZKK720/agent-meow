@@ -1,8 +1,8 @@
 """Tests for the Claude gateway shim (thinking.display restoration).
 
-The shim exists because Claude CLIs ≥ 2.1.168 strip ``thinking.display``
-from ``/v1/messages`` bodies when experimental betas are disabled — the
-required configuration on the Databricks gateway — which silences all
+The shim exists because Claude CLIs â‰¥ 2.1.168 strip ``thinking.display``
+from ``/v1/messages`` bodies when experimental betas are disabled â€” the
+required configuration on the Databricks gateway â€” which silences all
 Opus thinking output (Opus 4.7+ defaults ``display`` to ``"omitted"``).
 """
 
@@ -17,12 +17,12 @@ import httpx
 import pytest
 import uvicorn
 
-from agent_meow.inner.claude_gateway_shim import (
+from omnigent.inner.claude_gateway_shim import (
     ClaudeGatewayShim,
     restore_thinking_display,
 )
 
-# ── restore_thinking_display unit tests ───────────────────
+# â”€â”€ restore_thinking_display unit tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _body(model: str, thinking: dict[str, Any] | None) -> bytes:  # type: ignore[explicit-any]  # thinking mirrors the API's open dict
@@ -47,9 +47,9 @@ def _body(model: str, thinking: dict[str, Any] | None) -> bytes:  # type: ignore
 @pytest.mark.parametrize(
     "model,thinking",
     [
-        # Opus + adaptive missing display — the live bug shape.
+        # Opus + adaptive missing display â€” the live bug shape.
         ("databricks-claude-opus-4-8", {"type": "adaptive"}),
-        # Opus + enabled missing display — any non-disabled type qualifies.
+        # Opus + enabled missing display â€” any non-disabled type qualifies.
         ("databricks-claude-opus-4-7", {"type": "enabled", "budget_tokens": 1024}),
         # Fable shares Opus 4.7+'s display="omitted" default.
         ("databricks-claude-fable-5", {"type": "adaptive"}),
@@ -59,7 +59,7 @@ def test_restore_injects_display_for_adaptive_tiers(model: str, thinking: dict[s
     """Qualifying opus/fable bodies gain ``display="summarized"``; the rest
     of the payload is preserved byte-for-byte after re-encoding."""
     result = json.loads(restore_thinking_display(_body(model, thinking)))
-    # display injected — without it the model defaults to "omitted" and
+    # display injected â€” without it the model defaults to "omitted" and
     # streams no thinking text (the user-visible bug).
     assert result["thinking"]["display"] == "summarized"
     # Original thinking fields survive alongside the injected display.
@@ -76,12 +76,12 @@ def test_restore_injects_display_for_adaptive_tiers(model: str, thinking: dict[s
         ("databricks-claude-opus-4-8", {"type": "adaptive", "display": "omitted"}),
         # Disabled thinking has nothing to display.
         ("databricks-claude-opus-4-8", {"type": "disabled"}),
-        # Sonnet streams visible thinking by default — never touched.
+        # Sonnet streams visible thinking by default â€” never touched.
         ("databricks-claude-sonnet-4-6", {"type": "adaptive"}),
         # First-party ids (no databricks- prefix) are out of scope.
         ("claude-opus-4-8", {"type": "adaptive"}),
         ("claude-fable-5", {"type": "adaptive"}),
-        # No thinking key at all — nothing to patch.
+        # No thinking key at all â€” nothing to patch.
         ("databricks-claude-opus-4-8", None),
     ],
 )
@@ -105,11 +105,11 @@ def test_restore_leaves_non_qualifying_bodies_unchanged(
 )
 def test_restore_passes_through_unparseable_bodies(body: bytes) -> None:
     """Non-object JSON, invalid JSON, and non-dict thinking are forwarded
-    verbatim rather than raising — the upstream owns request validation."""
+    verbatim rather than raising â€” the upstream owns request validation."""
     assert restore_thinking_display(body) == body
 
 
-# ── shim integration tests (real local upstream) ──────────
+# â”€â”€ shim integration tests (real local upstream) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -119,7 +119,7 @@ class _CapturedRequest:
 
     :param method: HTTP method, e.g. ``"POST"``.
     :param path: Request path, e.g. ``"/v1/messages"``.
-    :param headers: Lower-cased header name → value.
+    :param headers: Lower-cased header name â†’ value.
     :param body: Raw request body bytes.
     """
 
@@ -246,7 +246,7 @@ async def test_shim_patches_opus_messages_body_and_streams_response(upstream) ->
                 content=_body("databricks-claude-opus-4-8", {"type": "adaptive"}),
                 headers={"authorization": "Bearer test-token"},
             )
-        # SSE body round-trips through the shim unmodified — a buffering
+        # SSE body round-trips through the shim unmodified â€” a buffering
         # or truncation bug in the relay would corrupt this.
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "text/event-stream"
@@ -278,7 +278,7 @@ async def test_shim_forwards_non_opus_and_non_messages_traffic_verbatim(upstream
             await client.post(f"{shim.base_url}/v1/messages", content=sonnet_body)
             other = await client.get(f"{shim.base_url}/v1/models?limit=5")
 
-        # Sonnet body forwarded byte-for-byte — an over-broad patch that
+        # Sonnet body forwarded byte-for-byte â€” an over-broad patch that
         # touched sonnet would change its (working) thinking behavior.
         assert upstream.requests[0].body == sonnet_body
         # Non-messages path + query string forwarded as-is.
@@ -293,7 +293,7 @@ async def test_shim_forwards_non_opus_and_non_messages_traffic_verbatim(upstream
 async def test_shim_returns_502_when_upstream_unreachable() -> None:
     """Upstream connection failures surface as a 502 with an Anthropic-
     shaped error body instead of hanging or crashing the shim."""
-    # Port 9 (discard) on loopback is closed — connect fails immediately.
+    # Port 9 (discard) on loopback is closed â€” connect fails immediately.
     shim = ClaudeGatewayShim(upstream_base_url="http://127.0.0.1:9")
     await shim.start()
     try:
@@ -312,7 +312,7 @@ async def test_shim_returns_502_when_upstream_unreachable() -> None:
 @pytest.mark.asyncio
 async def test_shim_does_not_install_process_signal_handlers() -> None:
     """The shim's uvicorn server must not swap the process's
-    SIGINT/SIGTERM handlers — the harness subprocess's own uvicorn
+    SIGINT/SIGTERM handlers â€” the harness subprocess's own uvicorn
     server owns those for graceful shutdown (_runner.py). A stock
     ``uvicorn.Server`` here replaces the handlers for the shim's whole
     lifetime, silently breaking harness SIGTERM shutdown."""
@@ -323,13 +323,13 @@ async def test_shim_does_not_install_process_signal_handlers() -> None:
     await shim.start()
     try:
         after = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
-        # Identical handler objects — the shim never touched them.
+        # Identical handler objects â€” the shim never touched them.
         assert after == before
     finally:
         await shim.aclose()
 
 
-# ── executor wiring test ──────────────────────────────────
+# â”€â”€ executor wiring test â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -341,11 +341,11 @@ async def test_gateway_executor_routes_new_client_through_shim(monkeypatch) -> N
     ``_get_or_create_client`` (the seam where ``options.env`` is
     consumed); spawning the real CLI is infeasible in unit tests.
     """
-    from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
-    from agent_meow.inner.databricks_executor import DatabricksCredentials
+    from omnigent.inner.claude_sdk_executor import ClaudeSDKExecutor
+    from omnigent.inner.databricks_executor import DatabricksCredentials
 
     monkeypatch.setattr(
-        "agent_meow.inner.databricks_executor._read_databrickscfg",
+        "omnigent.inner.databricks_executor._read_databrickscfg",
         lambda profile=None: DatabricksCredentials(
             host="https://example.databricks.com", token="dapi_test_token"
         ),
@@ -388,7 +388,7 @@ async def test_gateway_executor_routes_new_client_through_shim(monkeypatch) -> N
             model="databricks-claude-opus-4-8",
         )
         # The CLI must talk to the loopback shim, not the gateway
-        # directly — otherwise its stripped body reaches the gateway
+        # directly â€” otherwise its stripped body reaches the gateway
         # and opus thinking stays silent.
         assert connect_env["ANTHROPIC_BASE_URL"].startswith("http://127.0.0.1:")
         assert executor._gateway_shim is not None

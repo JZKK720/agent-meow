@@ -1,9 +1,9 @@
-"""Tests for :class:`~?agent_meow.inner.copilot_executor.CopilotExecutor`.
+"""Tests for :class:`~?omnigent.inner.copilot_executor.CopilotExecutor`.
 
 The copilot harness drives the GitHub Copilot SDK (``github-copilot-sdk``,
 imported as ``copilot``). The SDK is replaced with an injected fake module (so
 no real backing CLI, GitHub token, or network is needed), letting us exercise
-the ``SessionEvent`` → ExecutorEvent mapping, the tool bridge into
+the ``SessionEvent`` â†’ ExecutorEvent mapping, the tool bridge into
 ``_tool_executor``, persistent-session reuse across turns, the ``databricks-*``
 model fallback, usage accumulation, and the failure/lifecycle paths. Live
 end-to-end coverage (a real Copilot model invoking a bridged tool) lives in the
@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.inner.copilot_executor import (
+from omnigent.inner.copilot_executor import (
     CopilotExecutor,
     _accumulate_usage,
     _ambient_github_token,
@@ -32,7 +32,7 @@ from agent_meow.inner.copilot_executor import (
     _resolve_model,
     _resolve_reasoning_effort,
 )
-from agent_meow.inner.executor import (
+from omnigent.inner.executor import (
     CompactionComplete,
     ExecutorConfig,
     ExecutorError,
@@ -416,7 +416,7 @@ async def test_run_turn_streams_text_reasoning_and_usage(
         monkeypatch,
         [
             [
-                _ev("ASSISTANT_REASONING_DELTA", deltaContent="thinking…"),
+                _ev("ASSISTANT_REASONING_DELTA", deltaContent="thinkingâ€¦"),
                 _ev("ASSISTANT_MESSAGE_DELTA", deltaContent="PO"),
                 _ev("ASSISTANT_MESSAGE_DELTA", deltaContent="NG"),
                 _ev("ASSISTANT_USAGE", model="claude-haiku-4.5", inputTokens=10, outputTokens=2),
@@ -430,7 +430,7 @@ async def test_run_turn_streams_text_reasoning_and_usage(
     reasoning = [e for e in events if isinstance(e, ReasoningChunk)]
     completes = [e for e in events if isinstance(e, TurnComplete)]
     assert "".join(texts) == "PONG"
-    assert reasoning and reasoning[0].delta == "thinking…"
+    assert reasoning and reasoning[0].delta == "thinkingâ€¦"
     assert completes and completes[0].response == "PONG"
     assert completes[0].usage == {
         "input_tokens": 10,
@@ -628,7 +628,7 @@ async def test_session_restart_on_system_prompt_change(
     ex = CopilotExecutor(github_token="gho_x")
     _ = [e async for e in ex.run_turn([_user("first")], [], "SYS-A")]
     _ = [e async for e in ex.run_turn([_user("second")], [], "SYS-B")]
-    # System prompt changed → fresh session created, old client stopped.
+    # System prompt changed â†’ fresh session created, old client stopped.
     assert len(state["create_kwargs"]) == 2
     assert state["client_closed"] >= 1
     await ex.close()
@@ -751,7 +751,7 @@ async def test_start_failure_stops_client_no_orphan(monkeypatch: pytest.MonkeyPa
 @pytest.mark.asyncio
 async def test_error_after_partial_text_is_not_masked(monkeypatch: pytest.MonkeyPatch) -> None:
     # A SESSION_ERROR / MODEL_CALL_FAILURE after partial text streamed, with no
-    # successful final ASSISTANT_MESSAGE, must surface as an ExecutorError — not
+    # successful final ASSISTANT_MESSAGE, must surface as an ExecutorError â€” not
     # a clean TurnComplete carrying the partial text (which would mask the
     # failure).
     _install_fake_copilot(
@@ -772,7 +772,7 @@ async def test_error_after_partial_text_is_not_masked(monkeypatch: pytest.Monkey
 
 
 # ---------------------------------------------------------------------------
-# Policy gates (PHASE_LLM_REQUEST / PHASE_LLM_RESPONSE) — parity with the
+# Policy gates (PHASE_LLM_REQUEST / PHASE_LLM_RESPONSE) â€” parity with the
 # cursor / pi / claude-sdk executors.
 # ---------------------------------------------------------------------------
 
@@ -1030,7 +1030,7 @@ async def test_session_restart_on_tools_change(monkeypatch: pytest.MonkeyPatch) 
     ]
     _ = [e async for e in ex.run_turn([_user("first")], tools_a, "SYS")]
     _ = [e async for e in ex.run_turn([_user("second")], tools_b, "SYS")]
-    # Tool set changed → fresh session, old client stopped (so removed tools
+    # Tool set changed â†’ fresh session, old client stopped (so removed tools
     # can't stay callable and new tools aren't missing).
     assert len(state["create_kwargs"]) == 2
     assert state["client_closed"] >= 1

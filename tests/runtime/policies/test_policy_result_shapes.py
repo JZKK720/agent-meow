@@ -12,8 +12,8 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from agent_meow.policies.types import EvaluationContext, PolicyResult
-from agent_meow.spec.types import (
+from omnigent.policies.types import EvaluationContext, PolicyResult
+from omnigent.spec.types import (
     Phase,
     PolicyAction,
 )

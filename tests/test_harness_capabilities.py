@@ -9,8 +9,8 @@ drift.
 
 from __future__ import annotations
 
-from agent_meow import harness_plugins as hp
-from agent_meow.harness_capabilities import (
+from omnigent import harness_plugins as hp
+from omnigent.harness_capabilities import (
     AuthModel,
     EffortFamily,
     Elicitation,
@@ -19,14 +19,14 @@ from agent_meow.harness_capabilities import (
     ModelFamily,
     Resume,
 )
-from agent_meow.harness_plugins import (
+from omnigent.harness_plugins import (
     HarnessContribution,
     harness_capabilities,
     harness_catalog,
     native_agents,
     valid_harnesses,
 )
-from agent_meow.model_override import (
+from omnigent.model_override import (
     _ANTIGRAVITY_FAMILY_HARNESSES,
     _CLAUDE_FAMILY_HARNESSES,
     _CODEX_FAMILY_HARNESSES,

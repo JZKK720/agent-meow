@@ -7,7 +7,7 @@ definitions via the ``callable`` field on a FunctionTool.
 import time
 from datetime import datetime, timedelta, timezone
 
-from agent_meow.policies.schema import PolicyEvent, PolicyResponse
+from omnigent.policies.schema import PolicyEvent, PolicyResponse
 
 
 def web_search(query: str) -> dict:

@@ -1,7 +1,7 @@
 """Per-test nodeid attribution for the token-usage auto-recorder.
 
 The recording + JSON-writing logic lives in
-:mod:`~?agent_meow.llms._usage_observer`, which auto-activates whenever
+:mod:`~?omnigent.llms._usage_observer`, which auto-activates whenever
 ``OMNIGENT_TOKEN_USAGE_JSON`` is set in the environment (including in
 subprocesses spawned by tests). This plugin's only job is to mark
 which test is currently running so LLM calls get attributed to the
@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.llms import _usage_observer
+from omnigent.llms import _usage_observer
 
 
 @pytest.hookimpl(hookwrapper=True)

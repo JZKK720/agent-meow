@@ -30,10 +30,10 @@ from tests.e2e._run_with_group_timeout import run_with_group_timeout
 # Several examples (databricks_mcps_agent,
 # databricks_mcps_agent_with_google_policy, glean_mcp_agent,
 # databricks_coding_agent) hardcode
-#   args: [-m, agent_meow.inner.databricks_mcps.<X>, --profile,
+#   args: [-m, omnigent.inner.databricks_mcps.<X>, --profile,
 #          <profile-name>]
 # in their YAMLs. The Databricks MCP subprocess has three auth
-# modes (see agent_meow/inner/databricks_mcps/common/workspace.py):
+# modes (see omnigent/inner/databricks_mcps/common/workspace.py):
 #   1. ``--host <url> --token <PAT>``  (explicit PAT)
 #   2. ``--profile <name>``            (look up host+token in .databrickscfg)
 #   3. no args                         (fall through to env vars)
@@ -42,10 +42,10 @@ from tests.e2e._run_with_group_timeout import run_with_group_timeout
 # These env vars let a test host override to mode 1 or 2 without
 # editing the YAML in-tree.
 #
-# Usage — mode 2 (profile-based):
+# Usage â€” mode 2 (profile-based):
 #   OMNIGENT_E2E_MCP_PROFILE=<your-profile> pytest ...
 #
-# Usage — mode 1 (direct PAT, no profile needed):
+# Usage â€” mode 1 (direct PAT, no profile needed):
 #   OMNIGENT_E2E_MCP_HOST=https://... \
 #   OMNIGENT_E2E_MCP_TOKEN=dapi... \
 #   pytest ...
@@ -82,19 +82,19 @@ def example_yaml_path(repo_root: Path, name: str) -> Path:
 
     Resolution order (first hit wins):
 
-    1. ``examples/<name>.yaml`` — shipped examples that remain in
+    1. ``examples/<name>.yaml`` â€” shipped examples that remain in
        the top-level ``examples/`` directory.
-    2. ``tests/resources/examples/<name>.yaml`` — single-YAML demos
+    2. ``tests/resources/examples/<name>.yaml`` â€” single-YAML demos
        moved to the test-resources tree.
-    3. ``tests/resources/examples/<name>/`` — multi-file AGENTSPEC
+    3. ``tests/resources/examples/<name>/`` â€” multi-file AGENTSPEC
        demos (``archer``, ``coder``, ``openai-coder``).
-    4. ``tests/resources/agents/<name>/`` — test-only fixtures
+    4. ``tests/resources/agents/<name>/`` â€” test-only fixtures
        (aspirational specs, incremental-feature variants).
 
     :param repo_root: Unified repo root; typically the
         ``omnigent_repo_root`` fixture value.
     :param name: Agent name. For top-level YAMLs, the filename
-        stem (``"hello_world"`` → ``tests/resources/examples/hello_world.yaml``);
+        stem (``"hello_world"`` â†’ ``tests/resources/examples/hello_world.yaml``);
         for dir-shaped agents, the directory name (``"archer"``).
     :returns: Absolute :class:`Path` to the YAML / config file.
     :raises FileNotFoundError: When none of the layouts match in
@@ -121,7 +121,7 @@ def example_yaml_path(repo_root: Path, name: str) -> Path:
         if agentspec.is_file():
             return agentspec
     raise FileNotFoundError(
-        f"No YAML for agent {name!r} — checked "
+        f"No YAML for agent {name!r} â€” checked "
         f"examples/{name}.yaml, "
         f"tests/resources/examples/{name}.yaml, "
         f"tests/resources/examples/{name}/ and tests/resources/agents/{name}/ "
@@ -254,7 +254,7 @@ def validate_agent_def_structure(
     profiles) but whose *spec translation* we still want to
     guard against regressions. Exercises the unified spec parser,
     the :func:`agent_spec_to_agent_def` translator, and the
-    per-tool / per-policy / per-terminal registration paths —
+    per-tool / per-policy / per-terminal registration paths â€”
     all of which the unification touched.
 
     :param omnigent_python: Interpreter with agent-meow installed.
@@ -286,7 +286,7 @@ def validate_agent_def_structure(
 import json
 import sys
 sys.path.insert(0, {str(omnigent_repo_root)!r})
-from agent_meow.inner.loader import load_agent_def_from_path
+from omnigent.inner.loader import load_agent_def_from_path
 
 agent_def = load_agent_def_from_path({str(yaml_path)!r})
 assert agent_def is not None, "load returned None"
@@ -328,7 +328,7 @@ print("SUMMARY:" + json.dumps(summary))
         f"Structural check failed for {example_name!r}:\n"
         f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
     )
-    # Extract the JSON summary — other print()s (e.g. DBOS init
+    # Extract the JSON summary â€” other print()s (e.g. DBOS init
     # noise) may precede it.
     import json
 
@@ -408,7 +408,7 @@ def assert_completed_one_shot(
         f"{result.returncode} (expected 0).\n"
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
-    # Any assistant reply must reach stdout — zero-length stdout
+    # Any assistant reply must reach stdout â€” zero-length stdout
     # means the run exited 0 without actually streaming anything.
     # --no-log strips the banner, so stdout == "" is a regression.
     assert result.stdout.strip(), (
@@ -471,7 +471,7 @@ def mcp_auth_override() -> McpAuthOverride:
 def _rewrite_mcp_auth_in_place(yaml_obj: object, override: McpAuthOverride) -> int:
     """
     Walk a parsed YAML structure and rewrite the auth args for
-    every ``-m agent_meow.inner.databricks_mcps.*`` subprocess.
+    every ``-m omnigent.inner.databricks_mcps.*`` subprocess.
 
     Strips any existing ``--profile / --host / --token`` arg
     pairs from the MCP's ``args:`` list and appends the ones
@@ -505,7 +505,7 @@ def _rewrite_args_list(args: list[object], override: McpAuthOverride) -> int:
     :returns: 1 if this list was an MCP-subprocess args list, else 0.
     """
     if not any(
-        isinstance(x, str) and x.startswith("agent_meow.inner.databricks_mcps.") for x in args
+        isinstance(x, str) and x.startswith("omnigent.inner.databricks_mcps.") for x in args
     ):
         return 0
 
@@ -525,7 +525,7 @@ def _rewrite_args_list(args: list[object], override: McpAuthOverride) -> int:
         cleaned.extend(["--profile", override.profile])
     elif override.host is not None and override.token is not None:
         cleaned.extend(["--host", override.host, "--token", override.token])
-    # (If override has neither, leave args bare — MCP subprocess
+    # (If override has neither, leave args bare â€” MCP subprocess
     # will fall through to DATABRICKS_* env vars.)
 
     args.clear()
@@ -553,7 +553,7 @@ def materialize_yaml_with_mcp_auth(
         args list.
     :returns: Path to pass to the CLI.
     :raises AssertionError: When no MCP subprocess was found in
-        the YAML — the test expected at least one, so zero
+        the YAML â€” the test expected at least one, so zero
         rewrites means the YAML shape drifted.
     """
     if source.is_file():

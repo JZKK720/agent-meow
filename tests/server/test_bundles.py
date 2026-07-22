@@ -1,13 +1,13 @@
 """
-Tests for uploaded agent bundle validation (``agent_meow/server/bundles.py``).
+Tests for uploaded agent bundle validation (``omnigent/server/bundles.py``).
 
 ``validate_agent_bundle`` is the untrusted upload entry point, so it
 enforces two protections that trusted spec loading does not:
 
-- **No env expansion** — it parses with ``expand_env=False`` so a
+- **No env expansion** â€” it parses with ``expand_env=False`` so a
   tenant-supplied ``${VAR}`` is never resolved against the server
   process env (no server-secret exfiltration).
-- **Handler allowlist** — it loads with ``enforce_handler_allowlist=True`` so a
+- **Handler allowlist** â€” it loads with ``enforce_handler_allowlist=True`` so a
   ``type: function`` policy naming an unregistered handler (e.g.
   ``subprocess.Popen``) is refused before the inner loader resolves and
   calls it at parse time.
@@ -22,8 +22,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
-from agent_meow.server.bundles import validate_agent_bundle
+from omnigent.errors import OmnigentError
+from omnigent.server.bundles import validate_agent_bundle
 
 _SECRET_ENV_VAR = "OMNIGENT_W7_BUNDLE_SECRET"
 _SECRET_VALUE = "server-side-secret-token"
@@ -53,7 +53,7 @@ def _single_file_yaml_bundle(yaml_text: str) -> bytes:
     Pack *yaml_text* into a ``.tar.gz`` bundle holding one ``agent.yaml``.
 
     Produces the single-file agent-meow YAML shape (no ``config.yaml``),
-    which ``agent_meow.spec.load`` dispatches to the inner loader — the
+    which ``omnigent.spec.load`` dispatches to the inner loader â€” the
     parse-time-execution path the handler-allowlist guard must cover.
 
     :param yaml_text: The agent YAML document, e.g.
@@ -76,7 +76,7 @@ _MIN_CONFIG = (
 )
 
 
-# ── no env expansion on the upload path ────────────────────
+# â”€â”€ no env expansion on the upload path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_validate_agent_bundle_does_not_expand_env(
@@ -116,7 +116,7 @@ def test_validate_agent_bundle_does_not_expand_env(
 
     spec = validate_agent_bundle(bundle)
 
-    # Name still parses (validation succeeds) — the bundle is valid,
+    # Name still parses (validation succeeds) â€” the bundle is valid,
     # we just refuse to resolve its env references.
     assert spec.name == "uploaded-agent"
     header = spec.mcp_servers[0].headers["Authorization"]
@@ -125,7 +125,7 @@ def test_validate_agent_bundle_does_not_expand_env(
     assert _SECRET_VALUE not in header
 
 
-# ── policy handler allowlist on the upload path ───────────────────
+# â”€â”€ policy handler allowlist on the upload path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_validate_bundle_accepts_clean_agent() -> None:
@@ -167,7 +167,7 @@ def test_validate_bundle_accepts_registered_policy_handler() -> None:
     """A bundle whose policy handler is registered validates.
 
     ``ask_on_os_tools`` is a built-in registry entry, so it passes the
-    upload allowlist — proving the guard does not over-block legitimate
+    upload allowlist â€” proving the guard does not over-block legitimate
     bundles.
     """
     spec = validate_agent_bundle(
@@ -179,7 +179,7 @@ def test_validate_bundle_accepts_registered_policy_handler() -> None:
             "policies:\n"
             "  ask_os:\n"
             "    type: function\n"
-            "    handler: agent_meow.policies.builtins.safety.ask_on_os_tools\n"
+            "    handler: omnigent.policies.builtins.safety.ask_on_os_tools\n"
         ),
     )
     assert spec.name == "gated_agent"
@@ -192,7 +192,7 @@ def test_validate_bundle_rejects_injection_handler_without_executing(
 
     The handler is a ``subprocess.Popen`` factory whose args would create
     a marker file. The bundle must be rejected as invalid AND the marker
-    must not exist — proving the guard fires before the parse-time
+    must not exist â€” proving the guard fires before the parse-time
     factory call, not after.
 
     :param tmp_path: Pytest temp dir; the marker path the payload would
@@ -245,7 +245,7 @@ def test_validate_bundle_rejects_unregistered_handler_in_sub_agent() -> None:
     The ``config.yaml`` parser discovers child agents from ``agents/``
     subdirectories, each with its own ``guardrails`` whose handlers are
     resolved + called at engine build. A clean root with a malicious
-    sub-agent must not slip past the upload allowlist — the post-parse
+    sub-agent must not slip past the upload allowlist â€” the post-parse
     scan recurses into ``sub_agents``.
     """
     bundle = _make_bundle_bytes(
@@ -280,7 +280,7 @@ def test_validate_bundle_accepts_registered_handler_in_sub_agent() -> None:
                 + "  policies:\n"
                 + "    ask_os:\n"
                 + "      type: function\n"
-                + "      function: agent_meow.policies.builtins.safety.ask_on_os_tools\n"
+                + "      function: omnigent.policies.builtins.safety.ask_on_os_tools\n"
             ),
         }
     )
@@ -288,7 +288,7 @@ def test_validate_bundle_accepts_registered_handler_in_sub_agent() -> None:
     assert spec.name == "root_agent"
 
 
-# ── os_env.cwd containment on the upload path (GHSA-p8rw-8qj3-hf33) ──
+# â”€â”€ os_env.cwd containment on the upload path (GHSA-p8rw-8qj3-hf33) â”€â”€
 
 
 def _bundle_with_cwd(cwd: str) -> bytes:
@@ -339,7 +339,7 @@ def test_validate_agent_bundle_allows_absolute_cwd_for_trusted_local_server() ->
     behavior.
 
     With ``enforce_handler_allowlist=False`` the operator uploads their OWN
-    bundle and legitimately controls cwd, so containment is not enforced —
+    bundle and legitimately controls cwd, so containment is not enforced â€”
     matching ``designs/SESSION_WORKSPACE_SELECTION.md`` for direct/local runs.
     """
     spec = validate_agent_bundle(
@@ -348,11 +348,11 @@ def test_validate_agent_bundle_allows_absolute_cwd_for_trusted_local_server() ->
     assert spec.name == "uploaded-agent"
 
 
-# ── no server-side `callable:` tools on the upload path (GHSA-756x) ──
+# â”€â”€ no server-side `callable:` tools on the upload path (GHSA-756x) â”€â”€
 
 
 # A agent-meow function tool whose ``callable:`` is a dotted import path the
-# runner resolves with ``importlib`` and invokes — the RCE gadget.
+# runner resolves with ``importlib`` and invokes â€” the RCE gadget.
 _CALLABLE_TOOL_YAML = (
     "name: {name}\n"
     "prompt: hi\n"
@@ -390,7 +390,7 @@ def test_validate_bundle_allows_server_callable_tool_when_not_enforced() -> None
     The trusted single-user / local-server path uploads the operator's own
     bundle through this same function; Python callable tools are the intended
     operator feature there (the operator already has code execution), so the
-    guard must not block them — mirroring the handler-allowlist exemption.
+    guard must not block them â€” mirroring the handler-allowlist exemption.
     """
     spec = validate_agent_bundle(
         _single_file_yaml_bundle(_CALLABLE_TOOL_YAML.format(name="local_tool_agent")),
@@ -422,12 +422,12 @@ def test_reject_uploaded_callable_tools_recurses_into_sub_agents() -> None:
 
     Exercised directly: the directory ``config.yaml`` sub-agent shape does not
     surface YAML ``tools:`` callables through the parser, so this guards the
-    recursion itself — the defense-in-depth that any future surfacing path
+    recursion itself â€” the defense-in-depth that any future surfacing path
     relies on, matching the handler-allowlist guard's sub-agent coverage.
     """
-    from agent_meow.server.bundles import _reject_uploaded_callable_tools
-    from agent_meow.spec import AgentSpec
-    from agent_meow.spec.types import LocalToolInfo, ToolRuntime
+    from omnigent.server.bundles import _reject_uploaded_callable_tools
+    from omnigent.spec import AgentSpec
+    from omnigent.spec.types import LocalToolInfo, ToolRuntime
 
     sub = AgentSpec(name="evil_sub", spec_version=1)
     sub.local_tools = [

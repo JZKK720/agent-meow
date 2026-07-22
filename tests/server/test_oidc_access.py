@@ -1,7 +1,7 @@
-"""Tests for the OIDC admission policy (:mod:`~?agent_meow.server.oidc_access`).
+"""Tests for the OIDC admission policy (:mod:`~?omnigent.server.oidc_access`).
 
 The callback itself isn't driven end-to-end here (that needs an IdP
-token-exchange mock — covered by the manual REPL/IdP verification in
+token-exchange mock â€” covered by the manual REPL/IdP verification in
 the plan); these tests pin the single admit/deny decision the callback
 delegates to, across every branch: no-restriction default, env
 domains, the runtime-editable file (including mtime reload), the union
@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.server.admin_list import AdminList
-from agent_meow.server.oidc_access import OidcAdmissionPolicy, resolve_allowed_domains_path
+from omnigent.server.admin_list import AdminList
+from omnigent.server.oidc_access import OidcAdmissionPolicy, resolve_allowed_domains_path
 
 
 def _policy(
@@ -44,7 +44,7 @@ def _policy(
 def test_no_restriction_admits_everyone(tmp_path: Path) -> None:
     """With no env domains and no file, any authenticated email is admitted.
 
-    This preserves the OSS default — a fresh deploy with no domain
+    This preserves the OSS default â€” a fresh deploy with no domain
     config lets any IdP user in (e.g. GitHub). If this regressed, every
     no-config deploy would 403 all logins.
     """
@@ -132,7 +132,7 @@ def test_invite_bypasses_domain_restriction(tmp_path: Path) -> None:
 def test_config_allowed_domains_union(tmp_path: Path) -> None:
     """Domains from the server config (``config_allowed_domains``) are admitted.
 
-    Union'd with env + file — here env is None and only the config set
+    Union'd with env + file â€” here env is None and only the config set
     is configured, so it becomes the effective allowlist.
     """
     admins = tmp_path / "admins"
@@ -150,8 +150,8 @@ def test_config_allowed_domains_union(tmp_path: Path) -> None:
 
 def test_resolve_allowed_domains_path_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     """``OMNIGENT_OIDC_ALLOWED_DOMAINS_PATH`` wins over the default."""
-    monkeypatch.setenv("OMNIGENT_OIDC_ALLOWED_DOMAINS_PATH", "/etc/agent_meow/domains")
-    assert resolve_allowed_domains_path() == Path("/etc/agent_meow/domains")
+    monkeypatch.setenv("OMNIGENT_OIDC_ALLOWED_DOMAINS_PATH", "/etc/omnigent/domains")
+    assert resolve_allowed_domains_path() == Path("/etc/omnigent/domains")
 
 
 def test_resolve_allowed_domains_path_default(monkeypatch: pytest.MonkeyPatch) -> None:

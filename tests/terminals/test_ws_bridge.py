@@ -1,11 +1,11 @@
 """
-Unit tests for :mod:`~?agent_meow.terminals.ws_bridge`.
+Unit tests for :mod:`~?omnigent.terminals.ws_bridge`.
 
 Covers ``_write_all_nonblocking`` (retry-on-backpressure / short-write
 semantics over a real ``os.pipe``), the tmux-attach child reaper, the
 detach-vs-terminal-gone close-code logic that distinguishes a tmux
 detach (session still alive) from a real session exit,
-and ``_forward_pty_to_ws`` PTY→WS frame coalescing (queued bursts merge
+and ``_forward_pty_to_ws`` PTYâ†’WS frame coalescing (queued bursts merge
 into one frame; a lone keystroke still flushes immediately).
 """
 
@@ -30,8 +30,8 @@ from pathlib import Path
 
 import pytest
 
-import agent_meow.terminals.ws_bridge as ws_bridge
-from agent_meow.terminals.ws_bridge import (
+import omnigent.terminals.ws_bridge as ws_bridge
+from omnigent.terminals.ws_bridge import (
     WS_CLOSE_TERMINAL_DETACHED,
     _check_pane_dead_definitive,
     _forward_pty_to_ws,
@@ -158,7 +158,7 @@ async def test_write_all_nonblocking_exits_on_closed_fd() -> None:
     os.close(w_fd)
 
     loop = asyncio.get_running_loop()
-    # Should not raise — OSError is caught internally.
+    # Should not raise â€” OSError is caught internally.
     await _write_all_nonblocking(loop, w_fd, b"dead fd")
 
 
@@ -281,7 +281,7 @@ async def test_fork_exec_pty_spawns_child_and_returns_pty_handle() -> None:
     Uses ``true`` (exits 0 immediately) in place of ``tmux`` so the test
     is fast and dependency-free; the fork/exec wiring under test is the
     same. A failure means the parent side of ``pty.fork`` did not return
-    a usable handle — e.g. the child crashed before exec, or the master
+    a usable handle â€” e.g. the child crashed before exec, or the master
     fd is invalid.
     """
     true_path = shutil.which("true")
@@ -312,7 +312,7 @@ async def test_attach_fork_gate_is_per_loop_and_bounded() -> None:
     would be silently disabled.
     """
     gate = ws_bridge._attach_fork_gate()
-    # Same object on repeat calls within one loop → all attaches share
+    # Same object on repeat calls within one loop â†’ all attaches share
     # one serialization point.
     assert ws_bridge._attach_fork_gate() is gate
 
@@ -366,9 +366,9 @@ async def test_tmux_session_alive_tracks_real_session(tmp_path: Path) -> None:
     finally:
         subprocess.run([*base, "kill-server"], capture_output=True, check=False)
 
-    # Server gone → probe must report dead, not raise.
+    # Server gone â†’ probe must report dead, not raise.
     assert await _tmux_session_alive(str(socket_path), "main") is False
-    # Never-existed socket → probe reports dead (conservative).
+    # Never-existed socket â†’ probe reports dead (conservative).
     assert await _tmux_session_alive(str(tmp_path / "absent.sock"), "main") is False
 
 
@@ -380,7 +380,7 @@ async def test_tmux_session_alive_false_for_dead_pane(tmp_path: Path) -> None:
 
     The claude-native terminal opts into ``remain-on-exit`` (#540), so a crashed
     agent leaves a dead pane on a still-present session. The probe must report
-    that as gone via ``#{pane_dead}`` — otherwise a detach-vs-exit decision
+    that as gone via ``#{pane_dead}`` â€” otherwise a detach-vs-exit decision
     would treat the crash as a mere detach and the web client would reconnect
     to a dead pane forever instead of closing.
 
@@ -391,7 +391,7 @@ async def test_tmux_session_alive_false_for_dead_pane(tmp_path: Path) -> None:
     # One command sequence on a fresh server (";" separates tmux commands):
     # set remain-on-exit globally BEFORE new-session so the session inherits it
     # and survives the inner process exiting. A bare set-option can't run first
-    # on its own — no server exists yet to connect to.
+    # on its own â€” no server exists yet to connect to.
     subprocess.run(
         [
             *base,
@@ -429,7 +429,7 @@ class _ParkingFakeWebSocket:
 
     The bridge ends when either side finishes; this fake parks ``receive``
     forever so only the PTY-EOF branch (the ``tmux attach`` child exiting)
-    can end the bridge — exactly the path a detach takes. It records the
+    can end the bridge â€” exactly the path a detach takes. It records the
     close code/reason and signals when the first PTY output arrives (proof
     the attach is live), so the test can detach deterministically.
     """
@@ -467,7 +467,7 @@ async def test_bridge_detach_closes_4405_and_leaves_session_alive(
 
     This is the core detach case: the ``tmux attach`` child exits on
     detach (PTY EOF), but ``has-session`` still succeeds, so the bridge
-    must report ``WS_CLOSE_TERMINAL_DETACHED`` — reporting 4404 here is
+    must report ``WS_CLOSE_TERMINAL_DETACHED`` â€” reporting 4404 here is
     what made the client tear the whole session (and runner) down.
 
     The detach is driven with ``tmux detach-client`` (rather than fragile
@@ -533,7 +533,7 @@ class _CollectingFakeWebSocket(_ParkingFakeWebSocket):
 
     Extends :class:`_ParkingFakeWebSocket` (client side parks forever,
     close code captured) with an output buffer so tests can assert on
-    the actual bytes the attach client drew — e.g. that real pane
+    the actual bytes the attach client drew â€” e.g. that real pane
     content arrived rather than a tmux startup error.
     """
 
@@ -564,14 +564,14 @@ async def test_bridge_attach_renders_pane_with_dumb_ambient_term(
     headless host has no controlling terminal, bash substitutes
     ``TERM=dumb``, and the runner inherits it. The bridge must pin the
     ``tmux attach`` child's ``TERM`` to the real client's terminal
-    type (xterm.js ⇒ ``xterm-256color``) rather than inherit the
-    ambient value — ``tmux attach`` refuses dumb terminals ("terminal
+    type (xterm.js â‡’ ``xterm-256color``) rather than inherit the
+    ambient value â€” ``tmux attach`` refuses dumb terminals ("terminal
     does not support clear"), which rendered the web terminal as an
     error loop instead of the Claude TUI.
 
     The pane marker arriving over the WS proves the attach client ran
     with a usable TERM. If the env pin regresses, tmux prints its
-    "open terminal failed" error and exits — the marker never arrives
+    "open terminal failed" error and exits â€” the marker never arrives
     and this test times out at the wait below.
 
     :param tmp_path: Pytest tmp directory for the private socket.
@@ -611,13 +611,13 @@ async def test_bridge_attach_renders_pane_with_dumb_ambient_term(
         # output is its "open terminal failed" error before PTY EOF.
         await asyncio.wait_for(_wait_for_marker(), timeout=10.0)
         assert b"open terminal failed" not in ws.output, (
-            "tmux rejected the attach client's terminal type — the bridge "
+            "tmux rejected the attach client's terminal type â€” the bridge "
             "leaked the ambient dumb TERM instead of pinning xterm-256color"
         )
         # The attach client is still alive (the bridge ends on PTY EOF,
         # which is what the pre-fix failure produced immediately).
         assert not bridge_task.done(), (
-            "attach child exited right after drawing — with a usable TERM "
+            "attach child exited right after drawing â€” with a usable TERM "
             "it stays attached until detach/kill"
         )
     finally:
@@ -627,7 +627,7 @@ async def test_bridge_attach_renders_pane_with_dumb_ambient_term(
         subprocess.run([*base, "kill-server"], capture_output=True, check=False)
 
 
-# ── read_only input gating ────────────────────────────────────────
+# â”€â”€ read_only input gating â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _ScriptedWebSocket:
@@ -641,7 +641,7 @@ class _ScriptedWebSocket:
     ``receive()``, ``exhausted`` being set is a deterministic barrier:
     every scripted frame has been fully applied (a keystroke either
     written to or dropped before the PTY, a resize ``ioctl`` already
-    issued) by the time it fires — no sleeps or polling required.
+    issued) by the time it fires â€” no sleeps or polling required.
 
     :param frames: ASGI-style inbound frame dicts, e.g.
         ``{"type": "websocket.receive", "bytes": b"x"}``.
@@ -712,7 +712,7 @@ async def test_bridge_read_only_gates_keystrokes_but_not_resize(
     ``os.openpty`` pair (the bridge writes browser bytes to the master;
     they surface as input on the slave). Two inbound frames are scripted:
     a keystroke, then a resize. The ``_ScriptedWebSocket.exhausted`` event
-    is the synchronization barrier — once set, both frames have been
+    is the synchronization barrier â€” once set, both frames have been
     fully processed, so the assertions observe a settled PTY state.
 
     :param read_only: Whether the bridge runs in read-only mode.
@@ -764,7 +764,7 @@ async def test_bridge_read_only_gates_keystrokes_but_not_resize(
         # Barrier: both scripted frames have been applied to the PTY.
         await asyncio.wait_for(ws.exhausted.wait(), timeout=5.0)
 
-        # Resize is applied regardless of read_only — a read-only viewer
+        # Resize is applied regardless of read_only â€” a read-only viewer
         # must still be able to size their own viewport. If this fails,
         # the resize branch was wrongly gated behind the read_only check
         # (or the ioctl never ran).
@@ -776,7 +776,7 @@ async def test_bridge_read_only_gates_keystrokes_but_not_resize(
 
         # The load-bearing half: keystrokes reach the PTY only when NOT
         # read_only. In read_only the bytes must be dropped before the
-        # write — a non-empty drain here means a read-only collaborator
+        # write â€” a non-empty drain here means a read-only collaborator
         # could execute commands in the shared terminal.
         delivered = _drain(slave_fd)
         if read_only:
@@ -869,7 +869,7 @@ async def test_bridge_stamps_on_client_interaction_for_each_event(
             f"{after_frames}; connect-entry or per-frame stamping regressed"
         )
     finally:
-        # Close the slave → master EOF → bridge exits → its finally stamps
+        # Close the slave â†’ master EOF â†’ bridge exits â†’ its finally stamps
         # the disconnect.
         with contextlib.suppress(OSError):
             os.close(slave_fd)
@@ -1004,7 +1004,7 @@ async def test_forward_pty_to_ws_coalesces_queued_burst() -> None:
     ``_on_pty_readable`` enqueues the PTY master in 4 KiB reads, so a screen
     redraw / large paste lands as ~10 queue items. Pre-filling the queue
     with that shape (ten 4 KiB chunks + ``None`` EOF) reproduces the burst
-    deterministically — a real PTY's ~12 KiB kernel buffer would cap how
+    deterministically â€” a real PTY's ~12 KiB kernel buffer would cap how
     much is ever queued at once. Before, each item was its own WS frame.
 
     Hitting ``None`` mid-merge also exercises the EOF-after-flush path, so
@@ -1050,10 +1050,10 @@ async def test_forward_pty_to_ws_coalesces_queued_burst() -> None:
 @pytest.mark.asyncio
 async def test_forward_pty_to_ws_single_write_sends_immediately_one_frame() -> None:
     """
-    A lone chunk is sent immediately as one frame — zero added latency.
+    A lone chunk is sent immediately as one frame â€” zero added latency.
 
     Coalescing must never wait to accumulate: a single keystroke echo has
-    to flush the instant it is queued. Enqueue one chunk with NO EOF yet —
+    to flush the instant it is queued. Enqueue one chunk with NO EOF yet â€”
     if the forwarder waited for more, ``sent`` stays empty and ``wait_for``
     times out. The frame appearing proves the first ``get`` flushes only
     the available bytes and the ``get_nowait`` drain stops without blocking.
@@ -1074,7 +1074,7 @@ async def test_forward_pty_to_ws_single_write_sends_immediately_one_frame() -> N
 
         await asyncio.wait_for(_one_frame_sent(), timeout=5.0)
 
-        # One keystroke in one frame — not held back, nothing to merge, no latency added.
+        # One keystroke in one frame â€” not held back, nothing to merge, no latency added.
         assert ws.sent == [keystroke], (
             f"expected a lone keystroke to be sent as exactly one frame "
             f"{[keystroke]!r}, got {ws.sent!r}. If empty, coalescing "
@@ -1093,7 +1093,7 @@ async def test_forward_pty_to_ws_caps_coalesced_frame_size() -> None:
 
     Without a cap a multi-megabyte burst would buffer into one giant frame
     and stall first-paint. With a burst (16 KiB) larger than the cap (8 KiB),
-    the forwarder must emit several ~cap-sized frames, not one — still
+    the forwarder must emit several ~cap-sized frames, not one â€” still
     delivering every byte exactly.
     """
     chunk_size = ws_bridge._PTY_READ_CHUNK  # 4 KiB
@@ -1232,7 +1232,7 @@ async def test_forward_pty_to_ws_accepts_dynamic_coalesce_cap() -> None:
     assert b"".join(ws.sent) == b"x" * ws_bridge._PTY_READ_CHUNK
 
 
-# ── Additional unit tests (no tmux required) ─────────────────
+# â”€â”€ Additional unit tests (no tmux required) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_current_coalesce_limit_static_value() -> None:
@@ -1240,7 +1240,7 @@ def test_current_coalesce_limit_static_value() -> None:
     ``_current_coalesce_limit`` returns the integer unchanged when
     given a static cap.
     """
-    from agent_meow.terminals.ws_bridge import _current_coalesce_limit
+    from omnigent.terminals.ws_bridge import _current_coalesce_limit
 
     assert _current_coalesce_limit(4096) == 4096
 
@@ -1250,17 +1250,17 @@ def test_current_coalesce_limit_callable_invoked() -> None:
     ``_current_coalesce_limit`` calls the callable and returns its
     result when given a dynamic cap.
     """
-    from agent_meow.terminals.ws_bridge import _current_coalesce_limit
+    from omnigent.terminals.ws_bridge import _current_coalesce_limit
 
     assert _current_coalesce_limit(lambda: 2048) == 2048
 
 
 def test_current_coalesce_limit_rejects_zero() -> None:
     """
-    A zero cap raises ``ValueError`` — a zero cap would make the
+    A zero cap raises ``ValueError`` â€” a zero cap would make the
     frame-splitting loop infinite.
     """
-    from agent_meow.terminals.ws_bridge import _current_coalesce_limit
+    from omnigent.terminals.ws_bridge import _current_coalesce_limit
 
     with pytest.raises(ValueError, match="must be positive"):
         _current_coalesce_limit(0)
@@ -1270,7 +1270,7 @@ def test_current_coalesce_limit_rejects_negative_callable() -> None:
     """
     A callable returning a negative value raises ``ValueError``.
     """
-    from agent_meow.terminals.ws_bridge import _current_coalesce_limit
+    from omnigent.terminals.ws_bridge import _current_coalesce_limit
 
     with pytest.raises(ValueError, match="must be positive"):
         _current_coalesce_limit(lambda: -5)
@@ -1279,10 +1279,10 @@ def test_current_coalesce_limit_rejects_negative_callable() -> None:
 def test_coalesce_limit_after_input_returns_large_cap_with_no_input() -> None:
     """
     Before any client input (``last_client_input_at=None``), the
-    coalesce cap is the full flood cap — output should stream
+    coalesce cap is the full flood cap â€” output should stream
     efficiently without the interactive constraint.
     """
-    from agent_meow.terminals.ws_bridge import _coalesce_limit_after_input
+    from omnigent.terminals.ws_bridge import _coalesce_limit_after_input
 
     assert _coalesce_limit_after_input(None) == ws_bridge._WS_COALESCE_MAX_BYTES
 
@@ -1296,7 +1296,7 @@ def test_coalesce_limit_after_input_returns_small_cap_within_window(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.terminals.ws_bridge import _coalesce_limit_after_input
+    from omnigent.terminals.ws_bridge import _coalesce_limit_after_input
 
     monkeypatch.setattr(ws_bridge, "_monotonic", lambda: 100.5)
     # Input was 0.3s ago (within the 0.75s window).
@@ -1312,7 +1312,7 @@ def test_coalesce_limit_after_input_returns_large_cap_after_window(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.terminals.ws_bridge import _coalesce_limit_after_input
+    from omnigent.terminals.ws_bridge import _coalesce_limit_after_input
 
     monkeypatch.setattr(ws_bridge, "_monotonic", lambda: 102.0)
     # Input was 2s ago (well past the 0.75s window).
@@ -1326,7 +1326,7 @@ async def test_tmux_session_alive_returns_false_on_spawn_failure(
     """
     ``_tmux_session_alive`` returns ``False`` when ``create_subprocess_exec``
     raises ``OSError`` (tmux binary not found). This is the conservative
-    fallback — any probe error is treated as "session dead".
+    fallback â€” any probe error is treated as "session dead".
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
@@ -1460,9 +1460,9 @@ def test_monotonic_returns_float() -> None:
     """
     ``_monotonic`` is a thin wrapper over ``time.monotonic`` that
     returns a float. This seems trivial but the wrapper exists as
-    a test seam — verify it works as documented.
+    a test seam â€” verify it works as documented.
     """
-    from agent_meow.terminals.ws_bridge import _monotonic
+    from omnigent.terminals.ws_bridge import _monotonic
 
     val = _monotonic()
     assert isinstance(val, float)

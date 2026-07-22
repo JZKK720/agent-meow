@@ -2,16 +2,16 @@
 
 The sub-agent-elicitation contract: when a sub-agent (child session) raises an
 elicitation, the prompt must surface on the PARENT session (so a user
-in the parent — e.g. polly — chat sees it) stamped with
+in the parent â€” e.g. polly â€” chat sees it) stamped with
 ``params.target_session_id`` (the child that owns the parked Future),
 and resolving against that CHILD session id must release the worker.
 
-This drives the REAL stack — a local ``agent-meow server`` booted from
+This drives the REAL stack â€” a local ``agent-meow server`` booted from
 this working tree, a local runner + the native ``claude``/``codex``
 CLIs spawned by ``agent-meow run --server``, and a real LLM brain. The
 ``ask-mode-supervisor`` fixture agent's ``claude_code`` (claude-native,
 ``--permission-mode default``) and ``codex`` (codex-native, default
-approval policy — no ``yolo``) sub-agents run in PROMPTING mode, so a
+approval policy â€” no ``yolo``) sub-agents run in PROMPTING mode, so a
 delegated shell command makes the worker raise a real approval that
 must be forwarded and answered from the parent.
 
@@ -50,9 +50,9 @@ import pytest
 _REPO = Path(__file__).resolve().parents[2]
 _PROFILE = "oss"
 
-# ── Fixture agent bundle (materialized into a tmp dir by ``agent_dir``) ──
+# â”€â”€ Fixture agent bundle (materialized into a tmp dir by ``agent_dir``) â”€â”€
 # A polly-style supervisor whose claude_code and codex sub-agents run in
-# PROMPTING (ask) permission mode — NOT bypass/yolo — so a worker raises a
+# PROMPTING (ask) permission mode â€” NOT bypass/yolo â€” so a worker raises a
 # real approval the parent must surface and resolve. Inlined
 # here rather than checked in under tests/resources so the fixture lives
 # and dies with this test.
@@ -61,10 +61,10 @@ spec_version: 1
 name: ask-mode-supervisor
 description: >-
   E2E fixture: a polly-style supervisor whose claude_code and codex
-  sub-agents run in PROMPTING (ask) permission mode — they are NOT in
+  sub-agents run in PROMPTING (ask) permission mode â€” they are NOT in
   bypass / yolo. Used to e2e-verify that a sub-agent's approval prompt
   surfaces on the parent session and is answerable by resolving against
-  the child session id (PR 2272 — sub-agent elicitation routing).
+  the child session id (PR 2272 â€” sub-agent elicitation routing).
 
 # Orchestrator brain: claude-sdk (in-process), like polly. It only
 # delegates; the substantive command-running work is done by the native
@@ -76,17 +76,17 @@ executor:
 
 prompt: |
   You are a coding orchestrator. You do not do substantive work
-  yourself — you delegate to one of your two sub-agents and report
+  yourself â€” you delegate to one of your two sub-agents and report
   back what they did.
 
   You have exactly two sub-agents, both real CLI coding harnesses that
   run in their own terminal:
-  - `claude_code` — Claude Code (claude-native harness).
-  - `codex` — Codex (codex-native harness).
+  - `claude_code` â€” Claude Code (claude-native harness).
+  - `codex` â€” Codex (codex-native harness).
 
   Delegate work via `sys_session_send(agent=<name>, title=<short label>,
   args=<task>)`. Each runs autonomously and notifies you via the inbox
-  when done; collect results with `sys_read_inbox`. Do not busy-poll —
+  when done; collect results with `sys_read_inbox`. Do not busy-poll â€”
   end your turn while a worker runs and you will be woken when it
   finishes.
 
@@ -121,13 +121,13 @@ executor:
     harness: claude-native
     # PROMPTING (not bypass): the server translates this into
     # ``--permission-mode default`` so Claude Code asks before running
-    # Bash/Edit/Write. This is the whole point of the fixture — a worker
+    # Bash/Edit/Write. This is the whole point of the fixture â€” a worker
     # that raises an approval the parent must surface and resolve.
     permission_mode: default
 
 prompt: |
   You are Claude Code, a coding sub-agent. Do exactly the one task the
-  orchestrator delegates — when asked to run a shell command, run it in
+  orchestrator delegates â€” when asked to run a shell command, run it in
   your terminal with the Bash tool, then report the output. Do not
   refactor or wander.
 
@@ -154,7 +154,7 @@ executor:
 
 prompt: |
   You are Codex, a coding sub-agent. Do exactly the one task the
-  orchestrator delegates — when asked to run a shell command, run it in
+  orchestrator delegates â€” when asked to run a shell command, run it in
   your terminal, then report the output. Do not refactor or wander.
 
 os_env:
@@ -179,7 +179,7 @@ pytestmark = pytest.mark.skipif(
     os.environ.get("OMNIGENT_E2E_SUBAGENT_ELICIT") != "1",
     reason=(
         "sub-agent elicitation e2e needs the dev-box toolset (oss OAuth + "
-        "claude/codex CLIs) absent on CI — set "
+        "claude/codex CLIs) absent on CI â€” set "
         "OMNIGENT_E2E_SUBAGENT_ELICIT=1 to opt in."
     ),
 )
@@ -298,7 +298,7 @@ def _kill_tree(pid: int, conv_ids: set[str]) -> None:
     """
     SIGTERM-then-SIGKILL a run subprocess tree + leaked harness runners.
 
-    ``agent-meow run`` spawns a detached daemon → runner → per-conversation
+    ``agent-meow run`` spawns a detached daemon â†’ runner â†’ per-conversation
     harness chain plus (for claude-native) a tmux server, which outlive the
     run process. We additionally kill any ``harnesses._runner`` whose
     cmdline names one of this run's conversation ids.
@@ -315,7 +315,7 @@ def _kill_tree(pid: int, conv_ids: set[str]) -> None:
         except subprocess.CalledProcessError:
             ps = ""
         for line in ps.splitlines():
-            if "agent_meow.runtime.harnesses._runner" in line and any(c in line for c in conv_ids):
+            if "omnigent.runtime.harnesses._runner" in line and any(c in line for c in conv_ids):
                 toks = line.split()
                 with contextlib.suppress(ValueError, IndexError):
                     pids.add(int(toks[0]))
@@ -379,7 +379,7 @@ def local_server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     workdir = tmp_path_factory.mktemp("subagent_elicit_e2e")
     port = _free_port()
     base = f"http://127.0.0.1:{port}"
-    log = open(workdir / "server.log", "w")  # noqa: SIM115 — lives for the Popen lifetime
+    log = open(workdir / "server.log", "w")  # noqa: SIM115 â€” lives for the Popen lifetime
     proc = subprocess.Popen(
         [
             sys.executable,
@@ -438,7 +438,7 @@ def _force_codex_prompting(config_path: Path) -> str | None:
     test-set ``CODEX_HOME``, so an isolated home does not reach the
     app-server). Dev boxes commonly run unattended with
     ``approval_policy = "never"`` + ``sandbox_mode = "danger-full-access"``,
-    which makes a codex worker auto-run everything — so it never raises an
+    which makes a codex worker auto-run everything â€” so it never raises an
     approval to forward. This flips those two keys to ``"untrusted"`` /
     ``"workspace-write"`` so a write outside the workspace prompts.
 
@@ -559,7 +559,7 @@ def _llm_token(request: pytest.FixtureRequest) -> str:
     """
     Resolve the LLM bearer token for the run subprocess.
 
-    :param request: Pytest request — reads the ``--llm-api-key`` option.
+    :param request: Pytest request â€” reads the ``--llm-api-key`` option.
     :returns: The token string.
     :raises pytest.UsageError: If ``--llm-api-key`` was not supplied.
     """
@@ -572,11 +572,11 @@ def _llm_token(request: pytest.FixtureRequest) -> str:
 @pytest.mark.parametrize(
     "sub_agent,scenario",
     [
-        # A gated shell command (file write) — claude-native prompts via its
+        # A gated shell command (file write) â€” claude-native prompts via its
         # permission hook; codex prompts via its approval policy.
         ("claude_code", "command"),
         ("codex", "command"),
-        # Claude's built-in AskUserQuestion — the interactive question card.
+        # Claude's built-in AskUserQuestion â€” the interactive question card.
         # claude-native only; fires regardless of bypass mode so it needs no
         # prompting-config toggle. (codex has no AskUserQuestion equivalent.)
         ("claude_code", "ask_user_question"),
@@ -602,10 +602,10 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
     1. A child (sub-agent) session of the expected vendor appears.
     2. The PARENT snapshot's ``pending_elicitations`` surfaces that
        child's prompt, stamped with ``params.target_session_id`` == the
-       child id — the "actionable from the parent UI" guarantee.
+       child id â€” the "actionable from the parent UI" guarantee.
     3. Resolving via the CHILD session's resolve endpoint (what the
        parent UI does with ``target_session_id``) clears the child's
-       pending prompt — proving the verdict reached the parked Future.
+       pending prompt â€” proving the verdict reached the parked Future.
 
     A mirroring regression fails at step 2 (no targeted prompt on the
     parent); a resolve-routing regression fails at step 3 (child stays
@@ -615,7 +615,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
     :param request: Pytest request (for ``--llm-api-key`` / ``--profile``).
     :param sub_agent: Which native sub-agent to delegate to, e.g.
         ``"claude_code"``.
-    :param scenario: Which elicitation the worker raises — ``"command"``
+    :param scenario: Which elicitation the worker raises â€” ``"command"``
         (a gated shell command) or ``"ask_user_question"`` (Claude's
         built-in interactive question tool).
     :param using_mock_llm: Whether mock LLM mode is active.
@@ -678,7 +678,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
     prompt = (
         f"Immediately call sys_session_send with agent='{sub_agent}', "
         f"title='elicit-probe', and args set to exactly: '{task}'. Do this as "
-        f"your very first action — do not analyze, plan, or ask questions "
+        f"your very first action â€” do not analyze, plan, or ask questions "
         f"first, and do not do the task yourself. After the sub-agent reports "
         f"back via your inbox, summarize its result in one sentence."
     )
@@ -705,7 +705,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
             s.get("id")
             for s in _get(local_server, "/v1/sessions?order=desc&limit=60", token).get("data", [])
         }
-        log = open(log_path, "w")  # noqa: SIM115 — lives for the run subprocess lifetime
+        log = open(log_path, "w")  # noqa: SIM115 â€” lives for the run subprocess lifetime
         run_proc = subprocess.Popen(
             [
                 sys.executable,
@@ -729,11 +729,11 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
         # The phases below poll a live, out-of-process server (and a detached
         # native-worker tree) over HTTP, driven by a real LLM. There is no
         # in-process event to await across that boundary, so each phase is a
-        # bounded ``time.sleep``-paced poll on a monotonic deadline — the
+        # bounded ``time.sleep``-paced poll on a monotonic deadline â€” the
         # standard shape for this repo's real-server e2e tests
         # (cf. ``test_polly_e2e.py``).
 
-        # 1) Discover the parent session this run created (bounded — a brain
+        # 1) Discover the parent session this run created (bounded â€” a brain
         #    that never connects fails fast with the run log rather than
         #    polling the full turn budget).
         parent_deadline = time.monotonic() + _PARENT_DISCOVER_TIMEOUT_SEC
@@ -753,7 +753,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
         )
 
         # 2) Wait for the worker child to spawn (bounded, fail-fast). A brain
-        #    that ends its turn without dispatching — or stalls under load —
+        #    that ends its turn without dispatching â€” or stalls under load â€”
         #    fails here with the run log instead of hanging on step 3.
         child_deadline = time.monotonic() + _CHILD_SPAWN_TIMEOUT_SEC
         while time.monotonic() < child_deadline and child_id is None:
@@ -776,7 +776,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
         # 3) Wait for the child's approval to surface on the PARENT snapshot,
         #    stamped with target_session_id. The worker raises it once it
         #    decides to run the gated command (the run process may have already
-        #    exited — the native worker keeps running detached).
+        #    exited â€” the native worker keeps running detached).
         targeted_prompt: dict | None = None
         elicit_deadline = time.monotonic() + _ELICIT_TIMEOUT_SEC
         while time.monotonic() < elicit_deadline and targeted_prompt is None:
@@ -820,7 +820,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
 
         # 4) Resolve via the CHILD session id (what the parent UI does with
         #    the mirrored target_session_id) and confirm the child's parked
-        #    prompt clears — proving the verdict reached the parked Future.
+        #    prompt clears â€” proving the verdict reached the parked Future.
         status, text = _post(
             local_server,
             f"/v1/sessions/{child_id}/elicitations/{elicitation_id}/resolve",
@@ -842,7 +842,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
             time.sleep(2.0)
         assert cleared, (
             f"child {child_id!r} still shows elicitation {elicitation_id!r} after the "
-            f"verdict — the resolve did not reach the child's parked Future"
+            f"verdict â€” the resolve did not reach the child's parked Future"
         )
     finally:
         # Restore the developer's native-CLI config FIRST (before any slow

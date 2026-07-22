@@ -1,4 +1,4 @@
-"""Tests for :mod:`~?agent_meow.onboarding.sandboxes.daytona`."""
+"""Tests for :mod:`~?omnigent.onboarding.sandboxes.daytona`."""
 
 from __future__ import annotations
 
@@ -10,20 +10,20 @@ from pathlib import Path
 import click
 import pytest
 
-from agent_meow.onboarding.sandboxes.base import (
+from omnigent.onboarding.sandboxes.base import (
     DEFAULT_HOST_IMAGE,
     SandboxCapabilityError,
 )
-from agent_meow.onboarding.sandboxes.daytona import (
+from omnigent.onboarding.sandboxes.daytona import (
     HOST_IMAGE_ENV_VAR,
     SANDBOX_ENV_PASSTHROUGH_ENV_VAR,
     DaytonaSandboxLauncher,
 )
 
-# ── Fake Daytona SDK ────────────────────────────────────────
+# â”€â”€ Fake Daytona SDK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # The Daytona SDK is an optional dependency the test environment may
-# not install, and real Sandbox objects only exist server-side anyway —
+# not install, and real Sandbox objects only exist server-side anyway â€”
 # so these are hand-rolled stub classes (never MagicMock: the
 # launcher's attribute access must hit explicitly defined recorders,
 # not silently succeed). The fake module is injected via sys.modules so
@@ -240,7 +240,7 @@ class _CreateParams:
     """
     Recorded ``CreateSandboxFromImageParams`` construction.
 
-    Field-for-field mirror of the kwargs the launcher passes — the
+    Field-for-field mirror of the kwargs the launcher passes â€” the
     real class is a Pydantic model, but the launcher only constructs
     and forwards it, so a recording dataclass keeps every value
     observable.
@@ -297,13 +297,13 @@ class _FakeDaytonaState:
     :param sandboxes: Live sandboxes by id (``get`` resolves here;
         absent ids raise the fake not-found error).
     :param deleted: Ids passed to ``Daytona.delete``.
-    :param client_count: How many ``Daytona()`` clients were built —
+    :param client_count: How many ``Daytona()`` clients were built â€”
         the launcher must build exactly one and reuse it.
     :param create_raises: Exception ``create`` raises instead of
         provisioning (e.g. a canned SDK authorization error), or
         ``None`` for normal creation.
     :param delete_raises: Exceptions successive ``delete`` calls raise
-        before succeeding (popped front-first) — models the live
+        before succeeding (popped front-first) â€” models the live
         "Sandbox state change in progress" conflict window.
     """
 
@@ -397,14 +397,14 @@ def fake_daytona(monkeypatch: pytest.MonkeyPatch) -> _FakeDaytonaState:
     return _install_fake_daytona(monkeypatch)
 
 
-# ── prepare ─────────────────────────────────────────────────
+# â”€â”€ prepare â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_prepare_requires_api_key(
     fake_daytona: _FakeDaytonaState, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
-    Preflight fails loud without ``DAYTONA_API_KEY`` — otherwise the
+    Preflight fails loud without ``DAYTONA_API_KEY`` â€” otherwise the
     failure surfaces later as an opaque SDK auth error mid-provision.
     """
     monkeypatch.delenv("DAYTONA_API_KEY")
@@ -413,11 +413,11 @@ def test_prepare_requires_api_key(
 
 
 def test_prepare_passes_with_api_key(fake_daytona: _FakeDaytonaState) -> None:
-    """SDK importable + key set → preflight succeeds."""
+    """SDK importable + key set â†’ preflight succeeds."""
     DaytonaSandboxLauncher().prepare()
 
 
-# ── provision ───────────────────────────────────────────────
+# â”€â”€ provision â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_provision_defaults_official_image_and_disables_autostop(
@@ -451,7 +451,7 @@ def test_provision_image_resolution_order(
 ) -> None:
     """
     Explicit constructor image wins over the env override, which wins
-    over the official default — the same precedence the server's
+    over the official default â€” the same precedence the server's
     ``sandbox.daytona.image`` config relies on.
     """
     monkeypatch.setenv(HOST_IMAGE_ENV_VAR, "docker.io/env/override:1")
@@ -469,7 +469,7 @@ def test_provision_env_passthrough_resolves_from_server_env(
 ) -> None:
     """
     Constructor env NAMES resolve to values from the server process
-    environment at provision time — the config carries names only, so
+    environment at provision time â€” the config carries names only, so
     secret values never live in the config file.
     """
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-123")
@@ -510,7 +510,7 @@ def test_provision_env_passthrough_missing_var_fails_loud(
 ) -> None:
     """
     A configured name unset in the server environment is an operator
-    error — launching without it would surface much later as an opaque
+    error â€” launching without it would surface much later as an opaque
     harness auth failure inside the sandbox.
     """
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -528,7 +528,7 @@ def test_provision_wraps_sdk_errors_with_provider_reason(
     SDK failures surface as launcher-contract ClickExceptions carrying
     the provider's reason. Raw SDK exceptions would fall through the
     managed launch's generic except and report an opaque "internal
-    error" — this is exactly how a real "Organization is suspended:
+    error" â€” this is exactly how a real "Organization is suspended:
     Please verify your email address" rejection reached a user as
     noise during live verification.
     """
@@ -542,7 +542,7 @@ def test_provision_wraps_sdk_errors_with_provider_reason(
 
 def test_launcher_reuses_one_client(fake_daytona: _FakeDaytonaState) -> None:
     """
-    One API client per launcher: provision twice, still one client —
+    One API client per launcher: provision twice, still one client â€”
     per-call clients would re-handshake auth on every primitive.
     """
     launcher = DaytonaSandboxLauncher()
@@ -551,7 +551,7 @@ def test_launcher_reuses_one_client(fake_daytona: _FakeDaytonaState) -> None:
     assert fake_daytona.client_count == 1
 
 
-# ── run ─────────────────────────────────────────────────────
+# â”€â”€ run â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_run_returns_combined_output_as_stdout(fake_daytona: _FakeDaytonaState) -> None:
@@ -597,7 +597,7 @@ def test_run_wraps_sdk_errors_with_provider_reason(
 ) -> None:
     """
     ``run`` wraps SDK exec failures as launcher-contract
-    ClickExceptions carrying the provider's reason — same posture as
+    ClickExceptions carrying the provider's reason â€” same posture as
     the (tested) provision wrap. A raw SDK exception here would fall
     through the managed flow's generic except as an opaque "internal
     error" when, e.g., the toolbox is down or the sandbox stopped
@@ -615,14 +615,14 @@ def test_run_wraps_sdk_errors_with_provider_reason(
 
 def test_run_unknown_sandbox_fails_with_hint(fake_daytona: _FakeDaytonaState) -> None:
     """
-    A vanished sandbox surfaces as a clear error naming the id — the
+    A vanished sandbox surfaces as a clear error naming the id â€” the
     shape the managed-relaunch machinery logs when generation N died.
     """
     with pytest.raises(click.ClickException, match="dt-gone"):
         DaytonaSandboxLauncher().run("dt-gone", "true")
 
 
-# ── terminate ───────────────────────────────────────────────
+# â”€â”€ terminate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_terminate_deletes_and_is_idempotent(fake_daytona: _FakeDaytonaState) -> None:
@@ -636,7 +636,7 @@ def test_terminate_deletes_and_is_idempotent(fake_daytona: _FakeDaytonaState) ->
     launcher.terminate(sandbox_id)
     assert fake_daytona.deleted == [sandbox_id]
 
-    # Second terminate: already gone → swallow, not raise.
+    # Second terminate: already gone â†’ swallow, not raise.
     launcher.terminate(sandbox_id)
     assert fake_daytona.deleted == [sandbox_id]
 
@@ -653,11 +653,11 @@ def test_terminate_retries_state_change_conflicts(
     (launch-failure cleanup vs session delete), so terminate must ride
     out the conflict window rather than surface it.
     """
-    monkeypatch.setattr("agent_meow.onboarding.sandboxes.daytona._TERMINATE_CONFLICT_BACKOFF_S", 0.0)
+    monkeypatch.setattr("omnigent.onboarding.sandboxes.daytona._TERMINATE_CONFLICT_BACKOFF_S", 0.0)
     launcher = DaytonaSandboxLauncher()
     sandbox_id = launcher.provision("a")
     # First two attempts conflict; the third (final allowed attempt)
-    # succeeds — exercising the full retry budget.
+    # succeeds â€” exercising the full retry budget.
     fake_daytona.delete_raises = [_FakeConflictError("in progress"), _FakeConflictError("x")]
 
     launcher.terminate(sandbox_id)
@@ -669,27 +669,27 @@ def test_terminate_conflict_exhaustion_raises(
     fake_daytona: _FakeDaytonaState, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
-    A conflict that outlives the retry budget surfaces — the managed
+    A conflict that outlives the retry budget surfaces â€” the managed
     teardown callers are best-effort and log it; swallowing forever
     could hide a wedged sandbox that never gets reaped.
     """
-    monkeypatch.setattr("agent_meow.onboarding.sandboxes.daytona._TERMINATE_CONFLICT_BACKOFF_S", 0.0)
+    monkeypatch.setattr("omnigent.onboarding.sandboxes.daytona._TERMINATE_CONFLICT_BACKOFF_S", 0.0)
     launcher = DaytonaSandboxLauncher()
     sandbox_id = launcher.provision("a")
     fake_daytona.delete_raises = [_FakeConflictError("stuck")] * 3
 
     with pytest.raises(_FakeConflictError):
         launcher.terminate(sandbox_id)
-    # Nothing recorded as deleted — every attempt conflicted.
+    # Nothing recorded as deleted â€” every attempt conflicted.
     assert fake_daytona.deleted == []
 
 
-# ── attach / keep_alive ─────────────────────────────────────
+# â”€â”€ attach / keep_alive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_attach_starts_stopped_sandbox(fake_daytona: _FakeDaytonaState) -> None:
     """
-    Attaching to a stopped sandbox starts it — unlike Modal, a stopped
+    Attaching to a stopped sandbox starts it â€” unlike Modal, a stopped
     Daytona sandbox is restartable, so attach must recover it instead
     of rejecting it.
     """
@@ -708,7 +708,7 @@ def test_attach_starts_stopped_sandbox(fake_daytona: _FakeDaytonaState) -> None:
 
 def test_attach_running_sandbox_skips_start(fake_daytona: _FakeDaytonaState) -> None:
     """
-    A sandbox already STARTED attaches without a start call — issuing
+    A sandbox already STARTED attaches without a start call â€” issuing
     one anyway would be a pointless state-change request the provider
     may reject as a conflict.
     """
@@ -728,7 +728,7 @@ def test_attach_unknown_sandbox_fails_with_hint(fake_daytona: _FakeDaytonaState)
 
 def test_keep_alive_disables_autostop(fake_daytona: _FakeDaytonaState) -> None:
     """
-    keep_alive re-asserts the disabled idle auto-stop (interval 0) —
+    keep_alive re-asserts the disabled idle auto-stop (interval 0) â€”
     it matters for attached sandboxes created outside this flow, whose
     15-minute default would kill a host sitting between turns.
     """
@@ -745,7 +745,7 @@ def test_keep_alive_soft_fails_on_provider_rejection(
     fake_daytona: _FakeDaytonaState, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """
-    A rejected auto-stop setting warns instead of aborting — the base
+    A rejected auto-stop setting warns instead of aborting â€” the base
     contract says keep_alive is soft-fail, since the bootstrap can
     proceed (the host just risks idle-stop later).
     """
@@ -760,7 +760,7 @@ def test_keep_alive_soft_fails_on_provider_rejection(
     assert "could not disable idle auto-stop" in capsys.readouterr().out
 
 
-# ── put / wheel_install_command ─────────────────────────────
+# â”€â”€ put / wheel_install_command â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_put_ships_file_via_filesystem_api(fake_daytona: _FakeDaytonaState) -> None:
@@ -781,7 +781,7 @@ def test_put_ships_file_via_filesystem_api(fake_daytona: _FakeDaytonaState) -> N
 def test_put_wraps_sdk_errors_with_provider_reason(fake_daytona: _FakeDaytonaState) -> None:
     """
     Upload failures surface as launcher-contract ClickExceptions
-    carrying the provider's reason — same posture as run/provision.
+    carrying the provider's reason â€” same posture as run/provision.
     """
     launcher = DaytonaSandboxLauncher()
     sandbox_id = launcher.provision("a")
@@ -804,7 +804,7 @@ def test_wheel_install_command_overlays_baked_install(fake_daytona: _FakeDaytona
     assert "--no-deps" in command
 
 
-# ── exec_foreground ─────────────────────────────────────────
+# â”€â”€ exec_foreground â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_exec_foreground_runs_command_over_pty(
@@ -825,7 +825,7 @@ def test_exec_foreground_runs_command_over_pty(
     returncode = launcher.exec_foreground(sandbox_id, "agent-meow host --server u")
 
     assert returncode == 7
-    # One fresh session per call — a fixed id would collide with the
+    # One fresh session per call â€” a fixed id would collide with the
     # provider's "session id already in use" error on reconnect.
     assert len(process.pty_session_ids) == 1
     # exec replaces the PTY shell so the close frame carries the
@@ -834,7 +834,7 @@ def test_exec_foreground_runs_command_over_pty(
     assert process.pty_handle.sent_inputs == [
         "TERM=xterm-256color exec agent-meow host --server u\n"
     ]
-    # Remote output reached the local terminal — a silent foreground
+    # Remote output reached the local terminal â€” a silent foreground
     # attach would hide the host's registration banner and errors.
     assert "host registered" in capsys.readouterr().out
     # The websocket is released even on the happy path.
@@ -844,7 +844,7 @@ def test_exec_foreground_runs_command_over_pty(
 def test_exec_foreground_kills_remote_on_interrupt(fake_daytona: _FakeDaytonaState) -> None:
     """
     Ctrl-C during the blocking PTY read kills the remote process and
-    re-raises — otherwise a detached `agent-meow host` would keep the
+    re-raises â€” otherwise a detached `agent-meow host` would keep the
     sandbox registered with a dead terminal.
     """
     launcher = DaytonaSandboxLauncher()
@@ -857,7 +857,7 @@ def test_exec_foreground_kills_remote_on_interrupt(fake_daytona: _FakeDaytonaSta
     with pytest.raises(KeyboardInterrupt):
         launcher.exec_foreground(sandbox_id, "agent-meow host --server u")
 
-    # The remote process was killed AND the websocket released — a
+    # The remote process was killed AND the websocket released â€” a
     # missing kill leaves the host running headless; a missing
     # disconnect leaks the pooled connection.
     assert process.pty_handle.kill_calls == 1
@@ -869,7 +869,7 @@ def test_exec_foreground_missing_exit_code_fails_loud(
 ) -> None:
     """
     A PTY that ends without an exit code (websocket drop) raises with
-    the daemon's error instead of inventing a status — connect treats
+    the daemon's error instead of inventing a status â€” connect treats
     the return value as the remote command's outcome.
     """
     launcher = DaytonaSandboxLauncher()
@@ -897,7 +897,7 @@ def test_exec_foreground_wraps_pty_create_errors(fake_daytona: _FakeDaytonaState
         launcher.exec_foreground(sandbox_id, "true")
 
 
-# ── capability surface ──────────────────────────────────────
+# â”€â”€ capability surface â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_only_login_primitives_are_capability_gated(
@@ -905,7 +905,7 @@ def test_only_login_primitives_are_capability_gated(
 ) -> None:
     """
     Daytona supports the CLI bootstrap, so only the in-sandbox OAuth
-    login's primitives stay gated: there is no local→sandbox port
+    login's primitives stay gated: there is no localâ†’sandbox port
     forwarding path, and ``stream_exec``'s sole consumer (that login)
     fails fast on the port-forward flag before ever reaching it.
     """

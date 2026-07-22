@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.tools.builtins.search_conversations`."""
+"""Unit tests for :mod:`~?omnigent.tools.builtins.search_conversations`."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from typing import Any
 
 import pytest
 
-from agent_meow.entities.conversation import (
+from omnigent.entities.conversation import (
     FunctionCallData,
     FunctionCallOutputData,
     MessageData,
 )
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins.search_conversations import (
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins.search_conversations import (
     SearchConversationsTool,
     _extract_text,
     _format_results,
@@ -23,7 +23,7 @@ from agent_meow.tools.builtins.search_conversations import (
 _CTX = ToolContext(task_id="task_test", agent_id="agent_test")
 
 
-# ── Stubs ────────────────────────────────────────────────
+# â”€â”€ Stubs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @dataclass
@@ -70,7 +70,7 @@ def _function_call_output_data() -> FunctionCallOutputData:
     )
 
 
-# ── Schema ───────────────────────────────────────────────
+# â”€â”€ Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_schema_shape() -> None:
@@ -93,7 +93,7 @@ def test_name_and_description() -> None:
     assert len(SearchConversationsTool.description()) > 0
 
 
-# ── Invoke ───────────────────────────────────────────────
+# â”€â”€ Invoke â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_invoke_returns_results(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -108,7 +108,7 @@ def test_invoke_returns_results(monkeypatch: pytest.MonkeyPatch) -> None:
         ),
     ]
     monkeypatch.setattr(
-        "agent_meow.runtime.get_conversation_store",
+        "omnigent.runtime.get_conversation_store",
         lambda: _FakeConversationStore(items),
     )
 
@@ -123,7 +123,7 @@ def test_invoke_returns_results(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_invoke_no_results(monkeypatch: pytest.MonkeyPatch) -> None:
     """invoke() returns empty results with a message."""
     monkeypatch.setattr(
-        "agent_meow.runtime.get_conversation_store",
+        "omnigent.runtime.get_conversation_store",
         lambda: _FakeConversationStore([]),
     )
 
@@ -145,7 +145,7 @@ def test_invoke_respects_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     items = [_FakeItem(f"item_{i}", f"conv_{i}", i, "message", _message_data()) for i in range(20)]
     store = _FakeConversationStore(items)
     monkeypatch.setattr(
-        "agent_meow.runtime.get_conversation_store",
+        "omnigent.runtime.get_conversation_store",
         lambda: store,
     )
 
@@ -154,7 +154,7 @@ def test_invoke_respects_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     assert len(result["results"]) == 3
 
 
-# ── _extract_text ────────────────────────────────────────
+# â”€â”€ _extract_text â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_extract_text_message() -> None:
@@ -188,7 +188,7 @@ def test_extract_text_unknown_type() -> None:
     assert _extract_text(item) == ""
 
 
-# ── _format_results ──────────────────────────────────────
+# â”€â”€ _format_results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_format_results_includes_all_fields() -> None:

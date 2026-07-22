@@ -132,7 +132,7 @@ def _omnigent_server(
 
     # Spawn runner as sibling subprocess.
     runner_proc = subprocess.Popen(
-        [str(python), "-m", "agent_meow.runner._entry"],
+        [str(python), "-m", "omnigent.runner._entry"],
         env={
             **env,
             "OMNIGENT_RUNNER_ID": runner_id,
@@ -266,7 +266,7 @@ def _resolve_python() -> Path:
         current = current.parent
 
 
-# ── Test ─────────────────────────────────────────────────────────
+# â”€â”€ Test â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_session_resources_e2e(
@@ -287,7 +287,7 @@ def test_session_resources_e2e(
     :param tmp_path: Pytest temp directory for the agent YAML
         and SQLite database.
     """
-    from agent_meow.runner.identity import token_bound_runner_id
+    from omnigent.runner.identity import token_bound_runner_id
 
     python = omnigent_python
     repo_root = omnigent_repo_root
@@ -320,7 +320,7 @@ def test_session_resources_e2e(
         ) as client:
             session_id = _create_session(client, yaml_path, runner_id)
 
-            # ── Unified inventory ────────────────────────────
+            # â”€â”€ Unified inventory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             resp = client.get(
                 f"/v1/sessions/{session_id}/resources?order=asc",
             )
@@ -330,7 +330,7 @@ def test_session_resources_e2e(
             ids = [r["id"] for r in body["data"]]
             assert "default" in ids
 
-            # ── Typed environment collection ──────────────────
+            # â”€â”€ Typed environment collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             resp = client.get(
                 f"/v1/sessions/{session_id}/resources/environments",
             )
@@ -338,14 +338,14 @@ def test_session_resources_e2e(
             types = {r["type"] for r in resp.json()["data"]}
             assert types <= {"environment"}
 
-            # ── Single environment lookup ─────────────────────
+            # â”€â”€ Single environment lookup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             resp = client.get(
                 f"/v1/sessions/{session_id}/resources/environments/default",
             )
             assert resp.status_code == 200
             assert resp.json()["id"] == "default"
 
-            # ── Terminals (auto-created REPL terminal) ────────
+            # â”€â”€ Terminals (auto-created REPL terminal) â”€â”€â”€â”€â”€â”€â”€â”€
             # Runner-hosted SDK sessions auto-create the embedded
             # agent-meow REPL terminal (``terminal_tui_main``) on bind;
             # it is the only terminal until the agent launches more.
@@ -357,7 +357,7 @@ def test_session_resources_e2e(
             assert resp.status_code == 200
             assert [t["id"] for t in resp.json()["data"]] == ["terminal_tui_main"]
 
-            # ── Type filter ───────────────────────────────────
+            # â”€â”€ Type filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             resp = client.get(
                 f"/v1/sessions/{session_id}/resources?type=environment",
             )
@@ -365,13 +365,13 @@ def test_session_resources_e2e(
             for r in resp.json()["data"]:
                 assert r["type"] == "environment"
 
-            # ── 404 for unknown session ───────────────────────
+            # â”€â”€ 404 for unknown session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             resp = client.get(
                 "/v1/sessions/conv_nonexistent/resources",
             )
             assert resp.status_code == 404
 
-            # ── File lifecycle ────────────────────────────────
+            # â”€â”€ File lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             content = f"e2e test {time.time()}"
             resp = client.post(
                 f"/v1/sessions/{session_id}/resources/files",
@@ -406,7 +406,7 @@ def test_session_resources_e2e(
             assert resp.status_code == 200
             assert resp.text == content
 
-            # Ownership: wrong session → 404
+            # Ownership: wrong session â†’ 404
             resp = client.get(
                 f"/v1/sessions/conv_nonexistent/resources/files/{file_id}",
             )
@@ -425,7 +425,7 @@ def test_session_resources_e2e(
             )
             assert resp.status_code == 404
 
-            # ── Filesystem operations ─────────────────────────
+            # â”€â”€ Filesystem operations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             fs = f"/v1/sessions/{session_id}/resources/environments/default/filesystem"
 
             # List root
@@ -473,7 +473,7 @@ def test_session_resources_e2e(
             resp = client.get(f"{fs}/_e2e_test.txt")
             assert resp.status_code == 404
 
-            # ── Shell execution ───────────────────────────────
+            # â”€â”€ Shell execution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             shell_url = f"/v1/sessions/{session_id}/resources/environments/default/shell"
 
             resp = client.post(

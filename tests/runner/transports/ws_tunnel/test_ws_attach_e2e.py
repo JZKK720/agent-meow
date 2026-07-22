@@ -19,7 +19,7 @@ import pytest
 from fastapi import FastAPI, WebSocket
 from websockets.exceptions import ConnectionClosed
 
-from agent_meow.runner.transports.ws_tunnel.frames import (
+from omnigent.runner.transports.ws_tunnel.frames import (
     HelloFrame,
     WSCloseFrame,
     WSFrame,
@@ -27,13 +27,13 @@ from agent_meow.runner.transports.ws_tunnel.frames import (
     decode_frame,
     encode_frame,
 )
-from agent_meow.runner.transports.ws_tunnel.registry import TunnelRegistry
-from agent_meow.runner.transports.ws_tunnel.serve import (
+from omnigent.runner.transports.ws_tunnel.registry import TunnelRegistry
+from omnigent.runner.transports.ws_tunnel.serve import (
     _cancel_ws_channels,
     _handle_tunnel_frame,
     _RunnerWSChannel,
 )
-from agent_meow.server._runner_ws_tunnel import _TunneledWSConn
+from omnigent.server._runner_ws_tunnel import _TunneledWSConn
 
 
 class _FakeWS:

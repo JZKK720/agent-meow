@@ -1,5 +1,5 @@
 """
-Unit tests for the ``agent_meow.runtime.telemetry`` helpers.
+Unit tests for the ``omnigent.runtime.telemetry`` helpers.
 
 Exercises pure helpers (no spans created) and the trace-context
 wrapper with an in-memory OTel exporter so the tests stay fast
@@ -24,13 +24,13 @@ from opentelemetry.trace import (
     StatusCode,
 )
 
-from agent_meow.runtime import telemetry
+from omnigent.runtime import telemetry
 
 _RESP_HEX = "d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3"
 _RESP_ID = f"resp_{_RESP_HEX}"
 
 
-# ── Fixtures ────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +40,7 @@ def _opt_in_telemetry(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     This module exercises telemetry behavior, so opt in for every test; the
     opt-out test clears it explicitly. Also resets the session-id contextvar
     around each test so a ``set_session_id`` / hook call in one test (which
-    deliberately does not reset — prod requests are isolated async tasks)
+    deliberately does not reset â€” prod requests are isolated async tasks)
     cannot leak into the next.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -54,7 +54,7 @@ def _opt_in_telemetry(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         # init()/enable_tracing() in a telemetry test flips global tracing on
         # and never resets it; clear it so it can't leak "tracing on" into
         # other suites (e.g. the executor-adapter tests).
-        from agent_meow.inner.tracing import disable_tracing
+        from omnigent.inner.tracing import disable_tracing
 
         disable_tracing()
         telemetry._initialized = False
@@ -82,7 +82,7 @@ def in_memory_exporter(monkeypatch: pytest.MonkeyPatch) -> Iterator[InMemorySpan
     exporter.clear()
 
 
-# ── parse_provider_name ─────────────────────────────────
+# â”€â”€ parse_provider_name â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -106,7 +106,7 @@ def test_parse_provider_name(input_model: str, expected: tuple[str, str]) -> Non
     assert telemetry.parse_provider_name(input_model) == expected
 
 
-# ── trace_id_from_response_id ───────────────────────────
+# â”€â”€ trace_id_from_response_id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_trace_id_from_response_id_valid() -> None:
@@ -121,7 +121,7 @@ def test_trace_id_from_response_id_valid() -> None:
 def test_trace_id_from_response_id_wrong_prefix() -> None:
     """
     An ID without the ``resp_`` prefix raises ValueError. This is
-    the first validation line — operators should not be able to
+    the first validation line â€” operators should not be able to
     confuse conversation IDs (``conv_...``) for response IDs.
     """
     with pytest.raises(ValueError, match="resp_"):
@@ -158,7 +158,7 @@ def test_trace_id_from_response_id_invalid_hex() -> None:
         telemetry.trace_id_from_response_id(bad_id)
 
 
-# ── _env_bool / should_capture_content ─────────────────
+# â”€â”€ _env_bool / should_capture_content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -208,7 +208,7 @@ def test_should_capture_content_reflects_module_state(
     assert telemetry.should_capture_content() is True
 
 
-# ── trace_context_for_response ──────────────────────────
+# â”€â”€ trace_context_for_response â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_trace_context_for_response_root(
@@ -216,7 +216,7 @@ def test_trace_context_for_response_root(
 ) -> None:
     """
     A span opened inside ``trace_context_for_response(response_id)``
-    has the trace_id derived from ``response_id`` — the full
+    has the trace_id derived from ``response_id`` â€” the full
     omnigent-to-trace-backend lookup chain works end-to-end.
     """
     tracer = otel_trace.get_tracer("test")
@@ -280,13 +280,13 @@ def test_trace_context_for_response_shared_across_children(
     )
 
 
-# ── get_traceparent_env ─────────────────────────────────
+# â”€â”€ get_traceparent_env â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_get_traceparent_env_no_span() -> None:
     """
     Outside of any span, ``get_traceparent_env`` returns an empty
-    dict — we do not invent a trace context for subprocess
+    dict â€” we do not invent a trace context for subprocess
     inheritance when the parent has none.
     """
     env = telemetry.get_traceparent_env()
@@ -315,7 +315,7 @@ def test_get_traceparent_env_inside_span(
             )
 
 
-# ── record_llm_usage ────────────────────────────────────
+# â”€â”€ record_llm_usage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_record_llm_usage_basic(
@@ -376,7 +376,7 @@ def test_record_llm_usage_without_cache_omits_fields(
 ) -> None:
     """
     When cache fields are absent from the input dict, they are NOT
-    recorded — this prevents masking "caching not reported" as
+    recorded â€” this prevents masking "caching not reported" as
     "zero tokens cached".
     """
     tracer = otel_trace.get_tracer("test")
@@ -393,7 +393,7 @@ def test_record_llm_usage_without_cache_omits_fields(
     assert "gen_ai.usage.cache_creation_input_tokens" not in attrs
 
 
-# ── record_error / record_cancellation ─────────────────
+# â”€â”€ record_error / record_cancellation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_record_error_sets_error_type_and_status(
@@ -437,7 +437,7 @@ def test_record_cancellation_sets_cancelled_error_type(
     assert spans[0].status.status_code == StatusCode.ERROR
 
 
-# ── init() ──────────────────────────────────────────────
+# â”€â”€ init() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_init_no_endpoint_does_not_install_otlp_provider(
@@ -445,7 +445,7 @@ def test_init_no_endpoint_does_not_install_otlp_provider(
 ) -> None:
     """
     When ``OTEL_EXPORTER_OTLP_ENDPOINT`` is unset, ``init`` must
-    NOT replace the global TracerProvider — callers may have already
+    NOT replace the global TracerProvider â€” callers may have already
     installed their own.
     """
     monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
@@ -511,7 +511,7 @@ def test_init_disabled_by_default_is_noop(
 ) -> None:
     """
     Telemetry is opt-in: with ``OMNIGENT_TELEMETRY_ENABLED`` unset,
-    ``init`` is a no-op even when an OTLP endpoint is configured — no
+    ``init`` is a no-op even when an OTLP endpoint is configured â€” no
     provider is installed, so a default install pays nothing.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -531,7 +531,7 @@ def test_fastapi_session_id_hook_stamps_session_id(
 ) -> None:
     """
     The FastAPI server-request hook tags the server span with the
-    agent-meow session id parsed from a ``/sessions/<conv_…>/`` path, so
+    agent-meow session id parsed from a ``/sessions/<conv_â€¦>/`` path, so
     every session-scoped request span is findable by session.
 
     :param in_memory_exporter: In-memory span exporter fixture.
@@ -568,12 +568,12 @@ def test_tracing_context_stamps_session_id_on_agent_span(
 ) -> None:
     """
     Spans created by a session-scoped ``TracingContext`` carry the
-    ``session.id`` attribute, so agent-turn spans — which can root their
-    own trace — stay groupable by session in the backend.
+    ``session.id`` attribute, so agent-turn spans â€” which can root their
+    own trace â€” stay groupable by session in the backend.
 
     :param in_memory_exporter: In-memory span exporter fixture.
     """
-    from agent_meow.inner.tracing import TracingContext
+    from omnigent.inner.tracing import TracingContext
 
     tctx = TracingContext(session_id="conv_abc123")
     agent_span = tctx.start_agent_span("my-agent", "hello")
@@ -589,7 +589,7 @@ def test_set_session_id_stamps_current_span(
     in_memory_exporter: InMemorySpanExporter,
 ) -> None:
     """
-    ``set_session_id`` tags the active span — used by session-creating
+    ``set_session_id`` tags the active span â€” used by session-creating
     routes (``POST /v1/sessions``) where the conv id is minted in the body
     and so is absent from the request path the FastAPI hook reads. A falsy
     id is a no-op.
@@ -608,8 +608,8 @@ def test_set_session_id_stamps_current_span(
 def test_session_scope_processor_stamps_every_span() -> None:
     """
     The generic mechanism: every span created inside ``session_scope`` is
-    tagged with ``session.id`` by ``_SessionIdSpanProcessor`` — no per-span
-    code — and spans outside the scope are left untouched.
+    tagged with ``session.id`` by ``_SessionIdSpanProcessor`` â€” no per-span
+    code â€” and spans outside the scope are left untouched.
     """
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -638,7 +638,7 @@ def test_init_sets_service_name_from_argument(
 ) -> None:
     """
     A passed ``service_name`` becomes ``OTEL_SERVICE_NAME``, overriding
-    any inherited value — so a child process (e.g. the runner spawned by
+    any inherited value â€” so a child process (e.g. the runner spawned by
     the server) is attributable as its own component rather than
     inheriting the parent's name.
     """
@@ -702,7 +702,7 @@ def _stub_fastapi_instrumentor(monkeypatch: pytest.MonkeyPatch) -> list[FastAPI]
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: A list that accumulates each app passed to the
-        instrumentor — empty means instrumentation was skipped.
+        instrumentor â€” empty means instrumentation was skipped.
     """
     calls: list[FastAPI] = []
     monkeypatch.setattr(
@@ -717,7 +717,7 @@ def test_instrument_fastapi_app_disabled_without_backend(
 ) -> None:
     """
     With no flag and no tracing backend configured, FastAPI
-    instrumentation is skipped — bare installs pay no span overhead.
+    instrumentation is skipped â€” bare installs pay no span overhead.
     """
     monkeypatch.delenv("OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION", raising=False)
     monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
@@ -733,7 +733,7 @@ def test_instrument_fastapi_app_default_on_with_backend(
 ) -> None:
     """
     With the flag unset, instrumentation defaults ON when an OTLP
-    endpoint is configured — that is when HTTP server spans have
+    endpoint is configured â€” that is when HTTP server spans have
     somewhere to go and when cross-app trace propagation matters.
     """
     monkeypatch.delenv("OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION", raising=False)
@@ -751,7 +751,7 @@ def test_instrument_fastapi_app_explicit_false_overrides_backend(
 ) -> None:
     """
     An explicit ``OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION=false`` wins
-    even when a backend is configured — operators can force it off.
+    even when a backend is configured â€” operators can force it off.
     """
     monkeypatch.setenv("OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION", "false")
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
@@ -782,7 +782,7 @@ def test_instrument_fastapi_app_calls_instrumentor_when_enabled(
 def test_instrument_httpx_wires_global_client() -> None:
     """
     ``_instrument_httpx`` installs the global HTTPX instrumentation so
-    outbound httpx requests inject ``traceparent``. Idempotent — a
+    outbound httpx requests inject ``traceparent``. Idempotent â€” a
     second call must not raise. Uninstruments afterward to avoid
     leaking global state into other tests.
     """
@@ -820,7 +820,7 @@ def test_instrument_sqlalchemy_engine_missing_package_is_noop(
 ) -> None:
     """
     When the optional SQLAlchemy instrumentation package is absent,
-    the helper degrades to a no-op rather than raising — bare installs
+    the helper degrades to a no-op rather than raising â€” bare installs
     without the tracing extras must still create engines.
     """
     import sys
@@ -839,7 +839,7 @@ def test_inject_extract_frame_round_trip(
 ) -> None:
     """
     A frame injected under a span and consumed via ``consume_frame_span``
-    nests under the same trace — the JSON-frame websocket propagation
+    nests under the same trace â€” the JSON-frame websocket propagation
     invariant (host tunnel, session-updates) holds end to end.
     """
     tracer = otel_trace.get_tracer("test")
@@ -853,7 +853,7 @@ def test_inject_extract_frame_round_trip(
 
     assert consumed_hex == _RESP_HEX, (
         f"consumer trace {consumed_hex!r} should match producer trace "
-        f"{_RESP_HEX!r} — frame trace-context propagation is broken."
+        f"{_RESP_HEX!r} â€” frame trace-context propagation is broken."
     )
 
 
@@ -873,7 +873,7 @@ def test_consume_frame_span_roots_new_trace_without_carrier(
 ) -> None:
     """
     A carrier with no trace headers roots a fresh trace rather than
-    raising — a frame from a peer that never injected context is still
+    raising â€” a frame from a peer that never injected context is still
     handled, just without an upstream parent.
     """
     with telemetry.consume_frame_span("host.hello", {"kind": "host.hello"}) as span:
@@ -886,7 +886,7 @@ def test_consume_frame_span_omits_payload_when_capture_off(
 ) -> None:
     """
     With content capture off (the default), the frame body is NOT
-    attached to the span — only its structure/metadata is traced.
+    attached to the span â€” only its structure/metadata is traced.
     """
     monkeypatch.setattr(telemetry, "_capture_content", False)
     with telemetry.consume_frame_span(
@@ -895,7 +895,7 @@ def test_consume_frame_span_omits_payload_when_capture_off(
     ):
         pass
     span = in_memory_exporter.get_finished_spans()[-1]
-    assert "agent_meow.message.payload" not in (span.attributes or {})
+    assert "omnigent.message.payload" not in (span.attributes or {})
 
 
 def test_consume_frame_span_records_redacted_payload_when_capture_on(
@@ -904,7 +904,7 @@ def test_consume_frame_span_records_redacted_payload_when_capture_on(
 ) -> None:
     """
     With content capture on, the received frame body is attached to the
-    span — but secret-looking keys are redacted, the W3C propagation
+    span â€” but secret-looking keys are redacted, the W3C propagation
     keys are dropped, and benign fields are preserved verbatim.
     """
     monkeypatch.setattr(telemetry, "_capture_content", True)
@@ -919,7 +919,7 @@ def test_consume_frame_span_records_redacted_payload_when_capture_on(
     ):
         pass
     span = in_memory_exporter.get_finished_spans()[-1]
-    payload = (span.attributes or {})["agent_meow.message.payload"]
+    payload = (span.attributes or {})["omnigent.message.payload"]
     assert "SUPER_SECRET" not in payload
     assert "[redacted]" in payload
     assert "traceparent" not in payload
@@ -938,9 +938,9 @@ def test_record_message_payload_truncates(
     with telemetry.span("x") as span:
         telemetry.record_message_payload({"blob": "A" * 9000}, span=span)
     out = in_memory_exporter.get_finished_spans()[-1]
-    payload = (out.attributes or {})["agent_meow.message.payload"]
-    assert payload.endswith("…[truncated]")
-    assert len(payload) <= telemetry._CONTENT_MAX_LEN + len("…[truncated]")
+    payload = (out.attributes or {})["omnigent.message.payload"]
+    assert payload.endswith("â€¦[truncated]")
+    assert len(payload) <= telemetry._CONTENT_MAX_LEN + len("â€¦[truncated]")
 
 
 def test_span_helper_emits_named_span_with_attributes(
@@ -948,7 +948,7 @@ def test_span_helper_emits_named_span_with_attributes(
 ) -> None:
     """
     ``telemetry.span`` emits a named child span with the given
-    attributes — the helper used to instrument plain infra boundaries
+    attributes â€” the helper used to instrument plain infra boundaries
     (terminal attach, policy evaluation).
     """
     with telemetry.span(
@@ -1037,7 +1037,7 @@ def test_httpx_to_fastapi_propagates_trace_across_http_hop(
     # the traceparent crossed the HTTP boundary and was extracted.
     assert handler_trace_id.get("value") == _RESP_HEX, (
         f"server handler trace_id {handler_trace_id.get('value')!r} does "
-        f"not match caller trace {_RESP_HEX!r} — traceparent did not "
+        f"not match caller trace {_RESP_HEX!r} â€” traceparent did not "
         "propagate across the HTTP hop (inject or extract is broken)."
     )
 
@@ -1049,8 +1049,8 @@ def test_instrument_httpx_client_injects_over_custom_transport(
     A client on a custom transport propagates only after instrument_client.
 
     The process-wide httpx instrumentation patches only httpx's *standard*
-    transports, so a client built on a custom ``AsyncBaseTransport`` — the
-    server->runner ``WSTunnelTransport`` — is invisible to it: outbound
+    transports, so a client built on a custom ``AsyncBaseTransport`` â€” the
+    server->runner ``WSTunnelTransport`` â€” is invisible to it: outbound
     requests carry no ``traceparent`` and the runner roots a disconnected
     trace. :func:`telemetry.instrument_httpx_client` wraps the instance to
     close that gap. This guards the server->runner forward staying in the
@@ -1083,7 +1083,7 @@ def test_instrument_httpx_client_injects_over_custom_transport(
     asyncio.run(_call(bare))
     assert "traceparent" not in captured["headers"], (
         "a custom-transport client unexpectedly injected traceparent without "
-        "instrument_client — the per-client fix may be unnecessary; re-evaluate."
+        "instrument_client â€” the per-client fix may be unnecessary; re-evaluate."
     )
 
     # After instrument_client the traceparent rides the custom transport,
@@ -1095,6 +1095,6 @@ def test_instrument_httpx_client_injects_over_custom_transport(
     traceparent = captured["headers"].get("traceparent")
     assert traceparent is not None and _RESP_HEX in traceparent, (
         f"traceparent {traceparent!r} missing or not pinned to caller trace "
-        f"{_RESP_HEX!r} after instrument_client — the server->runner forward "
+        f"{_RESP_HEX!r} after instrument_client â€” the server->runner forward "
         "would not stay in the originating trace."
     )

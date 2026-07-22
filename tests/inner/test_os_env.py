@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?agent_meow.inner.os_env` helper-env construction."""
+"""Unit tests for :mod:`~?omnigent.inner.os_env` helper-env construction."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import base64
 import tracemalloc
 from pathlib import Path
 
-from agent_meow.inner.os_env import _read_impl, build_helper_env
-from agent_meow.inner.sandbox import SandboxPolicy
-from agent_meow.runner.identity import (
+from omnigent.inner.os_env import _read_impl, build_helper_env
+from omnigent.inner.sandbox import SandboxPolicy
+from omnigent.runner.identity import (
     OMNIGENT_SESSION_ENV_VALUE,
     OMNIGENT_SESSION_ENV_VAR,
     RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR,
@@ -112,7 +112,7 @@ def test_build_helper_env_active_passes_omnigent_session_marker() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _read_impl — binary file handling
+# _read_impl â€” binary file handling
 # ---------------------------------------------------------------------------
 
 _BINARY = b"\x89PNG\r\n\x1a\n\x00\x01\x02\xff"
@@ -134,7 +134,7 @@ def test_read_impl_binary_descriptor_for_agent(tmp_path: Path) -> None:
     assert result["encoding"] == "base64"
     assert result["content"] == ""
     assert result["total_bytes"] == len(_BINARY)
-    # Not truncated — the payload was deliberately omitted, not cut short.
+    # Not truncated â€” the payload was deliberately omitted, not cut short.
     assert result["truncated"] is False
     assert "note" in result
 
@@ -189,7 +189,7 @@ def test_read_impl_binary_descriptor_does_not_read_whole_file(tmp_path: Path) ->
     """The descriptor path is O(1): it stats the size, never reading content.
 
     Regression guard for inlining the whole file (``path.read_bytes()``) just
-    to compute ``total_bytes`` — which would OOM on large workspace blobs.
+    to compute ``total_bytes`` â€” which would OOM on large workspace blobs.
 
     :returns: None.
     """
@@ -236,13 +236,13 @@ def test_read_impl_multibyte_char_straddling_sniff_boundary_is_text(tmp_path: Pa
     """A multi-byte char split across the 8 KB sniff boundary stays text.
 
     The incremental decoder must treat the truncated trailing sequence as
-    *incomplete*, not invalid — otherwise valid UTF-8 would be misread as
+    *incomplete*, not invalid â€” otherwise valid UTF-8 would be misread as
     binary purely because of where the prefix happened to be cut.
 
     :returns: None.
     """
-    # 8 KB sniff window cuts the 3-byte '€' (0xE2 0x82 0xAC) at byte 8191.
-    text = "a" * 8_190 + "€" + "tail\n"
+    # 8 KB sniff window cuts the 3-byte 'â‚¬' (0xE2 0x82 0xAC) at byte 8191.
+    text = "a" * 8_190 + "â‚¬" + "tail\n"
     f = tmp_path / "wide.txt"
     f.write_text(text, encoding="utf-8")
 

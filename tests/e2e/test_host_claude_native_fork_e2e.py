@@ -6,14 +6,14 @@ claude-native session, resumed on the same host, must carry the
 source's Claude history into the clone's own session so the agent can
 recall it. Both resume shapes are exercised:
 
-1. **Same working directory** — the clone resumes in the source's exact
+1. **Same working directory** â€” the clone resumes in the source's exact
    workspace. The cloned transcript must be written *before* launch so
    the forwarder's ``start_at_end`` seeks past the copied prefix
    (otherwise the whole transcript double-renders into the clone).
-2. **New git worktree** — the clone resumes in a freshly created
+2. **New git worktree** â€” the clone resumes in a freshly created
    worktree off the source repo. Claude's ``--resume`` is cwd-scoped, so
    the cloned transcript must land in the *clone's* project dir (not the
-   source's) or the resume silently finds nothing → "terminal resource
+   source's) or the resume silently finds nothing â†’ "terminal resource
    not found".
 
 The regression these guard against: forking used to ask Claude Code to
@@ -26,7 +26,7 @@ uuid we assign (``_clone_claude_transcript``) and launches plain
 
 Why this is opt-in (same rationale as ``test_host_claude_native_e2e``):
 claude-native needs a real *interactive* Claude login anchored to the
-real ``$HOME`` — it cannot be relocated into CI. Set
+real ``$HOME`` â€” it cannot be relocated into CI. Set
 ``OMNIGENT_E2E_CLAUDE_NATIVE=1`` (with ``claude`` installed + logged
 in) to run::
 
@@ -68,7 +68,7 @@ from tests.e2e.test_host_claude_native_e2e import (
     _workspace_trusted_in_claude_config,
 )
 
-# Opt-in only — see module docstring and test_host_claude_native_e2e for
+# Opt-in only â€” see module docstring and test_host_claude_native_e2e for
 # why binary presence alone is not a sufficient gate.
 pytestmark = pytest.mark.skipif(
     os.environ.get("OMNIGENT_E2E_CLAUDE_NATIVE") != "1" or shutil.which("claude") is None,
@@ -85,7 +85,7 @@ def _workspaces_trusted_in_claude_config(workspaces: list[Path]) -> Iterator[Non
     Mark several workspaces trusted in ``~/.claude.json`` at once.
 
     The fork-resume tests touch two directories (the source workspace and
-    the clone's resume directory — the same dir, or a new worktree), and
+    the clone's resume directory â€” the same dir, or a new worktree), and
     BOTH must be pre-trusted or Claude shows its folder-trust dialog
     instead of the input box (which blocks injection and confounds the
     readiness gate). This nests :func:`_workspace_trusted_in_claude_config`
@@ -177,7 +177,7 @@ def _wait_for_external_session_id(client: httpx.Client, *, session_id: str, time
     Poll a session until its ``external_session_id`` is captured.
 
     A fork only carries history when the SOURCE has a Claude session id
-    recorded — the fork stamps ``agent_meow.fork.source_external_session_id``
+    recorded â€” the fork stamps ``omnigent.fork.source_external_session_id``
     from it, which the runner reads to find the source transcript.
     Capture happens after Claude's first turn (the hook records the
     transcript path). Forking before then would silently launch the
@@ -199,7 +199,7 @@ def _wait_for_external_session_id(client: httpx.Client, *, session_id: str, time
         time.sleep(POLL_INTERVAL_S)
     raise AssertionError(
         f"Source session {session_id} never captured an external_session_id within "
-        f"{timeout}s — the fork would have no source transcript to clone."
+        f"{timeout}s â€” the fork would have no source transcript to clone."
     )
 
 
@@ -315,14 +315,14 @@ def _run_fork_resume_history_check(
     id to be captured, forks it, binds the clone (same dir or a new
     worktree), then asks the clone to recall the code word. The recall
     only succeeds if the source transcript was cloned into the clone's
-    own project dir and resumed — a fresh launch (the regression) has no
+    own project dir and resumed â€” a fresh launch (the regression) has no
     history and never echoes the marker.
 
     :param http_client: HTTP client pointed at the test server.
     :param host_id: The online host's id.
     :param agent_id: The ``claude-native-ui`` agent id.
     :param source_workspace: Workspace the source session starts in.
-    :param resume_workspace: Workspace passed to the runner launch — the
+    :param resume_workspace: Workspace passed to the runner launch â€” the
         same dir as *source_workspace*, or the repo root for the worktree
         case (the host derives the worktree path from it).
     :param git: Optional worktree block for the resume launch; ``None``
@@ -355,7 +355,7 @@ def _run_fork_resume_history_check(
     )
 
     # Ask the clone to recall the planted word. It can only answer from
-    # the cloned source transcript — a fresh (history-less) launch can't.
+    # the cloned source transcript â€” a fresh (history-less) launch can't.
     _send_user_message(
         http_client,
         session_id=fork_id,
@@ -368,9 +368,9 @@ def _run_fork_resume_history_check(
         http_client, session_id=fork_id, marker=marker, timeout=180.0
     )
     # The marker only surfaces if the source transcript was cloned into
-    # the clone's project dir and resumed — proving history transfer.
+    # the clone's project dir and resumed â€” proving history transfer.
     assert marker in text, (
-        f"clone did not recall {marker!r} (got {text!r}) — the source transcript "
+        f"clone did not recall {marker!r} (got {text!r}) â€” the source transcript "
         "was not cloned/resumed, so the clone launched fresh without history"
     )
 
@@ -417,7 +417,7 @@ def test_fork_resume_worktree_carries_history(
     cwd-scoped, so the source transcript must be cloned into the
     *worktree's* project dir (not the source repo's) for the resume to
     find it. The pre-``--fork-session`` regression silently found nothing
-    here → "terminal resource not found" and no history.
+    here â†’ "terminal resource not found" and no history.
     """
     repo = tmp_path / "srcrepo"
     _init_git_repo(repo)
@@ -451,7 +451,7 @@ def test_fork_sdk_source_into_native_builds_history(
     """
     A claude-SDK source forked into claude-native recalls source history.
 
-    This exercises the SDK→native (same provider family) switch: the source
+    This exercises the SDKâ†’native (same provider family) switch: the source
     runs claude-sdk (no native ``external_session_id`` to clone), so the
     runner must REBUILD the clone's Claude transcript from the copied AP
     items (``_ensure_local_claude_resume_transcript`` /
@@ -459,8 +459,8 @@ def test_fork_sdk_source_into_native_builds_history(
     minted uuid, then ``--resume`` it. A regression launches fresh and the
     native clone can't recall the source's code word.
 
-    The SDK source runs on the SERVER's runner (``live_runner_id``) — which
-    is wired to the mock LLM server — while the native clone runs on
+    The SDK source runs on the SERVER's runner (``live_runner_id``) â€” which
+    is wired to the mock LLM server â€” while the native clone runs on
     the host daemon (Claude CLI OAuth); the fork is independent of both.
 
     :param live_server: The test server URL.
@@ -480,14 +480,14 @@ def test_fork_sdk_source_into_native_builds_history(
     configure_mock_llm(
         mock_llm_server_url,
         [
-            {"text": f"ACK — code word recorded: {marker}"},
+            {"text": f"ACK â€” code word recorded: {marker}"},
             {"text": marker},
         ],
         key=mock_model,
     )
 
     # Register the claude-coder (claude-sdk, anthropic) agent as the SOURCE.
-    # No model rewrite needed — we use the mock model key directly.
+    # No model rewrite needed â€” we use the mock model key directly.
     sdk_agent_name = upload_agent(
         http_client,
         _CLAUDE_CODER_DIR,
@@ -529,7 +529,7 @@ def test_fork_sdk_source_into_native_builds_history(
             )
             _launch_runner(http_client, host_id=host_id, session_id=fork_id, workspace=workspace)
 
-            # 3. The native clone recalls the planted word — only possible
+            # 3. The native clone recalls the planted word â€” only possible
             # if the agent-meow items were rebuilt into its Claude transcript and
             # resumed; a fresh launch has no history.
             _send_user_message(
@@ -544,7 +544,7 @@ def test_fork_sdk_source_into_native_builds_history(
                 http_client, session_id=fork_id, marker=marker, timeout=180.0
             )
             assert marker in text, (
-                f"native clone did not recall {marker!r} (got {text!r}) — the SDK "
+                f"native clone did not recall {marker!r} (got {text!r}) â€” the SDK "
                 "source's agent-meow items were not rebuilt into the clone's Claude "
                 "transcript, so it launched fresh without history"
             )
@@ -558,10 +558,10 @@ def test_fork_native_source_into_sdk_carries_history(
     """
     A claude-native source forked into a claude-sdk agent recalls history.
 
-    This exercises the native→SDK switch (already supported via SDK
-    transcript replay — the SDK target serializes the copied agent-meow
+    This exercises the nativeâ†’SDK switch (already supported via SDK
+    transcript replay â€” the SDK target serializes the copied agent-meow
     transcript as context). The clone binds the built-in ``sdk-chat-builtin``
-    (a plain claude-sdk chat agent seeded via OMNIGENT_BUILTIN_AGENT_DIRS —
+    (a plain claude-sdk chat agent seeded via OMNIGENT_BUILTIN_AGENT_DIRS â€”
     NOT the polly supervisor, so the recall is deterministic). It runs on
     the host daemon via the Claude CLI's OAuth, like claude-native.
 
@@ -611,7 +611,7 @@ def test_fork_native_source_into_sdk_carries_history(
 
             # The clone must NOT inherit the source's terminal-first labels.
             snap = http_client.get(f"/v1/sessions/{fork_id}", timeout=30.0).json()
-            assert snap.get("labels", {}).get("agent_meow.ui") != "terminal", (
+            assert snap.get("labels", {}).get("omnigent.ui") != "terminal", (
                 "SDK clone of a claude-native source must drop terminal-first "
                 f"mode, got labels {snap.get('labels')!r}"
             )
@@ -632,6 +632,6 @@ def test_fork_native_source_into_sdk_carries_history(
                 http_client, session_id=fork_id, marker=marker, timeout=180.0
             )
             assert marker in text, (
-                f"SDK clone did not recall {marker!r} (got {text!r}) — the native "
+                f"SDK clone did not recall {marker!r} (got {text!r}) â€” the native "
                 "source's transcript was not replayed as context into the SDK clone"
             )

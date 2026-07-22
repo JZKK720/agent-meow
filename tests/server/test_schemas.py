@@ -8,9 +8,9 @@ dispatches by ``type``, (c) loose-by-default ``extra="ignore"``
 forward compatibility, and (d) MCP-style ``extra="allow"`` on the
 elicitation params block.
 
-The event models live in :mod:`~?agent_meow.server.schemas`;
+The event models live in :mod:`~?omnigent.server.schemas`;
 this module only references the request/response schemas in
-:mod:`~?agent_meow.server.schemas` for the embedded ``ResponseObject``.
+:mod:`~?omnigent.server.schemas` for the embedded ``ResponseObject``.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from typing import Any
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from agent_meow.server.schemas import (
+from omnigent.server.schemas import (
     CancelledEvent,
     CompletedEvent,
     CreatedEvent,
@@ -42,13 +42,13 @@ from agent_meow.server.schemas import (
     SessionHeartbeatEvent,
 )
 
-# ── Round-trip serialization ──────────────────────────────────
+# â”€â”€ Round-trip serialization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_output_text_delta_roundtrip() -> None:
     """OutputTextDeltaEvent dumps exactly the legacy raw-dict shape."""
     event = OutputTextDeltaEvent(type="response.output_text.delta", delta="Hello")
-    # exclude_none drops the unset sequence_number — matches the
+    # exclude_none drops the unset sequence_number â€” matches the
     # producer-side raw dict at workflow.py:818.
     assert event.model_dump(exclude_none=True) == {
         "type": "response.output_text.delta",
@@ -102,7 +102,7 @@ def test_output_item_done_roundtrip() -> None:
 def test_heartbeat_roundtrip_minimal() -> None:
     """
     HeartbeatEvent without timing metadata round-trips to just the
-    type — older AP→harness pairs that pre-date the field addition
+    type â€” older APâ†’harness pairs that pre-date the field addition
     must keep parsing cleanly.
 
     What breaks if this fails: a harness that emits the legacy
@@ -111,7 +111,7 @@ def test_heartbeat_roundtrip_minimal() -> None:
     those harnesses run.
     """
     event = HeartbeatEvent(type="response.heartbeat")
-    # exclude_none drops the timing fields — wire stays minimal
+    # exclude_none drops the timing fields â€” wire stays minimal
     # for legacy emitters.
     assert event.model_dump(exclude_none=True) == {
         "type": "response.heartbeat",
@@ -124,7 +124,7 @@ def test_heartbeat_roundtrip_with_timing_metadata() -> None:
     """
     HeartbeatEvent populated with ``server_time`` and
     ``last_event_seq`` round-trips both fields verbatim per
-    contract §Heartbeats.
+    contract Â§Heartbeats.
 
     What breaks if this fails: consumers can't detect clock
     drift (no server_time) or dropped events (no
@@ -142,7 +142,7 @@ def test_heartbeat_roundtrip_with_timing_metadata() -> None:
         "last_event_seq": 42,
     }
     # Round-trip through JSON to guarantee the wire shape
-    # matches the contract — pydantic's serialization could
+    # matches the contract â€” pydantic's serialization could
     # silently rename these on a future bump and only a JSON
     # round-trip would catch it.
     raw = event.model_dump_json(exclude_none=True)
@@ -186,7 +186,7 @@ def test_elicitation_request_roundtrip() -> None:
         params=params,
     )
     dumped = event.model_dump(exclude_none=True)
-    # method is the MCP standard literal — kept default-on so producers
+    # method is the MCP standard literal â€” kept default-on so producers
     # don't have to re-state it but parsers see it explicitly.
     assert dumped == {
         "type": "response.elicitation_request",
@@ -241,15 +241,15 @@ def test_response_envelope_event_carries_real_response_object(
 
     Covers both initial (created / queued / in_progress) and
     terminal (completed / failed / cancelled / incomplete) event
-    variants — they all wrap a :class:`ResponseObject`. Catches a
+    variants â€” they all wrap a :class:`ResponseObject`. Catches a
     regression where the ``response`` field was loosened to
-    ``dict[str, Any]`` — the typed contract requires
+    ``dict[str, Any]`` â€” the typed contract requires
     :class:`ResponseObject` so consumers can read structured fields
     without a second parse step.
     """
     response = sample_response_object.model_copy(update={"status": status_value})
     event = event_class(type=type_literal, response=response)
-    # response field must be a real ResponseObject, not a dict — so
+    # response field must be a real ResponseObject, not a dict â€” so
     # downstream consumers see typed field access.
     assert isinstance(event.response, ResponseObject)
     assert event.response.status == status_value
@@ -260,7 +260,7 @@ def test_response_envelope_event_carries_real_response_object(
     assert dumped["response"]["status"] == status_value
 
 
-# ── Discriminated union dispatch ──────────────────────────────
+# â”€â”€ Discriminated union dispatch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -301,7 +301,7 @@ def test_response_stream_event_dispatches_to_concrete_class(
     """TypeAdapter routes raw dicts to the right typed model via type."""
     adapter: TypeAdapter[ServerStreamEvent] = TypeAdapter(ServerStreamEvent)
     parsed = adapter.validate_python(raw_dict)
-    # type(parsed) must equal expected_class — if the discriminator
+    # type(parsed) must equal expected_class â€” if the discriminator
     # changes (or a variant gets removed from the union), this flips
     # to a different class or raises.
     assert type(parsed) is expected_class
@@ -330,7 +330,7 @@ def test_response_stream_event_dispatches_envelope_events(
     """Each envelope event variant dispatches to its concrete class.
 
     Covers initial (created / queued / in_progress) and terminal
-    (completed / failed / cancelled / incomplete) — they all share
+    (completed / failed / cancelled / incomplete) â€” they all share
     the same wire shape (``{"type", "response"}``) and only the
     type discriminator distinguishes them. Catches a regression
     where any envelope variant gets removed from the union (the
@@ -360,7 +360,7 @@ def test_response_stream_event_dispatches_envelope_events(
             IncompleteEvent,
         ),
     )
-    # response field round-trips back to a ResponseObject — proves
+    # response field round-trips back to a ResponseObject â€” proves
     # the union didn't downgrade it to a dict.
     assert isinstance(parsed.response, ResponseObject)
     assert parsed.response.id == "resp_abc123"
@@ -380,13 +380,13 @@ def test_response_stream_event_rejects_unknown_type() -> None:
         adapter.validate_python({"type": "response.something_invented"})
 
 
-# ── Required-field validation ─────────────────────────────────
+# â”€â”€ Required-field validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
     "event_class,kwargs",
     [
-        # delta is required for the text/reasoning delta events —
+        # delta is required for the text/reasoning delta events â€”
         # producing one of these without text means the producer is
         # broken; fail loud at parse time.
         (OutputTextDeltaEvent, {"type": "response.output_text.delta"}),
@@ -398,7 +398,7 @@ def test_response_stream_event_rejects_unknown_type() -> None:
             ReasoningSummaryTextDeltaEvent,
             {"type": "response.reasoning_summary_text.delta"},
         ),
-        # item is required for output_item.done — without it, consumers
+        # item is required for output_item.done â€” without it, consumers
         # have nothing to render.
         (OutputItemDoneEvent, {"type": "response.output_item.done"}),
         # ElicitationRequestEvent needs both correlation id and params
@@ -418,7 +418,7 @@ def test_response_stream_event_rejects_unknown_type() -> None:
                 "params": {"message": "?"},
             },
         ),
-        # Terminal events require a response object — that's the
+        # Terminal events require a response object â€” that's the
         # entire payload, not just a nice-to-have.
         (CompletedEvent, {"type": "response.completed"}),
         (FailedEvent, {"type": "response.failed"}),
@@ -444,7 +444,7 @@ def test_elicitation_request_params_requires_message() -> None:
         ElicitationRequestParams()  # type: ignore[call-arg]
 
 
-# ── Loose-by-default forward compatibility ────────────────────
+# â”€â”€ Loose-by-default forward compatibility â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -467,13 +467,13 @@ def test_event_silently_drops_unknown_fields(
     """Forward-compat: unknown top-level fields are silently dropped.
 
     This is the v1 validation discipline (extra="ignore" on event
-    models) — newer producers can add fields without breaking older
+    models) â€” newer producers can add fields without breaking older
     parsers. Required for the contract's "version skew doesn't
     break harnesses" guarantee.
     """
     parsed = event_class(**base_kwargs, future_field="surprise")
     dumped = parsed.model_dump(exclude_none=True)
-    # The unknown field is dropped — not preserved, not raised.
+    # The unknown field is dropped â€” not preserved, not raised.
     assert "future_field" not in dumped
 
 
@@ -483,12 +483,12 @@ def test_elicitation_request_params_preserves_unknown_fields() -> None:
     MCP's ElicitRequestParams allows arbitrary extras under params
     (the spec uses extra="allow") so MCP servers can attach context.
     Our params model preserves the same behavior so an MCP server's
-    elicitation/create call traversing harness → agent-meow → client doesn't
+    elicitation/create call traversing harness â†’ agent-meow â†’ client doesn't
     lose fields the MCP server attached.
     """
     params = ElicitationRequestParams(
         message="hi",
-        # mcp_specific_field is NOT declared on the model — extra="allow"
+        # mcp_specific_field is NOT declared on the model â€” extra="allow"
         # should preserve it through model_dump.
         mcp_specific_field="server-defined-context",  # type: ignore[call-arg]
     )
@@ -497,13 +497,13 @@ def test_elicitation_request_params_preserves_unknown_fields() -> None:
     assert dumped["mcp_specific_field"] == "server-defined-context"
 
 
-# ── Sequence-number ambient field ─────────────────────────────
+# â”€â”€ Sequence-number ambient field â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_sequence_number_defaults_to_none() -> None:
     """Producers leave sequence_number unset; AP's serializer assigns it.
 
-    Verifies the producer-side contract — the field exists for
+    Verifies the producer-side contract â€” the field exists for
     consumers but doesn't burden producers with assigning it.
     """
     event = HeartbeatEvent(type="response.heartbeat")
@@ -520,12 +520,12 @@ def test_sequence_number_included_when_assigned() -> None:
     assert dumped["sequence_number"] == 42
 
 
-# ── CreateResponseRequest model validator ─────────────────────
+# â”€â”€ CreateResponseRequest model validator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_create_response_request_model_required_for_fresh_conversation() -> None:
     """
-    model=None without previous_response_id raises ValidationError (→ 422).
+    model=None without previous_response_id raises ValidationError (â†’ 422).
 
     The validator enforces that fresh conversations must name an agent.
     Without it, downstream code would fail deep inside the handler with
@@ -533,7 +533,7 @@ def test_create_response_request_model_required_for_fresh_conversation() -> None
 
     What breaks if this fails: a caller can POST ``{input: "hi"}`` with
     no model, bypass Pydantic, and reach the route handler with
-    ``req.model=None`` — the handler then has no agent to resolve and
+    ``req.model=None`` â€” the handler then has no agent to resolve and
     raises a 400 runtime error or hits a None-dereference.
     """
     with pytest.raises(ValidationError):
@@ -543,12 +543,12 @@ def test_create_response_request_model_required_for_fresh_conversation() -> None
 @pytest.mark.parametrize(
     "kwargs",
     [
-        # Fresh conversation with explicit model — the normal path.
+        # Fresh conversation with explicit model â€” the normal path.
         {"input": "hi", "model": "my-agent"},
         # Continuation turn: model omitted because server resolves agent
         # from the prior task. This is the idle-injection path.
         {"input": "hi", "previous_response_id": "resp_abc123"},
-        # Continuation turn with model explicitly repeated — also valid.
+        # Continuation turn with model explicitly repeated â€” also valid.
         {
             "input": "hi",
             "model": "my-agent",
@@ -565,13 +565,13 @@ def test_create_response_request_model_validator_accepts_valid_payloads(
     continuation with model repeated.
 
     What breaks if this fails: valid client requests are rejected with
-    422 — either fresh turns fail because model is treated as always
+    422 â€” either fresh turns fail because model is treated as always
     required, or continuation turns fail because model=None is always
     rejected.
     """
     req = CreateResponseRequest(**kwargs)
     assert req.input == "hi"
-    # model and previous_response_id carry through verbatim — Pydantic
+    # model and previous_response_id carry through verbatim â€” Pydantic
     # must not strip or coerce either field during validation.
     if "model" in kwargs:
         assert req.model == kwargs["model"]
@@ -587,7 +587,7 @@ def test_session_create_git_requires_host_id() -> None:
     failing late. If this validator is dropped, the request would
     validate and the error would surface deeper in the create flow.
     """
-    from agent_meow.server.schemas import SessionCreateRequest, SessionGitOptions
+    from omnigent.server.schemas import SessionCreateRequest, SessionGitOptions
 
     with pytest.raises(ValidationError, match="git worktree creation requires host_id"):
         SessionCreateRequest(
@@ -598,7 +598,7 @@ def test_session_create_git_requires_host_id() -> None:
 
 def test_session_create_git_with_host_id_ok() -> None:
     """``git`` with ``host_id`` validates cleanly."""
-    from agent_meow.server.schemas import SessionCreateRequest, SessionGitOptions
+    from omnigent.server.schemas import SessionCreateRequest, SessionGitOptions
 
     req = SessionCreateRequest(
         agent_id="ag_x",
@@ -612,10 +612,10 @@ def test_session_create_git_with_host_id_ok() -> None:
 
 def test_session_create_host_type_defaults_external() -> None:
     """
-    ``host_type`` defaults to ``"external"`` — the pre-existing
+    ``host_type`` defaults to ``"external"`` â€” the pre-existing
     contract for every client that doesn't send the field (backcompat).
     """
-    from agent_meow.server.schemas import SessionCreateRequest
+    from omnigent.server.schemas import SessionCreateRequest
 
     req = SessionCreateRequest(agent_id="ag_x")
     assert req.host_type == "external"
@@ -624,10 +624,10 @@ def test_session_create_host_type_defaults_external() -> None:
 def test_session_create_managed_rejects_host_id() -> None:
     """
     ``host_type="managed"`` + caller-supplied ``host_id`` is a
-    contradiction (the server provisions the host) — must 422 at
+    contradiction (the server provisions the host) â€” must 422 at
     validation instead of silently ignoring the caller's host.
     """
-    from agent_meow.server.schemas import SessionCreateRequest
+    from omnigent.server.schemas import SessionCreateRequest
 
     with pytest.raises(ValidationError, match="host_id must not be set"):
         SessionCreateRequest(agent_id="ag_x", host_type="managed", host_id="host_abc")
@@ -635,12 +635,12 @@ def test_session_create_managed_rejects_host_id() -> None:
 
 def test_session_create_managed_rejects_path_workspace() -> None:
     """
-    ``host_type="managed"`` + a PATH workspace is a contradiction —
+    ``host_type="managed"`` + a PATH workspace is a contradiction â€”
     the sandbox doesn't exist yet, so there is no filesystem to point
     at. Managed workspaces are repository URLs; must 422 at
     validation with the URL form named.
     """
-    from agent_meow.server.schemas import SessionCreateRequest
+    from omnigent.server.schemas import SessionCreateRequest
 
     with pytest.raises(ValidationError, match="takes a git repository URL"):
         SessionCreateRequest(agent_id="ag_x", host_type="managed", workspace="/tmp/w")
@@ -657,10 +657,10 @@ def test_session_create_managed_rejects_path_workspace() -> None:
 def test_session_create_managed_accepts_repo_url_workspace(workspace: str) -> None:
     """
     ``host_type="managed"`` accepts the ``<repo>[#<branch>]`` workspace
-    forms — the value passes through verbatim for the launch path to
+    forms â€” the value passes through verbatim for the launch path to
     parse and clone.
     """
-    from agent_meow.server.schemas import SessionCreateRequest
+    from omnigent.server.schemas import SessionCreateRequest
 
     req = SessionCreateRequest(agent_id="ag_x", host_type="managed", workspace=workspace)
     assert req.workspace == workspace
@@ -669,7 +669,7 @@ def test_session_create_managed_accepts_repo_url_workspace(workspace: str) -> No
 @pytest.mark.parametrize(
     ("workspace", "expected_fragment"),
     [
-        # Commit SHA fragment → detached HEAD; the message routes the
+        # Commit SHA fragment â†’ detached HEAD; the message routes the
         # caller toward branches.
         ("https://github.com/org/repo#" + "a" * 40, "not a commit SHA"),
         # Empty fragment.
@@ -686,7 +686,7 @@ def test_session_create_managed_rejects_malformed_repo_workspace(
     error embedded) instead of failing mid-provision inside a
     half-launched sandbox.
     """
-    from agent_meow.server.schemas import SessionCreateRequest
+    from omnigent.server.schemas import SessionCreateRequest
 
     with pytest.raises(ValidationError, match="") as exc:
         SessionCreateRequest(agent_id="ag_x", host_type="managed", workspace=workspace)
@@ -696,11 +696,11 @@ def test_session_create_managed_rejects_malformed_repo_workspace(
 def test_session_create_external_rejects_repo_url_workspace() -> None:
     """
     A repository-URL workspace on an EXTERNAL host is rejected: there,
-    ``workspace`` is an absolute path on the host — silently treating
+    ``workspace`` is an absolute path on the host â€” silently treating
     the URL as a path would fail later in workspace validation with a
     confusing "no such directory".
     """
-    from agent_meow.server.schemas import SessionCreateRequest
+    from omnigent.server.schemas import SessionCreateRequest
 
     with pytest.raises(ValidationError, match="requires host_type 'managed'"):
         SessionCreateRequest(
@@ -719,13 +719,13 @@ def test_session_response_status_accepts_canonical_set(status: str) -> None:
     The wire ``session.status`` event already models ``"waiting"`` (a turn
     parked on background work / sub-agents). The REST snapshot collapses
     ``"waiting"`` -> ``"running"`` on every current read path, so the value
-    does not normally reach this model — but a server >= 0.3.0 is documented
+    does not normally reach this model â€” but a server >= 0.3.0 is documented
     (``server/API.md``) to serialize the canonical set, and keeping the
     Literal a strict subset means any future or alternate-backend path that
     forwards the raw status would 500 on serialization. Widening keeps the
     model a superset of what the runtime can produce.
     """
-    from agent_meow.server.schemas import SessionResponse
+    from omnigent.server.schemas import SessionResponse
 
     resp = SessionResponse(id="conv_x", agent_id="ag_x", status=status, created_at=0)
     assert resp.status == status
@@ -735,7 +735,7 @@ def test_session_response_status_accepts_canonical_set(status: str) -> None:
 @pytest.mark.parametrize("status", ["idle", "running", "waiting", "failed"])
 def test_session_list_item_status_accepts_canonical_set(status: str) -> None:
     """``SessionListItem.status`` accepts the same canonical set as the snapshot."""
-    from agent_meow.server.schemas import SessionListItem
+    from omnigent.server.schemas import SessionListItem
 
     item = SessionListItem(id="conv_x", agent_id="ag_x", status=status, created_at=0, updated_at=0)
     assert item.status == status
@@ -743,7 +743,7 @@ def test_session_list_item_status_accepts_canonical_set(status: str) -> None:
 
 def test_session_response_status_rejects_unknown_value() -> None:
     """A status outside the canonical set still fails loud (fail-closed wire shape)."""
-    from agent_meow.server.schemas import SessionResponse
+    from omnigent.server.schemas import SessionResponse
 
     with pytest.raises(ValidationError):
         SessionResponse(id="conv_x", agent_id="ag_x", status="launching", created_at=0)

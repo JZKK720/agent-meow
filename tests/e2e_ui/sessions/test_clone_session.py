@@ -1,9 +1,9 @@
 """Browser e2e for the Clone session flow (ForkSessionDialog).
 
 Drives the real chain the unit layer can't: per-message "Fork from
-here" action → Radix dialog → ``POST /v1/sessions/{id}/fork`` → close +
-navigate into the clone → the copied transcript renders from the fork's
-snapshot. (The desktop header has no Clone button — the per-message
+here" action â†’ Radix dialog â†’ ``POST /v1/sessions/{id}/fork`` â†’ close +
+navigate into the clone â†’ the copied transcript renders from the fork's
+snapshot. (The desktop header has no Clone button â€” the per-message
 action is the desktop entry point; mobile keeps a three-dot menu entry.)
 
 The seeded session is runner-bound with no workspace, so the dialog takes
@@ -44,7 +44,7 @@ def test_clone_session_copies_transcript_and_navigates(
     Failure modes this catches that the mocked dialog tests can't:
 
     - The dialog submits but the fork request 4xxs (client/server wire
-      shape drift on ``SessionForkRequest`` — e.g. ``extra="forbid"``
+      shape drift on ``SessionForkRequest`` â€” e.g. ``extra="forbid"``
       rejecting a new field).
     - The fork succeeds but navigation doesn't happen or lands on the
       SOURCE session (the dialog's close+navigate ordering broke).
@@ -70,7 +70,7 @@ def test_clone_session_copies_transcript_and_navigates(
 
     # Seed the transcript with a uniquely-marked user turn and wait for
     # the assistant reply so the fork has BOTH roles to copy.
-    composer = page.get_by_placeholder("Ask the agent anything…")
+    composer = page.get_by_placeholder("Ask the agent anythingâ€¦")
     expect(composer).to_be_visible()
     composer.fill(f"Reply with one short word. Marker: {_MARKER}")
     page.get_by_role("button", name="Send", exact=True).click()
@@ -81,7 +81,7 @@ def test_clone_session_copies_transcript_and_navigates(
     # action (the desktop entry point; the action bar is dimmed until
     # hover but stays clickable). Forking from the LAST response is a
     # full clone, so this covers the same copy-everything path the old
-    # header button drove. Non-coding source → the submit button reads
+    # header button drove. Non-coding source â†’ the submit button reads
     # "Clone" (no host/directory section).
     assistant.hover()
     page.get_by_test_id("fork-from-response").first.click()
@@ -91,7 +91,7 @@ def test_clone_session_copies_transcript_and_navigates(
     expect(submit).to_have_text("Clone")
     submit.click()
 
-    # ONE call → dialog closes and the URL moves to a DIFFERENT /c/<id>.
+    # ONE call â†’ dialog closes and the URL moves to a DIFFERENT /c/<id>.
     # A URL still on the source id means navigation never fired (or
     # landed back on the source); a visible dialog means the fork call
     # failed and surfaced an inline error instead.
@@ -103,7 +103,7 @@ def test_clone_session_copies_transcript_and_navigates(
     fork_id = page.url.rsplit("/c/", 1)[1].split("?", 1)[0]
     assert fork_id != session_id
 
-    # The clone's transcript carries the source's marked user turn —
+    # The clone's transcript carries the source's marked user turn â€”
     # rendered from the fork's own snapshot (the clone has no runner, so
     # nothing here can come from a live stream). An empty chat means the
     # deep-copy or fork hydration regressed.
@@ -116,7 +116,7 @@ def test_clone_session_copies_transcript_and_navigates(
 # Forking needs a real assistant bubble to anchor "Fork from here", so
 # this sends a turn and waits on the reply. The in-process harness
 # occasionally produces no assistant output on the first turn (the
-# runner goes idle after dispatch — a nondeterministic harness
+# runner goes idle after dispatch â€” a nondeterministic harness
 # scheduling stall, not a real-LLM artifact since this drives the mock
 # LLM). Rerun on failure rather than widen the already-generous 60s
 # wait, which a stalled turn would never satisfy.
@@ -135,13 +135,13 @@ def test_clone_dialog_offers_cross_family_native_target_and_forks(
     agent catalog: the server must report a classifiable harness for the
     built-in AND the dialog must offer it. It then submits the switch and
     asserts the fork is created with the carry-history label stamped and the
-    source-session directive absent — the server-side gates that route the
+    source-session directive absent â€” the server-side gates that route the
     runner to the rebuild path.
 
     Failure modes this catches that the dialog unit tests can't:
 
     - The catalog stops reporting a harness for the native built-ins
-      (``harness: null`` → the option vanishes from the picker).
+      (``harness: null`` â†’ the option vanishes from the picker).
     - The fork request with a cross-family ``agent_id`` 4xxs (wire drift).
     - The route/store label gating regresses (wrong labels on the fork).
 
@@ -158,7 +158,7 @@ def test_clone_dialog_offers_cross_family_native_target_and_forks(
         (a for a in agents_resp.json()["data"] if a["name"] == "claude-native-ui"), None
     )
     assert claude_native is not None, (
-        "claude-native-ui built-in not registered on the test server — it is "
+        "claude-native-ui built-in not registered on the test server â€” it is "
         "seeded unconditionally at startup, so its absence is a server bug"
     )
 
@@ -173,7 +173,7 @@ def test_clone_dialog_offers_cross_family_native_target_and_forks(
 
     # One marked turn so the fork has content and an assistant bubble to
     # anchor the "Fork from here" action.
-    composer = page.get_by_placeholder("Ask the agent anything…")
+    composer = page.get_by_placeholder("Ask the agent anythingâ€¦")
     expect(composer).to_be_visible()
     composer.fill(f"Reply with one short word. Marker: {_XFAM_MARKER}")
     page.get_by_role("button", name="Send", exact=True).click()
@@ -209,12 +209,12 @@ def test_clone_dialog_offers_cross_family_native_target_and_forks(
     snap = httpx.get(f"{base_url}/v1/sessions/{fork_id}", timeout=30.0)
     snap.raise_for_status()
     labels: dict[str, str] = snap.json().get("labels") or {}
-    assert labels.get("agent_meow.fork.carry_history") == "1", (
+    assert labels.get("omnigent.fork.carry_history") == "1", (
         f"cross-family native fork must stamp carry-history, got {labels!r}"
     )
-    assert "agent_meow.fork.source_external_session_id" not in labels, (
+    assert "omnigent.fork.source_external_session_id" not in labels, (
         f"fork of an SDK source must not stamp a source native session id, got {labels!r}"
     )
-    assert labels.get("agent_meow.wrapper") == "claude-code-native-ui", (
+    assert labels.get("omnigent.wrapper") == "claude-code-native-ui", (
         f"fork must present as the TARGET (claude-native) harness, got {labels!r}"
     )

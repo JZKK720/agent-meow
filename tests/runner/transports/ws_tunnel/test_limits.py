@@ -2,16 +2,16 @@
 
 Scope note (#1116): these guard the shared constants and the tunnel-vs-app-level
 invariant. They do NOT assert anything about the server-global reach of uvicorn's
-``ws_ping_*`` — that setting applies the same 30 s/90 s budget to every WebSocket
+``ws_ping_*`` â€” that setting applies the same 30 s/90 s budget to every WebSocket
 route (session-updates, terminal-attach), which is deliberate: for an idle such
 socket the protocol PING/PONG is the only half-open detector, so the only effect is
 a slightly later half-open-socket reap (~120 s vs ~40 s), bounded and not a
-correctness change. See the comment on ``uvicorn.run`` in ``agent_meow/cli.py``.
+correctness change. See the comment on ``uvicorn.run`` in ``omnigent/cli.py``.
 """
 
 from __future__ import annotations
 
-from agent_meow.runner.transports.ws_tunnel.limits import (
+from omnigent.runner.transports.ws_tunnel.limits import (
     RUNNER_TUNNEL_MAX_MESSAGE_BYTES,
     TUNNEL_KEEPALIVE_PING_INTERVAL_S,
     TUNNEL_KEEPALIVE_PING_TIMEOUT_S,
@@ -44,10 +44,10 @@ def test_keepalive_not_stricter_than_app_level_budget() -> None:
     ``PING_INTERVAL_S * PING_MISS_THRESHOLD`` seconds of silence. If the
     websockets/uvicorn protocol keepalive timeout is tighter than that, it drops a
     healthy-but-busy tunnel (event loop stalled) with ``1011`` before the
-    deliberate app-level policy ever applies — the regression this guards. Checked
+    deliberate app-level policy ever applies â€” the regression this guards. Checked
     against BOTH tunnels, which share the same budget.
     """
-    from agent_meow.server.routes import host_tunnel, runner_tunnel
+    from omnigent.server.routes import host_tunnel, runner_tunnel
 
     for module in (runner_tunnel, host_tunnel):
         app_level_dead_after_s = module.PING_INTERVAL_S * module.PING_MISS_THRESHOLD

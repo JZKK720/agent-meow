@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_meow.entities import ConversationItem, MessageData, PagedList, SlashCommandData
-from agent_meow.entities.pagination import paginate_in_memory
-from agent_meow.runtime.workflow import _load_initial_history
+from omnigent.entities import ConversationItem, MessageData, PagedList, SlashCommandData
+from omnigent.entities.pagination import paginate_in_memory
+from omnigent.runtime.workflow import _load_initial_history
 
 
 class _ConversationStore:

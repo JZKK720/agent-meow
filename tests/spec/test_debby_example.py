@@ -3,9 +3,9 @@
 Debby's "GPT" sub-agent must run on the ``codex`` harness, not
 ``openai-agents``. The openai-agents harness treats an unpinned model as a
 Databricks model (``is_databricks_model = model is None`` in
-``agent_meow/inner/openai_agents_sdk_executor.py``) and, with no
+``omnigent/inner/openai_agents_sdk_executor.py``) and, with no
 ``OPENAI_API_KEY`` / ``OPENAI_BASE_URL`` in the environment, silently falls
-back to ambient Databricks credentials — routing the "GPT" head through the
+back to ambient Databricks credentials â€” routing the "GPT" head through the
 Databricks gateway instead of OpenAI. The ``codex`` harness is GPT-only, uses
 OpenAI's native auth, and has no such unpinned-model Databricks fallback.
 
@@ -18,8 +18,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agent_meow.spec.parser import parse
-from agent_meow.spec.types import DatabricksAuth
+from omnigent.spec.parser import parse
+from omnigent.spec.types import DatabricksAuth
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEBBY_DIR = _REPO_ROOT / "examples" / "debby"
@@ -31,7 +31,7 @@ def test_debby_gpt_head_uses_codex_not_openai_agents() -> None:
 
     If this flips back to ``openai-agents`` with no pinned model, Debby's GPT
     head falls back to ambient Databricks credentials for any user with a
-    Databricks profile configured — the exact bug this example was fixed for.
+    Databricks profile configured â€” the exact bug this example was fixed for.
     """
     spec = parse(_DEBBY_DIR)
     by_name = {sub.name: sub for sub in spec.sub_agents}
@@ -52,7 +52,7 @@ def test_debby_gpt_head_uses_codex_not_openai_agents() -> None:
         f"Debby's GPT head must not pin a Databricks-hosted model; got {model!r}."
     )
     assert not isinstance(gpt.executor.auth, DatabricksAuth), (
-        "Debby's GPT head must not declare Databricks auth — it should route "
+        "Debby's GPT head must not declare Databricks auth â€” it should route "
         "to OpenAI via the codex harness."
     )
 

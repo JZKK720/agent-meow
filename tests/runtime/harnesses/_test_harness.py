@@ -2,7 +2,7 @@
 Minimal harness fixture for the process-manager / runner tests.
 
 Exports ``create_app() -> FastAPI`` matching the contract from
-``designs/SERVER_HARNESS_CONTRACT.md`` §Required harness package
+``designs/SERVER_HARNESS_CONTRACT.md`` Â§Required harness package
 shape, so the runner can import + serve it the same way it would
 serve a real harness wrap.
 
@@ -10,11 +10,11 @@ The app implements just enough surface for the lifecycle tests to
 verify spawn / health / round-trip behavior:
 
 - ``GET /health`` returns ``{"status": "ok"}`` (the standard probe).
-- ``GET /pid`` returns the runner subprocess's pid — useful for
+- ``GET /pid`` returns the runner subprocess's pid â€” useful for
   tests that need to verify the same subprocess persists across
   multiple ``get_client`` calls.
 - ``GET /conversation-id`` returns the value the runner stashed
-  on ``app.state.conversation_id`` — verifies the
+  on ``app.state.conversation_id`` â€” verifies the
   ``--conversation-id`` plumbing in the runner.
 - ``GET /env/{name}`` returns the subprocess's value for the
   given env var (or ``null``). Used by per-spawn-env tests to
@@ -35,7 +35,7 @@ verify spawn / health / round-trip behavior:
 Lives under ``tests/`` so it doesn't ship as production code; the
 test process registers the module path
 (``"tests.runtime.harnesses._test_harness"``) in
-:data:`~?agent_meow.runtime.harnesses._HARNESS_MODULES` per test.
+:data:`~?omnigent.runtime.harnesses._HARNESS_MODULES` per test.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def create_app() -> FastAPI:
 
     :returns: A bare-minimum :class:`FastAPI` instance with three
         introspection endpoints used by the test suite. NOT the
-        full harness contract — production wraps implement
+        full harness contract â€” production wraps implement
         ``/v1/responses`` etc.
     """
     app = FastAPI(title="harness-test-fixture")
@@ -113,12 +113,12 @@ def create_app() -> FastAPI:
         Stream ``count`` chunks, one per 0.5s, then close cleanly.
 
         Used by the reaper-mid-stream regression test to hold an
-        AP→harness UDS connection open across at least one reaper
+        APâ†’harness UDS connection open across at least one reaper
         pass. The body iterator yields ``"chunk-N\\n"`` lines so
         the consumer can verify the stream actually delivered all
         chunks (mid-tear-down would surface as a partial read or
-        an httpx ``ReadError``). Default ``count=5`` × 0.5s = 2.5s
-        — long enough that a 1.0s ``idle_timeout_s`` reaper has
+        an httpx ``ReadError``). Default ``count=5`` Ã— 0.5s = 2.5s
+        â€” long enough that a 1.0s ``idle_timeout_s`` reaper has
         a clear window to fire mid-stream.
 
         :param count: Number of chunks to emit, e.g. ``5``.

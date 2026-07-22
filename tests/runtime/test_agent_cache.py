@@ -1,4 +1,4 @@
-"""Tests for agent_meow.runtime.agent_cache."""
+"""Tests for omnigent.runtime.agent_cache."""
 
 from __future__ import annotations
 
@@ -9,9 +9,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
-from agent_meow.runtime.agent_cache import AgentCache
-from agent_meow.stores.artifact_store.local import LocalArtifactStore
+from omnigent.errors import OmnigentError
+from omnigent.runtime.agent_cache import AgentCache
+from omnigent.stores.artifact_store.local import LocalArtifactStore
 
 # Minimal valid config.yaml for a spec_version=1 agent
 _MINIMAL_CONFIG = yaml.dump(
@@ -105,7 +105,7 @@ def test_load_memory_cache_hit(
     first = agent_cache.load("agent-2", loc)
     second = agent_cache.load("agent-2", loc)
 
-    # Same spec object (identity check — memory cache returns same ref)
+    # Same spec object (identity check â€” memory cache returns same ref)
     assert first.spec is second.spec
     assert first.workdir == second.workdir
 
@@ -126,7 +126,7 @@ def test_load_disk_cache_hit(
     cache_1 = AgentCache(artifact_store=artifact_store, cache_dir=cache_dir)
     first = cache_1.load("agent-3", loc)
 
-    # New cache instance simulates server restart — empty memory cache
+    # New cache instance simulates server restart â€” empty memory cache
     cache_2 = AgentCache(artifact_store=artifact_store, cache_dir=cache_dir)
 
     # Remove from artifact store to prove we don't re-download
@@ -182,7 +182,7 @@ def test_evict_clears_both_tiers(
     # Disk cache cleared
     assert not (cache_dir / "agent-4").exists()
 
-    # Memory cache cleared — remove from artifact store to prove
+    # Memory cache cleared â€” remove from artifact store to prove
     # load() can't fall back to a cached spec in memory
     artifact_store.delete(loc)
     with pytest.raises(KeyError):
@@ -196,10 +196,10 @@ def test_evict_noop_for_uncached_agent(
     agent_cache.evict("never-loaded")
 
 
-# ── env-var expansion is gated on provenance ──────────
+# â”€â”€ env-var expansion is gated on provenance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # A tenant-uploaded (session-scoped) bundle must NOT have its ${VAR}
-# references expanded against the server process env — that leaks
+# references expanded against the server process env â€” that leaks
 # server-side secrets into a spec-controlled MCP/LLM connection. The
 # cache defaults to expand_env=False (fail-safe); only operator-authored
 # template agents pass expand_env=True.
@@ -254,7 +254,7 @@ def test_load_does_not_expand_env_by_default(
     This is the fix: the secret value must never reach a
     tenant-controlled MCP header. If this assertion fails (header equals
     the secret value), the cache expanded a session-scoped bundle against
-    the server env — the exact exfiltration the ticket describes.
+    the server env â€” the exact exfiltration the ticket describes.
     """
     monkeypatch.setenv(_SECRET_ENV_VAR, _SECRET_VALUE)
     loc = "leaky-default/h1"
@@ -263,7 +263,7 @@ def test_load_does_not_expand_env_by_default(
     loaded = agent_cache.load("leaky-default", loc)
 
     header = _mcp_auth_header(loaded.spec.mcp_servers)
-    # Literal reference preserved — the server secret was NOT substituted.
+    # Literal reference preserved â€” the server secret was NOT substituted.
     assert header == "Bearer ${OMNIGENT_W7_TEST_SECRET}"
     # Defense in depth: the secret value appears nowhere in the header.
     assert _SECRET_VALUE not in header
@@ -278,7 +278,7 @@ def test_load_expand_env_true_expands_for_template(
     ``load(expand_env=True)`` (the operator/template path) DOES expand
     ``${VAR}`` against the process env.
 
-    Proves the flag actually controls expansion — without it the
+    Proves the flag actually controls expansion â€” without it the
     "default doesn't expand" test could pass simply because expansion is
     globally broken. A failure here (header still literal) would mean
     template agents silently stopped resolving their connection secrets.
@@ -303,7 +303,7 @@ def test_replace_does_not_expand_env_by_default(
     ``replace()`` is fail-safe too: the warm-swap re-parse leaves
     ``${VAR}`` literal by default (session-scoped bundle).
 
-    Guards the PUT /sessions/{id}/agent path — a tenant replacing their
+    Guards the PUT /sessions/{id}/agent path â€” a tenant replacing their
     own session bundle must not gain server-env expansion.
     """
     monkeypatch.setenv(_SECRET_ENV_VAR, _SECRET_VALUE)

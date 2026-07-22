@@ -15,9 +15,9 @@ writes still land atomically.
 
 from __future__ import annotations
 
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.types import LabelDef
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.types import LabelDef
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 

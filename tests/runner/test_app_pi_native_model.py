@@ -2,7 +2,7 @@
 
 ``_pi_native_model_from_spec`` is the seam that turns a session's
 ``executor.model`` (set via a config.yaml ``model:`` key) into the model
-threaded into ``resolve_pi_native_provider(model=...)`` — which renders it
+threaded into ``resolve_pi_native_provider(model=...)`` â€” which renders it
 into the runner-owned Pi ``models.json`` (and the appended ``--model``).
 
 Unlike cursor-native, a gateway-routed id (``databricks-*``) is KEPT: the
@@ -19,13 +19,13 @@ from typing import Any
 import httpx
 import pytest
 
-from agent_meow.entities.session_resources import SessionResourceView
-from agent_meow.runner.app import (
+from omnigent.entities.session_resources import SessionResourceView
+from omnigent.runner.app import (
     ResolvedSpec,
     _auto_create_pi_terminal,
     _pi_native_model_from_spec,
 )
-from agent_meow.spec.types import AgentSpec, ExecutorSpec
+from omnigent.spec.types import AgentSpec, ExecutorSpec
 
 
 def _spec(model: str | None) -> AgentSpec:
@@ -49,7 +49,7 @@ def test_pi_native_model_keeps_gateway_id() -> None:
 
 
 def test_pi_native_model_no_pin_returns_none() -> None:
-    """No model declared → None (Pi keeps the provider's default model)."""
+    """No model declared â†’ None (Pi keeps the provider's default model)."""
     assert _pi_native_model_from_spec(_spec(None)) is None
     assert _pi_native_model_from_spec(_spec("")) is None
 
@@ -94,15 +94,15 @@ async def test_auto_create_pi_terminal_threads_spec_model_into_models_json(
     ``claude-sonnet-4-6``. The threaded override must win: the generated
     ``models.json`` selects ``claude-opus-4-7`` and the appended Pi
     ``--model`` arg reflects it. This is the runner-side seam the feature
-    adds — without threading the spec model, the models.json would carry
+    adds â€” without threading the spec model, the models.json would carry
     the family default instead.
 
     :param tmp_path: Temp dir backing the pi-native bridge root.
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    import agent_meow.pi_native_bridge as pi_bridge
-    import agent_meow.pi_native_credentials as creds
+    import omnigent.pi_native_bridge as pi_bridge
+    import omnigent.pi_native_credentials as creds
 
     session_id = "conv_pi_model_e2e"
     workspace = tmp_path / "workspace"
@@ -112,13 +112,13 @@ async def test_auto_create_pi_terminal_threads_spec_model_into_models_json(
     monkeypatch.setattr(pi_bridge, "_BRIDGE_ROOT", tmp_path / "pi-native")
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(workspace))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
-    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
     # Resolve a Pi executable without requiring the real binary on PATH.
-    monkeypatch.setattr("agent_meow.pi_native.resolve_pi_executable", lambda: "/usr/bin/pi")
+    monkeypatch.setattr("omnigent.pi_native.resolve_pi_executable", lambda: "/usr/bin/pi")
 
     # ``resolve_pi_native_provider``'s default config_loader is bound at def
     # time, so inject the test config by patching the module symbol the runner
-    # imports locally — recording the ``model`` kwarg it is called with.
+    # imports locally â€” recording the ``model`` kwarg it is called with.
     real_resolve = creds.resolve_pi_native_provider
     captured: dict[str, Any] = {}
 
@@ -218,8 +218,8 @@ async def test_auto_create_pi_terminal_no_spec_model_uses_provider_default(
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    import agent_meow.pi_native_bridge as pi_bridge
-    import agent_meow.pi_native_credentials as creds
+    import omnigent.pi_native_bridge as pi_bridge
+    import omnigent.pi_native_credentials as creds
 
     session_id = "conv_pi_model_default"
     workspace = tmp_path / "workspace"
@@ -227,8 +227,8 @@ async def test_auto_create_pi_terminal_no_spec_model_uses_provider_default(
     monkeypatch.setattr(pi_bridge, "_BRIDGE_ROOT", tmp_path / "pi-native")
     monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(workspace))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
-    monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
-    monkeypatch.setattr("agent_meow.pi_native.resolve_pi_executable", lambda: "/usr/bin/pi")
+    monkeypatch.setattr("omnigent.runner._entry._make_auth_token_factory", lambda: None)
+    monkeypatch.setattr("omnigent.pi_native.resolve_pi_executable", lambda: "/usr/bin/pi")
 
     real_resolve = creds.resolve_pi_native_provider
     captured: dict[str, Any] = {}

@@ -1,6 +1,6 @@
 """Tests for the native Antigravity (``agent-meow antigravity``) launcher.
 
-No live agy or server is started — the terminal-launch POST is driven through
+No live agy or server is started â€” the terminal-launch POST is driven through
 an ``httpx.MockTransport`` so the request body shape is asserted without a real
 runner.
 """
@@ -16,11 +16,11 @@ from pathlib import Path
 import httpx
 import pytest
 
-import agent_meow.antigravity_native as _mod
-import agent_meow.antigravity_native_bridge as bridge_mod
-from agent_meow._wrapper_labels import ANTIGRAVITY_NATIVE_WRAPPER_VALUE, WRAPPER_LABEL_KEY
-from agent_meow.antigravity_native import antigravity_terminal_resource_id
-from agent_meow.antigravity_native_bridge import (
+import omnigent.antigravity_native as _mod
+import omnigent.antigravity_native_bridge as bridge_mod
+from omnigent._wrapper_labels import ANTIGRAVITY_NATIVE_WRAPPER_VALUE, WRAPPER_LABEL_KEY
+from omnigent.antigravity_native import antigravity_terminal_resource_id
+from omnigent.antigravity_native_bridge import (
     ANTIGRAVITY_NATIVE_BRIDGE_ID_LABEL_KEY,
     read_bridge_state,
     read_tmux_info,
@@ -46,9 +46,9 @@ def _stub_agy_binary(monkeypatch: pytest.MonkeyPatch) -> None:
     Resolve the agy binary to a fixed name so launch tests need no real install.
 
     ``build_agy_launch`` uses ``agy_binary_path()`` as ``argv[0]`` unconditionally,
-    and that raises ``RuntimeError`` when agy is absent from ``PATH`` — which is the
+    and that raises ``RuntimeError`` when agy is absent from ``PATH`` â€” which is the
     case in CI. Patch the name at the site where ``build_agy_launch`` looks it up
-    (its own module), plus the re-export in :mod:`~?agent_meow.antigravity_native` used
+    (its own module), plus the re-export in :mod:`~?omnigent.antigravity_native` used
     by the direct-CLI launch path, so no test depends on agy being installed.
 
     This is autouse for the whole module; the real resolution / missing-agy
@@ -56,7 +56,7 @@ def _stub_agy_binary(monkeypatch: pytest.MonkeyPatch) -> None:
     ``tests/test_antigravity_native_launch.py`` (which patches ``shutil.which``
     directly), so nothing here needs the unstubbed binary lookup.
     """
-    monkeypatch.setattr("agent_meow.antigravity_native_launch.agy_binary_path", lambda: "agy")
+    monkeypatch.setattr("omnigent.antigravity_native_launch.agy_binary_path", lambda: "agy")
     monkeypatch.setattr(_mod, "agy_binary_path", lambda: "agy")
 
 
@@ -66,7 +66,7 @@ async def test_launch_terminal_body_uses_ensure_native_terminal_not_bridge_injec
 
     ``bridge_inject_dir`` is the Claude-native marker: on the runner it starts a
     Claude comment relay, tags the terminal ``CLAUDE_NATIVE_TERMINAL_ROLE``, and
-    publishes Claude tmux metadata — side effects antigravity does not own and
+    publishes Claude tmux metadata â€” side effects antigravity does not own and
     must not trigger. The antigravity bootstrap must therefore use the
     side-effect-free allowlist marker ``ensure_native_terminal``. This guards
     against a regression that reintroduces the Claude relay on every agy launch.
@@ -99,7 +99,7 @@ async def test_launch_terminal_passes_spec_args_without_binary() -> None:
     The launch spec carries the agy args (sans the binary) and the command separately.
 
     Guards the argv split: ``argv[0]`` is the binary (sent as ``command``) and
-    the rest are the terminal ``spec.args`` — a mix-up would double the binary
+    the rest are the terminal ``spec.args`` â€” a mix-up would double the binary
     or drop the first flag.
     """
     seen: dict[str, object] = {}
@@ -208,7 +208,7 @@ async def test_daemon_resume_reattaches_to_running_terminal(
     :param tmp_path: pytest temp dir, used to isolate the bridge root.
     :returns: None.
     """
-    import agent_meow.antigravity_native_bridge as bridge_mod
+    import omnigent.antigravity_native_bridge as bridge_mod
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     terminal_id = antigravity_terminal_resource_id()
@@ -274,7 +274,7 @@ async def test_daemon_resume_cold_falls_through_to_launch(
     :param tmp_path: pytest temp dir, used to isolate the bridge root.
     :returns: None.
     """
-    import agent_meow.antigravity_native_bridge as bridge_mod
+    import omnigent.antigravity_native_bridge as bridge_mod
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     terminal_id = antigravity_terminal_resource_id()
@@ -341,13 +341,13 @@ async def test_daemon_fresh_launch_reattaches_to_runner_autocreated_terminal(
     Regression for the double-launch bug: binding the runner triggers the runner's
     auto-create of the antigravity terminal (``runner/app.py``
     ``_auto_create_antigravity_terminal``). The CLI must then reattach to that
-    runner-owned terminal — NOT call ``_launch_and_record`` (whose
+    runner-owned terminal â€” NOT call ``_launch_and_record`` (whose
     ``clear_bridge_state`` wipes the bridge state the runner just wrote, breaking
     web-turn injection with "Antigravity native bridge state is missing", while its
     redundant terminal POST 500s). The pre-bind reattach check (resume path) cannot
     catch this because the runner only auto-creates AFTER the bind.
     """
-    import agent_meow.antigravity_native_bridge as bridge_mod
+    import omnigent.antigravity_native_bridge as bridge_mod
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     terminal_id = antigravity_terminal_resource_id()
@@ -418,14 +418,14 @@ async def test_local_fresh_launch_reattaches_to_runner_autocreated_terminal(
     ``agent-meow antigravity`` path: the local server spawns a CLI runner, and
     binding it triggers the runner's ``_auto_create_antigravity_terminal`` exactly
     as the daemon path does. ``_prepare_antigravity_terminal`` must reattach to that
-    runner-owned terminal after the bind — NOT call ``_launch_and_record`` (whose
+    runner-owned terminal after the bind â€” NOT call ``_launch_and_record`` (whose
     ``clear_bridge_state`` wipes the runner's bridge state and whose redundant
     terminal POST 500s, and which on ``reattached=False`` also starts a second CLI
-    RPC reader → double-mirror). The original fix (7df3ba4d/f4ce3ce8) only patched
+    RPC reader â†’ double-mirror). The original fix (7df3ba4d/f4ce3ce8) only patched
     ``_prepare_antigravity_terminal_via_daemon``; this guards the local-server
     path.
     """
-    import agent_meow.antigravity_native_bridge as bridge_mod
+    import omnigent.antigravity_native_bridge as bridge_mod
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     terminal_id = antigravity_terminal_resource_id()
@@ -514,8 +514,8 @@ async def test_launch_and_record_advertises_tmux_target_when_pane_exposed(
     When the runner exposes a local tmux pane, ``_launch_and_record`` advertises it.
 
     A CLI-launched session's web turns are typed into the agy TUI by the executor,
-    which reads the pane from ``tmux.json`` — so ``_launch_and_record`` must write
-    it whenever the launched terminal carries a socket + target. (No pane ⇒ no
+    which reads the pane from ``tmux.json`` â€” so ``_launch_and_record`` must write
+    it whenever the launched terminal carries a socket + target. (No pane â‡’ no
     write; that path is covered by the other launch tests, whose handler returns
     empty metadata.)
     """
@@ -538,7 +538,7 @@ async def test_launch_and_record_advertises_tmux_target_when_pane_exposed(
 
 
 # ---------------------------------------------------------------------------
-# _launch_is_headless — attended vs unattended signal (phase 4 task 1)
+# _launch_is_headless â€” attended vs unattended signal (phase 4 task 1)
 # ---------------------------------------------------------------------------
 
 
@@ -589,7 +589,7 @@ async def test_launch_and_record_threads_headless_skip_flag(
     """``headless=True`` adds ``--dangerously-skip-permissions`` to the POSTed argv.
 
     Confirms the phase-4 task-1 wiring is threaded all the way through
-    ``_launch_and_record`` → ``build_agy_launch`` → the terminal-launch
+    ``_launch_and_record`` â†’ ``build_agy_launch`` â†’ the terminal-launch
     ``spec.args``, not just the unit-level ``should_skip_permissions``.
     """
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
@@ -711,7 +711,7 @@ async def test_attach_terminal_closes_on_real_exit_when_owned(
 async def test_attach_terminal_skips_close_on_detach(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A tmux DETACH must NOT close the terminal — agy keeps running for re-attach.
+    """A tmux DETACH must NOT close the terminal â€” agy keeps running for re-attach.
 
     Detaching is "leave it running"; closing here would kill a live agy session
     the user intends to come back to.
@@ -725,7 +725,7 @@ async def test_attach_terminal_skips_close_on_detach(
 async def test_attach_terminal_skips_close_when_reattached_even_on_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A reattached invocation must NOT close on exit — it does not own teardown.
+    """A reattached invocation must NOT close on exit â€” it does not own teardown.
 
     This invocation reused a terminal another launcher created; closing it on our
     exit would tear down a resource we do not own (the over-close seam).
@@ -739,7 +739,7 @@ async def test_attach_terminal_skips_close_when_reattached_even_on_exit(
 async def test_attach_terminal_skips_close_when_reattached_and_detached(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Reattached AND detached: both reasons to skip close — and it is skipped."""
+    """Reattached AND detached: both reasons to skip close â€” and it is skipped."""
     closed = await _run_attach_and_capture_close(
         monkeypatch, reattached=True, outcome=_mod._AttachOutcome.DETACHED
     )
@@ -754,13 +754,13 @@ async def _run_attach_and_capture_reader(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param reattached: ``prepared.reattached`` for this run.
-    :returns: ``(reader_starts, cold_start_starts)`` — each 0 or 1.
+    :returns: ``(reader_starts, cold_start_starts)`` â€” each 0 or 1.
     """
     reader_starts = 0
     cold_start_starts = 0
 
     def _counting_reader(**_kwargs: object) -> object:
-        # Count the CALL synchronously (deterministic) — not the task body, which
+        # Count the CALL synchronously (deterministic) â€” not the task body, which
         # may be cancelled by the finally before it runs. Returns a coroutine so
         # ``asyncio.create_task(run_reader_with_bridge(...))`` still works.
         nonlocal reader_starts
@@ -809,7 +809,7 @@ async def test_attach_terminal_skips_cli_reader_when_reattached(
     The runner auto-creates "terminal + reader" together and owns the mirror for a
     runner-owned terminal. A second CLI-side reader would double-mirror every step
     (two readers POSTing the same agy conversation). So when ``reattached`` the CLI
-    defers to the runner — and skips cold-start too (the runner cold-starts).
+    defers to the runner â€” and skips cold-start too (the runner cold-starts).
     """
     reader_starts, cold_start_starts = await _run_attach_and_capture_reader(
         monkeypatch, reattached=True
@@ -847,7 +847,7 @@ async def _capture_cold_start_pane_kwargs(
     """
     sock = tmp_path / "agy.sock"
     if socket_exists:
-        sock.write_bytes(b"")  # a real local file → pane is local
+        sock.write_bytes(b"")  # a real local file â†’ pane is local
 
     captured: dict[str, object] = {}
 
@@ -905,7 +905,7 @@ async def test_attach_threads_local_pane_into_cold_start(
 async def test_attach_omits_remote_pane_from_cold_start(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A non-local socket (remote runner) is NOT threaded in — avoids doomed tmux spawns.
+    """A non-local socket (remote runner) is NOT threaded in â€” avoids doomed tmux spawns.
 
     MINOR-1 guard: the runner advertises a server-side socket PATH that does not
     exist locally. Passing it would make the cold-start run a failing
@@ -921,13 +921,13 @@ async def test_attach_omits_remote_pane_from_cold_start(
 
 
 # ---------------------------------------------------------------------------
-# _cold_start_agy_conversation — mint + persist + external_session_id PATCH
+# _cold_start_agy_conversation â€” mint + persist + external_session_id PATCH
 # ---------------------------------------------------------------------------
 
 
 def _seed_bridge_state(bridge_dir: Path, conversation_id: str) -> None:
     """Seed bridge state with a given conversation id for cold-start tests."""
-    from agent_meow.antigravity_native_bridge import (
+    from omnigent.antigravity_native_bridge import (
         AntigravityNativeBridgeState,
         write_bridge_state,
     )
@@ -992,7 +992,7 @@ async def test_cli_cold_start_mints_without_patching_external_session_id(
     assert after is not None
     assert after.conversation_id == minted_id
     # NO external_session_id PATCH: the cold-start no longer records the headless
-    # phantom (the reader records the adopted TUI cascade instead) — #2 data-loss.
+    # phantom (the reader records the adopted TUI cascade instead) â€” #2 data-loss.
     assert patches == []
 
 
@@ -1029,7 +1029,7 @@ async def test_cli_cold_start_skips_when_conversation_already_real(
         timeout_s=1.0,
     )
 
-    # Bridge state untouched — the resume id stands.
+    # Bridge state untouched â€” the resume id stands.
     after = read_bridge_state(bridge_dir)
     assert after is not None
     assert after.conversation_id == real_id
@@ -1047,7 +1047,7 @@ async def test_cli_cold_start_scopes_to_pane_agy(
     exists. Exercises the REAL ``resolve_cold_start_agy_rpc_port`` dispatch by
     stubbing its rpc-module seams.
     """
-    import agent_meow.antigravity_native_rpc as rpc
+    import omnigent.antigravity_native_rpc as rpc
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     bridge_dir = bridge_mod.bridge_dir_for_bridge_id("bridge_cs_pane")
@@ -1094,20 +1094,20 @@ async def test_cli_cold_start_falls_back_when_no_pane(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """
-    No local pane (``tmux_socket``/``tmux_target`` is ``None``) → lowest candidate.
+    No local pane (``tmux_socket``/``tmux_target`` is ``None``) â†’ lowest candidate.
 
     Preserves the current CLI behavior for the WebSocket-attach / remote-runner
     path that has no local tmux socket: the cold-start falls back to
     ``_candidate_agy_rpc_ports()[0]`` and never consults the pane-scoped resolver.
     """
-    import agent_meow.antigravity_native_rpc as rpc
+    import omnigent.antigravity_native_rpc as rpc
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     bridge_dir = bridge_mod.bridge_dir_for_bridge_id("bridge_cs_nopane")
     _seed_bridge_state(bridge_dir, "agy_conv_placeholder")
 
     def _no_pane_scope(_sock: object, _tgt: object) -> rpc.PaneAgyResolution:
-        raise AssertionError("no pane → the pane-scoped resolver must not be consulted")
+        raise AssertionError("no pane â†’ the pane-scoped resolver must not be consulted")
 
     monkeypatch.setattr(rpc, "resolve_pane_agy_rpc_port_state", _no_pane_scope)
     monkeypatch.setattr(rpc, "_candidate_agy_rpc_ports", lambda: [52548, 61000])
@@ -1143,15 +1143,15 @@ async def test_cli_cold_start_waits_when_pane_agy_absent(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """
-    Pane present, our agy NOT up yet, FOREIGN candidate present → no StartCascade.
+    Pane present, our agy NOT up yet, FOREIGN candidate present â†’ no StartCascade.
 
     The CLI ``tmux_start_on_attach`` early-poll window the R2 review flagged: the
     cold-start runs concurrently with the attach, so before agy is ``exec``-ed the
     pane has no agy (``agy_found=False``). A foreign agy is the only candidate. The
     cold-start MUST keep polling (and, at the collapsed deadline, leave the
-    placeholder) — NOT bind the foreign candidate.
+    placeholder) â€” NOT bind the foreign candidate.
     """
-    import agent_meow.antigravity_native_rpc as rpc
+    import omnigent.antigravity_native_rpc as rpc
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     bridge_dir = bridge_mod.bridge_dir_for_bridge_id("bridge_cs_earlypoll")
@@ -1177,7 +1177,7 @@ async def test_cli_cold_start_waits_when_pane_agy_absent(
     monkeypatch.setattr(_mod, "_agy_cold_start_poll_sleep", _no_sleep)
 
     def _fail_client(**_kwargs: object) -> httpx.AsyncClient:
-        raise AssertionError("no real id → no external_session_id PATCH")
+        raise AssertionError("no real id â†’ no external_session_id PATCH")
 
     monkeypatch.setattr(_mod.httpx, "AsyncClient", _fail_client)
 
@@ -1202,13 +1202,13 @@ async def test_cli_cold_start_falls_back_when_port_unattributable(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """
-    Pane present, our agy found, port not lsof-attributable → candidate fallback.
+    Pane present, our agy found, port not lsof-attributable â†’ candidate fallback.
 
     Restricted-/proc one-agy-per-pod on the CLI path: agy IS up in the pane
     (``agy_found=True``) but its port is not lsof-attributable, so the lone
     candidate (ours) is used.
     """
-    import agent_meow.antigravity_native_rpc as rpc
+    import omnigent.antigravity_native_rpc as rpc
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     bridge_dir = bridge_mod.bridge_dir_for_bridge_id("bridge_cs_noport")

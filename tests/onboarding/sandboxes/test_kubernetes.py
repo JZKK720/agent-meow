@@ -4,7 +4,7 @@ Tests for the Kubernetes (entrypoint-as-host) sandbox launcher.
 The official ``kubernetes`` client is an optional dependency, so the SDK-driven
 tests inject a small fake package into ``sys.modules`` (no real cluster, no real
 client). The entrypoint model needs only ``CoreV1Api`` create/read/delete/log
-fakes — there is no exec transport to fake.
+fakes â€” there is no exec transport to fake.
 """
 
 from __future__ import annotations
@@ -17,14 +17,14 @@ from types import SimpleNamespace
 import click
 import pytest
 
-import agent_meow.onboarding.sandboxes.kubernetes as k8s
-from agent_meow.host.identity import (
+import omnigent.onboarding.sandboxes.kubernetes as k8s
+from omnigent.host.identity import (
     HOST_ID_ENV_VAR,
     HOST_NAME_ENV_VAR,
     HOST_TOKEN_ENV_VAR,
 )
-from agent_meow.onboarding.sandboxes.base import SandboxCapabilityError
-from agent_meow.onboarding.sandboxes.kubernetes import (
+from omnigent.onboarding.sandboxes.base import SandboxCapabilityError
+from omnigent.onboarding.sandboxes.kubernetes import (
     KubernetesSandboxLauncher,
     build_pod_manifest,
     build_token_secret_manifest,
@@ -43,11 +43,11 @@ _MANIFEST_KW = {
     "harness_secret": "omnigent-creds",
     "env_literals": {},
     "node_selector": None,
-    "workspace": "/home/agent_meow/workspace",
+    "workspace": "/home/omnigent/workspace",
 }
 
 
-# ── pure manifest / rendering tests (no SDK) ────────────────
+# â”€â”€ pure manifest / rendering tests (no SDK) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_pod_manifest_runs_host_under_reaper_as_container_command() -> None:
@@ -70,7 +70,7 @@ def test_build_pod_manifest_runs_host_under_reaper_as_container_command() -> Non
 def test_build_pod_manifest_init_container_prepares_and_clones_workspace() -> None:
     """The init container makes the workspace and clones the repo before the host."""
     manifest = build_pod_manifest(
-        **{**_MANIFEST_KW, "clone_dir": "/home/agent_meow/workspace/repo"},
+        **{**_MANIFEST_KW, "clone_dir": "/home/omnigent/workspace/repo"},
         repo_url="https://github.com/org/repo.git",
         repo_branch="main",
     )
@@ -78,16 +78,16 @@ def test_build_pod_manifest_init_container_prepares_and_clones_workspace() -> No
     assert len(init) == 1
     assert init[0]["name"] == "workspace-prep"
     script = init[0]["command"][2]
-    assert "mkdir -p /home/agent_meow/workspace" in script
+    assert "mkdir -p /home/omnigent/workspace" in script
     assert "git clone --branch main --single-branch -- " in script
-    assert "https://github.com/org/repo.git /home/agent_meow/workspace/repo" in script
+    assert "https://github.com/org/repo.git /home/omnigent/workspace/repo" in script
 
 
 def test_build_pod_manifest_without_repo_has_no_clone() -> None:
-    """No repo → the init container only makes the workspace, no git clone."""
+    """No repo â†’ the init container only makes the workspace, no git clone."""
     manifest = build_pod_manifest(**_MANIFEST_KW)
     script = manifest["spec"]["initContainers"][0]["command"][2]
-    assert "mkdir -p /home/agent_meow/workspace" in script
+    assert "mkdir -p /home/omnigent/workspace" in script
     assert "git clone" not in script
 
 
@@ -127,7 +127,7 @@ def test_build_pod_manifest_harness_secret_projects_into_both_containers() -> No
 
 
 def test_build_pod_manifest_omits_envfrom_without_harness_secret() -> None:
-    """No harness Secret → no envFrom key on either container."""
+    """No harness Secret â†’ no envFrom key on either container."""
     manifest = build_pod_manifest(**{**_MANIFEST_KW, "harness_secret": None})
     assert "envFrom" not in manifest["spec"]["initContainers"][0]
     assert "envFrom" not in manifest["spec"]["containers"][0]
@@ -210,7 +210,7 @@ def test_env_var_name_override_is_validated(monkeypatch: pytest.MonkeyPatch) -> 
         KubernetesSandboxLauncher()._resolve_namespace()
 
 
-# ── SDK-driven tests (fake kubernetes client) ───────────────
+# â”€â”€ SDK-driven tests (fake kubernetes client) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _FakeApiException(Exception):
@@ -363,7 +363,7 @@ def test_launch_host_creates_secret_then_pod_and_returns_workspace(
         host_name="managed-1",
         server_url="http://srv.example.com",
     )
-    assert workspace == "/home/agent_meow/workspace"
+    assert workspace == "/home/omnigent/workspace"
     # Secret is created before the Pod (so the secretKeyRef resolves immediately).
     assert fake_core.calls.index("create_secret") < fake_core.calls.index("create_pod")
     assert fake_core.created_secrets[0]["stringData"] == {HOST_TOKEN_ENV_VAR: _TOKEN}
@@ -384,7 +384,7 @@ def test_launch_host_with_repo_returns_clone_dir(fake_core: _FakeCore) -> None:
         repo_url="https://github.com/org/repo.git",
         repo_name="repo",
     )
-    assert workspace == "/home/agent_meow/workspace/repo"
+    assert workspace == "/home/omnigent/workspace/repo"
 
 
 def test_launch_host_cleans_up_on_create_failure(fake_core: _FakeCore) -> None:
@@ -487,7 +487,7 @@ def test_terminate_retries_transient_then_gives_up_best_effort(
 def test_provision_reserves_pod_name_and_run_is_unsupported() -> None:
     """provision reserves a Pod name (no Pod created); run has no exec transport."""
     launcher = _launcher()
-    # provision reserves the id — it does NOT create a Pod and does NOT raise.
+    # provision reserves the id â€” it does NOT create a Pod and does NOT raise.
     name = launcher.provision("managed-abc")
     assert name.startswith("omnigent-managed-abc-")
     # run is unsupported: the host is the Pod entrypoint, there is no exec-in.

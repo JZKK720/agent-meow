@@ -1,5 +1,5 @@
 """
-Unit tests for :class:`~?agent_meow.terminals.TerminalRegistry`.
+Unit tests for :class:`~?omnigent.terminals.TerminalRegistry`.
 
 Covers the registry's lifecycle invariants directly, without going
 through the ``sys_terminal_*`` tools. The tools are tested separately
@@ -23,13 +23,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
-from agent_meow.inner.terminal import TerminalCreateResult, TerminalInstance
-from agent_meow.terminals import TerminalRegistry
-from agent_meow.terminals import registry as registry_mod
-from agent_meow.terminals.registry import TerminalListEntry, conversation_link_for_id
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec, TerminalEnvSpec
+from omnigent.inner.terminal import TerminalCreateResult, TerminalInstance
+from omnigent.terminals import TerminalRegistry
+from omnigent.terminals import registry as registry_mod
+from omnigent.terminals.registry import TerminalListEntry, conversation_link_for_id
 
-# ── Pure bookkeeping (no tmux) ────────────────────────────────
+# â”€â”€ Pure bookkeeping (no tmux) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_active_conversation_ids_empty_on_fresh_registry() -> None:
@@ -47,7 +47,7 @@ def test_active_conversation_ids_empty_on_fresh_registry() -> None:
 
 def test_get_returns_none_for_unknown_triple() -> None:
     """
-    ``get`` is total — never raises for unknown ids. Returns
+    ``get`` is total â€” never raises for unknown ids. Returns
     ``None`` so callers can use it as a presence check.
     """
     reg = TerminalRegistry()
@@ -100,24 +100,24 @@ def test_conversation_link_for_id_maps_workspace_hosted_server_to_ui_mount(
     """
     Workspace-hosted runners link to the SPA mount, not the API mount.
 
-    The runner threads ``RUNNER_SERVER_URL`` — the API proxy base
-    (``/api/2.0/agent-meow``) — into the registry. A naive
+    The runner threads ``RUNNER_SERVER_URL`` â€” the API proxy base
+    (``/api/2.0/agent-meow``) â€” into the registry. A naive
     ``{base}/c/<id>`` would put the JSON API path in the tmux status
     bar; the link must instead land on the ``/agent-meow`` SPA mount and
     carry the ``?o=<org>`` selector ``agent-meow login`` recorded, exactly
     like the CLI's ``Web UI:`` line. Pins parity with
-    :func:`~?agent_meow.conversation_browser.conversation_url`.
+    :func:`~?omnigent.conversation_browser.conversation_url`.
 
     :param tmp_path: Pytest tmp dir for the stubbed auth-token file.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.cli_auth import store_databricks_auth
+    from omnigent.cli_auth import store_databricks_auth
 
     monkeypatch.setattr(
-        "agent_meow.cli_auth._token_file_path",
+        "omnigent.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
-    server = "https://example.databricks.com/api/2.0/agent_meow"
+    server = "https://example.databricks.com/api/2.0/omnigent"
     store_databricks_auth(
         server,
         "https://example.databricks.com",
@@ -126,7 +126,7 @@ def test_conversation_link_for_id_maps_workspace_hosted_server_to_ui_mount(
 
     assert (
         conversation_link_for_id("conv_abc123", base_url=server)
-        == "https://example.databricks.com/agent_meow/c/conv_abc123?o=2850744067564480"
+        == "https://example.databricks.com/omnigent/c/conv_abc123?o=2850744067564480"
     )
 
 
@@ -134,7 +134,7 @@ async def test_close_unknown_triple_returns_false() -> None:
     """
     Closing a never-launched (or already-closed) terminal returns
     ``False`` and does not raise. Idempotent close is the
-    contract — workflow finally-blocks and LLM-driven cleanup
+    contract â€” workflow finally-blocks and LLM-driven cleanup
     both depend on it.
     """
     reg = TerminalRegistry()
@@ -144,7 +144,7 @@ async def test_close_unknown_triple_returns_false() -> None:
 async def test_cleanup_conversation_unknown_id_is_noop() -> None:
     """
     ``cleanup_conversation`` on an id with no terminals must
-    return without raising — workflow finally-blocks always
+    return without raising â€” workflow finally-blocks always
     fire, even when the workflow never launched a terminal.
     """
     reg = TerminalRegistry()
@@ -285,7 +285,7 @@ def test_transfer_rejects_target_collision_without_moving_source(tmp_path: Path)
     assert reg.get("conv_new", "claude", "main") is target
 
 
-# ── Real-tmux lifecycle tests ─────────────────────────────────
+# â”€â”€ Real-tmux lifecycle tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 pytestmark_tmux = pytest.mark.skipif(
     shutil.which("tmux") is None,
@@ -297,7 +297,7 @@ pytestmark_tmux = pytest.mark.skipif(
 def bash_spec(tmp_path: Path) -> TerminalEnvSpec:
     """A minimal :class:`TerminalEnvSpec` with sandbox=none anchored at tmp_path.
 
-    :param tmp_path: Pytest's tmpdir — the working directory for the
+    :param tmp_path: Pytest's tmpdir â€” the working directory for the
         spawned tmux. Sandbox is forced off so the test doesn't depend
         on bwrap / macOS sandbox availability.
     :returns: A :class:`TerminalEnvSpec` ready to launch.
@@ -320,7 +320,7 @@ async def cleanup(reg_with_tmux: TerminalRegistry) -> AsyncIterator[None]:
     the registry.
 
     :param reg_with_tmux: The registry fixture.
-    :yields: ``None`` — value isn't consumed.
+    :yields: ``None`` â€” value isn't consumed.
     """
     yield
     await reg_with_tmux.shutdown()
@@ -377,7 +377,7 @@ async def test_launch_idempotent_returns_existing_instance(
     assert first is second, (
         "Idempotent launch must return the existing instance. If "
         "first is not second, the registry is spawning a fresh "
-        "tmux on every launch — a leak."
+        "tmux on every launch â€” a leak."
     )
 
 
@@ -417,7 +417,7 @@ async def test_distinct_conversations_isolated(
     inst_a = await reg_with_tmux.launch("conv_a", "bash", "s1", bash_spec)
     inst_b = await reg_with_tmux.launch("conv_b", "bash", "s1", bash_spec)
     assert inst_a is not inst_b
-    # Cross-conversation get returns None — no leakage.
+    # Cross-conversation get returns None â€” no leakage.
     assert reg_with_tmux.get("conv_a", "bash", "s1") is inst_a
     assert reg_with_tmux.get("conv_b", "bash", "s1") is inst_b
 
@@ -430,7 +430,7 @@ async def test_list_for_conversation_returns_only_owners_terminals(
 ) -> None:
     """
     ``list_for_conversation`` returns only the requested
-    conversation's terminals — no leakage of other conversations'
+    conversation's terminals â€” no leakage of other conversations'
     sessions.
     """
     del cleanup
@@ -465,12 +465,12 @@ async def test_cleanup_conversation_closes_all_owners_terminals(
 
     await reg_with_tmux.cleanup_conversation("conv_a")
 
-    # conv_a slot is gone — both entries cleared.
+    # conv_a slot is gone â€” both entries cleared.
     assert reg_with_tmux.list_for_conversation("conv_a") == []
     assert reg_with_tmux.get("conv_a", "bash", "s1") is None
     assert reg_with_tmux.get("conv_a", "bash", "s2") is None
 
-    # conv_b is untouched — isolation invariant.
+    # conv_b is untouched â€” isolation invariant.
     assert reg_with_tmux.get("conv_b", "bash", "s1") is inst_b
 
     # Cleanup the surviving instance.
@@ -484,7 +484,7 @@ async def test_close_after_cleanup_returns_false(
 ) -> None:
     """
     Closing a terminal that ``cleanup_conversation`` already
-    removed returns ``False`` — no double-close errors.
+    removed returns ``False`` â€” no double-close errors.
     """
     await reg_with_tmux.launch("conv_a", "bash", "s1", bash_spec)
     await reg_with_tmux.cleanup_conversation("conv_a")
@@ -514,7 +514,7 @@ async def test_shutdown_clears_all_conversations(
     assert reg_with_tmux.list_for_conversation("conv_b") == []
 
 
-# ── Additional pure-bookkeeping tests (no tmux) ─────────────
+# â”€â”€ Additional pure-bookkeeping tests (no tmux) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_get_instance_lock_returns_none_for_unknown_triple() -> None:
@@ -580,7 +580,7 @@ def test_transfer_cleans_up_empty_source_slot(tmp_path: Path) -> None:
     """
     After transferring the last terminal from a conversation, the
     source conversation's slot is removed from ``_by_conversation``
-    entirely — not left as an empty dict.
+    entirely â€” not left as an empty dict.
     """
     reg = TerminalRegistry()
     instance = TerminalInstance(
@@ -602,7 +602,7 @@ def test_transfer_cleans_up_empty_source_slot(tmp_path: Path) -> None:
 
 def test_conversation_link_for_id_treats_whitespace_only_as_no_base() -> None:
     """
-    A base_url of whitespace-only is treated the same as ``None`` —
+    A base_url of whitespace-only is treated the same as ``None`` â€”
     falls back to a relative path. This guards against config entries
     that are accidentally blank.
     """
@@ -720,9 +720,9 @@ async def test_close_with_timeout_still_returns_true(tmp_path: Path) -> None:
     reg._by_conversation["conv_a"] = {("bash", "s1"): instance}
     reg._instance_locks[("conv_a", "bash", "s1")] = threading.Lock()
 
-    # The close should not hang — it uses asyncio.wait_for with _CLOSE_TIMEOUT_S.
+    # The close should not hang â€” it uses asyncio.wait_for with _CLOSE_TIMEOUT_S.
     # We patch _CLOSE_TIMEOUT_S to a tiny value so the test finishes quickly.
-    import agent_meow.terminals.registry as reg_mod
+    import omnigent.terminals.registry as reg_mod
 
     original = reg_mod._CLOSE_TIMEOUT_S
     reg_mod._CLOSE_TIMEOUT_S = 0.01

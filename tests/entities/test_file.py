@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_meow.entities.file import StoredFile
+from omnigent.entities.file import StoredFile
 
 
 def test_stored_file_minimal() -> None:

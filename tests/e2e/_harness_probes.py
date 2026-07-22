@@ -9,7 +9,7 @@ up (``[claude-sdk]``, ``[codex]``, etc.) and a per-harness failure
 is visible without re-reading the parametrize tuple.
 
 Add a new entry here when a new harness wrap lands in
-:data:`~?agent_meow.runtime.harnesses._HARNESS_MODULES`. Every
+:data:`~?omnigent.runtime.harnesses._HARNESS_MODULES`. Every
 parametrized e2e test then picks up the new harness without
 per-file edits.
 """
@@ -133,12 +133,12 @@ HARNESS_PROBES: list[HarnessProbe] = [
 HARNESS_HARNESS_MODELS: list[tuple[str, str]] = [(p.harness, p.model) for p in HARNESS_PROBES]
 
 
-# IDs for parametrize calls — keeps test names like
+# IDs for parametrize calls â€” keeps test names like
 # ``test_foo[claude-sdk]`` / ``test_foo[codex]`` / ``test_foo[pi]``.
 HARNESS_IDS: list[str] = [p.harness for p in HARNESS_PROBES]
 
 
-# ── CLI availability gate ───────────────────────────────────
+# â”€â”€ CLI availability gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 # Look up table from harness name to its required CLI binary.

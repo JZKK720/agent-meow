@@ -1,12 +1,12 @@
-"""Unit tests for :mod:`~?agent_meow.tools.builtins.policy`."""
+"""Unit tests for :mod:`~?omnigent.tools.builtins.policy`."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_meow.tools.builtins.policy import SysAddPolicyTool, SysPolicyRegistryTool
+from omnigent.tools.builtins.policy import SysAddPolicyTool, SysPolicyRegistryTool
 
-# ── SysAddPolicyTool ─────────────────────────────────────
+# â”€â”€ SysAddPolicyTool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSysAddPolicyTool:
@@ -37,7 +37,7 @@ class TestSysAddPolicyTool:
         sys_add_policy is runner-dispatched; invoking it in-process
         raises NotImplementedError.
         """
-        from agent_meow.tools.base import ToolContext
+        from omnigent.tools.base import ToolContext
 
         tool = SysAddPolicyTool()
         ctx = ToolContext(task_id="t", agent_id="a")
@@ -45,7 +45,7 @@ class TestSysAddPolicyTool:
             tool.invoke("{}", ctx)
 
 
-# ── SysPolicyRegistryTool ────────────────────────────────
+# â”€â”€ SysPolicyRegistryTool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class TestSysPolicyRegistryTool:
@@ -69,7 +69,7 @@ class TestSysPolicyRegistryTool:
 
     def test_invoke_raises_not_implemented(self) -> None:
         """Runner-dispatched; raises if called in-process."""
-        from agent_meow.tools.base import ToolContext
+        from omnigent.tools.base import ToolContext
 
         tool = SysPolicyRegistryTool()
         ctx = ToolContext(task_id="t", agent_id="a")

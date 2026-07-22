@@ -1,4 +1,4 @@
-"""Tests for agent_meow.tools.builtins.read_skill_file."""
+"""Tests for omnigent.tools.builtins.read_skill_file."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.spec.types import SkillSpec
-from agent_meow.tools.base import ToolContext
-from agent_meow.tools.builtins import ReadSkillFileTool
+from omnigent.spec.types import SkillSpec
+from omnigent.tools.base import ToolContext
+from omnigent.tools.builtins import ReadSkillFileTool
 
 
 @pytest.fixture()

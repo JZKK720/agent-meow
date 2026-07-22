@@ -1,8 +1,8 @@
 """Unit tests for OIDC authentication: OIDCConfig, UnifiedAuthProvider,
 create_auth_provider factory, PKCE helpers, and session cookie utilities.
 
-Tests mirror the source at ``agent_meow/server/oidc.py`` and
-``agent_meow/server/auth.py``.
+Tests mirror the source at ``omnigent/server/oidc.py`` and
+``omnigent/server/auth.py``.
 """
 
 from __future__ import annotations
@@ -13,14 +13,14 @@ from unittest.mock import MagicMock
 import jwt
 import pytest
 
-from agent_meow.server.auth import (
+from omnigent.server.auth import (
     RESERVED_USER_LOCAL,
     UnifiedAuthProvider,
     create_auth_provider,
     resolve_auth_header,
     resolve_auth_header_strip_prefix,
 )
-from agent_meow.server.oidc import (
+from omnigent.server.oidc import (
     OIDCConfig,
     derive_code_challenge,
     generate_code_verifier,
@@ -29,19 +29,19 @@ from agent_meow.server.oidc import (
     mint_session_token,
 )
 
-# ── PKCE helpers ─────────────────────────────────────────────────
+# â”€â”€ PKCE helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_generate_code_verifier_length() -> None:
-    """Code verifier is within the RFC 7636 length bounds (43–128 chars).
+    """Code verifier is within the RFC 7636 length bounds (43â€“128 chars).
 
     A verifier outside this range would be rejected by compliant
     IdPs during the token exchange.
     """
     verifier = generate_code_verifier()
-    # RFC 7636 requires 43–128 characters.
+    # RFC 7636 requires 43â€“128 characters.
     assert 43 <= len(verifier) <= 128, (
-        f"Code verifier length {len(verifier)} is outside RFC 7636 bounds (43–128)."
+        f"Code verifier length {len(verifier)} is outside RFC 7636 bounds (43â€“128)."
     )
 
 
@@ -63,7 +63,7 @@ def test_derive_code_challenge_is_deterministic() -> None:
 def test_derive_code_challenge_differs_for_different_verifiers() -> None:
     """Different verifiers produce different challenges.
 
-    If they didn't, PKCE would provide no security — any
+    If they didn't, PKCE would provide no security â€” any
     code_verifier would match any challenge.
     """
     v1 = generate_code_verifier()
@@ -71,17 +71,17 @@ def test_derive_code_challenge_differs_for_different_verifiers() -> None:
     assert derive_code_challenge(v1) != derive_code_challenge(v2)
 
 
-# ── Session cookie minting / validation ──────────────────────────
+# â”€â”€ Session cookie minting / validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
-_TEST_SECRET = b"a" * 32  # 32 bytes — minimum valid secret
+_TEST_SECRET = b"a" * 32  # 32 bytes â€” minimum valid secret
 
 
 def test_mint_session_cookie_produces_valid_jwt() -> None:
     """Minted cookie is a valid HS256 JWT with the expected claims.
 
     If the cookie fails to decode, the OIDCAuthProvider would
-    reject every request and return None (→ 401 for all users).
+    reject every request and return None (â†’ 401 for all users).
     """
     token = mint_session_cookie(
         user_id="alice@example.com",
@@ -141,7 +141,7 @@ def test_mint_session_token_short_ttl_expires() -> None:
 
     This is the property that removes the fixed session-length cap: the
     minted owner token genuinely expires, so the runner must (and does)
-    re-mint — rather than holding one static long-lived credential.
+    re-mint â€” rather than holding one static long-lived credential.
     """
     token = mint_session_token(
         user_id="alice@example.com",
@@ -157,7 +157,7 @@ def test_hmac_digest_is_deterministic() -> None:
     """Same token + secret always produces the same digest.
 
     The credential cache in UnifiedAuthProvider uses this as a
-    cache key — non-deterministic digests would cause 100% cache
+    cache key â€” non-deterministic digests would cause 100% cache
     misses.
     """
     d1 = hmac_digest("my-token", _TEST_SECRET)
@@ -176,7 +176,7 @@ def test_hmac_digest_differs_for_different_tokens() -> None:
     assert d1 != d2
 
 
-# ── UnifiedAuthProvider (header source) ──────────────────────────
+# â”€â”€ UnifiedAuthProvider (header source) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _mock_request(
@@ -214,7 +214,7 @@ def test_header_source_returns_email_from_header() -> None:
 def test_header_source_rejects_missing_header(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Missing header is rejected (``None`` → 401) by default.
+    """Missing header is rejected (``None`` â†’ 401) by default.
 
     A missing or proxy-dropped ``X-Forwarded-Email``
     must fail closed. If this returned ``"local"`` instead, every
@@ -236,7 +236,7 @@ def test_header_source_local_single_user_falls_back_to_local() -> None:
 
     ``local_single_user=True`` models a server spawned with
     ``OMNIGENT_LOCAL_SINGLE_USER=1`` (the managed local spawn
-    paths) — its only user IS the local user, and no proxy exists
+    paths) â€” its only user IS the local user, and no proxy exists
     to inject identity.
     """
     provider = UnifiedAuthProvider(source="header", local_single_user=True)
@@ -251,7 +251,7 @@ def test_header_source_resolves_single_user_from_env(
 
     The managed local spawn paths configure single-user mode via the
     ``OMNIGENT_LOCAL_SINGLE_USER=1`` env var, not a constructor
-    argument — this pins the env-resolution path they rely on.
+    argument â€” this pins the env-resolution path they rely on.
     """
     monkeypatch.setenv("OMNIGENT_LOCAL_SINGLE_USER", "1")
     provider = UnifiedAuthProvider(source="header")
@@ -263,7 +263,7 @@ def test_header_source_single_user_still_honors_header() -> None:
     """A present header wins over the single-user fallback.
 
     Even on a single-user local runtime, a proxy-injected identity
-    must be honored (and reserved names rejected) — the fallback
+    must be honored (and reserved names rejected) â€” the fallback
     only covers the header-absent case.
     """
     provider = UnifiedAuthProvider(source="header", local_single_user=True)
@@ -336,7 +336,7 @@ def test_header_source_resolves_header_name_from_env(
     """``header_name=None`` resolves from ``OMNIGENT_AUTH_HEADER``.
 
     The deploy path configures the header name via env var, not a
-    constructor argument — this pins the env-resolution path.
+    constructor argument â€” this pins the env-resolution path.
     """
     monkeypatch.setenv("OMNIGENT_AUTH_HEADER", "Cf-Access-Authenticated-User-Email")
     provider = UnifiedAuthProvider(source="header")
@@ -361,7 +361,7 @@ def test_resolve_auth_header_defaults_to_x_forwarded_email(
     assert resolve_auth_header() == "X-Forwarded-Email"
 
 
-# ── UnifiedAuthProvider (header source: Google IAP prefix strip) ──
+# â”€â”€ UnifiedAuthProvider (header source: Google IAP prefix strip) â”€â”€
 
 # Google IAP injects its identity in ``X-Goog-Authenticated-User-Email``
 # namespaced as ``accounts.google.com:<email>``. The configured strip
@@ -375,7 +375,7 @@ def test_header_source_strips_configured_prefix() -> None:
 
     IAP forwards ``accounts.google.com:user@example.com``. Without
     stripping, the identity would carry the namespace prefix and never
-    match the bare email used for ownership/sharing — so a deploy behind
+    match the bare email used for ownership/sharing â€” so a deploy behind
     IAP could not be addressed by its real identity at all.
     """
     provider = UnifiedAuthProvider(
@@ -391,7 +391,7 @@ def test_header_source_strip_prefix_absent_passes_value_through() -> None:
     """A value lacking the prefix is used unchanged.
 
     ``str.removeprefix`` is a no-op when the prefix is absent, so a
-    proxy value that is already bare still authenticates — the strip is
+    proxy value that is already bare still authenticates â€” the strip is
     purely additive and never corrupts a non-namespaced identity.
     """
     provider = UnifiedAuthProvider(
@@ -407,7 +407,7 @@ def test_header_source_rejects_value_that_is_only_the_prefix() -> None:
     """A header carrying only the prefix (empty after strip) fails closed.
 
     ``accounts.google.com:`` with no email is malformed; it must reject
-    (``None`` → 401), never authenticate as an empty-string identity
+    (``None`` â†’ 401), never authenticate as an empty-string identity
     that requests could then share.
     """
     provider = UnifiedAuthProvider(
@@ -425,7 +425,7 @@ def test_header_source_rejects_reserved_name_behind_prefix() -> None:
 
     Otherwise ``accounts.google.com:local`` would slip past the
     reserved check (it isn't literally ``"local"``) and then strip down
-    to the reserved ``"local"`` sentinel — letting a client impersonate
+    to the reserved ``"local"`` sentinel â€” letting a client impersonate
     it through the namespaced header.
     """
     provider = UnifiedAuthProvider(
@@ -443,7 +443,7 @@ def test_header_source_resolves_strip_prefix_from_env(
     """``header_strip_prefix=None`` resolves from the env var.
 
     The deploy path configures the prefix via
-    ``OMNIGENT_AUTH_HEADER_STRIP_PREFIX``, not a constructor argument —
+    ``OMNIGENT_AUTH_HEADER_STRIP_PREFIX``, not a constructor argument â€”
     this pins the env-resolution path IAP deployments rely on.
     """
     monkeypatch.setenv("OMNIGENT_AUTH_HEADER", _IAP_HEADER)
@@ -456,7 +456,7 @@ def test_header_source_resolves_strip_prefix_from_env(
 def test_resolve_auth_header_strip_prefix_defaults_to_empty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Unset/whitespace ``OMNIGENT_AUTH_HEADER_STRIP_PREFIX`` → ``""``.
+    """Unset/whitespace ``OMNIGENT_AUTH_HEADER_STRIP_PREFIX`` â†’ ``""``.
 
     The default must strip nothing so every existing header-mode deploy
     (none of which set this) keeps passing the header value through
@@ -468,7 +468,7 @@ def test_resolve_auth_header_strip_prefix_defaults_to_empty(
     assert resolve_auth_header_strip_prefix() == ""
 
 
-# ── UnifiedAuthProvider (oidc source) ────────────────────────────
+# â”€â”€ UnifiedAuthProvider (oidc source) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_oidc_config() -> OIDCConfig:
@@ -570,7 +570,7 @@ def test_oidc_source_rejects_reserved_sub_claims(reserved: str) -> None:
     """OIDC source rejects cookies with reserved user names in sub.
 
     If a cookie somehow contained "local" or "__public__" as the
-    sub claim, it must not be accepted — these are internal
+    sub claim, it must not be accepted â€” these are internal
     sentinel values.
     """
     config = _make_oidc_config()
@@ -591,7 +591,7 @@ def test_oidc_source_caches_validated_cookie() -> None:
 
     The TTL credential cache prevents decoding the same cookie on
     every request. If caching is broken, JWT decode runs on every
-    request — a significant performance regression under load.
+    request â€” a significant performance regression under load.
     """
     config = _make_oidc_config()
     provider = UnifiedAuthProvider(source="oidc", oidc_config=config)
@@ -698,7 +698,7 @@ def test_oidc_source_login_url() -> None:
     assert provider.login_url == "/auth/login"
 
 
-# ── create_auth_provider factory ─────────────────────────────────
+# â”€â”€ create_auth_provider factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_factory_returns_header_provider_explicit_zero_config(
@@ -761,7 +761,7 @@ def test_factory_oidc_fails_without_config(
         create_auth_provider()
 
 
-# ── OIDCConfig.from_env validation ───────────────────────────────
+# â”€â”€ OIDCConfig.from_env validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_oidc_config_rejects_short_cookie_secret(
@@ -826,7 +826,7 @@ def test_oidc_config_github_provider(
 def test_oidc_config_github_empty_scopes_env_falls_back_to_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Empty OMNIGENT_OIDC_SCOPES → provider default (else GitHub 404s consent)."""
+    """Empty OMNIGENT_OIDC_SCOPES â†’ provider default (else GitHub 404s consent)."""
     monkeypatch.setenv("OMNIGENT_OIDC_ISSUER", "https://github.com")
     monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_ID", "test")
     monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_SECRET", "test")
@@ -866,19 +866,19 @@ def test_oidc_redirect_uri_derived_from_domain(monkeypatch: pytest.MonkeyPatch) 
 
     Lets a domain-based deploy set one var (OMNIGENT_DOMAIN, already
     needed by the Caddy overlay) instead of two, and removes the
-    http/https scheme mistake. GitHub branch → no network discovery.
+    http/https scheme mistake. GitHub branch â†’ no network discovery.
     """
     monkeypatch.setenv("OMNIGENT_OIDC_ISSUER", "https://github.com")
     monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_ID", "test")
     monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_SECRET", "test")
     monkeypatch.delenv("OMNIGENT_OIDC_REDIRECT_URI", raising=False)
-    monkeypatch.setenv("OMNIGENT_DOMAIN", "agent_meow.example.com")
+    monkeypatch.setenv("OMNIGENT_DOMAIN", "omnigent.example.com")
     monkeypatch.setenv("OMNIGENT_OIDC_COOKIE_SECRET", "aa" * 32)
 
     config = OIDCConfig.from_env()
 
-    assert config.redirect_uri == "https://agent_meow.example.com/auth/callback"
-    # Derived URI is https → secure cookies + __Host- prefix.
+    assert config.redirect_uri == "https://omnigent.example.com/auth/callback"
+    # Derived URI is https â†’ secure cookies + __Host- prefix.
     assert config.secure_cookies is True
 
 
@@ -888,7 +888,7 @@ def test_oidc_explicit_redirect_uri_wins_over_domain(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_ID", "test")
     monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_SECRET", "test")
     monkeypatch.setenv("OMNIGENT_OIDC_REDIRECT_URI", "http://10.0.0.5:8000/auth/callback")
-    monkeypatch.setenv("OMNIGENT_DOMAIN", "agent_meow.example.com")
+    monkeypatch.setenv("OMNIGENT_DOMAIN", "omnigent.example.com")
     monkeypatch.setenv("OMNIGENT_OIDC_COOKIE_SECRET", "aa" * 32)
 
     config = OIDCConfig.from_env()

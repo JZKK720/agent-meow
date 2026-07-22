@@ -7,10 +7,10 @@ from pathlib import Path
 import sqlalchemy as sa
 from alembic import command
 
-from agent_meow.db.migrations.versions.e9f2a7c4d1b8_backfill_unbound_runner_id import (
+from omnigent.db.migrations.versions.e9f2a7c4d1b8_backfill_unbound_runner_id import (
     OFFLINE_MIGRATED_RUNNER_ID,
 )
-from agent_meow.db.utils import (
+from omnigent.db.utils import (
     _build_alembic_config,
 )
 

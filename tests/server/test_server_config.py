@@ -1,8 +1,8 @@
-"""Tests for the shared server-config loader (:mod:`~?agent_meow.server.server_config`).
+"""Tests for the shared server-config loader (:mod:`~?omnigent.server.server_config`).
 
-Covers path resolution (env override → ``<data_dir>/config.yaml`` →
+Covers path resolution (env override â†’ ``<data_dir>/config.yaml`` â†’
 None), loading + fail-open behavior (missing / malformed / non-mapping
-→ empty dict, never a crash), and the ``config_str_list`` coercion used
+â†’ empty dict, never a crash), and the ``config_str_list`` coercion used
 for ``admins`` / ``allowed_domains``.
 """
 
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.server.server_config import (
+from omnigent.server.server_config import (
     config_str_list,
     load_server_config,
     resolve_config_path,
@@ -25,7 +25,7 @@ def _pin_data_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("OMNIGENT_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-credentials"))
 
 
-# ── path resolution ───────────────────────────────────────────────
+# â”€â”€ path resolution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_config_path_env_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -49,12 +49,12 @@ def test_resolve_config_path_default_when_present(
 def test_resolve_config_path_none_when_absent(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """No env, no default file → ``None`` (pure-env back-compat)."""
+    """No env, no default file â†’ ``None`` (pure-env back-compat)."""
     _pin_data_dir(monkeypatch, tmp_path)
     assert resolve_config_path() is None
 
 
-# ── loading ───────────────────────────────────────────────────────
+# â”€â”€ loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_load_server_config_parses(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -69,7 +69,7 @@ def test_load_server_config_parses(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
 def test_load_server_config_empty_when_no_file(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """No config file → empty dict (not an error)."""
+    """No config file â†’ empty dict (not an error)."""
     _pin_data_dir(monkeypatch, tmp_path)
     assert load_server_config() == {}
 
@@ -92,7 +92,7 @@ def test_load_server_config_non_mapping_is_empty(
     assert load_server_config() == {}
 
 
-# ── config_str_list ───────────────────────────────────────────────
+# â”€â”€ config_str_list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_config_str_list_accepts_list() -> None:
@@ -100,7 +100,7 @@ def test_config_str_list_accepts_list() -> None:
 
 
 def test_config_str_list_accepts_scalar() -> None:
-    """A single scalar is wrapped — a one-entry value needn't be a list."""
+    """A single scalar is wrapped â€” a one-entry value needn't be a list."""
     assert config_str_list("a@x.com") == ["a@x.com"]
 
 

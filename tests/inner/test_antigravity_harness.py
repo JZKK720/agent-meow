@@ -1,7 +1,7 @@
 """
 Tests for the ``harness: antigravity`` wrap shape.
 
-Mirror of the openai-agents wrap tests — verifies the wrap module has the
+Mirror of the openai-agents wrap tests â€” verifies the wrap module has the
 same shape (registry entry, FastAPI app routes, env-var-driven lazy
 executor construction). Does NOT exercise the real ``google-antigravity``
 SDK; the inner :class:`AntigravityExecutor.__init__` is mocked so the
@@ -14,8 +14,8 @@ from typing import Any
 
 import pytest
 
-from agent_meow.inner import antigravity_harness
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
+from omnigent.inner import antigravity_harness
+from omnigent.runtime.harnesses import _HARNESS_MODULES
 
 
 def test_harness_module_registered_in_module_registry() -> None:
@@ -25,7 +25,7 @@ def test_harness_module_registered_in_module_registry() -> None:
     parent tries to spawn it for an ``executor.harness == "antigravity"``
     spec.
     """
-    assert _HARNESS_MODULES.get("antigravity") == "agent_meow.inner.antigravity_harness"
+    assert _HARNESS_MODULES.get("antigravity") == "omnigent.inner.antigravity_harness"
 
 
 def test_create_app_returns_fastapi_with_required_routes() -> None:
@@ -64,7 +64,7 @@ def _capture_factory_kwargs(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         captured.update(kwargs)
 
     monkeypatch.setattr(
-        "agent_meow.inner.antigravity_harness.AntigravityExecutor.__init__", _fake_init
+        "omnigent.inner.antigravity_harness.AntigravityExecutor.__init__", _fake_init
     )
     antigravity_harness._build_antigravity_executor()
     return captured
@@ -75,7 +75,7 @@ def test_executor_factory_threads_env_vars(monkeypatch: pytest.MonkeyPatch) -> N
 
     Locks in the canonical Gemini-native env-var contract the spawn-env builder
     (``_build_antigravity_spawn_env`` in workflow.py) emits. There are no
-    ``*_GATEWAY_*`` vars — the SDK has no OpenAI-compatible base_url.
+    ``*_GATEWAY_*`` vars â€” the SDK has no OpenAI-compatible base_url.
     """
     monkeypatch.setenv("HARNESS_ANTIGRAVITY_MODEL", "gemini-3-pro")
     monkeypatch.setenv("HARNESS_ANTIGRAVITY_API_KEY", "ag-test-key")

@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agent_meow.inner.executor import (
+from omnigent.inner.executor import (
     MockExecutor,
     TextChunk,
     ToolCallRequest,

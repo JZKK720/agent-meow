@@ -1,10 +1,10 @@
 """
-Unit tests for :mod:`~?agent_meow.runtime.inflight_text`.
+Unit tests for :mod:`~?omnigent.runtime.inflight_text`.
 
 The in-flight-text index recovers the assistant text streamed in the
 current turn so a client (re)connecting mid-turn can replay it.
-These tests pin its state-machine invariants directly — the layer where
-they actually live — rather than through a full workflow:
+These tests pin its state-machine invariants directly â€” the layer where
+they actually live â€” rather than through a full workflow:
 
 * :func:`record_publish` accumulates ``response.output_text.delta`` text
   and captures the turn's ``ResponseObject``; :func:`snapshot_for`
@@ -13,11 +13,11 @@ they actually live — rather than through a full workflow:
   prepends a prior turn's text.
 * Any terminal turn event clears the entry.
 * Replay only fires once real text has streamed (so a lifecycle-only
-  turn — e.g. claude-native, which streams no ``output_text`` — stays
+  turn â€” e.g. claude-native, which streams no ``output_text`` â€” stays
   inert and never double-renders the cold-load snapshot).
 * Reasoning deltas are intentionally NOT tracked.
 
-The wire-up between :func:`~?agent_meow.runtime.session_stream.publish`
+The wire-up between :func:`~?omnigent.runtime.session_stream.publish`
 and this index, plus the snapshot/live-tail partition guarantee, is
 tested in :file:`tests/runtime/test_session_stream.py`.
 """
@@ -28,7 +28,7 @@ from typing import Any
 
 import pytest
 
-from agent_meow.runtime import inflight_text
+from omnigent.runtime import inflight_text
 
 
 @pytest.fixture(autouse=True)
@@ -122,7 +122,7 @@ def test_reset_text_drops_committed_text_but_keeps_header() -> None:
 
     inflight_text.reset_text(cid)
 
-    # The flushed text is gone — no replay (snapshot_for returns [] when a
+    # The flushed text is gone â€” no replay (snapshot_for returns [] when a
     # header exists but no text remains).
     assert inflight_text.snapshot_for(cid) == [], (
         "reset_text must drop the already-committed text from the replay"
@@ -172,7 +172,7 @@ def test_in_progress_after_created_refreshes_without_dropping_text() -> None:
 
 def test_new_response_id_resets_accumulation() -> None:
     """
-    A different response id starts a fresh turn — no cross-turn leak.
+    A different response id starts a fresh turn â€” no cross-turn leak.
 
     Without the id-keyed reset, turn 2's replay would prepend all of
     turn 1's text.
@@ -181,7 +181,7 @@ def test_new_response_id_resets_accumulation() -> None:
     inflight_text.record_publish(cid, _created("resp_1"))
     inflight_text.record_publish(cid, _delta("turn one"))
     # New turn (response.completed would normally clear first, but a
-    # missed terminal must not strand turn 1's text either — the id
+    # missed terminal must not strand turn 1's text either â€” the id
     # change alone resets).
     inflight_text.record_publish(cid, _created("resp_2"))
     inflight_text.record_publish(cid, _delta("turn two"))
@@ -217,7 +217,7 @@ def test_terminal_event_clears_entry(terminal_type: str) -> None:
     inflight_text.record_publish(cid, _delta("some text"))
     inflight_text.record_publish(cid, {"type": terminal_type, "response": {"model": "nessie"}})
 
-    # Empty list (not just falsy) — the entry was popped. A non-empty
+    # Empty list (not just falsy) â€” the entry was popped. A non-empty
     # result means the terminal branch failed to clear and the next
     # reconnect would replay stale text.
     assert inflight_text.snapshot_for(cid) == []
@@ -235,7 +235,7 @@ def test_no_replay_until_text_streamed() -> None:
     cid = "conv_e"
     inflight_text.record_publish(cid, _created("resp_1"))
 
-    # No text streamed → nothing to recover → no replay. A non-empty
+    # No text streamed â†’ nothing to recover â†’ no replay. A non-empty
     # result would inject a header-only bubble for every in-flight turn.
     assert inflight_text.snapshot_for(cid) == []
 
@@ -244,7 +244,7 @@ def test_reasoning_deltas_are_not_tracked() -> None:
     """
     Reasoning deltas never populate the index.
 
-    Reasoning is throwaway and may legitimately differ on reload — only
+    Reasoning is throwaway and may legitimately differ on reload â€” only
     assistant ``output_text`` is recovered. If a reasoning delta were
     accumulated, a reasoning-only step would replay as assistant text.
     """
@@ -255,7 +255,7 @@ def test_reasoning_deltas_are_not_tracked() -> None:
         cid, {"type": "response.reasoning_summary_text.delta", "delta": "summary"}
     )
 
-    # Lifecycle seen but no output_text → no replay. Non-empty here
+    # Lifecycle seen but no output_text â†’ no replay. Non-empty here
     # would mean reasoning leaked into the assistant-text accumulator.
     assert inflight_text.snapshot_for(cid) == []
 
@@ -265,7 +265,7 @@ def test_delta_before_lifecycle_replays_headless() -> None:
     Text arriving before any lifecycle event is still recovered.
 
     Anomalous for the scaffold (which emits ``response.created`` first),
-    but the text must not be silently dropped — better a header-less
+    but the text must not be silently dropped â€” better a header-less
     delta replay than lost content.
     """
     cid = "conv_g"
@@ -314,7 +314,7 @@ def test_terminal_session_status_clears_entry(terminal_status: str) -> None:
 
     inflight_text.record_publish(cid, _status(terminal_status))
 
-    # Cleared — the turn ended without a terminal response.* event.
+    # Cleared â€” the turn ended without a terminal response.* event.
     # Non-empty here means the Stop/delete/setup-failure leak is back.
     assert inflight_text.snapshot_for(cid) == []
 
@@ -326,7 +326,7 @@ def test_nonterminal_session_status_keeps_inflight_text(nonterminal_status: str)
 
     ``running`` is the active-turn status and ``waiting`` is a mid-turn
     pause (e.g. a parked elicitation); a turn is still streaming, so its
-    accumulated text must survive — clearing here would re-break the
+    accumulated text must survive â€” clearing here would re-break the
     reload recovery the fix provides.
     """
     cid = "conv_status_keep"
@@ -347,8 +347,8 @@ def test_policy_deny_sentinel_does_not_linger() -> None:
     The policy-deny notice is cleared by its trailing ``idle`` (no stray replay).
 
     The deny path publishes a synthetic ``output_text.delta``
-    (``"[Denied by policy: …]"``) with NO ``response.created`` and NO
-    terminal ``response.*`` — only ``session.status running`` … ``idle``
+    (``"[Denied by policy: â€¦]"``) with NO ``response.created`` and NO
+    terminal ``response.*`` â€” only ``session.status running`` â€¦ ``idle``
     around it. The terminal ``idle`` must clear the header-less entry, or
     the deny notice replays as a stray agent-less bubble on every reload.
     """
@@ -360,7 +360,7 @@ def test_policy_deny_sentinel_does_not_linger() -> None:
 
     inflight_text.record_publish(cid, _status("idle"))
 
-    # Cleared by idle → no stray replay on a later reload.
+    # Cleared by idle â†’ no stray replay on a later reload.
     assert inflight_text.snapshot_for(cid) == []
 
 
@@ -384,7 +384,7 @@ def test_discard_drops_entry_and_is_idempotent() -> None:
     inflight_text.discard("conv_never_tracked")
 
 
-# ── Claude-native message-scoped streaming ───────────────────────────
+# â”€â”€ Claude-native message-scoped streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _native_delta(
@@ -466,7 +466,7 @@ def test_native_messages_replay_in_order_not_blobbed() -> None:
     """
     Multiple in-flight messages replay as separate deltas, in stream order.
 
-    A claude-native turn streams several messages (message → tool →
+    A claude-native turn streams several messages (message â†’ tool â†’
     message); each must replay under its OWN message_id, not be
     concatenated into one blob (which would lose message boundaries and
     the per-message ids the client keys previews on).
@@ -487,8 +487,8 @@ def test_native_output_item_done_retires_by_content_not_position() -> None:
     A committed ``message`` retires the preview whose TEXT it matches.
 
     Two complete messages are in flight; the commit carries the SECOND
-    one's text, so the second is retired and the first — still uncommitted
-    — keeps replaying. The old FIFO rule would have dropped the oldest
+    one's text, so the second is retired and the first â€” still uncommitted
+    â€” keeps replaying. The old FIFO rule would have dropped the oldest
     (m1) regardless of content, leaving the committed m2 to double-render
     against the cold-load snapshot. The done event carries no message_id,
     so content is the only reliable join key (proven byte-equal by probe).
@@ -503,7 +503,7 @@ def test_native_output_item_done_retires_by_content_not_position() -> None:
 
     snap = inflight_text.snapshot_for(cid)
     # m2 retired by content; m1 (older, uncommitted) survives. FIFO would
-    # have produced ["m1"... dropped, "m2" kept] — i.e. the wrong result.
+    # have produced ["m1"... dropped, "m2" kept] â€” i.e. the wrong result.
     assert [(e["message_id"], e["delta"]) for e in snap] == [("m1", "first answer")], (
         f"content match must retire m2 (the committed text), not the oldest m1: {snap!r}"
     )
@@ -514,8 +514,8 @@ def test_pi_native_empty_final_marker_retires_message_on_commit() -> None:
     A pi-native turn is retired even though its ``final`` chunk is empty.
 
     pi-native (and any harness using the web UI's ``finalizeStreamingMessage``
-    contract) signals end-of-message with an EMPTY marker — ``delta=""`` with
-    ``final=true`` — after the text chunks. The completion flag, not the
+    contract) signals end-of-message with an EMPTY marker â€” ``delta=""`` with
+    ``final=true`` â€” after the text chunks. The completion flag, not the
     (absent) text, is what flips ``final_seen`` and makes the message eligible
     for the byte-equal retire on ``output_item.done``.
 
@@ -531,7 +531,7 @@ def test_pi_native_empty_final_marker_retires_message_on_commit() -> None:
     marker = _native_delta("pi:msg:0", 1, "", final=True)
     suppress_marker = inflight_text.record_publish(cid, marker)
     # The empty marker is broadcast (not suppressed) while the message is still
-    # uncommitted — its live preview must finalize on the web client.
+    # uncommitted â€” its live preview must finalize on the web client.
     assert suppress_marker is False
 
     # The empty marker recorded text only via its earlier chunk; the join key
@@ -552,7 +552,7 @@ def test_pi_native_empty_final_marker_suppresses_when_commit_races_ahead() -> No
     The committed ``output_item.done`` can arrive BEFORE the deltas (the
     single-chunk race): no in-flight message matches yet, so its fingerprint
     is buffered. When the text chunk then the empty ``final`` marker land, the
-    marker — now honored rather than dropped — completes the message, matches
+    marker â€” now honored rather than dropped â€” completes the message, matches
     the buffered fingerprint, retires it, and is suppressed from the live tail
     so the duplicate trailing chunk never reaches the client.
     """
@@ -619,7 +619,7 @@ def test_native_single_chunk_commit_before_delta_is_retired_and_suppressed() -> 
     """
     The core bug: a single-chunk message whose only chunk lands AFTER commit.
 
-    FIFO could never handle this — at commit time the message is not
+    FIFO could never handle this â€” at commit time the message is not
     tracked at all, so nothing is popped and its id is never retired; its
     late ``final`` chunk then resurrects a preview that both replays on
     reconnect and renders live as a duplicate of the committed message.
@@ -631,7 +631,7 @@ def test_native_single_chunk_commit_before_delta_is_retired_and_suppressed() -> 
     chunk from the live fan-out.
     """
     cid = "conv_native_single_chunk_race"
-    # Commit arrives FIRST — no delta for this message has been seen yet.
+    # Commit arrives FIRST â€” no delta for this message has been seen yet.
     suppress_commit = inflight_text.record_publish(cid, _message_done("ci_1", text="Hello world"))
     assert suppress_commit is False
     assert inflight_text.snapshot_for(cid) == [], "nothing is in flight at commit time"
@@ -662,7 +662,7 @@ def test_native_late_chunk_for_retired_message_is_dropped_and_suppressed() -> No
     """
     cid = "conv_native_retired_stray"
     inflight_text.record_publish(cid, _native_delta("m1", 0, "the answer", final=True))
-    # Commit matches m1 by content → m1 retired.
+    # Commit matches m1 by content â†’ m1 retired.
     inflight_text.record_publish(cid, _message_done("ci_1", text="the answer"))
     assert inflight_text.snapshot_for(cid) == [], "m1 retired on commit"
 
@@ -678,7 +678,7 @@ def test_native_retire_by_content_leaves_a_still_streaming_sibling() -> None:
     Retiring one committed message leaves a younger, still-streaming one.
 
     m1 completes and commits; m2 is still mid-stream (no ``final`` yet).
-    Committing m1 by content retires only m1 — m2 keeps accumulating and
+    Committing m1 by content retires only m1 â€” m2 keeps accumulating and
     replaying (the retire is scoped to the matched message, not the turn).
     """
     cid = "conv_native_sibling"
@@ -703,7 +703,7 @@ def test_native_commit_without_matching_text_retires_nothing() -> None:
     Content matching never mis-retires: if the committed text doesn't
     byte-match a completed in-flight message (deltas not yet arrived, or a
     multi-text-block message whose deltas concatenate differently), every
-    preview survives — the fingerprint is buffered for a later match, and
+    preview survives â€” the fingerprint is buffered for a later match, and
     unmatched previews are cleared at turn-end, not dropped here on a
     wrong positional guess.
     """
@@ -727,12 +727,12 @@ def test_native_identical_text_messages_reconciled_by_count() -> None:
     When both commits arrive before either's deltas, the committed-text
     multiset holds the one fingerprint with count 2. Each message's
     ``final`` chunk consumes one, so BOTH are retired and BOTH chunks
-    suppressed — and the count drains to exactly zero, so a later identical
+    suppressed â€” and the count drains to exactly zero, so a later identical
     chunk is treated as a genuine new live message (not a phantom match a
     plain set would produce forever).
     """
     cid = "conv_native_identical"
-    # Both commits first → same fingerprint, count 2.
+    # Both commits first â†’ same fingerprint, count 2.
     inflight_text.record_publish(cid, _message_done("ci_1", text="OK"))
     inflight_text.record_publish(cid, _message_done("ci_2", text="OK"))
 
@@ -762,14 +762,14 @@ def test_native_stale_committed_fingerprint_expires_after_ttl(
     be suppressed by it.
 
     Drives the monotonic clock via the ``_monotonic`` indirection (patched,
-    not the global ``time.monotonic`` — that would leak across workers).
+    not the global ``time.monotonic`` â€” that would leak across workers).
     """
     cid = "conv_native_ttl_expire"
     clock = {"now": 1000.0}
     monkeypatch.setattr(inflight_text, "_monotonic", lambda: clock["now"])
 
     # A commit lands first (single-chunk race) and buffers "OK" at t=1000,
-    # but its own delta never arrives (e.g. dropped) — the fingerprint is
+    # but its own delta never arrives (e.g. dropped) â€” the fingerprint is
     # now stale and would mis-suppress a future "OK".
     inflight_text.record_publish(cid, _message_done("ci_1", text="OK"))
 
@@ -777,7 +777,7 @@ def test_native_stale_committed_fingerprint_expires_after_ttl(
     clock["now"] = 1000.0 + inflight_text._NATIVE_COMMITTED_TTL_S + 1.0
     suppress = inflight_text.record_publish(cid, _native_delta("m_later", 0, "OK", final=True))
 
-    # Expired → NOT a match: True here would mean the stale fingerprint hid a
+    # Expired â†’ NOT a match: True here would mean the stale fingerprint hid a
     # legitimate later message (the cross-turn-leak regression this guards).
     assert suppress is False, "a fingerprint older than the TTL must not suppress a later message"
     # And the later message is a normal live message (still in the index).
@@ -809,7 +809,7 @@ def test_native_committed_fingerprint_within_ttl_still_suppresses(
     suppress = inflight_text.record_publish(cid, _native_delta("m1", 0, "Hello", final=True))
 
     assert suppress is True, (
-        "a delta racing within the TTL is the commit's own chunk — suppress it"
+        "a delta racing within the TTL is the commit's own chunk â€” suppress it"
     )
     assert inflight_text.snapshot_for(cid) == [], "and the message is retired (no replay)"
 
@@ -848,7 +848,7 @@ def test_native_delta_dedupes_by_index() -> None:
     cid = "conv_native_dup"
     inflight_text.record_publish(cid, _native_delta("m1", 0, "Hello "))
     inflight_text.record_publish(cid, _native_delta("m1", 1, "world"))
-    # Duplicate of index 1 (and a stale index 0) — both ignored.
+    # Duplicate of index 1 (and a stale index 0) â€” both ignored.
     inflight_text.record_publish(cid, _native_delta("m1", 1, "world"))
     inflight_text.record_publish(cid, _native_delta("m1", 0, "Hello "))
 
@@ -864,11 +864,11 @@ def test_native_previews_survive_terminal_session_status(terminal_status: str) -
     Claude-native goes ``idle`` (its PTY falls quiet) MID-TURN while
     parked on a permission prompt, with streamed text that has not yet
     committed to the store. Dropping the preview on ``idle`` would lose
-    exactly that text on reload — the user-reported bug (streamed text +
+    exactly that text on reload â€” the user-reported bug (streamed text +
     pending elicitation, gone on refresh). Native previews are evicted
     per-message by ``output_item.done`` and wholesale by ``discard``, not
     by session status. (Contrast ``test_terminal_session_status_clears_entry``,
-    which pins that the RESPONSE-scoped blob still clears on ``idle`` —
+    which pins that the RESPONSE-scoped blob still clears on ``idle`` â€”
     in-process agents emit ``waiting`` for a parked elicitation, so their
     ``idle`` always means turn-over.)
     """

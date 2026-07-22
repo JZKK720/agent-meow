@@ -1,4 +1,4 @@
-"""Per-harness live characterization test — antigravity (Gemini) SDK harness.
+"""Per-harness live characterization test â€” antigravity (Gemini) SDK harness.
 
 Runs ``agent-meow run <spec> --harness antigravity ...`` as a real subprocess and
 asserts structural invariants over the persisted **conversation transcript**
@@ -16,15 +16,15 @@ Unlike the other per-harness e2e tests (claude-sdk / codex / openai-agents / pi)
 the antigravity harness is **Gemini-native**: the SDK has no OpenAI-compatible
 ``base_url`` and there is deliberately no Databricks-gateway path, so this test
 does NOT use ``patched_databrickscfg`` / ``omnigent_credentials_env``'s gateway
-URL — it authenticates purely from the configured / ambient Gemini key. This
-mirrors :mod:`tests.e2e.agent_meow.test_per_harness_cursor` (the other
+URL â€” it authenticates purely from the configured / ambient Gemini key. This
+mirrors :mod:`tests.e2e.omnigent.test_per_harness_cursor` (the other
 backend-native SDK harness): because a Gemini key is not provisioned on CI, the
 test **skips** (rather than fails) when no key is present, so the e2e shards stay
 green; it runs for real wherever a key is configured.
 
 **Why this test cannot use the mock LLM server:** The ``google-antigravity``
 SDK has no OpenAI-compatible ``base_url`` and no Databricks-gateway path.
-Setting ``OPENAI_BASE_URL`` to the mock server has no effect on this harness —
+Setting ``OPENAI_BASE_URL`` to the mock server has no effect on this harness â€”
 the SDK always connects directly to Google's Gemini backend using the Gemini
 API key. There is no intercept point equivalent to ``OPENAI_BASE_URL`` in the
 Gemini SDK, so the mock-LLM approach used by other harness tests (e.g.
@@ -34,12 +34,12 @@ when the SDK or key is absent.
 
 **Prerequisites (skipped cleanly when absent):**
 - ``google.antigravity`` importable in the agent-meow venv (the ``antigravity``
-  extra — ``pip install 'agent-meow[antigravity]'``).
+  extra â€” ``pip install 'agent-meow[antigravity]'``).
 - A Gemini / Antigravity API key configured (a stored ``antigravity:`` config
   block resolvable via
-  :func:`~?agent_meow.onboarding.antigravity_auth.antigravity_api_key_configured`,
+  :func:`~?omnigent.onboarding.antigravity_auth.antigravity_api_key_configured`,
   or an ambient ``GEMINI_API_KEY`` / ``ANTIGRAVITY_API_KEY``). The SDK *requires*
-  a key — there is no login flow.
+  a key â€” there is no login flow.
 
 **glibc / dev-shim caveat:** the SDK spawns a bundled native ``localharness``
 binary linked against a recent glibc (needs ``GLIBC_ABI_DT_RELR``), so a live
@@ -61,15 +61,15 @@ recognized as the host, not a harness regression.
 - The ``google-antigravity`` SDK contract changes (``Agent`` / ``Conversation``
   / ``receive_steps`` shape).
 - ``--continue`` stops seeding prior-turn history onto a fresh antigravity
-  session (#278 regression — the SDK has no history-injection API, so prior
+  session (#278 regression â€” the SDK has no history-injection API, so prior
   turns are replayed as a plain-text ``"Conversation so far: ..."`` prefix).
-- ``agent_meow.cli``'s ``run`` one-shot / interactive paths stop persisting the
+- ``omnigent.cli``'s ``run`` one-shot / interactive paths stop persisting the
   assistant reply, or harness dispatch for ``antigravity`` regresses.
 
 **Scope note (stable-on-main behaviors only):** this file is authored off
 ``main`` (#194 + #276/#277/#278). It deliberately does NOT assert tool-parameter
 schemas (#279), policy enforcement (#284), the model catalog (#290), or error
-normalization (#297) — those land with their own PRs and are tested there.
+normalization (#297) â€” those land with their own PRs and are tested there.
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.entities.conversation import MessageData
+from omnigent.entities.conversation import MessageData
 
 _HARNESS = "antigravity"
 
@@ -113,7 +113,7 @@ _ERROR_MARKERS: tuple[str, ...] = (
 _RUN_TIMEOUT_SEC = 200
 
 # Minimal antigravity-native agent spec. Single-file legacy form (``name`` /
-# ``prompt`` / ``executor``) — the form ``agent-meow run <file>`` accepts without a
+# ``prompt`` / ``executor``) â€” the form ``agent-meow run <file>`` accepts without a
 # spec directory. No ``executor.auth`` block: the key resolves from the stored
 # ``antigravity:`` config / ambient ``GEMINI_API_KEY`` via
 # ``_build_antigravity_spawn_env``. The model is pinned per-test via ``--model``
@@ -135,7 +135,7 @@ def _antigravity_skip_reason(omnigent_python: Path) -> str | None:
     Mirrors the cursor harness gate: the antigravity harness talks only to
     Google's Gemini backend (no Databricks-gateway path), and CI does not
     provision a Gemini key, so an absent prerequisite is a clean **skip** rather
-    than a failure — keeping the e2e shards green while the test runs for real
+    than a failure â€” keeping the e2e shards green while the test runs for real
     wherever a key is configured.
 
     Both prerequisites are probed in the *agent-meow venv* interpreter (the one the
@@ -150,12 +150,12 @@ def _antigravity_skip_reason(omnigent_python: Path) -> str | None:
         [
             str(omnigent_python),
             "-c",
-            # Booleans only — never print the key. ``antigravity_api_key_configured``
+            # Booleans only â€” never print the key. ``antigravity_api_key_configured``
             # resolves a stored ``antigravity:`` block; the ambient env vars are the
             # SDK's direct fallback (and what ``_build_antigravity_spawn_env`` adopts).
             "import importlib.util, os, sys;"
             "have_sdk = importlib.util.find_spec('google.antigravity') is not None;"
-            "from agent_meow.onboarding.antigravity_auth import "
+            "from omnigent.onboarding.antigravity_auth import "
             "antigravity_api_key_configured as cfg, ANTIGRAVITY_ENV_VARS;"
             "have_key = cfg() or any(os.environ.get(v) for v in ANTIGRAVITY_ENV_VARS);"
             "sys.stdout.write(f'{int(have_sdk)}{int(have_key)}')",
@@ -164,7 +164,7 @@ def _antigravity_skip_reason(omnigent_python: Path) -> str | None:
         text=True,
     )
     if probe.returncode != 0:
-        # The probe itself failed to import the onboarding module — treat as a
+        # The probe itself failed to import the onboarding module â€” treat as a
         # missing/installation-broken prerequisite and skip with the detail.
         return (
             "antigravity prerequisite probe failed in the agent-meow venv "
@@ -185,7 +185,7 @@ def _antigravity_skip_reason(omnigent_python: Path) -> str | None:
             "Antigravity SDK requires a key (no login flow); configure an "
             "'antigravity:' block via 'omni setup' or export GEMINI_API_KEY / "
             "ANTIGRAVITY_API_KEY. Skipped (not failed) because CI does not "
-            "provision a Gemini key — this Gemini-native harness has no "
+            "provision a Gemini key â€” this Gemini-native harness has no "
             "Databricks-gateway fallback."
         )
     return None
@@ -209,7 +209,7 @@ def _antigravity_env(base_env: dict[str, str], home: Path) -> dict[str, str]:
     Starts from the shared ``omnigent_credentials_env`` (so PATH, the onboarding
     suppression knobs, and the worktree ``PYTHONPATH`` propagate) but isolates
     ``$HOME`` and the agent-meow state/config roots into the test's temp dir, so
-    the persistent conversation store this test reads (``$HOME/.agent_meow/chat.db``)
+    the persistent conversation store this test reads (``$HOME/.omnigent/chat.db``)
     is private and the run never threads onto an unrelated prior conversation.
 
     The gateway-oriented ``OPENAI_BASE_URL`` / ``OPENAI_API_KEY`` keys inherited
@@ -234,19 +234,19 @@ def _assistant_transcript_texts(db_path: Path) -> list[str]:
     """Return every assistant message text block from the persistent store.
 
     Reads the conversation transcript directly from the SQLite store the
-    subprocess wrote, rather than scraping the CLI's stdout — the transcript is
+    subprocess wrote, rather than scraping the CLI's stdout â€” the transcript is
     the durable record of what the harness actually produced. Mirrors
     ``_conversation_texts`` in
-    :mod:`tests.e2e.agent_meow.test_server_remote_omnigent_autonomous_flows`, but
+    :mod:`tests.e2e.omnigent.test_server_remote_omnigent_autonomous_flows`, but
     filtered to assistant-authored messages so the assertions can't be satisfied
     by the echoed user prompt.
 
-    :param db_path: Path to ``$HOME/.agent_meow/chat.db``.
+    :param db_path: Path to ``$HOME/.omnigent/chat.db``.
     :returns: Assistant message texts across every conversation in the store.
     """
     # Lazy import: the conversation store pulls in SQLAlchemy, and keeping it out
     # of module import time means a skipped test (no SDK / key) never pays for it.
-    from agent_meow.stores.conversation_store.sqlalchemy_store import (
+    from omnigent.stores.conversation_store.sqlalchemy_store import (
         SqlAlchemyConversationStore,
     )
 
@@ -281,7 +281,7 @@ def _run_one_shot(
     """Run a one-shot ``agent-meow run <spec> --harness antigravity -p <prompt>``.
 
     Session-backed (no ``--no-session``) so the turn is persisted to
-    ``$HOME/.agent_meow/chat.db`` for transcript inspection and so a later
+    ``$HOME/.omnigent/chat.db`` for transcript inspection and so a later
     ``--continue`` can thread onto it.
 
     :param omnigent_python: Interpreter from the ``omnigent_python`` fixture.
@@ -413,7 +413,7 @@ def test_per_harness_antigravity_model_selection(
     Exercises ``--model`` threading through ``_build_antigravity_spawn_env`` ->
     ``HARNESS_ANTIGRAVITY_MODEL`` for an explicit ``gemini-2.5-flash`` pin, and
     the harness's resolved ``gemini-3.5-flash`` default. Both must exit 0 and
-    persist a non-error assistant reply. Stays on the flash tier deliberately —
+    persist a non-error assistant reply. Stays on the flash tier deliberately â€”
     ``gemini-3-pro`` 404s on a plain AI-Studio key.
 
     :param model: The Gemini id under test (parametrized).
@@ -458,7 +458,7 @@ def test_per_harness_antigravity_multi_turn_history_retention(
     prefix. This is the integration test for that path: turn 1 (one-shot ``-p``)
     plants a unique nonce into the persistent store; turn 2 (interactive REPL
     ``--continue`` on the same store, with the recall prompt piped on stdin and
-    ``/quit`` terminating it) must recover the nonce — proving the prior turn's
+    ``/quit`` terminating it) must recover the nonce â€” proving the prior turn's
     text reached the model on the resumed session. The recall prompt does NOT
     contain the nonce, so the only way turn 2 can produce it is via the seeded
     history.
@@ -484,7 +484,7 @@ def test_per_harness_antigravity_multi_turn_history_retention(
     # "recover" a popular fixture word from its training data instead of history.
     nonce = "nonce" + uuid.uuid4().hex[:12]
 
-    # ── Turn 1: plant the nonce (one-shot -p, session-backed).
+    # â”€â”€ Turn 1: plant the nonce (one-shot -p, session-backed).
     plant = _run_one_shot(
         omnigent_python=omnigent_python,
         omnigent_repo_root=omnigent_repo_root,
@@ -504,11 +504,11 @@ def test_per_harness_antigravity_multi_turn_history_retention(
         f"The multi-turn recovery check below would be meaningless."
     )
     assert db_path.is_file(), (
-        f"persistent store not created at {db_path} — turn 1 ran ephemerally, so "
+        f"persistent store not created at {db_path} â€” turn 1 ran ephemerally, so "
         f"--continue in turn 2 would have nothing to thread onto."
     )
 
-    # ── Turn 2: recover the nonce via interactive REPL --continue. The CLI
+    # â”€â”€ Turn 2: recover the nonce via interactive REPL --continue. The CLI
     # rejects --continue + -p, so the recall prompt is piped on stdin and /quit
     # ends the REPL. The prompt deliberately omits the nonce.
     recall_prompt = (
@@ -566,7 +566,7 @@ def test_per_harness_antigravity_graceful_completion(
     """The happy path exits 0 and the parent session is not ``failed``.
 
     Distinct from the smoke test: this asserts the *graceful-completion*
-    invariant — a clean exit and a transcript free of error markers, i.e. the
+    invariant â€” a clean exit and a transcript free of error markers, i.e. the
     session did not end in the ``failed`` state the executor uses for a glibc /
     model / egress failure (which would surface as an ``ExecutorError`` item, not
     a normal assistant reply). Together with the smoke test's content check this

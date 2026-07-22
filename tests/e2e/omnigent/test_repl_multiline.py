@@ -1,14 +1,14 @@
-"""Phase 0 characterization test — multi-line input via Ctrl+J.
+"""Phase 0 characterization test â€” multi-line input via Ctrl+J.
 
 Drives the REPL under pexpect, types the first half of a
 prompt, sends ``Ctrl+J`` to insert a newline mid-input, types the
 second half, and finally submits with Enter. Asserts the full
 multi-line message reached the agent by looking for BOTH halves
-in the user turn the REPL echoes to scrollback (under the ``❯``
-prompt glyph) before streaming the assistant response (under ``◆``).
+in the user turn the REPL echoes to scrollback (under the ``â¯``
+prompt glyph) before streaming the assistant response (under ``â—†``).
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
-REPL pexpect suite — "Multi-line input".
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
+REPL pexpect suite â€” "Multi-line input".
 """
 
 from __future__ import annotations
@@ -16,15 +16,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from tests.e2e.agent_meow._pexpect_harness import (
+from tests.e2e.omnigent._pexpect_harness import (
     await_turn_complete,
     clean_exit,
     spawn_omnigent_run,
     strip_ansi,
     wait_for_ready,
 )
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm
 
 _MODEL = "mock-model"
 _HARNESS = "openai-agents"
@@ -36,7 +36,7 @@ _SECOND_LINE = "line-two-beta"
 
 # Visible turn-synchronization markers.
 _RUNNING_MARKER = r"working"
-_COMPLETION_MARKER = r"❯ "
+_COMPLETION_MARKER = r"â¯ "
 
 _SPAWN_TIMEOUT = 60.0
 _BOOT_TIMEOUT = 30.0
@@ -108,10 +108,10 @@ def test_repl_multiline_ctrl_j_insert(
         "first_line_present": _FIRST_LINE in combined_stripped,
         "second_line_present": _SECOND_LINE in combined_stripped,
         # The turn banners are glyphs now, not the legacy "You>"/"Agent>"
-        # text labels: the user prompt echoes under "❯" and the assistant
-        # reply under "◆" (e.g. "❯ line-one-alpha" / "◆ <reply>").
-        "user_banner_present": "❯" in combined_stripped,
-        "agent_banner_present": "◆" in combined_stripped,
+        # text labels: the user prompt echoes under "â¯" and the assistant
+        # reply under "â—†" (e.g. "â¯ line-one-alpha" / "â—† <reply>").
+        "user_banner_present": "â¯" in combined_stripped,
+        "agent_banner_present": "â—†" in combined_stripped,
     }
     diffs = compare_snapshot("test_repl_multiline", observed)
     assert diffs == [], (

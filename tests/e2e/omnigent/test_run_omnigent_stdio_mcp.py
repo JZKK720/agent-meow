@@ -2,14 +2,14 @@
 
 Proves the full path landed by the stdio-MCP work:
 
-    YAML  →  agent-meow agent-meow translator
+    YAML  â†’  agent-meow agent-meow translator
           (emits ``MCPServerConfig(transport=\"stdio\", ...)``)
-          →  ``ToolManager.start()`` (spawns the MCP subprocess
+          â†’  ``ToolManager.start()`` (spawns the MCP subprocess
           via ``mcp.client.stdio.stdio_client`` under the shared
           ``wrap_with_srt`` helper)
-          →  openai-agents harness sees the MCP tool
-          →  LLM (OpenAI ``gpt-4o-mini``) calls the tool
-          →  ``echo: <probe>`` string round-trips back through
+          â†’  openai-agents harness sees the MCP tool
+          â†’  LLM (OpenAI ``gpt-4o-mini``) calls the tool
+          â†’  ``echo: <probe>`` string round-trips back through
           stdio, through the harness, through the agent-meow mode reply
           render, into this test's stdout.
 
@@ -21,7 +21,7 @@ real ``gpt-4o-mini`` endpoint reached via ``$OPENAI_API_KEY``.
 **What breaks if this fails:**
 
 - The agent-meow translator silently drops the
-  :class:`~?agent_meow.inner.tools.MCPTool`: the spec loads, but
+  :class:`~?omnigent.inner.tools.MCPTool`: the spec loads, but
   the agent-meow runtime never registers the tool, the LLM
   never calls it, and the ``echo: <probe>`` fingerprint is
   absent. The unit test
@@ -30,7 +30,7 @@ real ``gpt-4o-mini`` endpoint reached via ``$OPENAI_API_KEY``.
   right ``MCPServerConfig``, but doesn't exercise the
   subprocess side.
 - ``McpServerConnection._open_stdio_transport`` regresses so
-  the subprocess never spawns or the stdio handshake hangs —
+  the subprocess never spawns or the stdio handshake hangs â€”
   the unit tests patch ``stdio_client``, only this test runs
   the real one against a real FastMCP server.
 - ``wrap_with_srt`` mis-wraps on this host's configuration
@@ -62,7 +62,7 @@ _OPENAI_MODEL = "gpt-4o-mini"
 _HARNESS = "openai-agents"
 
 # Probe token the LLM must pass to the ``echo`` tool. Picked to
-# be obviously synthetic — a model "guessing" a reply string
+# be obviously synthetic â€” a model "guessing" a reply string
 # wouldn't match this by accident.
 _PROBE = "ap-stdio-mcp-probe-7431"
 
@@ -94,7 +94,7 @@ def _skip_without_openai_key() -> str:
 
     Keeps the suite runnable on CI / in environments where the
     contributor hasn't exported a key. A stale Databricks PAT
-    export (``dapi...``) is also skipped — the openai-agents
+    export (``dapi...``) is also skipped â€” the openai-agents
     harness would hit api.openai.com with it and 401.
 
     :returns: The OpenAI API key string.
@@ -102,7 +102,7 @@ def _skip_without_openai_key() -> str:
     key = os.environ.get("OPENAI_API_KEY")
     if key is None or not key.strip():
         pytest.skip(
-            "OPENAI_API_KEY not set — this test spawns a live "
+            "OPENAI_API_KEY not set â€” this test spawns a live "
             "OpenAI turn. Export a real OpenAI key "
             "(``export OPENAI_API_KEY=sk-...``) and rerun."
         )
@@ -112,7 +112,7 @@ def _skip_without_openai_key() -> str:
             f"OPENAI_API_KEY is set but doesn't look like an "
             f"OpenAI key (expected a string starting with 'sk-', "
             f"got {key[:6]!r}...). Refusing to run to avoid a "
-            f"confusing 401 against api.openai.com — this test "
+            f"confusing 401 against api.openai.com â€” this test "
             f"targets OpenAI directly, not a Databricks gateway.",
         )
     return key
@@ -125,13 +125,13 @@ def _write_stdio_mcp_yaml(tmp_path: Path, repo_root: Path) -> Path:
 
     The YAML is emitted fresh each test run (rather than checked
     in under ``examples/``) because the ``command:`` is the
-    current Python interpreter's absolute path — baking that in
+    current Python interpreter's absolute path â€” baking that in
     as a committed example would be either brittle (wrong on
     other machines) or indirect (an ``sh -c`` wrapper to find
     python). A test-generated YAML sidesteps both.
 
     :param tmp_path: Per-test temporary directory.
-    :param repo_root: agent-meow repo root — used to resolve the
+    :param repo_root: agent-meow repo root â€” used to resolve the
         absolute path to the echo MCP fixture.
     :returns: Path to the generated YAML.
     """
@@ -139,7 +139,7 @@ def _write_stdio_mcp_yaml(tmp_path: Path, repo_root: Path) -> Path:
 
     echo_server_abs = repo_root / _ECHO_MCP_REL
     assert echo_server_abs.is_file(), (
-        f"Expected echo MCP fixture at {echo_server_abs} — the "
+        f"Expected echo MCP fixture at {echo_server_abs} â€” the "
         f"test depends on the bundled FastMCP server. If the "
         f"fixture moved, update ``_ECHO_MCP_REL`` alongside."
     )
@@ -175,13 +175,13 @@ def test_omnigent_stdio_mcp_tool_roundtrip(tmp_path: Path) -> None:
 
     Full-stack verification. Other tests cover each layer in
     isolation (translator unit test, runtime transport unit
-    tests, ToolManager integration test) — this one catches
+    tests, ToolManager integration test) â€” this one catches
     regressions that only surface when every layer runs
     together with a live LLM.
 
     :param tmp_path: Per-test temporary directory. Used to
         materialize the generated agent YAML so the test owns
-        its own copy — no collateral risk to example YAMLs.
+        its own copy â€” no collateral risk to example YAMLs.
     """
     openai_key = _skip_without_openai_key()
 
@@ -228,7 +228,7 @@ def test_omnigent_stdio_mcp_tool_roundtrip(tmp_path: Path) -> None:
     # mistake the ask for one of agent-meow' auto-registered
     # builtins (``check_task``, ``sys_cancel_task``, ...). gpt-4o-mini
     # was observed routing to ``check_task`` when the prompt said
-    # only "echo X" — it heard "task-id X" instead of "text X".
+    # only "echo X" â€” it heard "task-id X" instead of "text X".
     prompt = f"Use the ``echo`` tool with text='{_PROBE}' and reply with the tool's exact return."
     args = [
         str(python),
@@ -263,7 +263,7 @@ def test_omnigent_stdio_mcp_tool_roundtrip(tmp_path: Path) -> None:
         # 401 from OpenAI means the key in /tmp/mykey was
         # invalid or got routed to the wrong base URL.
         "401",
-        # validator failure — the translator emitted a spec the
+        # validator failure â€” the translator emitted a spec the
         # validator rejects.
         "invalid agent spec synthesized",
         # The pre-stdio-MCP translator fail-loud. If this shows
@@ -272,7 +272,7 @@ def test_omnigent_stdio_mcp_tool_roundtrip(tmp_path: Path) -> None:
     )
     for marker in forbidden:
         assert marker not in combined, (
-            f"Forbidden marker {marker!r} in output — a --agent-meow "
+            f"Forbidden marker {marker!r} in output â€” a --agent-meow "
             f"failure mode fired. stderr tail:\n{result.stderr[-2000:]}"
         )
 
@@ -290,7 +290,7 @@ def test_omnigent_stdio_mcp_tool_roundtrip(tmp_path: Path) -> None:
     # prompt asks for the TOOL's return value).
     assert _SUCCESS_MARKER in result.stdout, (
         f"Expected {_SUCCESS_MARKER!r} in stdout but didn't "
-        f"find it — the LLM either didn't call the ``echo`` "
+        f"find it â€” the LLM either didn't call the ``echo`` "
         f"tool, or the tool's output never reached the reply. "
         f"stdout tail:\n{result.stdout[-2500:]}"
     )

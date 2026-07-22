@@ -1,4 +1,4 @@
-"""Phase 0 characterization test — openai-agents-sdk harness, one-shot prompt.
+"""Phase 0 characterization test â€” openai-agents-sdk harness, one-shot prompt.
 
 Runs ``agent-meow run hello_world.yaml --harness openai-agents
 --model <mock-model> -p "..."`` as a real subprocess against the
@@ -8,19 +8,19 @@ stderr cleanliness, assistant text length).
 **What breaks if this fails:**
 - agent-meow' ``OpenAIAgentsSDKExecutor`` regresses (the Runner
   lifecycle, the Responses-API adapter in
-  ``agent_meow.open_responses_sdk``, the MCP tool bridging, or
+  ``omnigent.open_responses_sdk``, the MCP tool bridging, or
   the event stream translation to ``ExecutorEvent`` types).
 - The ``openai-agents`` Python package (``agents`` module) is
   missing from the agent-meow venv or its public API changes
   incompatibly.
-- ``agent_meow.cli._run_agent`` for the ``-p`` one-shot path
+- ``omnigent.cli._run_agent`` for the ``-p`` one-shot path
   stops printing the assistant text on turn complete.
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
 per-harness suite.
 
 **Serial execution note:** These tests are designed for serial
-execution — do NOT run them under pytest-xdist or any parallel
+execution â€” do NOT run them under pytest-xdist or any parallel
 runner that shares the mock LLM server process. Each test uses a
 UUID-keyed model name, so concurrent tests use separate queues and
 queue cross-contamination is impossible even without ``reset_mock_llm``.
@@ -38,8 +38,8 @@ from typing import Any
 
 import pytest
 
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
 
 _HARNESS = "openai-agents"
 _PROMPT = "say hi in 5 words"
@@ -63,7 +63,7 @@ def openai_agents_available(omnigent_python: Path) -> bool:
 
     ``OpenAIAgentsSDKExecutor`` imports the ``agents`` package
     lazily on first use. The package must be installed in the
-    *agent-meow* venv (the subprocess interpreter) — the current
+    *agent-meow* venv (the subprocess interpreter) â€” the current
     pytest interpreter is irrelevant because the test shells out.
 
     :param omnigent_python: Interpreter the subprocess will
@@ -97,7 +97,7 @@ def test_per_harness_openai_agents_sdk_one_shot(
     Uses the mock LLM server so the test runs without real API
     credentials. The openai-agents executor honors
     ``OPENAI_BASE_URL`` / ``OPENAI_API_KEY`` env vars directly
-    (populated by ``mock_credentials_env``) — no
+    (populated by ``mock_credentials_env``) â€” no
     ``~/.databrickscfg`` touch is required for this harness.
 
     :param omnigent_python: Interpreter with agent-meow +
@@ -109,7 +109,7 @@ def test_per_harness_openai_agents_sdk_one_shot(
         configuring canned responses.
     :param openai_agents_available: True when the ``agents``
         package is importable in the agent-meow venv. On False
-        the test skips — consistent with the codex and
+        the test skips â€” consistent with the codex and
         claude-sdk harness tests that skip when their binary
         is absent.
     """
@@ -117,7 +117,7 @@ def test_per_harness_openai_agents_sdk_one_shot(
         pytest.skip(
             "openai-agents-sdk harness prerequisite missing: "
             "the 'agents' Python package (openai-agents) must be "
-            "installed in the agent-meow venv. Skipping — package absent."
+            "installed in the agent-meow venv. Skipping â€” package absent."
         )
 
     model = f"mock-harness-openai-{uuid.uuid4().hex[:8]}"
@@ -163,7 +163,7 @@ def test_per_harness_openai_agents_sdk_one_shot(
     }
 
     # Full stderr surfaced on failure so CI logs show WHY the run
-    # went wrong — stderr here is opaque unless we dump it.
+    # went wrong â€” stderr here is opaque unless we dump it.
     diffs = compare_snapshot(
         "test_per_harness_openai_agents_sdk",
         observed,

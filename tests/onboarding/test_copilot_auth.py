@@ -1,10 +1,10 @@
-"""Tests for ``agent_meow/onboarding/copilot_auth.py`` — the Copilot token store.
+"""Tests for ``omnigent/onboarding/copilot_auth.py`` â€” the Copilot token store.
 
 Copilot's GitHub token lives in a dedicated top-level ``copilot:`` config block
 (not the shared global ``auth:``) and the agent-meow secret store, resolved with
 the same ``resolve_secret`` resolver the provider families use. These tests
 isolate the config + secret store to a tmp dir (file backend, no OS keychain)
-and assert the read/resolve/configured helpers behave — including the **soft**
+and assert the read/resolve/configured helpers behave â€” including the **soft**
 resolution that returns ``None`` on a dangling reference instead of raising, so
 a run / setup readout falls back rather than crashing. Mirrors
 ``test_cursor_auth.py``.
@@ -17,9 +17,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.onboarding import copilot_auth, extra_install
-from agent_meow.onboarding import secrets as secret_store
-from agent_meow.onboarding.copilot_auth import (
+from omnigent.onboarding import copilot_auth, extra_install
+from omnigent.onboarding import secrets as secret_store
+from omnigent.onboarding.copilot_auth import (
     COPILOT_SECRET_NAME,
     copilot_github_token_configured,
     copilot_github_token_ref,
@@ -124,7 +124,7 @@ def test_resolve_from_inline_github_token_only(
 
 def test_dangling_keychain_reference_is_soft_none(tmp_path: Path) -> None:
     # A keychain ref to a name that was never stored resolves to None (never
-    # raises) and reads as not-configured — the realistic "deleted keychain
+    # raises) and reads as not-configured â€” the realistic "deleted keychain
     # entry" case, distinct from the env-var dangling case above.
     _write_config(tmp_path, {"copilot": {"github_token_ref": "keychain:copilot-never-stored"}})
     assert resolve_copilot_github_token() is None
@@ -178,7 +178,7 @@ def test_copilot_sdk_installed_false_when_module_not_found(
 
 
 def test_copilot_install_command_prefers_uv(monkeypatch: pytest.MonkeyPatch) -> None:
-    """With ``uv`` on PATH, the install runs ``uv pip install`` — no index URL."""
+    """With ``uv`` on PATH, the install runs ``uv pip install`` â€” no index URL."""
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: "/usr/bin/uv")
     cmd = copilot_install_command()
@@ -187,7 +187,7 @@ def test_copilot_install_command_prefers_uv(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_copilot_install_command_falls_back_to_pip(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Without ``uv``, it falls back to this interpreter's pip — still no index."""
+    """Without ``uv``, it falls back to this interpreter's pip â€” still no index."""
     monkeypatch.setattr(extra_install, "_is_uv_tool_install", lambda: False)
     monkeypatch.setattr(extra_install.shutil, "which", lambda name: None)
     cmd = copilot_install_command()

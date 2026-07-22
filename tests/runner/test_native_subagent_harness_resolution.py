@@ -39,8 +39,8 @@ from typing import Any
 
 import pytest
 
-from agent_meow.runner import create_runner_app
-from agent_meow.spec.types import AgentSpec, ExecutorSpec
+from omnigent.runner import create_runner_app
+from omnigent.spec.types import AgentSpec, ExecutorSpec
 
 # Reuse the proven harness/process-manager/client stubs from the sessions-native
 # suite so this repro drives the exact same dispatch path the runner uses.
@@ -293,7 +293,7 @@ async def test_reconnect_catch_up_scan_keeps_child_native_harness() -> None:
     The fix recovers ``sub_agent_name`` from the server snapshot so the turn
     resolves ``claude-native`` instead.
     """
-    from agent_meow.runner.app import _session_histories_ref
+    from omnigent.runner.app import _session_histories_ref
 
     pm = _FakeProcessManager(
         _ScriptedHarnessClient(

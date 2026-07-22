@@ -1,4 +1,4 @@
-"""Phase 0 characterization test — codex harness, one-shot prompt.
+"""Phase 0 characterization test â€” codex harness, one-shot prompt.
 
 Runs ``agent-meow run hello_world.yaml --harness codex --model
 <mock-model> -p "..."`` as a real subprocess against the mock LLM
@@ -11,14 +11,14 @@ cleanliness, assistant text length).
   message-stream translation in ``codex_executor.run_turn``).
 - The ``codex`` CLI binary disappears from PATH or its
   ``app-server`` subcommand changes its startup contract.
-- ``agent_meow.cli._run_agent`` for the ``-p`` one-shot path
+- ``omnigent.cli._run_agent`` for the ``-p`` one-shot path
   stops printing assistant text to stdout on turn complete.
 
-Design reference: ``designs/OMNIGENT_INTEGRATION.md`` §Phase 0
+Design reference: ``designs/OMNIGENT_INTEGRATION.md`` Â§Phase 0
 per-harness suite.
 
 **Serial execution note:** These tests are designed for serial
-execution — do NOT run them under pytest-xdist or any parallel
+execution â€” do NOT run them under pytest-xdist or any parallel
 runner that shares the mock LLM server process. Each test uses a
 UUID-keyed model name, so concurrent tests use separate queues and
 queue cross-contamination is impossible even without ``reset_mock_llm``.
@@ -37,8 +37,8 @@ from typing import Any
 
 import pytest
 
-from tests.e2e.agent_meow._snapshot import compare_snapshot
-from tests.e2e.agent_meow.conftest import configure_mock_llm, reset_mock_llm
+from tests.e2e.omnigent._snapshot import compare_snapshot
+from tests.e2e.omnigent.conftest import configure_mock_llm, reset_mock_llm
 
 _HARNESS = "codex"
 _PROMPT = "say hi in 5 words"
@@ -95,14 +95,14 @@ def test_per_harness_codex_one_shot(
     :param mock_llm_server_url: Base URL of the mock server for
         configuring canned responses.
     :param codex_available: True when the ``codex`` CLI is
-        present. On False the test skips — codex is a genuine
+        present. On False the test skips â€” codex is a genuine
         proprietary binary that CI typically lacks.
     """
     if not codex_available:
         pytest.skip(
             "codex harness prerequisite missing: the 'codex' CLI "
             "binary must be installed on PATH (install via "
-            "'npm i -g @openai/codex'). Skipping — binary absent."
+            "'npm i -g @openai/codex'). Skipping â€” binary absent."
         )
 
     model = f"mock-harness-codex-{uuid.uuid4().hex[:8]}"
@@ -161,7 +161,7 @@ def test_per_harness_codex_one_shot(
     }
 
     # Full stderr surfaced on failure so CI logs show WHY the run
-    # went wrong (e.g. missing binary) — stderr here is opaque
+    # went wrong (e.g. missing binary) â€” stderr here is opaque
     # unless we dump it in the failure message.
     diffs = compare_snapshot("test_per_harness_codex", observed)
     assert diffs == [], (

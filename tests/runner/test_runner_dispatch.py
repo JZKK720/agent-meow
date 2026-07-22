@@ -1,10 +1,10 @@
-"""End-to-end runner-dispatch tests: server → runner → spawned harness.
+"""End-to-end runner-dispatch tests: server â†’ runner â†’ spawned harness.
 
 The load-bearing assertion: the runner FastAPI app, when given a
 real :class:`HarnessProcessManager`, accepts a
 POST /v1/sessions/{conversation_id}/events?stream=true,
 spawns a harness subprocess (using the existing
-``agent_meow/runtime/harnesses/`` machinery — NOT a parallel impl),
+``omnigent/runtime/harnesses/`` machinery â€” NOT a parallel impl),
 forwards the request to the harness via UDS, and streams the
 harness's SSE response back through the runner's own SSE response.
 
@@ -16,8 +16,8 @@ Architecture verified end-to-end:
 - The test posts to the runner's
   /v1/sessions/{conversation_id}/events?stream=true with a message
   body + harness name.
-- The runner calls ``mgr.get_client()`` → spawns a uvicorn
-  subprocess running the test harness on a UDS → returns the
+- The runner calls ``mgr.get_client()`` â†’ spawns a uvicorn
+  subprocess running the test harness on a UDS â†’ returns the
   per-conversation httpx client.
 - The runner POSTs the request to the harness via that client.
 - The harness drives an LLM call via ``run_turn`` and streams SSE
@@ -47,16 +47,16 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from agent_meow.runner import create_runner_app
-from agent_meow.runner.app import (
+from omnigent.runner import create_runner_app
+from omnigent.runner.app import (
     _build_spawn_env_from_spec,
     _forward_harness_response,
     _resolve_harness_config,
 )
-from agent_meow.runtime.harnesses import _HARNESS_MODULES
-from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
-from agent_meow.session_lifecycle import CLOSED_LABEL_KEY, CLOSED_LABEL_VALUE
-from agent_meow.spec.types import AgentSpec, ExecutorSpec, SharePolicy
+from omnigent.runtime.harnesses import _HARNESS_MODULES
+from omnigent.runtime.harnesses.process_manager import HarnessProcessManager
+from omnigent.session_lifecycle import CLOSED_LABEL_KEY, CLOSED_LABEL_VALUE
+from omnigent.spec.types import AgentSpec, ExecutorSpec, SharePolicy
 from tests.runner.helpers import NullServerClient
 
 _TEST_HARNESS_NAME = "runner-test-default"
@@ -79,7 +79,7 @@ def _assume_harness_clis_installed(monkeypatch: pytest.MonkeyPatch) -> None:
     :param monkeypatch: Pytest monkeypatch fixture.
     """
     monkeypatch.setattr(
-        "agent_meow.onboarding.harness_install.missing_harness_cli",
+        "omnigent.onboarding.harness_install.missing_harness_cli",
         lambda harness: None,
     )
 
@@ -179,8 +179,8 @@ async def _drain_published_statuses(
     """Collect ``session.status`` values a runner published for a session.
 
     Reads the runner's module-level per-session event queue
-    (``agent_meow.runner.app._session_event_queues_ref``) — the same queue
-    the SSE ``/stream`` endpoint drains — and returns the ordered list of
+    (``omnigent.runner.app._session_event_queues_ref``) â€” the same queue
+    the SSE ``/stream`` endpoint drains â€” and returns the ordered list of
     ``session.status`` values seen, stopping once *until* is published. This
     polls the in-process queue rather than a concurrent SSE ``GET`` because
     ``httpx.ASGITransport`` does not interleave a streaming response with a
@@ -190,12 +190,12 @@ async def _drain_published_statuses(
     :param conv: Session/conversation identifier, e.g. ``"conv_abc123"``.
     :param until: Stop once this ``session.status`` value is observed,
         e.g. ``"failed"``.
-    :param timeout: Hard cap in seconds — if *until* never arrives the poll
+    :param timeout: Hard cap in seconds â€” if *until* never arrives the poll
         gives up and returns what it saw, so a hang regression fails the
         assertion instead of spinning forever.
     :returns: Ordered ``session.status`` values published for *conv*.
     """
-    from agent_meow.runner.app import _session_event_queues_ref
+    from omnigent.runner.app import _session_event_queues_ref
 
     statuses: list[str] = []
     deadline = asyncio.get_running_loop().time() + timeout
@@ -235,7 +235,7 @@ async def _drain_failed_status_event(
         hanging.
     :returns: The ``session.status: failed`` event dict, or ``None``.
     """
-    from agent_meow.runner.app import _session_event_queues_ref
+    from omnigent.runner.app import _session_event_queues_ref
 
     deadline = asyncio.get_running_loop().time() + timeout
     while asyncio.get_running_loop().time() < deadline:
@@ -328,11 +328,11 @@ class _FakeProcessManager:
         return self._harness_client
 
     def mark_in_flight(self, conversation_id: str, response_id: str) -> None:
-        """Reaper in-flight marker — no-op for this stub (issue #1414)."""
+        """Reaper in-flight marker â€” no-op for this stub (issue #1414)."""
         del conversation_id, response_id
 
     def clear_in_flight(self, conversation_id: str) -> None:
-        """Reaper in-flight clear — no-op for this stub (issue #1414)."""
+        """Reaper in-flight clear â€” no-op for this stub (issue #1414)."""
         del conversation_id
 
 
@@ -370,7 +370,7 @@ async def started_manager() -> AsyncIterator[HarnessProcessManager]:
         shutil.rmtree(short_parent, ignore_errors=True)
 
 
-# ── Plumbing tests (no LLM key required) ─────────────────
+# â”€â”€ Plumbing tests (no LLM key required) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_forward_harness_response_preserves_no_body_responses() -> None:
@@ -398,7 +398,7 @@ def test_forward_harness_response_preserves_json_body() -> None:
 @pytest.mark.asyncio
 async def test_runner_post_without_manager_returns_501() -> None:
     """Scaffold-mode preserved when no manager is wired up."""
-    app = create_runner_app(server_client=NullServerClient())  # type: ignore[arg-type] # no process_manager → scaffold
+    app = create_runner_app(server_client=NullServerClient())  # type: ignore[arg-type] # no process_manager â†’ scaffold
     async with _runner_test_client(app) as http:
         response = await http.post(
             "/v1/sessions/conv_x/events?stream=true",
@@ -425,7 +425,7 @@ async def test_runner_resolves_harness_from_fallback_when_no_agent_id(
         server_client=NullServerClient(),  # type: ignore[arg-type]
     )
     async with _runner_test_client(app) as http:
-        # No agent_id → runner falls back to "runner-test-default"
+        # No agent_id â†’ runner falls back to "runner-test-default"
         # harness. With that registered in _HARNESS_MODULES, the
         # runner must spawn the harness and return its SSE stream.
         # Missing LLM credentials are represented inside that stream
@@ -478,7 +478,7 @@ class _RecordingProcessManager:
         Record the harness name and return an empty fake harness client.
 
         :param conversation_id: agent-meow conversation id.
-        :param harness_name: Harness name the runner resolved — the
+        :param harness_name: Harness name the runner resolved â€” the
             value under test.
         :param env: Optional spawn environment (ignored).
         :returns: A fake harness client with an empty SSE stream so the
@@ -490,11 +490,11 @@ class _RecordingProcessManager:
         return _FakeHarnessClient([])
 
     def mark_in_flight(self, conversation_id: str, response_id: str) -> None:
-        """Reaper in-flight marker — no-op for this stub (issue #1414)."""
+        """Reaper in-flight marker â€” no-op for this stub (issue #1414)."""
         del conversation_id, response_id
 
     def clear_in_flight(self, conversation_id: str) -> None:
-        """Reaper in-flight clear — no-op for this stub (issue #1414)."""
+        """Reaper in-flight clear â€” no-op for this stub (issue #1414)."""
         del conversation_id
 
 
@@ -544,12 +544,12 @@ async def test_runner_resolves_agent_from_server_snapshot_when_msg_lacks_agent_i
         Resolve the spec for the agent_id read from the snapshot.
 
         :param agent_id: Agent id the runner resolved. MUST equal the
-            snapshot's agent_id — the message body carried none, so any
+            snapshot's agent_id â€” the message body carried none, so any
             other value means the on-demand snapshot path didn't run.
         :param session_id: Session id (unused).
         :returns: A minimal spec whose harness is ``resolved_harness``.
         """
-        # The agent_id can only come from the server snapshot here — the
+        # The agent_id can only come from the server snapshot here â€” the
         # POST body below omits it. If this fires with a different value
         # (or not at all), the on-demand resolution path is broken.
         assert agent_id == resolved_agent_id
@@ -572,7 +572,7 @@ async def test_runner_resolves_agent_from_server_snapshot_when_msg_lacks_agent_i
     try:
         async with _runner_test_client(app) as http:
             response = await http.post(
-                # No ``?stream=true`` → background turn, the production
+                # No ``?stream=true`` â†’ background turn, the production
                 # path the agent-meow server uses to forward session messages.
                 f"/v1/sessions/{conv}/events",
                 json={
@@ -580,7 +580,7 @@ async def test_runner_resolves_agent_from_server_snapshot_when_msg_lacks_agent_i
                     "role": "user",
                     "model": "x",
                     "content": [{"role": "user", "content": "hi"}],
-                    # No agent_id — this is the race condition under test.
+                    # No agent_id â€” this is the race condition under test.
                 },
             )
             # Background turn accepted; dispatch happens asynchronously.
@@ -639,11 +639,11 @@ class _ContentCapturingProcessManager:
         return _ContentCapturingHarnessClient(self._captured, self._reached)
 
     def mark_in_flight(self, conversation_id: str, response_id: str) -> None:
-        """Reaper in-flight marker — no-op for this stub (issue #1414)."""
+        """Reaper in-flight marker â€” no-op for this stub (issue #1414)."""
         del conversation_id, response_id
 
     def clear_in_flight(self, conversation_id: str) -> None:
-        """Reaper in-flight clear — no-op for this stub (issue #1414)."""
+        """Reaper in-flight clear â€” no-op for this stub (issue #1414)."""
         del conversation_id
 
 
@@ -679,7 +679,7 @@ class _ContentCapturingHarnessClient:
 
         :param method: HTTP method (unused).
         :param url: Harness endpoint path (unused).
-        :param json: JSON body sent to the harness — captured here.
+        :param json: JSON body sent to the harness â€” captured here.
         :param timeout: Request timeout (unused).
         :returns: An empty fake stream so the turn completes at once.
         """
@@ -699,17 +699,17 @@ async def test_runner_reloads_full_history_on_cold_cache_after_restart() -> None
     the incoming message (``setdefault(conv, []).append(...)``), so the
     harness ran the turn with no prior context. This is acute for the
     claude-sdk harness, which on a cold SDK session replays the in-memory
-    history verbatim as the prompt — a one-message cache erased the whole
+    history verbatim as the prompt â€” a one-message cache erased the whole
     conversation.
 
     The fix rehydrates the full history from the store on the first touch of
     a conversation. The stub server models invariant I1 (persist-before-
     forward): its ``GET /items`` returns the prior turns AND the just-posted
     message (``item_3``), and the forwarded body carries
-    ``persisted_item_id="item_3"`` — so the reload drops that exact item by
+    ``persisted_item_id="item_3"`` â€” so the reload drops that exact item by
     id and appends the runner's copy, proving no duplication.
     """
-    from agent_meow.runner import app as runner_app
+    from omnigent.runner import app as runner_app
 
     conv = "conv_restart_history_reload"
     prior_user = "what is the capital of France?"
@@ -799,7 +799,7 @@ async def test_runner_reloads_full_history_on_cold_cache_after_restart() -> None
     try:
         async with _runner_test_client(app) as http:
             response = await http.post(
-                # No ``?stream=true`` → background turn, the production path
+                # No ``?stream=true`` â†’ background turn, the production path
                 # the agent-meow server uses to forward session messages.
                 f"/v1/sessions/{conv}/events",
                 json={
@@ -846,14 +846,14 @@ async def test_runner_cold_cache_appends_message_when_store_lacks_it() -> None:
     WITHOUT persisting first, so a fresh ``GET /items`` returns the prior
     turns but NOT the just-posted message. If the cold-cache reload simply
     overwrote ``_session_histories`` with that load, the new input would be
-    dropped — and the native executor, which types only the LATEST user
+    dropped â€” and the native executor, which types only the LATEST user
     message into its pane, would inject stale text.
 
     This drives the cold path with a stub server whose history reload
     excludes the new message and asserts the harness still receives it,
     appended as the latest turn, with prior context preserved.
     """
-    from agent_meow.runner import app as runner_app
+    from omnigent.runner import app as runner_app
 
     conv = "conv_cold_cache_append"
     prior_user = "first question"
@@ -889,7 +889,7 @@ async def test_runner_cold_cache_appends_message_when_store_lacks_it() -> None:
                             "role": "assistant",
                             "content": [{"type": "output_text", "text": prior_assistant}],
                         },
-                        # No item for ``new_user`` — the forward did not
+                        # No item for ``new_user`` â€” the forward did not
                         # persist it before reaching the runner.
                     ],
                     "first_id": "item_1",
@@ -943,7 +943,7 @@ async def test_runner_cold_cache_appends_message_when_store_lacks_it() -> None:
                     "model": "x",
                     # No ``persisted_item_id``: the native-terminal forward
                     # skipped persist-before-forward, so there's nothing in the
-                    # store to drop — the runner must append, not dedup.
+                    # store to drop â€” the runner must append, not dedup.
                     "content": [{"type": "input_text", "text": new_user}],
                 },
             )
@@ -962,7 +962,7 @@ async def test_runner_cold_cache_appends_message_when_store_lacks_it() -> None:
         if isinstance(block, dict)
     ]
     # Prior context preserved, and the not-yet-persisted message was
-    # appended (not dropped) as the latest turn — present exactly once.
+    # appended (not dropped) as the latest turn â€” present exactly once.
     assert texts == [prior_user, prior_assistant, new_user], (
         f"expected prior history + appended new message, got {texts}"
     )
@@ -976,14 +976,14 @@ async def test_runner_cold_cache_keeps_trailing_user_when_no_persisted_id() -> N
     earlier fix unconditionally popped a trailing *user* item, assuming it was
     always this turn's persisted input. That's wrong when the forward did NOT
     persist-before-forward AND the store legitimately ends with a user
-    message — e.g. a crash mid-turn where the prior user prompt was persisted
+    message â€” e.g. a crash mid-turn where the prior user prompt was persisted
     but its assistant reply never was, or a native-terminal injection. Popping
     there deletes real history.
 
     With id-based dedup, no ``persisted_item_id`` means nothing is dropped: the
     real trailing user message survives and the new message is appended.
     """
-    from agent_meow.runner import app as runner_app
+    from omnigent.runner import app as runner_app
 
     conv = "conv_cold_cache_keep_user"
     # A prior user prompt whose assistant reply was never persisted (e.g. the
@@ -1064,7 +1064,7 @@ async def test_runner_cold_cache_keeps_trailing_user_when_no_persisted_id() -> N
                     "type": "message",
                     "role": "user",
                     "model": "x",
-                    # No ``persisted_item_id`` → the trailing user item is NOT
+                    # No ``persisted_item_id`` â†’ the trailing user item is NOT
                     # this turn's input, so it must be kept.
                     "content": [{"type": "input_text", "text": new_user}],
                 },
@@ -1093,7 +1093,7 @@ async def test_runner_cold_cache_uses_resolved_message_not_stored_file_id() -> N
     """Cold-cache reload of a media turn uses the resolved block, not the store copy.
 
     The server persists the PRE-resolution body (``file_id`` blocks) and the
-    runner resolves ``file_id`` → ``image_url`` itself. So on a cold cache the
+    runner resolves ``file_id`` â†’ ``image_url`` itself. So on a cold cache the
     ``GET /items`` tail is the just-posted message in its *unresolved* form,
     while ``message_body`` is the *resolved* form. Any content-equality dedup
     would never match (the blocks differ), which would both duplicate the
@@ -1104,7 +1104,7 @@ async def test_runner_cold_cache_uses_resolved_message_not_stored_file_id() -> N
     the server) and appends the runner-resolved message, so the harness sees
     exactly one, fully resolved copy regardless of the content mismatch.
     """
-    from agent_meow.runner import app as runner_app
+    from omnigent.runner import app as runner_app
 
     conv = "conv_cold_cache_media"
     prior_user = "earlier question"
@@ -1149,7 +1149,7 @@ async def test_runner_cold_cache_uses_resolved_message_not_stored_file_id() -> N
                             "role": "assistant",
                             "content": [{"type": "output_text", "text": prior_assistant}],
                         },
-                        # I1 persisted THIS message — but in its unresolved
+                        # I1 persisted THIS message â€” but in its unresolved
                         # (file_id) form, exactly as received.
                         {
                             "id": "item_3",
@@ -1234,7 +1234,7 @@ async def test_runner_cold_cache_uses_resolved_message_not_stored_file_id() -> N
     assert len(content) == 3, f"expected no duplicate of the media message: {content}"
     image_msg = content[-1]
     image_block = image_msg["content"][0]
-    # The stored unresolved copy was dropped; the resolved block is used —
+    # The stored unresolved copy was dropped; the resolved block is used â€”
     # no ``file_id`` leaks to the harness.
     assert "file_id" not in image_block, f"unresolved file_id leaked to harness: {image_block}"
     assert image_block.get("image_url", "").startswith("data:image/png;base64,"), (
@@ -1275,7 +1275,7 @@ async def test_runner_post_returns_503_when_spec_resolver_fails(
         server_client=NullServerClient(),  # type: ignore[arg-type]
     )
     async with _runner_test_client(app) as http:
-        with caplog.at_level(logging.WARNING, logger="agent_meow.runner.app"):
+        with caplog.at_level(logging.WARNING, logger="omnigent.runner.app"):
             response = await http.post(
                 "/v1/sessions/conv_spec_resolver_failed/events?stream=true",
                 json={
@@ -1297,7 +1297,7 @@ async def test_runner_post_returns_503_when_spec_resolver_fails(
     assert "spec resolver unavailable" not in body["detail"]
     # The other half of the contract: the raw cause IS logged for operators.
     # If this fails, log-and-genericize logged nothing and the detail is the
-    # only record of the failure — defeating the diagnostic path.
+    # only record of the failure â€” defeating the diagnostic path.
     assert "spec resolver unavailable for ag_missing" in caplog.text
 
 
@@ -1399,9 +1399,9 @@ def test_build_spawn_env_applies_model_override(
     base = _build_spawn_env_from_spec(spec, "claude-sdk")
     overridden = _build_spawn_env_from_spec(spec, "claude-sdk", model_override="claude-sonnet-4-6")
     assert base is not None and overridden is not None
-    # Baseline uses the provider/catalog default (not the override) …
+    # Baseline uses the provider/catalog default (not the override) â€¦
     assert base["HARNESS_CLAUDE_SDK_MODEL"] != "claude-sonnet-4-6"
-    # … and the override wins, landing in the model env var the SDK reads.
+    # â€¦ and the override wins, landing in the model env var the SDK reads.
     assert overridden["HARNESS_CLAUDE_SDK_MODEL"] == "claude-sonnet-4-6"
 
 
@@ -1413,7 +1413,7 @@ async def test_resolve_harness_config_applies_harness_override(
 
     The web UI's new-chat picker persists the override on the session and
     the server forwards it in the message body; the runner must spawn THAT
-    harness (with its spawn-env shape), not the spec's declared one — else
+    harness (with its spawn-env shape), not the spec's declared one â€” else
     the snapshot would claim "pi" while claude-sdk actually runs.
 
     :param tmp_path: Pytest temp dir for an isolated provider config.
@@ -1455,11 +1455,11 @@ async def test_resolve_harness_config_applies_harness_override(
         harness_override="pi",
     )
     assert harness == "pi", (
-        f"harness_override='pi' resolved to {harness!r} — the override "
+        f"harness_override='pi' resolved to {harness!r} â€” the override "
         f"was ignored and the spec's declared harness won."
     )
     # The spawn env must be built FOR the overridden harness (pi env keys),
-    # not the spec's claude-sdk shape — a claude env here means the harness
+    # not the spec's claude-sdk shape â€” a claude env here means the harness
     # name and env were resolved inconsistently.
     assert spawn_env is not None and "HARNESS_PI_MODEL" in spawn_env, (
         f"Expected a pi spawn-env; got keys {sorted(spawn_env or {})!r}"
@@ -1485,13 +1485,13 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
     The fix wraps the setup phase so any pre-stream exception routes through
     ``_on_proxy_stream_end``, which clears the active turn and publishes
     ``session.status: failed``. This test drives the background-turn path
-    (no ``?stream=true`` — the production path the agent-meow server uses) and
+    (no ``?stream=true`` â€” the production path the agent-meow server uses) and
     asserts the ``failed`` status reaches the session SSE stream.
 
     :param monkeypatch: pytest fixture used to force the spawn-env build to
         raise the same error class the no-model provider path produces.
     """
-    from agent_meow.errors import ErrorCode, OmnigentError
+    from omnigent.errors import ErrorCode, OmnigentError
 
     conv = "conv_spawn_env_build_raises"
 
@@ -1519,7 +1519,7 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
         :param spec: The agent spec (unused).
         :param workdir: Bundle workdir (unused).
         :returns: Never returns.
-        :raises OmnigentError: Always — mirrors the no-model provider error.
+        :raises OmnigentError: Always â€” mirrors the no-model provider error.
         """
         del spec, workdir
         raise OmnigentError(
@@ -1530,7 +1530,7 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
     # ``_build_spawn_env_from_spec`` imports this from workflow at call time,
     # so patching the workflow attribute reaches the runner's call site.
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow._build_claude_sdk_spawn_env",
+        "omnigent.runtime.workflow._build_claude_sdk_spawn_env",
         _raising_build,
     )
 
@@ -1545,7 +1545,7 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
 
     async with _runner_test_client(app) as http:
         response = await http.post(
-            # No ``?stream=true`` → background turn (the production path the
+            # No ``?stream=true`` â†’ background turn (the production path the
             # agent-meow server uses to forward session messages).
             f"/v1/sessions/{conv}/events",
             json={
@@ -1560,7 +1560,7 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
         await _await_bg_turn_task(conv)
         statuses = await _drain_published_statuses(conv, until="failed", timeout=2.0)
 
-    # The turn published "running" then "failed" — it reached a terminal
+    # The turn published "running" then "failed" â€” it reached a terminal
     # state and cleared. Without the fix, the setup-phase OmnigentError is
     # swallowed: only "running" is published, ``_active_turns`` stays set, and
     # the session hangs on "working" forever (the silent-hang regression).
@@ -1576,7 +1576,7 @@ async def test_runner_failed_status_carries_setup_error_message(
     Regression for the silent-REPL failure mode: ending the turn on a
     pre-stream error stopped the spinner but rendered no text, because the
     runner published a bare ``session.status: failed`` with no error
-    detail — the message never left the runner. This drives the same
+    detail â€” the message never left the runner. This drives the same
     spawn-env-build failure as
     :func:`test_runner_background_turn_emits_failed_when_spawn_env_build_raises`
     and asserts the published ``failed`` event now carries the normalized
@@ -1585,7 +1585,7 @@ async def test_runner_failed_status_carries_setup_error_message(
     :param monkeypatch: pytest fixture used to force the spawn-env build to
         raise the no-model provider error.
     """
-    from agent_meow.errors import ErrorCode, OmnigentError
+    from omnigent.errors import ErrorCode, OmnigentError
 
     conv = "conv_failed_status_carries_error"
     raised_message = "No model resolved for the 'claude-sdk' harness on a generic provider."
@@ -1618,7 +1618,7 @@ async def test_runner_failed_status_carries_setup_error_message(
         raise OmnigentError(raised_message, code=ErrorCode.INVALID_INPUT)
 
     monkeypatch.setattr(
-        "agent_meow.runtime.workflow._build_claude_sdk_spawn_env",
+        "omnigent.runtime.workflow._build_claude_sdk_spawn_env",
         _raising_build,
     )
 
@@ -1646,7 +1646,7 @@ async def test_runner_failed_status_carries_setup_error_message(
         await _await_bg_turn_task(conv)
         failed_event = await _drain_failed_status_event(conv, timeout=2.0)
 
-    # The failed event must carry the real setup error message — not a
+    # The failed event must carry the real setup error message â€” not a
     # bare status. Without the fix ``error`` is absent and the REPL
     # renders nothing.
     assert failed_event is not None
@@ -1659,7 +1659,7 @@ async def test_runner_failed_status_carries_setup_error_message(
     assert error["code"]
 
 
-# ── Harness-stream failure → terminal session.status ────
+# â”€â”€ Harness-stream failure â†’ terminal session.status â”€â”€â”€â”€
 
 
 async def _drain_status_events(
@@ -1672,17 +1672,17 @@ async def _drain_status_events(
 
     Like :func:`_drain_published_statuses` but returns the full event dicts,
     so one drain can assert both the status order and the carried ``error``
-    payload — the queue is consumed by reading, so a test cannot drain twice.
+    payload â€” the queue is consumed by reading, so a test cannot drain twice.
 
     :param conv: Session/conversation identifier, e.g. ``"conv_abc123"``.
     :param until: Stop once this ``session.status`` value is observed,
         e.g. ``"failed"``.
-    :param timeout: Hard cap in seconds — if *until* never arrives the poll
+    :param timeout: Hard cap in seconds â€” if *until* never arrives the poll
         gives up and returns what it saw, so a hang regression fails the
         assertion instead of spinning forever.
     :returns: Ordered ``session.status`` event dicts published for *conv*.
     """
-    from agent_meow.runner.app import _session_event_queues_ref
+    from omnigent.runner.app import _session_event_queues_ref
 
     events: list[dict[str, Any]] = []
     deadline = asyncio.get_running_loop().time() + timeout
@@ -1760,7 +1760,7 @@ async def test_runner_publishes_terminal_failed_when_harness_stream_fails(
     ``response.failed`` on the SSE stream, but the runner's proxy relay
     called ``_on_proxy_stream_end`` with no error, so the turn ended with
     ``session.status: idle``. For codex-native sessions ``idle`` is
-    suppressed (the Codex app-server forwarder owns that edge — and posts
+    suppressed (the Codex app-server forwarder owns that edge â€” and posts
     nothing when Codex never started a turn), so NO terminal status was
     published at all: the web UI showed the error block yet spun on
     "working" forever. For subprocess harnesses the terminal edge was
@@ -1782,9 +1782,9 @@ async def test_runner_publishes_terminal_failed_when_harness_stream_fails(
     """
     conv = f"conv_stream_failed_{until}_{harness.replace('-', '_')}"
     # Keep the codex-native pre-turn bridge writes (write_mcp_bridge_config)
-    # out of the real ``~/.agent_meow/codex-native`` tree. The module documents
+    # out of the real ``~/.omnigent/codex-native`` tree. The module documents
     # this monkeypatch as the supported test isolation point.
-    monkeypatch.setattr("agent_meow.codex_native_bridge._BRIDGE_ROOT", tmp_path)
+    monkeypatch.setattr("omnigent.codex_native_bridge._BRIDGE_ROOT", tmp_path)
 
     async def _spec_resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
         """
@@ -1812,7 +1812,7 @@ async def test_runner_publishes_terminal_failed_when_harness_stream_fails(
 
     async with _runner_test_client(app) as http:
         response = await http.post(
-            # No ``?stream=true`` → background turn (the production path the
+            # No ``?stream=true`` â†’ background turn (the production path the
             # agent-meow server uses to forward session messages).
             f"/v1/sessions/{conv}/events",
             json={
@@ -1825,7 +1825,7 @@ async def test_runner_publishes_terminal_failed_when_harness_stream_fails(
         )
         assert response.status_code == 202
         # Await the background turn task directly so we know it has completed
-        # (and published its terminal status) before draining — the same race
+        # (and published its terminal status) before draining â€” the same race
         # guard the sibling failed-status tests use.
         await _await_bg_turn_task(conv)
         events = await _drain_status_events(conv, until=until, timeout=2.0)
@@ -1845,20 +1845,20 @@ async def test_runner_publishes_terminal_failed_when_harness_stream_fails(
     if until == "failed":
         error = events[-1].get("error")
         # The terminal failed edge must carry the harness's real error so
-        # clients can render it — a bare ``failed`` with no payload would
+        # clients can render it â€” a bare ``failed`` with no payload would
         # clear the spinner but tell the user nothing.
         assert isinstance(error, dict)
         assert _STREAM_FAILURE_MESSAGE in error["message"]
 
 
-# ── Runner-local OS env dispatch ────────────────────────
+# â”€â”€ Runner-local OS env dispatch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_runner_os_env_tools_use_agent_spec_cwd() -> None:
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-    from agent_meow.runner.tool_dispatch import _execute_os_env_tool
-    from agent_meow.spec.types import AgentSpec
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.runner.tool_dispatch import _execute_os_env_tool
+    from omnigent.spec.types import AgentSpec
 
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -1924,8 +1924,8 @@ async def test_runner_os_env_placeholder_cwd_uses_cli_workspace(
     :param tmp_path: Per-test temp root for workspace and fallback paths.
     :returns: None.
     """
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-    from agent_meow.runner.tool_dispatch import _execute_os_env_tool
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.runner.tool_dispatch import _execute_os_env_tool
 
     workspace = tmp_path / "project"
     workspace.mkdir()
@@ -1954,9 +1954,9 @@ async def test_runner_os_env_placeholder_cwd_uses_cli_workspace(
 
 @pytest.mark.asyncio
 async def test_runner_os_env_tools_default_to_conversation_workspace(monkeypatch) -> None:
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-    from agent_meow.runner.tool_dispatch import _execute_os_env_tool
-    from agent_meow.spec.types import AgentSpec
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.runner.tool_dispatch import _execute_os_env_tool
+    from omnigent.spec.types import AgentSpec
 
     with tempfile.TemporaryDirectory() as td:
         monkeypatch.setenv("OMNIGENT_RUNNER_OS_ENV_ROOT", td)
@@ -1982,7 +1982,7 @@ def test_clone_os_env_spec_preserves_all_sandbox_fields() -> None:
     """Cloning an OSEnvSpec must preserve every sandbox field.
 
     Regression guard for the same class of bug previously fixed in
-    :func:`~?agent_meow.inner.terminal._clone_sandbox_spec`: hand-enumerated
+    :func:`~?omnigent.inner.terminal._clone_sandbox_spec`: hand-enumerated
     field copies silently drop security-critical fields (egress_rules,
     egress_allow_private_destinations, env_passthrough, etc.) when new
     fields are added to :class:`OSEnvSandboxSpec`. This test asserts the
@@ -1993,8 +1993,8 @@ def test_clone_os_env_spec_preserves_all_sandbox_fields() -> None:
     """
     import dataclasses
 
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-    from agent_meow.runner.tool_dispatch import _clone_os_env_spec
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.runner.tool_dispatch import _clone_os_env_spec
 
     sandbox = OSEnvSandboxSpec(
         type="darwin_seatbelt",
@@ -2049,8 +2049,8 @@ def test_effective_runner_os_env_defaults_when_spec_has_no_os_env(monkeypatch) -
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    from agent_meow.runner.tool_dispatch import _effective_runner_os_env_spec
-    from agent_meow.spec.types import AgentSpec
+    from omnigent.runner.tool_dispatch import _effective_runner_os_env_spec
+    from omnigent.spec.types import AgentSpec
 
     with tempfile.TemporaryDirectory() as td:
         monkeypatch.setenv("OMNIGENT_RUNNER_OS_ENV_ROOT", td)
@@ -2073,8 +2073,8 @@ def test_effective_runner_os_env_uses_cli_workspace_when_spec_has_no_os_env(
     :param tmp_path: Per-test temp root for workspace and fallback paths.
     :returns: None.
     """
-    from agent_meow.runner.tool_dispatch import _effective_runner_os_env_spec
-    from agent_meow.spec.types import AgentSpec
+    from omnigent.runner.tool_dispatch import _effective_runner_os_env_spec
+    from omnigent.spec.types import AgentSpec
 
     workspace = tmp_path / "project"
     workspace.mkdir()
@@ -2101,14 +2101,14 @@ def test_effective_runner_os_env_runner_workspace_overrides_absolute_spec_cwd(
     Per designs/SESSION_WORKSPACE_SELECTION.md "How this maps onto
     runtime": absolute spec cwds are session-create-time
     boundaries, not runtime overrides. When the runner is launched
-    with ``OMNIGENT_RUNNER_WORKSPACE`` set, it always wins —
+    with ``OMNIGENT_RUNNER_WORKSPACE`` set, it always wins â€”
     otherwise picking ``~/universe/src/foo`` for an agent
     declaring ``cwd: ~/universe`` would silently relocate up to
     ``~/universe`` at runtime.
     """
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-    from agent_meow.runner.tool_dispatch import _effective_runner_os_env_spec
-    from agent_meow.spec.types import AgentSpec
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.runner.tool_dispatch import _effective_runner_os_env_spec
+    from omnigent.spec.types import AgentSpec
 
     workspace = tmp_path / "picked-subdir"
     workspace.mkdir()
@@ -2145,9 +2145,9 @@ def test_effective_runner_os_env_absolute_spec_cwd_used_without_runner_workspace
     runs that construct an agent spec directly without the env
     var continue to honor whatever the spec declared.
     """
-    from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
-    from agent_meow.runner.tool_dispatch import _effective_runner_os_env_spec
-    from agent_meow.spec.types import AgentSpec
+    from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+    from omnigent.runner.tool_dispatch import _effective_runner_os_env_spec
+    from omnigent.spec.types import AgentSpec
 
     spec_cwd = tmp_path / "agent-spec-cwd"
     spec_cwd.mkdir()
@@ -2180,11 +2180,11 @@ async def test_runner_terminal_dispatch_passes_cli_workspace(
     :param tmp_path: Workspace path exported to the runner.
     :returns: None.
     """
-    from agent_meow.inner.datamodel import TerminalEnvSpec
-    from agent_meow.runner.tool_dispatch import _execute_terminal_tool
-    from agent_meow.terminals import TerminalRegistry
-    from agent_meow.tools.base import ToolContext
-    from agent_meow.tools.builtins.sys_terminal import SysTerminalLaunchTool
+    from omnigent.inner.datamodel import TerminalEnvSpec
+    from omnigent.runner.tool_dispatch import _execute_terminal_tool
+    from omnigent.terminals import TerminalRegistry
+    from omnigent.tools.base import ToolContext
+    from omnigent.tools.builtins.sys_terminal import SysTerminalLaunchTool
 
     workspace = tmp_path / "project"
     workspace.mkdir()
@@ -2301,7 +2301,7 @@ def _capturing_publish_event(
     """Build a ``publish_event`` stub that records published events.
 
     :param captured: List the returned callable appends each event
-        dict to (the session id is discarded — every event in these
+        dict to (the session id is discarded â€” every event in these
         tests targets the same conversation).
     :returns: A ``(session_id, event) -> None`` callable.
     """
@@ -2325,9 +2325,9 @@ async def test_terminal_launch_dispatch_emits_resource_created(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.runner.tool_dispatch import _execute_terminal_tool
-    from agent_meow.tools.base import ToolContext
-    from agent_meow.tools.builtins.sys_terminal import SysTerminalLaunchTool
+    from omnigent.runner.tool_dispatch import _execute_terminal_tool
+    from omnigent.tools.base import ToolContext
+    from omnigent.tools.builtins.sys_terminal import SysTerminalLaunchTool
 
     spec = AgentSpec(spec_version=1)
 
@@ -2353,7 +2353,7 @@ async def test_terminal_launch_dispatch_emits_resource_created(
 
     # Tool output is returned unchanged to the harness.
     assert json.loads(out)["status"] == "launched"
-    # Exactly one live event — the fresh-launch resource.created. A
+    # Exactly one live event â€” the fresh-launch resource.created. A
     # second event would mean the close branch or a duplicate fired.
     assert len(published) == 1, f"expected 1 published event, got {published}"
     event = published[0]
@@ -2379,9 +2379,9 @@ async def test_terminal_launch_idempotent_does_not_emit(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.runner.tool_dispatch import _execute_terminal_tool
-    from agent_meow.tools.base import ToolContext
-    from agent_meow.tools.builtins.sys_terminal import SysTerminalLaunchTool
+    from omnigent.runner.tool_dispatch import _execute_terminal_tool
+    from omnigent.tools.base import ToolContext
+    from omnigent.tools.builtins.sys_terminal import SysTerminalLaunchTool
 
     spec = AgentSpec(spec_version=1)
 
@@ -2423,9 +2423,9 @@ async def test_terminal_close_dispatch_emits_resource_deleted(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.runner.tool_dispatch import _execute_terminal_tool
-    from agent_meow.tools.base import ToolContext
-    from agent_meow.tools.builtins.sys_terminal import SysTerminalCloseTool
+    from omnigent.runner.tool_dispatch import _execute_terminal_tool
+    from omnigent.tools.base import ToolContext
+    from omnigent.tools.builtins.sys_terminal import SysTerminalCloseTool
 
     spec = AgentSpec(spec_version=1)
 
@@ -2468,7 +2468,7 @@ async def test_runner_read_inbox_continues_after_malformed_terminal_idle_item() 
 
     :returns: None.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     session_inbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
     session_inbox.put_nowait(
@@ -2504,12 +2504,12 @@ async def test_runner_read_inbox_continues_after_malformed_terminal_idle_item() 
     assert session_inbox.empty()
 
 
-# ── End-to-end with real harness subprocess + real LLM ──
+# â”€â”€ End-to-end with real harness subprocess + real LLM â”€â”€
 
 
 @pytest.mark.skipif(
     not os.environ.get("OPENAI_API_KEY"),
-    reason="OPENAI_API_KEY not set; runner→harness→LLM e2e skipped",
+    reason="OPENAI_API_KEY not set; runnerâ†’harnessâ†’LLM e2e skipped",
 )
 @pytest.mark.asyncio
 async def test_runner_dispatches_to_spawned_harness_with_real_llm(
@@ -2517,13 +2517,13 @@ async def test_runner_dispatches_to_spawned_harness_with_real_llm(
 ) -> None:
     """The flagship architectural test.
 
-    Server-side httpx → runner FastAPI's
-    ``POST /v1/sessions/{conversation_id}/events?stream=true`` →
+    Server-side httpx â†’ runner FastAPI's
+    ``POST /v1/sessions/{conversation_id}/events?stream=true`` â†’
     runner asks ``HarnessProcessManager`` to spawn / fetch the
-    per-conversation harness → uvicorn subprocess on a UDS →
-    test harness's ``run_turn`` → real OpenAI gpt-4o-mini → SSE
-    chunks stream back through harness UDS → runner's proxy_stream
-    → test httpx client.
+    per-conversation harness â†’ uvicorn subprocess on a UDS â†’
+    test harness's ``run_turn`` â†’ real OpenAI gpt-4o-mini â†’ SSE
+    chunks stream back through harness UDS â†’ runner's proxy_stream
+    â†’ test httpx client.
 
     Successful streaming with the expected event sequence proves:
     1. The runner package uses the existing HarnessProcessManager
@@ -2531,7 +2531,7 @@ async def test_runner_dispatches_to_spawned_harness_with_real_llm(
     2. A real harness subprocess is spawned per (conversation, harness).
     3. The runner correctly relays the harness's SSE bytes.
     4. The runner is exercising the architectural shape from
-       designs/RUNNER.md §4 — not just calling an LLM directly.
+       designs/RUNNER.md Â§4 â€” not just calling an LLM directly.
     """
     app = create_runner_app(
         process_manager=started_manager,
@@ -2562,7 +2562,7 @@ async def test_runner_dispatches_to_spawned_harness_with_real_llm(
     # Parse the SSE bytes back into events.
     events = _parse_sse(body)
     types = [t for t, _ in events]
-    # Must START with response.created and END with response.completed —
+    # Must START with response.created and END with response.completed â€”
     # proves both ends of the harness's emitted stream made it through
     # the runner's proxy. A real LLM produces at least one delta in
     # between.
@@ -2575,7 +2575,7 @@ async def test_runner_dispatches_to_spawned_harness_with_real_llm(
     assert any(t == "response.output_text.delta" for t in types), (
         f"expected text deltas from real LLM; got types={types}"
     )
-    # The subprocess actually got spawned — verify by checking the
+    # The subprocess actually got spawned â€” verify by checking the
     # manager's internal state. (Direct attribute access; the manager
     # is a test-fixture instance so this is fine.)
     assert "conv_runner_e2e_test" in started_manager._entries, (
@@ -2617,7 +2617,7 @@ def test_maybe_signal_changed_files_throttles_within_window() -> None:
     real sleep. Regression target: a multi-file turn must collapse to
     one refetch trigger (leading-edge throttle), not fire per write.
     """
-    from agent_meow.runner.tool_dispatch import (
+    from omnigent.runner.tool_dispatch import (
         _CHANGED_FILES_SIGNAL_THROTTLE_S,
         _maybe_signal_changed_files,
     )
@@ -2630,9 +2630,9 @@ def test_maybe_signal_changed_files_throttles_within_window() -> None:
     sid = "conv_changed_files_throttle_unique"
     # First call emits immediately (leading edge).
     _maybe_signal_changed_files(sid, _pub, now=100.0)
-    # Within the window — suppressed.
+    # Within the window â€” suppressed.
     _maybe_signal_changed_files(sid, _pub, now=100.0 + _CHANGED_FILES_SIGNAL_THROTTLE_S / 2)
-    # After the window — emits again.
+    # After the window â€” emits again.
     _maybe_signal_changed_files(sid, _pub, now=100.0 + _CHANGED_FILES_SIGNAL_THROTTLE_S + 0.01)
 
     # 2 = first (leading) + post-window; the middle call was throttled.
@@ -2658,7 +2658,7 @@ def test_subagent_read_tools_are_runner_local() -> None:
     spec-callable resolution and the user sees "not in local dispatch table"
     instead of sub-agent recovery data.
     """
-    from agent_meow.runner.tool_dispatch import should_dispatch_locally
+    from omnigent.runner.tool_dispatch import should_dispatch_locally
 
     assert should_dispatch_locally("sys_session_list") is True
     assert should_dispatch_locally("sys_session_get_history") is True
@@ -2692,8 +2692,8 @@ async def test_sys_session_send_reuses_existing_child_session(
     :param monkeypatch: Pytest monkeypatch fixture.
     :param subagent_args: ``sys_session_send`` ``args`` payload.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     create_posts = 0
     event_posts: list[dict[str, Any]] = []
@@ -2807,15 +2807,15 @@ async def test_sys_session_send_model_lands_in_child_create_body(
     The server persists ``model_override`` on the child row, where the
     native launch paths read it as ``--model`` and the SDK harness path
     as ``HARNESS_<H>_MODEL``. If the create body drops the field, the
-    child silently runs on the harness default — the exact silent-drop
+    child silently runs on the harness default â€” the exact silent-drop
     failure this feature forbids.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param harness: Declared sub-agent harness under test.
     :param model: Family-appropriate model id for *harness*.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     create_bodies: list[dict[str, Any]] = []
 
@@ -2865,7 +2865,7 @@ async def test_sys_session_send_model_lands_in_child_create_body(
 
     payload = json.loads(output)
     assert payload["status"] == "launching"
-    # Exactly one create, carrying the override verbatim — the value the
+    # Exactly one create, carrying the override verbatim â€” the value the
     # server persists and the harness launch consumes.
     assert len(create_bodies) == 1, "fresh named send must create exactly one child"
     assert create_bodies[0]["model_override"] == model
@@ -2887,13 +2887,13 @@ async def test_sys_session_send_blocks_fresh_dispatch_when_harness_cli_missing(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.onboarding.harness_install import HarnessInstallSpec
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.onboarding.harness_install import HarnessInstallSpec
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     # Override the autouse "all CLIs present" stub: pi's CLI is absent here.
     monkeypatch.setattr(
-        "agent_meow.onboarding.harness_install.missing_harness_cli",
+        "omnigent.onboarding.harness_install.missing_harness_cli",
         lambda harness: HarnessInstallSpec("Pi", "pi", "@earendil-works/pi-coding-agent"),
     )
     monkeypatch.setattr(runner_app, "get_session_agent_id", lambda _sid: "ag_parent")
@@ -2937,13 +2937,13 @@ async def test_sys_session_send_blocks_fresh_dispatch_when_harness_cli_missing(
             runner_app._session_inboxes_ref.pop("conv_parent_nopi", None)
 
     # The output is a plain error string (not a JSON status payload) naming
-    # the missing binary and how to install it — what the orchestrator/human
+    # the missing binary and how to install it â€” what the orchestrator/human
     # needs to unblock. If this regresses, the dispatch would instead create a
     # child that can never boot.
     assert output.startswith("Error:")
     assert "'pi' CLI" in output
     assert "npm install -g @earendil-works/pi-coding-agent" in output
-    # No child was created — the guard returned before the create POST. A
+    # No child was created â€” the guard returned before the create POST. A
     # nonzero count would mean we spawned a worker doomed to fail at boot.
     assert create_posts == 0
 
@@ -2962,8 +2962,8 @@ async def test_sys_session_send_model_rejected_for_existing_child(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     create_posts = 0
     event_posts = 0
@@ -3037,17 +3037,17 @@ async def test_sys_session_send_model_rejected_in_by_id_mode() -> None:
     ``model`` plus ``session_id`` fails loud before any server call.
 
     By-id mode always targets an existing session, where a model
-    override cannot take effect — the tool must reject it instead of
+    override cannot take effect â€” the tool must reject it instead of
     silently dropping the field.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     requests_seen = 0
     session_inbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
-        """Count every request — none is expected."""
+        """Count every request â€” none is expected."""
         nonlocal requests_seen
         requests_seen += 1
         return httpx.Response(404, json={"error": str(request.url)})
@@ -3092,8 +3092,8 @@ async def test_sys_session_send_model_rejected_for_unplumbed_harness(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     create_posts = 0
 
@@ -3183,8 +3183,8 @@ async def test_sys_session_send_model_rejected_for_wrong_family(
     :param model: Cross-family or undeterminable model id.
     :param expected_rule: Rule text the error must contain.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     create_posts = 0
 
@@ -3252,18 +3252,18 @@ async def test_sys_session_send_model_invalid_rejected_before_any_server_call(
 
     The override eventually lands on a command line (``--model``), so
     shell-shaped or non-string values must be rejected at the tool
-    boundary — not persisted and not silently dropped.
+    boundary â€” not persisted and not silently dropped.
 
     :param bad_model: The invalid ``model`` payload under test.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     requests_seen = 0
     session_inbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
-        """Count every request — none is expected."""
+        """Count every request â€” none is expected."""
         nonlocal requests_seen
         requests_seen += 1
         return httpx.Response(404, json={"error": str(request.url)})
@@ -3292,7 +3292,7 @@ async def test_sys_session_send_model_invalid_rejected_before_any_server_call(
 
     assert output.startswith("Error:"), output
     assert "model" in output
-    # Validation precedes every lookup/create — nothing reached the server.
+    # Validation precedes every lookup/create â€” nothing reached the server.
     assert requests_seen == 0
 
 
@@ -3301,7 +3301,7 @@ def _spec_with_real_subagent(harness: str) -> AgentSpec:
     Build a real parent :class:`AgentSpec` with one ``worker`` sub-agent.
 
     Unlike :func:`_spec_with_subagent_harness` (a structural stub), this
-    is a fully-typed spec the model-provider resolution can walk — the
+    is a fully-typed spec the model-provider resolution can walk â€” the
     normalization gate resolves ``executor.auth`` / ``profile`` / config
     providers on the sub-spec.
 
@@ -3335,7 +3335,7 @@ def _isolate_model_providers(
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
     monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
-    monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
+    monkeypatch.setattr("omnigent.onboarding.detected.detect_providers", list)
     (tmp_path / "config.yaml").write_text(yaml_text)
 
 
@@ -3346,7 +3346,7 @@ class _ModelSendResult:
 
     :param output: The tool output string (JSON handle or ``Error:``).
     :param create_bodies: The ``POST /v1/sessions`` bodies the mock
-        server captured — the persisted ``model_override`` lives here.
+        server captured â€” the persisted ``model_override`` lives here.
     """
 
     output: str
@@ -3369,8 +3369,8 @@ async def _dispatch_model_send(
     :param conv_id: A unique parent conversation id per test.
     :returns: The tool output and the captured create bodies.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     create_bodies: list[dict[str, Any]] = []
     monkeypatch.setattr(runner_app, "get_session_agent_id", lambda _sid: "ag_parent")
@@ -3456,7 +3456,7 @@ async def test_sys_session_send_localizes_canonical_model_for_gateway_child(
     With a Databricks default provider, a bare canonical vendor id
     (``claude-sonnet-4-6``) would die at the gateway ("model not
     found"); the gate must persist the ``databricks-``-prefixed
-    spelling as ``model_override`` — and ONLY for mechanical ids:
+    spelling as ``model_override`` â€” and ONLY for mechanical ids:
     already-local and vendor-prefixed shapes pass through verbatim.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3478,7 +3478,7 @@ async def test_sys_session_send_localizes_canonical_model_for_gateway_child(
     )
     payload = json.loads(result.output)
     assert payload["status"] == "launching"
-    # The persisted override is the localized id — this is the value the
+    # The persisted override is the localized id â€” this is the value the
     # server stores and the harness launch consumes.
     assert len(result.create_bodies) == 1
     assert result.create_bodies[0]["model_override"] == expected
@@ -3533,7 +3533,7 @@ async def test_sys_session_send_passes_model_through_when_provider_undeterminabl
     An undeterminable child provider leaves the requested id untouched.
 
     The structural sub-spec stub has no auth/profile attributes, so
-    provider resolution degrades to "none" — the gate must neither
+    provider resolution degrades to "none" â€” the gate must neither
     crash the dispatch nor guess a transform.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3549,7 +3549,7 @@ async def test_sys_session_send_passes_model_through_when_provider_undeterminabl
     payload = json.loads(result.output)
     assert payload["status"] == "launching"
     assert len(result.create_bodies) == 1
-    # Pass-through: no provider kind, no transform — fail-loud at the
+    # Pass-through: no provider kind, no transform â€” fail-loud at the
     # harness remains the safety net.
     assert result.create_bodies[0]["model_override"] == "claude-sonnet-4-6"
 
@@ -3564,7 +3564,7 @@ async def test_sys_session_send_family_guard_runs_before_normalization(
 
     A GPT id on a claude worker must be rejected quoting exactly what
     the caller sent (``gpt-5-4``, not ``databricks-gpt-5-4``) and no
-    child may be created — even though the gateway provider would have
+    child may be created â€” even though the gateway provider would have
     localized the id had the guard passed.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3596,7 +3596,7 @@ async def test_sys_list_models_dispatches_locally_with_static_provider(
     """
     ``execute_tool`` routes ``sys_list_models`` to the catalog enumerator.
 
-    With a subscription default (static — no HTTP), the payload must
+    With a subscription default (static â€” no HTTP), the payload must
     carry one row per declared sub-agent plus ``self``, each in the
     documented ``{source, verified, models, note}`` shape with the
     curated claude ids surviving the claude-family filter.
@@ -3604,7 +3604,7 @@ async def test_sys_list_models_dispatches_locally_with_static_provider(
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Per-test temp dir for the isolated provider config.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     _isolate_model_providers(
         monkeypatch,
@@ -3622,7 +3622,7 @@ async def test_sys_list_models_dispatches_locally_with_static_provider(
     worker = payload["worker"]
     assert worker["source"] == "static"
     assert worker["verified"] is False
-    # The curated claude aliases survive the claude-family filter — the
+    # The curated claude aliases survive the claude-family filter â€” the
     # exact ids an orchestrator may pass back as args.model.
     assert [m["id"] for m in worker["models"]] == [
         "claude-opus-4-8",
@@ -3637,10 +3637,10 @@ async def test_sys_list_models_requires_agent_spec() -> None:
     """
     ``sys_list_models`` with no resolvable spec fails loud, not empty.
 
-    A silent ``{}`` would read as "no workers exist" — the error string
+    A silent ``{}`` would read as "no workers exist" â€” the error string
     tells the orchestrator the runner couldn't resolve its spec.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     output = await execute_tool(
         tool_name="sys_list_models",
@@ -3660,14 +3660,14 @@ async def test_sys_session_send_by_id_rejects_closed_child(
     By-id ``sys_session_send`` refuses closed direct children.
 
     The close tool hands orchestrators a durable ``conversation_id``.
-    Without checking ``agent_meow.closed=true`` in by-id mode, an
+    Without checking ``omnigent.closed=true`` in by-id mode, an
     orchestrator could keep chatting with the exact child it had just
     closed, bypassing the named lookup that skips closed rows.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     event_posts = 0
     registrations: list[str] = []
@@ -3735,8 +3735,8 @@ async def test_sys_session_send_completion_drains_from_parent_inbox(
     tool result. If completion delivery is not wired, the drain returns the
     empty-inbox sentinel instead of the child marker.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     monkeypatch.setattr(runner_app, "get_session_agent_id", lambda _sid: "ag_parent")
     monkeypatch.setattr(runner_app, "register_child_session", lambda *a, **k: None)
@@ -3815,8 +3815,8 @@ async def test_subagent_inbox_cleanup_does_not_unregister_next_turn(
     first inbox item's cleanup is guarded by the per-dispatch work id so it
     cannot unregister the second running turn.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     monkeypatch.setattr(runner_app, "get_session_agent_id", lambda _sid: "ag_parent")
     monkeypatch.setattr(runner_app, "register_child_session", lambda *a, **k: None)
@@ -3931,12 +3931,12 @@ def _sse_text_turn(text: str) -> list[str]:
 
     The runner's ``proxy_stream`` accumulates ``response.output_text.delta``
     chunks and, on ``response.completed``, commits an assistant message to
-    ``_session_histories`` — which is what ``_extract_last_assistant_text``
+    ``_session_histories`` â€” which is what ``_extract_last_assistant_text``
     reads for the sub-agent's delivered output. So a turn that emits
     ``text`` here is the turn whose result the parent should receive.
 
     :param text: Assistant text this turn streams, e.g. ``"FINAL"``.
-    :returns: SSE frames for a created → one-delta → completed turn.
+    :returns: SSE frames for a created â†’ one-delta â†’ completed turn.
     """
     return [
         'event: response.created\ndata: {"type":"response.created",'
@@ -3956,7 +3956,7 @@ class _GatedTwoTurnHarnessStream:
     ``started`` (the sync gate so the test knows the turn is live and in
     ``_active_turns``), then awaits ``release`` before yielding
     ``response.completed``. This holds turn 1 active deterministically while
-    the test posts a second message (which buffers a continuation) — no
+    the test posts a second message (which buffers a continuation) â€” no
     sleeps, no polling of runner internals. Turn 2 (and any later turn)
     streams its scripted frames straight through.
 
@@ -4034,7 +4034,7 @@ class _GatedTwoTurnHarnessClient:
     """Harness client whose ``stream`` returns the gated two-turn stream.
 
     Also implements ``post`` (202) so the runner's best-effort mid-turn
-    injection forward — fired when the second message buffers — succeeds
+    injection forward â€” fired when the second message buffers â€” succeeds
     quietly instead of raising into the buffering path.
 
     :param turns: Per-turn SSE frame lists.
@@ -4090,7 +4090,7 @@ class _GatedTwoTurnHarnessClient:
         """Accept the runner's mid-turn injection forward (best-effort).
 
         :param url: Harness endpoint path (ignored).
-        :param json: Forwarded message body (ignored — the buffered copy is
+        :param json: Forwarded message body (ignored â€” the buffered copy is
             what drives the continuation; this fake never echoes an
             ``injection.consumed`` marker, so the buffer survives).
         :param timeout: Request timeout (ignored).
@@ -4107,9 +4107,9 @@ async def test_scaffold_subagent_defers_terminal_delivery_while_continuation_buf
     Reproduces the multi-turn delivery bug: ``_on_proxy_stream_end`` used to
     mark a scaffold child's work entry terminal (``completed`` +
     ``_extract_last_assistant_text``) at EVERY successful turn end. A child
-    that runs a second turn without a fresh parent ``sys_session_send`` — here
+    that runs a second turn without a fresh parent ``sys_session_send`` â€” here
     a buffered continuation message drained by ``_check_and_start_next_turn``
-    — then had its FIRST turn's intermediate narration delivered as the
+    â€” then had its FIRST turn's intermediate narration delivered as the
     result, and its real final synthesis dropped by the already-terminal +
     ``delivered`` short-circuit in ``mark_subagent_work_terminal``.
 
@@ -4119,7 +4119,7 @@ async def test_scaffold_subagent_defers_terminal_delivery_while_continuation_buf
     continuation). Releasing turn 1 then lets the continuation run to its own
     empty-buffer stream end. No sleeps, no polling of runner internals.
     """
-    from agent_meow.runner import app as runner_app
+    from omnigent.runner import app as runner_app
 
     parent_id = "conv_parent_multiturn_defer"
     child_id = "conv_child_multiturn_defer"
@@ -4155,7 +4155,7 @@ async def test_scaffold_subagent_defers_terminal_delivery_while_continuation_buf
         server_client=NullServerClient(),  # type: ignore[arg-type]
     )
 
-    # Register the child as tracked sub-agent work with a real parent inbox —
+    # Register the child as tracked sub-agent work with a real parent inbox â€”
     # the same module-level surface a parent ``sys_session_send`` uses. The
     # inbox queue is the observable delivery surface.
     parent_inbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -4198,7 +4198,7 @@ async def test_scaffold_subagent_defers_terminal_delivery_while_continuation_buf
                 },
             )
             # 202 with status "buffered" proves the message buffered against the
-            # active turn rather than starting its own turn — the precondition
+            # active turn rather than starting its own turn â€” the precondition
             # for the deferral path. If this were "accepted", turn 1 would not
             # have a continuation pending and the bug wouldn't apply.
             assert resp2.status_code == 202
@@ -4239,7 +4239,7 @@ async def test_scaffold_subagent_defers_terminal_delivery_while_continuation_buf
     assert item["status"] == "completed"  # success terminal status
     # The delivered output is the FINAL turn's text, not turn 1's intermediate
     # narration. Before the fix, turn 1's "INTERMEDIATE_NARRATION" was delivered
-    # as the terminal result and the final synthesis was dropped — so this
+    # as the terminal result and the final synthesis was dropped â€” so this
     # asserts the exact content that proves the right turn won.
     assert item["output"] == "FINAL_SYNTHESIS", (
         f"parent must receive the final turn's synthesis, got {item['output']!r}; "
@@ -4297,7 +4297,7 @@ async def test_sys_read_inbox_applies_subagent_tool_result_policy(
     :param expected_output: Output expected in the drained inbox text.
     :param blocked_output: Raw child output that policy must remove.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     session_inbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
     session_inbox.put_nowait(
@@ -4365,8 +4365,8 @@ async def test_sys_read_inbox_requeues_subagent_output_on_transient_policy_failu
     payload must remain retryable; otherwise the second drain could not
     return the child result after the policy service recovers.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     parent_id = "conv_parent_policy_retry"
     child_id = "conv_child_policy_retry"
@@ -4452,7 +4452,7 @@ def test_list_tasks_is_not_runner_local_builtin() -> None:
     claim it as a local lifecycle tool or relay it to native harnesses as
     a framework-owned builtin.
     """
-    from agent_meow.runner.tool_dispatch import (
+    from omnigent.runner.tool_dispatch import (
         _NATIVE_RELAY_BUILTIN_TOOLS,
         should_dispatch_locally,
     )
@@ -4475,8 +4475,8 @@ async def test_sys_cancel_task_stops_subagent_and_dedupes_late_completion(
     kills the pane and reclaims the work entry). A later completion attempt
     must not enqueue a second completed inbox item.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     monkeypatch.setattr(runner_app, "get_session_agent_id", lambda _sid: "ag_parent")
     monkeypatch.setattr(runner_app, "register_child_session", lambda *a, **k: None)
@@ -4497,7 +4497,7 @@ async def test_sys_cancel_task_stops_subagent_and_dedupes_late_completion(
                 201,
                 json={
                     "id": "conv_child_cancel",
-                    "labels": {"agent_meow.wrapper": "claude-code-native-ui"},
+                    "labels": {"omnigent.wrapper": "claude-code-native-ui"},
                 },
             )
         if (
@@ -4558,7 +4558,7 @@ async def test_sys_cancel_task_stops_subagent_and_dedupes_late_completion(
             runner_app._session_inboxes_ref.pop("conv_parent_cancel", None)
 
     # ``data`` rides along because SessionEventInput requires it on older
-    # servers — omitting it 422'd sub-agent cancellation in production.
+    # servers â€” omitting it 422'd sub-agent cancellation in production.
     assert stops == [{"type": "stop_session", "data": {}}]
     assert cancel_output == {
         "cancelled": True,
@@ -4566,7 +4566,7 @@ async def test_sys_cancel_task_stops_subagent_and_dedupes_late_completion(
         "status": "cancelled",
     }
     assert inbox_output == (
-        "[System: sub-agent task conv_child_cancel cancelled — runner:phase-c]"
+        "[System: sub-agent task conv_child_cancel cancelled â€” runner:phase-c]"
     ), "Cancelled sub-agent work must produce exactly one cancelled inbox item."
 
 
@@ -4578,12 +4578,12 @@ async def test_sys_cancel_task_reports_codex_native_cancel_as_best_effort() -> N
     Codex-native has no runner-side hard-stop path, so the cancel routes to
     ``interrupt`` (not ``stop_session``, which the runner 204 no-ops for every
     non-claude-native harness). For codex-native that interrupt is itself a
-    best-effort no-op — the child can remain running after the POST returns —
+    best-effort no-op â€” the child can remain running after the POST returns â€”
     so the tool result must say cancellation is best-effort instead of telling
     the parent to wait forever for a terminal inbox item.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     parent_id = "conv_parent_codex_cancel"
     child_id = "conv_child_codex_cancel"
@@ -4651,13 +4651,13 @@ async def test_sys_cancel_task_interrupts_non_native_subagent() -> None:
     In-process harnesses (e.g. ``claude-sdk``) have no wrapper label. The
     runner's ``stop_session`` handler 204 no-ops for them, so posting
     ``stop_session`` would silently leave the child running and the parent
-    work entry stuck ``running``. ``interrupt`` is the path they honor —
-    ``_interrupted_sessions`` → ``_on_proxy_stream_end`` marks the turn
+    work entry stuck ``running``. ``interrupt`` is the path they honor â€”
+    ``_interrupted_sessions`` â†’ ``_on_proxy_stream_end`` marks the turn
     cancelled and wakes the parent. This guards against regressing to an
     unconditional ``stop_session`` (which dropped in-process cancellation).
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     parent_id = "conv_parent_inproc_cancel"
     child_id = "conv_child_inproc_cancel"
@@ -4703,7 +4703,7 @@ async def test_sys_cancel_task_interrupts_non_native_subagent() -> None:
     # the stop_session that the runner no-ops for non-claude-native harnesses.
     # ``data`` rides along for SessionEventInput compatibility with older servers.
     assert posts == [{"type": "interrupt", "data": {}}]
-    # Not codex → generic (non-best-effort) pending result; the terminal
+    # Not codex â†’ generic (non-best-effort) pending result; the terminal
     # status will arrive on the inbox once the interrupted turn ends.
     assert cancel_output == {
         "cancel_requested": True,
@@ -4723,7 +4723,7 @@ def test_session_status_to_task_status_maps_known_values() -> None:
     child-summary ``current_task_status`` (different vocabularies), and
     returns None for unknown values so the caller omits the field.
     """
-    from agent_meow.runner.app import _session_status_to_task_status
+    from omnigent.runner.app import _session_status_to_task_status
 
     assert _session_status_to_task_status("launching") == "launching"
     assert _session_status_to_task_status("running") == "in_progress"
@@ -4739,13 +4739,13 @@ def test_truncate_child_preview_caps_with_ellipsis() -> None:
     text past the cap to exactly the cap + a single ellipsis char (so the
     child rail preview matches the server-side truncation).
     """
-    from agent_meow.runner.app import _CHILD_PREVIEW_MAX_CHARS, _truncate_child_preview
+    from omnigent.runner.app import _CHILD_PREVIEW_MAX_CHARS, _truncate_child_preview
 
     assert _truncate_child_preview("hello world") == "hello world"
 
     long_text = "x" * (_CHILD_PREVIEW_MAX_CHARS + 50)
     out = _truncate_child_preview(long_text)
-    assert out.endswith("…")
+    assert out.endswith("â€¦")
     assert len(out) == _CHILD_PREVIEW_MAX_CHARS + 1
 
 
@@ -4755,7 +4755,7 @@ def test_register_unregister_child_session_roundtrip() -> None:
     ``unregister_child_session`` drops it (used to mirror a child's
     status/preview deltas onto the parent stream).
     """
-    from agent_meow.runner.app import (
+    from omnigent.runner.app import (
         _child_session_parents,
         register_child_session,
         unregister_child_session,
@@ -4779,16 +4779,16 @@ def test_register_unregister_child_session_roundtrip() -> None:
     assert _child_session_parents.get(child_id) is None
 
 
-# ── sys_session_get_history / _list / _close runner dispatch ────────
+# â”€â”€ sys_session_get_history / _list / _close runner dispatch â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # These verify the runner-local handler that makes get_history/list/close
 # work for harness agents (claude-sdk/codex/openai-agents), whose
 # agent-meow tool calls surface as action_required and route through
-# the runner — NOT the in-process inner Session. Confirmed empirically:
+# the runner â€” NOT the in-process inner Session. Confirmed empirically:
 # without this dispatch the runner returns "not in local dispatch
 # table"; with it, a live harness agent reads a sibling's items. The
 # handler calls the agent-meow server's existing REST endpoints, so tests use a
-# real httpx.AsyncClient backed by MockTransport (not a MagicMock) — the
+# real httpx.AsyncClient backed by MockTransport (not a MagicMock) â€” the
 # code exercises the same request/response objects it sees in production.
 
 
@@ -4815,11 +4815,11 @@ async def test_session_list_maps_children_and_skips_closed() -> None:
     ``{agent, title, conversation_id}`` and drops closed and
     colonless rows, matching ``SysSessionListTool``.
     """
-    from agent_meow.runner.tool_dispatch import _execute_session_query_tool
+    from omnigent.runner.tool_dispatch import _execute_session_query_tool
 
     def handler(request: httpx.Request) -> httpx.Response:
         # Parent-detection snapshot: this caller is top-level (no parent),
-        # so there is no main/sibling enrichment — only its own children.
+        # so there is no main/sibling enrichment â€” only its own children.
         if request.url.path == "/v1/sessions/conv_parent":
             return httpx.Response(200, json={"id": "conv_parent", "parent_session_id": None})
         assert request.url.path == "/v1/sessions/conv_parent/child_sessions"
@@ -4882,11 +4882,11 @@ async def test_session_list_maps_children_and_skips_closed() -> None:
 async def test_session_list_adds_main_and_siblings_for_child_caller() -> None:
     """
     When the caller is itself a child (a user-added agent), sys_session_list
-    also surfaces ``main`` (its parent) and its siblings — so an added agent
+    also surfaces ``main`` (its parent) and its siblings â€” so an added agent
     with no children of its own can still discover the conversation_ids to
     peek. The caller is excluded from its own sibling list.
     """
-    from agent_meow.runner.tool_dispatch import _execute_session_query_tool
+    from omnigent.runner.tool_dispatch import _execute_session_query_tool
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -4939,9 +4939,9 @@ async def test_session_peek_returns_chronological_projected_items() -> None:
     """
     ``sys_session_get_history`` reads ``GET /items`` (newest-first), reverses to
     chronological, projects each item, and labels with the target's
-    parsed agent/title from its snapshot — matching ``SysSessionGetHistoryTool``.
+    parsed agent/title from its snapshot â€” matching ``SysSessionGetHistoryTool``.
     """
-    from agent_meow.runner.tool_dispatch import _execute_session_query_tool
+    from omnigent.runner.tool_dispatch import _execute_session_query_tool
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/v1/sessions/conv_target/items":
@@ -4983,7 +4983,7 @@ async def test_session_peek_returns_chronological_projected_items() -> None:
     assert out["agent"] == "researcher"
     assert out["title"] == "auth"
     # Reversed to chronological (user ask first), and message text is
-    # extracted from the content blocks — proves the projection ran.
+    # extracted from the content blocks â€” proves the projection ran.
     assert [(i["role"], i["text"]) for i in out["items"]] == [
         ("user", "where is the bug"),
         ("assistant", "found it"),
@@ -5002,7 +5002,7 @@ async def test_session_peek_appends_pending_elicitation_from_snapshot() -> None:
     get_history must read it and project a ``pending_elicitation`` item so the
     parent agent isn't blind to a sub-agent awaiting input.
     """
-    from agent_meow.runner.tool_dispatch import _execute_session_query_tool
+    from omnigent.runner.tool_dispatch import _execute_session_query_tool
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/v1/sessions/conv_target/items":
@@ -5072,7 +5072,7 @@ async def test_session_peek_appends_pending_elicitation_from_snapshot() -> None:
 )
 async def test_session_peek_maps_access_errors(status: int, expected_error: str) -> None:
     """A 404/403 from ``GET /items`` maps to the in-process tool's typed errors."""
-    from agent_meow.runner.tool_dispatch import _execute_session_query_tool
+    from omnigent.runner.tool_dispatch import _execute_session_query_tool
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(status, json={"error": "x"})
@@ -5097,7 +5097,7 @@ async def test_session_close_patches_tombstoned_title() -> None:
 
     The title tombstone frees the DB unique slot so future
     ``sys_session_send`` of the same ``(agent, title)`` creates a
-    fresh child. The ``agent_meow.closed=true`` label is the
+    fresh child. The ``omnigent.closed=true`` label is the
     behavioral marker that direct write paths and clients consume.
 
     The caller (``conv_caller``) and target (``conv_target``) share the
@@ -5105,11 +5105,11 @@ async def test_session_close_patches_tombstoned_title() -> None:
     tree-scope gate passes and the PATCH is issued.
     """
     # _execute_session_query_tool is the runner's REST dispatch entry
-    # point for session-query tools — called directly here because these
+    # point for session-query tools â€” called directly here because these
     # tests validate the REST path's tree-scoping (_session_close_via_rest)
     # specifically, distinct from the in-process path covered in
     # tests/tools/builtins/test_sys_session.py.
-    from agent_meow.runner.tool_dispatch import _execute_session_query_tool
+    from omnigent.runner.tool_dispatch import _execute_session_query_tool
 
     patched: dict[str, Any] = {}
 
@@ -5166,11 +5166,11 @@ async def test_session_close_rejects_out_of_tree_target_without_patch() -> None:
     the in-process path. Here the target's ``root_conversation_id``
     (``conv_other_root``) differs from the caller's (``conv_root``), so
     the tool returns ``session_out_of_tree`` and the tombstone PATCH is
-    never sent — proving the target's title is left intact. Without the
+    never sent â€” proving the target's title is left intact. Without the
     gate, edit access alone would let an agent close a sub-agent in one
     of its other, unrelated trees.
     """
-    from agent_meow.runner.tool_dispatch import _execute_session_query_tool
+    from omnigent.runner.tool_dispatch import _execute_session_query_tool
 
     patched = False
 
@@ -5220,7 +5220,7 @@ async def test_session_close_rejects_top_level_target() -> None:
     ``parent_session_id``; close only operates on sub-agents, so the
     tool returns ``session_not_a_sub_agent``.
     """
-    from agent_meow.runner.tool_dispatch import _execute_session_query_tool
+    from omnigent.runner.tool_dispatch import _execute_session_query_tool
 
     patched = False
 
@@ -5262,7 +5262,7 @@ def test_agent_tools_are_runner_local() -> None:
     through to spec-callable resolution and the orchestrator can't
     inspect or fork agents.
     """
-    from agent_meow.runner.tool_dispatch import should_dispatch_locally
+    from omnigent.runner.tool_dispatch import should_dispatch_locally
 
     assert should_dispatch_locally("sys_agent_get") is True
     assert should_dispatch_locally("sys_agent_download") is True
@@ -5282,7 +5282,7 @@ async def test_agent_tools_map_404_to_agent_not_found(
     tmp_path: Path,
 ) -> None:
     """
-    Both agent tools map a 404 to ``agent_not_found`` — the orchestrator
+    Both agent tools map a 404 to ``agent_not_found`` â€” the orchestrator
     gets a typed reason instead of a raw status. If the mapping
     regressed, it couldn't tell "no such agent/session" from a transport
     error.
@@ -5290,7 +5290,7 @@ async def test_agent_tools_map_404_to_agent_not_found(
     :param tool_name: The agent tool under test.
     :param tmp_path: Workspace dir (only the download path needs it).
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(404, json={"error": "missing"})
@@ -5338,7 +5338,7 @@ def test_native_relay_builtin_set_matches_toolmanager_gating(
 
     claude-native / codex-native ignore the harness ``tools`` list, so the
     relay is their only tool surface; ``_ensure_comment_relay_started``
-    applies this same ``ToolManager(spec).get_tool_schemas()`` ∩
+    applies this same ``ToolManager(spec).get_tool_schemas()`` âˆ©
     ``_NATIVE_RELAY_BUILTIN_TOOLS`` filter. This locks two invariants:
 
     - **Parity**: the always-on orchestrator/discovery surface (agent
@@ -5348,20 +5348,20 @@ def test_native_relay_builtin_set_matches_toolmanager_gating(
       distinct grants, matching what non-native harnesses get via
       ``request.tools``. ``tools.agents`` permits only the declared
       sub-agent list (send + close, NO create); ``spawn: true`` (set
-      by the native wrapper specs) additionally grants create —
+      by the native wrapper specs) additionally grants create â€”
       launching arbitrary agents or custom bundles. A regressed gate
       either strands an opted-in native agent or hands an un-opted
       agent the spawn surface.
 
-    :param opt_in: Which opt-in arm the spec uses — ``"none"``,
+    :param opt_in: Which opt-in arm the spec uses â€” ``"none"``,
         ``"agents"`` (declared ``tools.agents``), or ``"spawn"``
         (top-level ``spawn: true``).
     :param expected_writes: Exact spawn-write tool names expected in
         the relayed set for this opt-in arm.
     """
-    from agent_meow.runner.tool_dispatch import _NATIVE_RELAY_BUILTIN_TOOLS
-    from agent_meow.spec.types import ToolsConfig
-    from agent_meow.tools.manager import ToolManager
+    from omnigent.runner.tool_dispatch import _NATIVE_RELAY_BUILTIN_TOOLS
+    from omnigent.spec.types import ToolsConfig
+    from omnigent.tools.manager import ToolManager
 
     if opt_in == "agents":
         spec = AgentSpec(
@@ -5376,7 +5376,7 @@ def test_native_relay_builtin_set_matches_toolmanager_gating(
     schema_names = {s["function"]["name"] for s in ToolManager(spec).get_tool_schemas()}
     relayed = schema_names & _NATIVE_RELAY_BUILTIN_TOOLS
 
-    # Always-on reads/discovery reach every native agent — if any is
+    # Always-on reads/discovery reach every native agent â€” if any is
     # missing, the orchestrator running under claude-native can't list or
     # inspect agents/sessions.
     assert {"sys_agent_get", "sys_agent_download", "sys_agent_list"} <= relayed
@@ -5385,7 +5385,7 @@ def test_native_relay_builtin_set_matches_toolmanager_gating(
     assert {"list_comments", "update_comment"} <= relayed
 
     # Exact-set check on the writes: an extra name means a grant leaked
-    # beyond its arm (e.g. create from tools.agents alone — letting a
+    # beyond its arm (e.g. create from tools.agents alone â€” letting a
     # whitelisted-sub-agents spec launch arbitrary bundles); a missing
     # name strands an opted-in agent.
     spawn_writes = {"sys_session_send", "sys_session_close", "sys_session_create"}
@@ -5394,7 +5394,7 @@ def test_native_relay_builtin_set_matches_toolmanager_gating(
     assert ("sys_list_models" in relayed) == ("sys_session_send" in expected_writes)
 
     # OS tools ride a separate unconditional relay path (overriding the
-    # bridge's static versions), so they must never be in the builtin set —
+    # bridge's static versions), so they must never be in the builtin set â€”
     # otherwise they'd be double-advertised and bypass that override.
     os_tools = {"sys_os_read", "sys_os_write", "sys_os_edit", "sys_os_shell"}
     assert not (os_tools & _NATIVE_RELAY_BUILTIN_TOOLS)
@@ -5427,17 +5427,17 @@ def test_native_relay_advertises_terminal_tools_per_spec_gate(
     ``terminals``.
 
     claude-native / codex-native ignore the harness ``tools`` list, so
-    the relay (``ToolManager(spec).get_tool_schemas()`` ∩
+    the relay (``ToolManager(spec).get_tool_schemas()`` âˆ©
     ``_NATIVE_RELAY_BUILTIN_TOOLS``, applied by
     ``_ensure_comment_relay_started``) is the ONLY way the five
     terminal tools reach the real CLI. This locks both directions of
     the gate:
 
     - **Advertised when granted**: a spec with a ``terminals:`` block
-      must relay all five tools — a missing name strands a native
+      must relay all five tools â€” a missing name strands a native
       agent that was granted terminals.
     - **Withheld when not granted**: a spec without ``terminals:``
-      must relay none — a leaked name hands tmux access to an
+      must relay none â€” a leaked name hands tmux access to an
       un-opted agent.
 
     :param declares_terminals: Whether the spec carries a
@@ -5449,11 +5449,11 @@ def test_native_relay_advertises_terminal_tools_per_spec_gate(
         terminal-tool registration (which looks it up via
         ``get_terminal_registry()``) works without runtime ``init()``.
     """
-    from agent_meow.inner.datamodel import TerminalEnvSpec
-    from agent_meow.runner.tool_dispatch import _NATIVE_RELAY_BUILTIN_TOOLS
-    from agent_meow.runtime import _globals as rt_globals
-    from agent_meow.terminals.registry import TerminalRegistry
-    from agent_meow.tools.manager import ToolManager
+    from omnigent.inner.datamodel import TerminalEnvSpec
+    from omnigent.runner.tool_dispatch import _NATIVE_RELAY_BUILTIN_TOOLS
+    from omnigent.runtime import _globals as rt_globals
+    from omnigent.terminals.registry import TerminalRegistry
+    from omnigent.tools.manager import ToolManager
 
     monkeypatch.setattr(rt_globals, "_terminal_registry", TerminalRegistry())
 
@@ -5485,7 +5485,7 @@ def test_session_create_is_runner_local() -> None:
     through to spec-callable resolution and the orchestrator can't spawn
     child sessions.
     """
-    from agent_meow.runner.tool_dispatch import should_dispatch_locally
+    from omnigent.runner.tool_dispatch import should_dispatch_locally
 
     assert should_dispatch_locally("sys_session_create") is True
 
@@ -5498,10 +5498,10 @@ async def test_session_list_global_sessions_filter_and_connectivity() -> None:
     ``runner_online`` by checking each UNIQUE runner once. Proves: the
     agent_name filter reaches the server; sessions are projected with
     status + parentage; and connectivity is folded in without a
-    per-session status fan-out (two sessions share runner r1 → exactly
+    per-session status fan-out (two sessions share runner r1 â†’ exactly
     one /v1/runners/r1/status call).
     """
-    from agent_meow.runner.tool_dispatch import _execute_session_query_tool
+    from omnigent.runner.tool_dispatch import _execute_session_query_tool
 
     runner_status_calls: list[str] = []
     sessions_params: dict[str, str] = {}
@@ -5577,7 +5577,7 @@ async def test_session_list_global_sessions_filter_and_connectivity() -> None:
             "parent_session_id": None,
         },
     ]
-    # Connectivity resolved once per UNIQUE runner — two sessions share
+    # Connectivity resolved once per UNIQUE runner â€” two sessions share
     # r1, so exactly one status call (not one per session). A count of 2
     # would mean the dedup regressed into a per-session fan-out.
     assert runner_status_calls == ["r1"]
@@ -5592,7 +5592,7 @@ async def test_sys_agent_download_rejects_path_in_dest_filename(tmp_path: Path) 
 
     :param tmp_path: Pytest temp dir used as the runner workspace.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -5632,7 +5632,7 @@ async def test_sys_agent_download_rejects_symlink_escape_from_cwd(tmp_path: Path
     :param tmp_path: Pytest temp dir; holds both the workspace and an
         outside directory the symlink points at.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -5664,7 +5664,7 @@ async def test_sys_agent_download_rejects_symlink_escape_from_cwd(tmp_path: Path
 
     info = json.loads(output)
     assert "error" in info
-    # The outside target was never created — the guard blocked the write.
+    # The outside target was never created â€” the guard blocked the write.
     assert not outside_target.exists()
 
 
@@ -5681,7 +5681,7 @@ async def test_sys_agent_download_writes_bundle_to_workspace(tmp_path: Path) -> 
     :param tmp_path: Pytest temp dir used as the runner workspace, so the
         resolved os_env cwd is a real local directory.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     bundle_bytes = b"\x1f\x8b\x08fake-tar-gz-bytes"
 
@@ -5707,11 +5707,11 @@ async def test_sys_agent_download_writes_bundle_to_workspace(tmp_path: Path) -> 
         )
 
     info = json.loads(output)
-    # Default filename: agent name sanitized (space → "_") + version.
+    # Default filename: agent name sanitized (space â†’ "_") + version.
     expected = tmp_path / "my_agent-v5.tar.gz"
     assert info["path"] == str(expected)
     assert info["bytes_written"] == len(bundle_bytes)
-    # The bundle actually landed on disk with the exact bytes — a
+    # The bundle actually landed on disk with the exact bytes â€” a
     # mismatch means the write path or byte handling broke.
     assert expected.read_bytes() == bundle_bytes
 
@@ -5725,7 +5725,7 @@ async def test_sys_agent_get_projects_agent_metadata() -> None:
     projection dropped a field or used the wrong key, the asserted
     values would differ.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         if request.method == "GET" and request.url.path == "/v1/sessions/conv_x/agent":
@@ -5773,13 +5773,13 @@ async def test_sys_agent_list_degrades_when_sources_fail(tmp_path: Path) -> None
     """
     A failing source degrades to an empty section rather than failing the
     whole call. Here the server 500s both list endpoints and no local
-    config dir exists, so all three sections come back empty — but the
+    config dir exists, so all three sections come back empty â€” but the
     tool still returns a well-formed result. If a source error
     propagated, the tool would return an ``error`` instead.
 
     :param tmp_path: Workspace dir with no agent-config subdir.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, json={"error": "boom"})
@@ -5814,7 +5814,7 @@ async def test_sys_agent_list_merges_three_sources(tmp_path: Path) -> None:
     :param tmp_path: Pytest temp dir used as the runner workspace, so the
         local-config scan reads a real directory.
     """
-    from agent_meow.runner.tool_dispatch import _AGENT_CONFIG_SUBDIR, execute_tool
+    from omnigent.runner.tool_dispatch import _AGENT_CONFIG_SUBDIR, execute_tool
 
     # Author a local config on disk so the scan has something to find.
     configs_dir = tmp_path / _AGENT_CONFIG_SUBDIR
@@ -5858,7 +5858,7 @@ async def test_sys_agent_list_merges_three_sources(tmp_path: Path) -> None:
         )
 
     info = json.loads(output)
-    # Built-ins projected from GET /v1/agents (id → agent_id).
+    # Built-ins projected from GET /v1/agents (id â†’ agent_id).
     assert info["builtins"] == [
         {"agent_id": "ag_b", "name": "claude-native-ui", "description": None, "harness": "claude"}
     ]
@@ -5881,7 +5881,7 @@ async def test_sys_session_create_maps_agent_not_found() -> None:
     typed reason rather than a raw status. If the mapping regressed, the
     orchestrator couldn't tell a bad agent_id from a transport failure.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(404, json={"error": "no agent"})
@@ -5909,10 +5909,10 @@ async def test_sys_session_create_spawns_child_under_caller() -> None:
     ``parent_session_id`` forced to the caller (child-only), passes the
     agent_id, title, and a queued initial message, and returns a handle
     carrying the new child's id. If parent_session_id weren't forced to
-    the caller, an orchestrator could create top-level/sibling sessions —
+    the caller, an orchestrator could create top-level/sibling sessions â€”
     so the asserted request body is the security-critical check.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     captured: dict[str, Any] = {}
 
@@ -5974,7 +5974,7 @@ async def test_sys_session_create_requires_exactly_one_mode(
     If the mode split regressed to a silent preference, an orchestrator
     passing both could launch the wrong agent with no signal.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         raise AssertionError(f"server must not be reached on invalid mode args: {request.url}")
@@ -6033,13 +6033,13 @@ async def test_sys_session_create_bundle_mode_uploads_child_under_caller(
 
     The asserted multipart metadata is the security-critical check
     (child-only, mirroring agent_id mode); the tarball content check
-    proves the local config actually traversed bundling — an empty
+    proves the local config actually traversed bundling â€” an empty
     bundle would create a session the server rejects at first turn.
     """
     import io
     import tarfile
 
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     config_text = "name: helper\nprompt: do helpful things\n"
     (tmp_path / "helper.yaml").write_text(config_text)
@@ -6086,7 +6086,7 @@ async def test_sys_session_create_bundle_mode_uploads_child_under_caller(
     assert parts["metadata"] == {"parent_session_id": "conv_caller", "title": "auth"}
 
     # The uploaded bundle is a gzipped tar holding the authored config
-    # verbatim — proves the local file traversed materialize → tar.
+    # verbatim â€” proves the local file traversed materialize â†’ tar.
     with tarfile.open(fileobj=io.BytesIO(parts["bundle"]), mode="r:gz") as tf:
         names = tf.getnames()
         assert names == ["helper.yaml"]
@@ -6094,7 +6094,7 @@ async def test_sys_session_create_bundle_mode_uploads_child_under_caller(
         assert member is not None
         assert member.read().decode() == config_text
 
-    # The optional message was queued as the child's first user event —
+    # The optional message was queued as the child's first user event â€”
     # this is what starts the child's turn (same pattern as named send).
     assert len(event_bodies) == 1
     assert event_bodies[0]["data"]["content"][0]["text"] == "start"
@@ -6102,7 +6102,7 @@ async def test_sys_session_create_bundle_mode_uploads_child_under_caller(
     handle = json.loads(output)
     assert handle["conversation_id"] == "conv_child"
     # agent_id/agent_name come from the server's CreatedSessionResponse,
-    # not the caller's args — the orchestrator needs the NEW agent's id.
+    # not the caller's args â€” the orchestrator needs the NEW agent's id.
     assert handle["agent_id"] == "ag_new"
     assert handle["agent_name"] == "helper"
 
@@ -6119,7 +6119,7 @@ async def test_sys_session_create_config_path_escape_rejected(
     without it, an orchestrator could exfiltrate arbitrary host files
     by bundling them into an uploaded agent.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     workdir = tmp_path / "work"
     workdir.mkdir()
@@ -6151,7 +6151,7 @@ async def test_sys_session_create_config_not_found(tmp_path: Path) -> None:
     error so the LLM can distinguish a bad path from a transport
     failure, without any server call.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         raise AssertionError(f"server must not be reached: {request.url}")
@@ -6176,13 +6176,13 @@ async def test_sys_session_create_config_not_found(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_sys_session_get_info_defaults_to_caller_session() -> None:
     """
-    Omitting ``session_id`` describes the caller's own session — the
+    Omitting ``session_id`` describes the caller's own session â€” the
     runner targets ``GET /v1/sessions/{conversation_id}``. With no
     runner bound, connectivity is unknown (``None``) and no
     runner-status call is made. If the default-to-caller logic
     regressed, the request path would be wrong and the GET would 404.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     requested_paths: list[str] = []
 
@@ -6216,7 +6216,7 @@ async def test_sys_session_get_info_defaults_to_caller_session() -> None:
 
     info = json.loads(output)
     assert info["session_id"] == "conv_caller"
-    # No runner bound → connectivity unknown, and the status endpoint is
+    # No runner bound â†’ connectivity unknown, and the status endpoint is
     # never queried (a stray /v1/runners call would mean the None-runner
     # short-circuit regressed).
     assert info["runner_online"] is None
@@ -6240,14 +6240,14 @@ async def test_sys_session_get_info_maps_error_statuses(
 ) -> None:
     """
     A 404 maps to ``session_not_found``; 401/403 map to
-    ``access_denied`` — so the LLM gets a typed reason instead of a raw
+    ``access_denied`` â€” so the LLM gets a typed reason instead of a raw
     HTTP status. If the mapping regressed, the orchestrator couldn't
     distinguish "no such session" from "you can't read it".
 
     :param status_code: HTTP status the mocked agent-meow server returns.
     :param expected_error: The typed error string the tool should emit.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(status_code, json={"error": "x"})
@@ -6278,7 +6278,7 @@ async def test_sys_session_share_defaults_to_caller_and_puts_grant() -> None:
     request path or body would be wrong (and an agent's "share this
     session" would silently hit the wrong session or wrong level).
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     requests: list[tuple[str, str, dict[str, Any]]] = []
 
@@ -6335,14 +6335,14 @@ async def test_sys_session_share_maps_error_statuses(
 ) -> None:
     """
     A 404 maps to ``session_not_found``; 401/403 map to ``access_denied``
-    — a typed reason instead of a raw status, matching the sibling
+    â€” a typed reason instead of a raw status, matching the sibling
     session tools so the LLM can distinguish "no such session" from
     "you can't manage it".
 
     :param status_code: HTTP status the mocked agent-meow server returns.
     :param expected_error: The typed error string the tool should emit.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(status_code, json={"detail": "x"})
@@ -6367,12 +6367,12 @@ async def test_sys_session_share_maps_error_statuses(
 @pytest.mark.asyncio
 async def test_sys_session_share_rejects_bad_level_without_calling_server() -> None:
     """
-    An unknown ``level`` is rejected client-side before any PUT — so a
+    An unknown ``level`` is rejected client-side before any PUT â€” so a
     typo can't fall through to the server or silently skip the grant. A
     request reaching the handler would mean the level validation
     regressed.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     called = False
 
@@ -6405,13 +6405,13 @@ async def test_sys_session_share_surfaces_server_message_on_4xx() -> None:
     ``__public__`` grant above read level) surfaces the server's own
     ``{"error": {"message": ...}}`` text rather than a bare "returned
     400". If the detail-extraction regressed, the agent would see only
-    the status code and couldn't tell that public is read-only — the
+    the status code and couldn't tell that public is read-only â€” the
     exact actionable reason the server gave.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     # Mirrors the OmnigentError envelope the server's exception handler
-    # emits (agent_meow/server/app.py) for the public + level>read guard.
+    # emits (omnigent/server/app.py) for the public + level>read guard.
     server_message = "Public access is limited to read-only (level 1)"
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
@@ -6455,7 +6455,7 @@ async def test_sys_session_share_disabled_without_share_flag(
 ) -> None:
     """
     With no spec (``None``) or ``agent_session_sharing: none``, the
-    runner refuses the grant client-side and never PUTs — the
+    runner refuses the grant client-side and never PUTs â€” the
     ``agent_session_sharing`` flag is the real gate, not just tool
     advertisement, so a prompt-injected call naming the tool can't
     escalate. A PUT reaching the handler would mean the runner-side
@@ -6464,7 +6464,7 @@ async def test_sys_session_share_disabled_without_share_flag(
     :param share_policy: The spec's ``agent_session_sharing`` policy
         under test (or ``None`` for a missing spec).
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     called = False
 
@@ -6499,12 +6499,12 @@ async def test_sys_session_share_non_public_rejects_public_grant() -> None:
     """
     Under ``agent_session_sharing: non-public`` a grant to a named user
     is allowed, but a ``__public__`` grant is refused client-side before
-    any PUT — the
+    any PUT â€” the
     non-public tier must not be able to expose the transcript anonymously
     even if the model (or an injection) asks for it. A PUT here would
     mean the public sub-gate regressed.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     called = False
 
@@ -6533,12 +6533,12 @@ async def test_sys_session_share_non_public_rejects_public_grant() -> None:
 async def test_sys_session_share_public_allows_public_grant() -> None:
     """
     Under ``agent_session_sharing: public`` a ``__public__`` read grant
-    passes the runner gate and PUTs to the permissions endpoint — the
+    passes the runner gate and PUTs to the permissions endpoint â€” the
     positive case the
     non-public/none gates exclude. If the gate wrongly blocked it, public
     sharing would be impossible even when the spec explicitly opts in.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     requests: list[tuple[str, str, dict[str, Any]]] = []
 
@@ -6587,10 +6587,10 @@ async def test_sys_session_get_info_projects_metadata_and_runner_connectivity() 
     attach ``runner_online``. If the projection regressed (dropped a
     field, skipped the runner-status call, or picked the wrong model),
     the asserted values would differ. The transcript is intentionally
-    absent — get_info is metadata-only (``sys_session_get_history`` returns
+    absent â€” get_info is metadata-only (``sys_session_get_history`` returns
     items).
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         if request.method == "GET" and request.url.path == "/v1/sessions/conv_target":
@@ -6637,7 +6637,7 @@ async def test_sys_session_get_info_projects_metadata_and_runner_connectivity() 
     assert info["agent_id"] == "ag_xyz"
     assert info["agent_name"] == "researcher"
     assert info["runner_id"] == "runner_1"
-    # Live connectivity folded in from the runners status endpoint —
+    # Live connectivity folded in from the runners status endpoint â€”
     # None here would mean the best-effort status call was skipped.
     assert info["runner_online"] is True
     assert info["parent_session_id"] == "conv_parent"
@@ -6645,7 +6645,7 @@ async def test_sys_session_get_info_projects_metadata_and_runner_connectivity() 
     # default. "anthropic/claude-sonnet-4-6" here would mean the
     # override was ignored.
     assert info["model"] == "claude-opus-4-8"
-    # Two outstanding approval prompts surfaced from the snapshot — both
+    # Two outstanding approval prompts surfaced from the snapshot â€” both
     # the prompts themselves and a count. If the projection dropped the
     # prompts (count-only), the orchestrator couldn't tell what the
     # blocked session is waiting on.
@@ -6665,7 +6665,7 @@ async def test_sys_session_get_info_hides_native_ui_wrapper_agent_name() -> None
     internal ``-native-ui`` wrapper name to its display name (``"Pi"``) so the
     implementation detail never reaches the model.
     """
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner.tool_dispatch import execute_tool
 
     async def _server_handler(request: httpx.Request) -> httpx.Response:
         if request.method == "GET" and request.url.path == "/v1/sessions/conv_pi":
@@ -6716,8 +6716,8 @@ async def test_sys_session_send_session_id_posts_to_direct_child(
     :param monkeypatch: Stubs the runner-local child registration so the
         dispatch runs without a live runner.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     monkeypatch.setattr(runner_app, "register_child_session", lambda *a, **k: None)
     session_inbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -6768,15 +6768,15 @@ async def test_sys_session_send_session_id_posts_to_direct_child(
 async def test_sys_session_send_session_id_rejects_non_child() -> None:
     """
     By-session-id send refuses a target that is NOT a direct child of the
-    caller (``parent_session_id`` mismatch) — returning
+    caller (``parent_session_id`` mismatch) â€” returning
     ``session_out_of_tree`` and posting NO message. This is the
     child-only safety guarantee: an orchestrator can't drive a sibling or
     an unrelated session it merely has read access to. If the parentage
     check regressed, the message would be posted and the assertion on
     ``event_posts`` would fail.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     session_inbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
     event_posts: list[dict[str, Any]] = []
@@ -6826,16 +6826,16 @@ def test_format_async_task_item_empty_subagent_completion_reads_as_no_output(
     """
     An empty sub-agent completion renders "produced no output", not "returned:".
 
-    A native child that idles with no assistant text is delivered as ``""`` —
+    A native child that idles with no assistant text is delivered as ``""`` â€”
     the runner deliberately avoids fabricating output from stale runner
     history (see
     ``test_external_status_idle_without_output_omits_stale_history_preview``).
     The parent LLM must then see an explicit "produced no output" line rather
-    than a dangling ``"…returned: "`` that reads as a truncated/garbled handoff.
+    than a dangling ``"â€¦returned: "`` that reads as a truncated/garbled handoff.
 
     :param empty_output: An empty or whitespace-only child output.
     """
-    from agent_meow.runner.tool_dispatch import _format_async_task_item
+    from omnigent.runner.tool_dispatch import _format_async_task_item
 
     line = _format_async_task_item(
         {
@@ -6848,7 +6848,7 @@ def test_format_async_task_item_empty_subagent_completion_reads_as_no_output(
         }
     )
     # Reads as no-output; the dangling content-free "returned:" must not appear.
-    # With the old formatter, an empty output rendered "…returned: ]" and this
+    # With the old formatter, an empty output rendered "â€¦returned: ]" and this
     # would fail on the missing "produced no output" / present "returned:".
     assert "produced no output" in line
     assert "returned:" not in line
@@ -6860,7 +6860,7 @@ def test_format_async_task_item_nonempty_subagent_completion_shows_output() -> N
 
     Guards against the empty-output branch swallowing a real result.
     """
-    from agent_meow.runner.tool_dispatch import _format_async_task_item
+    from omnigent.runner.tool_dispatch import _format_async_task_item
 
     line = _format_async_task_item(
         {
@@ -6886,8 +6886,8 @@ async def test_sys_session_send_rejects_both_session_id_and_named_target() -> No
     with no signal to the caller. The dispatch must reject the ambiguity before
     making any server call.
     """
-    from agent_meow.runner import app as runner_app
-    from agent_meow.runner.tool_dispatch import execute_tool
+    from omnigent.runner import app as runner_app
+    from omnigent.runner.tool_dispatch import execute_tool
 
     server_called = False
 
@@ -6895,7 +6895,7 @@ async def test_sys_session_send_rejects_both_session_id_and_named_target() -> No
         """
         Fail the test if any server call is made.
 
-        :param request: Any agent-meow request — none should occur on the reject path.
+        :param request: Any agent-meow request â€” none should occur on the reject path.
         :returns: A 404 (also records the unexpected call).
         """
         nonlocal server_called
@@ -6939,7 +6939,7 @@ async def test_create_session_reinit_preserves_existing_inbox() -> None:
     A reconnect re-POST of ``/v1/sessions`` must not wipe the session inbox.
 
     The agent-meow server re-POSTs ``/v1/sessions`` for every bound conversation
-    on each runner WebSocket (re)connect — including in-process reconnects of a
+    on each runner WebSocket (re)connect â€” including in-process reconnects of a
     still-alive runner after a transient blip. A sub-agent completion that lands
     while the socket is down delivers its result into the parent's
     ``_session_inboxes`` queue and latches the work entry ``delivered``, which
@@ -6951,7 +6951,7 @@ async def test_create_session_reinit_preserves_existing_inbox() -> None:
 
     :returns: None.
     """
-    from agent_meow.runner import app as runner_app
+    from omnigent.runner import app as runner_app
 
     session_id = "conv_reinit_inbox_guard"
     agent_id = "ag_reinit_inbox_guard"
@@ -7025,7 +7025,7 @@ async def test_create_session_reinit_preserves_existing_inbox() -> None:
         runner_app._session_inboxes_ref.pop(session_id, None)
 
 
-# ── approval-event flattening (elicitation-approval hang regression) ──────
+# â”€â”€ approval-event flattening (elicitation-approval hang regression) â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -7038,9 +7038,9 @@ async def test_approval_event_flattened_for_harness_scaffold() -> None:
     ``content`` at the TOP level. If the runner forwards the envelope verbatim
     the harness 422s and the parked ``ctx.elicit`` Future never resolves (the
     turn hangs after a human approves). The runner must translate the envelope
-    into the flat event the scaffold validates — for every scaffold harness.
+    into the flat event the scaffold validates â€” for every scaffold harness.
     """
-    from agent_meow.runtime.harnesses._scaffold import ApprovalEvent
+    from omnigent.runtime.harnesses._scaffold import ApprovalEvent
 
     captured: dict[str, Any] = {}
 
@@ -7071,7 +7071,7 @@ async def test_approval_event_flattened_for_harness_scaffold() -> None:
         )
 
     assert resp.status_code == 204
-    # Forwarded body is FLAT — no ``data`` envelope.
+    # Forwarded body is FLAT â€” no ``data`` envelope.
     assert captured["body"] == {
         "type": "approval",
         "elicitation_id": "elicit_x",
@@ -7085,7 +7085,7 @@ async def test_approval_event_flattened_for_harness_scaffold() -> None:
 @pytest.mark.asyncio
 async def test_approval_event_without_content_flattened() -> None:
     """A decline verdict with no form content flattens without a ``content`` key."""
-    from agent_meow.runtime.harnesses._scaffold import ApprovalEvent
+    from omnigent.runtime.harnesses._scaffold import ApprovalEvent
 
     captured: dict[str, Any] = {}
 

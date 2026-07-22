@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow import cli_diagnostics
+from omnigent import cli_diagnostics
 
 
 @dataclass(frozen=True)
@@ -361,14 +361,14 @@ def test_main_logs_click_exceptions(
     :returns: ``None``.
     """
     del isolated_cli_diagnostics
-    from agent_meow import cli as cli_module
+    from omnigent import cli as cli_module
 
     # An unsupported --harness is a deterministic ClickException trigger that
     # raises before any daemon/network work. (A bare `agent-meow run` no longer
-    # errors — it drops into first-run `configure harnesses` — so it can't be
+    # errors â€” it drops into first-run `configure harnesses` â€” so it can't be
     # the trigger here.)
     monkeypatch.setattr(sys, "argv", ["agent-meow", "run", "--harness", "not-a-real-harness"])
-    # Isolate from any real ~/.agent_meow/config.yaml on the developer's machine.
+    # Isolate from any real ~/.omnigent/config.yaml on the developer's machine.
     monkeypatch.setattr(cli_module, "_load_global_config", dict)
 
     with pytest.raises(SystemExit) as exc_info:
@@ -407,7 +407,7 @@ async def test_slash_command_exceptions_reach_cli_log(
     del isolated_cli_diagnostics
     from omnigent_ui_sdk import RichBlockFormatter
 
-    from agent_meow.repl._repl import handle_slash_command
+    from omnigent.repl._repl import handle_slash_command
     from tests.repl.helpers import CapturingHost
 
     class _SessionWithoutModelSetter:

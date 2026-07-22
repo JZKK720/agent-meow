@@ -1,7 +1,7 @@
 """Unit tests for the session permission resolution function.
 
-Tests :func:`~?agent_meow.server.permissions.check_session_access` and
-:func:`~?agent_meow.server.permissions.check_is_manager` against all
+Tests :func:`~?omnigent.server.permissions.check_session_access` and
+:func:`~?omnigent.server.permissions.check_is_manager` against all
 resolution branches:
 
 1. Admin user -> allow
@@ -24,9 +24,9 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.entities.conversation import Conversation
-from agent_meow.entities.permission import ResolvedAccess, SessionPermission
-from agent_meow.server.auth import (
+from omnigent.entities.conversation import Conversation
+from omnigent.entities.permission import ResolvedAccess, SessionPermission
+from omnigent.server.auth import (
     LEVEL_EDIT,
     LEVEL_MANAGE,
     LEVEL_OWNER,
@@ -34,14 +34,14 @@ from agent_meow.server.auth import (
     RESERVED_USER_PUBLIC,
     env_var_is_truthy,
 )
-from agent_meow.server.permissions import (
+from omnigent.server.permissions import (
     check_is_manager,
     check_session_access,
     resolved_allows,
     resolved_level,
 )
 
-# ── In-memory store stubs ────────────────────────────────────────
+# â”€â”€ In-memory store stubs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # Real stub classes instead of MagicMock.  Each raises
 # AssertionError on methods not expected during permission checks
@@ -145,7 +145,7 @@ def _make_conversation(
 ) -> Conversation:
     """Build a minimal Conversation dataclass for tests.
 
-    Timestamps are fixed at 0 — irrelevant for permission logic.
+    Timestamps are fixed at 0 â€” irrelevant for permission logic.
     """
     return Conversation(
         id=conv_id,
@@ -157,7 +157,7 @@ def _make_conversation(
     )
 
 
-# ── Fixtures ─────────────────────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.fixture()
@@ -172,7 +172,7 @@ def conv_store() -> _StubConversationStore:
     return _StubConversationStore()
 
 
-# ── 1. Admin user -> allow ───────────────────────────────────────
+# â”€â”€ 1. Admin user -> allow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_admin_user_allowed_for_any_level(
@@ -182,7 +182,7 @@ def test_admin_user_allowed_for_any_level(
     """An admin user is granted access at any required level.
 
     The admin check is the very first branch in the resolution
-    algorithm — it does not even look up the conversation or any
+    algorithm â€” it does not even look up the conversation or any
     grants.  We deliberately do NOT add the conversation to
     conv_store to prove that the admin short-circuit fires before
     the conversation lookup.
@@ -210,7 +210,7 @@ def test_admin_user_allowed_for_any_level(
         )
 
 
-# ── 2. Sub-agent -> delegate to parent ───────────────────────────
+# â”€â”€ 2. Sub-agent -> delegate to parent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_sub_agent_delegates_to_parent(
@@ -251,7 +251,7 @@ def test_sub_agent_delegates_to_parent(
     )
 
 
-# ── 3. Unauthenticated (user_id=None) -> deny ───────────────────
+# â”€â”€ 3. Unauthenticated (user_id=None) -> deny â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_unauthenticated_user_denied(
@@ -282,7 +282,7 @@ def test_unauthenticated_user_denied(
     )
 
 
-# ── 4. Direct grant with sufficient level -> allow ───────────────
+# â”€â”€ 4. Direct grant with sufficient level -> allow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -336,7 +336,7 @@ def test_direct_grant_sufficient_level(
     )
 
 
-# ── 5. Direct grant with insufficient level -> deny ──────────────
+# â”€â”€ 5. Direct grant with insufficient level -> deny â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -374,7 +374,7 @@ def test_direct_grant_insufficient_level(
         permission_store=perm_store,  # type: ignore[arg-type]
         conversation_store=conv_store,  # type: ignore[arg-type]
     )
-    # Grant level < required level — access must be denied.  If True,
+    # Grant level < required level â€” access must be denied.  If True,
     # the level comparison is using the wrong operator (e.g. > instead
     # of >=, or checking the wrong direction).
     assert result is False, (
@@ -383,7 +383,7 @@ def test_direct_grant_insufficient_level(
     )
 
 
-# ── 6. __public__ sentinel grant ─────────────────────────────────
+# â”€â”€ 6. __public__ sentinel grant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_public_grant_allows_read(
@@ -442,7 +442,7 @@ def test_public_grant_denies_edit(
     )
 
 
-# ── 7. No grant at all -> deny ───────────────────────────────────
+# â”€â”€ 7. No grant at all -> deny â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_no_grant_denies_access(
@@ -464,7 +464,7 @@ def test_no_grant_denies_access(
         permission_store=perm_store,  # type: ignore[arg-type]
         conversation_store=conv_store,  # type: ignore[arg-type]
     )
-    # No grants exist at all — must be denied.  If True, there is
+    # No grants exist at all â€” must be denied.  If True, there is
     # a fallback path that defaults to allowing access.
     assert result is False, (
         "A user with no direct or public grant should be denied. "
@@ -472,7 +472,7 @@ def test_no_grant_denies_access(
     )
 
 
-# ── 8. Conversation not found -> deny ────────────────────────────
+# â”€â”€ 8. Conversation not found -> deny â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_conversation_not_found_denies_access(
@@ -485,7 +485,7 @@ def test_conversation_not_found_denies_access(
     conversation returns False because the lookup precedes the
     grant checks.
     """
-    # conv_store is empty — no conversations at all.
+    # conv_store is empty â€” no conversations at all.
     perm_store.add_grant("alice@example.com", "conv_gone", LEVEL_MANAGE)
 
     result = check_session_access(
@@ -504,7 +504,7 @@ def test_conversation_not_found_denies_access(
     )
 
 
-# ── 9. Nested sub-agent (grandchild) -> delegates up the chain ───
+# â”€â”€ 9. Nested sub-agent (grandchild) -> delegates up the chain â”€â”€â”€
 
 
 def test_nested_sub_agent_delegates_to_root(
@@ -534,7 +534,7 @@ def test_nested_sub_agent_delegates_to_root(
     conv_store.add(grandchild)
     perm_store.add_grant("alice@example.com", "conv_root", LEVEL_EDIT)
 
-    # Access the grandchild — should delegate to child, then to root.
+    # Access the grandchild â€” should delegate to child, then to root.
     result = check_session_access(
         user_id="alice@example.com",
         conversation_id="conv_grandchild",
@@ -583,16 +583,16 @@ def test_nested_sub_agent_denied_when_root_insufficient(
         permission_store=perm_store,  # type: ignore[arg-type]
         conversation_store=conv_store,  # type: ignore[arg-type]
     )
-    # Delegation reaches root, but root only has read — manage is
+    # Delegation reaches root, but root only has read â€” manage is
     # denied.  If True, the level check is skipped during recursion.
     assert result is False, (
         "Grandchild delegates to root, but root only has read-level "
-        "grant — manage should be denied. If True, level comparison "
+        "grant â€” manage should be denied. If True, level comparison "
         "is broken in the recursive path."
     )
 
 
-# ── check_is_manager shorthand ───────────────────────────────────
+# â”€â”€ check_is_manager shorthand â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_check_is_manager_delegates_correctly(
@@ -637,7 +637,7 @@ def test_check_is_manager_delegates_correctly(
     )
 
 
-# ── Edge: admin bypasses conversation-not-found ──────────────────
+# â”€â”€ Edge: admin bypasses conversation-not-found â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_admin_bypasses_missing_conversation(
@@ -668,7 +668,7 @@ def test_admin_bypasses_missing_conversation(
     )
 
 
-# ── Edge: direct grant takes precedence over __public__ ──────────
+# â”€â”€ Edge: direct grant takes precedence over __public__ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_direct_grant_takes_precedence_over_public(
@@ -686,7 +686,7 @@ def test_direct_grant_takes_precedence_over_public(
     perm_store.add_grant("alice@example.com", "conv_both", LEVEL_MANAGE)
     perm_store.add_grant(RESERVED_USER_PUBLIC, "conv_both", LEVEL_READ)
 
-    # Manage-level required — direct grant covers it; public would not.
+    # Manage-level required â€” direct grant covers it; public would not.
     result = check_session_access(
         user_id="alice@example.com",
         conversation_id="conv_both",
@@ -704,7 +704,7 @@ def test_direct_grant_takes_precedence_over_public(
     )
 
 
-# ── Edge: non-admin, non-sub-agent, user_id=None ────────────────
+# â”€â”€ Edge: non-admin, non-sub-agent, user_id=None â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_unauthenticated_on_sub_agent_still_denied(
@@ -724,7 +724,7 @@ def test_unauthenticated_on_sub_agent_still_denied(
     )
     conv_store.add(parent)
     conv_store.add(child)
-    # Public read grant on parent — but user_id=None is blocked first.
+    # Public read grant on parent â€” but user_id=None is blocked first.
     perm_store.add_grant(RESERVED_USER_PUBLIC, "conv_parent", LEVEL_READ)
 
     result = check_session_access(
@@ -743,7 +743,7 @@ def test_unauthenticated_on_sub_agent_still_denied(
     )
 
 
-# ── Header mode: missing header -> None (401) ────────────────
+# â”€â”€ Header mode: missing header -> None (401) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize("raw_value", ["1", "true", "TRUE", "yes", " Yes "])
@@ -781,7 +781,7 @@ def test_env_var_is_truthy_uses_default_when_unset(
 def test_header_mode_rejects_missing_header(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """UnifiedAuthProvider(source="header") returns ``None`` (→ 401)
+    """UnifiedAuthProvider(source="header") returns ``None`` (â†’ 401)
     when X-Forwarded-Email is absent.
 
     A missing or proxy-dropped header must fail closed.
@@ -792,7 +792,7 @@ def test_header_mode_rejects_missing_header(
     """
     from unittest.mock import MagicMock
 
-    from agent_meow.server.auth import UnifiedAuthProvider
+    from omnigent.server.auth import UnifiedAuthProvider
 
     # Clear the single-user marker so an ambient value from the dev
     # shell can't flip the provider into the fallback path.
@@ -809,7 +809,7 @@ def test_header_mode_rejects_missing_header(
     result = provider.get_user_id(mock_request)
 
     assert result is None, (
-        f"Expected None (fail closed → 401) for missing header, got {result!r}. "
+        f"Expected None (fail closed â†’ 401) for missing header, got {result!r}. "
         f"A non-None value means unauthenticated requests resolve to a shared "
         f"identity (regression)."
     )
@@ -824,7 +824,7 @@ def test_header_mode_accepts_valid_header() -> None:
     """
     from unittest.mock import MagicMock
 
-    from agent_meow.server.auth import UnifiedAuthProvider
+    from omnigent.server.auth import UnifiedAuthProvider
 
     provider = UnifiedAuthProvider(source="header")
     mock_request = MagicMock()
@@ -835,7 +835,7 @@ def test_header_mode_accepts_valid_header() -> None:
     assert result == "alice@example.com", f"Expected 'alice@example.com', got {result!r}."
 
 
-# ── Reserved names in header mode ────────────────────────────
+# â”€â”€ Reserved names in header mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.parametrize(
@@ -853,7 +853,7 @@ def test_header_mode_rejects_reserved_names(reserved_name: str) -> None:
     """
     from unittest.mock import MagicMock
 
-    from agent_meow.server.auth import UnifiedAuthProvider
+    from omnigent.server.auth import UnifiedAuthProvider
 
     provider = UnifiedAuthProvider(source="header")
     mock_request = MagicMock()
@@ -866,11 +866,11 @@ def test_header_mode_rejects_reserved_names(reserved_name: str) -> None:
     )
 
 
-# ── resolved_allows / resolved_level (in-memory policy) ──────────────
+# â”€â”€ resolved_allows / resolved_level (in-memory policy) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolved_allows_admin_bypasses_everything() -> None:
-    """Admin is allowed at any level with no grants — mirrors the bypass."""
+    """Admin is allowed at any level with no grants â€” mirrors the bypass."""
     access = ResolvedAccess(is_admin=True, user_grant_level=None, public_grant_level=None)
     assert resolved_allows(access, LEVEL_OWNER) is True
     assert resolved_level(access) == LEVEL_OWNER
@@ -896,7 +896,7 @@ def test_resolved_level_prefers_user_grant_over_public() -> None:
     This is the asymmetry between access and displayed level: with a low
     user grant and a higher public grant, ``resolved_allows`` is satisfied
     by the public grant, but ``resolved_level`` reports the user's own
-    grant — exactly matching ``get_permission_level`` so the combined
+    grant â€” exactly matching ``get_permission_level`` so the combined
     helper does not change the displayed level.
     """
     access = ResolvedAccess(
@@ -915,7 +915,7 @@ def test_resolved_level_falls_back_to_public_when_no_user_grant() -> None:
 
 
 def test_resolved_level_none_when_no_access() -> None:
-    """No admin, no grants → no displayed level."""
+    """No admin, no grants â†’ no displayed level."""
     access = ResolvedAccess(is_admin=False, user_grant_level=None, public_grant_level=None)
     assert resolved_level(access) is None
     assert resolved_allows(access, LEVEL_READ) is False

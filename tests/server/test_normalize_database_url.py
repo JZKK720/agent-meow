@@ -1,6 +1,6 @@
 import pytest
 
-from agent_meow.db.utils import normalize_database_url
+from omnigent.db.utils import normalize_database_url
 
 
 @pytest.mark.parametrize(
@@ -16,15 +16,15 @@ from agent_meow.db.utils import normalize_database_url
             "postgresql://user:pw@host:5432/db",
             "postgresql+psycopg://user:pw@host:5432/db",
         ),
-        # Already correct — pass through unchanged
+        # Already correct â€” pass through unchanged
         (
             "postgresql+psycopg://user:pw@host:5432/db",
             "postgresql+psycopg://user:pw@host:5432/db",
         ),
-        # SQLite (local dev) — pass through unchanged
+        # SQLite (local dev) â€” pass through unchanged
         (
-            "sqlite:///./agent_meow.db",
-            "sqlite:///./agent_meow.db",
+            "sqlite:///./omnigent.db",
+            "sqlite:///./omnigent.db",
         ),
         # Credentials with special characters survive the prefix rewrite
         (

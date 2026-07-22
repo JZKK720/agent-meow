@@ -1,6 +1,6 @@
-"""Tests for the accounts → OIDC identity remap.
+"""Tests for the accounts â†’ OIDC identity remap.
 
-Covers :func:`~?agent_meow.server.identity_migration.remap_identities` and
+Covers :func:`~?omnigent.server.identity_migration.remap_identities` and
 ``build_domain_mapping`` against a real SQLite database, plus the
 ``agent-meow debug migrate-accounts-to-oidc`` CLI wrapper via Click's
 ``CliRunner``.
@@ -18,19 +18,19 @@ from click.testing import CliRunner
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from agent_meow.cli import cli
-from agent_meow.db.db_models import (
+from omnigent.cli import cli
+from omnigent.db.db_models import (
     SqlAccountToken,
     SqlComment,
     SqlHost,
     SqlPolicy,
 )
-from agent_meow.db.utils import get_or_create_engine
-from agent_meow.server.accounts_store import SqlAlchemyAccountStore
-from agent_meow.server.identity_migration import build_domain_mapping, remap_identities
-from agent_meow.server.passwords import hash_password
-from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
-from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
+from omnigent.db.utils import get_or_create_engine
+from omnigent.server.accounts_store import SqlAlchemyAccountStore
+from omnigent.server.identity_migration import build_domain_mapping, remap_identities
+from omnigent.server.passwords import hash_password
+from omnigent.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
+from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 
 
 def _conversation(db_uri: str) -> str:
@@ -38,7 +38,7 @@ def _conversation(db_uri: str) -> str:
     return SqlAlchemyConversationStore(db_uri).create_conversation().id
 
 
-# ── build_domain_mapping ──────────────────────────────────────────
+# â”€â”€ build_domain_mapping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_build_domain_mapping_skips_emails_and_reserved(db_uri: str) -> None:
@@ -67,7 +67,7 @@ def test_build_domain_mapping_strips_leading_at(db_uri: str) -> None:
     assert mapping == {"alice": "alice@example.com"}
 
 
-# ── remap_identities: the core move ───────────────────────────────
+# â”€â”€ remap_identities: the core move â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_remap_moves_user_grant_and_admin(db_uri: str) -> None:
@@ -114,7 +114,7 @@ def test_remap_repoints_comments_policies_tokens_hosts(db_uri: str) -> None:
                 body="hi",
                 status="draft",
                 created_at=1,
-                # created_at scaled to epoch-µs, matching the store's invariant.
+                # created_at scaled to epoch-Âµs, matching the store's invariant.
                 updated_at=1_000_000,
                 created_by="alice",
             )
@@ -196,7 +196,7 @@ def test_grant_collision_merges_to_higher_level(db_uri: str) -> None:
     perm_store.grant("alice", conv_id, level=3)  # old has manage
     perm_store.grant("alice@example.com", conv_id, level=1)  # new has read
 
-    # NEW exists distinctly → needs force to merge.
+    # NEW exists distinctly â†’ needs force to merge.
     report = remap_identities(
         get_or_create_engine(db_uri),
         {"alice": "alice@example.com"},
@@ -240,7 +240,7 @@ def test_skipped_missing_old_user(db_uri: str) -> None:
     assert report.per_table == {}
 
 
-# ── CLI wrapper ───────────────────────────────────────────────────
+# â”€â”€ CLI wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_cli_dry_run_by_default(db_uri: str) -> None:
@@ -259,7 +259,7 @@ def test_cli_dry_run_by_default(db_uri: str) -> None:
     # Surfaces the IdP-email-mismatch reminder so the operator verifies
     # the targets match what their IdP returns before committing.
     assert "must match the email your IdP returns" in result.output
-    # No --commit → unchanged.
+    # No --commit â†’ unchanged.
     assert account_store.get_user("alice") is not None
     assert account_store.get_user("alice@example.com") is None
 

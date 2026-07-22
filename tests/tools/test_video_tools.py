@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from agent_meow.tools.builtins.videos import (
+from omnigent.tools.builtins.videos import (
     VideoGenerateTool,
     VideoGetTool,
     VideoListTool,

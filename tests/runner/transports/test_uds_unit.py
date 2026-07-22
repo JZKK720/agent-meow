@@ -1,8 +1,8 @@
 """Unit tests for UDS transport helper functions (no subprocess spawning).
 
-Tests the pure-logic helpers in ``agent_meow.runner.transports.uds``:
+Tests the pure-logic helpers in ``omnigent.runner.transports.uds``:
 socket probing, client factory, path construction, and subprocess
-configuration — all without launching real uvicorn.
+configuration â€” all without launching real uvicorn.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import tempfile
 import httpx
 import pytest
 
-from agent_meow.runner.transports.uds import (
+from omnigent.runner.transports.uds import (
     RunnerSubprocess,
     _is_socket_listening,
     create_uds_client,
@@ -26,7 +26,7 @@ _REQUIRES_UDS = pytest.mark.skipif(
 )
 
 
-# ── _is_socket_listening ────────────────────────────────
+# â”€â”€ _is_socket_listening â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @_REQUIRES_UDS
@@ -70,7 +70,7 @@ def test_is_socket_listening_returns_false_for_unbound_socket_file() -> None:
         assert _is_socket_listening(sock_path) is False
 
 
-# ── create_uds_client ──────────────────────────────────
+# â”€â”€ create_uds_client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @_REQUIRES_UDS
@@ -96,7 +96,7 @@ async def test_create_uds_client_custom_base_url() -> None:
         await client.aclose()
 
 
-# ── RunnerSubprocess config ─────────────────────────────
+# â”€â”€ RunnerSubprocess config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_runner_subprocess_defaults() -> None:

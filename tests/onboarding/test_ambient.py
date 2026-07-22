@@ -1,11 +1,11 @@
-"""Tests for agent_meow.onboarding.ambient — machine credential detection.
+"""Tests for omnigent.onboarding.ambient â€” machine credential detection.
 
 Detection reads the environment, two CLI-login files under ``$HOME``, a single
-localhost TCP probe for Ollama, and — on macOS only — a ``claude auth status``
+localhost TCP probe for Ollama, and â€” on macOS only â€” a ``claude auth status``
 fallback for the Keychain-stored Claude credential. These tests redirect
 ``$HOME`` to a tmp dir, control the environment explicitly, and monkeypatch
-both :func:`~?agent_meow.onboarding.ambient._ollama_reachable` and
-:func:`~?agent_meow.onboarding.harness_install.harness_cli_logged_in` so no real
+both :func:`~?omnigent.onboarding.ambient._ollama_reachable` and
+:func:`~?omnigent.onboarding.harness_install.harness_cli_logged_in` so no real
 network or subprocess I/O occurs. Each test asserts the exact
 :class:`DetectedProvider` fields (name / kind / family / source), not just the
 count, so a wrong field turns the test red.
@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.onboarding import ambient
-from agent_meow.onboarding.ambient import DetectedProvider, detect_providers
+from omnigent.onboarding import ambient
+from omnigent.onboarding.ambient import DetectedProvider, detect_providers
 
-# Every provider env var ambient may read — cleared in the base fixture so
+# Every provider env var ambient may read â€” cleared in the base fixture so
 # the host's own keys don't leak into the deterministic detection tests.
 _PROVIDER_ENV_VARS = [
     "ANTHROPIC_API_KEY",
@@ -45,7 +45,7 @@ def clean_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
     credential files), clears every provider env var, stubs
     ``_ollama_reachable`` to ``False``, and stubs the macOS Keychain fallback
     (``harness_cli_logged_in``) to ``False`` so the suite never shells out to a
-    real ``claude auth status`` — keeping detection deterministic and free of
+    real ``claude auth status`` â€” keeping detection deterministic and free of
     real I/O even when the suite runs on a macOS host with a logged-in CLI.
     Individual tests then opt back in to exactly the signal they exercise.
 
@@ -53,7 +53,7 @@ def clean_env(tmp_path, monkeypatch: pytest.MonkeyPatch):
     :param monkeypatch: pytest's env/attr patching fixture.
     :returns: The tmp HOME path, e.g. ``"/tmp/pytest-.../test_x0"``.
     """
-    from agent_meow.onboarding import harness_install
+    from omnigent.onboarding import harness_install
 
     monkeypatch.setenv("HOME", str(tmp_path))
     for var in _PROVIDER_ENV_VARS:
@@ -97,7 +97,7 @@ def test_no_credentials_detected(clean_env) -> None:
             "GEMINI_API_KEY",
             # Gemini serves the ``gemini`` surface (the antigravity-sdk harness
             # drives the Gemini SDK with a GEMINI_API_KEY), so a detected key
-            # is mapped to the gemini family — no longer dropped as family None.
+            # is mapped to the gemini family â€” no longer dropped as family None.
             DetectedProvider(name="gemini", kind="key", family="gemini", source="$GEMINI_API_KEY"),
         ),
     ],
@@ -107,7 +107,7 @@ def test_env_key_detection(
 ) -> None:
     """Each provider env key is detected with the right family mapping.
 
-    Failure means a key would be missed, or mapped to the wrong family —
+    Failure means a key would be missed, or mapped to the wrong family â€”
     routing a Claude key through the OpenAI surface, say.
     """
     monkeypatch.setenv(env_var, "some-secret-value")
@@ -178,10 +178,10 @@ def test_claude_cli_login_detected(clean_env, creds_json: str) -> None:
 @pytest.mark.parametrize(
     "creds_json",
     [
-        "{}",  # empty — logged out / never logged in
+        "{}",  # empty â€” logged out / never logged in
         '{"claudeAiOauth": {}}',  # present object, no tokens
         '{"claudeAiOauth": {"accessToken": "", "refreshToken": "rt"}}',  # blank access token
-        # Expired access token with NO refresh token → dead (re-login needed).
+        # Expired access token with NO refresh token â†’ dead (re-login needed).
         '{"claudeAiOauth": {"accessToken": "at", "refreshToken": "", "expiresAt": 1}}',
         '{"claudeAiOauth": null}',
         "not json",  # malformed
@@ -193,7 +193,7 @@ def test_claude_auth_without_credential_not_detected(clean_env, creds_json: str)
     Mirrors the codex check: existence alone used to count as a subscription, so
     an empty / logged-out / expired-without-refresh / malformed file planted a
     phantom claude subscription. The expired-without-refresh case is the
-    important one — an expired access token with a refresh token is still usable
+    important one â€” an expired access token with a refresh token is still usable
     (covered above), but with neither it's a dead login. Failure means the
     over-detection regressed.
     """
@@ -242,7 +242,7 @@ def test_codex_cli_login_detected(clean_env, auth_json: str) -> None:
 @pytest.mark.parametrize(
     "auth_json",
     [
-        "{}",  # empty object — logged out / never logged in
+        "{}",  # empty object â€” logged out / never logged in
         '{"auth_mode": "apikey", "OPENAI_API_KEY": ""}',  # blank key
         '{"auth_mode": "apikey", "OPENAI_API_KEY": null}',  # null key
         '{"tokens": {"access_token": "", "refresh_token": "", "id_token": ""}}',  # empty tokens
@@ -263,7 +263,7 @@ def test_codex_auth_without_credential_not_detected(clean_env, auth_json: str) -
     cred_dir = clean_env / ".codex"
     cred_dir.mkdir()
     (cred_dir / "auth.json").write_text(auth_json, encoding="utf-8")
-    # No codex detection at all — empty list (nothing else is configured).
+    # No codex detection at all â€” empty list (nothing else is configured).
     assert detect_providers() == []
 
 
@@ -272,16 +272,16 @@ def test_claude_macos_keychain_login_detected(clean_env, monkeypatch: pytest.Mon
 
     The bug this fixes: Claude Code stores its OAuth in the macOS Keychain, not
     ``~/.claude/.credentials.json``, so the file check misses a real, working
-    subscription — and ``configure harnesses`` failed to auto-detect it even
+    subscription â€” and ``configure harnesses`` failed to auto-detect it even
     though the same machine could sign in without a web login. With the file
     absent, detection must fall back to the CLI status check on macOS. Failure
     means the Keychain subscription is silently dropped again.
     """
     monkeypatch.setattr(ambient.sys, "platform", "darwin")
-    # No ~/.claude/.credentials.json under the tmp HOME → file check is False,
+    # No ~/.claude/.credentials.json under the tmp HOME â†’ file check is False,
     # forcing the macOS Keychain fallback. The fallback asks the CLI (which
     # reads the Keychain); stub it so no real ``claude auth status`` runs.
-    from agent_meow.onboarding import harness_install
+    from omnigent.onboarding import harness_install
 
     seen_keys: list[str] = []
 
@@ -309,11 +309,11 @@ def test_claude_macos_keychain_absent_not_detected(
     """On macOS with no creds file and a logged-out CLI, claude is NOT detected.
 
     The Keychain fallback runs (file is absent) but the CLI reports no login, so
-    detection must stay empty — no phantom subscription. Failure means the macOS
+    detection must stay empty â€” no phantom subscription. Failure means the macOS
     fallback fabricates a subscription whenever the file happens to be missing.
     """
     monkeypatch.setattr(ambient.sys, "platform", "darwin")
-    from agent_meow.onboarding import harness_install
+    from omnigent.onboarding import harness_install
 
     seen_keys: list[str] = []
 
@@ -328,7 +328,7 @@ def test_claude_macos_keychain_absent_not_detected(
 
 
 def test_claude_linux_no_keychain_cli_fallback(clean_env, monkeypatch: pytest.MonkeyPatch) -> None:
-    """On Linux the CLI-status fallback never runs — detection stays file-only.
+    """On Linux the CLI-status fallback never runs â€” detection stays file-only.
 
     The macOS Keychain fallback is gated on ``sys.platform == "darwin"``: Linux
     stores the credential in the file, so a subprocess fallback would be both
@@ -336,13 +336,13 @@ def test_claude_linux_no_keychain_cli_fallback(clean_env, monkeypatch: pytest.Mo
     called, so any Linux invocation of the CLI fallback fails the test.
     """
     monkeypatch.setattr(ambient.sys, "platform", "linux")
-    from agent_meow.onboarding import harness_install
+    from omnigent.onboarding import harness_install
 
     def _must_not_call(key: str) -> bool:
         raise AssertionError(f"CLI fallback must not run on Linux (key={key!r})")
 
     monkeypatch.setattr(harness_install, "harness_cli_logged_in", _must_not_call)
-    # No creds file under tmp HOME, and the fallback is gated off → empty.
+    # No creds file under tmp HOME, and the fallback is gated off â†’ empty.
     assert detect_providers() == []
 
 
@@ -357,7 +357,7 @@ def test_claude_macos_file_present_skips_cli_fallback(
     fallback fails the test.
     """
     monkeypatch.setattr(ambient.sys, "platform", "darwin")
-    from agent_meow.onboarding import harness_install
+    from omnigent.onboarding import harness_install
 
     def _must_not_call(key: str) -> bool:
         raise AssertionError(f"file-present path must not invoke the CLI (key={key!r})")
@@ -399,7 +399,7 @@ def test_ollama_detected_when_reachable(clean_env, monkeypatch: pytest.MonkeyPat
 
 
 def test_detection_priority_order(clean_env, monkeypatch: pytest.MonkeyPatch) -> None:
-    """All signals together are returned in env → claude → codex → ollama order.
+    """All signals together are returned in env â†’ claude â†’ codex â†’ ollama order.
 
     Failure means the stable ordering broke, so the setup UI would present
     detected providers in a non-deterministic / surprising order.
@@ -408,14 +408,14 @@ def test_detection_priority_order(clean_env, monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setenv("OPENAI_API_KEY", "k-oai")
     claude_dir = clean_env / ".claude"
     claude_dir.mkdir()
-    # A real credential — existence alone is no longer enough to be detected.
+    # A real credential â€” existence alone is no longer enough to be detected.
     (claude_dir / ".credentials.json").write_text(
         '{"claudeAiOauth": {"accessToken": "at-real", "refreshToken": "rt-real"}}',
         encoding="utf-8",
     )
     codex_dir = clean_env / ".codex"
     codex_dir.mkdir()
-    # A real credential — existence alone is no longer enough to be detected.
+    # A real credential â€” existence alone is no longer enough to be detected.
     (codex_dir / "auth.json").write_text(
         '{"auth_mode": "apikey", "OPENAI_API_KEY": "sk-codex-real"}', encoding="utf-8"
     )
@@ -427,11 +427,11 @@ def test_detection_priority_order(clean_env, monkeypatch: pytest.MonkeyPatch) ->
     assert [d.name for d in detected] == ["openai", "anthropic", "claude", "codex", "ollama"]
 
 
-# ── Codex config.toml custom provider (cli-config) detection ───────────────
+# â”€â”€ Codex config.toml custom provider (cli-config) detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 # The exact shape `isaac configure codex` writes (AI Gateway mode): a custom
 # [model_providers.Databricks] table authenticated by a token-printing
-# command, selected via a top-level model_provider — and NO auth.json.
+# command, selected via a top-level model_provider â€” and NO auth.json.
 _ISAAC_STYLE_CODEX_CONFIG = """
 model_provider = "Databricks"
 
@@ -478,8 +478,8 @@ def _write_codex_config(home, body: str) -> None:
 def test_codex_config_custom_provider_detected(clean_env) -> None:
     """An isaac-style config.toml (custom provider + auth command) is detected.
 
-    This is the exact state ``isaac configure codex`` leaves behind — no
-    auth.json at all — which the subscription detection cannot see. Failure
+    This is the exact state ``isaac configure codex`` leaves behind â€” no
+    auth.json at all â€” which the subscription detection cannot see. Failure
     means internal users' gateway-configured codex shows as "not configured"
     in setup (the original bug).
     """
@@ -494,7 +494,7 @@ def test_codex_config_provider_transport_reads_base_url_and_auth(clean_env) -> N
     point Pi at the user's Databricks gateway. The ``[X.auth]`` command + args
     are rebuilt into a single shell-safe string.
     """
-    from agent_meow.onboarding.ambient import (
+    from omnigent.onboarding.ambient import (
         _codex_config_path,
         codex_config_provider_transport,
     )
@@ -509,8 +509,8 @@ def test_codex_config_provider_transport_reads_base_url_and_auth(clean_env) -> N
 
 
 def test_codex_config_provider_transport_missing_table_returns_none(clean_env) -> None:
-    """An absent / unnamed ``[model_providers.X]`` table → ``None``."""
-    from agent_meow.onboarding.ambient import (
+    """An absent / unnamed ``[model_providers.X]`` table â†’ ``None``."""
+    from omnigent.onboarding.ambient import (
         _codex_config_path,
         codex_config_provider_transport,
     )
@@ -526,7 +526,7 @@ def test_codex_config_detected_before_codex_login(clean_env) -> None:
 
     Detection order drives the auto-default in the read-time merge, and
     plain ``codex`` on such a machine uses config.toml's default provider
-    (it beats auth.json) — omnigents must match. Failure means the
+    (it beats auth.json) â€” omnigents must match. Failure means the
     subscription would auto-default and route differently from the user's
     own ``codex`` terminal.
     """
@@ -572,7 +572,7 @@ command = "work-token"
 """,
     )
     detected = detect_providers()
-    # The active profile's provider, not the top-level one — wrong id here
+    # The active profile's provider, not the top-level one â€” wrong id here
     # means the profile merge is ignored.
     assert [d.model_provider for d in detected] == ["WorkProvider"]
     assert detected[0].display_name == "Work Provider"
@@ -601,22 +601,22 @@ command = "print-token"
 @pytest.mark.parametrize(
     "label,body",
     [
-        # The default provider is codex's built-in "openai" — that's the
+        # The default provider is codex's built-in "openai" â€” that's the
         # subscription / API-key path, not a config-defined credential.
         (
             "builtin-provider",
             'model_provider = "openai"\n'
             '[model_providers.Custom]\n[model_providers.Custom.auth]\ncommand = "x"\n',
         ),
-        # No model_provider at all → codex defaults to builtin "openai".
+        # No model_provider at all â†’ codex defaults to builtin "openai".
         (
             "no-model-provider",
             '[model_providers.Custom]\n[model_providers.Custom.auth]\ncommand = "x"\n',
         ),
-        # Selected provider has no [model_providers.X] table → codex itself
+        # Selected provider has no [model_providers.X] table â†’ codex itself
         # would fail; nothing usable to adopt.
         ("missing-table", 'model_provider = "Ghost"\n'),
-        # requires_openai_auth rides the ChatGPT login — auth.json territory.
+        # requires_openai_auth rides the ChatGPT login â€” auth.json territory.
         (
             "requires-openai-auth",
             'model_provider = "Custom"\n'
@@ -683,13 +683,13 @@ def test_codex_config_other_self_contained_auth_detected(
     assert [d.model_provider for d in detected] == ["Custom"]
 
 
-# ── Claude on Vertex AI (GCP ADC) detection ──────────────────────────────────
+# â”€â”€ Claude on Vertex AI (GCP ADC) detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_vertex_claude_detected_with_all_env_vars(
     clean_env, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """All three Vertex env vars present → vertex-claude is detected.
+    """All three Vertex env vars present â†’ vertex-claude is detected.
 
     Claude Code natively supports Vertex AI via CLAUDE_CODE_USE_VERTEX,
     ANTHROPIC_VERTEX_PROJECT_ID, and CLOUD_ML_REGION. When all three are
@@ -738,7 +738,7 @@ def test_vertex_claude_detected_with_all_env_vars(
 def test_vertex_claude_not_detected_when_incomplete(
     clean_env, monkeypatch: pytest.MonkeyPatch, label: str, env: dict[str, str]
 ) -> None:
-    """Missing or disabled Vertex env vars → no vertex-claude detection.
+    """Missing or disabled Vertex env vars â†’ no vertex-claude detection.
 
     All three vars must be present and CLAUDE_CODE_USE_VERTEX must be
     truthy. Failure means a partial configuration would surface a bogus

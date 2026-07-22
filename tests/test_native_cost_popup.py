@@ -1,12 +1,12 @@
 """
 Unit tests for the native-terminal cost-approval popup script.
 
-Covers :mod:`~?agent_meow.native_cost_popup` — the program that runs inside
+Covers :mod:`~?omnigent.native_cost_popup` â€” the program that runs inside
 a ``tmux display-popup`` on a native harness pane, reads an
 approve/decline answer, and POSTs the verdict to the agent-meow elicitation-
 resolve endpoint (the same endpoint the web ApprovalCard uses).
 
-The tests drive the public :func:`~?agent_meow.native_cost_popup.main`
+The tests drive the public :func:`~?omnigent.native_cost_popup.main`
 entry point and assert on the exact HTTP request it issues (URL, method,
 JSON body) and on the no-request invariant when the popup is dismissed.
 """
@@ -22,7 +22,7 @@ from urllib import request
 
 import pytest
 
-from agent_meow import native_cost_popup
+from omnigent import native_cost_popup
 
 _AP_URL = "http://127.0.0.1:8787"
 _SESSION_ID = "conv_abc123"
@@ -92,7 +92,7 @@ def _install_popup_harness(
     Writes a real AP-routing config file (so ``_read_omnigent_routing`` exercises
     its real parse), stubs ``input`` to return *answer* (or raise EOF for a
     dismissal), and replaces the module's ``request`` binding with a
-    namespace whose ``urlopen`` records the outgoing request — scoped to
+    namespace whose ``urlopen`` records the outgoing request â€” scoped to
     this module only, never the global ``urllib.request`` (rule 14).
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -129,7 +129,7 @@ def _install_popup_harness(
         return _FakeResponse(202)
 
     # Replace only this module's ``request`` name (keep the real
-    # ``Request`` builder; fake only ``urlopen``) — never the global
+    # ``Request`` builder; fake only ``urlopen``) â€” never the global
     # urllib.request singleton.
     monkeypatch.setattr(
         native_cost_popup,
@@ -138,7 +138,7 @@ def _install_popup_harness(
     )
     # Disable the resolved-elsewhere watcher: it spawns a daemon thread that
     # polls the server and ``os._exit``s, neither of which belongs in a unit
-    # test of the verdict→resolve path (the watcher is manual-E2E verified).
+    # test of the verdictâ†’resolve path (the watcher is manual-E2E verified).
     monkeypatch.setattr(native_cost_popup, "_start_resolution_watcher", lambda **_kw: None)
     return harness
 
@@ -186,7 +186,7 @@ def test_main_posts_verdict_to_resolve_endpoint(
     ``ElicitationResult`` and deliver it to the SAME endpoint the web
     ApprovalCard hits, so the shared elicitation Future resolves. A
     failure means the verdict mapping, the URL path, or the body shape
-    regressed — any of which would silently break native approval.
+    regressed â€” any of which would silently break native approval.
     """
     harness = _install_popup_harness(monkeypatch, tmp_path, answer=answer)
 
@@ -194,7 +194,7 @@ def test_main_posts_verdict_to_resolve_endpoint(
 
     assert rc == 0  # clean exit after a delivered verdict
     assert harness.captured is not None, (
-        "main answered y/n but issued no HTTP request — the resolve POST "
+        "main answered y/n but issued no HTTP request â€” the resolve POST "
         "was skipped, so the native verdict never reaches the server."
     )
     # URL must be the exact session-scoped resolve endpoint the web card
@@ -229,7 +229,7 @@ def test_main_dismissal_issues_no_request(
 
     assert rc == 0  # dismissal is a clean, non-error exit
     assert harness.captured is None, (
-        "main posted a verdict on dismissal — it must leave the "
+        "main posted a verdict on dismissal â€” it must leave the "
         "elicitation outstanding for the web UI / server timeout."
     )
 
@@ -259,7 +259,7 @@ def test_prompt_header_reflects_policy_name(
         "user knows which policy is asking"
     )
     assert "Cost budget checkpoint" not in out, (
-        "the hardcoded cost-budget header must not render for a non-cost policy — that was the bug"
+        "the hardcoded cost-budget header must not render for a non-cost policy â€” that was the bug"
     )
 
 
@@ -329,7 +329,7 @@ def test_wait_for_tmux_client_returns_true_when_client_attached(
     """
     monkeypatch.setattr(native_cost_popup, "_list_tmux_clients", lambda _s, _t: ["/dev/pts/9"])
 
-    # Client present on the first probe → True with no sleep.
+    # Client present on the first probe â†’ True with no sleep.
     assert native_cost_popup.wait_for_tmux_client("/tmp/x.sock", "main", timeout_s=5.0) is True
 
 
@@ -345,7 +345,7 @@ def test_wait_for_tmux_client_times_out_when_no_client(
     """
     monkeypatch.setattr(native_cost_popup, "_list_tmux_clients", lambda _s, _t: [])
 
-    # timeout_s=0.0 → the deadline has already passed, so it returns without
+    # timeout_s=0.0 â†’ the deadline has already passed, so it returns without
     # sleeping (keeps the test fast and free of time.sleep).
     assert native_cost_popup.wait_for_tmux_client("/tmp/x.sock", "main", timeout_s=0.0) is False
 
@@ -355,7 +355,7 @@ def test_main_notice_mode_needs_no_config_and_no_resolve(
 ) -> None:
     """``--notice`` shows a hard-block reason and exits 0 without any server call.
 
-    The hard-DENY path (e.g. an opencode cost cap) has nothing to resolve — it
+    The hard-DENY path (e.g. an opencode cost cap) has nothing to resolve â€” it
     must not require the AP-routing config and must not POST a verdict.
     """
     posted: list[Any] = []
@@ -394,7 +394,7 @@ def test_launch_blocked_notice_spawns_notice_popup(
 def test_launch_blocked_notice_skips_without_client(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No attached client → nothing to render on → no popup spawned."""
+    """No attached client â†’ nothing to render on â†’ no popup spawned."""
     monkeypatch.setattr(native_cost_popup, "_list_tmux_clients", lambda _s, _t: [])
     import subprocess
 

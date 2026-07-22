@@ -4,13 +4,13 @@ Tests for :class:`FunctionPolicy` (Phase 4).
 Ports and extends these agent-meow cases:
 
 From ``test_policies.py``:
-- ``test_allow_by_default`` — empty FunctionPolicy → ALLOW
-- ``test_sync_callable_block`` — sync DENY via callable
-- ``test_sync_callable_allow`` — sync ALLOW via lambda
-- ``test_async_callable`` — async def evaluator
-- ``test_callable_returns_dict`` — dict return parses
-- ``test_deny_action_from_dict`` — string 'deny' in dict
-- ``test_tool_call_rate_limit`` — closure rate-limit policy
+- ``test_allow_by_default`` â€” empty FunctionPolicy â†’ ALLOW
+- ``test_sync_callable_block`` â€” sync DENY via callable
+- ``test_sync_callable_allow`` â€” sync ALLOW via lambda
+- ``test_async_callable`` â€” async def evaluator
+- ``test_callable_returns_dict`` â€” dict return parses
+- ``test_deny_action_from_dict`` â€” string 'deny' in dict
+- ``test_tool_call_rate_limit`` â€” closure rate-limit policy
 
 From ``test_labels_and_policies.py`` (FunctionPolicy-context):
 - ``test_three_arg_callable_receives_context``
@@ -20,7 +20,7 @@ From ``test_labels_and_policies.py`` (FunctionPolicy-context):
 - ``test_zero_arg_factory_copy_creates_fresh_state``
 
 Plus Phase 4 carve-outs:
-- Exception → DENY (fail-closed)
+- Exception â†’ DENY (fail-closed)
 - set_labels whitelist filtering
 """
 
@@ -33,20 +33,20 @@ from typing import Any
 
 import pytest
 
-from agent_meow.policies.function import (
+from omnigent.policies.function import (
     FunctionPolicy,
     resolve_function_policy,
 )
-from agent_meow.policies.types import EvaluationContext, PolicyResult
-from agent_meow.runtime.policies.engine import PolicyEngine
-from agent_meow.spec.types import (
+from omnigent.policies.types import EvaluationContext, PolicyResult
+from omnigent.runtime.policies.engine import PolicyEngine
+from omnigent.spec.types import (
     FunctionPolicySpec,
     FunctionRef,
     Phase,
     PhaseSelector,
     PolicyAction,
 )
-from agent_meow.stores.conversation_store.sqlalchemy_store import (
+from omnigent.stores.conversation_store.sqlalchemy_store import (
     SqlAlchemyConversationStore,
 )
 from tests.runtime.policies.conftest import make_fixed_policy
@@ -57,7 +57,7 @@ def _install_module(tmp_path: Path, module_name: str, source: str) -> None:
     Write a Python module into a tmp dir and make it importable.
 
     Used by tests that need to exercise
-    ``resolve_function_policy`` — the real code path that
+    ``resolve_function_policy`` â€” the real code path that
     production YAMLs go through.
     """
     pkg_dir = tmp_path / "test_fn_policy_pkg"
@@ -121,7 +121,7 @@ def _build_engine(
     )
 
 
-# ── Direct FunctionPolicy (no dotted-path resolution) ──
+# â”€â”€ Direct FunctionPolicy (no dotted-path resolution) â”€â”€
 
 
 @pytest.mark.asyncio
@@ -242,8 +242,8 @@ async def test_callable_returns_foreign_policy_result_shape() -> None:
     coercion, regardless of its class identity. This pins the
     regression reported against
     ``examples/rate_limit_policy.py``, which imports
-    ``PolicyResult`` from ``agent_meow.policies`` — a different
-    module than the engine's ``agent_meow.policies.types`` so
+    ``PolicyResult`` from ``omnigent.policies`` â€” a different
+    module than the engine's ``omnigent.policies.types`` so
     ``isinstance`` fails.
 
     Uses a local stand-in dataclass so the test doesn't
@@ -258,7 +258,7 @@ async def test_callable_returns_foreign_policy_result_shape() -> None:
 
     class _ForeignAction(enum.Enum):
         """
-        Mimics ``agent_meow.policies.PolicyAction`` — wire
+        Mimics ``omnigent.policies.PolicyAction`` â€” wire
         values match agent-meow', but the enum class is
         distinct so ``isinstance(x, PolicyAction)`` fails.
         """
@@ -269,7 +269,7 @@ async def test_callable_returns_foreign_policy_result_shape() -> None:
     @dataclass
     class _ForeignPolicyResult:
         """
-        Mimics ``agent_meow.policies.PolicyResult`` — same
+        Mimics ``omnigent.policies.PolicyResult`` â€” same
         attributes, different class identity.
         """
 
@@ -288,7 +288,7 @@ async def test_callable_returns_foreign_policy_result_shape() -> None:
         EvaluationContext(phase=Phase.REQUEST, content="x"),
         {"labels": {}, "conversation_id": "c"},
     )
-    # DENY (action coerced via the enum's ``.value`` — a plain
+    # DENY (action coerced via the enum's ``.value`` â€” a plain
     # ``str(_ForeignAction.DENY)`` would give
     # ``"_ForeignAction.DENY"`` which ``PolicyAction(...)``
     # rejects.
@@ -334,7 +334,7 @@ async def test_two_arg_callable_reads_config_for_decision(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """Ports agent-meow ``test_three_arg_callable_reads_labels_for_decision``.
-    Under V0, labels are NOT passed to the callable — decisions
+    Under V0, labels are NOT passed to the callable â€” decisions
     that once depended on the runtime label state should instead
     use the spec's static ``config`` thresholds. This test verifies
     that config values steer the decision and that label state is
@@ -372,7 +372,7 @@ async def test_two_arg_callable_reads_config_for_decision(
     assert allowed.action == PolicyAction.ALLOW
 
     # Separately verify labels ARE visible on the engine after a
-    # label-writing policy runs — they just aren't piped through
+    # label-writing policy runs â€” they just aren't piped through
     # the callable's config arg.
     label_policy = make_fixed_policy(
         name="taint",
@@ -411,7 +411,7 @@ async def test_async_two_arg_callable() -> None:
     assert r.action == PolicyAction.DENY
 
 
-# ── Rate-limit closure (the load-bearing §9.1 example) ─
+# â”€â”€ Rate-limit closure (the load-bearing Â§9.1 example) â”€
 
 
 @pytest.mark.asyncio
@@ -463,19 +463,19 @@ async def test_rate_limit_closure_counts() -> None:
     assert r.action == PolicyAction.DENY
 
 
-# ── Factory resolution (the dict-form YAML path) ───────
+# â”€â”€ Factory resolution (the dict-form YAML path) â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_function_policy_short_form(tmp_path: Path) -> None:
-    """Short-form: `function: module.attr` → the attr IS
+    """Short-form: `function: module.attr` â†’ the attr IS
     the evaluator."""
     _install_module(
         tmp_path,
         "probe",
         """
-        from agent_meow.policies.types import PolicyResult
+        from omnigent.policies.types import PolicyResult
 
-        from agent_meow.spec.types import PolicyAction
+        from omnigent.spec.types import PolicyAction
 
         def noop(event):
             return PolicyResult(action=PolicyAction.ALLOW)
@@ -493,16 +493,16 @@ def test_resolve_function_policy_short_form(tmp_path: Path) -> None:
 
 
 def test_resolve_function_policy_factory_form(tmp_path: Path) -> None:
-    """Dict-form: `function: {path, arguments}` → path is a
+    """Dict-form: `function: {path, arguments}` â†’ path is a
     factory. The factory runs once at build time, returning
     the evaluator. Closure state is per-workflow."""
     _install_module(
         tmp_path,
         "probe_factory",
         """
-        from agent_meow.policies.types import PolicyResult
+        from omnigent.policies.types import PolicyResult
 
-        from agent_meow.spec.types import PolicyAction
+        from omnigent.spec.types import PolicyAction
 
         def make(limit):
             calls = 0
@@ -533,7 +533,7 @@ def test_resolve_function_policy_empty_arguments_invokes_factory(
     """``arguments={}`` invokes the factory with no kwargs (defaults).
 
     Before the ``is not None`` fix, ``{}`` was falsy and the factory
-    was used as the evaluator directly — calling it with ``(event)``
+    was used as the evaluator directly â€” calling it with ``(event)``
     returned an inner function instead of a verdict. If this
     regresses, factory policies stored with ``factory_params={}``
     (the shape the web UI sends) would fail at evaluation time.
@@ -542,8 +542,8 @@ def test_resolve_function_policy_empty_arguments_invokes_factory(
         tmp_path,
         "probe_empty_args",
         """
-        from agent_meow.policies.types import PolicyResult
-        from agent_meow.spec.types import PolicyAction
+        from omnigent.policies.types import PolicyResult
+        from omnigent.spec.types import PolicyAction
 
         def make(limit=5):
             def _eval(event):
@@ -573,15 +573,15 @@ def test_resolve_function_policy_none_arguments_auto_detects_factory(
 
     Legacy DB rows store ``factory_params=None``. The resolver
     inspects the signature: if every positional param has a default,
-    it's a factory — call it with no args to produce the evaluator.
+    it's a factory â€” call it with no args to produce the evaluator.
     Direct callables (required ``event`` param) are used as-is.
     """
     _install_module(
         tmp_path,
         "probe_auto",
         """
-        from agent_meow.policies.types import PolicyResult
-        from agent_meow.spec.types import PolicyAction
+        from omnigent.policies.types import PolicyResult
+        from omnigent.spec.types import PolicyAction
 
         def factory_all_defaults(limit=10, action="ALLOW"):
             def _eval(event):
@@ -627,16 +627,16 @@ async def test_factory_closure_counter_isolated_per_build(
 ) -> None:
     """Ports agent-meow ``test_rate_limit_counter_isolated``.
     Two separate FunctionPolicy builds from the same factory
-    have independent closure state — if this regresses,
+    have independent closure state â€” if this regresses,
     rate limits for different agents (or different workflows
     of the same agent) would pool into one counter."""
     _install_module(
         tmp_path,
         "probe_iso",
         """
-        from agent_meow.policies.types import PolicyResult
+        from omnigent.policies.types import PolicyResult
 
-        from agent_meow.spec.types import PolicyAction
+        from omnigent.spec.types import PolicyAction
 
         def make(limit):
             calls = 0
@@ -666,21 +666,21 @@ async def test_factory_closure_counter_isolated_per_build(
     # A: 1 ALLOW then DENY (limit=1).
     assert (await policy_a.evaluate(ctx, context)).action == PolicyAction.ALLOW
     assert (await policy_a.evaluate(ctx, context)).action == PolicyAction.DENY
-    # B starts fresh — its first call is ALLOW even though
+    # B starts fresh â€” its first call is ALLOW even though
     # A has already exhausted its counter.
     assert (await policy_b.evaluate(ctx, context)).action == PolicyAction.ALLOW
 
 
-# ── Engine-level FunctionPolicy dispatch ──────────────
+# â”€â”€ Engine-level FunctionPolicy dispatch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
 async def test_function_policy_exception_fails_closed_to_deny(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """A callable that raises → engine coerces to DENY with
+    """A callable that raises â†’ engine coerces to DENY with
     the exception message in reason. Critical safety property
-    — a broken callable must not silently ALLOW."""
+    â€” a broken callable must not silently ALLOW."""
 
     def fn(event: dict) -> PolicyResult:
         raise RuntimeError("crashed")
@@ -699,9 +699,9 @@ async def test_function_policy_set_labels_whitelist_drops_extras(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """Spec declares `set_labels: [integrity]`; callable
-    returns extra keys → engine filters them out silently
-    (POLICIES.md §9.2 on the prompt-policy path but applies
-    uniformly here per §4 step 5)."""
+    returns extra keys â†’ engine filters them out silently
+    (POLICIES.md Â§9.2 on the prompt-policy path but applies
+    uniformly here per Â§4 step 5)."""
 
     def fn(event: dict) -> PolicyResult:
         return PolicyResult(
@@ -714,7 +714,7 @@ async def test_function_policy_set_labels_whitelist_drops_extras(
     await engine.evaluate(EvaluationContext(phase=Phase.REQUEST, content="x"))
     # Hot cache reflects only the whitelisted key.
     assert engine.labels == {"integrity": "0"}
-    # Persisted state matches — the stealthy_key never
+    # Persisted state matches â€” the stealthy_key never
     # touched the store.
     conv = conversation_store.get_conversation(engine.conversation_id)
     assert conv is not None
@@ -741,7 +741,7 @@ async def test_function_policy_without_whitelist_writes_freely(
     assert engine.labels == {"any": "value", "other": "thing"}
 
 
-# ── Composition: FunctionPolicy + FunctionPolicy together ─
+# â”€â”€ Composition: FunctionPolicy + FunctionPolicy together â”€
 
 
 @pytest.mark.asyncio
@@ -763,7 +763,7 @@ async def test_function_and_label_policies_compose(
     correctly when its decision is based on event content.
 
     This is the same pattern the secure_research_agent
-    example uses — the Phase 4 e2e proxy."""
+    example uses â€” the Phase 4 e2e proxy."""
     taint = make_fixed_policy(
         name="taint_web",
         on=[PhaseSelector(phase=Phase.TOOL_CALL, tool_name="web_search")],
@@ -772,7 +772,7 @@ async def test_function_and_label_policies_compose(
     )
 
     # Shell guard denies any tool whose event target is
-    # "run_shell" — its decision is driven by event["target"],
+    # "run_shell" â€” its decision is driven by event["target"],
     # not runtime labels. Label state is verified separately
     # via engine.labels after each turn.
     def shell_guard(event: dict) -> PolicyResult:
@@ -805,7 +805,7 @@ async def test_function_and_label_policies_compose(
     # Label taint is visible on the engine after turn 1.
     assert engine.labels["integrity"] == "0"
 
-    # Turn 2: run_shell → shell_guard sees event["target"]
+    # Turn 2: run_shell â†’ shell_guard sees event["target"]
     # == "run_shell" and DENIES.
     r2 = await engine.evaluate(
         EvaluationContext(
@@ -819,7 +819,7 @@ async def test_function_and_label_policies_compose(
     assert "tainted" in r2.reason
 
 
-# ── reset_turn forwarding (fix #2) ───────────────────────────
+# â”€â”€ reset_turn forwarding (fix #2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_function_policy_reset_turn_invokes_callable_attribute(
@@ -829,8 +829,8 @@ def test_function_policy_reset_turn_invokes_callable_attribute(
     ``FunctionPolicy.reset_turn`` must look up ``reset_turn``
     on the wrapped callable and invoke it. This is how legacy
     agent-meow policies like ``max_tool_calls_per_turn`` clear
-    per-turn accumulators between turns — see
-    :meth:`~?agent_meow.runtime.policies.engine.PolicyEngine.reset_turn`
+    per-turn accumulators between turns â€” see
+    :meth:`~?omnigent.runtime.policies.engine.PolicyEngine.reset_turn`
     for the native implementation we mirror.
 
     What breaks if this fails: the rate-limit factory in
@@ -838,7 +838,7 @@ def test_function_policy_reset_turn_invokes_callable_attribute(
     without ever resetting its counter, and a "15 per turn"
     config silently behaves as "15 per session".
     """
-    del conversation_store  # Unused — engine isn't needed for this assertion.
+    del conversation_store  # Unused â€” engine isn't needed for this assertion.
     reset_calls: list[None] = []
 
     def evaluate(
@@ -856,7 +856,7 @@ def test_function_policy_reset_turn_invokes_callable_attribute(
     policy = FunctionPolicy(_spec(), evaluate)
     policy.reset_turn()
     policy.reset_turn()
-    # Two explicit invocations → two underlying invocations.
+    # Two explicit invocations â†’ two underlying invocations.
     # Anything other than 2 indicates either a missed
     # delegation (0) or a duplicated call (>2).
     assert len(reset_calls) == 2
@@ -867,7 +867,7 @@ def test_function_policy_reset_turn_no_op_when_callable_lacks_attribute(
 ) -> None:
     """
     Stateless callables (no ``reset_turn`` attribute) must be
-    a clean no-op — calling ``policy.reset_turn()`` cannot
+    a clean no-op â€” calling ``policy.reset_turn()`` cannot
     raise. The base-class ``Policy.reset_turn`` and the
     FunctionPolicy override both default to "do nothing" for
     plain callables.
@@ -899,7 +899,7 @@ def test_engine_reset_turn_calls_every_policy(
     every policy in YAML order, regardless of type. Verifies:
 
     - Stateless policies are called (no-op, but the call
-      happens — pinned by counter on a recording subclass).
+      happens â€” pinned by counter on a recording subclass).
     - Stateful FunctionPolicies clear their underlying
       callable's accumulator.
     - FunctionPolicy entries (which have a default no-op
@@ -972,7 +972,7 @@ def test_engine_reset_turn_does_not_cross_engines(
     engine_b = _build_engine(conversation_store, [pol_b])
 
     engine_a.reset_turn()
-    # Only A's counter advanced — B's engine wasn't touched.
+    # Only A's counter advanced â€” B's engine wasn't touched.
     assert len(counters_a) == 1
     assert len(counters_b) == 0
 
@@ -984,7 +984,7 @@ def test_engine_reset_turn_does_not_cross_engines(
     assert len(counters_b) == 1
 
 
-# ── PolicyResult.data propagation ─────────────────────
+# â”€â”€ PolicyResult.data propagation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @pytest.mark.asyncio
@@ -1054,7 +1054,7 @@ async def test_engine_data_chains_sequentially_across_policies(
     not the original content.
 
     The canonical use case: a two-stage redaction pipeline where
-    the first policy scrubs PII and the second strips secrets —
+    the first policy scrubs PII and the second strips secrets â€”
     the second policy must see the already-PII-scrubbed payload,
     not the raw original.
     """
@@ -1095,7 +1095,7 @@ async def test_engine_data_chains_sequentially_across_policies(
     assert result.data == {"query": "after-second"}
 
 
-# ── Gap 7: legacy (content, phase) callable shim ─────────────────────────────
+# â”€â”€ Gap 7: legacy (content, phase) callable shim â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_resolve_function_policy_wraps_legacy_callable(tmp_path: Path) -> None:
@@ -1106,7 +1106,7 @@ def test_resolve_function_policy_wraps_legacy_callable(tmp_path: Path) -> None:
     Before the fix, passing a legacy callable to
     ``resolve_function_policy`` stored it unwrapped. The
     evaluator would then receive ``(event_dict, config)`` instead
-    of ``(content, phase)`` — the phase check (``phase ==
+    of ``(content, phase)`` â€” the phase check (``phase ==
     "tool_call"``) always failed against a dict, silently
     producing ALLOW regardless of the event."""
     _install_module(
@@ -1134,7 +1134,7 @@ async def test_resolve_function_policy_legacy_callable_evaluates_correctly(
 ) -> None:
     """A legacy ``(content, phase)`` callable wrapped by
     ``resolve_function_policy`` returns the right decision at
-    evaluation time — both the action and the reason survive
+    evaluation time â€” both the action and the reason survive
     the ``_coerce_legacy_return`` path."""
     _install_module(
         tmp_path,
@@ -1165,14 +1165,14 @@ async def test_resolve_function_policy_legacy_callable_evaluates_correctly(
 
 def test_resolve_function_policy_modern_callable_not_wrapped(tmp_path: Path) -> None:
     """A modern ``(event)`` callable passes through
-    ``resolve_function_policy`` unchanged — its identity is
+    ``resolve_function_policy`` unchanged â€” its identity is
     preserved and no legacy shim wrapper is injected."""
     _install_module(
         tmp_path,
         "probe_modern",
         """
-        from agent_meow.policies.types import PolicyResult
-        from agent_meow.spec.types import PolicyAction
+        from omnigent.policies.types import PolicyResult
+        from omnigent.spec.types import PolicyAction
 
         def modern_allow(event):
             return PolicyResult(action=PolicyAction.ALLOW)

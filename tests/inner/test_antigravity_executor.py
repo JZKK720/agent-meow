@@ -1,5 +1,5 @@
 """
-Unit tests for :class:`~?agent_meow.inner.antigravity_executor.AntigravityExecutor`.
+Unit tests for :class:`~?omnigent.inner.antigravity_executor.AntigravityExecutor`.
 
 The fakes here mirror the real ``google.antigravity`` streaming surface the
 executor depends on: ``agent.conversation`` yields :class:`Step` objects from
@@ -21,9 +21,9 @@ from typing import Any
 
 import pytest
 
-from agent_meow.inner import antigravity_executor as ag
-from agent_meow.inner.antigravity_executor import AntigravityExecutor, _latest_user_text
-from agent_meow.inner.executor import (
+from omnigent.inner import antigravity_executor as ag
+from omnigent.inner.antigravity_executor import AntigravityExecutor, _latest_user_text
+from omnigent.inner.executor import (
     ExecutorConfig,
     ExecutorError,
     ReasoningChunk,
@@ -34,9 +34,9 @@ from agent_meow.inner.executor import (
     TurnCancelled,
     TurnComplete,
 )
-from agent_meow.llms._usage_observer import add_observer
+from omnigent.llms._usage_observer import add_observer
 
-# ── Fakes mirroring the real SDK streaming shapes ───────────────────────
+# â”€â”€ Fakes mirroring the real SDK streaming shapes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _StepType(enum.Enum):
@@ -212,7 +212,7 @@ class _FakeAgent:
 
 
 class _FakeLocalAgentConfig:
-    """Mirror of ``LocalAgentConfig`` — accepts exactly the fields the executor sets."""
+    """Mirror of ``LocalAgentConfig`` â€” accepts exactly the fields the executor sets."""
 
     def __init__(
         self,
@@ -308,7 +308,7 @@ def _tool_call_step(call: _FakeToolCall, status: _StepStatus = _StepStatus.ACTIV
     return _YieldStep(_FakeStep(step_type=_StepType.TOOL_CALL, status=status, tool_calls=[call]))
 
 
-# ── Tests ───────────────────────────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_latest_user_text_prefers_last_user_message() -> None:
@@ -338,7 +338,7 @@ async def test_streaming_maps_text_reasoning_and_usage(monkeypatch: pytest.Monke
 
     events = await _drain(executor, [{"role": "user", "content": "hi", "session_id": "s1"}])
 
-    # Two TextChunks prove deltas stream incrementally rather than as one blob —
+    # Two TextChunks prove deltas stream incrementally rather than as one blob â€”
     # if the executor reverted to a one-shot agent.chat() this would be 1 (or 0).
     texts = [e.text for e in events if isinstance(e, TextChunk)]
     assert texts == ["Hello ", "world"]
@@ -388,7 +388,7 @@ async def test_user_echoed_step_not_surfaced(monkeypatch: pytest.MonkeyPatch) ->
     events = await _drain(executor, [{"role": "user", "content": "go", "session_id": "s1"}])
 
     texts = [e.text for e in events if isinstance(e, TextChunk)]
-    # Only the MODEL->USER reply — the USER-source echo is filtered out.
+    # Only the MODEL->USER reply â€” the USER-source echo is filtered out.
     assert texts == ["the real reply"]
     completes = [e for e in events if isinstance(e, TurnComplete)]
     assert completes[0].response == "the real reply"
@@ -448,10 +448,10 @@ async def test_tool_completion_error_status(monkeypatch: pytest.MonkeyPatch) -> 
 
 @pytest.mark.asyncio
 async def test_tool_result_payload_error_classified_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A ToolResult whose *payload* carries an error (not ToolResult.error) → ERROR."""
+    """A ToolResult whose *payload* carries an error (not ToolResult.error) â†’ ERROR."""
     script: list[_TurnAction] = [
         _tool_call_step(_FakeToolCall("sys_shell", {}, call_id="t1")),
-        # error=None, but the result payload self-describes as an error — this
+        # error=None, but the result payload self-describes as an error â€” this
         # exercises classify_tool_result's payload branch, not the .error path.
         _FireToolResult(_FakeToolResult("sys_shell", result={"error": "boom"}, call_id="t1")),
     ]
@@ -510,7 +510,7 @@ async def test_tool_error_step_completes_without_hook(monkeypatch: pytest.Monkey
     assert len(completes) == 1
     assert completes[0].status == ToolCallStatus.ERROR
     assert completes[0].metadata == {"call_id": "t1"}
-    # The turn itself is not failed — a tool error is not a turn-level error.
+    # The turn itself is not failed â€” a tool error is not a turn-level error.
     assert any(isinstance(e, TurnComplete) for e in events)
     assert not any(isinstance(e, ExecutorError) for e in events)
 
@@ -522,7 +522,7 @@ async def test_tool_completion_not_double_emitted(monkeypatch: pytest.MonkeyPatc
     script: list[_TurnAction] = [
         _tool_call_step(call, status=_StepStatus.ACTIVE),
         _FireToolResult(_FakeToolResult("sys_shell", result={"ok": True}, call_id="t1")),
-        # A trailing DONE step for the same call — the fallback must see it as
+        # A trailing DONE step for the same call â€” the fallback must see it as
         # already-completed (popped by the hook) and NOT emit a second event.
         _tool_call_step(call, status=_StepStatus.DONE),
     ]
@@ -580,7 +580,7 @@ async def test_terminal_error_step_yields_executor_error(monkeypatch: pytest.Mon
     assert errors[0].message == "model exploded"
     # TERMINAL_ERROR is non-retryable (a plain ERROR would be retryable).
     assert errors[0].retryable is False
-    # No TurnComplete after a turn-level error — the workflow treats it as failed.
+    # No TurnComplete after a turn-level error â€” the workflow treats it as failed.
     assert not any(isinstance(e, TurnComplete) for e in events)
 
 
@@ -764,7 +764,7 @@ async def test_agent_reused_across_turns_same_session(monkeypatch: pytest.Monkey
     await _drain(executor, [{"role": "user", "content": "one", "session_id": "s1"}])
     await _drain(executor, [{"role": "user", "content": "two", "session_id": "s1"}])
 
-    # Exactly one agent built across two turns — the signature was unchanged so
+    # Exactly one agent built across two turns â€” the signature was unchanged so
     # the cached agent (and its SDK conversation state) was reused.
     assert len(captured["agents"]) == 1
     assert captured["agents"][0].conversation.sends == ["one", "two"]
@@ -791,14 +791,14 @@ async def test_fresh_session_replays_prior_history(monkeypatch: pytest.MonkeyPat
     await _drain(executor, messages)
 
     # One agent, one send. That send must carry the prior turns AND the latest
-    # user text — not just the latest text (the pre-fix behavior).
+    # user text â€” not just the latest text (the pre-fix behavior).
     sends = captured["agents"][0].conversation.sends
     assert len(sends) == 1
     seeded = sends[0]
     assert "what is 2+2?" in seeded  # prior user turn replayed
     assert "assistant: 4" in seeded  # prior assistant turn replayed
     assert "and times 3?" in seeded  # latest user input still present
-    # The latest input is not the whole prompt — proves a prefix was prepended.
+    # The latest input is not the whole prompt â€” proves a prefix was prepended.
     assert seeded != "and times 3?"
 
 
@@ -810,7 +810,7 @@ async def test_rebuilt_session_replays_history_after_signature_change(
 
     A signature change (model/system-prompt/tools) discards the live SDK
     conversation, so the *rebuilt* agent is fresh and must be re-seeded with the
-    history it just lost — the same context-loss bug a server restart causes.
+    history it just lost â€” the same context-loss bug a server restart causes.
     """
     captured = _install_fake_sdk(monkeypatch, scripts=[[_text_step("a")], [_text_step("b")]])
     executor = AntigravityExecutor(model="gemini-3-pro")
@@ -859,7 +859,7 @@ async def test_reused_session_does_not_reseed_history(monkeypatch: pytest.Monkey
     await _drain(executor, second)
 
     assert len(captured["agents"]) == 1  # reused, not rebuilt
-    # The reused turn's send is the bare latest text — no "Conversation so far:"
+    # The reused turn's send is the bare latest text â€” no "Conversation so far:"
     # prefix and no duplicated prior turn.
     sends = captured["agents"][0].conversation.sends
     assert sends == ["one", "two"]
@@ -984,7 +984,7 @@ async def test_api_key_and_vertex_threaded_to_config(monkeypatch: pytest.MonkeyP
     assert vcfg.vertex is True
     assert vcfg.project == "my-proj"
     assert vcfg.location == "us-central1"
-    # The SDK config has no base_url field — the executor must never set one.
+    # The SDK config has no base_url field â€” the executor must never set one.
     assert not hasattr(vcfg, "base_url")
 
 
@@ -1060,7 +1060,7 @@ async def test_conversation_access_failure_reaps_agent(
     assert executor._session_states == {}
 
 
-# ── Interrupt (cancellation) tests — real deterministic sync gates ──────
+# â”€â”€ Interrupt (cancellation) tests â€” real deterministic sync gates â”€â”€â”€â”€â”€â”€
 
 
 class _BlockingConversation:
@@ -1169,7 +1169,7 @@ async def test_interrupt_session_cancels_running_turn(
     collected: list[Any] = []
     task = asyncio.create_task(_drive_until_first_text(executor, collected, first_text))
     # Wait until the turn has streamed its first delta (provably mid-flight)
-    # before interrupting — this is the deterministic race window.
+    # before interrupting â€” this is the deterministic race window.
     await asyncio.wait_for(first_text.wait(), timeout=5)
 
     interrupted = await executor.interrupt_session("s1")
@@ -1200,7 +1200,7 @@ class _RebuildConversation:
 
     The first conversation (``blocking=True``) streams one delta and parks on a
     gate until ``cancel()`` releases it, then raises the SDK cancellation error
-    — modelling an interrupted in-flight turn. The second conversation
+    â€” modelling an interrupted in-flight turn. The second conversation
     (``blocking=False``) is the fresh one a post-interrupt rebuild must open and
     runs a normal turn to completion. Each records its own ``sends`` so a test
     can prove the second turn went to the *new* conversation, not the cancelled
@@ -1315,7 +1315,7 @@ async def test_next_turn_rebuilds_after_interrupt(monkeypatch: pytest.MonkeyPatc
     # Turn 2 on the SAME session/signature must NOT reuse the cancelled agent.
     events = await _drain(executor, [{"role": "user", "content": "next", "session_id": "s1"}])
 
-    # A fresh agent was built (2 total) and the stale one was torn down — the
+    # A fresh agent was built (2 total) and the stale one was torn down â€” the
     # exact rebuild path a signature change uses. Reuse (the bug) would be 1.
     assert len(captured["agents"]) == 2
     assert captured["agents"][0].closed is True
