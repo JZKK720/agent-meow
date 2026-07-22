@@ -3,7 +3,7 @@
 Mirrors the surviving ``reasoning_effort`` patterns in
 ``test_sessions_endpoints.py``: PATCH writes the column and the
 snapshot reads it back. The LLM-piping coverage (mock_llm runner
-integration) was retired alongside the DBOS execution path â€”
+integration) was retired alongside the DBOS execution path â€?
 runner-path forwarding is verified here by stubbing
 ``_get_runner_client`` and capturing the runner POST body.
 """
@@ -11,6 +11,7 @@ runner-path forwarding is verified here by stubbing
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -194,7 +195,7 @@ async def test_create_session_with_model_override_persists(
     )
     assert resp.status_code == 201, resp.text
     created = resp.json()
-    # The create response itself must carry the override â€” the runner's
+    # The create response itself must carry the override â€?the runner's
     # launch-config fetch consumes this exact snapshot shape.
     assert created["model_override"] == "databricks-claude-sonnet-4-6"
 
@@ -219,7 +220,7 @@ async def test_create_session_rejects_malformed_model_override(
 
     The persisted value later becomes a ``--model`` argv element on the
     runner, so the route must refuse shell-/flag-shaped strings before
-    any row exists â€” the runner-side validation alone is not the trust
+    any row exists â€?the runner-side validation alone is not the trust
     boundary.
 
     :param bad_model: The malformed override under test.
@@ -259,7 +260,7 @@ async def test_create_session_with_reasoning_effort_persists(
     )
     assert resp.status_code == 201, resp.text
     created = resp.json()
-    # The create response itself must carry the effort â€” the runner's
+    # The create response itself must carry the effort â€?the runner's
     # launch-config fetch consumes this exact snapshot shape.
     assert created["reasoning_effort"] == "high"
 
@@ -344,7 +345,7 @@ async def test_runner_path_forwards_persisted_model_override(
     session = await _create_session(client, agent["id"])
     sid = session["id"]
 
-    # Persist the override and send an event WITHOUT repeating it â€”
+    # Persist the override and send an event WITHOUT repeating it â€?
     # only the persisted column should reach the runner body.
     patch = await client.patch(
         f"/v1/sessions/{sid}",
@@ -365,7 +366,7 @@ async def test_runner_path_forwards_persisted_model_override(
     assert resp.status_code == 202, resp.text
 
     assert captured.get("body") is not None, (
-        "Runner client was never POSTed to â€” _forward_event_to_runner "
+        "Runner client was never POSTed to â€?_forward_event_to_runner "
         "did not run. Check the runner-stub wiring."
     )
     assert captured["body"].get("model_override") == "claude-opus-4-7", (
@@ -384,7 +385,7 @@ async def test_create_time_model_override_forwards_on_first_event(
     This is the SDK-harness leg of ``sys_session_send``'s per-dispatch
     ``model``: the child's first message event must carry the persisted
     override so ``_resolve_harness_config`` bakes it into the spawn env
-    (``HARNESS_<H>_MODEL``) for the child's first turn â€” not only after
+    (``HARNESS_<H>_MODEL``) for the child's first turn â€?not only after
     a later PATCH.
     """
     captured = _stub_runner_client(monkeypatch)
@@ -414,7 +415,7 @@ async def test_create_time_model_override_forwards_on_first_event(
     assert event.status_code == 202, event.text
 
     assert captured.get("body") is not None, (
-        "Runner client was never POSTed to â€” _forward_event_to_runner "
+        "Runner client was never POSTed to â€?_forward_event_to_runner "
         "did not run. Check the runner-stub wiring."
     )
     assert captured["body"].get("model_override") == "databricks-claude-sonnet-4-6", (
@@ -449,13 +450,13 @@ async def test_context_window_uses_effective_model(
     session = await _create_session(client, agent["id"])
     sid = session["id"]
 
-    # Baseline: no override â†’ lookup uses the spec model.
+    # Baseline: no override â†?lookup uses the spec model.
     lookup_calls.clear()
     baseline = await client.get(f"/v1/sessions/{sid}")
     assert baseline.status_code == 200
     baseline_lookup = lookup_calls[-1] if lookup_calls else None
 
-    # Apply an override and re-fetch â€” lookup must now use the override.
+    # Apply an override and re-fetch â€?lookup must now use the override.
     await client.patch(
         f"/v1/sessions/{sid}",
         json={"model_override": "claude-opus-4-7"},
@@ -535,7 +536,7 @@ async def test_silent_patch_skips_claude_native_forward(
 
     Without this, the web sticky-pref handoff on a fresh session
     would render a leading "Command model X" slash-command item
-    before the user has sent anything â€” the bug a user reported.
+    before the user has sent anything â€?the bug a user reported.
 
     Updated for the unified-events refactor: agent-meow server no longer
     calls a dedicated ``_forward_claude_native_model`` helper. It
@@ -579,7 +580,7 @@ async def test_silent_patch_skips_claude_native_forward(
         )
         captured.clear()
 
-        # User-driven PATCH (silent omitted â†’ False): forward runs.
+        # User-driven PATCH (silent omitted â†?False): forward runs.
         resp = await client.patch(
             f"/v1/sessions/{sid}",
             json={"model_override": "claude-opus-4-7"},
@@ -621,7 +622,7 @@ async def test_silent_patch_skips_claude_native_forward(
     # No model_change POST must reach the runner. A non-empty list
     # here means the silent flag was ignored and bind-time sticky-
     # pref handoff would inject a visible ``/model X`` item into a
-    # fresh pane â€” the bug this skip exists to prevent.
+    # fresh pane â€?the bug this skip exists to prevent.
     model_forwards_after_silent_patch = [
         (url, body)
         for url, body in captured
@@ -633,7 +634,7 @@ async def test_silent_patch_skips_claude_native_forward(
     )
 
     # No POST to the legacy ``/claude-native-model`` route should
-    # happen anymore â€” its callsite is gone from agent-meow server.
+    # happen anymore â€?its callsite is gone from agent-meow server.
     legacy_forwards = [url for url, _ in captured if "/claude-native-model" in url]
     assert legacy_forwards == [], (
         f"Legacy /claude-native-model POSTs must not happen anymore; "
@@ -680,4 +681,76 @@ async def test_per_event_model_override_wins_over_persisted(
     assert captured.get("body", {}).get("model_override") == "claude-sonnet-4-6", (
         f"Per-event model_override should win; runner body had "
         f"{captured.get('body', {}).get('model_override')!r}."
+    )
+
+
+async def test_smart_routing_overrides_orchestrator_model_for_child_session(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Smart routing wins over the orchestrator's model choice for child sessions.
+
+    When sys_session_send passes ``model`` for a child session, the server
+    creates the child with that as ``model_override``. Previously the routing
+    gate (``effective_runner_override is None``) would then skip the judge
+    call entirely, silently letting the LLM's choice beat smart routing.
+
+    Now, when the parent session has the routing toggle on, the judge runs
+    regardless â€?and the routing verdict replaces the orchestrator's model
+    in the runner body and in the persisted ``model_override``.
+    """
+    captured = _stub_runner_client(monkeypatch)
+
+    # Stub route_turn to return a deterministic verdict, bypassing the real LLM.
+    routed_model = "databricks-claude-haiku-4-5"
+
+    async def _fake_route_turn(*_: Any, **__: Any) -> tuple[str, dict[str, Any]]:
+        return routed_model, {"rationale": "trivial task â€?cheap model suffices"}
+
+    # Patch the module where route_turn is defined so the lazy import inside
+    # _forward_event_to_runner picks up the stub.
+    with patch("agent_meow.server.smart_routing.route_turn", _fake_route_turn):
+        agent = await create_test_agent(client)
+
+        # Parent session with routing toggle on.
+        parent_resp = await client.post(
+            "/v1/sessions",
+            json={"agent_id": agent["id"], "cost_control_mode_override": "on"},
+        )
+        assert parent_resp.status_code == 201, parent_resp.text
+        parent_id = parent_resp.json()["id"]
+
+        # Child session with a model the orchestrator chose (simulates
+        # sys_session_send with model="databricks-claude-opus-4-8").
+        child_resp = await client.post(
+            "/v1/sessions",
+            json={
+                "agent_id": agent["id"],
+                "parent_session_id": parent_id,
+                "model_override": "databricks-claude-opus-4-8",
+            },
+        )
+        assert child_resp.status_code == 201, child_resp.text
+        child_id = child_resp.json()["id"]
+
+        # First message to the child â€?routing should fire and override.
+        event_resp = await client.post(
+            f"/v1/sessions/{child_id}/events",
+            json={
+                "type": "message",
+                "data": {
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": "what is 2+2?"}],
+                },
+            },
+        )
+        assert event_resp.status_code == 202, event_resp.text
+
+    assert captured.get("body") is not None, (
+        "Runner client was never POSTed to â€?_forward_event_to_runner did not run."
+    )
+    assert captured["body"].get("model_override") == routed_model, (
+        f"Smart routing should have replaced the orchestrator's model with "
+        f"{routed_model!r}; runner body had "
+        f"{captured['body'].get('model_override')!r}."
     )

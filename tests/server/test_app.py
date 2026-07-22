@@ -1,8 +1,8 @@
 """Tests for utility endpoints on the FastAPI app (health + version).
 
 These endpoints are defined inline in ``create_app()`` in
-``agent_meow/server/app.py`` rather than in a route sub-module, so
-they live here following the source â†” test directory mirroring rule.
+``omnigent/server/app.py`` rather than in a route sub-module, so
+they live here following the source â†?test directory mirroring rule.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ async def test_health_returns_ok(client: httpx.AsyncClient) -> None:
     """GET /health returns HTTP 200 and ``{"status": "ok"}``."""
     resp = await client.get("/health")
     assert resp.status_code == 200
-    # Exact shape â€” a regression that changes the key name or value
+    # Exact shape â€?a regression that changes the key name or value
     # would break health-check integrations that parse this response.
     assert resp.json() == {"status": "ok"}
 
@@ -42,7 +42,7 @@ async def test_version_returns_source_of_truth_version(
     regardless of how the package was installed. We deliberately do NOT assert
     against ``importlib.metadata.version`` here: that is a frozen build-time
     snapshot which can legitimately differ from ``VERSION`` (stale editable
-    install, or ``"source"`` placeholder metadata) â€” asserting equality would
+    install, or ``"source"`` placeholder metadata) â€?asserting equality would
     re-couple to exactly the metadata this change moved off of.
     """
     from agent_meow.version import VERSION
@@ -51,7 +51,7 @@ async def test_version_returns_source_of_truth_version(
     assert resp.status_code == 200
     body = resp.json()
 
-    # "version" key must be present â€” a missing key means the UI's
+    # "version" key must be present â€?a missing key means the UI's
     # fetchVersion() falls back to "unknown" in every bug report.
     assert "version" in body
     assert body["version"] == VERSION, (
@@ -74,15 +74,15 @@ class _StubWebSocket:
     reads tunnel presence via ``TunnelRegistry.get(...) is not None`` and
     never sends or receives on it. A real class (not ``MagicMock``) is
     used so any unexpected I/O call raises loudly rather than silently
-    succeeding â€” but in this test the socket is never driven.
+    succeeding â€?but in this test the socket is never driven.
     """
 
     async def send_text(self, data: str) -> None:
-        """Unused â€” the liveness path never sends. Fails loud if reached."""
+        """Unused â€?the liveness path never sends. Fails loud if reached."""
         raise AssertionError("the liveness test must not send on the tunnel socket")
 
     async def receive_text(self) -> str:
-        """Unused â€” the liveness path never receives. Fails loud if reached."""
+        """Unused â€?the liveness path never receives. Fails loud if reached."""
         raise AssertionError("the liveness test must not receive on the tunnel socket")
 
 
@@ -144,11 +144,13 @@ def _build_liveness_app(
     host_store = HostStore(db_uri)
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     # Online host so a host-bound session reports host_online=True.
-    host_store.upsert_on_connect("host_live", "laptop", "alice@example.com")
+    host_store.upsert_on_connect("2fd786c75c03cfbbec099a6820c08b62", "laptop", "alice@example.com")
     # A host that EXISTS (so the conversations.host_id FK is satisfied) but
     # is offline, for the runner-down + host-offline state.
-    host_store.upsert_on_connect("host_offline", "old-laptop", "alice@example.com")
-    host_store.set_offline("host_offline")
+    host_store.upsert_on_connect(
+        "3d9665477127e41f42de3f4109418173", "old-laptop", "alice@example.com"
+    )
+    host_store.set_offline("3d9665477127e41f42de3f4109418173")
 
     app = create_app(
         agent_store=SqlAlchemyAgentStore(db_uri),
@@ -178,13 +180,13 @@ async def test_health_batch_reports_strict_runner_and_host_liveness(
     ``_bulk_session_liveness``. The four states the open-session view
     must distinguish:
 
-    (a) runner tunnel up  â†’ runner_online True;
-    (b) runner down + host online â†’ runner_online False, host_online True
-        (the runner-down-but-host-can-relaunch state â€” strict
+    (a) runner tunnel up  â†?runner_online True;
+    (b) runner down + host online â†?runner_online False, host_online True
+        (the runner-down-but-host-can-relaunch state â€?strict
         ``runner_online`` does NOT fold in host optimism);
-    (c) runner down + host offline â†’ runner_online False,
+    (c) runner down + host offline â†?runner_online False,
         host_online False;
-    (d) no host_id, runner down â†’ runner_online False, host_online None.
+    (d) no host_id, runner down â†?runner_online False, host_online None.
 
     Also pins that a deliberately-stopped session is NOT special-cased
     (the stopped marker is retired in this workstream): it reads purely
@@ -199,19 +201,19 @@ async def test_health_batch_reports_strict_runner_and_host_liveness(
     _register_live_runner(app, "rnr_live")
     # (b) runner bound but tunnel NOT registered, host online.
     runner_down_host_up = conversation_store.create_conversation(
-        runner_id="rnr_dead", host_id="host_live", workspace="/tmp/ws"
+        runner_id="rnr_dead", host_id="2fd786c75c03cfbbec099a6820c08b62", workspace="/tmp/ws"
     )
     # (c) runner bound but tunnel down, host offline (unknown host id).
     runner_down_host_down = conversation_store.create_conversation(
-        runner_id="rnr_dead2", host_id="host_offline", workspace="/tmp/ws"
+        runner_id="rnr_dead2", host_id="3d9665477127e41f42de3f4109418173", workspace="/tmp/ws"
     )
     # (d) runner bound but tunnel down, NO host binding.
     runner_down_no_host = conversation_store.create_conversation(runner_id="rnr_dead3")
     # A stopped, host-bound session with a dead runner must read by
-    # tunnel/host state only â€” the stopped marker is no longer consulted by
+    # tunnel/host state only â€?the stopped marker is no longer consulted by
     # liveness. Bind a (down) runner so this isn't the no-runner terminal.
     stopped = conversation_store.create_conversation(
-        runner_id="rnr_dead4", host_id="host_live", workspace="/tmp/ws"
+        runner_id="rnr_dead4", host_id="2fd786c75c03cfbbec099a6820c08b62", workspace="/tmp/ws"
     )
     conversation_store.set_labels(stopped.id, {"agent_meow.stopped": "true"})
 
@@ -222,7 +224,7 @@ async def test_health_batch_reports_strict_runner_and_host_liveness(
             runner_down_host_down.id,
             runner_down_no_host.id,
             stopped.id,
-            "conv_unknown",
+            "fee171f70cf25c4cff8203046e727fd4",
         ]
     )
     transport = httpx.ASGITransport(app=app)
@@ -240,7 +242,7 @@ async def test_health_batch_reports_strict_runner_and_host_liveness(
     # cross-replica / DB-only degradation path). The live-registry path is
     # covered by test_health_reports_host_version_from_live_registry.
     #
-    # (a) Live runner tunnel â‡’ reachable. host_online None (no host_id).
+    # (a) Live runner tunnel â‡?reachable. host_online None (no host_id).
     # A failure here means the strict _runner_up check stopped reading the
     # tunnel registry, or the registration path changed.
     assert sessions[runner_up.id] == {
@@ -257,28 +259,28 @@ async def test_health_batch_reports_strict_runner_and_host_liveness(
         "host_online": True,
         "host_version": None,
     }
-    # (c) Dead runner, offline host â‡’ both False.
+    # (c) Dead runner, offline host â‡?both False.
     assert sessions[runner_down_host_down.id] == {
         "runner_online": False,
         "host_online": False,
         "host_version": None,
     }
-    # (d) Dead runner, no host â‡’ runner_online False, host_online None.
+    # (d) Dead runner, no host â‡?runner_online False, host_online None.
     assert sessions[runner_down_no_host.id] == {
         "runner_online": False,
         "host_online": None,
         "host_version": None,
     }
-    # Stopped + live host: NOT special-cased â€” reads exactly like (b). If
+    # Stopped + live host: NOT special-cased â€?reads exactly like (b). If
     # this regressed to False/True-with-stopped-collapse, the stopped marker
-    # would still be leaking into liveness (it must not â€” WS-S2 retires it).
+    # would still be leaking into liveness (it must not â€?WS-S2 retires it).
     assert sessions[stopped.id] == {
         "runner_online": False,
         "host_online": True,
         "host_version": None,
     }
-    # Unknown id (no conversation row) â‡’ reachable, no host.
-    assert sessions["conv_unknown"] == {
+    # Unknown id (no conversation row) â‡?reachable, no host.
+    assert sessions["fee171f70cf25c4cff8203046e727fd4"] == {
         "runner_online": True,
         "host_online": None,
         "host_version": None,
@@ -301,7 +303,7 @@ async def test_health_single_session_reports_both_liveness_fields(
     wired = _build_liveness_app(db_uri, tmp_path)
     # Dead runner on a live host: the runner-down-but-host-alive state.
     conv = wired.conversation_store.create_conversation(
-        runner_id="rnr_dead", host_id="host_live", workspace="/tmp/ws"
+        runner_id="rnr_dead", host_id="2fd786c75c03cfbbec099a6820c08b62", workspace="/tmp/ws"
     )
     app = wired.app
 
@@ -311,7 +313,7 @@ async def test_health_single_session_reports_both_liveness_fields(
 
     assert resp.status_code == 200
     body = resp.json()
-    # The single object echoes the id and the liveness fields â€” strict
+    # The single object echoes the id and the liveness fields â€?strict
     # runner_online False with host_online True. host_version is None: the
     # host is online in the DB store but has no live tunnel in the in-memory
     # registry the version is read from. A missing host_online/host_version
@@ -334,7 +336,7 @@ async def test_health_reports_host_version_from_live_registry(
     live tunnel on this replica.
 
     ``host_version`` is read from the in-memory host registry (the host's
-    ``host.hello`` frame), not the hosts table â€” so a session bound to a
+    ``host.hello`` frame), not the hosts table â€?so a session bound to a
     host with a live local tunnel reports that host's version, which the
     session info popover renders next to the server version. This is the
     non-``None`` counterpart to the DB-only rows in the batch test.
@@ -346,13 +348,13 @@ async def test_health_reports_host_version_from_live_registry(
     # host_live is already online in the host_store (DB) via the builder;
     # registering it in the in-memory registry is what carries the version.
     app.state.host_registry.register(
-        "host_live",
+        "2fd786c75c03cfbbec099a6820c08b62",
         _StubWebSocket(),
         HostHelloFrame(version="9.9.9-test", frame_protocol_version=1, name="laptop"),
         "alice@example.com",
     )
     conv = wired.conversation_store.create_conversation(
-        runner_id="rnr_dead", host_id="host_live", workspace="/tmp/ws"
+        runner_id="rnr_dead", host_id="2fd786c75c03cfbbec099a6820c08b62", workspace="/tmp/ws"
     )
 
     transport = httpx.ASGITransport(app=app)
@@ -374,8 +376,8 @@ async def test_info_includes_server_version(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    ``GET /v1/info`` includes ``server_version`` â€” the shared ``VERSION``
-    constant (same source as ``/api/version``) â€” so the web UI can show it
+    ``GET /v1/info`` includes ``server_version`` â€?the shared ``VERSION``
+    constant (same source as ``/api/version``) â€?so the web UI can show it
     in the session info popover's version footer without a second fetch.
     """
     from agent_meow.version import VERSION
@@ -393,7 +395,7 @@ async def test_info_includes_server_version(
 async def test_health_bare_returns_status_ok(db_uri: str, tmp_path: Path) -> None:
     """
     ``GET /health`` with no session params still returns the bare
-    ``{"status": "ok"}`` â€” the liveness rearchitecture must not break the
+    ``{"status": "ok"}`` â€?the liveness rearchitecture must not break the
     plain health-check integrations that parse this exact shape.
     """
     app = _build_liveness_app(db_uri, tmp_path).app
@@ -401,7 +403,7 @@ async def test_health_bare_returns_status_ok(db_uri: str, tmp_path: Path) -> Non
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
         resp = await c.get("/health")
     assert resp.status_code == 200
-    # Exact shape â€” no session/sessions keys leak in when none were asked for.
+    # Exact shape â€?no session/sessions keys leak in when none were asked for.
     assert resp.json() == {"status": "ok"}
 
 
@@ -413,7 +415,7 @@ async def test_health_unbound_fork_of_coding_session_reads_offline(
     """
     An unbound fork of a coding session reads offline; a chat fork online.
 
-    Both sessions are unbound (no runner, no host) â€” the case that
+    Both sessions are unbound (no runner, no host) â€?the case that
     previously short-circuited to "online" unconditionally. The
     fork-source label (set when the source had a workspace) flips that:
 
@@ -441,7 +443,9 @@ async def test_health_unbound_fork_of_coding_session_reads_offline(
     # Unbound forks: no runner_id, no host_id. The label is the only
     # difference between them.
     coding_fork = conversation_store.create_conversation()
-    conversation_store.set_labels(coding_fork.id, {"agent_meow.fork.source_id": "conv_src"})
+    conversation_store.set_labels(
+        coding_fork.id, {"agent_meow.fork.source_id": "e9f8f58523cec9a57d3bdf93be543e8c"}
+    )
     chat_fork = conversation_store.create_conversation()
 
     app = create_app(
@@ -462,10 +466,10 @@ async def test_health_unbound_fork_of_coding_session_reads_offline(
 
     assert resp.status_code == 200
     sessions = resp.json()["sessions"]
-    # needs_workspace fork â†’ offline. A True here means the unbound
+    # needs_workspace fork â†?offline. A True here means the unbound
     # branch ignored the flag (the pre-fix behavior).
     assert sessions[coding_fork.id]["runner_online"] is False
-    # Chat-only fork â†’ still reachable in-process.
+    # Chat-only fork â†?still reachable in-process.
     assert sessions[chat_fork.id]["runner_online"] is True
 
 
@@ -547,7 +551,7 @@ def _independent_seed_stores(tmp_path: Path, label: str) -> _SeedStores:
 
 
 def test_builtin_agent_id_is_stable_across_independent_stores(tmp_path: Path) -> None:
-    """A built-in's id is identical across two independent fresh stores â€” the
+    """A built-in's id is identical across two independent fresh stores â€?the
     contract the multi-tenant deployment needs. A revert to the random
     ``generate_agent_id()`` makes the two ids differ and fails this test."""
     from agent_meow.db.utils import builtin_agent_id
@@ -594,7 +598,7 @@ def test_ensure_extra_builtin_agents_skips_bad_path_and_seeds_good(
     )
 
     # The valid spec registered as a built-in (its file stem is the name);
-    # the missing one is absent â€” proving skip-and-continue, not abort.
+    # the missing one is absent â€?proving skip-and-continue, not abort.
     seeded = seed_stores.agent_store.get_by_name("extra-good")
     assert seeded is not None, "valid extra built-in must seed even after a bad entry"
     assert seeded.session_id is None, "extra built-ins must be session-scope NULL"
@@ -606,7 +610,7 @@ def test_ensure_default_qwen_agent_seeds_card(seed_stores: _SeedStores) -> None:
     Seeding registers qwen-native-ui as a built-in the picker can render.
 
     The new-session picker reads built-ins from ``GET /v1/agents``; without this
-    seeder Qwen Code only appears after the ``agent-meow qwen`` CLI first registers
+    seeder Qwen Code only appears after the ``omnigent qwen`` CLI first registers
     it, so it was absent from the Web UI dropdown.
     """
     server_app._ensure_default_qwen_agent(
@@ -623,7 +627,7 @@ def test_ensure_default_qwen_agent_seeds_card(seed_stores: _SeedStores) -> None:
 
 
 def test_ensure_default_qwen_agent_is_idempotent(seed_stores: _SeedStores) -> None:
-    """A second seed call is a no-op â€” startup runs the seeder every boot."""
+    """A second seed call is a no-op â€?startup runs the seeder every boot."""
     server_app._ensure_default_qwen_agent(
         seed_stores.agent_store,
         seed_stores.artifact_store,
@@ -687,7 +691,7 @@ def test_ensure_default_antigravity_agent_seeds_card(seed_stores: _SeedStores) -
     assert seeded.session_id is None
     # The bundle must be retrievable, not just referenced.
     assert seed_stores.artifact_store.get(seeded.bundle_location) is not None
-    # The materialized spec must carry the native harness â€” the contract the
+    # The materialized spec must carry the native harness â€?the contract the
     # server's _native_terminal_runtime + runner auto-create key off.
     loaded = seed_stores.agent_cache.load(seeded.id, seeded.bundle_location, expand_env=False)
     assert loaded.spec.executor.config.get("harness") == "antigravity-native"
@@ -714,7 +718,7 @@ def test_ensure_default_agents_includes_antigravity(seed_stores: _SeedStores) ->
 
 def test_ensure_default_polly_agent_is_idempotent(seed_stores: _SeedStores) -> None:
     """
-    A second seed call is a no-op â€” it must not register a duplicate.
+    A second seed call is a no-op â€?it must not register a duplicate.
 
     Startup runs the seeder every boot; a non-idempotent seeder would
     accumulate a new polly agent on each restart and break the
@@ -822,7 +826,7 @@ def test_ensure_default_polly_agent_no_churn_on_mtime_change(
 
     after = seed_stores.agent_store.get_by_name(server_app._POLLY_AGENT_NAME)
     assert after is not None
-    # Unchanged content â†’ no-op; a v2 here means tar mtimes leaked into the hash.
+    # Unchanged content â†?no-op; a v2 here means tar mtimes leaked into the hash.
     assert after.version == 1
     assert after.bundle_location == first.bundle_location
 
@@ -835,8 +839,8 @@ def test_ensure_default_polly_agent_repairs_stale_cache(
 
     ``AgentCache.load`` is keyed by ``agent_id`` and trusts its cached
     entry without checking ``bundle_location``. If a replica boots with
-    a cache that lags the (already-current) DB row â€” or a prior boot's
-    cache swap failed after the row update â€” the seeder must not just
+    a cache that lags the (already-current) DB row â€?or a prior boot's
+    cache swap failed after the row update â€?the seeder must not just
     early-return and keep serving the stale spec; it evicts so the next
     load re-fetches the row's bundle. Without the evict this test fails:
     ``load`` would return the poisoned spec.
@@ -867,7 +871,7 @@ def test_ensure_default_polly_agent_repairs_stale_cache(
     poisoned = seed_stores.agent_cache.load(agent.id, agent.bundle_location).spec.description
     assert poisoned == "STALE CACHED SPEC"
 
-    # Re-seed: source unchanged â†’ hash matches the row (the early-return path).
+    # Re-seed: source unchanged â†?hash matches the row (the early-return path).
     server_app._ensure_default_polly_agent(
         seed_stores.agent_store,
         seed_stores.artifact_store,
@@ -882,7 +886,7 @@ def test_ensure_default_polly_agent_repairs_stale_cache(
 
 def test_tar_gz_dir_is_order_independent(tmp_path: Path) -> None:
     """
-    Same content, different file-creation order â†’ identical bundle bytes.
+    Same content, different file-creation order â†?identical bundle bytes.
 
     Content-addressing only works if the bundle hash depends solely on
     content, not on the order entries happen to land on disk across
@@ -932,7 +936,7 @@ def test_ensure_default_polly_agent_skips_when_bundle_absent(
     seed_stores: _SeedStores, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
-    No bundle on disk â†’ no card. Seeding is skipped, not errored.
+    No bundle on disk â†?no card. Seeding is skipped, not errored.
 
     On a deployment that didn't package the ``examples/polly`` bundle,
     seeding must skip silently so startup doesn't fail and no broken
@@ -957,7 +961,7 @@ def test_ensure_default_debby_agent_seeds_card(seed_stores: _SeedStores) -> None
     renders each as a card; this is what makes debby launchable next
     to Claude Code, Codex, and polly. The deeper refresh/idempotency
     behavior lives in the shared ``_ensure_builtin_agent`` and is
-    covered by the polly tests above â€” this verifies debby's wiring
+    covered by the polly tests above â€?this verifies debby's wiring
     (name constant, packaged bundle source) specifically.
     """
     server_app._ensure_default_debby_agent(
@@ -977,7 +981,7 @@ def test_ensure_default_debby_agent_skips_when_bundle_absent(
     seed_stores: _SeedStores, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
-    No bundle on disk â†’ no card. Seeding is skipped, not errored.
+    No bundle on disk â†?no card. Seeding is skipped, not errored.
 
     On a deployment that didn't package the ``examples/debby`` bundle,
     seeding must skip silently so startup doesn't fail and no broken
@@ -1022,7 +1026,7 @@ async def test_api_only_root_serves_html_200_to_any_client(
     db_uri: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """On a no-web-UI server, ``GET /`` always returns the HTML explainer with a
-    200 â€” no content negotiation. A browser navigation and a plain JSON client
+    200 â€?no content negotiation. A browser navigation and a plain JSON client
     get the same page (``/`` is not used for anything else)."""
     app = _build_api_only_app(db_uri, tmp_path, monkeypatch)
     transport = httpx.ASGITransport(app=app)
@@ -1040,13 +1044,13 @@ async def test_api_only_unknown_path_gets_json_404(
     db_uri: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An unknown path still returns the exact default ``404 {"detail": "Not
-    Found"}`` for every client â€” the landing is served only at ``/``, never as a
+    Found"}`` for every client â€?the landing is served only at ``/``, never as a
     catch-all, so API consumers that parse that body are unaffected."""
     app = _build_api_only_app(db_uri, tmp_path, monkeypatch)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
         for headers in ({"accept": "text/html"}, {"accept": "application/json"}):
-            resp = await c.get("/c/conv_abc", headers=headers)
+            resp = await c.get("/c/4e92b5a0c0ee6db3f874f9c4a3f855a5", headers=headers)
             assert resp.status_code == 404, headers
             assert resp.json() == {"detail": "Not Found"}, headers
 
@@ -1063,3 +1067,81 @@ async def test_api_only_root_does_not_shadow_real_routes(
         resp = await c.get("/health", headers={"accept": "text/html"})
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
+
+
+@pytest.mark.asyncio
+async def test_health_derives_runner_online_from_fresh_row_stamp(
+    db_uri: str,
+    tmp_path: Path,
+) -> None:
+    """A runner whose tunnel lives on ANOTHER replica reads online here.
+
+    Under host_id replica sharding, the replica holding a runner's tunnel
+    stamps ``conversations.runner_last_seen`` (on connect + each ping-loop
+    tick of that tunnel) and clears it on graceful disconnect. A replica
+    serving ``/health`` with an EMPTY tunnel registry â€?this app â€?must
+    derive ``runner_online`` from that stamp's freshness: fresh reads
+    online, past the TTL reads offline (the self-correcting path for an
+    ungraceful host/replica death), cleared reads offline immediately.
+    """
+    import time
+
+    from agent_meow.stores.conversation_store import RUNNER_LIVENESS_TTL_S
+
+    wired = _build_liveness_app(db_uri, tmp_path)
+    app = wired.app
+    conversation_store = wired.conversation_store
+
+    fresh = conversation_store.create_conversation(runner_id="rnr_remote_fresh")
+    stale = conversation_store.create_conversation(runner_id="rnr_remote_stale")
+    cleared = conversation_store.create_conversation(runner_id="rnr_remote_cleared")
+    now = int(time.time())
+    conversation_store.touch_runner_liveness(["rnr_remote_fresh"], now=now - 5)
+    conversation_store.touch_runner_liveness(
+        ["rnr_remote_stale"], now=now - RUNNER_LIVENESS_TTL_S - 5
+    )
+    conversation_store.touch_runner_liveness(["rnr_remote_cleared"], now=now - 5)
+    conversation_store.clear_runner_liveness("rnr_remote_cleared")
+
+    ids = ",".join([fresh.id, stale.id, cleared.id])
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.get(f"/health?session_ids={ids}")
+
+    assert resp.status_code == 200
+    sessions = resp.json()["sessions"]
+    assert sessions[fresh.id]["runner_online"] is True
+    assert sessions[stale.id]["runner_online"] is False
+    assert sessions[cleared.id]["runner_online"] is False
+
+
+# â”€â”€ debug router loading (out-of-tree diagnostic endpoints) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+
+def test_load_debug_routers_none_and_empty() -> None:
+    """No configured modules â†?no routers, no error."""
+    assert server_app._load_debug_routers(None) == []
+    assert server_app._load_debug_routers([]) == []
+
+
+def test_load_debug_routers_missing_module_is_skipped() -> None:
+    """A module that can't be imported is logged and skipped, never raised.
+
+    This is the production safety net: a stray ``debug_router_modules`` key
+    naming an out-of-tree module absent from the install must not crash boot.
+    """
+    assert server_app._load_debug_routers(["nope.not.a.real.module"]) == []
+
+
+def test_load_debug_routers_module_without_list_is_skipped() -> None:
+    """A module lacking a DEBUG_ROUTERS list is skipped (uses a stdlib module)."""
+    assert server_app._load_debug_routers(["json"]) == []
+
+
+def test_load_debug_routers_collects_entries() -> None:
+    """The benchmark debug router module exposes a mountable DEBUG_ROUTERS entry."""
+    entries = server_app._load_debug_routers(["dev.benchmarks.agent_meow.debug_router"])
+    assert len(entries) == 1
+    _router, prefix, tags = entries[0]
+    assert prefix == "/debug"
+    assert tags == ["debug"]

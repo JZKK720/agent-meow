@@ -7,13 +7,13 @@ artifact store. Intended to run inside the image built by
 
 Execution mode: external runners only. The server accepts runner
 WebSocket connections at ``/v1/runner/tunnel`` and never spawns
-harness subprocesses on its own. Users run ``meow run … --server
+harness subprocesses on its own. Users run ``meow run �?--server
 <url>`` on their own machine; that runner dials in.
 
 Importing this module has **no side effects**: configuration loading,
 DB migrations, store construction, and app building all live inside
 ``build_app()`` / ``run_migrations()`` / ``main()``. Nothing connects
-to a database, reads config, or builds the app until ``main()`` runs —
+to a database, reads config, or builds the app until ``main()`` runs �?
 which the ``if __name__ == "__main__":`` block (i.e. the Docker
 ``CMD ["python", "/app/entrypoint.py"]``) invokes. This keeps the
 module importable for testing / tooling without a live database.
@@ -49,13 +49,13 @@ if TYPE_CHECKING:
 logging.basicConfig(level=logging.INFO, stream=sys.stderr, force=True)
 logger = logging.getLogger("omnigent-docker")
 
-# Defaults live as module-level constants — the Dockerfile and
+# Defaults live as module-level constants �?the Dockerfile and
 # docker-compose.yaml both also set these, so the values here just
 # document the contract for anyone running entrypoint.py outside the
 # image. Source: deploy/docker/Dockerfile (ENV block) and
 # deploy/docker/docker-compose.yaml.
 _DEFAULT_HOST = "0.0.0.0"
-# Pinned to 8000 by design (container/platform convention) — deliberately
+# Pinned to 8000 by design (container/platform convention) �?deliberately
 # decoupled from the CLI's local-server default (6767 in host/local_server.py).
 _DEFAULT_PORT = "8000"
 _DEFAULT_ARTIFACT_DIR = "/data/artifacts"
@@ -121,7 +121,7 @@ def _resolve_config() -> _ResolvedConfig:
     # ── Configuration ────────────────────────────────────────
     # Non-secret settings come from a YAML config file (default
     # <data_dir>/config.yaml, e.g. /data/config.yaml on the volume, or
-    # OMNIGENT_CONFIG) — the same experience a laptop gets from
+    # OMNIGENT_CONFIG) �?the same experience a laptop gets from
     # `meow server -c`. Secrets stay in the environment:
     # DATABASE_URL (carries the password) and the cookie / OIDC secrets.
     cfg = load_server_config()
@@ -152,7 +152,7 @@ def _resolve_config() -> _ResolvedConfig:
     port = int(cfg.get("port") or os.environ.get("PORT") or _DEFAULT_PORT)
     artifact_dir.mkdir(parents=True, exist_ok=True)
 
-    # Optional remote artifact store (S3 / Cloudflare R2 / MinIO / …). When set,
+    # Optional remote artifact store (S3 / Cloudflare R2 / MinIO / �?. When set,
     # the artifact STORE is remote and durable; artifact_dir stays local for the
     # cookie secret and on-disk cache. Mirrors how DATABASE_URL selects the DB.
     artifact_store_uri = cfg.get("artifact_store_uri") or os.environ.get("OMNIGENT_ARTIFACT_URI")
@@ -174,7 +174,7 @@ def _resolve_config() -> _ResolvedConfig:
     # The framework-wide default (a bare local `meow server`) is
     # single-user header mode with no login, but a Docker / HF / PaaS
     # instance is typically network-exposed, so we opt it into the
-    # multi-user login flow here — accounts by default, or OIDC if the
+    # multi-user login flow here �?accounts by default, or OIDC if the
     # operator supplied OMNIGENT_OIDC_* config. An operator can still
     # force header/oidc/accounts via OMNIGENT_AUTH_PROVIDER, or turn
     # auth off with OMNIGENT_AUTH_ENABLED=0.
@@ -184,7 +184,7 @@ def _resolve_config() -> _ResolvedConfig:
     # single-user local container" (the documented local-dev posture).
     # Header mode now fails closed on a missing X-Forwarded-Email,
     # so without this marker a no-auth container would
-    # 401 every request — nothing injects the header. Only the implicit
+    # 401 every request �?nothing injects the header. Only the implicit
     # kill-switch path gets the marker: an EXPLICIT
     # OMNIGENT_AUTH_PROVIDER=header deploy declared a header-injecting
     # proxy and must stay strict.
@@ -208,7 +208,7 @@ def _resolve_config() -> _ResolvedConfig:
         from agent_meow.server.accounts_secret import load_or_generate_cookie_secret
 
         # Empty-check, not setdefault: compose passes these as empty strings
-        # ("${VAR:-}"), which setdefault would leave in place — defeating the default.
+        # ("${VAR:-}"), which setdefault would leave in place �?defeating the default.
         if not os.environ.get("OMNIGENT_ACCOUNTS_COOKIE_SECRET"):
             os.environ["OMNIGENT_ACCOUNTS_COOKIE_SECRET"] = load_or_generate_cookie_secret(
                 artifact_dir
@@ -236,14 +236,14 @@ def _select_artifact_store(resolved_config: _ResolvedConfig) -> ArtifactStore:
     Pick the artifact store implementation from the resolved config.
 
     An ``s3://bucket[/prefix]`` ``artifact_store_uri`` selects the remote,
-    durable :class:`~omnigent.stores.artifact_store.s3.S3ArtifactStore` (AWS S3,
-    Cloudflare R2, MinIO, …), which survives an ephemeral or multi-replica
+    durable :class:`~agent_meow.stores.artifact_store.s3.S3ArtifactStore` (AWS S3,
+    Cloudflare R2, MinIO, �?, which survives an ephemeral or multi-replica
     deploy. Otherwise the local-filesystem store at ``artifact_dir`` is used.
     Mirrors how ``DATABASE_URL`` selects the database backend.
 
     :param resolved_config: The resolved startup configuration.
     :returns: The selected
-        :class:`~omnigent.stores.artifact_store.ArtifactStore`.
+        :class:`~agent_meow.stores.artifact_store.ArtifactStore`.
     """
     from agent_meow.stores.artifact_store.local import LocalArtifactStore
 
@@ -295,6 +295,10 @@ def build_app(resolved_config: _ResolvedConfig | None = None) -> _BuiltApp:
     from agent_meow.stores.permission_store.sqlalchemy_store import (
         SqlAlchemyPermissionStore,
     )
+    from agent_meow.stores.policy_store.sqlalchemy_store import SqlAlchemyPolicyStore
+    from agent_meow.stores.scheduled_task_store.sqlalchemy_store import (
+        SqlAlchemyScheduledTaskStore,
+    )
 
     telemetry.init()
 
@@ -306,6 +310,8 @@ def build_app(resolved_config: _ResolvedConfig | None = None) -> _BuiltApp:
     image_store = SqlAlchemyImageStore(database_url)
     permission_store = SqlAlchemyPermissionStore(database_url)
     host_store = HostStore(database_url)
+    policy_store = SqlAlchemyPolicyStore(database_url)
+    scheduled_task_store = SqlAlchemyScheduledTaskStore(database_url)
     # Fail startup loud on a malformed `sandbox:` section (an operator
     # typo should not surface as a runtime 502 on the first managed
     # session); the startup catch-all below logs it.
@@ -325,10 +331,11 @@ def build_app(resolved_config: _ResolvedConfig | None = None) -> _BuiltApp:
         conversation_store=conversation_store,
         artifact_store=artifact_store,
         comment_store=comment_store,
+        policy_store=policy_store,
     )
 
     # Build the auth provider from the live env (header/oidc/accounts).
-    # Accounts mode also needs an AccountStore explicitly wired — the
+    # Accounts mode also needs an AccountStore explicitly wired �?the
     # entrypoint constructs it here rather than letting create_app do
     # so internally, so this same code path can opt out by passing
     # None for non-accounts deploys (matching the structural
@@ -351,7 +358,9 @@ def build_app(resolved_config: _ResolvedConfig | None = None) -> _BuiltApp:
         agent_cache=agent_cache,
         comment_store=comment_store,
         permission_store=permission_store,
+        policy_store=policy_store,
         host_store=host_store,
+        scheduled_task_store=scheduled_task_store,
         auth_provider=auth_provider,
         account_store=account_store,
         # Non-secret auth settings from the config file (admins are the
@@ -373,13 +382,13 @@ def main() -> None:
     Wraps the whole boot in the startup catch-all so any failure
     (config, migrations, store wiring) lands in the container logs and
     the process holds open briefly for log capture before exiting
-    non-zero — the orchestrator then restarts us.
+    non-zero �?the orchestrator then restarts us.
     """
     try:
         resolved_config = _resolve_config()
 
         # ── Migrations ───────────────────────────────────────────
-        # Alembic upgrade runs before the stores boot — the SQLAlchemy
+        # Alembic upgrade runs before the stores boot �?the SQLAlchemy
         # stores refuse to start on a stale schema.
         run_migrations(resolved_config.database_url)
 
@@ -398,11 +407,11 @@ def main() -> None:
             port=resolved.port,
             ws_max_size=RUNNER_TUNNEL_MAX_MESSAGE_BYTES,
         )
-    except Exception:  # noqa: BLE001 — startup catch-all so failures land in logs
+    except Exception:  # noqa: BLE001 �?startup catch-all so failures land in logs
         logger.error("FATAL: meow server failed to start:\n%s", traceback.format_exc())
         # Keep the process alive briefly so the container log capture has time
         # to flush before the orchestrator restarts us.
-        import time  # deferred — keeps module inert
+        import time  # deferred �?keeps module inert
 
         time.sleep(30)
         sys.exit(1)

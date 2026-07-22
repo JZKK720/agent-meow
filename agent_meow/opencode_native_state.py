@@ -1,14 +1,14 @@
-"""Persistent client-side state for ``agent-meow opencode`` sessions.
+"""Persistent client-side state for ``omnigent opencode`` sessions.
 
 The native OpenCode wrapper records the cwd used to create a session so a
-later ``agent-meow opencode --resume <conv_id>`` can launch OpenCode from
+later ``omnigent opencode --resume <conv_id>`` can launch OpenCode from
 the same workspace. This state is intentionally client-side: local
 filesystem paths belong to the user's machine and should not be stored on
-the shared agent-meow server. Mirrors :mod:`~?agent_meow.codex_native_state`.
+the shared Omnigent server. Mirrors :mod:`agent_meow.codex_native_state`.
 
 Layout (per conversation):
 
-    ~/.agent_meow/opencode-native/<sha256(conv_id)[:32]>/launch.json
+    ~/.omnigent/opencode-native/<sha256(conv_id)[:32]>/launch.json
 """
 
 from __future__ import annotations
@@ -43,14 +43,14 @@ def _opencode_native_state_root() -> Path:
     Return the root directory for persistent opencode-native state.
 
     Honors :data:`_STATE_ROOT_ENV_VAR` for tests and advanced local setups.
-    Production defaults to ``~/.agent_meow/opencode-native``.
+    Production defaults to ``~/.omnigent/opencode-native``.
 
     :returns: Absolute path to the state root.
     """
     override = os.environ.get(_STATE_ROOT_ENV_VAR)
     if override:
         return Path(override)
-    return Path.home() / ".agent-meow" / "opencode-native"
+    return Path.home() / ".omnigent" / "opencode-native"
 
 
 def _state_dir_for_conversation_id(conversation_id: str) -> Path:
@@ -60,11 +60,23 @@ def _state_dir_for_conversation_id(conversation_id: str) -> Path:
     Hashing the conversation id prevents path traversal if a server ever
     returned an attacker-controlled id such as ``"../etc"``.
 
-    :param conversation_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    Sessions created before ids dropped the ``conv_`` prefix hashed the
+    prefixed string, so their directories live under the legacy digest; when
+    the bare-digest directory is absent, the legacy one is returned (never
+    renamed â€?files inside may embed their own absolute path).
+
+    :param conversation_id: Omnigent conversation id, bare 32-char hex
+        (a legacy ``conv_``-prefixed form is accepted and normalised).
     :returns: Absolute directory path; not guaranteed to exist.
     """
-    digest = hashlib.sha256(conversation_id.encode("utf-8")).hexdigest()[:_ID_HASH_CHARS]
-    return _opencode_native_state_root() / digest
+    bare = conversation_id.removeprefix("conv_")
+    root = _opencode_native_state_root()
+    state_dir = root / hashlib.sha256(bare.encode("utf-8")).hexdigest()[:_ID_HASH_CHARS]
+    if not state_dir.exists():
+        legacy = root / hashlib.sha256(f"conv_{bare}".encode()).hexdigest()[:_ID_HASH_CHARS]
+        if legacy.exists():
+            return legacy
+    return state_dir
 
 
 def write_launch_state(conversation_id: str, working_directory: str) -> None:
@@ -75,7 +87,7 @@ def write_launch_state(conversation_id: str, working_directory: str) -> None:
     and logged because changing the recorded cwd for an existing session
     would make future resume checks incorrect.
 
-    :param conversation_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param conversation_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param working_directory: Absolute launch cwd, e.g. ``"/home/me/repo"``.
     :returns: None.
     :raises ValueError: If *working_directory* is empty or relative.
@@ -113,7 +125,7 @@ def read_launch_state(conversation_id: str) -> OpenCodeNativeLaunchState | None:
     Missing, unreadable, or malformed state is treated as absent so legacy
     and cross-machine resumes continue to behave as before.
 
-    :param conversation_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param conversation_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :returns: Parsed state, or ``None`` if missing / malformed.
     """
     target = _state_dir_for_conversation_id(conversation_id) / _LAUNCH_FILE

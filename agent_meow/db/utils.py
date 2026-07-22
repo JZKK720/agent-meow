@@ -1,4 +1,4 @@
-"""Database utilities — engine caching, session management, helpers."""
+"""Database utilities �?engine caching, session management, helpers."""
 
 from __future__ import annotations
 
@@ -35,14 +35,14 @@ LakebaseTokenProvider = Callable[[], str]
 # ── Lakebase token-aware connections ───────────────────
 #
 # Databricks Lakebase (managed Postgres) authenticates with a short-lived
-# OAuth token (~1h TTL, rotated) used as the Postgres *password* — there is no
+# OAuth token (~1h TTL, rotated) used as the Postgres *password* �?there is no
 # static password to bake into the URL. To stay connected we must mint a fresh
 # token for every new physical connection instead of pinning one at engine
 # construction. This is OPT-IN: it activates only when a token provider is
 # resolvable (``OMNIGENT_LAKEBASE_INSTANCE`` is set, or a provider was injected
 # via :func:`set_lakebase_token_provider`). When it is not active, engine
 # creation is byte-for-byte the legacy static-URI path (SQLite or
-# static-password Postgres) — see :func:`_create_engine`.
+# static-password Postgres) �?see :func:`_create_engine`.
 
 # Env var naming the Lakebase database *instance* whose OAuth token should be
 # minted per connection. Its presence is what flips a Postgres engine into
@@ -51,8 +51,8 @@ _LAKEBASE_INSTANCE_ENV = "OMNIGENT_LAKEBASE_INSTANCE"
 
 # Recycle (close + reopen) pooled connections older than this many seconds.
 # Static deployments use 30 min (stale-connection hygiene). Lakebase lowers it
-# to 10 min so a connection is rebuilt — and its OAuth token re-minted via the
-# ``do_connect`` hook — comfortably before the ~1h token lifetime lapses, even
+# to 10 min so a connection is rebuilt �?and its OAuth token re-minted via the
+# ``do_connect`` hook �?comfortably before the ~1h token lifetime lapses, even
 # for connections that sit idle in the pool across a rotation.
 _SERVER_POOL_RECYCLE_SECONDS = 1800
 _LAKEBASE_POOL_RECYCLE_SECONDS = 600
@@ -126,7 +126,7 @@ def _resolve_lakebase_token_provider() -> LakebaseTokenProvider | None:
     1. A provider installed via :func:`set_lakebase_token_provider` (override).
     2. The Databricks SDK provider, bound to the instance named by
        ``OMNIGENT_LAKEBASE_INSTANCE``.
-    3. ``None`` — no token path; engines use the static-URI behavior.
+    3. ``None`` �?no token path; engines use the static-URI behavior.
 
     :returns: A zero-arg ``() -> str`` token provider, or ``None``.
     """
@@ -149,7 +149,7 @@ def _install_lakebase_token_refresh(
     ``password`` connection parameter with a freshly minted token immediately
     before each physical DBAPI connection is opened. ``do_connect`` fires once
     per *new* connection (not per pool checkout), so pooled connections reuse
-    their token until recycled — which is why :func:`_create_engine` pairs this
+    their token until recycled �?which is why :func:`_create_engine` pairs this
     with the shorter ``_LAKEBASE_POOL_RECYCLE_SECONDS`` window.
 
     :param engine: The SQLAlchemy engine to attach the listener to.
@@ -166,7 +166,7 @@ def _install_lakebase_token_refresh(
     ) -> None:
         # do_connect lets us mutate the connection params psycopg receives.
         # Overwriting ``password`` here means the token is read fresh for each
-        # new connection — never baked into the cached engine's URL.
+        # new connection �?never baked into the cached engine's URL.
         cparams["password"] = token_provider()
 
     event.listen(engine, "do_connect", _provide_fresh_token)
@@ -202,8 +202,8 @@ def _create_engine(db_uri: str) -> Engine:
     SQLite engines enable WAL journal mode and a 20s
     ``busy_timeout`` on every connection (not just sessions
     created via :func:`make_managed_session_maker`). Without WAL,
-    multi-process workloads — REPL + agent-meow server + runner subprocess
-    all hitting the same ``chat.db`` — surface as spurious
+    multi-process workloads �?REPL + Omnigent server + runner subprocess
+    all hitting the same ``chat.db`` �?surface as spurious
     ``disk I/O error`` and ``database is locked`` failures because
     the default ``journal_mode=DELETE`` only permits one writer at
     a time and synchronous-write contention propagates immediately.
@@ -226,7 +226,7 @@ def _create_engine(db_uri: str) -> Engine:
         # ``check_same_thread=False`` lets SQLAlchemy's pool hand a
         # connection to whichever worker thread asks for it (FastAPI,
         # asyncio.to_thread). The library still serializes access via
-        # the pool, so this isn't a footgun — it just removes the
+        # the pool, so this isn't a footgun �?it just removes the
         # legacy single-thread restriction.
         engine = create_engine(
             db_uri,
@@ -235,7 +235,7 @@ def _create_engine(db_uri: str) -> Engine:
 
         # Apply WAL + busy_timeout on every fresh DBAPI connection
         # so AsyncSession instances and any other consumer all
-        # benefit — the per-session PRAGMA in
+        # benefit �?the per-session PRAGMA in
         # :func:`make_managed_session_maker` only fires for code
         # paths that go through that helper.
         import sqlite3
@@ -254,9 +254,9 @@ def _create_engine(db_uri: str) -> Engine:
         return engine
     # Lakebase (managed Postgres) authenticates with a short-lived OAuth token
     # re-minted per connection; everything else uses the static URI as-is. The
-    # token path is OPT-IN — ``_resolve_lakebase_token_provider`` returns
+    # token path is OPT-IN �?``_resolve_lakebase_token_provider`` returns
     # ``None`` unless ``OMNIGENT_LAKEBASE_INSTANCE`` is set or a provider was
-    # injected — so a static-password Postgres URI is byte-for-byte unchanged.
+    # injected �?so a static-password Postgres URI is byte-for-byte unchanged.
     token_provider = _resolve_lakebase_token_provider()
     pool_recycle = (
         _LAKEBASE_POOL_RECYCLE_SECONDS if token_provider else _SERVER_POOL_RECYCLE_SECONDS
@@ -315,14 +315,47 @@ def get_or_create_engine(db_uri: str) -> Engine:
     return _engine_cache[db_uri]
 
 
+def get_or_create_conversation_engine(conv_uri: str) -> Engine:
+    """
+    Return a cached engine for the Agent Platform DB URI.
+
+    Unlike :func:`get_or_create_engine`, this does NOT run Alembic
+    migrations �?the AP DB is expected to be a fresh database that
+    gets its tables created via ``ConversationBase.metadata.create_all()``.
+    For the common case where AP DB == Omnigent DB, callers should
+    use :func:`get_or_create_engine` directly and share the engine.
+
+    :param conv_uri: SQLAlchemy database URI for the AP DB.
+    :returns: A :class:`~sqlalchemy.engine.Engine` for the given URI.
+    """
+    if conv_uri not in _engine_cache:
+        with _engine_lock:
+            if conv_uri not in _engine_cache:
+                engine = _create_engine(conv_uri)
+                _ensure_conversation_tables(engine)
+                from agent_meow.runtime.telemetry import instrument_sqlalchemy_engine
+
+                instrument_sqlalchemy_engine(engine)
+                _engine_cache[conv_uri] = engine
+    return _engine_cache[conv_uri]
+
+
+def _ensure_conversation_tables(engine: Engine) -> None:
+    """Create AP tables (conversations, conversation_items, conversation_labels) if absent."""
+    from agent_meow.db.db_models import ConversationBase
+
+    ConversationBase.metadata.create_all(bind=engine, checkfirst=True)
+    ensure_fts_table(engine)
+
+
 def _build_alembic_config(db_uri: str) -> Config:
     """
     Build an Alembic ``Config`` pointed at our migrations directory.
 
     Centralized so :func:`_run_migrations` and the
-    :func:`agent-meow debug db-upgrade` CLI command share the same
+    :func:`omnigent debug db-upgrade` CLI command share the same
     config (URL, script location). The script_location in
-    ``alembic.ini`` is relative — resolve it against the ini
+    ``alembic.ini`` is relative �?resolve it against the ini
     file's parent so the config works from any working directory.
 
     :param db_uri: SQLAlchemy database URL, e.g.
@@ -345,8 +378,8 @@ def _run_migrations(engine: Engine, db_uri: str) -> None:
 
     Always invokes ``alembic.command.upgrade("head")`` regardless
     of whether application tables already exist. Alembic is
-    idempotent — when the database is already at head this is a
-    fast no-op (one ``SELECT`` on ``alembic_version``) — so the
+    idempotent �?when the database is already at head this is a
+    fast no-op (one ``SELECT`` on ``alembic_version``) �?so the
     extra call is cheap, and it's the only way for column-level
     follow-up migrations (e.g. an ``ALTER TABLE ... ADD COLUMN``)
     to land on databases that were initialized at an earlier
@@ -362,7 +395,7 @@ def _run_migrations(engine: Engine, db_uri: str) -> None:
     """
     from alembic import command
 
-    from agent_meow.db.db_models import Base
+    from agent_meow.db.db_models import ConversationBase, OmnigentBase
 
     _logger.info("Running database migrations...")
     config = _build_alembic_config(db_uri)
@@ -376,9 +409,11 @@ def _run_migrations(engine: Engine, db_uri: str) -> None:
     # caller forgets to wire it into the chain, ``create_all`` will
     # at least create any missing tables from ORM metadata so the
     # server still boots. Cannot rescue missing COLUMNS on existing
-    # tables — those need a real migration, which is why the
-    # short-circuit above was removed.
-    Base.metadata.create_all(bind=engine, checkfirst=True)
+    # tables �?those need a real migration, which is why the
+    # short-circuit above was removed. Both bases are created because
+    # in single-DB mode this engine hosts the AP tables too.
+    for base in (OmnigentBase, ConversationBase):
+        base.metadata.create_all(bind=engine, checkfirst=True)
 
 
 def _get_current_db_revision(engine: Engine) -> str | None:
@@ -386,7 +421,7 @@ def _get_current_db_revision(engine: Engine) -> str | None:
     Return the database's current Alembic revision, or ``None``.
 
     ``None`` means the database has no ``alembic_version`` table at
-    all — i.e. nothing has ever been migrated against this database.
+    all �?i.e. nothing has ever been migrated against this database.
     A database that exists at some revision (even if not head) returns
     that revision string.
 
@@ -409,10 +444,10 @@ def _get_head_db_revision(db_uri: str) -> str:
     Return the head Alembic revision for our migrations directory.
 
     Reads the migration scripts on disk (not the database). Raises
-    if the migrations directory is empty or otherwise has no head —
+    if the migrations directory is empty or otherwise has no head �?
     that would indicate a packaging bug.
 
-    :param db_uri: Database URL — only used to build an Alembic
+    :param db_uri: Database URL �?only used to build an Alembic
         ``Config`` pointing at our scripts directory; the database
         itself is not contacted.
     :returns: The head revision hash, e.g. ``"c9d3a1f2e4b5"``.
@@ -425,7 +460,7 @@ def _get_head_db_revision(db_uri: str) -> str:
     head = script.get_current_head()
     if head is None:
         raise RuntimeError(
-            "No Alembic head revision found — the migrations directory appears to be empty."
+            "No Alembic head revision found �?the migrations directory appears to be empty."
         )
     return head
 
@@ -436,11 +471,11 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
 
     Three cases:
 
-    - **Fresh DB** (no ``alembic_version`` table) — run migrations to
+    - **Fresh DB** (no ``alembic_version`` table) �?run migrations to
       head. This covers brand-new SQLite files and freshly created
       Postgres schemas.
-    - **At head** — no-op.
-    - **Behind head** — log a warning, attempt an automatic Alembic
+    - **At head** �?no-op.
+    - **Behind head** �?log a warning, attempt an automatic Alembic
       upgrade to head, then verify that the database reached head.
       If the migration fails, re-raise with context so the server
       still terminates with an actionable error instead of continuing
@@ -461,7 +496,7 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
 
     if current != head:
         _logger.warning(
-            "agent-meow database schema is out of date "
+            "Omnigent database schema is out of date "
             "(found revision %r, expected %r); attempting automatic migration.",
             current,
             head,
@@ -470,11 +505,11 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
             _run_migrations(engine, db_uri)
         except Exception as exc:
             raise RuntimeError(
-                f"agent-meow database schema is out of date "
+                f"Omnigent database schema is out of date "
                 f"(found revision {current!r}, expected {head!r}) "
                 f"and automatic migration failed. Take a backup of your database, then run\n"
                 f"\n"
-                f"    agent-meow debug db-upgrade {db_uri!r}\n"
+                f"    omnigent debug db-upgrade {db_uri!r}\n"
                 f"\n"
                 f"to inspect or retry the migration manually."
             ) from exc
@@ -482,11 +517,11 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
         migrated = _get_current_db_revision(engine)
         if migrated != head:
             raise RuntimeError(
-                f"agent-meow automatic database migration did not reach head "
+                f"Omnigent automatic database migration did not reach head "
                 f"(started at {current!r}, now at {migrated!r}, expected {head!r}). "
                 f"Take a backup of your database, then run\n"
                 f"\n"
-                f"    agent-meow debug db-upgrade {db_uri!r}\n"
+                f"    omnigent debug db-upgrade {db_uri!r}\n"
                 f"\n"
                 f"to inspect or retry the migration manually."
             )
@@ -529,7 +564,14 @@ def make_managed_session_maker(
     :returns: A callable that, when invoked, returns a context
         manager yielding a :class:`~sqlalchemy.orm.Session`.
     """
-    factory = sessionmaker(bind=engine)
+    # expire_on_commit=False keeps column attributes accessible on ORM
+    # instances after the session commits and closes. Without it, SQLAlchemy
+    # expires all attributes on commit, and any access outside the session
+    # context (e.g. after the ``with session:`` block exits) raises
+    # DetachedInstanceError. This is safe here because each managed session
+    # is short-lived and single-writer, so there is no cross-session stale
+    # data concern.
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
     is_sqlite = engine.dialect.name == "sqlite"
 
     @contextmanager
@@ -564,66 +606,71 @@ def make_managed_session_maker(
 
 # ── ID generation ──────────────────────────────────────
 
-_ITEM_TYPE_PREFIX: dict[str, str] = {
-    "message": "msg_",
-    "function_call": "fc_",
-    "function_call_output": "fco_",
-    "error": "err_",
-    "reasoning": "rs_",
-    "compaction": "cmp_",
-    "native_tool": "nt_",
-    "resource_event": "rse_",
-    "slash_command": "sc_",
-    "terminal_command": "tc_",
-    "routing_decision": "rd_",
-}
+# Recognised conversation-item types, validated at id generation. The item's
+# type lives in the ``conversation_items.type`` column, not in its id. Kept in
+# parity with ``ITEM_TYPE_TO_DATA_CLS`` (see the db util tests).
+_ITEM_TYPES: frozenset[str] = frozenset(
+    {
+        "message",
+        "function_call",
+        "function_call_output",
+        "error",
+        "reasoning",
+        "compaction",
+        "native_tool",
+        "resource_event",
+        "slash_command",
+        "terminal_command",
+        "routing_decision",
+    }
+)
 
 
 def generate_agent_id() -> str:
     """
     Generate a unique agent identifier.
 
-    :returns: A string of the form ``"ag_<32-char hex>"``,
-        e.g. ``"ag_0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c"``.
+    :returns: A bare 32-char hex uuid,
+        e.g. ``"0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c"``.
     """
-    return f"ag_{uuid.uuid4().hex}"
+    return uuid.uuid4().hex
 
 
 def builtin_agent_id(name: str) -> str:
     """
     Deterministic agent id for a built-in agent, derived from its name.
 
-    Same shape and length as :func:`generate_agent_id` (``ag_`` + 32 hex), but
+    Same shape and length as :func:`generate_agent_id` (bare 32-char hex), but
     stable across processes: a multi-tenant deployment reseeds the built-ins into
     an ephemeral per-pod store, where a random id would change each boot and
     dangle a persisted ``conversation.agent_id``. Do NOT revert built-in seeding
     to :func:`generate_agent_id` (guarded by the ``builtin_agent_id`` tests).
 
     :param name: The built-in agent's unique name, e.g. ``"polly"``.
-    :returns: A deterministic id of the form ``"ag_<32-char hex>"``.
+    :returns: A deterministic bare 32-char hex id.
     """
     digest = hashlib.sha256(f"builtin:{name}".encode()).hexdigest()
-    return f"ag_{digest[:32]}"
+    return digest[:32]
 
 
 def generate_file_id() -> str:
     """
     Generate a unique file identifier.
 
-    :returns: A string of the form ``"file_<32-char hex>"``,
-        e.g. ``"file_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"``.
+    :returns: A bare 32-char hex uuid,
+        e.g. ``"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"``.
     """
-    return f"file_{uuid.uuid4().hex}"
+    return uuid.uuid4().hex
 
 
 def generate_conversation_id() -> str:
     """
     Generate a unique conversation identifier.
 
-    :returns: A string of the form ``"conv_<32-char hex>"``,
-        e.g. ``"conv_e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9"``.
+    :returns: A bare 32-char hex uuid,
+        e.g. ``"e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9"``.
     """
-    return f"conv_{uuid.uuid4().hex}"
+    return uuid.uuid4().hex
 
 
 def generate_task_id() -> str:
@@ -640,25 +687,16 @@ def generate_item_id(item_type: str) -> str:
     """
     Generate a unique conversation-item identifier.
 
-    The prefix is determined by the item type:
+    *item_type* is validated against :data:`_ITEM_TYPES` but no longer encoded
+    into the id �?the type lives in the ``conversation_items.type`` column.
 
-    - ``"message"`` -> ``"msg_"``
-    - ``"function_call"`` -> ``"fc_"``
-    - ``"function_call_output"`` -> ``"fco_"``
-    - ``"error"`` -> ``"err_"``
-    - ``"reasoning"`` -> ``"rs_"``
-    - ``"compaction"`` -> ``"cmp_"``
-    - ``"native_tool"`` -> ``"nt_"``
-    - ``"slash_command"`` -> ``"sc_"``
-
-    :param item_type: One of the keys in :data:`_ITEM_TYPE_PREFIX`.
-    :returns: A prefixed identifier, e.g. ``"msg_a1b2c3d4..."``.
+    :param item_type: One of the members of :data:`_ITEM_TYPES`.
+    :returns: A bare 32-char hex uuid, e.g. ``"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"``.
     :raises ValueError: If *item_type* is not a recognised type.
     """
-    prefix = _ITEM_TYPE_PREFIX.get(item_type)
-    if prefix is None:
+    if item_type not in _ITEM_TYPES:
         raise ValueError(f"unknown item type: {item_type!r}")
-    return f"{prefix}{uuid.uuid4().hex}"
+    return uuid.uuid4().hex
 
 
 # ── FTS (SQLite FTS5) ─────────────────────────────────
@@ -671,7 +709,7 @@ _CREATE_FTS = text(
 )
 
 # Dialects that support SQLite's FTS5 extension. Cloudflare D1 is SQLite
-# served over HTTP, so it gets full-text search too — gate FTS on the dialect
+# served over HTTP, so it gets full-text search too �?gate FTS on the dialect
 # *family*, not the literal name "sqlite". (The engine-level WAL/PRAGMA path in
 # ``_create_engine`` stays sqlite-only: those are local-file concerns that D1
 # neither needs nor supports over the wire.)
@@ -737,6 +775,45 @@ def insert_fts(
         )
 
 
+def insert_fts_bulk(
+    session: Session,
+    rows: list[tuple[str, str, str]],
+) -> None:
+    """
+    Dual-write multiple rows into the FTS5 table in a single INSERT.
+
+    On dialects without FTS5 this is a no-op. An empty ``rows`` list is also
+    a no-op.
+
+    :param session: An active SQLAlchemy session.
+    :param rows: Each tuple is ``(item_id, conversation_id, search_text)``.
+    """
+    if not rows:
+        return
+    if not (session.bind and _supports_fts5(session.bind.dialect.name)):
+        return
+    # 3 params per row; keep total < 999 (SQLite's safe SQLITE_MAX_VARIABLE_NUMBER
+    # on pre-3.32 builds). Newer SQLite raised the limit to 32766, but chunking at
+    # 300 is safe on all versions.
+    _CHUNK_SIZE = 300
+    for chunk_start in range(0, len(rows), _CHUNK_SIZE):
+        chunk = rows[chunk_start : chunk_start + _CHUNK_SIZE]
+        placeholders = ", ".join(f"(:item_id_{i}, :cid_{i}, :st_{i})" for i in range(len(chunk)))
+        params: dict[str, str] = {}
+        for i, (item_id, conversation_id, search_text) in enumerate(chunk):
+            params[f"item_id_{i}"] = item_id
+            params[f"cid_{i}"] = conversation_id
+            params[f"st_{i}"] = search_text
+        session.execute(
+            text(
+                f"INSERT INTO {_FTS_TABLE}"
+                f"(item_id, conversation_id, search_text) "
+                f"VALUES {placeholders}"
+            ),
+            params,
+        )
+
+
 def delete_fts_by_conversation(session: Session, conversation_id: str) -> None:
     """
     Remove all FTS rows for a conversation (SQLite-family dialects only).
@@ -752,6 +829,26 @@ def delete_fts_by_conversation(session: Session, conversation_id: str) -> None:
         session.execute(
             text(f"DELETE FROM {_FTS_TABLE} WHERE conversation_id = :cid"),
             {"cid": conversation_id},
+        )
+
+
+def delete_fts_by_conversation_ids(session: Session, conv_ids: list[str]) -> None:
+    """
+    Remove all FTS rows for a list of conversations in a single query.
+
+    No-op when ``conv_ids`` is empty or the dialect lacks FTS5.
+
+    :param session: An active SQLAlchemy session.
+    :param conv_ids: Conversation IDs whose FTS rows should be removed.
+    """
+    if not conv_ids:
+        return
+    if session.bind and _supports_fts5(session.bind.dialect.name):
+        placeholders = ", ".join(f":cid{i}" for i in range(len(conv_ids)))
+        params = {f"cid{i}": cid for i, cid in enumerate(conv_ids)}
+        session.execute(
+            text(f"DELETE FROM {_FTS_TABLE} WHERE conversation_id IN ({placeholders})"),
+            params,
         )
 
 
@@ -804,7 +901,7 @@ def extract_search_text(item: NewConversationItem) -> str:
         assert isinstance(item.data, CompactionData)
         return item.data.summary
     if item.type == "native_tool":
-        # Native tool items are opaque provider dicts — no
+        # Native tool items are opaque provider dicts �?no
         # meaningful text to index for search.
         return ""
     if item.type == "resource_event":
@@ -831,11 +928,9 @@ def extract_search_text(item: NewConversationItem) -> str:
             part for part in (data.get("input") or "", data.get("stdout") or "") if part
         )
     if item.type == "routing_decision":
-        # Index model + tier + rationale so FTS can find a router
-        # verdict by the model it picked or its one-line explanation.
-        return " ".join(
-            part for part in (data.get("model"), data.get("tier"), data.get("rationale")) if part
-        )
+        # Index model + rationale so FTS can find a router verdict by
+        # the model it picked or its one-line explanation.
+        return " ".join(part for part in (data.get("model"), data.get("rationale")) if part)
     raise ValueError(f"unknown item type: {item.type!r}")
 
 
@@ -846,8 +941,8 @@ def strip_nul_bytes(value: str) -> str:
     PostgreSQL ``text``/``varchar`` columns reject NUL bytes outright
     (``psycopg.DataError: PostgreSQL text fields cannot contain NUL
     (0x00) bytes``), so any tool output, message, or search text that
-    embeds a NUL — e.g. a tool that returns the contents of a binary
-    file — would otherwise abort the whole ``INSERT``. SQLite tolerates
+    embeds a NUL �?e.g. a tool that returns the contents of a binary
+    file �?would otherwise abort the whole ``INSERT``. SQLite tolerates
     NUL, so stripping uniformly here also keeps the two backends
     behaving identically. NUL carries no textual or full-text-search
     meaning, so removing it is lossless for our purposes.
@@ -858,6 +953,55 @@ def strip_nul_bytes(value: str) -> str:
         unchanged when no NUL bytes are present.
     """
     return value.replace("\x00", "")
+
+
+def build_search_snippet(
+    text: str,
+    query: str,
+    *,
+    context: int = 60,
+    max_len: int = 160,
+) -> str | None:
+    """
+    Build a short excerpt of ``text`` centered on the first ``query`` match.
+
+    Powers the session-search preview: the sidebar/palette matches on chat
+    content, so a hit is often invisible in the session title. This returns
+    the matching span plus a little surrounding context, with ``…`` marking
+    elided ends, so the UI can show *where* a session matched.
+
+    Matching is case-insensitive substring (mirrors the ``LIKE`` filter that
+    selected the row). Whitespace in ``text`` is collapsed first so a match
+    inside a multi-line tool output renders as one clean line.
+
+    :param text: The item's plain search text to excerpt from.
+    :param query: The user's search string, e.g. ``"deploy error"``.
+    :param context: Characters of context to keep on each side of the match.
+    :param max_len: Hard cap on the returned snippet length (excluding the
+        ``…`` markers) so a giant match term can't blow up the row.
+    :returns: The excerpt, or ``None`` when ``query`` is empty or does not
+        occur in ``text`` (caller then falls back to no preview).
+    """
+    if not query:
+        return None
+    collapsed = " ".join(text.split())
+    idx = collapsed.lower().find(query.lower())
+    if idx == -1:
+        return None
+    match_end = idx + len(query)
+    start = max(0, idx - context)
+    end = min(len(collapsed), match_end + context)
+    # Keep the total under max_len, but never clamp the matched term itself out
+    # of the window �?otherwise the UI would highlight nothing. A pathologically
+    # long match term overflows max_len rather than being cut mid-term.
+    if end - start > max_len:
+        end = max(start + max_len, match_end)
+    snippet = collapsed[start:end]
+    if start > 0:
+        snippet = f"…{snippet}"
+    if end < len(collapsed):
+        snippet = f"{snippet}�?
+    return snippet
 
 
 # ── Timestamp ──────────────────────────────────────────
@@ -879,7 +1023,7 @@ def now_epoch_us() -> int:
 
     Used for change-detection timestamps (``comments.updated_at``)
     where consecutive writes inside the same second must still produce
-    distinct, ordered values — second-granularity ``now_epoch`` would
+    distinct, ordered values �?second-granularity ``now_epoch`` would
     make back-to-back mutations indistinguishable to diff-based
     consumers like the ``WS /v1/sessions/updates`` fingerprint.
     Microseconds rather than nanoseconds because epoch-µs stays below

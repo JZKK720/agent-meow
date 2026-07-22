@@ -18,7 +18,7 @@ from agent_meow.codex_native_bridge import (
 from agent_meow.inner.codex_native_executor import CodexNativeExecutor
 from agent_meow.inner.executor import ExecutorConfig, ExecutorError, TurnComplete
 
-# A 1x1 transparent PNG, base64-encoded â€” a real decodable image small
+# A 1x1 transparent PNG, base64-encoded â€?a real decodable image small
 # enough to embed, used to prove image blocks are materialized to disk
 # rather than inlined as text.
 _PNG_B64 = (
@@ -31,8 +31,8 @@ class _FakeCodexNativeClient:
     """
     Fake Codex app-server client for native executor tests.
 
-    Accepts both call shapes ``client_for_transport`` produces â€” a
-    positional unix ``socket_path`` Path or a ``ws_url`` keyword â€” so
+    Accepts both call shapes ``client_for_transport`` produces â€?a
+    positional unix ``socket_path`` Path or a ``ws_url`` keyword â€?so
     tests can drive either transport. ``created`` records
     ``(socket_path, ws_url, client_name)`` per construction so a test
     can assert which transport branch the executor took.
@@ -193,6 +193,54 @@ def test_web_started_codex_turn_returns_without_waiting_for_terminal_event(
     ]
 
 
+def test_system_prompt_does_not_override_collaboration_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Native startup config owns system prompts; turns preserve Codex defaults."""
+    framework_instruction = "Keep framework metadata separate."
+
+    _FakeCodexNativeClient.requests = []
+    _FakeCodexNativeClient.created = []
+    _FakeCodexNativeClient.next_turn = 1
+    monkeypatch.setattr(
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
+        _FakeCodexNativeClient,
+    )
+    write_bridge_state(
+        tmp_path,
+        CodexNativeBridgeState(
+            session_id="conv_123",
+            socket_path=str(tmp_path / "app-server.sock"),
+            thread_id="thread_123",
+            codex_home=str(tmp_path / "codex-home"),
+            active_turn_id=None,
+        ),
+    )
+    executor = CodexNativeExecutor(bridge_dir=tmp_path)
+
+    async def run() -> None:
+        async for _event in executor.run_turn(
+            [{"role": "user", "content": [{"type": "input_text", "text": "hello"}]}],
+            [],
+            framework_instruction,
+            None,
+        ):
+            pass
+
+    asyncio.run(run())
+
+    assert _FakeCodexNativeClient.requests == [
+        (
+            "turn/start",
+            {
+                "threadId": "thread_123",
+                "input": [{"type": "text", "text": "hello"}],
+            },
+        ),
+    ]
+
+
 def test_image_block_is_sent_as_local_image_not_inline_base64(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -208,7 +256,7 @@ def test_image_block_is_sent_as_local_image_not_inline_base64(
     image becomes a ``localImage`` input item pointing at a real file
     holding the decoded PNG; (2) accompanying text is preserved as a
     separate ``text`` item; (3) the base64 payload appears in NO text
-    item â€” its presence there would be the exact bug recurring.
+    item â€?its presence there would be the exact bug recurring.
     """
     _FakeCodexNativeClient.requests = []
     _FakeCodexNativeClient.created = []
@@ -262,22 +310,22 @@ def test_image_block_is_sent_as_local_image_not_inline_base64(
 
     local_images = [item for item in items if item["type"] == "localImage"]
     texts = [item for item in items if item["type"] == "text"]
-    # One localImage item â€” the image was routed to the image channel,
+    # One localImage item â€?the image was routed to the image channel,
     # not flattened into text. Zero would mean the attachment was dropped.
     assert len(local_images) == 1, f"expected one localImage item, got {items}"
     # The accompanying prompt survives as its own text item.
     assert len(texts) == 1
     assert texts[0]["text"] == "what is this?"
-    # The path points at a real file holding the decoded PNG bytes â€” so
+    # The path points at a real file holding the decoded PNG bytes â€?so
     # the Codex app-server can open it. Mismatch means we wrote the wrong
     # bytes (e.g. the base64 text instead of the decoded image).
     image_path = Path(local_images[0]["path"])
     assert image_path.read_bytes() == base64.b64decode(_PNG_B64)
     # CRITICAL: the base64 payload must not appear in ANY text item. If it
     # does, the 11.7 M-char data URI is back in the text input and Codex
-    # rejects the turn with input_too_large â€” the original bug.
+    # rejects the turn with input_too_large â€?the original bug.
     assert all(_PNG_B64 not in item.get("text", "") for item in items), (
-        "base64 image payload leaked into a text input item â€” the "
+        "base64 image payload leaked into a text input item â€?the "
         "input_too_large bug has regressed"
     )
 
@@ -346,7 +394,7 @@ def test_input_file_binary_is_materialized_and_referenced_by_path(
 
     A non-text file (e.g. a PDF) can't be inlined as text, so it is
     materialized under ``uploads/`` and referenced via an
-    ``[Attached file: <path>]`` text item â€” keeping the multi-megabyte
+    ``[Attached file: <path>]`` text item â€?keeping the multi-megabyte
     base64 out of the turn input while still letting the model open it.
     Proves the file lands on disk with its decoded bytes and that the
     referenced path matches what was written. A failure means the binary
@@ -431,7 +479,7 @@ async def test_executor_reaches_app_server_over_ws_transport(
             socket_path=ws_url,
             thread_id="thread_123",
             codex_home=str(tmp_path / "codex-home"),
-            # Non-None active turn â†’ enqueue takes the turn/steer path
+            # Non-None active turn â†?enqueue takes the turn/steer path
             # (not turn/start), exercising the steering connect site.
             active_turn_id="turn_active",
         ),
@@ -553,8 +601,8 @@ async def test_concurrent_steering_during_turn_start_is_not_dropped(
     class _BlockingStartCodexClient:
         """Codex app-server fake whose ``turn/start`` blocks until released.
 
-        Pins ``run_turn`` inside the ``turn/start`` RPC â€” after it read
-        ``active_turn_id=None`` but before it writes the new turn id â€” so a
+        Pins ``run_turn`` inside the ``turn/start`` RPC â€?after it read
+        ``active_turn_id=None`` but before it writes the new turn id â€?so a
         concurrent steering injection races that window.
         """
 
@@ -647,7 +695,7 @@ async def test_concurrent_steering_during_turn_start_is_not_dropped(
         "missing steer means the steering message read active_turn_id=None and "
         "was dropped (no serialization with run_turn)."
     )
-    # Exactly one turn was started â€” no double-start race.
+    # Exactly one turn was started â€?no double-start race.
     assert methods.count("turn/start") == 1, f"expected exactly one turn/start; got {methods}"
 
 
@@ -705,8 +753,8 @@ def test_web_model_pick_applied_via_thread_settings_update(
     A model/effort change made in the agent-meow web UI reaches the runner
     as ``ExecutorConfig.model`` / ``extra["reasoning_effort"]``. Codex's
     ``turn/start`` takes no model/effort (input/context only), so the
-    override must ride a ``thread/settings/update`` request â€” whose
-    ``ThreadSettingsUpdateParams`` carries ``model`` and ``effort`` â€” or the
+    override must ride a ``thread/settings/update`` request â€?whose
+    ``ThreadSettingsUpdateParams`` carries ``model`` and ``effort`` â€?or the
     picker silently does nothing (#1256). The settings update precedes the
     bare turn so the change is in effect for it.
     """
@@ -753,7 +801,7 @@ def test_no_settings_update_when_overrides_unset(
     With no model/effort pinned, no ``thread/settings/update`` is sent.
 
     A native thread that never touches the web picker must keep its
-    launch-pinned model â€” a stray ``thread/settings/update`` could
+    launch-pinned model â€?a stray ``thread/settings/update`` could
     clobber it. An empty/None config issues only the bare
     ``{threadId, input}`` ``turn/start``.
     """
@@ -837,3 +885,214 @@ def test_run_turn_surfaces_recorded_startup_error(
     assert "never started" in error.message
     assert "startup timeout" in error.message
     assert error.message != "Codex native bridge state is missing"
+
+
+# â”€â”€ MCP startup: no client-side gate + Stop cancel (issue #2058) â”€â”€â”€â”€â”€â”€â”€â”€
+
+
+def _seed_bridge(tmp_path: Path, active_turn_id: str | None = None) -> None:
+    """
+    Write bridge state for the executor under test.
+
+    :param tmp_path: Bridge directory.
+    :param active_turn_id: Active turn id to seed, or ``None``.
+    """
+    write_bridge_state(
+        tmp_path,
+        CodexNativeBridgeState(
+            session_id="conv_123",
+            socket_path=str(tmp_path / "app-server.sock"),
+            thread_id="thread_123",
+            codex_home=str(tmp_path / "codex-home"),
+            active_turn_id=active_turn_id,
+        ),
+    )
+
+
+def test_turn_start_is_not_gated_on_pending_mcp_startup(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    ``turn/start`` dispatches immediately while MCP servers still boot.
+
+    The Codex app-server accepts a mid-startup ``turn/start`` and defers
+    its execution until the startup round settles (verified against codex
+    0.142.5), so a client-side wait would only add latency â€?up to its
+    full bound when a server hangs. The bounded ``asyncio.timeout`` fails
+    this test if a gate sneaks back in.
+    """
+    from agent_meow.codex_native_bridge import update_mcp_server_startup
+
+    _FakeCodexNativeClient.requests = []
+    _FakeCodexNativeClient.created = []
+    _FakeCodexNativeClient.next_turn = 1
+    monkeypatch.setattr(
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
+        _FakeCodexNativeClient,
+    )
+    _seed_bridge(tmp_path)
+    update_mcp_server_startup(tmp_path, "storage-console", "starting")
+    executor = CodexNativeExecutor(bridge_dir=tmp_path)
+
+    async def run() -> list[Any]:
+        """
+        Drive one turn under a budget any startup gate would blow.
+
+        :returns: Events yielded by the turn.
+        """
+        events: list[Any] = []
+        async with asyncio.timeout(5.0):
+            async for event in executor.run_turn(
+                [{"role": "user", "content": [{"type": "input_text", "text": "hi"}]}],
+                [],
+                "",
+            ):
+                events.append(event)
+        return events
+
+    events = asyncio.run(run())
+
+    assert [type(event) for event in events] == [TurnComplete]
+    assert [method for method, _ in _FakeCodexNativeClient.requests] == ["turn/start"]
+
+
+def test_turn_error_names_pending_mcp_servers(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    A turn failure during MCP startup names the still-pending servers.
+
+    An injection failure this early in the session's life is most often
+    the startup itself; without the suffix the user sees a bare transport
+    error and has no idea codex is still booting MCP servers.
+    """
+    from agent_meow.codex_native_bridge import update_mcp_server_startup
+
+    class _FailingTurnClient(_FakeCodexNativeClient):
+        """Fake client whose ``turn/start`` fails like a mid-boot app-server."""
+
+        async def request(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
+            """
+            Reject ``turn/start``; defer to the base fake otherwise.
+
+            :param method: JSON-RPC method, e.g. ``"turn/start"``.
+            :param params: JSON-RPC params.
+            :returns: Codex-shaped response payload.
+            """
+            if method == "turn/start":
+                raise RuntimeError("app-server hiccup")
+            return await super().request(method, params)
+
+    _FailingTurnClient.requests = []
+    _FailingTurnClient.created = []
+    _FailingTurnClient.next_turn = 1
+    monkeypatch.setattr(
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
+        _FailingTurnClient,
+    )
+    _seed_bridge(tmp_path)
+    update_mcp_server_startup(tmp_path, "storage-console", "starting")
+    executor = CodexNativeExecutor(bridge_dir=tmp_path)
+
+    events = _collect_turn_events(executor, "hi")
+
+    assert [type(event) for event in events] == [ExecutorError]
+    assert "MCP startup still waiting on storage-console" in events[0].message
+
+
+def test_interrupt_with_active_turn_and_pending_mcp_stops_both(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    Stop during a startup-deferred turn interrupts the turn AND the startup.
+
+    Codex holds a mid-startup turn until the MCP round settles, so
+    stopping only the turn would leave the user watching a startup they
+    asked to stop. The startup interrupt (empty turn id) is sent first and
+    best-effort, then the recorded turn is interrupted.
+    """
+    from agent_meow.codex_native_bridge import read_mcp_startup, update_mcp_server_startup
+
+    _FakeCodexNativeClient.requests = []
+    _FakeCodexNativeClient.created = []
+    _FakeCodexNativeClient.next_turn = 1
+    monkeypatch.setattr(
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
+        _FakeCodexNativeClient,
+    )
+    _seed_bridge(tmp_path, active_turn_id="turn_active")
+    update_mcp_server_startup(tmp_path, "storage-console", "starting")
+    executor = CodexNativeExecutor(bridge_dir=tmp_path)
+
+    interrupted = asyncio.run(executor.interrupt_session("key"))
+
+    assert interrupted is True
+    assert _FakeCodexNativeClient.requests == [
+        ("turn/interrupt", {"threadId": "thread_123", "turnId": ""}),
+        ("turn/interrupt", {"threadId": "thread_123", "turnId": "turn_active"}),
+    ]
+    assert read_mcp_startup(tmp_path)["storage-console"]["status"] == "cancelled"
+
+
+def test_interrupt_with_no_active_turn_cancels_mcp_startup(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    Stop during MCP startup cancels it instead of no-oping.
+
+    With no active turn id recorded, ``interrupt_session`` used to return
+    ``False`` and the user's Stop did nothing while Codex was wedged on a
+    slow MCP server. It must flip the pending servers to ``cancelled``
+    (unblocking the first-turn gate) and send Codex the TUI's startup
+    interrupt: ``turn/interrupt`` with an empty turn id.
+    """
+    from agent_meow.codex_native_bridge import read_mcp_startup, update_mcp_server_startup
+
+    _FakeCodexNativeClient.requests = []
+    _FakeCodexNativeClient.created = []
+    _FakeCodexNativeClient.next_turn = 1
+    monkeypatch.setattr(
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
+        _FakeCodexNativeClient,
+    )
+    _seed_bridge(tmp_path, active_turn_id=None)
+    update_mcp_server_startup(tmp_path, "storage-console", "starting")
+    executor = CodexNativeExecutor(bridge_dir=tmp_path)
+
+    interrupted = asyncio.run(executor.interrupt_session("key"))
+
+    assert interrupted is True
+    assert _FakeCodexNativeClient.requests == [
+        ("turn/interrupt", {"threadId": "thread_123", "turnId": ""})
+    ]
+    assert read_mcp_startup(tmp_path)["storage-console"]["status"] == "cancelled"
+
+
+def test_interrupt_with_no_active_turn_and_no_pending_mcp_is_noop(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    Stop with nothing running and nothing starting stays a no-op.
+
+    An idle session must not send spurious ``turn/interrupt`` requests to
+    the app-server on every Stop press.
+    """
+    _FakeCodexNativeClient.requests = []
+    _FakeCodexNativeClient.created = []
+    _FakeCodexNativeClient.next_turn = 1
+    monkeypatch.setattr(
+        "agent_meow.codex_native_app_server.CodexAppServerClient",
+        _FakeCodexNativeClient,
+    )
+    _seed_bridge(tmp_path, active_turn_id=None)
+    executor = CodexNativeExecutor(bridge_dir=tmp_path)
+
+    interrupted = asyncio.run(executor.interrupt_session("key"))
+
+    assert interrupted is False
+    assert _FakeCodexNativeClient.requests == []

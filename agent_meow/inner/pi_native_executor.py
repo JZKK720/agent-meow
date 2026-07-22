@@ -1,4 +1,4 @@
-"""Executor that bridges agent-meow messages into a native Pi TUI."""
+"""Executor that bridges Omnigent messages into a native Pi TUI."""
 
 from __future__ import annotations
 
@@ -27,10 +27,10 @@ from agent_meow.pi_native_bridge import (
 
 class PiNativeExecutor(Executor):
     """
-    Harness-side executor for ``agent-meow pi`` web UI turns.
+    Harness-side executor for ``omnigent pi`` web UI turns.
 
     The native Pi process is already running in the session terminal with
-    the agent-meow Pi extension loaded. Each turn queues the latest user
+    the Omnigent Pi extension loaded. Each turn queues the latest user
     message into the bridge inbox; the extension consumes it and calls
     ``pi.sendUserMessage`` inside the TUI process.
 
@@ -84,7 +84,7 @@ class PiNativeExecutor(Executor):
         Queue the latest user message for Pi.
 
         :param messages: Conversation history in executor message shape.
-        :param tools: Tool schemas from agent-meow. Ignored for now; native
+        :param tools: Tool schemas from agent_meow. Ignored for now; native
             Pi owns its configured tool surface.
         :param system_prompt: System prompt from the agent spec. Ignored
             because the native Pi terminal controls its own prompt/settings.
@@ -108,7 +108,7 @@ class PiNativeExecutor(Executor):
         The bearer baked into ``config.json`` at launch dies with the ~1h
         Databricks OAuth lifetime, and the resident extension re-reads the
         config per request (``freshAuthHeaders``). Refreshing it at each turn
-        keeps its policy/MCP POSTs authenticated instead of failing closed â€”
+        keeps its policy/MCP POSTs authenticated instead of failing closed â€?
         the same outcome the refresh-capable runtime auth and the native
         policy hooks already get via re-mint. Minting runs in-runner through
         the same factory those use. Best-effort: any failure (no factory in
@@ -120,13 +120,24 @@ class PiNativeExecutor(Executor):
         the pi terminal if that case ever bites.
         """
         try:
+            from agent_meow.cli_auth import databricks_request_headers
             from agent_meow.runner._entry import _make_auth_token_factory
 
             factory = _make_auth_token_factory()
             token = factory() if factory is not None else None
             if token:
-                refresh_config_auth_headers(self._bridge_dir, {"Authorization": f"Bearer {token}"})
-        except Exception:  # noqa: BLE001 â€” best-effort refresh; never block a turn
+                # Rebuild the FULL routing header set (not just the bearer) so the
+                # per-turn refresh preserves the workspace / deployment routing
+                # selectors baked at launch (see runner/app.py). A bearer-only
+                # refresh would drop them and re-break routing after the first turn.
+                refresh_config_auth_headers(
+                    self._bridge_dir,
+                    databricks_request_headers(
+                        os.environ.get("RUNNER_SERVER_URL", "http://localhost:6767").rstrip("/"),
+                        bearer_token=token,
+                    ),
+                )
+        except Exception:  # noqa: BLE001 â€?best-effort refresh; never block a turn
             pass
 
 
@@ -145,9 +156,9 @@ def _bridge_dir_from_env() -> Path:
 
 def _request_session_id_from_env() -> str | None:
     """
-    Resolve the agent-meow session id that requested this harness process.
+    Resolve the Omnigent session id that requested this harness process.
 
-    :returns: agent-meow session id, e.g. ``"conv_abc123"``, or ``None``.
+    :returns: Omnigent session id, e.g. ``"conv_abc123"``, or ``None``.
     """
     raw = os.environ.get(PI_NATIVE_REQUEST_SESSION_ID_ENV_VAR, "").strip()
     return raw or None

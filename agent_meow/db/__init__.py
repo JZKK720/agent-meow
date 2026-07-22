@@ -1,21 +1,29 @@
-"""Database package â€” SQLAlchemy models and Alembic migrations."""
+"""Database package â€?SQLAlchemy models and Alembic migrations."""
 
 from agent_meow.db.db_models import (
-    Base,
+    DEFAULT_WORKSPACE_ID,
+    ConversationBase,
+    OmnigentBase,
     SqlAgent,
     SqlConversation,
     SqlConversationItem,
     SqlFile,
     SqlSessionPermission,
     SqlUser,
+    current_workspace_id,
+    workspace_scope,
 )
 
 __all__ = [
-    "Base",
+    "DEFAULT_WORKSPACE_ID",
+    "ConversationBase",
+    "OmnigentBase",
     "SqlAgent",
     "SqlConversation",
     "SqlConversationItem",
     "SqlFile",
     "SqlSessionPermission",
     "SqlUser",
+    "current_workspace_id",
+    "workspace_scope",
 ]

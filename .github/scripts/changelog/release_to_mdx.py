@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """Turn a curated GitHub Release body into an MDX-safe per-version site page.
 
-The website's `/releases/<version>` post is the *concise, curated highlights* â€”
+The website's `/releases/<version>` post is the *concise, curated highlights* â€?
 it mirrors the GitHub Release notes a maintainer already hand-edits in the
-draftâ†’editâ†’publish flow. This module does a small mechanical transform so that
-GitHub-flavoured Markdown renders cleanly through the site's MDX pipeline
-(`@next/mdx`):
+draftâ†’editâ†’publish flow. The narrative body (intro summary + numbered feature
+sections) is written by the release-notes-drafter agent; this module does a small
+mechanical transform so that GitHub-flavoured Markdown renders cleanly through the
+site's MDX pipeline (`@next/mdx`), and wraps it in the site-only chrome the
+release body can't carry (a byline and a "What's Next" footer):
 
-  * unwrap `<https://â€¦>` autolinks (angle brackets are JSX in MDX),
+  * unwrap `<https://â€?` autolinks (angle brackets are JSX in MDX),
   * escape `{`, `}`, and any remaining `<` so MDX never tries to evaluate them,
   * linkify bare `#1234` references to the PR,
-  * prepend a `# vX.Y.Z` heading + a `_Released <date>_` line the index reads.
+  * prepend a `# vX.Y.Z` heading + a byline (`_Released <date>_` â€?the exact token
+    the site index reads â€?plus estimated read time and author),
+  * append a static "What's Next" footer (install command + community links).
 
-No LLM, no reflow â€” the curation is the human's; we only make it MDX-safe.
+No LLM, no reflow â€?the curation is the human's; we only make it MDX-safe.
 """
 
 from __future__ import annotations
@@ -27,6 +31,22 @@ _AUTOLINK_RE = re.compile(r"<((?:https?://)[^>\s]+)>")
 # A bare "#1234" not already part of a word, path, or link. Headings are
 # "# Title" (space after #), so they never match.
 _PR_REF_RE = re.compile(r"(?<![\w/#])#(\d+)\b")
+
+AUTHOR = "Omnigent maintainers"
+# Average adult reading speed; used only for the "N min read" byline estimate.
+_WORDS_PER_MINUTE = 200
+
+WHATS_NEXT = """## What's Next
+
+Install or upgrade Omnigent:
+
+```bash
+uv tool install --python 3.12 omnigent   # or: pip install "omnigent"
+```
+
+- Star the project and file issues on [GitHub](https://github.com/omnigent-ai/omnigent).
+- Join the conversation on our [Discord](https://discord.gg/omnigent).
+- Browse the [docs](https://agent_meow.ai/docs) to go deeper."""
 
 
 def mdx_escape(text: str) -> str:
@@ -44,6 +64,12 @@ def linkify_pr_refs(text: str, repo: str) -> str:
     )
 
 
+def _read_time_minutes(text: str) -> int:
+    """Estimate reading time in whole minutes (>=1) from a word count."""
+    words = len(text.split())
+    return max(1, round(words / _WORDS_PER_MINUTE))
+
+
 def release_body_to_mdx(tag: str, date: str, body: str, repo: str) -> str:
     """Render the MDX page for one release."""
     transformed = linkify_pr_refs(mdx_escape(body or ""), repo)
@@ -52,8 +78,13 @@ def release_body_to_mdx(tag: str, date: str, body: str, repo: str) -> str:
         + tag
         + ". Edit the GitHub Release, not this file. */}"
     )
-    header = f"{comment}\n\n# {tag}\n\n_Released {date}_\n\n"
-    return header + transformed.strip() + "\n"
+    # Byline mirrors the MLflow release-post layout: keep the exact
+    # `_Released <date>_` token the site index regex reads, then append the
+    # read-time estimate and author on the same line.
+    minutes = _read_time_minutes(transformed)
+    byline = f"_Released {date}_ Â· {minutes} min read Â· {AUTHOR}"
+    header = f"{comment}\n\n# {tag}\n\n{byline}\n\n"
+    return header + transformed.strip() + "\n\n" + WHATS_NEXT + "\n"
 
 
 def _tag_date(tag: str) -> str:

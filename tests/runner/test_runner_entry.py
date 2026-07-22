@@ -7,6 +7,8 @@ import importlib
 import io
 import logging
 import os
+import signal
+import sys
 import tarfile
 import time
 from pathlib import Path
@@ -18,6 +20,8 @@ import pytest
 from agent_meow.runner._entry import (
     _DEFAULT_RUNNER_IDLE_TIMEOUT_S,
     _agent_cache_dest,
+    _InitialAuthTokenFactory,
+    _install_crash_logging,
     _load_runner_idle_timeout_s_from_config,
     _make_auth_token_factory,
     _make_managed_mint_factory,
@@ -34,7 +38,10 @@ from agent_meow.runner._entry import (
     _server_url_from_env,
     main,
 )
-from agent_meow.runner.identity import RUNNER_TUNNEL_TOKEN_HEADER
+from agent_meow.runner.identity import (
+    RUNNER_INITIAL_AUTH_TOKEN_ENV_VAR,
+    RUNNER_TUNNEL_TOKEN_HEADER,
+)
 from agent_meow.runner.transports.ws_tunnel.serve import RUNNER_TUNNEL_REJECTION_PREFIX
 
 # Force-load the MCP streamable-http client before any test monkeypatches
@@ -52,7 +59,7 @@ class _TrackingTerminalRegistry:
         """
         Initialize the terminal registry test double.
 
-        :param conversation_link_base_url: agent-meow server base URL passed
+        :param conversation_link_base_url: Omnigent server base URL passed
             through by the runner entry point, e.g.
             ``"http://runner.test"``.
         :returns: None.
@@ -165,7 +172,7 @@ def test_make_auth_token_factory_returns_none_without_databricks_creds(
 ) -> None:
     """Without Databricks credentials the factory is ``None``.
 
-    Local unauthenticated servers don't need auth â€” the runner
+    Local unauthenticated servers don't need auth â€?the runner
     connects over loopback without a bearer token.
 
     :param monkeypatch: Pytest environment patch fixture.
@@ -177,7 +184,7 @@ def test_make_auth_token_factory_returns_none_without_databricks_creds(
         """Stand in for _resolve_databricks_auth with no credentials."""
         raise DatabricksAuthError("no Databricks credentials configured")
 
-    # No stored OIDC token and SDK resolution fails â†’ factory is None, so the
+    # No stored OIDC token and SDK resolution fails â†?factory is None, so the
     # runner connects to a local unauthenticated server without a bearer.
     monkeypatch.delenv("RUNNER_SERVER_URL", raising=False)  # skip OIDC branch
     monkeypatch.setattr(
@@ -194,7 +201,7 @@ def test_make_auth_token_factory_uses_managed_mint_when_only_binding_token(
     """A managed sandbox runner (binding token, no user creds) gets a factory.
 
     With no stored OIDC token and no Databricks credentials, the factory
-    would be ``None`` for a laptop runner â€” but a managed sandbox still
+    would be ``None`` for a laptop runner â€?but a managed sandbox still
     holds its tunnel binding token, so the factory falls back to minting a
     short-lived owner JWT against it. This is what lets a managed runner's
     HTTP callbacks authenticate under OIDC/accounts auth.
@@ -223,10 +230,138 @@ def test_make_auth_token_factory_uses_managed_mint_when_only_binding_token(
     assert factory() == "managed-jwt"
 
 
+def test_make_auth_token_factory_prefers_host_delegation_over_user_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Host-launched runners mint a scoped bearer without resolving user auth."""
+    resolve_calls: list[int] = []
+
+    def _unexpected_sdk_auth(*args: Any, **kwargs: Any) -> tuple[Any, str]:
+        del args, kwargs
+        resolve_calls.append(1)
+        raise AssertionError("delegated runners must not resolve host Databricks auth")
+
+    monkeypatch.setenv("RUNNER_SERVER_URL", "https://agent_meow.example.com")
+    monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", "host-binding-token")
+    monkeypatch.setenv("OMNIGENT_RUNNER_DELEGATED_AUTH", "1")
+    monkeypatch.setattr(
+        "agent_meow.inner.databricks_executor._resolve_databricks_auth",
+        _unexpected_sdk_auth,
+    )
+    monkeypatch.setattr(
+        "agent_meow.runner._entry._mint_managed_owner_token",
+        lambda mint_url, server_url, binding_token: ("delegated-jwt", time.time() + 1800),
+    )
+
+    factory = _make_auth_token_factory()
+
+    assert factory is not None
+    assert factory() == "delegated-jwt"
+    assert resolve_calls == []
+
+
+def test_initial_host_token_defers_local_auth_until_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A host bearer covers startup and resolves runner auth only on rejection."""
+    resolve_calls: list[int] = []
+    mint_calls: list[int] = []
+
+    class _SdkAuth:
+        """Refreshable runner-local auth stand-in."""
+
+        def current_token(self) -> str:
+            return "runner-refreshed-token"
+
+    def _resolve(*args: Any, **kwargs: Any) -> tuple[_SdkAuth, str]:
+        del args, kwargs
+        resolve_calls.append(1)
+        return _SdkAuth(), "https://workspace.cloud.databricks.com"
+
+    def _unexpected_mint(*args: Any, **kwargs: Any) -> tuple[str, float]:
+        del args, kwargs
+        mint_calls.append(1)
+        raise AssertionError("bootstrap fallback must use runner-local refresh auth")
+
+    monkeypatch.setenv("RUNNER_SERVER_URL", "https://app.databricksapps.com")
+    monkeypatch.setenv(RUNNER_INITIAL_AUTH_TOKEN_ENV_VAR, "host-bootstrap-token")
+    monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", "host-binding-token")
+    monkeypatch.setenv("OMNIGENT_RUNNER_DELEGATED_AUTH", "1")
+    monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
+    monkeypatch.setattr("agent_meow.inner.databricks_executor._resolve_databricks_auth", _resolve)
+    monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _unexpected_mint)
+
+    factory = _make_auth_token_factory()
+
+    assert isinstance(factory, _InitialAuthTokenFactory)
+    assert RUNNER_INITIAL_AUTH_TOKEN_ENV_VAR not in os.environ
+    assert factory() == "host-bootstrap-token"
+    assert factory() == "host-bootstrap-token"
+    assert resolve_calls == []
+    assert mint_calls == []
+
+    request = httpx.Request("GET", "https://app.databricksapps.com/api/version")
+    redirect = httpx.Response(302, headers={"Location": "/oidc/oauth2/v2.0/authorize"})
+    captured = _drive_auth_flow(_RunnerDatabricksAuth(factory), request, redirect)
+
+    assert captured == [
+        "Bearer host-bootstrap-token",
+        "Bearer runner-refreshed-token",
+    ]
+    assert resolve_calls == [1]
+    assert mint_calls == []
+
+
+def test_delegated_factory_falls_back_when_apps_proxy_redirects_mint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An Apps OAuth redirect makes delegation fall back to refreshable auth."""
+    mint_calls: list[int] = []
+
+    class _SdkAuth:
+        """Refreshable Databricks auth stand-in."""
+
+        def current_token(self) -> str:
+            return "workspace-token"
+
+    def _apps_redirect(mint_url: str, server_url: str, binding_token: str) -> tuple[str, float]:
+        """Model the Apps edge intercepting the mint request before agent_meow."""
+        del server_url, binding_token
+        mint_calls.append(1)
+        request = httpx.Request("POST", mint_url)
+        response = httpx.Response(
+            302,
+            headers={
+                "Location": (
+                    "https://workspace.cloud.databricks.com/oidc/oauth2/v2.0/authorize"
+                    "?redirect_uri=https%3A%2F%2Fapp.databricksapps.com%2F.auth%2Fcallback"
+                )
+            },
+            request=request,
+        )
+        raise httpx.HTTPStatusError("redirected to login", request=request, response=response)
+
+    monkeypatch.setenv("RUNNER_SERVER_URL", "https://app.databricksapps.com")
+    monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", "host-binding-token")
+    monkeypatch.setenv("OMNIGENT_RUNNER_DELEGATED_AUTH", "1")
+    monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
+    monkeypatch.setattr(
+        "agent_meow.inner.databricks_executor._resolve_databricks_auth",
+        lambda *args, **kwargs: (_SdkAuth(), "https://workspace.cloud.databricks.com"),
+    )
+    monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _apps_redirect)
+
+    factory = _make_auth_token_factory()
+
+    assert factory is not None
+    assert factory() == "workspace-token"
+    assert mint_calls == [1]
+
+
 def test_make_auth_token_factory_none_without_creds_or_binding_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No user creds AND no binding token â†’ still ``None`` (unchanged posture).
+    """No user creds AND no binding token â†?still ``None`` (unchanged posture).
 
     The managed-mint fallback must not fire for a non-managed runner: with
     no binding token there is nothing to mint against, so the factory is
@@ -274,7 +409,7 @@ def test_managed_mint_factory_caches_token_until_refresh_skew(
     factory = _make_managed_mint_factory("https://s.example.com", "btok")
     assert factory is not None
 
-    # Subsequent calls reuse the cached token â€” no new mint.
+    # Subsequent calls reuse the cached token â€?no new mint.
     assert factory() == "jwt-1"
     assert factory() == "jwt-1"
     assert len(calls) == 1
@@ -298,7 +433,7 @@ def test_managed_mint_factory_serves_cached_token_when_refresh_fails(
         """First call mints a near-expiry token; the refresh attempt fails."""
         calls.append(1)
         if len(calls) == 1:
-            # Expiry within the refresh skew â†’ the next call attempts a re-mint.
+            # Expiry within the refresh skew â†?the next call attempts a re-mint.
             return ("jwt-1", time.time() + 250)
         raise httpx.ConnectError("mint endpoint unreachable")
 
@@ -310,7 +445,7 @@ def test_managed_mint_factory_serves_cached_token_when_refresh_fails(
     assert len(calls) == 1
 
     # The token is within the refresh skew, so this call attempts a re-mint,
-    # which fails â€” the still-valid cached token is served instead of erroring.
+    # which fails â€?the still-valid cached token is served instead of erroring.
     assert factory() == "jwt-1"
     assert len(calls) == 2
 
@@ -318,11 +453,11 @@ def test_managed_mint_factory_serves_cached_token_when_refresh_fails(
 def test_managed_mint_factory_no_factory_when_server_definitively_refuses(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A definitive no-mint (HTTP 400/404) installs no factory â†’ bare requests.
+    """A definitive no-mint (HTTP 400/404) installs no factory â†?bare requests.
 
     HTTP 400 (no auth provider / header mode) and 404 (an older server
     without the endpoint) mean the server will never mint for this runner,
-    so the runner must fall back to unauthenticated requests â€” correct on a
+    so the runner must fall back to unauthenticated requests â€?correct on a
     no-auth server. No factory is installed.
 
     :param monkeypatch: Pytest environment patch fixture.
@@ -348,7 +483,7 @@ def test_managed_mint_factory_installs_for_retry_on_transient_boot_failure(
 
     If the mint endpoint has a blip at the instant the runner boots (network
     error, 5xx), the factory must still install so a later callback re-mints
-    â€” otherwise the runner is left permanently unauthenticated until process
+    â€?otherwise the runner is left permanently unauthenticated until process
     restart.
 
     :param monkeypatch: Pytest environment patch fixture.
@@ -356,7 +491,7 @@ def test_managed_mint_factory_installs_for_retry_on_transient_boot_failure(
     """
 
     def _blip(mint_url: str, server_url: str, binding_token: str) -> tuple[str, float]:
-        """A transient failure â€” the endpoint is momentarily unreachable."""
+        """A transient failure â€?the endpoint is momentarily unreachable."""
         raise httpx.ConnectError("mint endpoint unreachable at boot")
 
     monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _blip)
@@ -372,7 +507,7 @@ def test_managed_mint_factory_recovers_after_transient_boot_failure(
     """After a transient boot blip, the factory re-mints on the next call.
 
     Locks in the recovery guarantee: a one-time failure at construction does
-    not disable auth â€” the very next callback mints successfully.
+    not disable auth â€?the very next callback mints successfully.
 
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
@@ -397,13 +532,13 @@ def test_managed_mint_factory_recovers_after_transient_boot_failure(
 def test_managed_mint_factory_declines_at_request_time_and_auth_sends_bare(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A post-install definitive 400 latches ``declined`` â†’ bare requests.
+    """A post-install definitive 400 latches ``declined`` â†?bare requests.
 
     The boot-race regression from CI: the runner starts before the server
-    listens, so the construction probe hits a connection error (transient â†’
+    listens, so the construction probe hits a connection error (transient â†?
     factory installs), then every request-time mint gets the definitive
     HTTP 400 of a no-auth server. Without the latch, the factory returns
-    ``None`` forever and ``_RunnerDatabricksAuth`` fails closed â€” bricking
+    ``None`` forever and ``_RunnerDatabricksAuth`` fails closed â€?bricking
     every runnerâ†’server callback (``spec_resolver_failed``). With it, the
     first 400 flips the factory to declined and callbacks go out bare,
     exactly as if no factory had been installed.
@@ -428,7 +563,7 @@ def test_managed_mint_factory_declines_at_request_time_and_auth_sends_bare(
     monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _boot_blip_then_refuse)
 
     factory = _make_managed_mint_factory("https://s.example.com", "btok")
-    assert factory is not None  # boot blip is transient â†’ installed
+    assert factory is not None  # boot blip is transient â†?installed
 
     auth = _RunnerDatabricksAuth(factory)
     request = httpx.Request("GET", "http://server/v1/agents/ag_1/download")
@@ -448,7 +583,7 @@ def test_mint_managed_owner_token_posts_binding_token_and_parses_response(
     """The mint call targets the right URL with the binding-token header.
 
     Locks the runner->server contract: POST /v1/runners/{id}/token with
-    the tunnel binding token in ``X-agent-meow-Runner-Tunnel-Token``,
+    the tunnel binding token in ``X-Omnigent-Runner-Tunnel-Token``,
     returning ``{"token", "expires_at"}``.
 
     :param monkeypatch: Pytest environment patch fixture.
@@ -490,7 +625,7 @@ def test_runner_databricks_auth_injects_fresh_token_per_request() -> None:
     This is the mechanism that keeps the runner's httpx client
     authenticated after the initial OAuth token expires. If the
     factory is called only once (cached), HTTP callbacks to the
-    agent-meow server break after 1 hour.
+    Omnigent server break after 1 hour.
 
     :returns: None.
     """
@@ -513,13 +648,13 @@ def test_runner_databricks_auth_injects_fresh_token_per_request() -> None:
     sent = next(gen)
     assert sent.headers["Authorization"] == "Bearer tok-1"
 
-    # Second request gets tok-2 â€” factory is called again, not cached.
+    # Second request gets tok-2 â€?factory is called again, not cached.
     request2 = httpx.Request("GET", "http://server/v1/agents")
     gen2 = auth.auth_flow(request2)
     sent2 = next(gen2)
     assert sent2.headers["Authorization"] == "Bearer tok-2"
 
-    # Factory was called twice â€” once per request.
+    # Factory was called twice â€?once per request.
     # If call_count == 1, the token was cached and HTTP callbacks
     # would break after expiry.
     assert call_count == 2, (
@@ -529,7 +664,7 @@ def test_runner_databricks_auth_injects_fresh_token_per_request() -> None:
 
 
 def test_runner_databricks_auth_noop_without_factory() -> None:
-    """No factory means no auth header â€” local unauthenticated servers.
+    """No factory means no auth header â€?local unauthenticated servers.
 
     :returns: None.
     """
@@ -545,7 +680,7 @@ def _drive_auth_flow(
     request: httpx.Request,
     response: httpx.Response,
 ) -> list[str]:
-    """Drive ``auth_flow`` through one request â†’ response â†’ maybe-retry cycle.
+    """Drive ``auth_flow`` through one request â†?response â†?maybe-retry cycle.
 
     Returns the ``Authorization`` header captured *at yield time* for
     each yield, so the caller can distinguish initial vs retry tokens.
@@ -568,7 +703,7 @@ def _drive_auth_flow(
     except StopIteration:
         return captured
     captured.append(retry_request.headers.get("Authorization", ""))
-    # Drain â€” auth_flow yields at most once after the response, then
+    # Drain â€?auth_flow yields at most once after the response, then
     # exits without inspecting the second response.
     with pytest.raises(StopIteration):
         gen.send(httpx.Response(200))
@@ -578,7 +713,7 @@ def _drive_auth_flow(
 @pytest.mark.parametrize(
     "location",
     [
-        # Real-world shape captured from the agent-meow HTTP path: the Apps
+        # Real-world shape captured from the Omnigent HTTP path: the Apps
         # front door redirects directly to ``/oidc/...authorize``
         # with a ``redirect_uri`` of ``.../.auth/callback``.
         (
@@ -625,7 +760,7 @@ def test_runner_databricks_auth_remints_on_login_redirect(location: str) -> None
 
     # First yield carries the original (now-stale) token; second yield
     # carries the freshly-minted token. Two yields means the retry
-    # happened â€” without the fix this collapses to one yield and the
+    # happened â€?without the fix this collapses to one yield and the
     # caller surfaces the 302 as a hard error.
     assert len(captured) == 2, (
         f"Expected one retry on login-redirect, got {len(captured)} yield(s). "
@@ -644,10 +779,10 @@ def test_runner_databricks_auth_remints_on_login_redirect(location: str) -> None
 @pytest.mark.parametrize(
     "location",
     [
-        # Unrelated app-level redirect â€” must NOT trigger a re-mint.
+        # Unrelated app-level redirect â€?must NOT trigger a re-mint.
         "/v1/agents/agent_abc",
         "https://other.example.com/some/path",
-        # Empty Location (malformed redirect) â€” also not a login bounce.
+        # Empty Location (malformed redirect) â€?also not a login bounce.
         "",
     ],
 )
@@ -680,7 +815,7 @@ def test_runner_databricks_auth_does_not_remint_on_unrelated_redirect(
 
     captured = _drive_auth_flow(auth, request, redirect)
 
-    # Only the initial request was sent â€” no retry. If 2, the auth
+    # Only the initial request was sent â€?no retry. If 2, the auth
     # flow is treating non-login redirects as re-auth signals,
     # which would cause spurious token churn.
     assert len(captured) == 1
@@ -721,16 +856,16 @@ def test_runner_databricks_auth_remints_on_401() -> None:
 
 @pytest.mark.asyncio
 async def test_runner_databricks_auth_end_to_end_through_mock_transport() -> None:
-    """End-to-end: a 302â†’/oidc/ becomes a 200 after the bearer refresh.
+    """End-to-end: a 302â†?oidc/ becomes a 200 after the bearer refresh.
 
     This is the integration-shaped variant of the unit tests above.
     It exercises the actual ``httpx.AsyncClient`` send pipeline (auth
-    flow â†’ transport â†’ auth flow â†’ transport) so a regression in how
+    flow â†?transport â†?auth flow â†?transport) so a regression in how
     the Auth class plugs into httpx is caught here, not just in
     isolation. Mirrors the production flow:
 
     1. Runner posts to ``/v1/sessions/{id}/mcp`` with stale bearer.
-    2. agent-meow front door bounces with ``302 â†’ /oidc/...authorize``.
+    2. Omnigent front door bounces with ``302 â†?/oidc/...authorize``.
     3. Runner re-mints, retries with fresh bearer, server returns 200.
 
     Without the login-redirect branch in ``auth_flow``, step 3 never
@@ -782,7 +917,7 @@ async def test_runner_databricks_auth_end_to_end_through_mock_transport() -> Non
     # 200 means the retry happened, the fresh bearer was accepted, and
     # the caller (ProxyMcpManager in production) sees a normal success.
     # If this assertion fails with status_code == 302, the auth flow
-    # is not re-minting on the login-redirect path â€” the original bug.
+    # is not re-minting on the login-redirect path â€?the original bug.
     assert resp.status_code == 200
     # The server saw two distinct bearers: the stale one, then the
     # fresh one. Equal tokens here would mean the retry replayed the
@@ -1126,6 +1261,124 @@ def test_run_parent_death_killer_stands_down_when_adopted() -> None:
     )
 
 
+def test_run_parent_death_killer_logs_reason_before_hard_exit(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The hard-exit backstop records why it is killing the runner.
+
+    ``os._exit`` skips the exit-reason logging in the tunnel loop's
+    ``finally`` block, so the killer must log the reason itself before
+    hard-exiting â€?otherwise the parent-death path leaves no explanation
+    in the runner log. Uses an already-orphaned pid, tiny grace, and an
+    injected exit function so the real ``os._exit`` never fires.
+
+    :param caplog: Pytest log capture fixture.
+    :returns: None.
+    """
+    exit_calls: list[int] = []
+
+    with caplog.at_level(logging.WARNING, logger="agent_meow.runner._entry"):
+        _run_parent_death_killer(
+            os.getppid() + 100000,  # already "orphaned"
+            lambda: None,
+            poll_interval_s=0.01,
+            grace_s=0.01,
+            exit_fn=exit_calls.append,
+        )
+
+    assert exit_calls == [0]
+    assert any(
+        "runner exiting" in record.message and "parent process died" in record.message
+        for record in caplog.records
+    ), f"expected a parent-death exit log line, got {[r.message for r in caplog.records]}"
+
+
+def test_install_crash_logging_records_uncaught_exception(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An uncaught exception is logged with its type before the process dies.
+
+    This is the "runner randomly died" case: without the hook the only
+    trace is a bare traceback on stderr. The installed ``sys.excepthook``
+    must record the exception (with traceback) to the runner log and then
+    defer to the previously-installed hook so default behavior is intact.
+
+    :param caplog: Pytest log capture fixture.
+    :returns: None.
+    """
+    original_hook = sys.excepthook
+    forwarded: list[str] = []
+    try:
+        sys.excepthook = lambda *args: forwarded.append(args[0].__name__)
+        _install_crash_logging()
+        installed = sys.excepthook
+
+        with caplog.at_level(logging.CRITICAL, logger="agent_meow.runner._entry"):
+            try:
+                raise ValueError("boom")
+            except ValueError:
+                installed(*sys.exc_info())
+    finally:
+        sys.excepthook = original_hook
+
+    assert forwarded == ["ValueError"], "the prior excepthook must still run"
+    crash_records = [r for r in caplog.records if "uncaught" in r.message]
+    assert crash_records, "expected the crash hook to log the uncaught exception"
+    record = crash_records[0]
+    assert "ValueError" in record.message
+    assert record.exc_info is not None, "traceback must be attached for diagnosis"
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(
+    not hasattr(signal, "SIGTERM") or sys.platform == "win32",
+    reason="POSIX signal delivery required",
+)
+async def test_install_signal_handlers_records_signal_reason() -> None:
+    """A shutdown signal both sets the stop event and records its name.
+
+    The recorded reason is what the exit-log line reports, so it must
+    carry the specific signal (e.g. ``SIGTERM``) that stopped the runner
+    rather than a generic "shutdown requested". Delivers a real SIGTERM to
+    this process and waits for the loop handler to fire.
+
+    :returns: None.
+    """
+    from agent_meow.runner._entry import _install_signal_handlers
+
+    stop_event = asyncio.Event()
+    reasons: list[str] = []
+    _install_signal_handlers(stop_event, record_reason=reasons.append)
+    try:
+        os.kill(os.getpid(), signal.SIGTERM)
+        await asyncio.wait_for(stop_event.wait(), timeout=2.0)
+    finally:
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.remove_signal_handler(sig)
+
+    assert reasons == ["received SIGTERM"]
+
+
+def test_install_crash_logging_is_idempotent() -> None:
+    """Installing the crash hook twice does not stack wrappers.
+
+    ``main`` runs once per process, but tests call it repeatedly; a
+    non-idempotent install would chain a new wrapper each time and log the
+    same crash N times. The second install must be a no-op.
+
+    :returns: None.
+    """
+    original_hook = sys.excepthook
+    try:
+        _install_crash_logging()
+        first = sys.excepthook
+        _install_crash_logging()
+        assert sys.excepthook is first, "second install must not re-wrap"
+    finally:
+        sys.excepthook = original_hook
+
+
 @pytest.mark.asyncio
 async def test_runner_shutdown_closes_terminal_registry(
     monkeypatch: pytest.MonkeyPatch,
@@ -1133,7 +1386,7 @@ async def test_runner_shutdown_closes_terminal_registry(
     """The --server local runner shuts down terminal-owned resources.
 
     ``examples/databricks_coding_agent.yaml`` exposes terminal tools,
-    and in ``agent-meow run --server`` mode those terminals are owned
+    and in ``omnigent run --server`` mode those terminals are owned
     by the local tunnel runner. This test drives the runner app
     startup/shutdown hooks directly and verifies shutdown includes the
     TerminalRegistry, not just harness subprocesses and MCPs.
@@ -1210,17 +1463,17 @@ async def test_runner_shutdown_closes_terminal_registry(
     assert process_managers and process_managers[0].shutdown_called
     assert terminal_registries and terminal_registries[0].shutdown_called
     assert terminal_registries[0].conversation_link_base_url == "http://runner.test"
-    # In agent-meow mode (P1) the entry point passes mcp_manager=None; MCP calls are
+    # In Omnigent mode (P1) the entry point passes mcp_manager=None; MCP calls are
     # routed per-session through ProxyMcpManager (runner/proxy_mcp_manager.py)
     # instead of a shared RunnerMcpManager. No RunnerMcpManager is created on
-    # startup, so mcp_managers is empty â€” that is the correct post-P1 behavior.
+    # startup, so mcp_managers is empty â€?that is the correct post-P1 behavior.
     assert not mcp_managers, (
-        "RunnerMcpManager should not be created by create_app() in agent-meow mode; "
+        "RunnerMcpManager should not be created by create_app() in Omnigent mode; "
         "MCP calls are proxied per-session through ProxyMcpManager"
     )
     assert async_clients and async_clients[0].closed
     # No sync httpx.Client is wired into the runner after the DBOS
-    # removal â€” the legacy idle-sync client used by background
+    # removal â€?the legacy idle-sync client used by background
     # polling was deleted with that path. If a future change
     # reintroduces a sync client, the factory above will catch it
     # and the equivalent assertion can return.
@@ -1445,30 +1698,28 @@ def test_main_reports_tunnel_rejection_without_traceback(
     assert "Traceback" not in stderr
 
 
-def test_main_installs_timestamped_runner_log_format(
+def test_main_configures_runner_process_logging(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Runner process logs include timestamps at the formatter boundary.
-
-    Host-spawned runners redirect stderr to
-    ``~/.agent_meow/logs/host-runner/runner-*.log``. The entrypoint's
-    logging formatter therefore has to include ``asctime`` globally; adding
-    timestamps to individual messages would miss library and framework logs.
+    Runner process logs are configured through the shared process logger.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
     captured: dict[str, Any] = {}
 
-    def _capture_basic_config(**kwargs: Any) -> None:
+    def _capture_process_logging(destination: str, **kwargs: Any) -> None:
         """
-        Record the logging configuration requested by ``main``.
+        Record the process logging configuration requested by ``main``.
 
-        :param kwargs: Keyword arguments passed to ``logging.basicConfig``.
+        :param destination: Process-log destination.
+        :param kwargs: Keyword arguments passed to ``configure_process_logging``.
         :returns: None.
         """
+        captured["destination"] = destination
         captured.update(kwargs)
+        return
 
     async def _stop_immediately() -> None:
         """
@@ -1478,8 +1729,8 @@ def test_main_installs_timestamped_runner_log_format(
         """
 
     monkeypatch.setattr(
-        "agent_meow.runner._entry.logging.basicConfig",
-        _capture_basic_config,
+        "agent_meow.process_logging.configure_process_logging",
+        _capture_process_logging,
     )
     monkeypatch.setattr(
         "agent_meow.runner._entry._run_tunnel_from_env",
@@ -1488,10 +1739,7 @@ def test_main_installs_timestamped_runner_log_format(
 
     main()
 
-    assert captured["level"] == logging.INFO
-    assert captured["format"].startswith("%(asctime)s ")
-    assert "%(levelname)s:%(name)s:%(message)s" in captured["format"]
-    assert captured["datefmt"] == "%Y-%m-%dT%H:%M:%S%z"
+    assert captured == {"destination": "runner", "force": True}
 
 
 def test_main_preserves_unexpected_runtime_errors(
@@ -1565,7 +1813,7 @@ def test_make_auth_token_factory_resolves_sdk_auth_once(
         )
 
     monkeypatch.setattr(dbx, "_resolve_databricks_auth", _fake_resolve)
-    # No stored OIDC token â†’ the factory falls through to the SDK path.
+    # No stored OIDC token â†?the factory falls through to the SDK path.
     monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
 
     factory = _make_auth_token_factory(server_url="https://ex.databricks.com")
@@ -1586,7 +1834,7 @@ def test_make_auth_token_factory_resolves_sdk_auth_once(
     )
     # authenticate() runs once per token fetch: the factory's own probe (1)
     # plus the 5 explicit calls = 6. These are cheap in-memory SDK cache
-    # hits, NOT CLI shell-outs â€” that's the behavior the fix preserves.
+    # hits, NOT CLI shell-outs â€?that's the behavior the fix preserves.
     assert cfg.authenticate_calls == 6, (
         f"Expected 6 authenticate() calls (probe + 5), got {cfg.authenticate_calls}."
     )
@@ -1636,7 +1884,7 @@ def test_agent_cache_dest_contains_traversal(tmp_path: Path, agent_id: str, vers
 def test_agent_cache_dest_normal_id_round_trips(tmp_path: Path) -> None:
     """A normal agent id/version maps to the expected child directory.
 
-    Proves the sanitization doesn't mangle well-formed ids â€” only the
+    Proves the sanitization doesn't mangle well-formed ids â€?only the
     f-string shape changes for traversal inputs.
 
     :param tmp_path: Cache root fixture.

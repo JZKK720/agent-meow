@@ -1,7 +1,5 @@
 """Tests for DatabricksExecutor with a mock OpenAI client."""
 
-import pytest
-
 import asyncio
 import json
 import sys
@@ -10,7 +8,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-databricks = pytest.importorskip("databricks")
 import databricks.sdk.config as _sdk_config_mod
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -513,14 +510,16 @@ class TestDatabricksExecutorToolCalls(unittest.TestCase):
 
 class TestDatabricksExecutorErrors(unittest.TestCase):
     def test_empty_stream(self):
-        """Stream with no chunks yields a TurnComplete with empty text."""
+        """Stream with no chunks (no finish_reason, no content, no tool calls) is
+        a truncated turn that died mid-stream, so it surfaces an ExecutorError
+        rather than a silent empty TurnComplete (#1118)."""
 
         async def _t():
             executor = DatabricksExecutor(client=FakeClient([]))
             events = [e async for e in executor.run_turn([], [], "")]
             self.assertEqual(len(events), 1)
-            self.assertIsInstance(events[0], TurnComplete)
-            self.assertEqual(events[0].response, "")
+            self.assertIsInstance(events[0], ExecutorError)
+            self.assertEqual(events[0].message, "Stream ended without finish_reason")
 
         _run(_t())
 
@@ -682,7 +681,7 @@ class TestDatabricksExecutorMultiTurn(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Credential resolution (_read_databrickscfg) â€” function-based pytest tests.
+# Credential resolution (_read_databrickscfg) â€?function-based pytest tests.
 #
 # These exercise the OAuth bug fix: _read_databrickscfg now delegates to the
 # databricks-sdk so OAuth profiles (auth_type: databricks-cli) return a fresh
@@ -721,7 +720,7 @@ def clean_databricks_env(monkeypatch: pytest.MonkeyPatch) -> None:
     Clear every DATABRICKS_* env var that affects credential resolution.
 
     The agent harness that runs these tests may have e.g. ``DATABRICKS_TOKEN``
-    exported for the coding agent itself â€” which would override profile-based
+    exported for the coding agent itself â€?which would override profile-based
     resolution in the SDK and confuse these tests.
     """
     for var in _AUTH_ENV_VARS:
@@ -733,7 +732,7 @@ def _raise_offline_host_metadata(host: str) -> None:
 
     :param host: Workspace URL the SDK would have probed,
         e.g. ``"https://example.cloud.databricks.com"``.
-    :raises ConnectionError: Always â€” simulates an unreachable host without
+    :raises ConnectionError: Always â€?simulates an unreachable host without
         the SDK's network retry loop.
     """
     raise ConnectionError(f"offline test stub: refusing to probe {host}")
@@ -751,7 +750,7 @@ def pat_only_cfg(
     verbatim without any OAuth exchange. The host is a placeholder, so the
     SDK's ``Config.__init__`` host-metadata probe (a real HTTP GET against
     ``/.well-known/databricks-config``, with retries) is stubbed to fail
-    fast â€” ``_resolve_host_metadata`` logs and falls back to the explicit
+    fast â€?``_resolve_host_metadata`` logs and falls back to the explicit
     config, which is exactly the offline behavior these tests need.
     """
     monkeypatch.setattr(
@@ -797,7 +796,7 @@ def test_read_databrickscfg_missing_profile_falls_back_to_file_reader(
     -> DATABRICKS_CONFIG_PROFILE env -> DEFAULT section -> first section
     with both host+token. So on a config file that contains only
     ``pat-profile``, an unknown requested profile falls through to
-    "first section" â€” i.e. we recover PAT credentials.
+    "first section" â€?i.e. we recover PAT credentials.
     """
     creds = _read_databrickscfg("no-such-profile-xyz")
 
@@ -872,6 +871,67 @@ def test_read_databrickscfg_host_missing_named_profile_does_not_fallback(
     assert _read_databrickscfg_host("missing-profile") is None
 
 
+def test_databricks_gateway_host_ignores_env_override_for_explicit_profile(
+    tmp_path: _Path,
+    monkeypatch: pytest.MonkeyPatch,
+    clean_databricks_env: None,
+) -> None:
+    """An explicit profile's gateway host must match its ``--profile`` token.
+
+    ``databricks auth token --profile P`` mints a bearer for P's own workspace
+    and ignores ``DATABRICKS_HOST``. If the gateway base URL were resolved via
+    the SDK (which lets ``DATABRICKS_HOST`` override the profile host), the base
+    URL and the token would target different workspaces and the gateway rejects
+    the token. So the host must come from the profile section directly.
+    """
+    from agent_meow.inner.databricks_executor import _databricks_gateway_host
+
+    cfg_path = tmp_path / "databrickscfg"
+    cfg_path.write_text(
+        textwrap.dedent(
+            """
+        [oss]
+        host = https://profile-workspace.cloud.databricks.com
+        auth_type = databricks-cli
+        """
+        ).lstrip()
+    )
+    monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(cfg_path))
+    monkeypatch.setenv("DATABRICKS_HOST", "https://other-workspace.cloud.databricks.com")
+
+    assert _databricks_gateway_host("oss") == "https://profile-workspace.cloud.databricks.com"
+
+
+def test_databricks_gateway_host_missing_profile_falls_back_to_ambient(
+    tmp_path: _Path,
+    monkeypatch: pytest.MonkeyPatch,
+    clean_databricks_env: None,
+) -> None:
+    """A profile absent from the file falls back to the ambient/env chain.
+
+    Mirrors a spec authored with ``profile: P`` that now runs on a Databricks
+    App container with no matching section: there is no profile-pinned token to
+    diverge from, so ambient ``DATABRICKS_HOST`` is the right host.
+    """
+    from agent_meow.inner.databricks_executor import _databricks_gateway_host
+
+    # Stub the SDK's host-metadata probe (a real HTTP GET with retries) so the
+    # ambient-credential resolution stays offline and fast.
+    monkeypatch.setattr(
+        "databricks.sdk.config.get_host_metadata",
+        _raise_offline_host_metadata,
+    )
+    cfg_path = tmp_path / "databrickscfg"
+    cfg_path.write_text("# no matching profile\n")
+    monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(cfg_path))
+    monkeypatch.setenv("DATABRICKS_HOST", "https://ambient-workspace.cloud.databricks.com")
+    monkeypatch.setenv("DATABRICKS_TOKEN", "dapi-ambient-token")
+
+    assert _databricks_gateway_host("missing-profile") == (
+        "https://ambient-workspace.cloud.databricks.com"
+    )
+
+
 def test_codex_executor_gateway_uses_host_only_oauth_profile(
     tmp_path: _Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -895,10 +955,6 @@ def test_codex_executor_gateway_uses_host_only_oauth_profile(
         ).lstrip()
     )
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(cfg_path))
-    monkeypatch.setattr(
-        "agent_meow.inner.codex_executor._read_databrickscfg",
-        lambda _profile: None,
-    )
 
     from agent_meow.inner.codex_executor import CodexExecutor
 
@@ -967,13 +1023,13 @@ def test_read_databrickscfg_falls_back_when_sdk_raises(
     to the file reader so plain PAT setups still work.
 
     We simulate this by stubbing the SDK's ``Config`` with a tiny real
-    class that unconditionally raises on init â€” no MagicMock.
+    class that unconditionally raises on init â€?no MagicMock.
     """
 
     class _AlwaysFailsConfig:
         """
         Test double for ``databricks.sdk.config.Config`` that always
-        raises ValueError â€” emulates an exotic setup the SDK can't parse.
+        raises ValueError â€?emulates an exotic setup the SDK can't parse.
         """
 
         def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -1012,7 +1068,7 @@ def test_read_databrickscfg_missing_profile_uses_ambient_credentials(
 
     This covers the Databricks App deployment case: the spec was authored
     locally with ``profile: my-profile`` but runs on an App container that
-    has no ``~/.databrickscfg`` â€” the App container supplies credentials
+    has no ``~/.databrickscfg`` â€?the App container supplies credentials
     via environment variables instead.
     """
 
@@ -1028,7 +1084,7 @@ def test_read_databrickscfg_missing_profile_uses_ambient_credentials(
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             if kwargs.get("profile") is not None:
                 raise ValueError("simulated missing profile")
-            # Ambient path â€” expose host and a Bearer token.
+            # Ambient path â€?expose host and a Bearer token.
             self.host = "https://ambient.example.com"
 
         def authenticate(self) -> dict[str, str]:
@@ -1038,7 +1094,7 @@ def test_read_databrickscfg_missing_profile_uses_ambient_credentials(
 
     creds = _read_databrickscfg("no-such-profile-xyz")
 
-    # Ambient credentials resolved â€” the App-server fallback path works.
+    # Ambient credentials resolved â€?the App-server fallback path works.
     # If this is None, the ambient Config() branch was not reached.
     assert creds is not None
     # Host must come from the ambient Config, not the file reader.
@@ -1063,13 +1119,13 @@ def test_read_databrickscfg_missing_profile_ambient_also_fails_uses_file_fallbac
     ``ValueError``, the wrapper falls through to the legacy file reader.
 
     This is the two-step failure path: named profile absent AND no ambient
-    credentials in the environment â€” the file reader is the last resort.
+    credentials in the environment â€?the file reader is the last resort.
     """
 
     class _ProfileFailsThenAmbientFails:
         """
         Test double for ``databricks.sdk.config.Config`` that raises
-        ``ValueError`` unconditionally â€” emulates a machine with neither
+        ``ValueError`` unconditionally â€?emulates a machine with neither
         a matching named profile nor ambient env-var credentials.
         """
 
@@ -1093,7 +1149,7 @@ def test_read_databrickscfg_missing_profile_ambient_also_fails_uses_file_fallbac
     creds = _read_databrickscfg("no-such-profile-xyz")
 
     # File reader ran as the last resort after both SDK paths failed.
-    # If None, the file reader itself failed â€” check DATABRICKS_CONFIG_FILE.
+    # If None, the file reader itself failed â€?check DATABRICKS_CONFIG_FILE.
     assert creds is not None
     # Host must come from the file reader, not any SDK path.
     assert creds.host == "https://file-fallback.example.com", (
@@ -1119,7 +1175,7 @@ def test_read_databrickscfg_missing_profile_service_principal_via_ambient(
     The Databricks SDK's ``Config()`` natively handles client-credential env
     vars, so no explicit SP handling is needed in ``_read_databrickscfg``.
     This test confirms the ambient path reaches a ``Config()`` call with no
-    profile â€” the same call the SDK uses to pick up those env vars.
+    profile â€?the same call the SDK uses to pick up those env vars.
     """
 
     class _SPAmbientConfig:
@@ -1127,7 +1183,7 @@ def test_read_databrickscfg_missing_profile_service_principal_via_ambient(
         Test double for ``databricks.sdk.config.Config``.
 
         Raises ``ValueError`` when called with a named profile (simulating a
-        missing profile), succeeds when called with no args â€” as the SDK would
+        missing profile), succeeds when called with no args â€?as the SDK would
         do when ``DATABRICKS_HOST`` / ``DATABRICKS_CLIENT_ID`` /
         ``DATABRICKS_CLIENT_SECRET`` env vars are set.
         """
@@ -1135,7 +1191,7 @@ def test_read_databrickscfg_missing_profile_service_principal_via_ambient(
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             if kwargs.get("profile") is not None:
                 raise ValueError("simulated: named profile not found")
-            # Ambient path â€” service principal resolved host + M2M token.
+            # Ambient path â€?service principal resolved host + M2M token.
             self.host = "https://sp-workspace.example.com"
 
         def authenticate(self) -> dict[str, str]:
@@ -1206,11 +1262,11 @@ def test_read_databrickscfg_oauth_profile_returns_fresh_bearer(
 
     assert creds is not None, "OAuth profile should resolve credentials"
     assert creds.host == "https://oauth-workspace.example.com"
-    # OAuth access tokens are JWTs (header.payload.signature) â€” far longer
+    # OAuth access tokens are JWTs (header.payload.signature) â€?far longer
     # than a 36-char PAT and they start with "eyJ" (base64 of '{"alg":...').
     assert creds.token == fresh_bearer
     assert creds.token != stale_field, (
-        "OAuth profile returned the stale PAT from the file â€” the fix is "
+        "OAuth profile returned the stale PAT from the file â€?the fix is "
         "not actually exchanging credentials via the SDK."
     )
 
@@ -1285,7 +1341,7 @@ def test_resolve_databricks_auth_env_profile_falls_back_to_ambient_with_warning(
     tokens via env vars but don't have a matching profile in
     ``~/.databrickscfg``.
 
-    The fallback must NOT fire when the profile was passed explicitly â€” that
+    The fallback must NOT fire when the profile was passed explicitly â€?that
     case must fail loud (see
     ``test_resolve_databricks_auth_invalid_profile_raises_clear_error``).
 
@@ -1318,7 +1374,7 @@ def test_resolve_databricks_auth_env_profile_falls_back_to_ambient_with_warning(
     monkeypatch.setenv("DATABRICKS_CONFIG_PROFILE", "missing-profile")
 
     with caplog.at_level(logging.WARNING, logger="agent_meow.inner.databricks_executor"):
-        auth, host = _resolve_databricks_auth()  # profile=None â€” uses env var
+        auth, host = _resolve_databricks_auth()  # profile=None â€?uses env var
 
     assert isinstance(auth, _DatabricksBearerAuth), (
         "Expected a _DatabricksBearerAuth from the ambient Config() fallback; "
@@ -1327,7 +1383,7 @@ def test_resolve_databricks_auth_env_profile_falls_back_to_ambient_with_warning(
     assert host == "https://example.cloud.databricks.com", (
         f"Expected ambient workspace host, got {host!r}"
     )
-    # The fallback must be logged â€” it must not be silent.
+    # The fallback must be logged â€?it must not be silent.
     warning_messages = [r.message for r in caplog.records if r.levelno == logging.WARNING]
     assert any("missing-profile" in m and "ambient" in m for m in warning_messages), (
         f"Expected a warning mentioning the profile name and 'ambient', got: {warning_messages!r}"
@@ -1341,7 +1397,7 @@ def test_resolve_databricks_auth_explicit_profile_not_found_raises(
 
     When the user explicitly passes ``--profile dev`` and the profile cannot
     be resolved, ``_resolve_databricks_auth`` must raise ``DatabricksAuthError``
-    immediately â€” NOT silently fall back to a different workspace.  This
+    immediately â€?NOT silently fall back to a different workspace.  This
     upholds the "Fail loud" design principle.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -1367,12 +1423,12 @@ def test_resolve_databricks_auth_explicit_profile_not_found_raises(
     with pytest.raises(DatabricksAuthError, match="databricks auth login -p dev"):
         _resolve_databricks_auth("dev")
 
-    # Ambient Config() must NOT be called â€” no fallback for explicit profiles.
+    # Ambient Config() must NOT be called â€?no fallback for explicit profiles.
     # If Config() were called with no args, call_log would have a second entry.
     assert len(call_log) == 1, (
         f"Expected exactly one Config() call (the explicit profile), "
         f"got {len(call_log)}: {call_log!r}. "
-        f"The ambient fallback fired for an explicit profile â€” violates Fail Loud."
+        f"The ambient fallback fired for an explicit profile â€?violates Fail Loud."
     )
 
 
@@ -1531,17 +1587,10 @@ def test_codex_executor_uses_cli_auth_command_not_env_token(
     def _counting_read(profile=None):
         nonlocal call_count
         call_count += 1
-        return type(
-            "Creds",
-            (),
-            {
-                "host": "https://host",
-                "token": f"tok-{call_count}",
-            },
-        )()
+        return "https://host"
 
     monkeypatch.setattr(
-        "agent_meow.inner.codex_executor._read_databrickscfg",
+        "agent_meow.inner.codex_executor._databricks_gateway_host",
         _counting_read,
     )
 
@@ -1600,7 +1649,7 @@ def test_bearer_auth_current_token_reuses_config_and_strips_prefix() -> None:
     # Bare token (prefix stripped) on every call. A failure here means
     # current_token returned the raw header or the wrong field.
     assert tokens == ["dapi-XYZ"] * 4
-    # All 4 calls went through the SAME wrapped config â€” proving reuse, so
+    # All 4 calls went through the SAME wrapped config â€?proving reuse, so
     # the SDK's own cache (not a rebuilt Config) backs repeat calls. If the
     # method rebuilt Config, it would not be this single object's counter.
     assert cfg.authenticate_calls == 4
@@ -1617,7 +1666,7 @@ def test_bearer_auth_current_token_none_for_non_bearer(headers: dict[str, str]) 
     """
     ``current_token()`` returns ``None`` for a non-Bearer or empty
     ``Authorization`` header (the system only supports Bearer). Returning the
-    raw header would feed callers a credential the agent-meow server can't use.
+    raw header would feed callers a credential the Omnigent server can't use.
     """
 
     class _Config:
@@ -1632,7 +1681,7 @@ def test_bearer_auth_current_token_none_for_non_bearer(headers: dict[str, str]) 
 def test_bearer_auth_current_token_wraps_failure_as_auth_error() -> None:
     """
     ``current_token()`` raises :class:`DatabricksAuthError` when the SDK's
-    ``authenticate()`` raises â€” the same fail-loud contract as ``auth_flow``,
+    ``authenticate()`` raises â€?the same fail-loud contract as ``auth_flow``,
     so token-mint failures surface with a re-login hint instead of silently
     yielding a bad/empty credential.
     """
@@ -1651,14 +1700,14 @@ if __name__ == "__main__":
     unittest.main()
 
 
-# â”€â”€ host-keyed resolution (agent-meow login pointer records) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€ host-keyed resolution (omnigent login pointer records) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _StubSdkConfig:
     """Minimal stand-in for ``databricks.sdk.config.Config``.
 
     Real ``Config`` probes host metadata at construction, which fails
-    offline for placeholder hosts â€” the production seam
+    offline for placeholder hosts â€?the production seam
     (``_sdk_config``) exists precisely so tests can substitute this.
 
     :param host: The workspace host the config resolves to.
@@ -1725,7 +1774,7 @@ def test_resolve_auth_for_host_falls_back_to_cli_when_no_profile_matches(
     """With no cfg profile pinned to the host, the CLI host lookup runs.
 
     Cfg-less machines (fresh laptop, CI) have only the host-keyed OAuth
-    cache from ``databricks auth login --host`` â€” dropping this fallback
+    cache from ``databricks auth login --host`` â€?dropping this fallback
     would strand them.
     """
     from agent_meow.inner import databricks_executor
@@ -1733,7 +1782,7 @@ def test_resolve_auth_for_host_falls_back_to_cli_when_no_profile_matches(
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(tmp_path / "absent"))
 
     def _fake_sdk_config(**kwargs: str) -> _StubSdkConfig:
-        # The only construction allowed is the host-keyed CLI lookup â€”
+        # The only construction allowed is the host-keyed CLI lookup â€?
         # a profile= construction here means a phantom profile matched.
         assert kwargs == {
             "host": "https://example.databricks.com",
@@ -1779,9 +1828,36 @@ def test_profiles_for_host_normalizes_scheme_and_slash(
 def test_profiles_for_host_missing_file_returns_empty(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No config file â†’ no profile candidates (CLI fallback territory)."""
+    """No config file â†?no profile candidates (CLI fallback territory)."""
     from agent_meow.inner.databricks_executor import _databrickscfg_profiles_for_host
 
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(tmp_path / "absent"))
 
     assert _databrickscfg_profiles_for_host("https://example.databricks.com") == []
+
+
+def test_stream_ended_without_finish_reason_with_content_completes() -> None:
+    """A truncated stream that still produced text surfaces that text as a
+    TurnComplete (not an error) â€?only the empty case is fatal (#1118)."""
+
+    async def _t() -> None:
+        # Content arrives, then the stream ends without a finish_reason.
+        chunks = [FakeStreamChunk(choices=[FakeStreamChoice(delta=FakeDelta(content="partial"))])]
+        executor = DatabricksExecutor(client=FakeClient(chunks))
+
+        events = [
+            e
+            async for e in executor.run_turn(
+                messages=[{"role": "user", "content": "hi"}],
+                tools=[],
+                system_prompt="Be helpful.",
+                config=ExecutorConfig(model="databricks-kimi-k2-6"),
+            )
+        ]
+
+        assert not [e for e in events if isinstance(e, ExecutorError)]
+        turn_events = [e for e in events if isinstance(e, TurnComplete)]
+        assert len(turn_events) == 1
+        assert turn_events[0].response == "partial"
+
+    _run(_t())

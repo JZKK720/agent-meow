@@ -18,10 +18,98 @@ from agent_meow.codex_native_app_server import (
     _POLICY_HOOK_TIMEOUT_SECONDS,
     CodexNativeAppServer,
     _codex_policy_hooks_settings,
+    _sync_codex_developer_instructions,
     build_codex_native_server,
     trust_native_policy_hooks,
 )
 from agent_meow.codex_native_hook import _EVALUATE_POLICY_TIMEOUT_S
+from agent_meow.inner.codex_executor import _populate_codex_home_config
+
+
+def test_sync_developer_instructions_preserves_and_restores_user_config(tmp_path: Path) -> None:
+    """Framework instructions append without replacing the user's Codex guidance."""
+    codex_home = tmp_path / "codex-home"
+    codex_home.mkdir()
+    config_path = codex_home / "config.toml"
+    config_path.write_text(
+        'model = "gpt-5.5"\ndeveloper_instructions = "Keep user guidance."\n',
+        encoding="utf-8",
+    )
+
+    _sync_codex_developer_instructions(codex_home, "Rename the session.")
+    _sync_codex_developer_instructions(codex_home, "Rename the session.")
+
+    config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    assert config["model"] == "gpt-5.5"
+    assert config["developer_instructions"] == ("Keep user guidance.\n\nRename the session.")
+
+    _sync_codex_developer_instructions(codex_home, None)
+
+    resumed_config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    assert resumed_config["developer_instructions"] == "Keep user guidance."
+
+
+def test_sync_developer_instructions_survives_reseeded_config(tmp_path: Path) -> None:
+    """A persisted sidecar restores the original base after config reseeding."""
+    codex_home = tmp_path / "codex-home"
+    source_home = tmp_path / "source-home"
+    codex_home.mkdir()
+    source_home.mkdir()
+    config_path = codex_home / "config.toml"
+    config_path.write_text(
+        'developer_instructions = "Keep original guidance."\n',
+        encoding="utf-8",
+    )
+    (source_home / "config.toml").write_text(
+        'developer_instructions = "New shared guidance."\n',
+        encoding="utf-8",
+    )
+
+    _sync_codex_developer_instructions(codex_home, "Rename the session.")
+    config_path.unlink()
+    _populate_codex_home_config(codex_home, source_home)
+
+    reseeded = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    assert reseeded["developer_instructions"] == "New shared guidance."
+
+    _sync_codex_developer_instructions(codex_home, None)
+
+    resumed = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    assert resumed["developer_instructions"] == "Keep original guidance."
+
+
+def test_sync_developer_instructions_recovers_legacy_augmented_config(tmp_path: Path) -> None:
+    """A missing sidecar does not capture an existing framework suffix as user base."""
+    codex_home = tmp_path / "codex-home"
+    codex_home.mkdir()
+    config_path = codex_home / "config.toml"
+    config_path.write_text(
+        'developer_instructions = "Keep user guidance.\\n\\nRename the session."\n',
+        encoding="utf-8",
+    )
+
+    _sync_codex_developer_instructions(codex_home, "Rename the session.")
+
+    active = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    assert active["developer_instructions"] == "Keep user guidance.\n\nRename the session."
+
+    _sync_codex_developer_instructions(codex_home, None)
+
+    resumed = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    assert resumed["developer_instructions"] == "Keep user guidance."
+
+
+def test_sync_developer_instructions_skips_invalid_config(tmp_path: Path) -> None:
+    """Optional title metadata never blocks Codex startup on malformed config."""
+    codex_home = tmp_path / "codex-home"
+    codex_home.mkdir()
+    config_path = codex_home / "config.toml"
+    config_path.write_text("invalid = [", encoding="utf-8")
+
+    _sync_codex_developer_instructions(codex_home, "Rename the session.")
+
+    assert config_path.read_text(encoding="utf-8") == "invalid = ["
+
 
 _CWD = "/home/user/repo"
 _OUR_COMMAND = "/venv/bin/python -m agent_meow.codex_native_hook evaluate-policy --bridge-dir /b"
@@ -157,7 +245,7 @@ def test_build_codex_native_server_profile_error_names_profile(
         lambda: sys.executable,
     )
     monkeypatch.setattr(
-        "agent_meow.codex_native_app_server._read_databrickscfg",
+        "agent_meow.codex_native_app_server._databricks_gateway_host",
         lambda _profile: None,
     )
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(tmp_path / "missing-databrickscfg"))
@@ -182,19 +270,14 @@ def test_build_codex_native_server_uses_profile_host_without_static_token(
     """
     Native Codex accepts Databricks CLI OAuth profiles without static tokens.
 
-    A default agent-meow install may not include ``databricks-sdk`` in the
-    runner process. In that case ``_read_databrickscfg`` cannot mint a bearer
-    at startup, but the profile's host is still enough: Codex gets an
-    ``auth.command`` that runs ``databricks auth token --profile`` at request
-    time.
+    A default Omnigent install may not include ``databricks-sdk`` in the
+    runner process. In that case a bearer cannot be minted at startup, but the
+    profile's host is still enough: Codex gets an ``auth.command`` that runs
+    ``databricks auth token --profile`` at request time.
     """
     monkeypatch.setattr(
         "agent_meow.codex_native_app_server._find_codex_cli",
         lambda: sys.executable,
-    )
-    monkeypatch.setattr(
-        "agent_meow.codex_native_app_server._read_databrickscfg",
-        lambda _profile: None,
     )
     cfg_path = tmp_path / "databrickscfg"
     cfg_path.write_text(
@@ -269,7 +352,7 @@ def test_build_codex_native_server_bypass_emits_full_access_config(
     The ``--remote`` TUI launched with
     ``--dangerously-bypass-approvals-and-sandbox`` fixes the thread's
     approval/sandbox stance, but the chat/forwarder seam drives the SAME
-    thread through the app-server, so the app-server config must match â€”
+    thread through the app-server, so the app-server config must match â€?
     ``approval_policy="never"`` (no prompts a headless seam can't answer)
     and ``sandbox_mode="danger-full-access"`` (commands run with no command
     sandbox, the #657 ask). Without these the app-server-driven turns would
@@ -339,12 +422,15 @@ async def test_start_upserts_mcp_server_config_across_relaunches(
 [projects."/repo"]
 trust_level = "trusted"
 
-[mcp_servers.agent-meow] # stale generated table
+[mcp_servers.omnigent] # stale generated table
 command = "/old/python"
 args = ["old"]
 
 [mcp_servers.agent_meow.env] # stale generated env
 OLD = "1"
+
+[mcp_servers.agent_meow.tools.sys_session_rename] # stale generated approval
+approval_mode = "prompt"
 
 [mcp_servers.other]
 command = "other"
@@ -369,11 +455,11 @@ args = []
     config_path = codex_home / "config.toml"
     assert not config_path.is_symlink()
     rendered = config_path.read_text(encoding="utf-8")
-    assert rendered.count("[mcp_servers.agent-meow]") == 1
+    assert rendered.count("[mcp_servers.omnigent]") == 1
     assert "[mcp_servers.agent_meow.env]" not in rendered
     parsed = tomllib.loads(rendered)
     assert parsed["mcp_servers"]["other"]["command"] == "other"
-    assert parsed["mcp_servers"]["agent-meow"] == {
+    assert parsed["mcp_servers"]["omnigent"] == {
         "command": "/new/python",
         "args": [
             "-I",
@@ -383,6 +469,9 @@ args = []
             "--bridge-dir",
             str(bridge_dir),
         ],
+        "tools": {
+            "sys_session_rename": {"approval_mode": "approve"},
+        },
     }
 
 
@@ -410,9 +499,9 @@ async def test_start_writes_fresh_mcp_config_without_leading_blanks(
     await server.close()
 
     rendered = (codex_home / "config.toml").read_text(encoding="utf-8")
-    assert rendered.startswith("[mcp_servers.agent-meow]\n")
+    assert rendered.startswith("[mcp_servers.omnigent]\n")
     parsed = tomllib.loads(rendered)
-    assert parsed["mcp_servers"]["agent-meow"] == {
+    assert parsed["mcp_servers"]["omnigent"] == {
         "command": "/new/python",
         "args": [
             "-I",
@@ -422,14 +511,17 @@ async def test_start_writes_fresh_mcp_config_without_leading_blanks(
             "--bridge-dir",
             str(bridge_dir),
         ],
+        "tools": {
+            "sys_session_rename": {"approval_mode": "approve"},
+        },
     }
 
 
 async def test_untrusted_hook_is_trusted_via_batchwrite() -> None:
     """
-    An untrusted agent-meow hook is trusted with its currentHash.
+    An untrusted Omnigent hook is trusted with its currentHash.
 
-    This is the core flow: list â†’ write trusted_hash â†’ verify trusted.
+    This is the core flow: list â†?write trusted_hash â†?verify trusted.
     It fails if the batchWrite omits our key, writes the wrong hash, or
     skips the re-verification (which would let a still-untrusted hook
     through, silently disabling enforcement).
@@ -457,12 +549,12 @@ async def test_already_trusted_hook_skips_batchwrite() -> None:
     """
     client = _FakeCodexClient(hooks=[_hook("k1", _OUR_COMMAND, "trusted")])
     await trust_native_policy_hooks(client, cwd=_CWD)
-    assert _batchwrite_calls(client) == []  # nothing to trust â†’ no write
+    assert _batchwrite_calls(client) == []  # nothing to trust â†?no write
 
 
 async def test_missing_hook_raises() -> None:
     """
-    No discovered agent-meow hook fails loud (anti fail-open).
+    No discovered Omnigent hook fails loud (anti fail-open).
 
     If our hook was never registered/loaded, enforcement would silently
     not run. The flow must raise rather than return quietly. Fails if a
@@ -493,7 +585,7 @@ async def test_still_untrusted_after_write_raises() -> None:
 
 async def test_user_hooks_are_never_trusted() -> None:
     """
-    Only agent-meow hooks are trusted; user-declared hooks are left alone.
+    Only Omnigent hooks are trusted; user-declared hooks are left alone.
 
     The private CODEX_HOME symlinks the user's config.toml, which may
     declare its own hooks. Auto-trusting those would be a security hole.
@@ -521,7 +613,7 @@ async def test_missing_hook_error_reports_zero_hooks_loaded() -> None:
     Discovery failure with no hooks loaded names the likely cause.
 
     When codex loads zero hooks (the symptom of an invalid per-session
-    config.toml â†’ codex falls back to defaults), the "not discovered"
+    config.toml â†?codex falls back to defaults), the "not discovered"
     error must say so, not just report the bare cwd. Fails if the
     diagnostic suffix is dropped, which is what made the original report
     impossible to triage.
@@ -627,7 +719,7 @@ async def test_old_codex_skips_policy_hook_and_records_reason(
     _set_codex_version(monkeypatch, (0, 128, 0))
 
     server = _test_app_server(tmp_path, codex_home, bridge_dir, workspace)
-    # ap_server_url present â†’ enforcement was intended â†’ this is the
+    # ap_server_url present â†?enforcement was intended â†?this is the
     # security-relevant degrade path.
     server.ap_server_url = "http://127.0.0.1:9999"
     await server.start()
@@ -679,7 +771,7 @@ async def test_unknown_codex_version_treated_as_supported(
     An unparseable codex version does not disable enforcement.
 
     A flaky/odd ``codex --version`` must not silently drop policy
-    enforcement â€” we proceed to register + trust (a real trust failure is
+    enforcement â€?we proceed to register + trust (a real trust failure is
     then caught separately). Fails if ``None`` is treated as "too old".
     """
     real_codex_home = tmp_path / "real-codex-home"
@@ -709,7 +801,7 @@ async def test_trust_failure_is_fail_open_with_reason(
 
     This is the core behavior change: a hook that can't be trusted (e.g.
     "not discovered" on an otherwise-supported codex) must NOT raise out
-    of start() â€” the session runs, the reason is recorded for a web-UI
+    of start() â€?the session runs, the reason is recorded for a web-UI
     notice. Fails if start() re-raises (the old blocking behavior) or
     leaves the reason unset.
     """
@@ -724,7 +816,7 @@ async def test_trust_failure_is_fail_open_with_reason(
     _set_codex_version(monkeypatch, (0, 136, 0))
 
     async def _raise_trust(_self: CodexNativeAppServer) -> None:
-        raise RuntimeError("agent-meow policy hook was not discovered for cwd ...")
+        raise RuntimeError("Omnigent policy hook was not discovered for cwd ...")
 
     monkeypatch.setattr(CodexNativeAppServer, "_trust_policy_hooks", _raise_trust)
 
@@ -732,7 +824,7 @@ async def test_trust_failure_is_fail_open_with_reason(
     server.ap_server_url = "http://127.0.0.1:9999"
     await server.start()  # must NOT raise
     try:
-        # Hook was registered (supported codex) but trust failed â†’ degrade.
+        # Hook was registered (supported codex) but trust failed â†?degrade.
         assert (codex_home / "hooks.json").exists()
         assert server.policy_hook_disabled_reason is not None
         # The underlying trust error is carried into the reason.
@@ -750,7 +842,7 @@ def test_policy_hooks_timeout_outlasts_the_hooks_request_budget() -> None:
     the server parks the gate as a URL elicitation. Codex kills the hook
     subprocess after the ``timeout`` it reads from ``hooks.json``. If that
     timeout were shorter than the request budget, codex would kill the hook
-    mid-park and run the tool before the ASK verdict arrived â€” the regression
+    mid-park and run the tool before the ASK verdict arrived â€?the regression
     that let sub-agent tool calls slip past the cost gate (it was 30s).
     """
     settings = _codex_policy_hooks_settings(Path("/b"), "/venv/bin/python")
@@ -795,7 +887,7 @@ class TestPinCodexConfigModel:
         """The top-level ``model`` line is replaced; lookalike keys survive.
 
         ``model_provider`` / ``model_reasoning_effort`` also start with
-        "model", and keys inside tables must never be touched â€” both were
+        "model", and keys inside tables must never be touched â€?both were
         plausible regressions for a line-match implementation.
         """
         from agent_meow.codex_native_app_server import _pin_codex_config_model
@@ -862,349 +954,3 @@ class TestPinCodexConfigModel:
         # read_codex_config_model resolves codex-home under the bridge dir.
         _pin_codex_config_model(home, "databricks-gpt-5-4-mini")
         assert read_codex_config_model(bridge_dir) == "databricks-gpt-5-4-mini"
-
-
-class TestModelFlagHelpers:
-    """Unit coverage for the explicit ``--model`` launch-flag helpers."""
-
-    @pytest.mark.parametrize(
-        ("value", "expected"),
-        [
-            ("1", True),
-            ("true", True),
-            ("YES", True),
-            ("on", True),
-            ("0", False),
-            ("false", False),
-            ("", False),
-            ("maybe", False),
-        ],
-    )
-    def test_model_flag_enabled_reads_truthy_env(self, value: str, expected: bool) -> None:
-        """The opt-in flag honors the shared truthy-string convention."""
-        from agent_meow.codex_native_app_server import (
-            _MODEL_FLAG_ENV_VAR,
-            _model_flag_enabled,
-        )
-
-        assert _model_flag_enabled({_MODEL_FLAG_ENV_VAR: value}) is expected
-
-    def test_model_flag_disabled_when_env_absent(self) -> None:
-        """An unset flag defaults OFF (config.toml pin remains the only route)."""
-        from agent_meow.codex_native_app_server import _model_flag_enabled
-
-        assert _model_flag_enabled({}) is False
-
-    async def test_supports_model_flag_true_when_help_lists_it(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """``--model`` in ``codex --help`` output â†’ flag supported."""
-        from agent_meow.codex_native_app_server import _codex_supports_model_flag
-
-        async def _fake_exec(*_args: Any, **_kwargs: Any) -> Any:
-            return _HelpProc(b"Options:\n  -m, --model <MODEL>\n      Model to use\n")
-
-        monkeypatch.setattr("agent_meow.codex_native_app_server._create_subprocess_exec", _fake_exec)
-        assert await _codex_supports_model_flag("/usr/bin/codex") is True
-
-    async def test_supports_model_flag_false_when_help_omits_it(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A codex build whose ``--help`` lacks ``--model`` â†’ unsupported."""
-        from agent_meow.codex_native_app_server import _codex_supports_model_flag
-
-        async def _fake_exec(*_args: Any, **_kwargs: Any) -> Any:
-            return _HelpProc(b"Options:\n  -c, --config <key=value>\n")
-
-        monkeypatch.setattr("agent_meow.codex_native_app_server._create_subprocess_exec", _fake_exec)
-        assert await _codex_supports_model_flag("/usr/bin/codex") is False
-
-    async def test_supports_model_flag_false_when_probe_cannot_run(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """An OSError spawning the probe is treated as unsupported (flag skipped)."""
-        from agent_meow.codex_native_app_server import _codex_supports_model_flag
-
-        async def _fake_exec(*_args: Any, **_kwargs: Any) -> Any:
-            raise OSError("no codex")
-
-        monkeypatch.setattr("agent_meow.codex_native_app_server._create_subprocess_exec", _fake_exec)
-        assert await _codex_supports_model_flag("/usr/bin/codex") is False
-
-    async def test_supports_model_flag_ignores_lookalike_options_and_prose(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Only a real ``--model`` option definition counts, not lookalikes.
-
-        A build without ``--model`` may still mention a ``--model-provider``
-        flag or the word in prose; the matcher must not false-positive on
-        either and pass an unsupported flag to the launch.
-        """
-        from agent_meow.codex_native_app_server import _codex_supports_model_flag
-
-        async def _fake_exec(*_args: Any, **_kwargs: Any) -> Any:
-            return _HelpProc(
-                b"Options:\n"
-                b"      --model-provider <ID>\n"
-                b"          Override the default model provider\n"
-                b"  -c, --config <key=value>\n"
-                b"          e.g. set the --model in config.toml\n"
-            )
-
-        monkeypatch.setattr("agent_meow.codex_native_app_server._create_subprocess_exec", _fake_exec)
-        assert await _codex_supports_model_flag("/usr/bin/codex") is False
-
-
-@dataclass
-class _HelpProc:
-    """Minimal fake process for the ``codex --help`` capability probe.
-
-    :param out: Bytes returned as the probe's stdout.
-    """
-
-    out: bytes
-
-    async def communicate(self) -> tuple[bytes, bytes]:
-        """Return the scripted stdout (stderr is discarded by the probe)."""
-        return self.out, b""
-
-    def kill(self) -> None:
-        """No-op kill (the probe only kills on timeout, untested here)."""
-
-    async def wait(self) -> int:
-        """Return a success exit code."""
-        return 0
-
-
-@dataclass
-class _SpawnRecorder:
-    """Captures the argv + env handed to ``create_subprocess_exec`` in start().
-
-    Stands in for the real app-server subprocess so a startup unit test can
-    assert how the explicit ``--model`` flag is plumbed without spawning
-    codex. Exposes just the surface ``start`` and ``_stderr_loop`` touch.
-    """
-
-    argv: tuple[str, ...] | None = None
-    env: dict[str, str] | None = None
-    returncode: int | None = None
-
-    async def _record(self, *argv: str, env: dict[str, str], **_kwargs: Any) -> _SpawnRecorder:
-        self.argv = argv
-        self.env = env
-        return self
-
-    @property
-    def stderr(self) -> None:
-        """No stderr stream â€” the patched ``_stderr_loop`` never reads it."""
-        return None
-
-    async def wait(self) -> int:
-        """Return the (already terminated) exit code."""
-        return 0
-
-
-async def _model_flag_app_server(
-    tmp_path: Path,
-    *,
-    codex_path: str,
-    model: str | None,
-    env: dict[str, str],
-) -> CodexNativeAppServer:
-    """Build an app-server wrapper for the ``--model`` launch-flag tests.
-
-    :param tmp_path: Test temp dir.
-    :param codex_path: Codex executable path recorded into the argv.
-    :param model: Session-pinned model, or ``None``.
-    :param env: Spawn env (carries the opt-in flag).
-    :returns: Configured wrapper (not yet started).
-    """
-    codex_home = tmp_path / "codex-home"
-    bridge_dir = tmp_path / "bridge"
-    workspace = tmp_path / "workspace"
-    workspace.mkdir()
-    return CodexNativeAppServer(
-        codex_path=codex_path,
-        socket_path=tmp_path / "codex.sock",
-        codex_home=codex_home,
-        env=env,
-        config_overrides=[],
-        cwd=workspace,
-        bridge_dir=bridge_dir,
-        python_executable="/new/python",
-        pinned_model=model,
-    )
-
-
-def _patch_start_spawn(monkeypatch: pytest.MonkeyPatch, recorder: _SpawnRecorder) -> None:
-    """Stub the subprocess spawn + readiness waits used by ``start()``.
-
-    The version probe is stubbed to an old (pre-policy-hook) codex so
-    ``start`` skips hook registration â€” fewer side effects â€” and so its own
-    subprocess spawn never reaches the recorder. The recorder is wired only
-    to the final app-server spawn.
-
-    The spawn is captured by patching the module-level
-    ``_create_subprocess_exec`` indirection (which ``start`` now calls),
-    NOT ``â€¦app_server.asyncio.create_subprocess_exec`` â€” the latter walks the
-    real asyncio module singleton and leaks the mock into every other test in
-    the process.
-
-    :param monkeypatch: Pytest monkeypatch fixture.
-    :param recorder: Recorder whose ``_record`` captures the spawn argv/env.
-    """
-    _disable_codex_startup_rpc(monkeypatch)
-    _set_codex_version(monkeypatch, (0, 100, 0))
-    monkeypatch.setattr(
-        "agent_meow.codex_native_app_server._create_subprocess_exec", recorder._record
-    )
-    # The crash-reap registration path (added alongside this flag) is exercised
-    # by the process-registry tests; these flag tests only assert argv/env, so
-    # skip registration by denying the owner lock (the recorder has no pid).
-    monkeypatch.setattr(
-        "agent_meow.codex_native_app_server.acquire_codex_native_process_owner_lock",
-        lambda: None,
-    )
-
-    async def _noop_stderr(self: CodexNativeAppServer) -> None:
-        return None
-
-    monkeypatch.setattr(CodexNativeAppServer, "_stderr_loop", _noop_stderr)
-
-
-class TestModelFlagPlumbing:
-    """``start()`` plumbs the override per the opt-in flag and CLI support."""
-
-    async def test_flag_off_omits_model_flag_and_env(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """With the opt-in off, no ``--model`` flag is passed.
-
-        The config.toml pin (asserted below) remains the only route.
-        """
-        from agent_meow.codex_native_app_server import _MODEL_FLAG_ENV_VAR
-
-        # The opt-in is read from the server's own process env (os.environ);
-        # ensure it isn't ambiently set so "off" is genuinely off.
-        monkeypatch.delenv(_MODEL_FLAG_ENV_VAR, raising=False)
-        recorder = _SpawnRecorder()
-        _patch_start_spawn(monkeypatch, recorder)
-        server = await _model_flag_app_server(
-            tmp_path, codex_path="/usr/bin/codex", model="databricks-gpt-5-4-mini", env={}
-        )
-        await server.start()
-
-        assert recorder.argv is not None
-        assert "--model" not in recorder.argv
-        # config.toml pin still seeds the model regardless of the flag.
-        assert 'model = "databricks-gpt-5-4-mini"' in (
-            server.codex_home / "config.toml"
-        ).read_text(encoding="utf-8")
-
-    async def test_flag_on_with_cli_support_passes_global_model_flag(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Opt-in + a codex that supports ``--model`` â†’ global ``--model <id>``.
-
-        The flag must precede the ``app-server`` subcommand (it is a codex
-        global option).
-        """
-        from agent_meow.codex_native_app_server import _MODEL_FLAG_ENV_VAR
-
-        async def _supports(_codex_path: str) -> bool:
-            return True
-
-        monkeypatch.setattr(
-            "agent_meow.codex_native_app_server._codex_supports_model_flag", _supports
-        )
-        # The opt-in lives in the server's process env, NOT the cleaned codex
-        # spawn env (env={}): _clean_codex_env strips OMNIGENT_* keys, so a
-        # flag passed via env= would never be seen in production.
-        monkeypatch.setenv(_MODEL_FLAG_ENV_VAR, "1")
-        recorder = _SpawnRecorder()
-        _patch_start_spawn(monkeypatch, recorder)
-        server = await _model_flag_app_server(
-            tmp_path,
-            codex_path="/usr/bin/codex",
-            model="databricks-gpt-5-4-mini",
-            env={},
-        )
-        await server.start()
-
-        assert recorder.argv is not None
-        argv = list(recorder.argv)
-        assert "--model" in argv
-        model_idx = argv.index("--model")
-        assert argv[model_idx + 1] == "databricks-gpt-5-4-mini"
-        # Global option: precedes the subcommand.
-        assert model_idx < argv.index("app-server")
-
-    async def test_flag_on_without_cli_support_skips_model_flag(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Opt-in + a codex lacking ``--model`` -> no flag (config.toml pin carries it).
-
-        Passing an unknown flag would error, so an unsupported codex simply
-        doesn't get ``--model``; the always-on config.toml pin still launches
-        it on the right model.
-        """
-        from agent_meow.codex_native_app_server import _MODEL_FLAG_ENV_VAR
-
-        async def _unsupported(_codex_path: str) -> bool:
-            return False
-
-        monkeypatch.setattr(
-            "agent_meow.codex_native_app_server._codex_supports_model_flag", _unsupported
-        )
-        # Opt-in lives in the server process env, not the cleaned spawn env.
-        monkeypatch.setenv(_MODEL_FLAG_ENV_VAR, "1")
-        recorder = _SpawnRecorder()
-        _patch_start_spawn(monkeypatch, recorder)
-        server = await _model_flag_app_server(
-            tmp_path,
-            codex_path="/usr/bin/codex",
-            model="databricks-gpt-5-4-mini",
-            env={},
-        )
-        await server.start()
-
-        assert recorder.argv is not None
-        assert "--model" not in recorder.argv
-        # config.toml pin still seeds the model regardless of the flag.
-        assert 'model = "databricks-gpt-5-4-mini"' in (
-            server.codex_home / "config.toml"
-        ).read_text(encoding="utf-8")
-
-    async def test_flag_in_spawn_env_alone_does_not_enable(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """The flag in the cleaned spawn env (``self.env``) must NOT enable it.
-
-        Regression guard: ``self.env`` is the ``_clean_codex_env`` output,
-        whose prefix allowlist strips ``OMNIGENT_*`` keys, so the opt-in can
-        only arrive via the server's own ``os.environ``. If the gate ever
-        reverts to reading ``self.env``, this fails: the flag would appear to
-        work in a unit test that injects it via ``env=`` but be dead in prod.
-        """
-        from agent_meow.codex_native_app_server import _MODEL_FLAG_ENV_VAR
-
-        async def _supports(_codex_path: str) -> bool:
-            return True
-
-        monkeypatch.setattr(
-            "agent_meow.codex_native_app_server._codex_supports_model_flag", _supports
-        )
-        # NOT set in os.environ -- only smuggled into the spawn env.
-        monkeypatch.delenv(_MODEL_FLAG_ENV_VAR, raising=False)
-        recorder = _SpawnRecorder()
-        _patch_start_spawn(monkeypatch, recorder)
-        server = await _model_flag_app_server(
-            tmp_path,
-            codex_path="/usr/bin/codex",
-            model="databricks-gpt-5-4-mini",
-            env={_MODEL_FLAG_ENV_VAR: "1"},
-        )
-        await server.start()
-
-        assert recorder.argv is not None
-        assert "--model" not in recorder.argv

@@ -17,11 +17,11 @@ def _conversation_with_wrapper(wrapper: str) -> Conversation:
     :returns: Conversation with that label and a bound agent_id.
     """
     return Conversation(
-        id="conv_test",
+        id="e1f7c651c9f97fac088ea70ef633409d",
         created_at=0,
         updated_at=0,
-        root_conversation_id="conv_test",
-        agent_id="ag_native_test",
+        root_conversation_id="e1f7c651c9f97fac088ea70ef633409d",
+        agent_id="d5de5cef9504e12d06e729f3071d4f48",
         labels={"agent_meow.wrapper": wrapper},
     )
 
@@ -45,7 +45,7 @@ def test_codex_native_session_uses_codex_harness_for_web_messages() -> None:
     """
     Codex-native sessions use the native bypass and dispatch web
     messages into the ``codex-native`` harness instead of the normal
-    agent-meow persistence path.
+    Omnigent persistence path.
     """
     from agent_meow.server.routes import sessions as sessions_routes
 
@@ -53,7 +53,7 @@ def test_codex_native_session_uses_codex_harness_for_web_messages() -> None:
 
     assert sessions_routes._is_native_terminal_session(conv) is True
     # agent_id must be forwarded so the runner can resolve the harness
-    # spec on the first message, before POST /v1/sessions caches it â€”
+    # spec on the first message, before POST /v1/sessions caches it â€?
     # otherwise the turn falls back to "runner-test-default" and drops.
     assert sessions_routes._build_native_terminal_message_event(conv, _message_event()) == {
         "type": "message",
@@ -61,7 +61,7 @@ def test_codex_native_session_uses_codex_harness_for_web_messages() -> None:
         "content": [{"type": "input_text", "text": "hello"}],
         "model": "codex-native-ui",
         "harness": "codex-native",
-        "agent_id": "ag_native_test",
+        "agent_id": "d5de5cef9504e12d06e729f3071d4f48",
     }
 
 
@@ -78,7 +78,7 @@ def test_kiro_native_session_uses_kiro_harness_for_web_messages() -> None:
         "content": [{"type": "input_text", "text": "hello"}],
         "model": "kiro-native-ui",
         "harness": "kiro-native",
-        "agent_id": "ag_native_test",
+        "agent_id": "d5de5cef9504e12d06e729f3071d4f48",
     }
 
 
@@ -101,7 +101,7 @@ def test_antigravity_native_session_uses_antigravity_harness_for_web_messages() 
         "content": [{"type": "input_text", "text": "hello"}],
         "model": "antigravity-native-ui",
         "harness": "antigravity-native",
-        "agent_id": "ag_native_test",
+        "agent_id": "d5de5cef9504e12d06e729f3071d4f48",
     }
 
 
@@ -143,7 +143,7 @@ def test_transcript_forwarded_native_sessions_use_native_bypass() -> None:
 def test_unknown_wrapper_session_does_not_use_native_bypass() -> None:
     """
     Non-native wrapper labels must not enter the native terminal
-    bypass, otherwise agent-meow would skip persistence for regular sessions.
+    bypass, otherwise Omnigent would skip persistence for regular sessions.
     """
     from agent_meow.server.routes import sessions as sessions_routes
 
@@ -155,16 +155,16 @@ def test_unknown_wrapper_session_does_not_use_native_bypass() -> None:
 @pytest.mark.parametrize(
     "response,expected",
     [
-        # Runner attached a degrade reason â†’ it becomes the banner notice.
+        # Runner attached a degrade reason â†?it becomes the banner notice.
         (
             httpx.Response(200, json={"policy_hook_disabled_reason": "codex too old"}),
             "codex too old",
         ),
-        # Healthy session: no key â†’ no notice (enforcement active).
+        # Healthy session: no key â†?no notice (enforcement active).
         (httpx.Response(200, json={"resource": "view"}), None),
         # Whitespace-only reason is treated as absent (would fail ErrorData).
         (httpx.Response(200, json={"policy_hook_disabled_reason": "   "}), None),
-        # Non-dict body (defensive) â†’ no notice.
+        # Non-dict body (defensive) â†?no notice.
         (httpx.Response(200, json=["not", "a", "dict"]), None),
         # Non-JSON 2xx body must not crash the readiness probe.
         (httpx.Response(200, text="<<not json>>"), None),
@@ -179,7 +179,7 @@ def test_policy_notice_from_ensure_response(
     This gate decides whether a non-fatal "policy not enforced" banner is
     posted. It must return the reason verbatim when present, and ``None``
     (no banner) for a healthy session, a blank reason, a non-dict body, or
-    a non-JSON 2xx body â€” the last of which must not turn a successful
+    a non-JSON 2xx body â€?the last of which must not turn a successful
     readiness probe into a crash.
     """
     from agent_meow.server.routes import sessions as sessions_routes
@@ -197,7 +197,7 @@ def test_custom_native_harness_session_without_wrapper_label_is_native(
 
     A user agent that declares ``executor.harness: codex-native`` but is not a
     built-in ``*-native-ui`` wrapper (e.g. a ``polly`` orchestrator) carries NO
-    ``agent_meow.wrapper`` label â€” it renders chat-first on purpose. Its runner
+    ``agent_meow.wrapper`` label â€?it renders chat-first on purpose. Its runner
     still runs a native transcript forwarder, so the persist decision must
     treat it as native via the RESOLVED harness; otherwise the inbound user
     message is persisted AP-side AND mirrored by the forwarder (double input).
@@ -205,11 +205,11 @@ def test_custom_native_harness_session_without_wrapper_label_is_native(
     from agent_meow.server.routes import sessions as sessions_routes
 
     conv = Conversation(
-        id="conv_polly",
+        id="0e877e3fab4a2d5f5e386ef9f791eec0",
         created_at=0,
         updated_at=0,
-        root_conversation_id="conv_polly",
-        agent_id="ag_polly",
+        root_conversation_id="0e877e3fab4a2d5f5e386ef9f791eec0",
+        agent_id="61fc939de6af22c5349fa22ba6e62aca",
         labels={},  # chat-first: no wrapper / ui presentation labels
     )
     monkeypatch.setattr(sessions_routes, "_resolve_harness", lambda _c: "codex-native")
@@ -227,16 +227,16 @@ def test_custom_sdk_harness_session_is_not_native(
     """An SDK-harness session keeps the normal persist-before-forward path.
 
     SDK harnesses have no transcript forwarder, so the server's single
-    persisted copy is correct â€” the harness fallback must not over-fire.
+    persisted copy is correct â€?the harness fallback must not over-fire.
     """
     from agent_meow.server.routes import sessions as sessions_routes
 
     conv = Conversation(
-        id="conv_sdk",
+        id="9842b654446e37e810871eba75f58608",
         created_at=0,
         updated_at=0,
-        root_conversation_id="conv_sdk",
-        agent_id="ag_sdk",
+        root_conversation_id="9842b654446e37e810871eba75f58608",
+        agent_id="112e3284aa0a61b1b971de591fae1a26",
         labels={},
     )
     monkeypatch.setattr(sessions_routes, "_resolve_harness", lambda _c: "claude-sdk")

@@ -10,7 +10,7 @@ routes:
 
 2. ``DELETE /v1/sessions/{conversation_id}`` alias on the
    conversations router. Main has no DELETE on its sessions
-   router, but the UI needs one — the conversations DELETE
+   router, but the UI needs one �?the conversations DELETE
    handler already runs the full teardown (tasks, runner-side
    resource cleanup, session files), so the alias just delegates.
 
@@ -26,6 +26,8 @@ from __future__ import annotations
 import httpx
 import pytest
 
+from agent_meow.entities.conversation import MessageData, NewConversationItem
+from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
 from tests.server.helpers import (
     create_test_session,
 )
@@ -63,7 +65,7 @@ async def test_list_sessions_search_query_filters_by_title(client: httpx.AsyncCl
 
     Two seeded sessions get distinct titles; the search must return
     only the one whose title matches. Search target uses mixed case
-    ("Alpha…") with a lowercase query ("alpha") to prove the LIKE
+    ("Alpha�?) with a lowercase query ("alpha") to prove the LIKE
     is case-insensitive on both sides.
 
     :param client: HTTP client wired to the test app.
@@ -104,7 +106,7 @@ async def test_list_sessions_search_query_empty_is_noop(client: httpx.AsyncClien
     ids = [c["id"] for c in resp.json()["data"]]
     # The seeded session must still appear under the empty
     # search. Failure here means empty-string normalization was
-    # broken — the route would pass ``""`` to the store, which
+    # broken �?the route would pass ``""`` to the store, which
     # then filters by ``LIKE '%%'`` (matches any non-null title)
     # AND drops untitled rows, so a freshly-created untitled
     # session would vanish from the list.
@@ -137,13 +139,63 @@ async def test_list_sessions_search_query_excludes_null_titles(
     assert ids == [conv_a]
 
 
+async def test_list_sessions_search_snippet_on_content_match(
+    client: httpx.AsyncClient,
+    db_uri: str,
+) -> None:
+    """A content match returns a ``search_snippet``; a title match omits it.
+
+    The palette uses ``search_snippet`` to show *where* a session matched
+    when the hit is in the chat body (invisible in the title). Seed one
+    session whose body �?not title �?contains the query, and one whose
+    title matches, then assert only the content match carries the snippet.
+
+    :param client: HTTP client wired to the test app.
+    :param db_uri: Per-test SQLite database URI (same DB the app uses),
+        so an item can be appended directly through a store.
+    """
+    conv_content = await _create_session(
+        client,
+        name="snippet-content-agent",
+        title="General chat",
+    )
+    conv_title = await _create_session(
+        client,
+        name="snippet-title-agent",
+        title="deployment runbook",
+    )
+
+    conv_store = SqlAlchemyConversationStore(db_uri)
+    conv_store.append(
+        conv_content,
+        [
+            NewConversationItem(
+                type="message",
+                response_id="resp_snip",
+                data=MessageData(
+                    role="user",
+                    content=[{"type": "input_text", "text": "please fix the deployment pipeline"}],
+                ),
+            ),
+        ],
+    )
+
+    resp = await client.get("/v1/sessions", params={"search_query": "deployment"})
+    assert resp.status_code == 200
+    by_id = {c["id"]: c for c in resp.json()["data"]}
+    # Content match carries the excerpt with the matched term.
+    assert "deployment" in by_id[conv_content]["search_snippet"].lower()
+    # Title-only match: exclude_none drops the null field entirely.
+    assert "search_snippet" not in by_id[conv_title]
+
+
 # ── DELETE /v1/sessions/{conversation_id} ─────────────────────
 
 
 async def test_delete_session(client: httpx.AsyncClient) -> None:
     """``DELETE /v1/sessions/{id}`` removes the conversation row.
 
-    Routes via the conversations router's DELETE handler — that
+    Routes via the conversations router's DELETE handler �?that
     one runs the full teardown (tasks, runner-side resources,
     session files). Cross-check via the conversations GET that
     the row is gone, so the alias isn't silently acknowledging
@@ -151,7 +203,7 @@ async def test_delete_session(client: httpx.AsyncClient) -> None:
 
     The session is created via ``POST /v1/sessions`` (the only
     create path after the DBOS/responses removal); the delete
-    alias is agnostic of how the row was created — it just needs
+    alias is agnostic of how the row was created �?it just needs
     one to remove.
 
     :param client: HTTP client wired to the test app.

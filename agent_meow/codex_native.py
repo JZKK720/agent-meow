@@ -1,4 +1,4 @@
-"""Native Codex TUI wrapper for the agent-meow CLI."""
+"""Native Codex TUI wrapper for the Omnigent CLI."""
 
 from __future__ import annotations
 
@@ -37,6 +37,7 @@ from agent_meow.claude_native_bridge import url_component
 from agent_meow.codex_native_app_server import (
     CodexAppServerClient,
     CodexNativeAppServer,
+    _find_codex_cli,
     build_codex_native_server,
     build_codex_remote_args,
     client_for_transport,
@@ -60,12 +61,18 @@ from agent_meow.codex_native_forwarder import supervise_forwarder
 from agent_meow.codex_native_state import read_launch_state, write_launch_state
 from agent_meow.conversation_browser import conversation_url, open_conversation_link_if_enabled
 from agent_meow.entities.session_resources import terminal_resource_id
+from agent_meow.harness_availability import (
+    HARNESS_BINARY_MISSING,
+    HARNESS_NEEDS_AUTH,
+    HarnessUnavailableReason,
+)
 from agent_meow.host.daemon_launch import (
     error_text,
     launch_or_reuse_daemon_runner,
     wait_for_host_online,
     wait_for_runner_online,
 )
+from agent_meow.native_coding_agents import native_shell_terminal_spec
 from agent_meow.native_terminal import (
     DAEMON_HOST_ONLINE_TIMEOUT_S as _DAEMON_HOST_ONLINE_TIMEOUT_S,
 )
@@ -105,8 +112,6 @@ _UNBOUND_RUNNER_MESSAGE_FRAGMENT = "not bound to a runner"
 # hex + hyphens keeps it safe to interpolate into a rollout filename and a
 # ``codex resume`` argument (no path separators / traversal).
 _CODEX_THREAD_ID_RE = re.compile(r"^[0-9a-fA-F-]+$")
-_CODEX_AUTH_UNAVAILABLE_BINARY_MISSING = "binary-missing"
-_CODEX_AUTH_UNAVAILABLE_NEEDS_AUTH = "needs-auth"
 
 
 @dataclass(frozen=True)
@@ -120,11 +125,11 @@ def _resolve_codex_auth_source() -> _CodexAuthSource:
     """
     Resolve the local Codex auth source used for availability checks.
 
-    This is the seam for future managed credentials: once agent-meow can provide
+    This is the seam for future managed credentials: once Omnigent can provide
     centrally managed Codex credentials, this resolver can return that source
     instead. For now it deliberately defaults to Codex's local ``auth.json`` via
     the same ``CODEX_HOME`` source resolver used when launching native Codex, so
-    inherited private agent-meow homes map back to the user's real Codex home.
+    inherited private Omnigent homes map back to the user's real Codex home.
 
     :returns: Local Codex auth source to inspect synchronously.
     """
@@ -139,9 +144,9 @@ def _codex_auth_json_has_available_credential(auth_path: Path) -> bool:
     Presence-based by design. A real Codex ``auth.json`` (see the openai/codex
     ``AuthDotJson`` shape) is one of:
 
-    * **API-key** auth â€” a top-level ``OPENAI_API_KEY`` (or a
+    * **API-key** auth â€?a top-level ``OPENAI_API_KEY`` (or a
       ``personal_access_token`` from ``codex login --with-access-token``).
-    * **ChatGPT / OAuth** auth â€” a ``tokens`` object holding ``access_token`` /
+    * **ChatGPT / OAuth** auth â€?a ``tokens`` object holding ``access_token`` /
       ``refresh_token`` (and an ``id_token``).
 
     There is intentionally **no expiry judgement**. Codex stores no top-level
@@ -150,7 +155,7 @@ def _codex_auth_json_has_available_credential(auth_path: Path) -> bool:
     ``last_refresh``), so an "expired" ``access_token`` is the normal
     between-refresh state, not a deauth. Whether the ``refresh_token`` itself is
     still valid is server-side and opaque, so this local-only, side-effect-free
-    check only asks whether a credential is *configured* â€” not whether it would
+    check only asks whether a credential is *configured* â€?not whether it would
     authenticate. A revoked/truly-expired session can therefore still surface as
     available and fail at run time; catching that needs a network probe, which
     is out of scope here.
@@ -183,7 +188,7 @@ def _codex_auth_json_has_available_credential(auth_path: Path) -> bool:
     return False
 
 
-def _codex_auth_unavailable_reason() -> str | None:
+def _codex_auth_unavailable_reason() -> HarnessUnavailableReason | None:
     """
     Return why local Codex is unavailable, or ``None`` when available.
 
@@ -191,7 +196,7 @@ def _codex_auth_unavailable_reason() -> str | None:
     credential file the launch ignores. :func:`resolve_native_codex_launch`
     routes a Databricks-gateway / provider-configured setup through a Databricks
     profile or a ``model_provider`` override and mints its bearer at run time
-    (``databricks auth token`` / a provider auth command) â€” it never reads
+    (``databricks auth token`` / a provider auth command) â€?it never reads
     ``auth.json``. So on such a host ``auth.json`` is legitimately empty, and
     gating on it is a false negative (the launch works). Only when the launch
     defers to Codex's *own* login is ``auth.json`` the credential that decides
@@ -209,16 +214,12 @@ def _codex_auth_unavailable_reason() -> str | None:
         missing, malformed, or carries no credential, and ``None`` when a
         provider will route the launch or a login credential is configured.
         Token *validity* (revoked/expired refresh, an unreachable gateway) is
-        not judged locally â€” it surfaces at the first turn via the executor.
+        not judged locally â€?it surfaces at the first turn via the executor.
     """
-    if shutil.which(_DEFAULT_CODEX_COMMAND) is None:
-        return _CODEX_AUTH_UNAVAILABLE_BINARY_MISSING
-    # ponytail: resolve_native_codex_launch runs once per codex spelling
-    # (codex / codex-native / native-codex â†’ 3Ã—) per hello frame; on a host with
-    # NO configured provider it also runs ambient detection (a localhost ollama
-    # probe + a `claude auth status` subprocess). It's off the event loop and
-    # only bites unconfigured hosts â€” memoize the launch across the map build in
-    # configured_harness_map if that cost ever shows up.
+    if _find_codex_cli() is None:
+        return HARNESS_BINARY_MISSING
+    # On a host with no configured provider this may run ambient detection.
+    # configured_harness_map shares one probe across all Codex aliases.
     try:
         launch = resolve_native_codex_launch(model=None)
         routes_through_provider = (
@@ -231,7 +232,7 @@ def _codex_auth_unavailable_reason() -> str | None:
         return None
     source = _resolve_codex_auth_source()
     if not _codex_auth_json_has_available_credential(source.auth_path):
-        return _CODEX_AUTH_UNAVAILABLE_NEEDS_AUTH
+        return HARNESS_NEEDS_AUTH
     return None
 
 
@@ -270,7 +271,7 @@ class _ResumeWorkspaceActionOption:
 @dataclass
 class LaunchedCodexTerminal:
     """
-    Terminal resource returned by the agent-meow runner launch path.
+    Terminal resource returned by the Omnigent runner launch path.
 
     :param terminal_id: Terminal resource id, e.g.
         ``"terminal_codex_main"``.
@@ -290,7 +291,7 @@ class PreparedCodexTerminal:
     """
     Prepared native Codex terminal attachment details.
 
-    :param session_id: agent-meow session/conversation id.
+    :param session_id: Omnigent session/conversation id.
     :param terminal_id: Terminal resource id to attach.
     :param tmux_socket: Local tmux socket path when the runner exposed
         one and it is reachable from this CLI process.
@@ -335,11 +336,11 @@ def run_codex_native(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch Codex TUI in an agent-meow terminal.
+    Launch Codex TUI in an Omnigent terminal.
 
-    :param server: Resolved agent-meow server URL, e.g.
+    :param server: Resolved Omnigent server URL, e.g.
         ``"http://127.0.0.1:8123"``.
-    :param session_id: Optional existing agent-meow conversation id,
+    :param session_id: Optional existing Omnigent conversation id,
         e.g. ``"conv_abc123"``.
     :param codex_args: Raw Codex CLI args to pass before ``resume``.
     :param resume_picker: ``True`` runs the Codex-native picker.
@@ -357,7 +358,7 @@ def run_codex_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Codex requires a resolved agent-meow server URL. The CLI should call "
+            "Codex requires a resolved Omnigent server URL. The CLI should call "
             "_ensure_backend before run_codex_native."
         )
     with TemporaryDirectory(prefix="omnigent-codex-native-") as tmpdir:
@@ -378,7 +379,7 @@ def _record_launch_for_fresh_session(session_id: str) -> None:
     """
     Persist the wrapper's current cwd as the Codex session launch state.
 
-    :param session_id: Newly created agent-meow conversation id, e.g.
+    :param session_id: Newly created Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :returns: None.
     """
@@ -402,7 +403,7 @@ def _align_working_directory_with_session(session_id: str) -> None:
     present and points at a different existing directory, ask whether
     to switch there before the runner and app-server sample cwd.
 
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :returns: None. Side-effect-only; may change process cwd.
     :raises click.ClickException: If recorded state exists but no
         viable resume directory exists, or if the user cancels.
@@ -496,7 +497,7 @@ def _materialize_codex_agent_spec(
     model: str | None,
 ) -> Path:
     """
-    Write the terminal-first agent spec used by ``agent-meow codex``.
+    Write the terminal-first agent spec used by ``omnigent codex``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :param model: Optional model id, e.g. ``"gpt-5.4-mini"``.
@@ -526,21 +527,11 @@ def _materialize_codex_agent_spec(
         },
         # Declare a default shell terminal so the relay advertises the
         # ``sys_terminal_*`` family to the wrapped codex (the relay's
-        # gate is a non-empty ``terminals:`` block on this spec).
-        # Caller process / no sandbox matches the ``os_env`` stance
-        # above â€” the native CLI already runs unsandboxed on the
-        # user's workspace.
-        "terminals": {
-            "shell": {
-                "command": "bash",
-                "allow_cwd_override": True,
-                "os_env": {
-                    "type": "caller_process",
-                    "cwd": ".",
-                    "sandbox": {"type": "none"},
-                },
-            },
-        },
+        # gate is a non-empty ``terminals:`` block on this spec). Its
+        # command follows the user's ``$SHELL`` (zsh/fish/bash); caller
+        # process / no sandbox matches the ``os_env`` stance above â€?the
+        # native CLI already runs unsandboxed on the user's workspace.
+        "terminals": native_shell_terminal_spec(),
     }
     yaml_path.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
     return yaml_path
@@ -558,10 +549,10 @@ def _run_with_local_server(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Start a local agent-meow server, launch Codex, and attach to it.
+    Start a local Omnigent server, launch Codex, and attach to it.
 
     :param spec_path: Generated Codex wrapper agent spec.
-    :param session_id: Optional existing agent-meow session id.
+    :param session_id: Optional existing Omnigent session id.
     :param resume_picker: When ``True``, run the Codex-native picker.
     :param codex_args: Raw Codex CLI args.
     :param command: Codex executable to run.
@@ -652,12 +643,12 @@ def _run_with_remote_server(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch Codex on an agent-meow server via a daemon-spawned runner.
+    Launch Codex on an Omnigent server via a daemon-spawned runner.
 
-    :param base_url: Remote agent-meow server base URL, e.g.
+    :param base_url: Remote Omnigent server base URL, e.g.
         ``"https://example.databricks.com"``.
     :param spec_path: Generated Codex wrapper agent spec.
-    :param session_id: Optional existing agent-meow session id.
+    :param session_id: Optional existing Omnigent session id.
     :param resume_picker: When ``True``, run the Codex-native picker.
     :param codex_args: Raw Codex CLI args.
     :param model: Optional Codex model id.
@@ -750,7 +741,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the agent-meow server at {base_url}. "
+            f"Could not reach the omnigent server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc
@@ -775,9 +766,9 @@ async def _prepare_codex_terminal_via_daemon(
     terminal. The CLI only persists launch intent, waits for the terminal
     resource, and attaches to it.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"https://example.databricks.com"``.
-    :param headers: HTTP auth headers for agent-meow requests.
+    :param headers: HTTP auth headers for Omnigent requests.
     :param session_id: Existing session id to resume, or ``None`` for a
         fresh session.
     :param session_bundle: Gzipped Codex wrapper bundle. Required when
@@ -869,7 +860,7 @@ async def _prepare_codex_terminal_via_daemon(
         )
         _update_startup_progress(startup_progress, "Waiting for runner...")
         await wait_for_runner_online(client, runner_id, timeout_s=_DAEMON_RUNNER_ONLINE_TIMEOUT_S)
-        # Must run AFTER wait_for_runner_online â€” unregistered runners
+        # Must run AFTER wait_for_runner_online â€?unregistered runners
         # 400 on replace_runner_id. The daemon bind paths don't route
         # through replace_runner_id, so without this re-bind a stopped
         # session stays stopped.
@@ -903,7 +894,7 @@ async def _ensure_codex_terminal_on_runner(
     """
     Ask the bound runner to ensure the Codex app-server and terminal exist.
 
-    :param client: HTTP client pointed at the agent-meow server.
+    :param client: HTTP client pointed at the Omnigent server.
     :param session_id: Session id, e.g. ``"conv_abc123"``.
     :returns: None.
     :raises click.ClickException: If the runner rejects the ensure request.
@@ -928,7 +919,7 @@ async def _wait_for_codex_terminal_ready(
     """
     Wait until the runner exposes the Codex terminal resource.
 
-    :param client: HTTP client pointed at the agent-meow server.
+    :param client: HTTP client pointed at the Omnigent server.
     :param session_id: Session id, e.g. ``"conv_abc123"``.
     :param timeout_s: Max seconds to wait, e.g. ``60.0``.
     :returns: Terminal details including direct tmux attach metadata when
@@ -956,16 +947,16 @@ async def _post_initial_prompt(
     auth: httpx.Auth | None,
 ) -> None:
     """
-    Send the first Codex prompt through agent-meow instead of the app-server.
+    Send the first Codex prompt through Omnigent instead of the app-server.
 
-    :param base_url: agent-meow server base URL.
-    :param headers: HTTP auth headers for agent-meow requests.
+    :param base_url: Omnigent server base URL.
+    :param headers: HTTP auth headers for Omnigent requests.
     :param session_id: Session id, e.g. ``"conv_abc123"``.
     :param prompt: User prompt text.
     :param auth: Optional refresh-capable HTTP auth for long-lived
         Databricks-backed sessions.
     :returns: None.
-    :raises click.ClickException: If agent-meow rejects the prompt.
+    :raises click.ClickException: If Omnigent rejects the prompt.
     """
     async with httpx.AsyncClient(
         base_url=base_url,
@@ -1004,7 +995,7 @@ async def _prepare_codex_terminal(
     """
     Create/bind a session, start app-server, and launch Codex TUI.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers.
     :param session_id: Optional existing session id.
     :param runner_id: Runner id to bind.
@@ -1078,8 +1069,8 @@ async def _prepare_codex_terminal(
         codex_home = codex_home_for_bridge_dir(bridge_dir)
         clear_bridge_state(bridge_dir)
         # Route across all offerings: a configured provider (configure
-        # harness), the Databricks ucode profile, or Codex's own login â€”
-        # so `agent-meow codex` honors the provider selection like the
+        # harness), the Databricks ucode profile, or Codex's own login â€?
+        # so `omnigent codex` honors the provider selection like the
         # in-process codex harness. Resolved before any rollout synthesis
         # so session_meta can name the provider the launch routes through.
         _codex_launch = resolve_native_codex_launch(model=model)
@@ -1096,7 +1087,7 @@ async def _prepare_codex_terminal(
         # Listen on a loopback WebSocket, mirroring the host-spawned
         # runner (``runner/app.py`` ``_auto_create_codex_terminal``).
         # Codex CLI ``app-server`` only accepts ``stdio://``, ``ws://``,
-        # or ``off`` â€” it dropped ``unix://`` â€” so a ``unix://`` listen
+        # or ``off`` â€?it dropped ``unix://`` â€?so a ``unix://`` listen
         # exits immediately and the terminal (and the web-UI Terminal
         # pill) never appears.
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as _probe:
@@ -1149,7 +1140,7 @@ async def _prepare_codex_terminal(
                 remote_url=codex_ws_url,
                 env=codex_terminal_env(app_server),
                 # Give the --remote TUI the same provider overrides as
-                # the app-server so it resolves the agent-meow provider
+                # the app-server so it resolves the Omnigent provider
                 # and skips the OpenAI-login onboarding screen.
                 config_overrides=tuple(app_server.config_overrides),
             )
@@ -1195,7 +1186,7 @@ async def _attach_with_forwarder(
     """
     Attach to the Codex terminal while forwarding app-server events.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers.
     :param prepared: Prepared terminal details.
     :param prompt: Optional first prompt to send.
@@ -1287,7 +1278,7 @@ def _start_codex_forwarder(
     """
     Start the transcript forwarder for a prepared Codex terminal.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers.
     :param prepared: Prepared terminal details with a known thread id.
     :param auth: Optional long-lived HTTP auth for remote sessions.
@@ -1325,7 +1316,7 @@ async def _initialize_fresh_terminal_thread(
     terminal sharing while letting Codex query the real attached
     terminal during startup.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers.
     :param prepared: Prepared terminal details whose ``thread_id`` is
         still ``None``.
@@ -1361,9 +1352,9 @@ async def _attach_terminal_resource(
     recover: Any | None,
 ) -> None:
     """
-    Attach the current terminal to the prepared agent-meow terminal resource.
+    Attach the current terminal to the prepared Omnigent terminal resource.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers.
     :param prepared: Prepared terminal details.
     :param recover: Optional reconnect recovery callback.
@@ -1393,10 +1384,10 @@ async def _attach_terminal_resource(
 
 def _active_codex_session_id(bridge_dir: Path) -> str | None:
     """
-    Return the active agent-meow session id for a native Codex bridge.
+    Return the active Omnigent session id for a native Codex bridge.
 
     :param bridge_dir: Native Codex bridge directory.
-    :returns: agent-meow session id, e.g. ``"conv_abc123"``, or ``None`` when
+    :returns: Omnigent session id, e.g. ``"conv_abc123"``, or ``None`` when
         bridge state has not been written yet.
     """
     state = read_bridge_state(bridge_dir)
@@ -1439,8 +1430,8 @@ async def _attach_direct_tmux(socket_path: Path, tmux_target: str) -> None:
 
     This avoids the local WebSocket + PTY relay used for browser and
     non-local runner attaches. ``TMUX`` is removed from the child
-    environment so users who run ``agent-meow codex`` inside their own
-    tmux session can still attach to agent-meow' private tmux server.
+    environment so users who run ``omnigent codex`` inside their own
+    tmux session can still attach to Omnigent' private tmux server.
 
     :param socket_path: Runner tmux socket path.
     :param tmux_target: Tmux target to attach, e.g. ``"main"``.
@@ -1480,7 +1471,7 @@ async def _create_codex_session(
     :param terminal_launch_args: Pass-through Codex CLI args to persist
         for runner-owned terminal launch, e.g.
         ``["--config", "approval_policy=on-request"]``.
-    :returns: New agent-meow session id.
+    :returns: New Omnigent session id.
     """
     labels = dict(_SESSION_LABELS)
     if bridge_id is not None:
@@ -1509,10 +1500,10 @@ async def _create_codex_session(
 
 async def _fetch_codex_session(client: httpx.AsyncClient, session_id: str) -> dict[str, Any]:
     """
-    Fetch an existing agent-meow session.
+    Fetch an existing Omnigent session.
 
     :param client: HTTP client pointed at AP.
-    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
+    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
     :returns: Decoded session payload.
     """
     resp = await client.get(f"/v1/sessions/{url_component(session_id)}")
@@ -1535,7 +1526,7 @@ def _mint_codex_thread_id() -> str:
     Codex thread ids are UUIDv7 (time-ordered), e.g.
     ``"019e96aa-0be2-7343-8d3b-6f914d60936b"``. A fork writes the cloned
     rollout under a freshly minted id (rather than reusing the source's)
-    so the clone gets its own agent-meow ``external_session_id`` â€” mirroring how
+    so the clone gets its own Omnigent ``external_session_id`` â€?mirroring how
     claude-native assigns the clone a new transcript uuid. The stdlib has
     no UUIDv7 generator before Python 3.14, so we assemble one per
     RFC 9562 Â§5.7 (48-bit millisecond timestamp + version + variant +
@@ -1562,7 +1553,7 @@ def _find_codex_rollout(codex_home: Path, thread_id: str) -> Path | None:
     ``session_meta.id``. We locate it by that filename suffix.
 
     :param codex_home: A per-session private ``CODEX_HOME``, e.g.
-        ``Path("~/.agent_meow/codex-native/<hash>/codex-home")``.
+        ``Path("~/.omnigent/codex-native/<hash>/codex-home")``.
     :param thread_id: Codex thread id / rollout stem, e.g.
         ``"019e96aa-0be2-7343-8d3b-6f914d60936b"``.
     :returns: Path to the most recent matching rollout, or ``None`` when
@@ -1588,9 +1579,9 @@ def _copy_rollout_with_cwd(
 
     A rollout interleaves *structural* fields (the live thread settings
     Codex reads on resume) with *historical* content (recorded shell
-    commands, file paths, messages â€” facts about what already happened).
-    Only two structural fields carry the working directory â€”
-    ``session_meta.payload.cwd`` and each ``turn_context.payload.cwd`` â€”
+    commands, file paths, messages â€?facts about what already happened).
+    Only two structural fields carry the working directory â€?
+    ``session_meta.payload.cwd`` and each ``turn_context.payload.cwd`` â€?
     plus the thread id at ``session_meta.payload.id``. Those are rewritten
     to the clone's id / workspace; every other line (and every other
     ``cwd`` mention, which lives inside message/tool bodies) is copied
@@ -1623,7 +1614,7 @@ def _copy_rollout_with_cwd(
                 ) from exc
             record_type = record.get("type") if isinstance(record, dict) else None
             if record_type not in ("session_meta", "turn_context"):
-                # Historical record â€” write the original bytes back unchanged
+                # Historical record â€?write the original bytes back unchanged
                 # so message/tool bodies (and their incidental cwd mentions)
                 # are preserved exactly, including whitespace and key order.
                 dst.write(line)
@@ -1655,15 +1646,15 @@ def _clone_codex_rollout(
     Codex's resume reads the rollout from the app-server's ``CODEX_HOME``,
     which is per-session-private (keyed by the conversation id), so the
     source rollout must be copied into the *clone's* ``CODEX_HOME`` under a
-    thread id we assign. We rewrite ``session_meta.payload.id`` â†’
-    *target_thread_id* and the two structural ``cwd`` fields â†’
+    thread id we assign. We rewrite ``session_meta.payload.id`` â†?
+    *target_thread_id* and the two structural ``cwd`` fields â†?
     *clone_workspace* (see :func:`_copy_rollout_with_cwd`), preserving the
     record order and all historical content. The clone then launches
     ``codex resume <target_thread_id>``. Writing the file ourselves before
     launch (rather than pointing resume at the source's home) is what makes
     the worktree case work and keeps the clone's history isolated from the
     source. This is the codex-native mirror of
-    :func:`~?agent_meow.claude_native._clone_claude_transcript`. See
+    :func:`agent_meow.claude_native._clone_claude_transcript`. See
     designs/FORK_SESSION_UX.md.
 
     :param source_session_id: The SOURCE conversation id, used to locate
@@ -1675,7 +1666,7 @@ def _clone_codex_rollout(
         clone's ``external_session_id`` is set to this so a later relaunch
         resumes it via the normal path.
     :param clone_codex_home: The clone's per-session private ``CODEX_HOME``,
-        e.g. ``Path("~/.agent_meow/codex-native/<hash>/codex-home")``.
+        e.g. ``Path("~/.omnigent/codex-native/<hash>/codex-home")``.
     :param clone_workspace: The resolved directory the clone will run in
         (its worktree or same dir). Written into the structural ``cwd``
         fields. Pass an already-resolved path.
@@ -1727,17 +1718,17 @@ async def _ensure_local_codex_resume_rollout(
     """
     Ensure Codex has a local rollout JSONL for cold resume.
 
-    Cross-machine resume has the agent-meow conversation and Codex thread id on
+    Cross-machine resume has the Omnigent conversation and Codex thread id on
     the server, but not necessarily the app-server's local
     ``$CODEX_HOME/sessions/.../rollout-*-<thread>.jsonl`` file. Codex
     ``resume <thread>`` reads that local rollout, so before launching a
     known-thread terminal we synthesize the rollout from committed AP
     items when the local rollout is missing. Existing local rollout files
     are left untouched because Codex treats them as append-only runtime
-    state, not a cache that agent-meow should rewrite.
+    state, not a cache that Omnigent should rewrite.
 
-    :param client: HTTP client pointed at the agent-meow server.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client pointed at the Omnigent server.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param external_session_id: Codex thread id, e.g.
         ``"019e96aa-0be2-7343-8d3b-6f914d60936b"``.
     :param codex_home: Per-session private ``CODEX_HOME`` whose
@@ -1747,17 +1738,17 @@ async def _ensure_local_codex_resume_rollout(
         structural rollout cwd fields match the terminal cwd.
     :param model_provider: Provider id this session's launch routes through,
         e.g. ``"omnigent_databricks"`` (see
-        :func:`~?agent_meow.codex_native_app_server.codex_session_meta_model_provider`).
+        :func:`agent_meow.codex_native_app_server.codex_session_meta_model_provider`).
         Written into ``session_meta`` so codex's thread-store backfill can
         resolve the provider when it indexes the rollout.
     :param codex_path: Codex CLI executable used to stamp the real
         ``cli_version`` into ``session_meta``, e.g. ``"/usr/local/bin/codex"``.
-        ``None`` (or an unparseable version probe) falls back to ``"0.0.0"`` â€”
+        ``None`` (or an unparseable version probe) falls back to ``"0.0.0"`` â€?
         codex >= 0.133 requires the field to be *present* to parse the
         rollout, but treats the value as informational, so a flaky probe
         must not cost the carried history.
     :returns: Path to the existing or written rollout.
-    :raises click.ClickException: If agent-meow history cannot be fetched or the
+    :raises click.ClickException: If Omnigent history cannot be fetched or the
         rollout cannot be written, or if the persisted Codex thread id is
         unsafe for use in a rollout filename.
     """
@@ -1812,7 +1803,7 @@ def _codex_resume_rollout_path(codex_home: Path, external_session_id: str) -> Pa
     layout.
 
     :param codex_home: Per-session private ``CODEX_HOME``, e.g.
-        ``Path("~/.agent_meow/codex-native/x/codex-home")``.
+        ``Path("~/.omnigent/codex-native/x/codex-home")``.
     :param external_session_id: Codex thread id / rollout stem, e.g.
         ``"019e96aa-0be2-7343-8d3b-6f914d60936b"``.
     :returns: Rollout JSONL path to overwrite or create.
@@ -1833,10 +1824,10 @@ async def _fetch_all_session_items_for_codex_resume(
     session_id: str,
 ) -> list[dict[str, Any]]:
     """
-    Fetch committed agent-meow session items in chronological order.
+    Fetch committed Omnigent session items in chronological order.
 
-    :param client: HTTP client pointed at the agent-meow server.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client pointed at the Omnigent server.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :returns: Flat API item dicts from
         ``GET /v1/sessions/{id}/items``.
     :raises click.ClickException: If an item page cannot be fetched or
@@ -1891,10 +1882,10 @@ def _codex_rollout_records_from_session_items(
     cli_version: str,
 ) -> list[dict[str, Any]]:
     """
-    Convert agent-meow session items into Codex rollout JSONL records.
+    Convert Omnigent session items into Codex rollout JSONL records.
 
     The generated records follow Codex's rollout shape: one
-    ``session_meta`` record, a ``turn_context`` before each agent-meow response
+    ``session_meta`` record, a ``turn_context`` before each Omnigent response
     group, Responses-style ``response_item`` payloads for user, assistant,
     and tool history, and an ``event_msg`` mirror after each user/assistant
     message. All three session_meta extras and the event_msg mirrors are
@@ -1903,12 +1894,12 @@ def _codex_rollout_records_from_session_items(
     parse ("does not start with session metadata"), an absent
     ``model_provider`` breaks ``thread/resume`` config load once the
     thread-store backfill indexes the rollout, and without ``event_msg``
-    records codex reconstructs zero visible turns â€” the resume "succeeds"
+    records codex reconstructs zero visible turns â€?the resume "succeeds"
     but the thread opens empty.
 
-    :param items: Flat agent-meow item dicts in chronological order, e.g.
+    :param items: Flat Omnigent item dicts in chronological order, e.g.
         ``{"type": "message", "role": "user", "content": [...]}``.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
         Used for deterministic synthetic turn ids.
     :param external_session_id: Codex thread id, e.g.
         ``"019e96aa-0be2-7343-8d3b-6f914d60936b"``.
@@ -1929,7 +1920,7 @@ def _codex_rollout_records_from_session_items(
                 "id": external_session_id,
                 "timestamp": timestamp,
                 "cwd": str(cwd),
-                "originator": "agent-meow",
+                "originator": "omnigent",
                 "cli_version": cli_version,
                 "model_provider": model_provider,
             },
@@ -1941,7 +1932,7 @@ def _codex_rollout_records_from_session_items(
         if _session_item_response_id(item) in interrupted_response_ids:
             continue
         # Compaction items carry the post-compaction context. Emit a
-        # Compacted rollout record and discard all prior records â€” the
+        # Compacted rollout record and discard all prior records â€?the
         # replacement_history replaces them.
         if item.get("type") == "compaction":
             compacted_msgs = item.get("compacted_messages")
@@ -1957,7 +1948,7 @@ def _codex_rollout_records_from_session_items(
                 w_id = item.get("window_id")
                 if w_id is not None:
                     compacted_record["payload"]["window_id"] = w_id
-                # Replace all prior response_item records â€” the
+                # Replace all prior response_item records â€?the
                 # replacement_history is the new context baseline.
                 # Keep only session_meta and turn_context records.
                 records = [r for r in records if r.get("type") in ("session_meta",)]
@@ -2052,14 +2043,14 @@ def _codex_event_msg_record_for_message(
 
 def _interrupted_response_ids_from_session_items(items: list[dict[str, Any]]) -> set[str]:
     """
-    Return response ids for agent-meow turns that ended interrupted.
+    Return response ids for Omnigent turns that ended interrupted.
 
-    A Codex interrupted turn is persisted in agent-meow as visible transcript text
+    A Codex interrupted turn is persisted in Omnigent as visible transcript text
     plus an ``interrupted`` assistant marker. For native resume, the whole
     response group must be skipped so Codex does not restore the cancelled
     user request, partial assistant answer, or any partial tool history.
 
-    :param items: Flat agent-meow item dicts in chronological order, e.g.
+    :param items: Flat Omnigent item dicts in chronological order, e.g.
         ``[{"response_id": "codex_turn_123", "interrupted": True}]``.
     :returns: Response ids to exclude from synthesized Codex rollout
         history, e.g. ``{"codex_turn_123"}``.
@@ -2076,9 +2067,9 @@ def _interrupted_response_ids_from_session_items(items: list[dict[str, Any]]) ->
 
 def _session_item_response_id(item: dict[str, Any]) -> str | None:
     """
-    Extract a non-empty agent-meow response id from a flat item.
+    Extract a non-empty Omnigent response id from a flat item.
 
-    :param item: Flat agent-meow item dict, e.g.
+    :param item: Flat Omnigent item dict, e.g.
         ``{"response_id": "codex_turn_123"}``.
     :returns: Response id, e.g. ``"codex_turn_123"``, or ``None``.
     """
@@ -2088,12 +2079,12 @@ def _session_item_response_id(item: dict[str, Any]) -> str | None:
 
 def _codex_response_item_from_session_item(item: dict[str, Any]) -> dict[str, Any] | None:
     """
-    Convert one agent-meow item into one Codex ``response_item`` payload.
+    Convert one Omnigent item into one Codex ``response_item`` payload.
 
-    :param item: Flat agent-meow item dict, e.g.
+    :param item: Flat Omnigent item dict, e.g.
         ``{"type": "function_call", "name": "shell", ...}``.
     :returns: Responses-style item payload, or ``None`` for unsupported
-        or empty agent-meow items.
+        or empty Omnigent items.
     """
     payload = _codex_response_item_payload(item)
     if payload is None:
@@ -2106,14 +2097,14 @@ def _codex_response_item_from_session_item(item: dict[str, Any]) -> dict[str, An
 
 def _is_interrupted_assistant_session_item(item: dict[str, Any]) -> bool:
     """
-    Return whether an agent-meow item is an interrupted assistant partial.
+    Return whether an Omnigent item is an interrupted assistant partial.
 
-    agent-meow persists these messages so the web transcript can show the text and
+    Omnigent persists these messages so the web transcript can show the text and
     the interrupted label after refresh. They must not be synthesized back
     into Codex's native rollout during resume, or Codex may treat a partial
     answer as completed history and continue from a cancelled turn.
 
-    :param item: Flat agent-meow item dict, e.g.
+    :param item: Flat Omnigent item dict, e.g.
         ``{"type": "message", "role": "assistant", "interrupted": True}``.
     :returns: ``True`` for interrupted assistant messages.
     """
@@ -2126,11 +2117,11 @@ def _is_interrupted_assistant_session_item(item: dict[str, Any]) -> bool:
 
 def _codex_response_item_payload(item: dict[str, Any]) -> dict[str, Any] | None:
     """
-    Convert one supported agent-meow item into a Codex response payload body.
+    Convert one supported Omnigent item into a Codex response payload body.
 
-    :param item: Flat agent-meow item dict.
+    :param item: Flat Omnigent item dict.
     :returns: Payload without the optional item id, or ``None`` for
-        unsupported / empty agent-meow items.
+        unsupported / empty Omnigent items.
     """
     item_type = item.get("type")
     if item_type == "message":
@@ -2144,9 +2135,9 @@ def _codex_response_item_payload(item: dict[str, Any]) -> dict[str, Any] | None:
 
 def _codex_message_payload_from_session_item(item: dict[str, Any]) -> dict[str, Any] | None:
     """
-    Convert an agent-meow message item into a Codex message payload.
+    Convert an Omnigent message item into a Codex message payload.
 
-    :param item: agent-meow message item.
+    :param item: Omnigent message item.
     :returns: Codex message payload, or ``None`` for unsupported roles
         or empty text content.
     """
@@ -2167,12 +2158,12 @@ def _codex_function_call_payload_from_session_item(
     item: dict[str, Any],
 ) -> dict[str, Any] | None:
     """
-    Convert an agent-meow function call item into a Codex function call payload.
+    Convert an Omnigent function call item into a Codex function call payload.
 
-    :param item: agent-meow function call item.
+    :param item: Omnigent function call item.
     :returns: Codex function call payload, or ``None`` when optional
         routing fields are absent.
-    :raises click.ClickException: If the agent-meow item violates required tool
+    :raises click.ClickException: If the Omnigent item violates required tool
         history fields.
     """
     name = item.get("name")
@@ -2185,7 +2176,7 @@ def _codex_function_call_payload_from_session_item(
     if not isinstance(arguments, str):
         item_id = item.get("id")
         raise click.ClickException(
-            "Cannot synthesize Codex resume rollout: agent-meow function_call "
+            "Cannot synthesize Codex resume rollout: Omnigent function_call "
             f"{item_id!r} has non-string arguments."
         )
     return {
@@ -2200,12 +2191,12 @@ def _codex_function_call_output_payload_from_session_item(
     item: dict[str, Any],
 ) -> dict[str, Any] | None:
     """
-    Convert an agent-meow function output item into a Codex function output payload.
+    Convert an Omnigent function output item into a Codex function output payload.
 
-    :param item: agent-meow function output item.
+    :param item: Omnigent function output item.
     :returns: Codex function output payload, or ``None`` when optional
         routing fields are absent.
-    :raises click.ClickException: If the agent-meow item violates required tool
+    :raises click.ClickException: If the Omnigent item violates required tool
         output fields.
     """
     call_id = item.get("call_id")
@@ -2215,7 +2206,7 @@ def _codex_function_call_output_payload_from_session_item(
     if not isinstance(output, str):
         item_id = item.get("id")
         raise click.ClickException(
-            "Cannot synthesize Codex resume rollout: agent-meow function_call_output "
+            "Cannot synthesize Codex resume rollout: Omnigent function_call_output "
             f"{item_id!r} has non-string output."
         )
     return {
@@ -2231,11 +2222,11 @@ def _codex_content_blocks_from_api_content(
     api_type: str,
 ) -> list[dict[str, Any]]:
     """
-    Extract text blocks from an agent-meow content array for Codex rollout items.
+    Extract text blocks from an Omnigent content array for Codex rollout items.
 
-    :param content: agent-meow content array, e.g.
+    :param content: Omnigent content array, e.g.
         ``[{"type": "input_text", "text": "hello"}]``.
-    :param api_type: agent-meow block type to include, e.g.
+    :param api_type: Omnigent block type to include, e.g.
         ``"input_text"`` or ``"output_text"``.
     :returns: Codex/OpenAI content blocks preserving *api_type*.
     """
@@ -2259,16 +2250,16 @@ def _codex_turn_id_for_session_item(
     index: int,
 ) -> str:
     """
-    Return a Codex turn id for an agent-meow item.
+    Return a Codex turn id for an Omnigent item.
 
-    Codex-native forwarder stores agent-meow ``response_id`` as
+    Codex-native forwarder stores Omnigent ``response_id`` as
     ``"codex_<turn_id>"`` for mirrored items. When that prefix is not
     present, build a deterministic synthetic turn id from stable inputs.
 
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param external_session_id: Codex thread id, e.g.
         ``"019e96aa-0be2-7343-8d3b-6f914d60936b"``.
-    :param item: Flat agent-meow item dict.
+    :param item: Flat Omnigent item dict.
     :param index: Zero-based fallback item index.
     :returns: Codex turn id, e.g. ``"turn_abc123"``.
     """
@@ -2303,10 +2294,10 @@ async def _patch_external_session_id(
     thread_id: str,
 ) -> None:
     """
-    Persist the native Codex thread id on the agent-meow session.
+    Persist the native Codex thread id on the Omnigent session.
 
     :param client: HTTP client pointed at AP.
-    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
+    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
     :param thread_id: Codex thread id.
     :returns: None.
     """
@@ -2325,7 +2316,7 @@ async def _wait_for_thread_started(client: CodexAppServerClient) -> str:
     Wait for the Codex TUI to create its remote app-server thread.
 
     Thin CLI-flavoured wrapper over the canonical
-    :func:`~?agent_meow.codex_native_forwarder.wait_for_thread_started`
+    :func:`agent_meow.codex_native_forwarder.wait_for_thread_started`
     (shared with the host-spawned runner auto-create), translating its
     plain exceptions into ``click.ClickException`` for the CLI.
 
@@ -2386,7 +2377,7 @@ async def _launch_codex_terminal(
     Launch the server-backed Codex terminal resource.
 
     :param client: HTTP client pointed at AP.
-    :param session_id: agent-meow session id.
+    :param session_id: Omnigent session id.
     :param codex_args: Raw Codex CLI args.
     :param command: Codex executable.
     :param thread_id: Codex thread id to resume. ``None`` starts a
@@ -2481,7 +2472,7 @@ async def _find_running_codex_terminal(
     and cold-resume the Codex thread.
 
     :param client: HTTP client pointed at AP.
-    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
+    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
     :returns: Terminal details, or ``None`` when absent.
     :raises click.ClickException: If the server rejects the lookup for
         a reason other than "not currently attachable".
@@ -2535,7 +2526,7 @@ def _codex_terminal_lookup_is_reattach_miss(resp: httpx.Response) -> bool:
 
 def _response_error_code(resp: httpx.Response) -> str | None:
     """
-    Extract a structured agent-meow error code from *resp* if present.
+    Extract a structured Omnigent error code from *resp* if present.
 
     :param resp: HTTP response from AP.
     :returns: ``error.code`` when the JSON body has one, otherwise
@@ -2556,7 +2547,7 @@ def _response_error_code(resp: httpx.Response) -> str | None:
 
 def _runner_offline_message(message: str) -> bool:
     """
-    Return whether *message* is the agent-meow stale-runner error shape.
+    Return whether *message* is the Omnigent stale-runner error shape.
 
     :param message: Error text extracted from AP, e.g.
         ``"runner 'runner_abc' is offline for conversation 'conv_123'"``.
@@ -2576,9 +2567,9 @@ async def _close_codex_terminal(
     """
     Best-effort close of the AP-side Codex terminal resource.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers.
-    :param session_id: agent-meow session id.
+    :param session_id: Omnigent session id.
     :param terminal_id: Terminal resource id.
     :returns: None.
     """
@@ -2604,7 +2595,7 @@ def _resolve_session_id_for_resume(
     """
     Translate resume inputs into a concrete Codex-native session id.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers.
     :param session_id: Explicit session id, e.g. ``"conv_abc123"``.
     :param resume_picker: ``True`` for bare ``--resume``.
@@ -2623,7 +2614,7 @@ def _resolve_session_id_for_resume(
         """
         Run the async Codex-native picker.
 
-        :returns: Selected agent-meow session id, or ``None``.
+        :returns: Selected Omnigent session id, or ``None``.
         """
         async with OmnigentClient(
             base_url=base_url,

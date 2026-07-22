@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+import contextlib
 import json
 import tempfile
 import unittest
@@ -23,7 +24,6 @@ from agent_meow.inner.codex_executor import (
     _prompt_for_turn,
     _to_codex_input_items,
 )
-from agent_meow.inner.databricks_executor import DatabricksCredentials
 from agent_meow.inner.executor import (
     ExecutorError,
     ReasoningChunk,
@@ -141,6 +141,7 @@ class TestCodexExecutor(unittest.TestCase):
         )
         self.assertIn('model="databricks-gpt-5-4-mini"', overrides)
         self.assertIn('model_provider="omnigent_databricks"', overrides)
+        self.assertIn("model_supports_reasoning_summaries=true", overrides)
         self.assertTrue(any("/ai-gateway/codex/v1" in item for item in overrides))
         self.assertFalse(any("/serving-endpoints" in item for item in overrides))
         self.assertTrue(any('auth={command="sh"' in item for item in overrides))
@@ -169,7 +170,7 @@ class TestCodexExecutor(unittest.TestCase):
         parsed = tomllib.loads("\n".join(overrides))
         # The whole payload round-trips as the literal model name.
         self.assertEqual(parsed["model"], payload)
-        # The injected auth command did not survive â€” the legit one did.
+        # The injected auth command did not survive â€?the legit one did.
         provider = parsed["model_providers"]["omnigent_databricks"]
         self.assertEqual(provider["auth"]["args"], ["-c", real_auth])
 
@@ -177,11 +178,8 @@ class TestCodexExecutor(unittest.TestCase):
         with (
             patch("agent_meow.inner.codex_executor._find_codex_cli", return_value="/usr/bin/codex"),
             patch(
-                "agent_meow.inner.codex_executor._read_databrickscfg",
-                return_value=DatabricksCredentials(
-                    host="https://example.cloud.databricks.com",
-                    token="dapi_test_token",
-                ),
+                "agent_meow.inner.codex_executor._databricks_gateway_host",
+                return_value="https://example.cloud.databricks.com",
             ),
         ):
             executor = CodexExecutor(gateway=True)
@@ -209,11 +207,8 @@ class TestCodexExecutor(unittest.TestCase):
             patch("agent_meow.inner.codex_executor._find_codex_cli", return_value="/usr/bin/codex"),
             patch.dict("os.environ", {}, clear=True),
             patch(
-                "agent_meow.inner.codex_executor._read_databrickscfg",
-                return_value=DatabricksCredentials(
-                    host="https://example-profile-workspace.cloud.databricks.com",
-                    token="profile_token",
-                ),
+                "agent_meow.inner.codex_executor._databricks_gateway_host",
+                return_value="https://example-profile-workspace.cloud.databricks.com",
             ),
         ):
             executor = CodexExecutor(
@@ -229,7 +224,7 @@ class TestCodexExecutor(unittest.TestCase):
         self.assertNotIn("DATABRICKS_TOKEN", executor._env)
         # The fix: with an explicit profile, the bearer-token helper selects by
         # --profile (unambiguous), never --host. A regression to --host makes a
-        # workspace with two profiles on one host return an empty token â†’ 401.
+        # workspace with two profiles on one host return an empty token â†?401.
         self.assertTrue(
             any(
                 "databricks auth token --profile" in override
@@ -241,8 +236,8 @@ class TestCodexExecutor(unittest.TestCase):
         )
         # `--force-refresh` only exists in Databricks CLI >= v0.296.0, so it
         # must be applied via a `--help` capability probe ($force), never
-        # passed unconditionally â€” an older CLI rejects the unknown flag and
-        # yields an empty token â†’ silent 401.
+        # passed unconditionally â€?an older CLI rejects the unknown flag and
+        # yields an empty token â†?silent 401.
         auth_override = next(
             o for o in executor._codex_config_overrides if "databricks auth token" in o
         )
@@ -254,7 +249,7 @@ class TestCodexExecutor(unittest.TestCase):
         with (
             patch("agent_meow.inner.codex_executor._find_codex_cli", return_value="/usr/bin/codex"),
             patch.dict("os.environ", {}, clear=True),
-            patch("agent_meow.inner.codex_executor._read_databrickscfg") as read_cfg,
+            patch("agent_meow.inner.codex_executor._databricks_gateway_host") as gateway_host,
         ):
             executor = CodexExecutor(
                 gateway=True,
@@ -265,7 +260,7 @@ class TestCodexExecutor(unittest.TestCase):
                 model="databricks-gpt-5-4-mini",
             )
 
-        read_cfg.assert_not_called()
+        gateway_host.assert_not_called()
         self.assertEqual(
             executor._env["DATABRICKS_HOST"],
             "https://example.databricks.com",
@@ -308,8 +303,7 @@ class TestCodexExecutor(unittest.TestCase):
         with (
             patch("agent_meow.inner.codex_executor._find_codex_cli", return_value="/usr/bin/codex"),
             patch.dict("os.environ", {}, clear=True),
-            patch("agent_meow.inner.codex_executor._read_databrickscfg", return_value=None),
-            patch("agent_meow.inner.codex_executor._read_databrickscfg_host", return_value=None),
+            patch("agent_meow.inner.codex_executor._databricks_gateway_host", return_value=None),
         ):
             with self.assertRaises(EnvironmentError):
                 CodexExecutor(gateway=True)
@@ -405,11 +399,8 @@ class TestCodexExecutor(unittest.TestCase):
         async def _t():
             fake_session = _FakeAppSession([[TurnComplete(response="done")]])
             with patch(
-                "agent_meow.inner.codex_executor._read_databrickscfg",
-                return_value=DatabricksCredentials(
-                    host="https://example.cloud.databricks.com",
-                    token="dapi_test_token",
-                ),
+                "agent_meow.inner.codex_executor._databricks_gateway_host",
+                return_value="https://example.cloud.databricks.com",
             ):
                 executor = CodexExecutor(
                     codex_path="/bin/echo",
@@ -538,7 +529,7 @@ class TestCodexExecutor(unittest.TestCase):
         Codex's ``TurnStartParams`` has no ``effort`` field, so an effort set
         on ``turn/start`` is silently dropped by serde and never takes effect.
         It must go through ``thread/settings/update`` (whose
-        ``ThreadSettingsUpdateParams`` carries ``effort``) â€” the same path the
+        ``ThreadSettingsUpdateParams`` carries ``effort``) â€?the same path the
         TUI ``/model`` picker uses.
         """
 
@@ -567,7 +558,7 @@ class TestCodexExecutor(unittest.TestCase):
 
             inject_task = asyncio.create_task(_inject_turn_completed())
             # Drive the turn to completion (consume the event stream for its
-            # side effects â€” the RPCs we assert on below).
+            # side effects â€?the RPCs we assert on below).
             async for _event in session.run_turn(
                 messages=[{"role": "user", "content": "hi"}],
                 tools=[],
@@ -585,9 +576,67 @@ class TestCodexExecutor(unittest.TestCase):
             # to this turn, and turn/start carries no (dropped) effort field.
             self.assertEqual(methods, ["thread/start", "thread/settings/update", "turn/start"])
             settings_params = session._request.await_args_list[1].args[1]
-            self.assertEqual(settings_params, {"threadId": "thread-1", "effort": "high"})
+            self.assertEqual(
+                settings_params,
+                {
+                    "threadId": "thread-1",
+                    "effort": "high",
+                    "summary": "detailed",
+                },
+            )
             turn_params = session._request.await_args_list[2].args[1]
             self.assertNotIn("effort", turn_params)
+
+        _run(_t())
+
+    def test_app_server_run_turn_falls_back_when_settings_update_is_unsupported(self):
+        """Older app-server builds accept effort only on ``turn/start``."""
+
+        async def _t():
+            session = _CodexAppServerSession(
+                codex_path="/bin/echo",
+                cwd="/tmp/workspace",
+                env={},
+                tool_executor=None,
+            )
+            session.start = AsyncMock()
+            session._proc = _FakeProcess()
+            session._request = AsyncMock(
+                side_effect=[
+                    {"result": {"thread": {"id": "thread-1"}}},
+                    RuntimeError(
+                        "{'code': -32600, 'message': 'Invalid request: unknown variant "
+                        "`thread/settings/update`'}"
+                    ),
+                    {"result": {"turn": {"id": "turn-1"}}},
+                ]
+            )
+
+            async def _inject_turn_completed() -> None:
+                await asyncio.sleep(0.01)
+                session._events.put_nowait(
+                    {"method": "turn/completed", "params": {"turn": {"id": "turn-1"}}}
+                )
+
+            inject_task = asyncio.create_task(_inject_turn_completed())
+            async for _event in session.run_turn(
+                messages=[{"role": "user", "content": "hi"}],
+                tools=[],
+                system_prompt="",
+                model="gpt-5.4-mini",
+                cwd=".",
+                sandbox="workspace-write",
+                reasoning_effort="low",
+            ):
+                pass
+            await inject_task
+
+            methods = [call.args[0] for call in session._request.await_args_list]
+            self.assertEqual(methods, ["thread/start", "thread/settings/update", "turn/start"])
+            turn_params = session._request.await_args_list[2].args[1]
+            self.assertEqual(turn_params["effort"], "low")
+            self.assertEqual(turn_params["summary"], "detailed")
+            self.assertEqual(session._applied_effort, "low")
 
         _run(_t())
 
@@ -620,7 +669,7 @@ class TestCodexExecutor(unittest.TestCase):
 
             inject_task = asyncio.create_task(_inject_turn_completed())
             # Drive the turn to completion (consume the event stream for its
-            # side effects â€” the RPCs we assert on below).
+            # side effects â€?the RPCs we assert on below).
             async for _event in session.run_turn(
                 messages=[{"role": "user", "content": "again"}],
                 tools=[],
@@ -1461,7 +1510,7 @@ class TestCodexExecutor(unittest.TestCase):
     def test_app_server_run_turn_reasoning_deltas_yield_reasoning_chunks(self):
         """item/reasoning/textDelta and item/reasoning/summaryTextDelta events
         yield ReasoningChunk events so the idle watchdog resets during long
-        think phases (regression guard for JZKK720/agent-meow#738)."""
+        think phases (regression guard for omnigent-ai/omnigent#738)."""
 
         async def _t():
             session = _CodexAppServerSession(
@@ -1590,7 +1639,7 @@ class TestCodexExecutor(unittest.TestCase):
 #
 # Function-based pytest tests for the retryable-flag behavior on the
 # two codex app-server failure paths. Kept outside the unittest class
-# above to comply with the project-wide function-based test rule â€”
+# above to comply with the project-wide function-based test rule â€?
 # the class-style tests above pre-date that rule.
 
 
@@ -1620,7 +1669,7 @@ async def test_run_turn_turn_failed_emits_retryable_executor_error() -> None:
     session._request = AsyncMock(return_value={"result": {"turn": {"id": "turn-1"}}})
 
     # ``turnId`` must be set in ``params`` so the startup drain at
-    # codex_executor.py:550 preserves the event for the main loop â€”
+    # codex_executor.py:550 preserves the event for the main loop â€?
     # real codex frames carry it alongside the nested ``turn.id``.
     await session._events.put(
         {
@@ -1645,7 +1694,7 @@ async def test_run_turn_turn_failed_emits_retryable_executor_error() -> None:
         )
     ]
 
-    # Exactly one ExecutorError â€” anything else means the terminal
+    # Exactly one ExecutorError â€?anything else means the terminal
     # event stream leaked extra events past the failure.
     error_events = [e for e in events if isinstance(e, ExecutorError)]
     assert len(error_events) == 1, (
@@ -1661,7 +1710,7 @@ async def test_run_turn_method_error_emits_retryable_executor_error() -> None:
     JSON-RPC frame (typical for runtime / tool-execution failures),
     ``run_turn`` must emit ``ExecutorError(retryable=True)`` so the
     workflow's retry policy can reissue. Matches the behavior for
-    ``turn/failed`` â€” both paths carry transient provider-side errors.
+    ``turn/failed`` â€?both paths carry transient provider-side errors.
     """
     session = _CodexAppServerSession(
         codex_path="/bin/echo",
@@ -1864,7 +1913,7 @@ def test_format_codex_error_params_extracts_provider_error_from_nested_error() -
     What breaks if this fails: users hit a config mismatch (Claude
     model on a codex harness, bad profile, unsupported model on the
     Databricks Responses passthrough) and see only the bare fallback
-    "Codex App Server error" â€” no clue why. The 2026-04-28 user
+    "Codex App Server error" â€?no clue why. The 2026-04-28 user
     report was exactly this: codex+claude-opus-4-6 on Databricks
     surfaced as "Codex App Server error" with zero diagnostic info.
     """
@@ -1889,7 +1938,7 @@ def test_format_codex_error_params_extracts_provider_error_from_nested_error() -
     # alongside it.
     assert "Responses API passthrough is not supported" in result
     assert "BAD_REQUEST" in result
-    # The bare fallback string must NOT appear â€” that's the "you
+    # The bare fallback string must NOT appear â€?that's the "you
     # silently ate my diagnostic" symptom this fix prevents.
     assert "no params" not in result
     # The codex-envelope's ``codexErrorInfo: "other"`` is generic
@@ -1901,7 +1950,7 @@ def test_format_codex_error_params_extracts_provider_error_from_nested_error() -
 def test_format_codex_error_params_falls_back_to_raw_when_no_known_fields() -> None:
     """
     A truly opaque error frame (no message / code / data / nested
-    error.message) must still surface SOMETHING â€” dump the raw
+    error.message) must still surface SOMETHING â€?dump the raw
     params dict. We never want the user to see a bare
     "Codex App Server error" with no hint about what went wrong.
     """
@@ -1916,7 +1965,7 @@ def test_format_codex_error_params_falls_back_to_raw_when_no_known_fields() -> N
 def test_format_codex_error_params_handles_missing_params() -> None:
     """
     None / empty / non-dict params must produce a stable fallback
-    string â€” never crash, never empty.
+    string â€?never crash, never empty.
     """
     from agent_meow.inner.codex_executor import _format_codex_error_params
 
@@ -1930,7 +1979,7 @@ def test_extract_codex_last_turn_usage_splits_cached_out_of_input() -> None:
 
     Codex's ``inputTokens`` is inclusive of cached tokens, so the cached
     portion is moved into ``cache_read_input_tokens`` and ``input_tokens``
-    keeps only the non-cached remainder â€” otherwise the server prices cached
+    keeps only the non-cached remainder â€?otherwise the server prices cached
     tokens at the full input rate. If ``input_tokens`` came back as 7 (not 6)
     and there were no ``cache_read_input_tokens`` key, the split regressed.
     """
@@ -1959,7 +2008,7 @@ def test_extract_codex_last_turn_usage_splits_cached_out_of_input() -> None:
 
 
 def test_extract_codex_last_turn_usage_no_cache_key_when_uncached() -> None:
-    """No ``cachedInputTokens`` â‡’ input unchanged and no cache_read key added.
+    """No ``cachedInputTokens`` â‡?input unchanged and no cache_read key added.
 
     Guards against synthesizing a phantom cache bucket (which would shrink
     the non-cached input the server bills at the full rate).
@@ -1999,7 +2048,7 @@ def test_populate_codex_skills_all(tmp_path: Path) -> None:
 
     Mirrors the SDK semantics where ``skills='all'`` exposes
     every host-discovered skill. The populator is the codex
-    equivalent â€” it materializes the union of all sources into
+    equivalent â€?it materializes the union of all sources into
     the per-conversation ``$CODEX_HOME/skills/`` so codex's
     auto-discovery surfaces them all.
     """
@@ -2018,7 +2067,7 @@ def test_populate_codex_skills_all(tmp_path: Path) -> None:
     # Every skill from both sources is present as a symlink. If
     # the populator only scanned one source, this would miss
     # either ``gamma`` (bundle-only) or ``alpha``/``beta``
-    # (host-only) â€” the failure message would name the missing
+    # (host-only) â€?the failure message would name the missing
     # entry.
     assert sorted(p.name for p in target.iterdir()) == ["alpha", "beta", "gamma"]
     assert all((target / name).is_symlink() for name in ["alpha", "beta", "gamma"])
@@ -2028,9 +2077,9 @@ def test_populate_codex_skills_none(tmp_path: Path) -> None:
     """``skills_filter='none'`` leaves the target dir absent
     entirely.
 
-    Codex's discovery walks ``$CODEX_HOME/skills/`` â€” if the
+    Codex's discovery walks ``$CODEX_HOME/skills/`` â€?if the
     directory doesn't exist, no skills load. This is the
-    hermetic-agent regression-pin: agent-meow must produce no skill
+    hermetic-agent regression-pin: Omnigent must produce no skill
     surface for ``skills: none`` even when host
     ``~/.codex/skills/`` is populated.
     """
@@ -2044,7 +2093,7 @@ def test_populate_codex_skills_none(tmp_path: Path) -> None:
 
     # Target dir must not exist (codex's scan no-ops cleanly when
     # the path is absent). A directory with zero entries would
-    # still pass codex's existence check but is wasteful â€” the
+    # still pass codex's existence check but is wasteful â€?the
     # absent-dir contract is tighter.
     assert not target.exists()
 
@@ -2054,7 +2103,7 @@ def test_populate_codex_skills_named_subset(tmp_path: Path) -> None:
     skills.
 
     Names not present in any source are silently skipped (the
-    SDK semantic â€” missing skill is no-op, not an error).
+    SDK semantic â€?missing skill is no-op, not an error).
     Names present in multiple sources resolve to the
     first-listed source (so callers can express priority by
     ordering ``sources``).
@@ -2078,8 +2127,8 @@ def test_populate_codex_skills_named_subset(tmp_path: Path) -> None:
 
     # ``alpha`` resolves to the bundle copy (first source listed).
     # ``gamma`` is bundle-only. ``beta`` is host-only and not
-    # named â€” must NOT appear. ``missing_skill`` doesn't exist
-    # anywhere â€” must be silently dropped, not raised.
+    # named â€?must NOT appear. ``missing_skill`` doesn't exist
+    # anywhere â€?must be silently dropped, not raised.
     assert sorted(p.name for p in target.iterdir()) == ["alpha", "gamma"]
     alpha_target = (target / "alpha").resolve()
     assert alpha_target == (bundle_skills / "alpha").resolve(), (
@@ -2114,7 +2163,7 @@ def test_populate_codex_skills_from_bundle_links_bundle_skills(tmp_path: Path) -
 def test_populate_codex_skills_from_bundle_none_leaves_no_dir(tmp_path: Path) -> None:
     """
     ``skills_filter="none"`` produces no ``skills/`` dir even when the
-    bundle ships skills â€” the codex-native parity for a hermetic agent.
+    bundle ships skills â€?the codex-native parity for a hermetic agent.
     """
     from agent_meow.inner.codex_executor import populate_codex_skills_from_bundle
 
@@ -2146,6 +2195,8 @@ def test_populate_codex_home_config_symlinks_auth_and_config(tmp_path: Path) -> 
     source.mkdir()
     (source / "auth.json").write_text('{"auth_mode": "chatgpt"}')
     (source / "config.toml").write_text('[default]\nmodel = "gpt-5.4"')
+    (source / "AGENTS.md").write_text("global guidance")
+    (source / "AGENTS.override.md").write_text("global override")
     target = tmp_path / "temp_codex_home"
     target.mkdir()
 
@@ -2154,10 +2205,48 @@ def test_populate_codex_home_config_symlinks_auth_and_config(tmp_path: Path) -> 
     # auth.json: symlink so live credential refreshes propagate.
     assert (target / "auth.json").is_symlink()
     assert (target / "auth.json").read_text() == '{"auth_mode": "chatgpt"}'
+    assert (target / "AGENTS.md").is_symlink()
+    assert (target / "AGENTS.md").read_text() == "global guidance"
+    assert (target / "AGENTS.override.md").is_symlink()
+    assert (target / "AGENTS.override.md").read_text() == "global override"
     # config.toml: independent copy so /model writes stay session-local.
     assert not (target / "config.toml").is_symlink()
     assert (target / "config.toml").is_file()
     assert (target / "config.toml").read_text() == '[default]\nmodel = "gpt-5.4"'
+
+
+def test_populate_codex_home_config_minimal_mode_keeps_only_provider_routing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Title sidecars retain auth/provider config without loading extensions."""
+    from agent_meow.inner.codex_executor import _populate_codex_home_config
+
+    source = tmp_path / "real_codex_home"
+    source.mkdir()
+    (source / "auth.json").write_text('{"auth_mode": "chatgpt"}')
+    (source / "AGENTS.md").write_text("global guidance")
+    (source / "config.toml").write_text(
+        'model_provider = "Databricks"\n'
+        '[model_providers.Databricks]\nname = "Databricks"\nbase_url = "https://example"\n'
+        "[plugins.example]\nenabled = true\n"
+        '[mcp_servers.github]\nenabled = true\ncommand = "github-mcp"\n'
+        '[marketplaces.example]\nsource = "https://example"\n'
+    )
+    target = tmp_path / "temp_codex_home"
+    target.mkdir()
+    monkeypatch.setenv("HARNESS_CODEX_MINIMAL_CONFIG", "1")
+
+    _populate_codex_home_config(target, source)
+
+    assert (target / "auth.json").is_symlink()
+    assert not (target / "AGENTS.md").exists()
+    config_text = (target / "config.toml").read_text()
+    assert 'model_provider = "Databricks"' in config_text
+    assert "[model_providers.Databricks]" in config_text
+    assert "plugins" not in config_text
+    assert "mcp_servers" not in config_text
+    assert "marketplaces" not in config_text
 
 
 def test_populate_codex_home_config_config_toml_copy_is_isolated(tmp_path: Path) -> None:
@@ -2188,7 +2277,7 @@ def test_populate_codex_home_config_missing_source_dir(tmp_path: Path) -> None:
     """When the source ``CODEX_HOME`` dir doesn't exist (fresh install),
     nothing is created in the target.
 
-    Handles the case where codex has never been run locally â€” the
+    Handles the case where codex has never been run locally â€?the
     populator must no-op cleanly rather than raising on a missing path.
     """
     from agent_meow.inner.codex_executor import _populate_codex_home_config
@@ -2230,7 +2319,7 @@ def test_app_server_start_uses_real_home_for_private_inherited_codex_home(
     """
     Empty inherited ``CODEX_HOME`` does not hide the real user login at startup.
 
-    agent-meow itself can be launched from a Codex-managed environment
+    Omnigent itself can be launched from a Codex-managed environment
     where ``CODEX_HOME`` points at an isolated private home. If that
     inherited home lacks Codex auth/config files, app-server startup must
     bridge from the user's real ``~/.codex`` equivalent so Codex sessions
@@ -2243,7 +2332,7 @@ def test_app_server_start_uses_real_home_for_private_inherited_codex_home(
     """
     home = tmp_path / "home"
     monkeypatch.setenv("HOME", str(home))
-    inherited = home / ".agent-meow" / "codex-native" / "abc123" / "codex-home"
+    inherited = home / ".omnigent" / "codex-native" / "abc123" / "codex-home"
     inherited.mkdir(parents=True)
     monkeypatch.setenv("CODEX_HOME", str(inherited))
     real_codex_home = home / ".codex"
@@ -2312,7 +2401,7 @@ def test_app_server_start_preserves_custom_home_from_inherited_private_symlink(
     Nested startup preserves a parent's custom Codex home source.
 
     A top-level launch may bridge auth/config from an explicit custom
-    ``CODEX_HOME`` into an agent-meow private home. A nested launch inherits
+    ``CODEX_HOME`` into an Omnigent private home. A nested launch inherits
     only that private path, so it must infer the original custom source from
     the existing symlink targets instead of falling back to ``~/.codex``.
 
@@ -2331,7 +2420,7 @@ def test_app_server_start_preserves_custom_home_from_inherited_private_symlink(
     default_home.mkdir(parents=True)
     (default_home / "auth.json").write_text('{"auth_mode": "default"}')
     (default_home / "config.toml").write_text('model_provider = "default"')
-    inherited = home / ".agent-meow" / "codex-native" / "abc123" / "codex-home"
+    inherited = home / ".omnigent" / "codex-native" / "abc123" / "codex-home"
     inherited.mkdir(parents=True)
     (inherited / "auth.json").symlink_to(custom_home / "auth.json")
     (inherited / "config.toml").symlink_to(custom_home / "config.toml")
@@ -2423,7 +2512,7 @@ def test_clean_codex_env_excludes_openai_api_key(monkeypatch) -> None:
     env = _clean_codex_env()
 
     assert "OPENAI_API_KEY" not in env, (
-        "OPENAI_API_KEY must be excluded â€” subscription auth, not API key"
+        "OPENAI_API_KEY must be excluded â€?subscription auth, not API key"
     )
     # Other OPENAI_* vars (retry/timeout knobs) must still pass through.
     assert env.get("OPENAI_MAX_RETRIES") == "3"
@@ -2447,10 +2536,10 @@ def test_clean_codex_env_includes_databricks_bearer(monkeypatch) -> None:
 
 
 def test_clean_codex_env_includes_omnigent_session_marker(monkeypatch) -> None:
-    """The ``agent-meow`` session marker survives the codex env scrub.
+    """The ``OMNIGENT`` session marker survives the codex env scrub.
 
     The marker (set once on the runner) must reach the codex CLI so the
-    shell commands codex runs can detect they are inside an agent-meow
+    shell commands codex runs can detect they are inside an Omnigent
     session, like ``CLAUDE_CODE`` / ``CODEX``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -2469,7 +2558,7 @@ def test_clean_codex_env_includes_omnigent_session_marker(monkeypatch) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Tests for _to_codex_input_items â€” input_file â†’ inline text conversion
+# Tests for _to_codex_input_items â€?input_file â†?inline text conversion
 # ---------------------------------------------------------------------------
 
 
@@ -2477,7 +2566,7 @@ def test_to_codex_input_items_text_block_passes_through() -> None:
     """Plain text blocks are mapped to Codex ``{"type": "text"}`` items."""
     result = _to_codex_input_items([{"type": "input_text", "text": "hello"}])
 
-    # One item produced, with the same text â€” nothing stripped or altered.
+    # One item produced, with the same text â€?nothing stripped or altered.
     assert result == [{"type": "text", "text": "hello"}]
 
 
@@ -2525,7 +2614,7 @@ def test_to_codex_input_items_input_file_empty_file_data_dropped() -> None:
     """
     result = _to_codex_input_items([{"type": "input_file", "file_data": ""}])
 
-    # No item emitted â€” empty content is silently dropped.
+    # No item emitted â€?empty content is silently dropped.
     assert result == [], f"Expected empty list, got: {result!r}"
 
 
@@ -2539,7 +2628,7 @@ def test_to_codex_input_items_input_file_malformed_base64_dropped() -> None:
 
     result = _to_codex_input_items([block])
 
-    # Malformed base64 â†’ decode fails â†’ text="" â†’ dropped.
+    # Malformed base64 â†?decode fails â†?text="" â†?dropped.
     assert result == [], f"Expected empty list, got: {result!r}"
 
 
@@ -2554,7 +2643,7 @@ def test_to_codex_input_items_binary_file_dropped() -> None:
 
     result = _to_codex_input_items([block])
 
-    # Binary MIME type â†’ dropped, not inlined as garbage text.
+    # Binary MIME type â†?dropped, not inlined as garbage text.
     assert result == [], f"Expected binary block to be dropped, got: {result!r}"
 
 
@@ -2592,7 +2681,7 @@ class _FakeVersionProcess:
         """
         Return the canned ``(stdout, stderr)`` pair.
 
-        :returns: ``(self.stdout, b"")`` â€” the version probe ignores
+        :returns: ``(self.stdout, b"")`` â€?the version probe ignores
             stderr.
         """
         return (self.stdout, b"")
@@ -2606,7 +2695,7 @@ class _FakeVersionProcess:
         # Pre-release suffix: only the X.Y.Z core is parsed, so an alpha
         # of a supported release compares as that release.
         (b"codex-cli 0.132.0-alpha.1\n", (0, 132, 0)),
-        # No X.Y.Z token â†’ unknown (caller treats None as "supported").
+        # No X.Y.Z token â†?unknown (caller treats None as "supported").
         (b"codex-cli (unknown build)\n", None),
     ],
 )
@@ -2774,7 +2863,7 @@ def test_codex_skill_sources_order_bundle_then_host(tmp_path: Path) -> None:
 
 
 def test_codex_skill_sources_omits_absent_dirs(tmp_path: Path) -> None:
-    """Only existing dirs are returned (bundle absent â†’ host only)."""
+    """Only existing dirs are returned (bundle absent â†?host only)."""
     from agent_meow.inner.codex_executor import codex_skill_sources
 
     home = tmp_path / "home"
@@ -2788,9 +2877,9 @@ def test_clean_codex_env_honors_extra_allow(monkeypatch):
 
     monkeypatch.setenv("CRAWL4AI_API_TOKEN", "secret-tok")
     monkeypatch.setenv("COMPANIES_HOUSE_API_KEY", "ch-key")
-    # undeclared â†’ stripped by the hardcoded allowlist
+    # undeclared â†?stripped by the hardcoded allowlist
     assert "CRAWL4AI_API_TOKEN" not in _clean_codex_env()
-    # declared via env_passthrough â†’ admitted
+    # declared via env_passthrough â†?admitted
     env = _clean_codex_env(["CRAWL4AI_API_TOKEN", "COMPANIES_HOUSE_API_KEY"])
     assert env["CRAWL4AI_API_TOKEN"] == "secret-tok"
     assert env["COMPANIES_HOUSE_API_KEY"] == "ch-key"
@@ -2819,3 +2908,92 @@ def test_declared_passthrough_reads_sandbox_env_passthrough():
     assert _declared_passthrough(None) == ()
     assert _declared_passthrough(OSEnvSpec(sandbox=None)) == ()
     assert _declared_passthrough(OSEnvSpec(sandbox=OSEnvSandboxSpec(type="none"))) == ()
+
+
+def test_find_codex_cli_delegates_to_shared_resolver(monkeypatch):
+    """``_find_codex_cli`` resolves codex via the shared resolver with the
+    OMNIGENT_CODEX_PATH override. (The resolver's own PATH/override/fallback
+    behavior is covered in tests/inner/test_proc_and_platform.py.)"""
+    from agent_meow.inner import codex_executor as ce
+
+    captured = {}
+
+    def fake_resolve(name, *, env_var=None):
+        captured["name"] = name
+        captured["env_var"] = env_var
+        return "/opt/homebrew/bin/codex"
+
+    monkeypatch.setattr(ce, "resolve_cli_binary", fake_resolve)
+    assert ce._find_codex_cli() == "/opt/homebrew/bin/codex"
+    assert captured == {"name": "codex", "env_var": "OMNIGENT_CODEX_PATH"}
+
+
+class TestCodexAppServerSessionReadOnlyCwd(unittest.TestCase):
+    """Regression tests for .codex-tmp fallback on read-only cwd."""
+
+    def _run_start_and_capture_mkdtemp_dir(self, cwd: str) -> str:
+        """Run ``_CodexAppServerSession.start()`` with *cwd* and return
+        the ``dir=`` keyword passed to ``tempfile.mkdtemp`` for the
+        codex-home directory.
+
+        ``start()`` is stopped just after ``mkdtemp`` by forcing a
+        ``RuntimeError`` from the subprocess launch; the session's
+        ``close()`` cleans up the temp dir before we can inspect it,
+        so we capture the argument instead.
+        """
+        import tempfile as _tempfile
+
+        mkdtemp_dirs: list[str] = []
+        original_mkdtemp = _tempfile.mkdtemp
+
+        def _capture(**kwargs):
+            mkdtemp_dirs.append(kwargs.get("dir", ""))
+            return original_mkdtemp(**kwargs)
+
+        async def _t():
+            session = _CodexAppServerSession(
+                codex_path="/bin/echo",
+                cwd=cwd,
+                env={},
+                tool_executor=None,
+            )
+            with (
+                patch("agent_meow.inner.codex_executor.populate_codex_skills_from_bundle"),
+                patch("agent_meow.inner.codex_executor._populate_codex_home_config"),
+                patch(
+                    "agent_meow.inner.codex_executor._codex_home_config_source_from_env",
+                    return_value=None,
+                ),
+                patch(
+                    "agent_meow.inner.codex_executor._create_subprocess_exec",
+                    new_callable=AsyncMock,
+                    side_effect=RuntimeError("stop"),
+                ),
+                patch("tempfile.mkdtemp", side_effect=_capture),
+            ):
+                with contextlib.suppress(RuntimeError):
+                    await session.start()
+
+            self.assertTrue(mkdtemp_dirs, "mkdtemp was never called")
+            return mkdtemp_dirs[0]
+
+        return _run(_t())
+
+    def test_start_falls_back_to_tempdir_when_cwd_is_readonly(self):
+        """When cwd is ``/`` (read-only on macOS SSV), the codex home
+        must be placed under the system temp directory, not under
+        ``/.codex-tmp``.
+        """
+        import tempfile as _tempfile
+
+        dir_used = self._run_start_and_capture_mkdtemp_dir("/")
+        self.assertEqual(dir_used, _tempfile.gettempdir())
+
+    def test_start_uses_cwd_when_writable(self):
+        """When cwd is writable, .codex-tmp is placed there as before."""
+        import tempfile as _tempfile
+
+        with _tempfile.TemporaryDirectory() as writable_dir:
+            dir_used = self._run_start_and_capture_mkdtemp_dir(writable_dir)
+            expected = str(Path(writable_dir) / ".codex-tmp")
+            self.assertEqual(dir_used, expected)

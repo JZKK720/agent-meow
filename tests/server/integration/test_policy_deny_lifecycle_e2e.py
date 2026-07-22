@@ -4,9 +4,9 @@ Exercises the full user journey:
 
 1. Create a session with an agent.
 2. Attach a DENY policy via ``POST /v1/sessions/{session_id}/policies``.
-3. Send a user message â€” verify the DENY fires (synchronous inline verdict).
+3. Send a user message â€?verify the DENY fires (synchronous inline verdict).
 4. Remove the policy via ``DELETE``.
-5. Send another message â€” verify the mock LLM responds normally.
+5. Send another message â€?verify the mock LLM responds normally.
 6. Verify the policy is gone from the list endpoint.
 
 Also covers phase-scoping: a DENY policy attached on ``tool_call`` phase
@@ -50,7 +50,7 @@ def policy_app(
 ) -> FastAPI:
     """App with a ``policy_store`` so session-policy routes are active.
 
-    Uses no auth provider â€” the session policy routes fall through to
+    Uses no auth provider â€?the session policy routes fall through to
     the unauthenticated path (no permission checks), which is sufficient
     for testing the policy engine wiring.
 
@@ -90,7 +90,7 @@ async def policy_client(
     through the CRUD routes.
 
     :param policy_app: FastAPI app with policy store.
-    :param mock_llm: Controllable mock LLM â€” released on teardown.
+    :param mock_llm: Controllable mock LLM â€?released on teardown.
     :param db_uri: Per-test SQLite URI.
     :param tmp_path: Pytest temp dir for the harness process manager.
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -175,7 +175,7 @@ async def _attach_deny_policy(
     )
     assert resp.status_code == 200, f"policy create failed: {resp.status_code} {resp.text}"
     body = resp.json()
-    assert body["id"].startswith("pol_")
+    assert len(body["id"]) == 32
     return body["id"]
 
 
@@ -214,9 +214,9 @@ async def test_deny_policy_lifecycle(
 
     1. Create a session with an agent.
     2. Attach a DENY policy via the session policies endpoint.
-    3. Send a user message â€” verify the DENY fires synchronously.
+    3. Send a user message â€?verify the DENY fires synchronously.
     4. Remove the policy via DELETE.
-    5. Send another message â€” verify the mock LLM responds normally.
+    5. Send another message â€?verify the mock LLM responds normally.
     6. Verify the policy is gone from the list endpoint.
     """
     agent = await create_test_agent(policy_client)
@@ -252,7 +252,7 @@ async def test_deny_policy_lifecycle(
         policy_client, session_id, "Hello, this should go through."
     )
     # After policy removal the message must NOT be denied by policy.
-    # It may return 202 (queued) or 503 (no runner bound) â€” both prove
+    # It may return 202 (queued) or 503 (no runner bound) â€?both prove
     # the policy layer allowed it through.
     assert resp_allowed.status_code in {202, 503}, (
         f"expected 202 or 503 after policy removal; "
@@ -279,7 +279,7 @@ async def test_deny_policy_only_blocks_matching_phase(
     """A DENY policy scoped to ``tool_call`` phase does not block input messages.
 
     1. Attach a DENY policy that fires only on ``tool_call`` events.
-    2. Send a user message (INPUT/REQUEST phase) â€” verify it goes through.
+    2. Send a user message (INPUT/REQUEST phase) â€?verify it goes through.
 
     This proves that phase-scoping in ``make_fixed_action_callable``
     correctly causes the callable to abstain (return ``None``) on
@@ -300,8 +300,8 @@ async def test_deny_policy_only_blocks_matching_phase(
         },
     )
 
-    # Send user message (REQUEST phase) â€” should NOT be denied.
-    # May return 202 (queued) or 503 (no runner) â€” both prove the
+    # Send user message (REQUEST phase) â€?should NOT be denied.
+    # May return 202 (queued) or 503 (no runner) â€?both prove the
     # policy layer allowed it through; only {"denied": true} is a failure.
     resp = await _send_user_message(policy_client, session_id, "Hello, this should go through.")
     assert resp.status_code in {202, 503}, (
@@ -310,4 +310,43 @@ async def test_deny_policy_only_blocks_matching_phase(
     body = resp.json()
     assert body.get("denied") is not True, (
         f"tool_call-only DENY policy incorrectly blocked an input message; got {body}"
+    )
+
+
+async def test_input_deny_publishes_committed_item_event(
+    policy_client: httpx.AsyncClient,
+    mock_llm: ControllableMockClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An input-phase DENY publishes the sentinel as ``output_item.done``.
+
+    The deny text streams live as an ``output_text.delta`` (a provisional
+    web preview) and is persisted as an assistant item. Without a commit
+    event the web preview is swept by the terminal ``response.completed``,
+    so the deny only reappeared on refresh. Assert the persisted item is
+    published as ``response.output_item.done`` â€?carrying a real itemId â€?
+    so the web reconciles it into a durable block.
+    """
+    published: list[tuple[str, dict]] = []
+    monkeypatch.setattr(
+        "agent_meow.server.routes.sessions.session_stream.publish",
+        lambda sid, ev: published.append((sid, ev)),
+    )
+
+    agent = await create_test_agent(policy_client)
+    session_id = await _create_session(policy_client, agent["id"])
+    await _attach_deny_policy(policy_client, session_id)
+
+    resp = await _send_user_message(policy_client, session_id, "Hello, this should be blocked.")
+    assert resp.json().get("denied") is True, f"expected synchronous DENY; got {resp.json()}"
+
+    done_events = [ev for _sid, ev in published if ev.get("type") == "response.output_item.done"]
+    assert len(done_events) == 1, f"expected one committed-item event; got {done_events}"
+    item = done_events[0]["item"]
+    assert item.get("id"), f"committed item must carry a store-assigned id; got {item}"
+    text = "".join(
+        part.get("text", "") for part in item.get("content", []) if isinstance(part, dict)
+    )
+    assert "Blocked by test policy" in text, (
+        f"deny sentinel missing from committed item; got {item}"
     )

@@ -47,6 +47,13 @@ from agent_meow.tools.builtins.load_skill import (
 from agent_meow.tools.builtins.read_skill_file import (
     ReadSkillFileTool,
 )
+from agent_meow.tools.builtins.scheduled_tasks import (
+    SysScheduledTaskCreateTool,
+    SysScheduledTaskDeleteTool,
+    SysScheduledTaskListTool,
+    SysScheduledTaskUpdateTool,
+)
+from agent_meow.tools.builtins.session_rename import SysSessionRenameTool
 from agent_meow.tools.builtins.spawn import (
     SysSessionCloseTool,
     SysSessionCreateTool,
@@ -77,11 +84,16 @@ __all__ = [
     "SysCancelAsyncTool",
     "SysListModelsTool",
     "SysReadInboxTool",
+    "SysScheduledTaskCreateTool",
+    "SysScheduledTaskDeleteTool",
+    "SysScheduledTaskListTool",
+    "SysScheduledTaskUpdateTool",
     "SysSessionCloseTool",
     "SysSessionCreateTool",
     "SysSessionGetHistoryTool",
     "SysSessionGetInfoTool",
     "SysSessionListTool",
+    "SysSessionRenameTool",
     "SysSessionSendTool",
     "SysSessionShareTool",
     "SysTimerCancelTool",
@@ -96,12 +108,12 @@ __all__ = [
     "list_skill_resources",
 ]
 
-# Lazy imports avoid circular import cycles â€” each tool's actual
+# Lazy imports avoid circular import cycles â€?each tool's actual
 # class is imported only when the factory fires.
 
 # Factory type: each constructor accepts a config dict and returns
 # a Tool. Callable is used instead of type[Tool] because the base
-# Tool.__init__ does not declare a config parameter â€” only the
+# Tool.__init__ does not declare a config parameter â€?only the
 # web search subclasses do.
 _BuiltinFactory = Callable[[dict[str, str]], Tool]
 
@@ -168,6 +180,55 @@ def _create_export_agent(config: dict[str, str]) -> Tool:
     return ExportAgentTool()
 
 
+def _hindsight_available() -> bool:
+    """
+    Return ``True`` if the optional ``hindsight-client`` SDK is installed.
+
+    Probes via :func:`importlib.util.find_spec` (not ``import``) so the check
+    never loads the SDK or its transitive deps â€?they stay lazy until a
+    Hindsight tool is actually constructed.
+    """
+    import importlib.util
+
+    return importlib.util.find_spec("hindsight_client") is not None
+
+
+def _create_hindsight_retain(config: dict[str, str]) -> Tool:
+    """
+    Lazy factory for HindsightRetainTool.
+
+    :param config: Tool config (Hindsight api_key, bank_id, etc.).
+    :returns: A HindsightRetainTool instance.
+    """
+    from agent_meow.tools.builtins.hindsight import HindsightRetainTool
+
+    return HindsightRetainTool(config=config)
+
+
+def _create_hindsight_recall(config: dict[str, str]) -> Tool:
+    """
+    Lazy factory for HindsightRecallTool.
+
+    :param config: Tool config (Hindsight api_key, bank_id, etc.).
+    :returns: A HindsightRecallTool instance.
+    """
+    from agent_meow.tools.builtins.hindsight import HindsightRecallTool
+
+    return HindsightRecallTool(config=config)
+
+
+def _create_hindsight_reflect(config: dict[str, str]) -> Tool:
+    """
+    Lazy factory for HindsightReflectTool.
+
+    :param config: Tool config (Hindsight api_key, bank_id, etc.).
+    :returns: A HindsightReflectTool instance.
+    """
+    from agent_meow.tools.builtins.hindsight import HindsightReflectTool
+
+    return HindsightReflectTool(config=config)
+
+
 # Unified registry for every reserved builtin name. The value
 # is either a factory callable (for user-enablable tools) or
 # ``None`` for framework-owned names that occupy the name-space
@@ -179,7 +240,7 @@ def _create_export_agent(config: dict[str, str]) -> Tool:
 # per ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` Â§3a + Â§6.2. Their
 # replacement is the ``sys_terminal_*`` family registered
 # automatically by ``ToolManager._register_terminal_tools`` when
-# the spec declares a ``terminals:`` block â€” not via this
+# the spec declares a ``terminals:`` block â€?not via this
 # registry. One-shot shell commands now use ``sys_os_shell``
 # instead.
 _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
@@ -193,64 +254,60 @@ _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
     # Framework-owned: need runtime context. ``web_fetch`` is
     # constructed by ToolManager before reaching this registry.
     # ``list_comments`` and ``update_comment`` are auto-registered by
-    # ``ToolManager._register_comment_tools`` â€” they are reserved
+    # ``ToolManager._register_comment_tools`` â€?they are reserved
     # here so user specs cannot shadow them. (Policy ASKs are
-    # surfaced as MCP-shape elicitations on the SSE stream â€” not
-    # via the tool registry â€” see agent_meow/runtime/policies/approval.py.)
+    # surfaced as MCP-shape elicitations on the SSE stream â€?not
+    # via the tool registry â€?see omnigent/runtime/policies/approval.py.)
     "web_fetch": None,
     "list_comments": None,
     "update_comment": None,
     # ``sys_list_models`` is auto-registered by
     # ``ToolManager._register_sub_agent_tools`` with the dispatch grant
-    # and intercepted by name in the runner's tool dispatch â€” reserved
+    # and intercepted by name in the runner's tool dispatch â€?reserved
     # here so user specs cannot shadow it.
     "sys_list_models": None,
     # ``sys_advise_models`` is auto-registered alongside ``sys_list_models``
     # when ``RuntimeCaps.routing_client`` is configured. Intercepted by
-    # name in the runner's tool dispatch â€” reserved here so user specs
+    # name in the runner's tool dispatch â€?reserved here so user specs
     # cannot shadow it.
     "sys_advise_models": None,
-    # agent-meow Docs/Images surface tools â€” runner-dispatched, schema-only.
-    # Reserved here so user specs cannot shadow them; the runner's tool
-    # dispatch intercepts the calls by name.
-    "doc_create": None,
-    "doc_get": None,
-    "doc_list": None,
-    "doc_update": None,
-    "doc_generate": None,
-    # Office document create/edit/export (officecli) + convert (markitdown).
-    "doc_create_office": None,
-    "doc_edit_office": None,
-    "doc_export": None,
-    "doc_convert": None,
-    "image_list": None,
-    "image_get": None,
-    "image_upload": None,
-    "image_edit": None,
-    "image_generate": None,
-    # AI image editing â€” background removal (rembg) + inpaint/outpaint/upscale
-    # (A1111 HTTP or ComfyUI MCP). Runner-dispatched, schema-only.
-    "image_remove_bg": None,
-    "image_edit_ai": None,
-    # agent-meow voice surface tools â€” runner-dispatched, schema-only.
-    # transcribe_audio shells out to Handy CLI; text_to_speech / speak
-    # call a VibeVoice TTS gateway; transcribe_audio_high_quality calls
-    # a VibeVoice-ASR gateway.
-    "transcribe_audio": None,
-    "transcribe_audio_high_quality": None,
-    "text_to_speech": None,
-    "speak": None,
+    # ``browser_*`` embedded-browser tools are framework-owned: always
+    # auto-registered by ``ToolManager._register_browser_tools`` (the
+    # single source of truth for registration), so any agent can drive
+    # the desktop app's browser without the spec opting in. Reserved
+    # here with ``None`` â€?exactly like ``list_comments`` /
+    # ``update_comment`` â€?so user specs cannot shadow the names and
+    # ``get_builtin_tool`` returns ``None`` for them (they are not
+    # instantiated via this registry). Execution is runner-dispatched
+    # (``_BROWSER_TOOLS`` in omnigent/runner/tool_dispatch.py).
+    "browser_navigate": None,
+    "browser_snapshot": None,
+    "browser_click": None,
+    "browser_type": None,
+    "browser_screenshot": None,
 }
 
+# Hindsight long-term memory (optional ``hindsight`` extra). Registered only
+# when ``hindsight-client`` is installed, so the tools are absent from the
+# builtin list on installs without the extra.
+if _hindsight_available():
+    _BUILTIN_REGISTRY.update(
+        {
+            "hindsight_retain": _create_hindsight_retain,
+            "hindsight_recall": _create_hindsight_recall,
+            "hindsight_reflect": _create_hindsight_reflect,
+        }
+    )
+
 # Canonical set of every reserved builtin name. Derived from
-# the registry so there is a single source of truth â€” no drift
+# the registry so there is a single source of truth â€?no drift
 # between the reserved-name check and the factory dispatch.
 BUILTIN_NAMES: frozenset[str] = frozenset(_BUILTIN_REGISTRY.keys())
 
 # Subset of names that have a user-facing factory. Used by the
 # onboarding ``list_builtin_tools`` helper, which only lists
 # tools an agent spec can actually enable via
-# ``tools.builtins`` â€” framework-owned names would just confuse
+# ``tools.builtins`` â€?framework-owned names would just confuse
 # the agent author.
 INSTANTIABLE_BUILTINS: frozenset[str] = frozenset(
     name for name, factory in _BUILTIN_REGISTRY.items() if factory is not None
@@ -274,7 +331,7 @@ def get_builtin_tool(
         name is not recognized.
     """
     # Returns None for both "not in registry" AND
-    # "framework-owned without factory" â€” callers treat both
+    # "framework-owned without factory" â€?callers treat both
     # as "not instantiable via this entry point". Check against
     # BUILTIN_NAMES first if you need to distinguish.
     factory = _BUILTIN_REGISTRY.get(name)

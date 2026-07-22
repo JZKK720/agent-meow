@@ -1,10 +1,10 @@
 """
 E2E-test-only policy callables.
 
-Lives under the ``agent-meow`` package so the server
-subprocess (which imports from agent_meow, not tests/) can
+Lives under the ``omnigent`` package so the server
+subprocess (which imports from omnigent, not tests/) can
 resolve the dotted path. The module itself has no production
-value â€” it exists solely so
+value â€?it exists solely so
 ``tests/_fixtures/agents/e2e-policy-gate/config.yaml`` can
 reference a callable the live server process can import.
 
@@ -17,19 +17,19 @@ their own policy callables via pip-installed packages.
 
 from __future__ import annotations
 
-from typing import Any
-
 from agent_meow.policies.schema import PolicyEvent, PolicyResponse
 from agent_meow.policies.types import PolicyResult
 from agent_meow.spec.types import PolicyAction
 
-# Deterministic sentinel â€” arbitrary string unlikely to
+# Deterministic sentinel â€?arbitrary string unlikely to
 # appear in natural user messages, so the e2e test can
 # reliably flip the DENY path on / off.
 _SENTINEL = "BLOCK_THIS_TOKEN"
 
 
-_ALLOW: dict[str, Any] = {"result": "ALLOW"}
+def _allow() -> PolicyResponse:
+    """Return a fresh ALLOW decision for test policy callables."""
+    return {"result": "ALLOW"}
 
 
 def block_on_sentinel(event: PolicyEvent) -> PolicyResponse:
@@ -38,7 +38,7 @@ def block_on_sentinel(event: PolicyEvent) -> PolicyResponse:
 
     :param event: Event dict. On INPUT phase,
         ``event["data"]`` is the user message text (str).
-    :returns: Decision dict â€” DENY if the sentinel
+    :returns: Decision dict â€?DENY if the sentinel
         appears in the text, ALLOW otherwise.
     """
     content = event.get("data")
@@ -47,7 +47,7 @@ def block_on_sentinel(event: PolicyEvent) -> PolicyResponse:
             "result": "DENY",
             "reason": f"contains reserved token {_SENTINEL!r}",
         }
-    return _ALLOW
+    return _allow()
 
 
 # Trigger token for the e2e-label-gate fixture. When a user
@@ -64,7 +64,7 @@ def taint_on_banana(event: PolicyEvent) -> PolicyResult:
 
     Returns a native :class:`PolicyResult` (not a decision dict)
     because label writes (``set_labels``) require the
-    PolicyResult shape â€” the decision dict does not carry labels.
+    PolicyResult shape â€?the decision dict does not carry labels.
 
     :param event: Event dict.
     :returns: Always ALLOW; carries ``set_labels={"tainted": "1"}``

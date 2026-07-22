@@ -1,14 +1,14 @@
-"""Persistent client-side state for ``agent-meow codex`` sessions.
+"""Persistent client-side state for ``omnigent codex`` sessions.
 
 The native Codex wrapper records the cwd used to create a session so a
-later ``agent-meow codex --resume <conv_id>`` can launch Codex from the
+later ``omnigent codex --resume <conv_id>`` can launch Codex from the
 same workspace. This state is intentionally client-side: local
 filesystem paths belong to the user's machine and should not be stored
-on the shared agent-meow server.
+on the shared Omnigent server.
 
 Layout (per conversation):
 
-    ~/.agent_meow/codex-native/<sha256(conv_id)[:32]>/launch.json
+    ~/.omnigent/codex-native/<sha256(conv_id)[:32]>/launch.json
 """
 
 from __future__ import annotations
@@ -44,14 +44,14 @@ def _codex_native_state_root() -> Path:
     Return the root directory for persistent codex-native state.
 
     Honors :data:`_STATE_ROOT_ENV_VAR` for tests and advanced local
-    setups. Production defaults to ``~/.agent_meow/codex-native``.
+    setups. Production defaults to ``~/.omnigent/codex-native``.
 
     :returns: Absolute path to the state root.
     """
     override = os.environ.get(_STATE_ROOT_ENV_VAR)
     if override:
         return Path(override)
-    return Path.home() / ".agent-meow" / "codex-native"
+    return Path.home() / ".omnigent" / "codex-native"
 
 
 def _state_dir_for_conversation_id(conversation_id: str) -> Path:
@@ -61,12 +61,23 @@ def _state_dir_for_conversation_id(conversation_id: str) -> Path:
     Hashing the conversation id prevents path traversal if a server
     ever returned an attacker-controlled id such as ``"../etc"``.
 
-    :param conversation_id: agent-meow conversation id, e.g.
-        ``"conv_abc123"``.
+    Sessions created before ids dropped the ``conv_`` prefix hashed the
+    prefixed string, so their directories live under the legacy digest; when
+    the bare-digest directory is absent, the legacy one is returned (never
+    renamed — files inside may embed their own absolute path).
+
+    :param conversation_id: Omnigent conversation id, bare 32-char hex
+        (a legacy ``conv_``-prefixed form is accepted and normalised).
     :returns: Absolute directory path; not guaranteed to exist.
     """
-    digest = hashlib.sha256(conversation_id.encode("utf-8")).hexdigest()[:_ID_HASH_CHARS]
-    return _codex_native_state_root() / digest
+    bare = conversation_id.removeprefix("conv_")
+    root = _codex_native_state_root()
+    state_dir = root / hashlib.sha256(bare.encode("utf-8")).hexdigest()[:_ID_HASH_CHARS]
+    if not state_dir.exists():
+        legacy = root / hashlib.sha256(f"conv_{bare}".encode()).hexdigest()[:_ID_HASH_CHARS]
+        if legacy.exists():
+            return legacy
+    return state_dir
 
 
 def write_launch_state(conversation_id: str, working_directory: str) -> None:
@@ -77,7 +88,7 @@ def write_launch_state(conversation_id: str, working_directory: str) -> None:
     refused and logged because changing the recorded cwd for an
     existing session would make future resume checks incorrect.
 
-    :param conversation_id: agent-meow conversation id, e.g.
+    :param conversation_id: Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :param working_directory: Absolute launch cwd, e.g.
         ``"/home/me/repo"``.
@@ -117,7 +128,7 @@ def read_launch_state(conversation_id: str) -> CodexNativeLaunchState | None:
     Missing, unreadable, or malformed state is treated as absent so
     legacy and cross-machine resumes continue to behave as before.
 
-    :param conversation_id: agent-meow conversation id, e.g.
+    :param conversation_id: Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :returns: Parsed state, or ``None`` if missing / malformed.
     """

@@ -15,8 +15,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # text, so without filtering them a session started with an image is
 # titled by a temp-file path instead of what the user typed. Matched per
 # line by synthesize_conversation_title; keep in sync with
-# agent_meow/inner/claude_native_executor.py and
-# agent_meow/inner/codex_native_executor.py.
+# omnigent/inner/claude_native_executor.py and
+# omnigent/inner/codex_native_executor.py.
 _ATTACHMENT_MARKER_RE = re.compile(r"^\[Attached(?: file)?: .+\]$")
 
 # ── Conversation ──────────────────────────────────────
@@ -59,7 +59,7 @@ class Conversation:
     :param host_id: Host that launched (or should launch) the
         runner for this session. Set when a session is created
         from the Web UI targeting a specific host. ``None`` for
-        sessions started via ``agent-meow run`` (the CLI
+        sessions started via ``omnigent run`` (the CLI
         orchestrates runner spawning directly). Used for
         retry-on-reconnect: if the server restarts before the
         runner connects, the server re-sends the launch request
@@ -119,7 +119,7 @@ class Conversation:
         ``POST /v1/sessions`` (the new-chat harness picker) and
         immutable thereafter — the runner spawns the harness on the
         first turn, so a later switch would orphan the running
-        process. Only valid for ``executor.type: agent-meow`` agents;
+        process. Only valid for ``executor.type: omnigent`` agents;
         the create route validates against ``OMNIGENT_HARNESSES``.
         Sub-agent sessions never *inherit* the parent brain's override,
         so e.g. polly's workers keep their declared harnesses when the
@@ -138,7 +138,7 @@ class Conversation:
         (RUNNER_SUBAGENT_DISPATCH.md).
     :param external_session_id: Runtime-native session id this
         conversation wraps, e.g. Claude Code's session uuid for
-        ``agent-meow claude`` sessions. ``None`` for regular
+        ``omnigent claude`` sessions. ``None`` for regular
         AP-only conversations. Populated by the wrapper bridge
         from the underlying runtime and used by ``--resume`` to
         recover the external session's prior transcript on a
@@ -152,7 +152,7 @@ class Conversation:
         before it boots) and updated on resume via
         ``PATCH /v1/sessions/{id}`` (last-write-wins). The runner
         reconstructs the terminal launch command from these plus the
-        harness binary; the command and all bridge / agent-meow / auth wiring
+        harness binary; the command and all bridge / Omnigent / auth wiring
         stay runner-owned and are never stored here. A flat list (not
         a dict) is deliberate — there is no key for a user to smuggle
         internal wiring through. See
@@ -180,6 +180,15 @@ class Conversation:
         listing (and the sidebar), surfacing only when the caller
         passes ``include_archived=True``. ``False`` for normal
         sessions; toggled via ``PATCH /v1/sessions/{id}``.
+    :param project_id: The first-class project this session is filed
+        under, or ``None`` if unfiled. Owner-private membership; see
+        ``designs/PROJECTS_PRD.md``.
+    :param search_snippet: Transient, list-only excerpt of the chat
+        content that matched a ``search_query`` — set by
+        ``list_conversations`` whenever the query hit an item's body (even
+        if the title also matched), so the search UI can show *where* the
+        session matched. Never persisted (not a DB column) and ``None`` on
+        every non-search read path and title-only matches.
     """
 
     id: str
@@ -205,6 +214,17 @@ class Conversation:
     workspace: str | None = None
     git_branch: str | None = None
     archived: bool = False
+    # Live-state fields written by the replica holding the runner tunnel
+    # so any replica's session list can serve them. ``live_status`` is the
+    # last relay-observed turn status ("idle"/"running"/"waiting"/"failed",
+    # None = never reported); ``pending_elicitation_count`` is the
+    # outstanding approval-prompt count (None = never written).
+    live_status: str | None = None
+    pending_elicitation_count: int | None = None
+    project_id: str | None = None
+    # Transient: populated only by list_conversations on a content search;
+    # never read from or written to the DB.
+    search_snippet: str | None = None
 
 
 # ── Conversation item data types ───────────────────────
@@ -487,8 +507,8 @@ class RoutingDecisionData(BaseModel):
     """
     Data payload for an intelligent model-router decision item.
 
-    Emitted by the runner's per-turn cost advisor at the START of an
-    advised turn (see :func:`~?agent_meow.runner.cost_advisor`) and persisted
+    Emitted by the server-side smart routing path at the START of an
+    advised turn and persisted
     as a display-only transcript item so the model the router chose shows
     in the conversation flow the moment the turn begins. Listed in
     :data:`NON_CONTENT_ITEM_TYPES` so the agent loop's history filter
@@ -499,9 +519,6 @@ class RoutingDecisionData(BaseModel):
 
     :param model: The concrete brain model the router chose, e.g.
         ``"databricks-claude-opus-4-8"``.
-    :param tier: The difficulty tier the router assigned, one of
-        ``"cheap"`` / ``"medium"`` / ``"expensive"``, e.g.
-        ``"expensive"``.
     :param applied: ``True`` when the brain actually ran on
         :attr:`model` this turn (optimize mode, no user pin); ``False``
         when the router only WOULD have picked it (advise/shadow mode, or
@@ -512,9 +529,12 @@ class RoutingDecisionData(BaseModel):
     """
 
     model: str
-    tier: Literal["cheap", "medium", "expensive"]
     applied: bool
     rationale: str
+    #: Sub-agent name when this decision was made for a child session and the
+    #: item is being mirrored into the parent's transcript, e.g. ``"claude_code"``.
+    #: ``None`` for session-local routing decisions (the usual case).
+    agent: str | None = None
 
     @field_validator("model")
     @classmethod

@@ -152,6 +152,36 @@ def test_redirect_stderr_to_log_redacts_direct_stderr_writes(
     )
 
 
+def test_setup_cli_logging_uses_data_dir_cli_destination(
+    isolated_cli_diagnostics: None,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """CLI diagnostics live under ``<data-dir>/logs/cli``."""
+    del isolated_cli_diagnostics
+    data_dir = tmp_path / "data"
+    monkeypatch.setenv("OMNIGENT_DATA_DIR", str(data_dir))
+
+    ctx = cli_diagnostics.setup_cli_logging(["run", "agent.yaml"])
+
+    assert ctx.path.parent == data_dir / "logs" / "cli"
+    assert ctx.path.name.startswith("cli-")
+
+
+def test_setup_cli_logging_honors_debug_level(
+    isolated_cli_diagnostics: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``OMNIGENT_LOG_LEVEL=DEBUG`` makes debug records reach cli logs."""
+    del isolated_cli_diagnostics
+    monkeypatch.setenv("OMNIGENT_LOG_LEVEL", "DEBUG")
+    ctx = cli_diagnostics.setup_cli_logging(["run", "agent.yaml"])
+
+    logging.getLogger("agent_meow.test").debug("debug-visible")
+
+    assert "debug-visible" in ctx.path.read_text(encoding="utf-8")
+
+
 def test_restore_stderr_returns_writes_to_original_terminal(
     isolated_cli_diagnostics: None,
     monkeypatch: pytest.MonkeyPatch,
@@ -365,7 +395,7 @@ def test_main_logs_click_exceptions(
 
     # An unsupported --harness is a deterministic ClickException trigger that
     # raises before any daemon/network work. (A bare `agent-meow run` no longer
-    # errors â€” it drops into first-run `configure harnesses` â€” so it can't be
+    # errors â€?it drops into first-run `configure harnesses` â€?so it can't be
     # the trigger here.)
     monkeypatch.setattr(sys, "argv", ["agent-meow", "run", "--harness", "not-a-real-harness"])
     # Isolate from any real ~/.agent_meow/config.yaml on the developer's machine.

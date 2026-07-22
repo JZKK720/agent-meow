@@ -17,23 +17,5 @@
     <!-- Voice dictation (mic level meter / Web Speech). -->
     <key>com.apple.security.device.audio-input</key>
     <true/>
-    <!-- WebAuthn Touch ID platform authenticator: the keychain access group
-         that stores the Secure Enclave passkeys (app.configureWebAuthn).
-
-         keychain-access-groups is a RESTRICTED entitlement — three pieces
-         must stay in lockstep or AMFI SIGKILLs the app at launch ("Launchd
-         job spawn failed", POSIX error 163):
-           1. this entitlement,
-           2. WEBAUTHN_KEYCHAIN_ACCESS_GROUP in src/main.js (same string),
-           3. the embedded Developer ID provisioning profile
-              (signing/agent_meow.provisionprofile, wired via
-              `provisioningProfile` in package.json's `build.mac`), whose
-              allowlist `<CUBECLOUD_TEAM_ID>.*` authorizes the group. The signing
-              identity must be the same team (package.json pins
-              "智方云 (Cubecloud) (<CUBECLOUD_TEAM_ID>)"). -->
-    <key>keychain-access-groups</key>
-    <array>
-      <string><CUBECLOUD_TEAM_ID>.io.cubecloud.agentmeow.desktop</string>
-    </array>
   </dict>
 </plist>

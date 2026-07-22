@@ -14,22 +14,22 @@ LLM in run #2, proving that the persistent agent-meow store at
 
 - The persistent store path regresses in
   ``agent_meow.chat._omnigent_persistent_dir`` or
-  ``agent_meow.inner.cli._build_omnigent_stores`` â€” e.g. someone
+  ``agent_meow.inner.cli._build_omnigent_stores`` â€?e.g. someone
   flips back to ``mkdtemp`` and ``--continue`` silently
   starts a fresh conversation.
 - Idempotent agent registration regresses
-  (``_omnigent_register_yaml_bundle``) â€” the second subprocess
+  (``_omnigent_register_yaml_bundle``) â€?the second subprocess
   crashes on the ``agents.name`` UNIQUE constraint, OR
   registers a fresh ``agent_id`` that doesn't link to the
   prior conversation, OR fails to find the prior
   conversation when filtering by ``agent_id``.
 - ``_resolve_previous_response_id`` stops finding the
-  most-recent task on the most-recent conversation â€”
+  most-recent task on the most-recent conversation â€?
   ``--continue`` silently threads onto the wrong
   conversation, the LLM doesn't see the prior turn, and
   the nonce isn't recovered.
 - ``_post_prompt_and_print`` stops passing
-  ``previous_response_id`` on the POST â€” the route creates
+  ``previous_response_id`` on the POST â€?the route creates
   a fresh conversation for run #2 even though the resume
   resolution succeeded.
 
@@ -49,7 +49,7 @@ from pathlib import Path
 from tests.e2e.agent_meow.conftest import configure_mock_llm
 
 # ``openai-agents`` is picked because it honors
-# ``OPENAI_BASE_URL`` / ``OPENAI_API_KEY`` directly â€” no
+# ``OPENAI_BASE_URL`` / ``OPENAI_API_KEY`` directly â€?no
 # ``~/.databrickscfg`` patching required (which would be
 # awkward when HOME is a tmp_path).
 _MODEL = "mock-model"
@@ -73,11 +73,22 @@ def _make_nonce() -> str:
 
     :returns: A short hex string, e.g. ``"floogerwhip3a4f"``.
     """
-    # Deliberately not derived from a stable seed â€”
+    # Deliberately not derived from a stable seed â€?
     # parallel test runs need distinct nonces so they don't
     # leak between conversations even if HOME isolation
     # somehow fails.
     return "nonce" + uuid.uuid4().hex[:12]
+
+
+def _row_id_to_hex(value: object) -> str:
+    """Render a conversation id read via raw sqlite3 as bare 32-char hex.
+
+    The ``id`` column is a Uuid16 (16-byte BLOB), so ``sqlite3`` hands it
+    back as ``bytes``; ``--resume`` expects the hex string form.
+    """
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value).hex()
+    return str(value)
 
 
 def _argv_run_omnigent(
@@ -162,7 +173,7 @@ def _daemon_log_tails(home: Path, *, tail_chars: int = 3000) -> str:
     Each ``agent-meow run`` subprocess spawns its own local server, host
     daemon, and runner whose logs land under ``$HOME/.agent_meow/logs/``
     (``server/``, ``runner/``, ``host-runner/``). When the CLI exits
-    nonzero those logs are the only record of WHY â€” e.g. the local
+    nonzero those logs are the only record of WHY â€?e.g. the local
     server dying mid-startup surfaces in the CLI only as a bare
     ``httpx.ConnectError`` from ``wait_for_runner_online``.
 
@@ -230,9 +241,9 @@ def test_run_omnigent_continue_carries_history_across_invocations(
     #1's conversation.
 
     What breaks if this fails: see module-level docstring.
-    Each layer's regression â€” store filter, idempotent
+    Each layer's regression â€?store filter, idempotent
     register, previous_response_id plumbing, persistent
-    store dir â€” produces a different observable failure
+    store dir â€?produces a different observable failure
     here, but they all collapse the same way: run #2's
     output does not contain the nonce.
     """
@@ -282,7 +293,7 @@ def test_run_omnigent_continue_carries_history_across_invocations(
     persistent_db = fake_home / ".agent-meow" / "chat.db"
     assert persistent_db.is_file(), (
         f"Persistent store was not created at {persistent_db}. "
-        f"Run #1 didn't write to ``~/.agent_meow/chat.db`` â€” "
+        f"Run #1 didn't write to ``~/.agent_meow/chat.db`` â€?"
         f"either ``--no-session`` slipped in, or "
         f"``_omnigent_persistent_dir`` regressed."
     )
@@ -319,7 +330,7 @@ def test_run_omnigent_continue_carries_history_across_invocations(
     # the nonce; this assertion is the integration test for
     # every layer of the --continue plumbing at once.
     assert nonce in result2.stdout.lower(), (
-        f"Nonce {nonce!r} not in run #2 output â€” --continue "
+        f"Nonce {nonce!r} not in run #2 output â€?--continue "
         f"failed to recover the prior conversation. "
         f"stdout={result2.stdout!r} stderr={result2.stderr!r}"
     )
@@ -329,7 +340,7 @@ def test_run_omnigent_continue_with_no_prior_conversation_exits_nonzero(
     omnigent_python: Path,
     omnigent_repo_root: Path,
     mock_credentials_env: dict[str, str],
-    tmp_path: Path,  # no LLM call â€” exits before reaching mock server
+    tmp_path: Path,  # no LLM call â€?exits before reaching mock server
 ) -> None:
     """
     ``--continue`` against a fresh ``$HOME`` (no prior
@@ -402,7 +413,7 @@ def test_run_omnigent_continue_works_across_oneshot_and_interactive_paths(
     A previous regression had ``_preregister_agent`` doing
     delete + recreate of the agent row on every server
     startup, which cascaded through ``Task.agent_id`` and
-    wiped the prior conversations â€” making ``--continue``
+    wiped the prior conversations â€?making ``--continue``
     error out with "No prior conversation for agent ..." even
     though the ``-p`` write had succeeded. The
     one-mode-only e2e test
@@ -445,7 +456,7 @@ def test_run_omnigent_continue_works_across_oneshot_and_interactive_paths(
         f"Daemon logs:\n{_daemon_log_tails(fake_home)}"
     )
     assert nonce in plant.stdout.lower(), (
-        f"plant didn't echo the nonce â€” pre-condition for the "
+        f"plant didn't echo the nonce â€?pre-condition for the "
         f"recover step is broken. stdout={plant.stdout!r}"
     )
 
@@ -481,7 +492,7 @@ def test_run_omnigent_continue_works_across_oneshot_and_interactive_paths(
     # The interactive REPL prints a banner with "Resumed
     # conversation <id>" when --continue successfully
     # attaches. Without that, even an LLM hallucination
-    # could produce the nonce â€” the resume check is what
+    # could produce the nonce â€?the resume check is what
     # this test is really for.
     assert "Resumed conversation" in recover.stdout, (
         f"interactive --continue did not attach to the prior "
@@ -521,7 +532,7 @@ def test_run_omnigent_session_id_pins_the_specific_conversation(
       is ignored), so users who pinned an older
       conversation get the wrong history threaded in.
     - The ``--continue`` resolution path takes precedence
-      over the explicit id (the inverse â€” explicit beats
+      over the explicit id (the inverse â€?explicit beats
       implicit, but a regression could swap them).
     - The ``previous_response_id`` plumbing on the POST
       regresses and the new turn lands on a fresh
@@ -577,11 +588,16 @@ def test_run_omnigent_session_id_pins_the_specific_conversation(
     assert nonce_a in plant_a.stdout.lower()
 
     # Capture convA's id BEFORE planting B so we get the
-    # right one â€” "newest" walks forward as more
-    # conversations are added.
+    # right one â€?"newest" walks forward as more
+    # conversations are added. kind = 1 is the "default" enum code (the
+    # column is a SMALLINT; see agent_meow.db.enum_codecs.CONVERSATION_KIND).
     with sqlite3.connect(str(persistent_db)) as conn:
         rows = conn.execute(
-            "SELECT id FROM conversations WHERE kind = 'default' ORDER BY updated_at DESC, id DESC"
+            "SELECT c.id FROM conversations c "
+            "JOIN omnigent_conversation_metadata m "
+            "  ON m.workspace_id = c.workspace_id AND m.id = c.id "
+            "WHERE m.kind = 1 "
+            "ORDER BY c.updated_at DESC, c.id DESC"
         ).fetchall()
     assert len(rows) == 1, (
         f"Expected exactly 1 conversation after plant A; got {len(rows)}. "
@@ -589,14 +605,14 @@ def test_run_omnigent_session_id_pins_the_specific_conversation(
         f"store. If >1, an unrelated test polluted the dir or the "
         f"HOME isolation broke."
     )
-    conv_a_id = rows[0][0]
+    conv_a_id = _row_id_to_hex(rows[0][0])
 
     # â”€â”€ Run 2: plant nonce B, FRESH conversation (no
     # --continue / --session). A regression where -p mode
     # accidentally threads onto the prior conversation
     # (the symmetric bug to "explicit id is ignored")
     # would surface here as plant B writing to convA
-    # instead of creating convB â€” the assertion that
+    # instead of creating convB â€?the assertion that
     # there are two distinct conversations after this
     # step catches that.
     plant_b = subprocess.run(
@@ -621,16 +637,21 @@ def test_run_omnigent_session_id_pins_the_specific_conversation(
     )
     assert nonce_b in plant_b.stdout.lower()
 
+    # kind = 1 is the "default" enum code (SMALLINT column).
     with sqlite3.connect(str(persistent_db)) as conn:
         rows = conn.execute(
-            "SELECT id FROM conversations WHERE kind = 'default' ORDER BY updated_at DESC, id DESC"
+            "SELECT c.id FROM conversations c "
+            "JOIN omnigent_conversation_metadata m "
+            "  ON m.workspace_id = c.workspace_id AND m.id = c.id "
+            "WHERE m.kind = 1 "
+            "ORDER BY c.updated_at DESC, c.id DESC"
         ).fetchall()
     assert len(rows) == 2, (
         f"Expected exactly 2 conversations after plant B; got {len(rows)}. "
         f"If 1, plant B threaded onto convA (the silent-resume "
         f"regression). If >2, leakage from another test."
     )
-    conv_b_id = rows[0][0]
+    conv_b_id = _row_id_to_hex(rows[0][0])
     assert conv_b_id != conv_a_id
 
     # â”€â”€ Run 3: --resume convA_id must recover nonce A
@@ -671,7 +692,7 @@ def test_run_omnigent_session_id_pins_the_specific_conversation(
     assert nonce_b not in out_a, (
         f"--resume convA leaked nonce_b={nonce_b!r} from "
         f"the OTHER conversation. The id filter on the "
-        f"resume path is broken â€” it's pulling history from "
+        f"resume path is broken â€?it's pulling history from "
         f"every conversation for this agent instead of the "
         f"specific one. stdout={recall_a.stdout!r}"
     )
@@ -718,7 +739,7 @@ def test_run_omnigent_session_id_unknown_exits_nonzero(
     """
     ``--resume bogus_id`` (a conversation_id that doesn't
     exist in the store) exits non-zero with a clear
-    "not found" message â€” not a silent fallback to a fresh
+    "not found" message â€?not a silent fallback to a fresh
     conversation.
 
     What breaks if this fails: typoed conversation IDs
@@ -757,7 +778,7 @@ def test_run_omnigent_no_session_does_not_pollute_persistent_store(
     tmp_path: Path,
 ) -> None:
     """
-    ``--no-session`` opts back into the per-run tmpdir â€”
+    ``--no-session`` opts back into the per-run tmpdir â€?
     the persistent ``$HOME/.agent_meow/chat.db`` must NOT
     be touched by the run.
 
@@ -788,7 +809,7 @@ def test_run_omnigent_no_session_does_not_pollute_persistent_store(
     )
     # The persistent dir might exist (created by
     # ``_omnigent_persistent_dir`` regardless of
-    # ``--no-session`` â€” that's a one-time mkdir, not a
+    # ``--no-session`` â€?that's a one-time mkdir, not a
     # write), but the chat.db file MUST NOT.
     persistent_db = fake_home / ".agent-meow" / "chat.db"
     assert not persistent_db.exists(), (

@@ -1,14 +1,14 @@
-"""Native Kimi TUI wrapper for the agent-meow CLI.
+"""Native Kimi TUI wrapper for the Omnigent CLI.
 
-``agent-meow kimi`` launches the Kimi CLI's interactive TUI (``kimi``
-with no args) inside an agent-meow-runner-owned tmux terminal and attaches the
-local TTY â€” the kimi analog of ``agent-meow codex`` / ``agent-meow pi``. The runner
-spawns the process (see :func:`~?agent_meow.runner.app._auto_create_kimi_terminal`);
+``omnigent kimi`` launches the Kimi CLI's interactive TUI (``kimi``
+with no args) inside an Omnigent-runner-owned tmux terminal and attaches the
+local TTY â€?the kimi analog of ``omnigent codex`` / ``omnigent pi``. The runner
+spawns the process (see :func:`agent_meow.runner.app._auto_create_kimi_terminal`);
 this module owns the CLI-side orchestration: session create/resume, daemon
 runner bind, terminal-ready poll, and the direct tmux attach.
 
 Auth is the ambient ``kimi login`` (``$HOME/.kimi``); no API key is
-required. Unlike Pi there is no extension bridge â€” the runner sets up the
+required. Unlike Pi there is no extension bridge â€?the runner sets up the
 terminal environment directly.
 """
 
@@ -40,6 +40,7 @@ from agent_meow.host.daemon_launch import (
     wait_for_host_online,
     wait_for_runner_online,
 )
+from agent_meow.native_coding_agents import native_shell_terminal_spec
 from agent_meow.native_terminal import (
     DAEMON_HOST_ONLINE_TIMEOUT_S as _DAEMON_HOST_ONLINE_TIMEOUT_S,
 )
@@ -73,7 +74,7 @@ class NativeKimiLaunch:
 
 @dataclass(frozen=True)
 class LaunchedKimiTerminal:
-    """Terminal resource returned by the agent-meow runner launch path."""
+    """Terminal resource returned by the Omnigent runner launch path."""
 
     terminal_id: str
     tmux_socket: Path | None
@@ -87,7 +88,7 @@ class PreparedKimiTerminal:
     :param reattached: ``True`` when an existing, still-running session
         terminal was reused (the live-reattach path: prior chat is
         intact).
-    :param cold_resumed: ``True`` when resuming an existing agent-meow
+    :param cold_resumed: ``True`` when resuming an existing Omnigent
         session whose terminal had already exited, so a *fresh*
         ``kimi`` TUI was launched with none of the prior turns.
         Kimi records no resumable chat id, so this is genuinely a new
@@ -161,10 +162,10 @@ def run_kimi_native(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch the Kimi TUI in an agent-meow terminal.
+    Launch the Kimi TUI in an Omnigent terminal.
 
-    :param server: Resolved agent-meow server URL.
-    :param session_id: Optional existing agent-meow conversation id.
+    :param server: Resolved Omnigent server URL.
+    :param session_id: Optional existing Omnigent conversation id.
     :param kimi_args: Raw kimi CLI args to persist for the runner-owned TUI.
     :param resume_picker: ``True`` runs the kimi-native picker.
     :param auto_open_conversation: When ``True``, open the browser
@@ -174,7 +175,7 @@ def run_kimi_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Kimi requires a resolved agent-meow server URL. The CLI should call "
+            "Kimi requires a resolved Omnigent server URL. The CLI should call "
             "_ensure_backend before run_kimi_native."
         )
     with TemporaryDirectory(prefix="omnigent-kimi-native-") as tmpdir:
@@ -191,7 +192,7 @@ def run_kimi_native(
 
 def _materialize_kimi_agent_spec(tmpdir: Path) -> Path:
     """
-    Write the terminal-first agent spec used by ``agent-meow kimi``.
+    Write the terminal-first agent spec used by ``omnigent kimi``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :returns: Path to the generated YAML spec.
@@ -209,17 +210,9 @@ def _materialize_kimi_agent_spec(tmpdir: Path) -> Path:
             "cwd": ".",
             "sandbox": {"type": "none"},
         },
-        "terminals": {
-            "shell": {
-                "command": "bash",
-                "allow_cwd_override": True,
-                "os_env": {
-                    "type": "caller_process",
-                    "cwd": ".",
-                    "sandbox": {"type": "none"},
-                },
-            },
-        },
+        # Default shell terminal for the web-UI "+ New shell" affordance;
+        # its command follows the user's ``$SHELL`` (zsh/fish/bash).
+        "terminals": native_shell_terminal_spec(),
     }
     yaml_path.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
     return yaml_path
@@ -235,11 +228,11 @@ def _run_with_remote_server(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch Kimi on an agent-meow server via a daemon-spawned runner.
+    Launch Kimi on an Omnigent server via a daemon-spawned runner.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param spec_path: Generated Kimi wrapper agent spec.
-    :param session_id: Optional existing agent-meow session id.
+    :param session_id: Optional existing Omnigent session id.
     :param resume_picker: When ``True``, run the kimi-native picker.
     :param kimi_args: Raw kimi CLI args.
     :param auto_open_conversation: Whether to open the web conversation URL.
@@ -295,7 +288,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the agent-meow server at {base_url}. "
+            f"Could not reach the omnigent server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc
@@ -439,7 +432,7 @@ async def _create_kimi_session(
 
 
 async def _fetch_kimi_session(client: httpx.AsyncClient, session_id: str) -> dict[str, Any]:
-    """Fetch an existing agent-meow session."""
+    """Fetch an existing Omnigent session."""
     resp = await client.get(f"/v1/sessions/{url_component(session_id)}")
     if resp.status_code == 404:
         raise click.ClickException(f"Conversation {session_id!r} not found on the server.")

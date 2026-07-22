@@ -1,4 +1,4 @@
-"""Tests for the persistent background local agent-meow server helpers.
+"""Tests for the persistent background local Omnigent server helpers.
 
 Covers ``agent_meow.host.local_server``: reuse-vs-respawn detection
 (:func:`local_server_url_if_healthy`) and the spawn wiring
@@ -32,13 +32,13 @@ def test_local_server_url_if_healthy_returns_url_when_alive_and_healthy(
     monkeypatch.setattr(local_server, "_LOCAL_SERVER_PID_PATH", pid_file)
     monkeypatch.setattr(local_server, "_pid_alive", lambda pid: pid == 4242)
 
-    health_targets: list[str] = []
+    health_targets: list[tuple[str, bool]] = []
 
     class _Resp:
         status_code = 200
 
-    def _fake_get(url: str, *, timeout: float) -> _Resp:
-        health_targets.append(url)
+    def _fake_get(url: str, *, timeout: float, trust_env: bool) -> _Resp:
+        health_targets.append((url, trust_env))
         return _Resp()
 
     monkeypatch.setattr("httpx.get", _fake_get)
@@ -46,7 +46,36 @@ def test_local_server_url_if_healthy_returns_url_when_alive_and_healthy(
     assert local_server.local_server_url_if_healthy() == "http://127.0.0.1:8123"
     # The probe must hit the recorded port's /health, proving the port from
     # the pidfile (not a hardcoded default) was used.
-    assert health_targets == ["http://127.0.0.1:8123/health"]
+    assert health_targets == [("http://127.0.0.1:8123/health", False)]
+
+
+def test_wait_for_local_server_bypasses_environment_proxies(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The readiness poll must connect to loopback without system proxies."""
+
+    class _Proc:
+        @staticmethod
+        def poll() -> None:
+            return None
+
+    class _Resp:
+        status_code = 200
+
+    health_targets: list[tuple[str, bool]] = []
+
+    def _fake_get(url: str, *, timeout: float, trust_env: bool) -> _Resp:
+        health_targets.append((url, trust_env))
+        return _Resp()
+
+    monkeypatch.setattr("httpx.get", _fake_get)
+
+    local_server._wait_for_local_omnigent_server(
+        "http://127.0.0.1:8123", _Proc(), tmp_path / "server.log"
+    )
+
+    assert health_targets == [("http://127.0.0.1:8123/health", False)]
 
 
 def test_local_server_url_if_healthy_none_when_pid_dead(
@@ -111,7 +140,7 @@ def test_ensure_local_omnigent_server_reuses_without_spawning(
 
     result = local_server.ensure_local_omnigent_server()
     assert result.url == "http://127.0.0.1:8123"
-    # Reused an existing healthy server â€” did not start a new process.
+    # Reused an existing healthy server â€?did not start a new process.
     assert result.spawned is False
 
 
@@ -123,7 +152,7 @@ def test_ensure_local_omnigent_server_respawns_on_config_drift(
 
     This is the auth-drift fix: when the running server was spawned under a
     different auth source (its sidecar sig differs from this invocation's),
-    reuse must NOT happen â€” the old server is stopped and a fresh one
+    reuse must NOT happen â€?the old server is stopped and a fresh one
     spawned so the new config takes effect.
     """
     monkeypatch.setattr(
@@ -201,7 +230,7 @@ def test_server_config_signature_changes_with_version(
     sig_new = local_server.server_config_signature()
 
     assert sig_old != sig_new
-    # Same version â†’ stable signature (no spurious respawns on every call).
+    # Same version â†?stable signature (no spurious respawns on every call).
     assert sig_new == local_server.server_config_signature()
 
 
@@ -212,7 +241,7 @@ def test_ensure_local_omnigent_server_spawns_when_none_healthy(
     """With no healthy server, spawn one on a loopback port and record it.
 
     Verifies the spawn path: a free port is bound, the server subprocess is
-    launched as ``agent-meow server`` on 127.0.0.1, the pidfile records
+    launched as ``omnigent server`` on 127.0.0.1, the pidfile records
     ``pid\\nport``, and the chosen port is returned.
     The readiness poll is stubbed so the test does not depend on a real boot.
     """
@@ -231,7 +260,7 @@ def test_ensure_local_omnigent_server_spawns_when_none_healthy(
     # Point the persistent data dir at tmp so the test does not write to the
     # developer's real ~/.agent_meow.
     monkeypatch.setattr(Path, "home", classmethod(lambda _cls: tmp_path))
-    # The spawned server inherits the parent env unmodified â€” there is no
+    # The spawned server inherits the parent env unmodified â€?there is no
     # profile flag anymore, so an ambient DATABRICKS_CONFIG_PROFILE must
     # pass through to the server env as-is (asserted below).
     monkeypatch.setenv("DATABRICKS_CONFIG_PROFILE", "ambient")
@@ -261,14 +290,14 @@ def test_ensure_local_omnigent_server_spawns_when_none_healthy(
     result = local_server.ensure_local_omnigent_server()
 
     assert result.url == "http://127.0.0.1:8765"
-    # Spawned a fresh server (none was healthy) â€” reported as ours.
+    # Spawned a fresh server (none was healthy) â€?reported as ours.
     assert result.spawned is True
     args = captured["args"]
     assert isinstance(args, list)
     assert "server" in args
     assert "127.0.0.1" in args
     assert "8765" in args
-    # Pidfile records PID then port â€” the contract _read_local_server_pid_file
+    # Pidfile records PID then port â€?the contract _read_local_server_pid_file
     # parses; a wrong order silently breaks reuse on the next run.
     assert pid_file.read_text() == "9001\n8765\n"
     # The config-signature sidecar is stamped so a later differently-configured
@@ -289,7 +318,7 @@ def test_stop_local_omnigent_server_waits_for_process_exit(
 
     The bug: fire-and-forget SIGTERM left the port bound until the OS
     reaped the process, so the next ``ensure_local_omnigent_server`` or
-    ``agent-meow server`` failed to bind. The fix polls ``_pid_alive``
+    ``omnigent server`` failed to bind. The fix polls ``_pid_alive``
     until the process exits. This test verifies the poll loop runs and
     that both the pidfile and sig sidecar are cleaned up.
     """
@@ -321,14 +350,14 @@ def test_stop_local_omnigent_server_waits_for_process_exit(
         return alive_calls <= 2
 
     monkeypatch.setattr(local_server, "_pid_alive", _fake_pid_alive)
-    # Eliminate real sleeps â€” the poll interval is irrelevant in the test.
+    # Eliminate real sleeps â€?the poll interval is irrelevant in the test.
     monkeypatch.setattr(local_server.time, "sleep", lambda _s: None)
 
     local_server.stop_local_omnigent_server()
 
     import signal as signal_mod
 
-    # SIGTERM was sent exactly once â€” the process exited before the
+    # SIGTERM was sent exactly once â€?the process exited before the
     # grace period, so SIGKILL was never needed.
     assert kill_signals == [signal_mod.SIGTERM], (
         f"Expected a single SIGTERM, got {kill_signals}. "
@@ -336,7 +365,7 @@ def test_stop_local_omnigent_server_waits_for_process_exit(
     )
     # alive_calls >= 3 proves the poll loop ran (not just fire-and-forget).
     assert alive_calls >= 3, (
-        f"_pid_alive called {alive_calls} time(s) â€” expected â‰¥3 "
+        f"_pid_alive called {alive_calls} time(s) â€?expected â‰? "
         f"(guard + poll + exit-detect). If 1, the wait loop was skipped."
     )
     # Pidfile and sig sidecar cleaned up.
@@ -397,10 +426,10 @@ def test_stop_local_omnigent_server_escalates_to_sigkill(
     # Both SIGTERM and SIGKILL must have been sent, in that order.
     assert signal_mod.SIGTERM in kill_signals, "SIGTERM was never sent"
     assert signal_mod.SIGKILL in kill_signals, (
-        "SIGKILL was never sent â€” the grace period expiry didn't escalate"
+        "SIGKILL was never sent â€?the grace period expiry didn't escalate"
     )
     assert kill_signals.index(signal_mod.SIGTERM) < kill_signals.index(signal_mod.SIGKILL), (
-        "SIGKILL was sent before SIGTERM â€” escalation order is wrong"
+        "SIGKILL was sent before SIGTERM â€?escalation order is wrong"
     )
     assert not pid_file.exists()
     assert not sig_file.exists()
@@ -411,21 +440,21 @@ def test_local_data_dir_honors_data_dir_not_config_home(
 ) -> None:
     """``_local_data_dir`` isolates the runtime DB via ``OMNIGENT_DATA_DIR`` only.
 
-    Two worktrees sharing ``~/.agent_meow/chat.db`` with divergent Alembic
+    Two worktrees sharing ``~/.omnigent/chat.db`` with divergent Alembic
     heads can't migrate the shared DB, so the daemon-backed server fails to
     boot. ``OMNIGENT_DATA_DIR`` is the purpose-built data-isolation knob.
-    ``OMNIGENT_CONFIG_HOME`` MUST NOT move the DB â€” it isolates config only;
+    ``OMNIGENT_CONFIG_HOME`` MUST NOT move the DB â€?it isolates config only;
     overloading it broke HOME-based data isolation (the resumption e2e tests
     set ``HOME`` to control the DB while inheriting a shared CONFIG_HOME).
     """
     monkeypatch.delenv("OMNIGENT_DATA_DIR", raising=False)
     monkeypatch.delenv("OMNIGENT_CONFIG_HOME", raising=False)
     # Default: ~/.agent_meow.
-    assert local_server._local_data_dir() == Path.home() / ".agent-meow"
-    # CONFIG_HOME does NOT move the data dir â€” a failure here means config
+    assert local_server._local_data_dir() == Path.home() / ".omnigent"
+    # CONFIG_HOME does NOT move the data dir â€?a failure here means config
     # isolation is leaking back into data-dir selection.
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "cfg"))
-    assert local_server._local_data_dir() == Path.home() / ".agent-meow"
+    assert local_server._local_data_dir() == Path.home() / ".omnigent"
     # DATA_DIR is the data-isolation knob.
     monkeypatch.setenv("OMNIGENT_DATA_DIR", str(tmp_path / "data"))
     assert local_server._local_data_dir() == tmp_path / "data"
@@ -435,7 +464,7 @@ def test_pick_local_port_returns_preferred_when_free() -> None:
     """``pick_local_port`` returns the preferred port when it's bindable.
 
     The local server prefers a stable port (8000) so its URL is identical
-    across ``agent-meow server`` and daemon spawns. We use an
+    across ``omnigent server`` and daemon spawns. We use an
     OS-assigned free port as ``preferred`` here so the assertion is
     deterministic regardless of what's already bound on the host (8000
     is often busy on shared CI boxes).
@@ -455,7 +484,7 @@ def test_pick_local_port_falls_back_when_preferred_taken() -> None:
 
     Holding a listener on ``preferred`` makes its bind-test fail; the
     helper must return some OTHER, still-usable port rather than raising
-    or returning the busy one â€” this is what lets the fallback never
+    or returning the busy one â€?this is what lets the fallback never
     break daemon discovery (which keys off the pidfile, not the port).
     """
     import socket
@@ -479,7 +508,7 @@ def test_register_then_clear_local_server_round_trip(
 ) -> None:
     """``register_local_server`` writes our pid+port; ``clear`` removes it.
 
-    This is the handshake that lets a foreground ``agent-meow server``
+    This is the handshake that lets a foreground ``omnigent server``
     advertise itself to the daemon: register writes ``<pid>\\n<port>\\n``
     so :func:`local_server_url_if_healthy` can discover it, and the
     shutdown clear leaves no stale record behind.
@@ -500,7 +529,7 @@ def test_register_then_clear_local_server_round_trip(
     assert sig_file.exists()
 
     local_server.clear_local_server_record()
-    # Both files die together â€” a stale sig must not outlive the pidfile.
+    # Both files die together â€?a stale sig must not outlive the pidfile.
     assert not pid_file.exists()
     assert not sig_file.exists()
 
@@ -512,10 +541,10 @@ def test_register_local_server_stamps_matching_sig(
     """A foreground server's sidecar matches what connect/run compute.
 
     The regression this guards against: ``register_local_server`` wrote only the
-    pidfile, so a foreground ``agent-meow server`` presented no sig and the
+    pidfile, so a foreground ``omnigent server`` presented no sig and the
     next ``connect``/``run`` saw ``None != desired`` and stopped + respawned
     it. With the sig stamped, the reuse path in ``ensure_local_omnigent_server``
-    short-circuits to the healthy URL WITHOUT spawning â€” proving the
+    short-circuits to the healthy URL WITHOUT spawning â€?proving the
     foreground server is now reusable. Both sides compute the signature
     from the same resolved auth source, so the two signatures agree.
     """
@@ -527,12 +556,12 @@ def test_register_local_server_stamps_matching_sig(
         local_server, "_LOCAL_SERVER_LOG_REF_PATH", tmp_path / "local_server.logpath"
     )
 
-    # Foreground `agent-meow server` advertises itself in the pidfile + sig.
+    # Foreground `omnigent server` advertises itself in the pidfile + sig.
     local_server.register_local_server(8000)
     assert sig_file.read_text().strip() == local_server.server_config_signature()
 
     # A later connect/run under the same config finds it healthy and reuses
-    # it â€” Popen must NOT fire (that would be the stop-and-respawn bug).
+    # it â€?Popen must NOT fire (that would be the stop-and-respawn bug).
     monkeypatch.setattr(
         local_server, "local_server_url_if_healthy", lambda: "http://127.0.0.1:8000"
     )
@@ -544,7 +573,7 @@ def test_register_local_server_stamps_matching_sig(
 
     result = local_server.ensure_local_omnigent_server()
     assert result.url == "http://127.0.0.1:8000"
-    # Reused the foreground server â€” no respawn (the prior respawn regression).
+    # Reused the foreground server â€?no respawn (the prior respawn regression).
     assert result.spawned is False
 
 
@@ -555,7 +584,7 @@ def test_clear_local_server_record_leaves_other_pids_alone(
     """Clear is a no-op when the pidfile points at a different process.
 
     The foreground server must never delete the record of a
-    daemon-spawned server (or vice versa) on its own shutdown â€” only the
+    daemon-spawned server (or vice versa) on its own shutdown â€?only the
     process that registered itself may clear the file. We seed a foreign
     pid and assert the file survives.
     """
@@ -573,7 +602,7 @@ def test_clear_local_server_record_leaves_other_pids_alone(
 
 
 # ---------------------------------------------------------------------------
-# Server log-path sidecar â€” so `server start`/`status` name the exact log
+# Server log-path sidecar â€?so `server start`/`status` name the exact log
 # ---------------------------------------------------------------------------
 
 
@@ -583,7 +612,7 @@ def test_ensure_local_omnigent_server_spawn_records_and_returns_log_path(
 ) -> None:
     """A spawned server returns its captured-log path and records it for status.
 
-    ``agent-meow server start`` used to be a black box â€” it printed only the
+    ``omnigent server start`` used to be a black box â€?it printed only the
     URL. The spawn now threads the captured stdout/stderr log file out via
     ``LocalServerStartup.log_path`` AND into the log-path sidecar, so both
     the spawning call and a later ``server status`` can name the exact file.
@@ -621,14 +650,14 @@ def test_ensure_local_omnigent_server_spawn_records_and_returns_log_path(
     assert result.spawned is True
     assert result.log_path is not None
     # The captured log lives under the per-user server log dir as a .log file.
-    assert result.log_path.parent == tmp_path / ".agent-meow" / "logs" / "server"
+    assert result.log_path.parent == tmp_path / ".omnigent" / "logs" / "server"
     assert result.log_path.suffix == ".log"
-    assert result.log_path.name.startswith("local-server-")
+    assert result.log_path.name.startswith("server-")
     # Recorded in the sidecar so a later status/reuse names the same file.
     assert log_ref.read_text().strip() == str(result.log_path)
 
-    # `server status` (health stub) surfaces the exact recorded log path â€”
-    # not just the directory â€” proving the read path works end to end.
+    # `server status` (health stub) surfaces the exact recorded log path â€?
+    # not just the directory â€?proving the read path works end to end.
     monkeypatch.setattr(
         local_server, "local_server_url_if_healthy", lambda: "http://127.0.0.1:8765"
     )
@@ -644,7 +673,7 @@ def test_ensure_local_omnigent_server_reuse_reads_log_path_sidecar(
     """Reusing a healthy server reports its log file from the sidecar.
 
     The reuse path never sees the original spawn's ``log_path`` variable, so
-    it must read the recorded path back from the sidecar â€” otherwise a
+    it must read the recorded path back from the sidecar â€?otherwise a
     ``server start`` that reuses an existing background server could not name
     its log. Popen must not fire (the stub fails the test if it does).
     """
@@ -654,7 +683,7 @@ def test_ensure_local_omnigent_server_reuse_reads_log_path_sidecar(
     sig_file = tmp_path / "local_server.sig"
     sig_file.write_text(local_server.server_config_signature() + "\n")
     log_ref = tmp_path / "local_server.logpath"
-    recorded = tmp_path / ".agent-meow" / "logs" / "server" / "local-server-cd34.log"
+    recorded = tmp_path / ".omnigent" / "logs" / "server" / "server-cd34.log"
     log_ref.write_text(str(recorded) + "\n")
     monkeypatch.setattr(local_server, "_LOCAL_SERVER_SIG_PATH", sig_file)
     monkeypatch.setattr(local_server, "_LOCAL_SERVER_LOG_REF_PATH", log_ref)
@@ -676,10 +705,10 @@ def test_register_local_server_clears_stale_log_ref(
 ) -> None:
     """A foreground server clears any stale background log-path sidecar.
 
-    A foreground ``agent-meow server`` streams logs to its own terminal, not a
+    A foreground ``omnigent server`` streams logs to its own terminal, not a
     file. If a prior background server left a log-ref sidecar behind, a later
     ``server status`` for the foreground one must NOT report that defunct
-    file â€” register clears it so the log path resolves to ``None``.
+    file â€?register clears it so the log path resolves to ``None``.
     """
     pid_file = tmp_path / "local_server.pid"
     sig_file = tmp_path / "local_server.sig"
@@ -700,7 +729,7 @@ def test_register_local_server_clears_stale_log_ref(
 
 
 # ---------------------------------------------------------------------------
-# stop_untracked_local_server â€” the off-switch's orphan sweep
+# stop_untracked_local_server â€?the off-switch's orphan sweep
 # ---------------------------------------------------------------------------
 
 
@@ -745,16 +774,19 @@ def _fake_subprocess(stdout: str | None = None, raises: BaseException | None = N
 def test_stop_untracked_local_server_kills_orphan_on_default_port(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A live agent-meow server on :8000 with no pidfile entry is found and stopped.
+    """A live Omnigent server on :8000 with no pidfile entry is found and stopped.
 
     This is the reported bug: the pidfile was lost while the server lived, so
     ``stop_local_omnigent_server`` (pidfile-scoped) couldn't see it. The sweep must
     confirm it's our server via ``/health``, resolve its PID via lsof, and
-    terminate it â€” returning the PID so the off-switch can report it.
+    terminate it â€?returning the PID so the off-switch can report it.
     """
-    monkeypatch.setattr(
-        "httpx.get", lambda url, *, timeout: _FakeHealthResp(200, {"status": "ok"})
-    )
+
+    def _healthy(url: str, *, timeout: float, trust_env: bool) -> _FakeHealthResp:
+        assert trust_env is False
+        return _FakeHealthResp(200, {"status": "ok"})
+
+    monkeypatch.setattr("httpx.get", _healthy)
     monkeypatch.setattr(local_server, "subprocess", _fake_subprocess(stdout="93359\n93360\n"))
     monkeypatch.setattr(local_server, "_pid_alive", lambda pid: True)
     terminated: list[int] = []
@@ -770,21 +802,22 @@ def test_stop_untracked_local_server_kills_orphan_on_default_port(
 def test_stop_untracked_local_server_noop_when_nothing_listening(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No ``/health`` responder â†’ nothing killed, and lsof is never consulted.
+    """No ``/health`` responder â†?nothing killed, and lsof is never consulted.
 
     Guards against the off-switch killing whatever happens to hold the port:
-    if there's no agent-meow server answering, we must not even look up a PID.
+    if there's no Omnigent server answering, we must not even look up a PID.
     """
     import httpx
 
-    def _refused(url: str, *, timeout: float) -> Any:
+    def _refused(url: str, *, timeout: float, trust_env: bool) -> Any:
+        assert trust_env is False
         raise httpx.ConnectError("connection refused")
 
     monkeypatch.setattr("httpx.get", _refused)
     monkeypatch.setattr(
         local_server,
         "subprocess",
-        _fake_subprocess(raises=AssertionError("lsof consulted despite no agent-meow server")),
+        _fake_subprocess(raises=AssertionError("lsof consulted despite no Omnigent server")),
     )
     monkeypatch.setattr(local_server, "_terminate_pid", _raise_if_called)
 
@@ -794,10 +827,13 @@ def test_stop_untracked_local_server_noop_when_nothing_listening(
 def test_stop_untracked_local_server_noop_on_non_omnigent_listener(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A 200 that isn't ``{"status": "ok"}`` is some other app â€” never killed."""
-    monkeypatch.setattr(
-        "httpx.get", lambda url, *, timeout: _FakeHealthResp(200, {"hello": "world"})
-    )
+    """A 200 that isn't ``{"status": "ok"}`` is some other app â€?never killed."""
+
+    def _foreign(url: str, *, timeout: float, trust_env: bool) -> _FakeHealthResp:
+        assert trust_env is False
+        return _FakeHealthResp(200, {"hello": "world"})
+
+    monkeypatch.setattr("httpx.get", _foreign)
     monkeypatch.setattr(local_server, "_terminate_pid", _raise_if_called)
 
     assert local_server.stop_untracked_local_server(port=8000) is None
@@ -806,14 +842,17 @@ def test_stop_untracked_local_server_noop_on_non_omnigent_listener(
 def test_stop_untracked_local_server_noop_when_lsof_unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A live agent-meow server but no resolvable PID (lsof missing) â†’ degrade, no kill.
+    """A live Omnigent server but no resolvable PID (lsof missing) â†?degrade, no kill.
 
     Without a PID we can't terminate, so the sweep returns ``None`` rather
-    than crashing â€” the off-switch then leaves a manual hint to the user.
+    than crashing â€?the off-switch then leaves a manual hint to the user.
     """
-    monkeypatch.setattr(
-        "httpx.get", lambda url, *, timeout: _FakeHealthResp(200, {"status": "ok"})
-    )
+
+    def _healthy(url: str, *, timeout: float, trust_env: bool) -> _FakeHealthResp:
+        assert trust_env is False
+        return _FakeHealthResp(200, {"status": "ok"})
+
+    monkeypatch.setattr("httpx.get", _healthy)
     monkeypatch.setattr(
         local_server, "subprocess", _fake_subprocess(raises=FileNotFoundError("lsof"))
     )
@@ -904,7 +943,7 @@ def test_ensure_respawns_on_free_port_when_foreign_server_owns_preferred_port(
 
     result = local_server.ensure_local_omnigent_server()
 
-    # The returned URL is the respawn's free port, NOT the contended one â€”
+    # The returned URL is the respawn's free port, NOT the contended one â€?
     # the preferred-port spawn was never adopted.
     assert result.url == "http://127.0.0.1:9111"
     assert result.spawned is True
@@ -920,7 +959,7 @@ def test_ensure_retries_when_child_dies_and_foreign_owner_holds_port(
 
     The bind-race loser can die fast enough that the readiness wait raises
     (child exited) before /health is ever answered. That startup failure
-    is retryable when, and only when, a foreign listener owns the port â€”
+    is retryable when, and only when, a foreign listener owns the port â€?
     the failure was the race, not the server.
     """
     _patch_spawn_env(monkeypatch, tmp_path)
@@ -959,7 +998,7 @@ def test_ensure_startup_failure_without_contention_raises(
 
     The retry is reserved for port contention. When the child dies and
     nothing foreign owns the port (a real boot failure: bad spec, import
-    error), the original error must propagate after ONE spawn â€” retrying
+    error), the original error must propagate after ONE spawn â€?retrying
     would just fail again and hide the error for another timeout.
     """
     _patch_spawn_env(monkeypatch, tmp_path)

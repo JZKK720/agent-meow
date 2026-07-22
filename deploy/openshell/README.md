@@ -1,25 +1,25 @@
-# agent-meow on NVIDIA OpenShell
+# Omnigent on NVIDIA OpenShell
 
 [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) is a self-hosted sandbox
-provider. agent-meow connects to an OpenShell **gateway** with the official
+provider. Omnigent connects to an OpenShell **gateway** with the official
 [`openshell`](https://pypi.org/project/openshell/) Python SDK and asks that
 gateway to create, execute in, and delete sandboxes on the gateway's configured
 compute driver.
 
-This guide covers the agent-meow-specific OpenShell setup:
+This guide covers the Omnigent-specific OpenShell setup:
 
 - install the `openshell` extra;
 - select a working OpenShell gateway;
-- use an OpenShell-compatible agent-meow host image;
+- use an OpenShell-compatible Omnigent host image;
 - configure CLI-launched or server-managed sandboxes.
 
 ```bash
-pip install 'agent-meow[openshell]'
+uv pip install 'omnigent[openshell]'
 ```
 
-agent-meow uses OpenShell two ways:
+Omnigent uses OpenShell two ways:
 
-- **CLI-launched**: `meow sandbox create` / `connect` provisions a sandbox
+- **CLI-launched**: `omnigent sandbox create` / `connect` provisions a sandbox
   from your terminal, ships your local checkout into it, and registers it as a
   host with your server.
 - **Server-managed**: the server provisions a sandbox automatically when a
@@ -30,14 +30,14 @@ This is a sandbox-provider guide, not a server deploy target.
 
 Two traits shape the rest of this guide:
 
-- **gRPC, and a gateway you select — not an API key.** agent-meow connects through
+- **gRPC, and a gateway you select — not an API key.** Omnigent connects through
   the OpenShell gateway you've made active with `openshell gateway select`. The
   SDK's `from_active_cluster()` resolves that gateway's endpoint, TLS material,
   and OIDC token from `$OPENSHELL_GATEWAY` / `~/.config/openshell/active_gateway`.
-  There is no base-URL or token knob in agent-meow — gateway setup and auth are an
+  There is no base-URL or token knob in Omnigent — gateway setup and auth are an
   OpenShell concern.
 - **No local port forward.** OpenShell has no sandbox→laptop callback path, so
-  the interactive in-sandbox `meow login` / App OAuth step is skipped
+  the interactive in-sandbox `omnigent login` / App OAuth step is skipped
   automatically (as on Modal, Daytona, and CoreWeave) — fine for token/OIDC-auth
   servers.
 
@@ -58,9 +58,9 @@ curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | 
 > **The gateway host must be amd64 Linux.** OpenShell's supervisor
 > (Landlock/seccomp/netns) does not run reliably under emulation — on an arm64
 > host (e.g. Apple Silicon via colima) the sandbox never reaches READY. The
-> official host image now publishes multi-arch (amd64 + arm64), but its arm64
-> variant omits `cel-expr-python` (no linux-arm64 wheel — CEL policies degrade to
-> unavailable there), so the amd64 variant is the one to run with OpenShell. On an
+> official host image now publishes multi-arch (amd64 + arm64). CEL policies are
+> available on all architectures (cel-python is pure Python), so the amd64 variant
+> is the one to run with OpenShell for supervisor reasons. On an
 > Apple-Silicon laptop, point the gateway at a remote **amd64 Linux** box (and the
 > server at that gateway) rather than the local Docker VM.
 
@@ -91,7 +91,7 @@ gateway logs at `~/.openshell-local/gateway.log`.
 For a real deployment, run the gateway behind TLS with OIDC or mTLS (see the
 OpenShell docs), then `openshell gateway add <https-url>` and `openshell gateway
 login`; the SDK picks up the TLS/OIDC material from the gateway metadata
-automatically — agent-meow needs no extra configuration.
+automatically — Omnigent needs no extra configuration.
 
 > [!WARNING]
 > `allow_unauthenticated_users = true` and `--disable-tls` are local-development
@@ -99,9 +99,9 @@ automatically — agent-meow needs no extra configuration.
 
 ## The host image
 
-Sandboxes boot from `ghcr.io/JZKK720/agent-meow-host:latest`, published by CI
+Sandboxes boot from `ghcr.io/omnigent-ai/omnigent-host:latest`, published by CI
 from the `host` target of [`deploy/docker/Dockerfile`](../docker/Dockerfile) with
-agent-meow and its dependencies preinstalled — including the coding-harness CLIs
+Omnigent and its dependencies preinstalled — including the coding-harness CLIs
 (`claude`, `codex`, `pi`, `kiro-cli`), so agents on any harness run without an in-sandbox
 install. OpenShell injects its own supervisor as the container entrypoint.
 
@@ -117,22 +117,22 @@ Before using an image with OpenShell, smoke-test that contract from the same
 Docker daemon the gateway uses:
 
 ```bash
-docker run --rm --entrypoint sh ghcr.io/JZKK720/agent-meow-host:latest \
+docker run --rm --entrypoint sh ghcr.io/omnigent-ai/omnigent-host:latest \
   -lc 'id sandbox && command -v ip && command -v nft'
 ```
 
 To use a different image (a fork, or extra tooling baked in), run the build from
-an agent-meow repository checkout on an amd64 Docker-capable machine, then push it
+an Omnigent repository checkout on an amd64 Docker-capable machine, then push it
 where the gateway's driver can pull from:
 
 ```bash
 docker build -f deploy/docker/Dockerfile --target host \
   --platform linux/amd64 \
-  -t docker.io/<you>/agent-meow-host:latest .
-docker push docker.io/<you>/agent-meow-host:latest
+  -t docker.io/<you>/omnigent-host:latest .
+docker push docker.io/<you>/omnigent-host:latest
 ```
 
-Then point agent-meow at it with `OMNIGENT_OPENSHELL_HOST_IMAGE`.
+Then point Omnigent at it with `OMNIGENT_OPENSHELL_HOST_IMAGE`.
 
 > [!NOTE]
 > **Air-gapped?** Pre-load the host image (and OpenShell's supervisor image) into
@@ -145,7 +145,7 @@ With a gateway selected, provision a sandbox and ship your local checkout into
 it:
 
 ```bash
-meow sandbox create --provider openshell --server https://your-host
+omnigent sandbox create --provider openshell --server https://your-host
 ```
 
 This creates a sandbox from the host image, builds wheels from your local
@@ -153,12 +153,12 @@ checkout, and overlays them on top — so the sandbox runs *your* code, not
 whatever the image was built from. Then register it as a host with your server:
 
 ```bash
-meow sandbox connect --provider openshell \
+omnigent sandbox connect --provider openshell \
   --sandbox-id <id-printed-by-create> \
   --server https://your-host
 ```
 
-`connect` runs `meow host` inside the sandbox and holds the connection open
+`connect` runs `omnigent host` inside the sandbox and holds the connection open
 in your terminal — Ctrl-C tears it down (stopping the in-sandbox host). New
 sessions targeting that host now run in the sandbox. Pass a unique `--host-name
 <label>` per sandbox when connecting several to one server (the server keys hosts
@@ -174,12 +174,12 @@ sandbox):
 
 ```bash
 export OMNIGENT_OPENSHELL_SANDBOX_ENV=ANTHROPIC_API_KEY,GIT_TOKEN
-meow sandbox create --provider openshell --server https://your-host
+omnigent sandbox create --provider openshell --server https://your-host
 ```
 
 ## Server-managed sandboxes
 
-Add a `sandbox:` section to the server config (`meow server -c config.yaml`,
+Add a `sandbox:` section to the server config (`omnigent server -c config.yaml`,
 or `<data_dir>/config.yaml`):
 
 ```yaml
@@ -187,6 +187,18 @@ sandbox:
   provider: openshell
   server_url: https://your-host    # public URL sandboxes dial back to
 ```
+
+A top-level `sandbox.host_config:` (provider-agnostic) holds verbatim
+in-sandbox `~/.omnigent/config.yaml` content — e.g. a `providers:`
+block routing a harness through a self-hosted gateway — installed into
+the sandbox before `omnigent host` starts. The block is server-managed:
+entries injected by a previous launch are replaced or removed on the
+next launch/resume, while config created inside the sandbox survives.
+Keep secrets out via
+`api_key_ref: env:VAR` (resolved in the sandbox against the injected
+env). See the [sandbox-runners config
+table](../kubernetes/overlays/sandbox-runners/README.md#configuration-sandbox-configyaml)
+for the shape.
 
 `provider` + `server_url` is a complete config. Sessions created with
 `host_type: "managed"` (the API call or the Web UI's New Sandbox option) then run
@@ -217,7 +229,7 @@ sandbox:
   provider: openshell
   server_url: https://your-host
   openshell:
-    image: docker.io/<you>/agent-meow-host:latest         # default: official image
+    image: docker.io/<you>/omnigent-host:latest         # default: official image
     env: [OPENAI_API_KEY, ANTHROPIC_API_KEY, GIT_TOKEN]  # server env var NAMES to inject
     cluster: my-gateway                                  # default: active gateway
 ```
@@ -300,7 +312,7 @@ standard set, inject `OMNIGENT_RUNNER_ENV_PASSTHROUGH=NAME1,NAME2`.
 > [!TIP]
 > OpenShell can also enforce credential and egress policy at the sandbox boundary
 > via its declarative YAML policy (a gateway-side feature, independent of
-> agent-meow). See the [OpenShell policy docs](https://docs.nvidia.com/openshell).
+> Omnigent). See the [OpenShell policy docs](https://docs.nvidia.com/openshell).
 
 ## Git credentials (private repositories)
 
@@ -321,7 +333,7 @@ match the [Modal git guide](../modal/README.md#git-credentials-private-repositor
   approach NVIDIA's own LangChain backend uses). Wheels are shipped this way, then
   installed with the shared host-image overlay command.
 - **Sandbox identity.** OpenShell assigns each sandbox a petname (e.g.
-  `touched-urial`); that name is the handle agent-meow prints and reuses. The
+  `touched-urial`); that name is the handle Omnigent prints and reuses. The
   requested `--name` is advisory.
 - **Non-root execution.** OpenShell runs the agent as the `sandbox` user, so the
   launcher pins every exec's cwd and `$HOME` to `/home/sandbox` (the image keeps
@@ -367,7 +379,7 @@ match the [Modal git guide](../modal/README.md#git-credentials-private-repositor
 | Variable | Where it's read | Purpose |
 |---|---|---|
 | `OPENSHELL_GATEWAY` | CLI machine / server | Gateway name to use; overrides `~/.config/openshell/active_gateway` (read by the SDK). `sandbox.openshell.cluster` takes precedence for managed. |
-| `OMNIGENT_OPENSHELL_HOST_IMAGE` | CLI machine | Override the host image ref (default `ghcr.io/JZKK720/agent-meow-host:latest`); `sandbox.openshell.image` is the managed equivalent |
+| `OMNIGENT_OPENSHELL_HOST_IMAGE` | CLI machine | Override the host image ref (default `ghcr.io/omnigent-ai/omnigent-host:latest`); `sandbox.openshell.image` is the managed equivalent |
 | `OMNIGENT_OPENSHELL_SANDBOX_ENV` | CLI machine | Comma-separated launcher-side env var names to inject into the sandbox; `sandbox.openshell.env` is the managed equivalent |
 | `OMNIGENT_RUNNER_ENV_PASSTHROUGH` | inside the sandbox (injected) | Extra env var names the host forwards to runners |
 | `GIT_TOKEN` / `GIT_USERNAME` | inside the sandbox (injected) | HTTPS credentials for private repository clone / fetch / push |
@@ -382,7 +394,7 @@ Exercised end-to-end against a live OpenShell gateway on an **amd64 Linux** host
   primitive) streaming output and propagating exit codes; the gateway logs the
   matching `CreateSandbox` / `ExecSandbox` / `DeleteSandbox` RPCs.
 - **Full server-managed session** — a `host_type:"managed"` session drove the
-  server to provision a sandbox on the gateway, start `meow host` in it (held
+  server to provision a sandbox on the gateway, start `omnigent host` in it (held
   foreground exec), dial back over the tunnel, register, spawn the runner, and
   complete a real agent turn (a Gemini model via the openai-agents harness) — the
   agent's reply came back from inside the sandbox.
@@ -392,6 +404,6 @@ upload, foreground streaming, attach, terminate, env passthrough, error handling
 and the managed-config parsing:
 
 ```bash
-pip install -e '.[openshell,dev]'
+uv pip install -e '.[openshell,dev]'
 pytest tests/onboarding/sandboxes/test_openshell.py tests/server/test_managed_hosts.py
 ```

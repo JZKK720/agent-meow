@@ -1,8 +1,8 @@
-"""Native Antigravity (agy) TUI wrapper for the agent-meow CLI.
+"""Native Antigravity (agy) TUI wrapper for the Omnigent CLI.
 
-``agent-meow antigravity`` treats the Antigravity ``agy`` CLI as a
-terminal-first program, mirroring ``agent-meow codex`` / ``agent-meow claude``.
-It creates or binds an agent-meow session, launches ``agy`` in a runner-owned
+``omnigent antigravity`` treats the Antigravity ``agy`` CLI as a
+terminal-first program, mirroring ``omnigent codex`` / ``omnigent claude``.
+It creates or binds an Omnigent session, launches ``agy`` in a runner-owned
 tmux terminal resource, then attaches the local TTY (directly to the
 runner's tmux when same-machine, else over the WebSocket PTY bridge).
 
@@ -18,13 +18,13 @@ Differences from the Codex / Claude wrappers (Phase 1 scope):
   there is no app-server process to start, no ``--remote`` transport, and no
   thread-init handshake.
 * **RPC mirroring (read path) and RPC web-turn delivery (write path).** agy's
-  conversation mirrors into the agent-meow chat view via the RPC read driver
-  (:mod:`~?agent_meow.antigravity_native_reader`), which polls/streams agy's
+  conversation mirrors into the Omnigent chat view via the RPC read driver
+  (:mod:`agent_meow.antigravity_native_reader`), which polls/streams agy's
   connect-RPC trajectory steps. Web-UI turns are delivered into the native agy
   conversation (the write path) by the native executor
-  (:mod:`~?agent_meow.inner.antigravity_native_executor`) over the connect-RPC
+  (:mod:`agent_meow.inner.antigravity_native_executor`) over the connect-RPC
   ``SendUserCascadeMessage`` method, which agy records as a real ``USER_INPUT``
-  turn â€” NOT ``SendAgentMessage`` (recorded as a ``SYSTEM_MESSAGE``, which would
+  turn â€?NOT ``SendAgentMessage`` (recorded as a ``SYSTEM_MESSAGE``, which would
   never mirror as a user turn; see the executor module).
 * **Per-session identity is minted at cold-start, not assigned at launch.** agy
   mints its own UUID conversation and ignores the launcher's
@@ -34,17 +34,17 @@ Differences from the Codex / Claude wrappers (Phase 1 scope):
   connect-RPC, writes it to bridge state (which the RPC reader binds), and PATCHes
   it onto the session as ``external_session_id``. A resume reads that real id back
   and passes ``--conversation <id>`` to continue agy's actual conversation (see
-  :func:`~?agent_meow.antigravity_native_launch.build_agy_launch`).
+  :func:`agent_meow.antigravity_native_launch.build_agy_launch`).
 * **Workspace = the agy terminal cwd.** agy runs tools in its process working
   directory, so the terminal cwd is pinned to the session working dir; no
   ``--add-dir`` is needed.
-* **Auth is inherited from ``~/.gemini``** â€” no credential seeding.
+* **Auth is inherited from ``~/.gemini``** â€?no credential seeding.
 
 The runner OWNS the agy terminal: binding a runner triggers its idempotent
 auto-create of the antigravity terminal (``runner/app.py``
 ``_auto_create_antigravity_terminal``) for every antigravity-native session. So
 the CLI reattaches to that runner-owned terminal after binding rather than
-launching its own â€” a double launch 500s ("already observed as required") and
+launching its own â€?a double launch 500s ("already observed as required") and
 clobbers the runner's bridge state (breaking web-turn injection). A CLI-side
 launch (:func:`_launch_and_record`) remains only as a defensive fallback for the
 unexpected case where the runner produces no terminal in the wait window.
@@ -124,6 +124,7 @@ from agent_meow.host.daemon_launch import (
     wait_for_host_online,
     wait_for_runner_online,
 )
+from agent_meow.native_coding_agents import native_shell_terminal_spec
 from agent_meow.native_terminal import (
     DAEMON_HOST_ONLINE_TIMEOUT_S as _DAEMON_HOST_ONLINE_TIMEOUT_S,
 )
@@ -152,7 +153,7 @@ _SESSION_LABELS = {
 @dataclass(frozen=True)
 class LaunchedAntigravityTerminal:
     """
-    Terminal resource returned by the agent-meow runner launch path.
+    Terminal resource returned by the Omnigent runner launch path.
 
     :param terminal_id: Terminal resource id, e.g.
         ``"terminal_antigravity_main"``.
@@ -172,7 +173,7 @@ class PreparedAntigravityTerminal:
     """
     Prepared native Antigravity terminal attachment details.
 
-    :param session_id: agent-meow session/conversation id.
+    :param session_id: Omnigent session/conversation id.
     :param terminal_id: Terminal resource id to attach.
     :param bridge_dir: Native Antigravity bridge directory shared with the
         ``antigravity-native`` harness.
@@ -181,7 +182,7 @@ class PreparedAntigravityTerminal:
     :param tmux_target: Tmux target for direct local attaches, e.g.
         ``"main"``.
     :param reattached: ``True`` when an existing terminal was reused.
-        Drives teardown ownership â€” a reattached invocation must not
+        Drives teardown ownership â€?a reattached invocation must not
         close the terminal on exit.
     """
 
@@ -205,12 +206,12 @@ def run_antigravity_native(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch the Antigravity (agy) TUI in an agent-meow terminal and attach.
+    Launch the Antigravity (agy) TUI in an Omnigent terminal and attach.
 
-    :param server: Resolved agent-meow server URL, e.g.
-        ``"http://127.0.0.1:8123"``. ``None`` starts a local agent-meow
+    :param server: Resolved Omnigent server URL, e.g.
+        ``"http://127.0.0.1:8123"``. ``None`` starts a local Omnigent
         server using the existing chat-server machinery.
-    :param session_id: Optional existing agent-meow conversation id to
+    :param session_id: Optional existing Omnigent conversation id to
         resume, e.g. ``"conv_abc123"``. ``None`` creates a new bundled
         session.
     :param antigravity_args: Raw pass-through args appended to the ``agy``
@@ -223,14 +224,14 @@ def run_antigravity_native(
         tests can supply a fake executable.
     :param model: Optional model label passed to agy via ``--model``,
         e.g. ``"gemini-2.5-pro"``. ``None`` lets agy use its default.
-    :param permission_mode: Optional agent-meow permission mode, e.g.
+    :param permission_mode: Optional Omnigent permission mode, e.g.
         ``"bypassPermissions"``. ``"bypassPermissions"`` maps to agy's
         ``--dangerously-skip-permissions`` (its only pre-emptive control);
         any other value (or ``None``) leaves agy's default ``request-review``
-        prompt in place for the attended user â€” unless the launch is headless,
+        prompt in place for the attended user â€?unless the launch is headless,
         in which case the prompt is auto-bypassed so an unattended turn does not
         hang (see
-        :func:`~?agent_meow.antigravity_native_launch.should_skip_permissions`).
+        :func:`agent_meow.antigravity_native_launch.should_skip_permissions`).
     :param auto_open_conversation: When ``True``, open the browser
         conversation URL after the session is prepared.
     :returns: None after the terminal attach session ends.
@@ -242,7 +243,7 @@ def run_antigravity_native(
     _preflight_local_tools()
     # Resolve auth/model config once up front so a missing credential warns
     # before any server work. agy is OAuth-only (subscription), inherited
-    # from ~/.gemini â€” nothing is seeded.
+    # from ~/.gemini â€?nothing is seeded.
     launch = resolve_native_antigravity_launch(model=model)
     # Detect headless ONCE here (a controlling TTY on stdin+stdout means an
     # interactive client will attach to drive agy's request-review prompt; a
@@ -279,7 +280,7 @@ def run_antigravity_native(
 
 def _materialize_antigravity_agent_spec(tmpdir: Path) -> Path:
     """
-    Write the terminal-first agent spec used by ``agent-meow antigravity``.
+    Write the terminal-first agent spec used by ``omnigent antigravity``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :returns: Path to the generated YAML spec.
@@ -294,13 +295,13 @@ def _materialize_antigravity_agent_spec(tmpdir: Path) -> Path:
         "executor": {"harness": "antigravity-native"},
         # Opt the native session into the child-session spawn writes so the
         # wrapped agy can author agent configs and launch them as sub-agent
-        # sessions. The agent-meow MCP relay (wired in #1194 â€” see
+        # sessions. The Omnigent MCP relay (wired in #1194 â€?see
         # ``antigravity_native_bridge.write_mcp_config`` and the runner's
         # ``_ensure_comment_relay_started``) derives its advertised
         # ``sys_session_*`` write surface from this ``spawn: true`` gate.
         "spawn": True,
         # Without an ``os_env`` block the runner's filesystem APIs 404 (see
-        # ``_require_os_env`` in ``agent_meow/runner/app.py``). agy already
+        # ``_require_os_env`` in ``omnigent/runner/app.py``). agy already
         # operates on the user's workspace with full filesystem access, so
         # caller-process / no-sandbox matches reality and enables the web
         # UI's files panel.
@@ -309,22 +310,13 @@ def _materialize_antigravity_agent_spec(tmpdir: Path) -> Path:
             "cwd": ".",
             "sandbox": {"type": "none"},
         },
-        # Declare a default shell terminal so the agent-meow MCP relay advertises
+        # Declare a default shell terminal so the Omnigent MCP relay advertises
         # the ``sys_terminal_*`` family to the wrapped agy (the relay's gate is
         # a non-empty ``terminals:`` block on this spec). This also feeds the
         # web-UI new-terminal affordance (``server/routes/sessions.py``), so it
-        # is not inert even independent of the relay.
-        "terminals": {
-            "shell": {
-                "command": "bash",
-                "allow_cwd_override": True,
-                "os_env": {
-                    "type": "caller_process",
-                    "cwd": ".",
-                    "sandbox": {"type": "none"},
-                },
-            },
-        },
+        # is not inert even independent of the relay. Its command follows the
+        # user's ``$SHELL`` (zsh/fish/bash).
+        "terminals": native_shell_terminal_spec(),
     }
     yaml_path.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
     return yaml_path
@@ -343,16 +335,16 @@ def _run_with_local_server(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Start a local agent-meow server, launch agy, and attach to it.
+    Start a local Omnigent server, launch agy, and attach to it.
 
     :param spec_path: Generated Antigravity wrapper agent spec.
-    :param session_id: Optional existing agent-meow session id.
+    :param session_id: Optional existing Omnigent session id.
     :param resume_picker: When ``True`` and ``session_id is None``, run the
         picker.
     :param antigravity_args: Raw pass-through agy args.
     :param command: agy executable to run.
     :param model: Optional agy model id.
-    :param permission_mode: Optional agent-meow permission mode (e.g.
+    :param permission_mode: Optional Omnigent permission mode (e.g.
         ``"bypassPermissions"``) threaded into the agy argv assembly.
     :param headless: ``True`` when no interactive client will attach (forces
         the agy permission-bypass flag so an unattended turn does not hang).
@@ -380,7 +372,7 @@ def _run_with_local_server(
             resume_picker=resume_picker,
         )
         if resolved_session_id is None and resume_picker and session_id is None:
-            # Picker cancelled â€” exit before creating a session the user declined.
+            # Picker cancelled â€?exit before creating a session the user declined.
             return
 
         async def _drive() -> None:
@@ -442,23 +434,23 @@ def _run_with_remote_server(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch agy on a remote agent-meow server via a daemon-spawned runner.
+    Launch agy on a remote Omnigent server via a daemon-spawned runner.
 
     The CLI binds a daemon runner to the session, then launches the agy
     terminal itself (the runner has no agy auto-create branch). Attach
     prefers the runner's tmux when it is local, else the WebSocket PTY
     bridge.
 
-    :param base_url: Remote agent-meow server base URL, e.g.
+    :param base_url: Remote Omnigent server base URL, e.g.
         ``"https://example.databricks.com"``.
     :param spec_path: Generated Antigravity wrapper agent spec.
-    :param session_id: Optional existing agent-meow session id.
+    :param session_id: Optional existing Omnigent session id.
     :param resume_picker: When ``True`` and ``session_id is None``, run the
         picker.
     :param antigravity_args: Raw pass-through agy args.
     :param command: agy executable to run.
     :param model: Optional agy model id.
-    :param permission_mode: Optional agent-meow permission mode (e.g.
+    :param permission_mode: Optional Omnigent permission mode (e.g.
         ``"bypassPermissions"``) threaded into the agy argv assembly.
     :param headless: ``True`` when no interactive client will attach (forces
         the agy permission-bypass flag so an unattended turn does not hang).
@@ -540,7 +532,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the agent-meow server at {base_url}. "
+            f"Could not reach the omnigent server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc
@@ -563,7 +555,7 @@ async def _prepare_antigravity_terminal(
     """
     Create/bind a session and launch its agy terminal resource.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers; ``{}`` for the local server.
     :param session_id: Optional existing session id.
     :param runner_id: Runner id to bind to the session, or ``None``.
@@ -572,7 +564,7 @@ async def _prepare_antigravity_terminal(
     :param antigravity_args: Raw pass-through agy args.
     :param command: agy executable to run.
     :param model: Optional agy model id.
-    :param permission_mode: Optional agent-meow permission mode threaded into the
+    :param permission_mode: Optional Omnigent permission mode threaded into the
         agy argv assembly.
     :param headless: ``True`` when no interactive client will attach (forces
         the agy permission-bypass flag).
@@ -636,15 +628,15 @@ async def _prepare_antigravity_terminal(
             # The runner OWNS the antigravity terminal: binding triggers its
             # idempotent auto-create (``runner/app.py``
             # ``_auto_create_antigravity_terminal``), which fires for every
-            # antigravity-native session â€” including on the local server, whose
+            # antigravity-native session â€?including on the local server, whose
             # CLI runner subprocess runs the same auto-create. Reattach to that
             # runner-owned terminal instead of launching our own: a redundant
-            # ``_launch_and_record`` 500s ("terminal antigravity:main â€¦ already
+            # ``_launch_and_record`` 500s ("terminal antigravity:main â€?already
             # observed as required") AND its ``clear_bridge_state`` wipes the bridge
             # state the runner wrote (every web turn then fails "Antigravity native
             # bridge state is missing"), and on ``reattached=False``
-            # ``_attach_terminal`` starts a SECOND RPC reader â†’ double-mirror. The
-            # pre-bind existing-terminal check above can't catch this â€” the runner
+            # ``_attach_terminal`` starts a SECOND RPC reader â†?double-mirror. The
+            # pre-bind existing-terminal check above can't catch this â€?the runner
             # only auto-creates AFTER the bind. A CLI launch stays
             # as a defensive fallback when the runner produced no terminal in the
             # window. Mirrors ``_prepare_antigravity_terminal_via_daemon``.
@@ -694,7 +686,7 @@ async def _prepare_antigravity_terminal(
 # antigravity terminal (``runner/app.py`` ``_auto_create_antigravity_terminal``),
 # which OWNS the terminal for every antigravity-native session. After bind, wait
 # this long for that runner-owned terminal to appear before falling back to a
-# CLI-side launch â€” the fallback only fires when the runner produced none.
+# CLI-side launch â€?the fallback only fires when the runner produced none.
 _RUNNER_TERMINAL_AUTOCREATE_TIMEOUT_S = 20.0
 _RUNNER_TERMINAL_POLL_INTERVAL_S = 0.25
 
@@ -713,8 +705,8 @@ async def _await_runner_antigravity_terminal(
     ``clear_bridge_state`` would wipe the bridge state the runner wrote, breaking
     web-turn injection). Uses ``time.monotonic`` for the deadline.
 
-    :param client: HTTP client pointed at the agent-meow server.
-    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client pointed at the Omnigent server.
+    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
     :param timeout_s: Max seconds to wait for the runner-owned terminal.
     :returns: The runner-owned terminal details, or ``None`` if none appeared
         within *timeout_s* (the caller then launches one itself).
@@ -753,8 +745,8 @@ async def _prepare_antigravity_terminal_via_daemon(
     itself (:func:`_launch_and_record`) as a fallback when the runner produced
     none within :data:`_RUNNER_TERMINAL_AUTOCREATE_TIMEOUT_S`.
 
-    :param base_url: agent-meow server base URL.
-    :param headers: HTTP auth headers for agent-meow requests.
+    :param base_url: Omnigent server base URL.
+    :param headers: HTTP auth headers for Omnigent requests.
     :param session_id: Existing session id to resume, or ``None`` for a
         fresh session.
     :param session_bundle: Gzipped agent bundle. Required when
@@ -762,7 +754,7 @@ async def _prepare_antigravity_terminal_via_daemon(
     :param antigravity_args: Raw pass-through agy args.
     :param command: agy executable to run.
     :param model: Optional agy model id.
-    :param permission_mode: Optional agent-meow permission mode threaded into the
+    :param permission_mode: Optional Omnigent permission mode threaded into the
         agy argv assembly.
     :param headless: ``True`` when no interactive client will attach (forces
         the agy permission-bypass flag).
@@ -804,7 +796,7 @@ async def _prepare_antigravity_terminal_via_daemon(
             bridge_id = str(labels.get(ANTIGRAVITY_NATIVE_BRIDGE_ID_LABEL_KEY) or session_id)
             # Reattach to an already-running runner-owned agy terminal instead of
             # relaunching. Without this the daemon resume path always falls to
-            # ``_launch_and_record`` â†’ unconditional ``clear_bridge_state``,
+            # ``_launch_and_record`` â†?unconditional ``clear_bridge_state``,
             # which wipes the runner reader's bound ``conversation_id``;
             # and ``reattached=False`` would make teardown close a terminal a
             # different launcher owns. Mirrors the local-server prepare path and
@@ -842,18 +834,18 @@ async def _prepare_antigravity_terminal_via_daemon(
         )
         _update_progress(startup_progress, "Waiting for runner...")
         await wait_for_runner_online(client, runner_id, timeout_s=_DAEMON_RUNNER_ONLINE_TIMEOUT_S)
-        # Must run AFTER wait_for_runner_online â€” unregistered runners reject
+        # Must run AFTER wait_for_runner_online â€?unregistered runners reject
         # the bind. Mirrors the Codex/Claude daemon prepare ordering.
         await _bind_session_runner(client, session_id, runner_id)
         # The runner OWNS the antigravity terminal: binding triggers its idempotent
         # auto-create (``runner/app.py`` ``_auto_create_antigravity_terminal``,
         # which fires for every antigravity-native session). Reattach to that
         # runner-owned terminal instead of launching our own. Launching here would
-        # (a) 500 ("terminal antigravity:main â€¦ already observed as required") and
+        # (a) 500 ("terminal antigravity:main â€?already observed as required") and
         # (b) ``_launch_and_record``'s ``clear_bridge_state`` would wipe the bridge
         # state the runner wrote, so every web turn would fail with "Antigravity
         # native bridge state is missing". The pre-bind reattach check can't catch
-        # this â€” the runner only auto-creates AFTER the bind. Falling through to a
+        # this â€?the runner only auto-creates AFTER the bind. Falling through to a
         # CLI launch stays as a defensive fallback for the (unexpected) case where
         # the runner produced no terminal in the window.
         autocreated = await _await_runner_antigravity_terminal(
@@ -926,22 +918,22 @@ async def _launch_and_record(
 
     No agy process pid is captured here (and there is no ``agy_pid`` field in
     bridge state). The terminal is launched with ``tmux_start_on_attach=True``,
-    so at launch the pane runs a ``tmux wait-for`` shell â€” the agy process does
+    so at launch the pane runs a ``tmux wait-for`` shell â€?the agy process does
     not exist until the first client attaches, and there is no pid to record.
     The executor therefore discovers agy's connect-RPC port at injection time by
     enumerating agy processes and validating each against the bridge's
     conversation id via ``GetConversationMetadata`` (see
-    :func:`~?agent_meow.antigravity_native_rpc.resolve_language_server_port`). A pid
+    :func:`agent_meow.antigravity_native_rpc.resolve_language_server_port`). A pid
     fast-path is deliberately omitted: it would never fire (no pid at launch)
     and trusting a recycled pid without the conversation check would risk
     injecting into a different live agy.
 
     No durable read cursor is seeded: the RPC read driver that mirrors agy's
-    conversation (:mod:`~?agent_meow.antigravity_native_reader`) keeps an in-memory
+    conversation (:mod:`agent_meow.antigravity_native_reader`) keeps an in-memory
     seen-set only.
 
-    :param client: HTTP client pointed at the agent-meow server.
-    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client pointed at the Omnigent server.
+    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
     :param bridge_id: Opaque bridge id keying the bridge directory.
     :param conversation_id: On resume, agy's real (discovered) conversation id
         to pass as ``--conversation``. On a fresh launch, the minted
@@ -951,7 +943,7 @@ async def _launch_and_record(
     :param antigravity_args: Raw pass-through agy args.
     :param command: agy executable to run.
     :param model: Optional agy model id.
-    :param permission_mode: Optional agent-meow permission mode threaded into the
+    :param permission_mode: Optional Omnigent permission mode threaded into the
         agy argv assembly (maps ``"bypassPermissions"`` to the bypass flag).
     :param headless: ``True`` when no interactive client will attach (forces
         the agy permission-bypass flag so an unattended turn does not hang).
@@ -1003,7 +995,7 @@ async def _launch_and_record(
             tmux_target=launched.tmux_target,
         )
     # Seed bridge state with the conversation id known so far (the real id on
-    # resume; the ``agy_conv_*`` placeholder on a fresh launch â€” the attach-time
+    # resume; the ``agy_conv_*`` placeholder on a fresh launch â€?the attach-time
     # cold-start replaces it with agy's real cascade id once agy is live, so the
     # RPC reader binds the real conversation). No durable read cursor is seeded
     # (the reader keeps an in-memory seen-set).
@@ -1037,34 +1029,34 @@ async def _attach_terminal(
 
     **Read/write wiring on the CLI fallback only.** When the runner produced no
     terminal and the CLI launched its own (``prepared.reattached is False``), this
-    spawns â€” for the attach's lifetime, cancelled in ``finally`` â€” the RPC read
-    driver (:func:`~?agent_meow.antigravity_native_reader.run_reader_with_bridge`,
-    which mirrors agy's conversation into the agent-meow chat view and surfaces
+    spawns â€?for the attach's lifetime, cancelled in ``finally`` â€?the RPC read
+    driver (:func:`agent_meow.antigravity_native_reader.run_reader_with_bridge`,
+    which mirrors agy's conversation into the Omnigent chat view and surfaces
     WAITING interactions as real-time elicitations) and a one-shot cold-start
     (:func:`_cold_start_agy_conversation`) that mints agy's real cascade id so the
     reader can bind it. These run CONCURRENTLY with the attach because the CLI
-    terminal uses ``tmux_start_on_attach=True`` â€” agy does not exist until this
+    terminal uses ``tmux_start_on_attach=True`` â€?agy does not exist until this
     attach starts the pane, so cold-start cannot precede it; the cold-start's
     port poll and the reader's discovery poll both wait agy out. When
     ``prepared.reattached is True`` the runner OWNS the terminal and already runs
     its own reader (``runner/app.py`` ``_auto_create_antigravity_terminal``), so
-    the CLI starts neither â€” a second reader would double-mirror every step.
+    the CLI starts neither â€?a second reader would double-mirror every step.
 
     .. note::
         On this CLI fallback the human attaches to agy's TUI, which shows the
         empty ``>`` banner: the cold-started conversation is a HEADLESS RPC
         cascade that does not surface in the agy TUI (established by the cold-start
         spike). The real conversation is that headless RPC one, driven by the web
-        UI through the reader + executor â€” so the TUI looking empty while web
+        UI through the reader + executor â€?so the TUI looking empty while web
         turns flow is inherent to the RPC model, not a bug.
 
         The reader does NOT have refresh-capable auth here: it snapshots
         ``headers`` (the local server has none; a remote server's bearer is used
-        for its lifetime â€” ``recover`` refreshes the *attach* headers on reconnect
+        for its lifetime â€?``recover`` refreshes the *attach* headers on reconnect
         but not the reader's client). There is no pre-tool policy audit on this
         path; real-time elicitation is the enforcement surface now.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers (mutated in place by ``recover``).
     :param prepared: Prepared terminal details.
     :param recover: Optional async reconnect-recovery callback. ``None``
@@ -1089,7 +1081,7 @@ async def _attach_terminal(
             name="antigravity-native-rpc-reader",
         )
         # Scope the StartCascade port to THIS session's pane agy so a multi-agy
-        # host cannot cross-bind to a foreign agy â€” but ONLY when the tmux socket
+        # host cannot cross-bind to a foreign agy â€?but ONLY when the tmux socket
         # exists on THIS host. A remote runner advertises a server-side socket
         # PATH that is not local; running ``tmux -S <remote-path> display-message``
         # against it would fail on every poll (~80 doomed spawns over the budget),
@@ -1146,7 +1138,7 @@ async def _attach_terminal(
 # Cold-start port-discovery budget for the CLI fallback. agy's connect-RPC server
 # binds its loopback port a moment AFTER the process starts (per-process, BEFORE
 # any conversation exists), and on this path agy only starts when the attach opens
-# its pane â€” so the bootstrap polls. The wait is bounded so a never-binding agy
+# its pane â€?so the bootstrap polls. The wait is bounded so a never-binding agy
 # cannot pin the task; the reader's own discovery keeps polling afterward as a
 # fallback. Mirrors the runner's ``_AGY_COLD_START_PORT_TIMEOUT_S``.
 _AGY_COLD_START_PORT_TIMEOUT_S = 20.0
@@ -1159,7 +1151,7 @@ async def _agy_cold_start_poll_sleep(seconds: float) -> None:
 
     Indirection point so tests can stub the poll backoff without patching the
     process-wide ``asyncio.sleep``. Mirrors
-    :func:`~?agent_meow.runner.app._agy_cold_start_poll_sleep`.
+    :func:`agent_meow.runner.app._agy_cold_start_poll_sleep`.
 
     :param seconds: Seconds to wait before the next port probe, e.g. ``0.25``.
     :returns: None.
@@ -1181,17 +1173,17 @@ async def _cold_start_agy_conversation(
     Cold-start agy's conversation over connect-RPC for the CLI fallback (best-effort).
 
     The CLI-fallback analogue of the runner's
-    :func:`~?agent_meow.runner.app._cold_start_agy_conversation`: once agy is live
+    :func:`agent_meow.runner.app._cold_start_agy_conversation`: once agy is live
     (the attach started its pane), mint a real cascade over ``StartCascade`` and
     write that id into bridge state, replacing the ``agy_conv_*`` placeholder
-    :func:`_launch_and_record` seeded â€” so the RPC reader binds the real
+    :func:`_launch_and_record` seeded â€?so the RPC reader binds the real
     conversation and web turns resolve, instead of the reader polling the
     placeholder forever. The connect-RPC port is resolved by
-    :func:`~?agent_meow.antigravity_native_rpc.resolve_cold_start_agy_rpc_port`:
+    :func:`agent_meow.antigravity_native_rpc.resolve_cold_start_agy_rpc_port`:
     scoped to THIS session's own agy via its tmux pane (``tmux_socket`` /
     ``tmux_target``) so a host running several agy instances cannot
     ``StartCascade`` onto a FOREIGN agy (the conversation-ownership check that
-    normally disambiguates is not usable yet â€” no conversation exists). Crucially
+    normally disambiguates is not usable yet â€?no conversation exists). Crucially
     on this CLI path the terminal uses ``tmux_start_on_attach=True``, so agy is
     not ``exec``-ed until the human attaches while this poll runs concurrently:
     until our agy appears in the pane the resolver returns no port and this KEEPS
@@ -1201,15 +1193,15 @@ async def _cold_start_agy_conversation(
     lsof-attributable. This polls that resolver until a port binds, then
     ``StartCascade``s a generated ``uuid4``.
 
-    The cold-started id is also PATCHed onto the agent-meow session as
+    The cold-started id is also PATCHed onto the Omnigent session as
     ``external_session_id`` (best-effort, mirroring the runner cold-start and
-    codex/pi) so a later ``agent-meow antigravity --resume`` reads it back and passes
-    ``--conversation <id>`` to continue agy's actual conversation â€” the read-path
+    codex/pi) so a later ``omnigent antigravity --resume`` reads it back and passes
+    ``--conversation <id>`` to continue agy's actual conversation â€?the read-path
     replacement for the retired forwarder's ``_patch_external_session_id``.
 
     Resume launches already hold agy's real id (seeded as a non-placeholder
     ``conversation_id`` and passed as ``--conversation``), so cold-starting would
-    create a second empty conversation and overwrite the resumed id â€” this no-ops
+    create a second empty conversation and overwrite the resumed id â€?this no-ops
     when the seeded id is NOT a placeholder (the guard that makes ``--resume``
     actually continue the prior conversation).
 
@@ -1223,7 +1215,7 @@ async def _cold_start_agy_conversation(
         the real cold-started id is written into.
     :param session_id: Owning session/conversation id (for log correlation and
         the ``external_session_id`` PATCH target).
-    :param base_url: agent-meow server base URL for the ``external_session_id``
+    :param base_url: Omnigent server base URL for the ``external_session_id``
         PATCH.
     :param headers: HTTP auth headers for the PATCH (the local server has none; a
         remote server's bearer is used as-is).
@@ -1311,7 +1303,7 @@ def _can_attach_direct_tmux(prepared: PreparedAntigravityTerminal) -> bool:
     socket exists on this host (same machine), and ``tmux`` is on PATH. A
     remote runner's socket won't exist locally, so this returns ``False``
     and the caller falls back to the WebSocket attach. Mirrors
-    :func:`~?agent_meow.codex_native._can_attach_direct_tmux`.
+    :func:`agent_meow.codex_native._can_attach_direct_tmux`.
 
     :param prepared: Prepared terminal details.
     :returns: ``True`` when a direct local tmux attach is possible.
@@ -1330,8 +1322,8 @@ async def _attach_direct_tmux(socket_path: Path, tmux_target: str) -> _AttachOut
 
     Lower latency than the WebSocket PTY relay because there is no server
     round-trip. ``TMUX`` is dropped from the child environment so a user
-    who runs ``agent-meow antigravity`` from inside their own tmux can still
-    attach to agent-meow's private tmux server. After the attach child
+    who runs ``omnigent antigravity`` from inside their own tmux can still
+    attach to Omnigent's private tmux server. After the attach child
     exits, a ``has-session`` probe distinguishes a user *detach* (session
     still alive) from agy *exiting* (session gone).
 
@@ -1375,14 +1367,14 @@ async def _create_antigravity_session(
     ``external_session_id`` is left unset here: agy mints its own UUID and ignores
     any id the launcher assigns, so the real id is established at runtime by the
     cold-start (:func:`_cold_start_agy_conversation`), which writes it to bridge
-    state AND PATCHes it onto the session as ``external_session_id`` â€” the
+    state AND PATCHes it onto the session as ``external_session_id`` â€?the
     read-path replacement for the retired forwarder's id capture, so a later
     ``--resume`` continues agy's actual conversation.
 
-    :param client: HTTP client pointed at the agent-meow server.
+    :param client: HTTP client pointed at the Omnigent server.
     :param bundle: Gzipped Antigravity wrapper agent bundle.
     :param bridge_id: Opaque bridge id to write on the session labels.
-    :returns: New agent-meow session id, e.g. ``"conv_abc123"``.
+    :returns: New Omnigent session id, e.g. ``"conv_abc123"``.
     :raises click.ClickException: If creation fails.
     """
     labels = dict(_SESSION_LABELS)
@@ -1411,10 +1403,10 @@ async def _fetch_antigravity_session(
     client: httpx.AsyncClient, session_id: str
 ) -> dict[str, object]:
     """
-    Fetch an existing agent-meow session snapshot.
+    Fetch an existing Omnigent session snapshot.
 
-    :param client: HTTP client pointed at the agent-meow server.
-    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client pointed at the Omnigent server.
+    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
     :returns: Decoded session payload.
     :raises click.ClickException: If the lookup fails or returns non-object JSON.
     """
@@ -1442,8 +1434,8 @@ async def _launch_antigravity_terminal(
     """
     Launch the server-backed agy terminal resource.
 
-    :param client: HTTP client pointed at the agent-meow server.
-    :param session_id: agent-meow session id.
+    :param client: HTTP client pointed at the Omnigent server.
+    :param session_id: Omnigent session id.
     :param argv: Full agy command list from :func:`build_agy_launch`. The
         first element is the agy binary; the rest are its args.
     :param env: Environment overrides for the terminal process from
@@ -1458,7 +1450,7 @@ async def _launch_antigravity_terminal(
         "os_env_type": "caller_process",
         # Pin the terminal cwd to the user's launch directory. This IS agy's
         # workspace: agy runs its tools in the process cwd (verified
-        # empirically â€” without it, tools run in agy's default ``scratch`` dir),
+        # empirically â€?without it, tools run in agy's default ``scratch`` dir),
         # so no ``--add-dir`` flag is needed. The runner is local, so
         # ``Path.cwd()`` here equals the runner workspace. See the same comment
         # in ``claude_native._claude_terminal_request``.
@@ -1474,10 +1466,10 @@ async def _launch_antigravity_terminal(
         "spec": spec,
         # Native-bootstrap allowlist marker only: it lets the server's
         # create-terminal gate admit this undeclared terminal name (see
-        # ``agent_meow/server/routes/sessions.py`` ``is_native_bootstrap``).
+        # ``omnigent/server/routes/sessions.py`` ``is_native_bootstrap``).
         #
         # Deliberately NOT ``bridge_inject_dir``: on the runner, that marker
-        # triggers Claude-native machinery â€” it starts the Claude comment relay,
+        # triggers Claude-native machinery â€?it starts the Claude comment relay,
         # tags the terminal ``CLAUDE_NATIVE_TERMINAL_ROLE`` (which drives the
         # session's PTY-derived working status), and publishes Claude tmux
         # metadata. None of that is owned by antigravity teardown, and
@@ -1544,8 +1536,8 @@ async def _find_running_antigravity_terminal(
     """
     Return the existing running agy terminal id if present.
 
-    :param client: HTTP client pointed at the agent-meow server.
-    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client pointed at the Omnigent server.
+    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
     :returns: Terminal details, or ``None`` when the wrapper should launch
         a new terminal (missing, stopped, or runner unavailable).
     :raises click.ClickException: If the server rejects the lookup for a
@@ -1579,9 +1571,9 @@ async def _close_antigravity_terminal(
     """
     Best-effort close of the AP-side agy terminal resource.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers.
-    :param session_id: agent-meow session id.
+    :param session_id: Omnigent session id.
     :param terminal_id: Terminal resource id.
     :returns: None.
     """
@@ -1624,7 +1616,7 @@ def _resolve_session_id_for_resume(
     """
     Translate resume inputs into a concrete antigravity-native session id.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param headers: HTTP auth headers; ``{}`` for the local server.
     :param session_id: Explicit session id, e.g. ``"conv_abc123"``.
     :param resume_picker: ``True`` for bare ``--resume``.
@@ -1642,7 +1634,7 @@ def _resolve_session_id_for_resume(
         """
         Run the async antigravity-native picker.
 
-        :returns: Selected agent-meow session id, or ``None``.
+        :returns: Selected Omnigent session id, or ``None``.
         """
         async with OmnigentClient(
             base_url=base_url,
@@ -1710,7 +1702,7 @@ def _launch_is_headless() -> bool:
     """
     Return whether this agy launch is headless (no interactive client attaches).
 
-    ``agent-meow antigravity`` attaches the local TTY to the agy tmux terminal so
+    ``omnigent antigravity`` attaches the local TTY to the agy tmux terminal so
     the user drives agy interactively. agy's default ``request-review``
     permission prompt is fine for that attended case, but it would **hang an
     unattended/headless turn forever** waiting for a terminal answer (sandbox /
@@ -1718,13 +1710,13 @@ def _launch_is_headless() -> bool:
     interactive client will attach" is a controlling terminal on both stdin and
     stdout; when either is not a TTY (CI, ``nohup``, a pipe, a detached spawn)
     the launch is treated as headless so the caller can auto-bypass agy's prompt
-    (see :func:`~?agent_meow.antigravity_native_launch.should_skip_permissions`).
+    (see :func:`agent_meow.antigravity_native_launch.should_skip_permissions`).
 
     .. note:: This TTY signal governs ONLY the human-invoked CLI launch path
-       (``run_antigravity_native`` â†’ here, the single call site). The
+       (``run_antigravity_native`` â†?here, the single call site). The
        server-spawned / web-attached path
-       (:func:`~?agent_meow.runner.app._auto_create_antigravity_terminal`, the
-       claude/codex auto-create analogue) does NOT consult this function â€” it
+       (:func:`agent_meow.runner.app._auto_create_antigravity_terminal`, the
+       claude/codex auto-create analogue) does NOT consult this function â€?it
        passes ``headless=False`` to ``build_agy_launch`` directly, because the
        web client attaches to the agy pane through the runner tunnel and answers
        agy's ``request-review`` prompt there. **Keep that invariant:** a
@@ -1739,5 +1731,5 @@ def _launch_is_headless() -> bool:
         return not (sys.stdin.isatty() and sys.stdout.isatty())
     except (ValueError, OSError):
         # A closed/detached stream raises rather than returning False; treat any
-        # such failure as "no interactive client" â€” the safe, non-hanging choice.
+        # such failure as "no interactive client" â€?the safe, non-hanging choice.
         return True

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,7 +8,8 @@ import type { Host } from "@/hooks/useHosts";
 import { useHosts } from "@/hooks/useHosts";
 import type { AvailableAgent } from "@/hooks/useAvailableAgents";
 import { useAvailableAgents } from "@/hooks/useAvailableAgents";
-import { NewChatLandingScreen, sanitizeInitialPrompt } from "./NewChatDialog";
+import { NewChatLandingScreen, resetLandingDraft, sanitizeInitialPrompt } from "./NewChatDialog";
+import { writeDefaultBaseBranch } from "@/lib/baseBranchPreferences";
 
 // The landing screen drives the real Web-start flow end to end: the host and
 // first agent auto-select, the working directory seeds from the host's most-
@@ -22,11 +23,11 @@ import { NewChatLandingScreen, sanitizeInitialPrompt } from "./NewChatDialog";
 const navigateMock = vi.fn();
 const setPendingInitialPromptMock = vi.fn();
 
-const RECENT_KEY = "agent-meow:recent-workspaces";
+const RECENT_KEY = "omnigent:recent-workspaces";
 // Prompt history is scoped per conversation; the landing composer writes under
 // the newly created session id (``conv_new`` in these tests), so the recall
 // stack lives at the prefixed key, not the bare one.
-const PROMPT_HISTORY_KEY = "agent-meow:prompt-history:conv_new";
+const PROMPT_HISTORY_KEY = "omnigent:prompt-history:conv_new";
 // The seeded working directory (from the host's persisted recent) that the
 // create body must carry through.
 const SEEDED_WORKSPACE = "/Users/corey/universe/src/foo";
@@ -48,8 +49,14 @@ vi.mock("@/store/chatStore", () => ({
 }));
 
 vi.mock("@/lib/identity", () => ({ authenticatedFetch: vi.fn() }));
-vi.mock("@/hooks/useHosts", () => ({ useHosts: vi.fn() }));
-vi.mock("@/hooks/useAvailableAgents", () => ({ useAvailableAgents: vi.fn() }));
+vi.mock("@/hooks/useHosts", () => ({
+  useHosts: vi.fn(),
+  useInstallHarness: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+}));
+vi.mock("@/hooks/useAvailableAgents", () => ({
+  useAvailableAgents: vi.fn(),
+  prefetchAvailableAgentDetails: vi.fn(),
+}));
 // The home listing is only consulted when there's no recent; the recent is
 // always set here, so keep this inert (returns no listing).
 vi.mock("@/hooks/useHostFilesystem", () => ({
@@ -57,6 +64,9 @@ vi.mock("@/hooks/useHostFilesystem", () => ({
   // WorkspacePicker reads this on mount when the file browser opens;
   // an idle mutation keeps it inert for these tests.
   useCreateHostDirectory: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock("@/hooks/useHostWorktrees", () => ({
+  useHostWorktrees: () => ({ data: undefined }),
 }));
 // No other sessions in scope — keep the conflict hooks inert so they don't
 // issue their own /health fetch or surface a warning. The warning is covered
@@ -80,13 +90,15 @@ vi.mock("@/lib/agentLabels", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/agentLabels")>()),
   useBrainHarnessLabels: () => ({
     "claude-sdk": "Claude SDK",
-    "openai-agents": "OpenAI Agents SDK",
     codex: "Codex",
     cursor: "Cursor",
     pi: "Pi",
     antigravity: "Antigravity",
     copilot: "Copilot",
   }),
+  // Stub so the setup dialog's hook doesn't fire its own /v1/harnesses fetch
+  // (which would skew the create-flow call-count assertions here).
+  useHarnessSetupSteps: () => ({}),
 }));
 
 function host(overrides: Partial<Host> = {}): Host {
@@ -154,31 +166,46 @@ function openWorktree(): void {
   fireEvent.click(screen.getByTestId("new-chat-landing-branch-chip"));
 }
 
-/**
- * Open the agent/harness picker and open <agentId>'s config submenu via
- * keyboard (ArrowRight). A plain click on a knobbed row instead COMMITS the
- * pick and closes the menu, so config flows use the keyboard to drill in.
- */
-function openAgentConfig(agentId: string): void {
-  fireEvent.pointerDown(screen.getByTestId("new-chat-landing-agent-select"), { button: 0 });
-  fireEvent.keyDown(screen.getByTestId(`new-chat-landing-agent-${agentId}`), { key: "ArrowRight" });
-}
-
 /** Open the picker and commit (select + close) an agent by clicking its row. */
 function selectAgent(agentId: string): void {
   fireEvent.pointerDown(screen.getByTestId("new-chat-landing-agent-select"), { button: 0 });
   fireEvent.click(screen.getByTestId(`new-chat-landing-agent-${agentId}`));
 }
 
-/** Dismiss any open menu so a subsequent submit click isn't swallowed. */
-function closeMenu(): void {
-  fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+/**
+ * Select <agentId> and open its run-config modal via the composer gear icon.
+ * The knobs (model / effort / permission / approval / cursor mode / brain
+ * harness) live in this modal, not the picker dropdown.
+ */
+function openAgentConfig(agentId: string): void {
+  selectAgent(agentId);
+  fireEvent.click(screen.getByTestId("new-chat-landing-config-gear"));
+}
+
+/** Open a Radix Select trigger (opens on pointerdown in jsdom). */
+function openSelect(testId: string): void {
+  fireEvent.pointerDown(screen.getByTestId(testId), { button: 0 });
+  fireEvent.click(screen.getByTestId(testId));
+}
+
+/** Open the config-modal Select at <triggerTestId> and click the option labeled <label>. */
+function pickSelectOption(triggerTestId: string, label: string): void {
+  openSelect(triggerTestId);
+  fireEvent.click(screen.getByText(label));
+}
+
+/** Close the config modal by clicking Save (commits the draft). */
+function saveConfig(): void {
+  fireEvent.click(screen.getByTestId("new-chat-landing-config-save"));
 }
 
 beforeEach(() => {
   navigateMock.mockReset();
   setPendingInitialPromptMock.mockReset();
   vi.mocked(authenticatedFetch).mockReset();
+  // Clear the module-level landing draft so a base branch (or other field)
+  // left behind by an unmounting test doesn't seed the next one.
+  resetLandingDraft();
   localStorage.clear();
   // Seed host_1's recent so the working directory pre-fills deterministically
   // (the create body must carry SEEDED_WORKSPACE through).
@@ -222,6 +249,46 @@ describe("NewChatLandingScreen create flow", () => {
     expect(body.labels).toBeUndefined();
 
     // On success the screen routes to the freshly created session.
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith("/c/conv_new"));
+  });
+
+  it("shows a busy spinner on the submit button while the create is in flight", async () => {
+    // The create awaits the backend (session bootstrap + worktree setup) before
+    // navigating, so the landing screen lingers for the whole round-trip. Hold
+    // the POST open with a deferred promise to freeze that window, and assert
+    // the submit button flips to a busy/spinning state so the click reads as
+    // "working", not "frozen". Without feedback the button just goes inert and
+    // the message sits in the composer, so the user thinks nothing was sent.
+    let resolveCreate!: (res: Response) => void;
+    vi.mocked(authenticatedFetch).mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveCreate = resolve;
+      }) as ReturnType<typeof authenticatedFetch>,
+    );
+
+    renderLanding();
+    await waitForWorkspaceSeed();
+    typeMessage("inspect the repo");
+
+    const submit = screen.getByTestId("new-chat-landing-submit");
+    // Before submitting, the button is idle: enabled, not busy, arrow (no spin).
+    expect(submit).not.toBeDisabled();
+    expect(submit).toHaveAttribute("aria-busy", "false");
+    expect(submit.querySelector(".animate-spin")).toBeNull();
+
+    fireEvent.click(submit);
+
+    // While the POST is pending the button is disabled + aria-busy, its label
+    // reflects the in-flight state, and the spinner icon is mounted.
+    await waitFor(() => expect(submit).toBeDisabled());
+    expect(submit).toHaveAttribute("aria-busy", "true");
+    expect(submit).toHaveAttribute("aria-label", "Starting session");
+    expect(submit.querySelector(".animate-spin")).not.toBeNull();
+    // Navigation hasn't happened yet — we're still in the "frozen" window.
+    expect(navigateMock).not.toHaveBeenCalled();
+
+    // Let the backend respond: the flow completes and navigates away.
+    resolveCreate({ ok: true, json: async () => ({ id: "conv_new" }) } as unknown as Response);
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith("/c/conv_new"));
   });
 
@@ -296,7 +363,7 @@ describe("NewChatLandingScreen create flow", () => {
     renderLanding();
     await waitForWorkspaceSeed();
     const input = screen.getByTestId("new-chat-landing-input");
-    fireEvent.change(input, { target: { value: "agent-meow" } });
+    fireEvent.change(input, { target: { value: "omnigent" } });
 
     fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
     expect(authenticatedFetch).not.toHaveBeenCalled();
@@ -510,8 +577,8 @@ describe("NewChatLandingScreen create flow", () => {
     // the UI keys off to render the terminal wrapper. Dropping them would make
     // a native Claude Code session render as a plain chat.
     expect(body.labels).toEqual({
-      "agent_meow.ui": "terminal",
-      "agent_meow.wrapper": "claude-code-native-ui",
+      "omnigent.ui": "terminal",
+      "omnigent.wrapper": "claude-code-native-ui",
     });
   });
 
@@ -537,8 +604,8 @@ describe("NewChatLandingScreen create flow", () => {
     // agent name (unlike claude, whose wrapper is "claude-code-native-ui").
     // The runner/server key off exactly this value to boot the agy terminal.
     expect(body.labels).toEqual({
-      "agent_meow.ui": "terminal",
-      "agent_meow.wrapper": "antigravity-native-ui",
+      "omnigent.ui": "terminal",
+      "omnigent.wrapper": "antigravity-native-ui",
     });
   });
 
@@ -551,14 +618,14 @@ describe("NewChatLandingScreen create flow", () => {
 
     renderLanding();
     await waitForWorkspaceSeed();
-    // Open Claude Code's config submenu (ArrowRight) and pick a non-default
-    // permission mode. The create call proves the choice travels as a
+    // Open Claude Code's config modal and pick a non-default permission mode,
+    // then Save. The create call proves the choice travels as a
     // `--permission-mode <mode>` pair in terminal_launch_args.
     openAgentConfig("ag_native");
-    fireEvent.click(screen.getByTestId("new-chat-landing-permission-bypassPermissions"));
-    // The trigger label stays the bare agent name (the pick lives in the submenu).
+    pickSelectOption("new-chat-landing-config-permission", "Bypass permissions");
+    saveConfig();
+    // The trigger label stays the bare agent name (the pick lives in the modal).
     expect(screen.getByTestId("new-chat-landing-agent-select").textContent).not.toContain("(");
-    closeMenu();
     typeMessage("go");
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
 
@@ -576,7 +643,7 @@ describe("NewChatLandingScreen create flow", () => {
     // session must auto-fill it (the "Mode:" pill reflects it) and post it
     // WITHOUT the user re-opening the pill.
     localStorage.setItem(
-      "agent-meow:last-mode-by-harness",
+      "omnigent:last-mode-by-harness",
       JSON.stringify({ "claude-native": { mode: "plan" } }),
     );
     setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
@@ -608,14 +675,17 @@ describe("NewChatLandingScreen create flow", () => {
     renderLanding();
     await waitForWorkspaceSeed();
     openAgentConfig("ag_native");
-    fireEvent.click(screen.getByTestId("new-chat-landing-permission-acceptEdits"));
+    pickSelectOption("new-chat-landing-config-permission", "Accept edits");
+    saveConfig();
 
-    // The pick is snapshotted under the harness key immediately, so the next
-    // visit can seed from it.
+    // The pick is snapshotted under the harness key on Save, so the next
+    // visit can seed from it. (Saving also records the empty model/effort,
+    // which stay unset for this default-model session.)
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem("agent-meow:last-mode-by-harness") ?? "{}")).toEqual({
-        "claude-native": { mode: "acceptEdits" },
-      }),
+      expect(
+        JSON.parse(localStorage.getItem("omnigent:last-mode-by-harness") ?? "{}")["claude-native"]
+          ?.mode,
+      ).toBe("acceptEdits"),
     );
   });
 
@@ -623,23 +693,23 @@ describe("NewChatLandingScreen create flow", () => {
     // Codex has a pick on record; selecting Claude Code (no pick) must stay on
     // its default — modes are keyed per harness, not shared.
     localStorage.setItem(
-      "agent-meow:last-mode-by-harness",
+      "omnigent:last-mode-by-harness",
       JSON.stringify({ "codex-native": { mode: "full-access" } }),
     );
     setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
 
     renderLanding();
     await waitForWorkspaceSeed();
-    // Open Claude Code's submenu: its permission mode is at "Default" (the
-    // checked radio), and Codex's "Full access" approval preset doesn't even
-    // exist in this submenu — no cross-harness bleed.
+    // Open Claude Code's config modal: it shows the permission select (not an
+    // approval select), and Codex's stored "full-access" preset doesn't bleed
+    // in — the permission select sits at its Default.
     openAgentConfig("ag_native");
-    await waitFor(() =>
-      expect(
-        screen.getByTestId("new-chat-landing-permission-default").getAttribute("aria-checked"),
-      ).toBe("true"),
+    expect(screen.queryByTestId("new-chat-landing-config-approval")).toBeNull();
+    // The permission select's trigger displays its current value — "Default",
+    // not Codex's stored "full-access" (which isn't even a valid value here).
+    expect(screen.getByTestId("new-chat-landing-config-permission").textContent).toContain(
+      "Default",
     );
-    expect(screen.queryByTestId("new-chat-landing-approval-full-access")).toBeNull();
   });
 
   it("posts no launch args for opencode-native, even after a codex full-access pick", async () => {
@@ -659,12 +729,13 @@ describe("NewChatLandingScreen create flow", () => {
 
     renderLanding();
     await waitForWorkspaceSeed();
-    // Pick "Full access" for Codex (single-section submenu → closes on pick).
+    // Pick "Full access" for Codex in its config modal and Save.
     openAgentConfig("ag_codex");
-    fireEvent.click(screen.getByTestId("new-chat-landing-approval-full-access"));
+    pickSelectOption("new-chat-landing-config-approval", "Full access");
+    saveConfig();
 
-    // Switch to OpenCode by clicking its row (a plain row — no config submenu,
-    // since it has no mode knobs).
+    // Switch to OpenCode by clicking its row. It has no mode knobs, so no gear
+    // shows for it — its launch posts no terminal_launch_args.
     selectAgent("ag_opencode");
 
     typeMessage("go");
@@ -672,7 +743,7 @@ describe("NewChatLandingScreen create flow", () => {
     await waitFor(() => expect(authenticatedFetch).toHaveBeenCalledTimes(1));
     const [, init] = vi.mocked(authenticatedFetch).mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body.labels?.["agent_meow.wrapper"]).toBe("opencode-native-ui");
+    expect(body.labels?.["omnigent.wrapper"]).toBe("opencode-native-ui");
     expect(body.terminal_launch_args).toBeUndefined();
   });
 
@@ -696,7 +767,7 @@ describe("NewChatLandingScreen create flow", () => {
     const body = JSON.parse(init.body as string);
     // Anchor on the wrapper label so the absence check below isn't vacuous
     // against a malformed body.
-    expect(body.labels?.["agent_meow.wrapper"]).toBe("claude-code-native-ui");
+    expect(body.labels?.["omnigent.wrapper"]).toBe("claude-code-native-ui");
     // "Default" → no flag persisted (undefined is dropped by JSON.stringify),
     // so the runner launches claude with its own default.
     expect(body.terminal_launch_args).toBeUndefined();
@@ -733,12 +804,12 @@ describe("NewChatLandingScreen create flow", () => {
 
     renderLanding();
     await waitForWorkspaceSeed();
-    // Model, effort and permission mode share Claude Code's one config submenu;
-    // it stays open across picks (multi-section) so both can be set in one visit.
+    // Model, effort and permission mode share Claude Code's one config modal;
+    // both can be set in one visit and commit together on Save.
     openAgentConfig("ag_native");
-    fireEvent.click(screen.getByTestId("new-chat-landing-model-opus"));
-    fireEvent.click(screen.getByTestId("new-chat-landing-effort-high"));
-    closeMenu();
+    pickSelectOption("new-chat-landing-config-model", "Opus");
+    pickSelectOption("new-chat-landing-config-effort", "High");
+    saveConfig();
     typeMessage("go");
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
 
@@ -754,7 +825,7 @@ describe("NewChatLandingScreen create flow", () => {
     // the new session must auto-fill it and post it WITHOUT re-opening the
     // picker — the same remember-your-pick behavior the permission mode has.
     localStorage.setItem(
-      "agent-meow:last-mode-by-harness",
+      "omnigent:last-mode-by-harness",
       JSON.stringify({ "claude-native": { model: "opus", effort: "high" } }),
     );
     setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
@@ -779,7 +850,7 @@ describe("NewChatLandingScreen create flow", () => {
     // Effort is already on record. Picking only the model must merge — not
     // clobber — so the next session seeds BOTH from storage.
     localStorage.setItem(
-      "agent-meow:last-mode-by-harness",
+      "omnigent:last-mode-by-harness",
       JSON.stringify({ "claude-native": { effort: "high" } }),
     );
     setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
@@ -787,13 +858,17 @@ describe("NewChatLandingScreen create flow", () => {
     renderLanding();
     await waitForWorkspaceSeed();
     openAgentConfig("ag_native");
-    fireEvent.click(screen.getByTestId("new-chat-landing-model-opus"));
+    pickSelectOption("new-chat-landing-config-model", "Opus");
+    saveConfig();
 
-    await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem("agent-meow:last-mode-by-harness") ?? "{}")).toEqual({
-        "claude-native": { model: "opus", effort: "high" },
-      }),
-    );
+    // Save merges the model pick with the stored effort — both seed next time.
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem("omnigent:last-mode-by-harness") ?? "{}")[
+        "claude-native"
+      ];
+      expect(stored?.model).toBe("opus");
+      expect(stored?.effort).toBe("high");
+    });
   });
 
   it("ignores a retired stored model id and omits the override on create", async () => {
@@ -801,7 +876,7 @@ describe("NewChatLandingScreen create flow", () => {
     // resolve to unselected so the create never posts a dead model id (and the
     // valid stored effort still seeds).
     localStorage.setItem(
-      "agent-meow:last-mode-by-harness",
+      "omnigent:last-mode-by-harness",
       JSON.stringify({ "claude-native": { model: "ancient-model", effort: "high" } }),
     );
     setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
@@ -853,10 +928,10 @@ describe("NewChatLandingScreen create flow", () => {
 
     renderLanding();
     await waitForWorkspaceSeed();
-    // Open Codex's config submenu and pick "Full access" (single section →
-    // selecting it also commits and closes the menu).
+    // Open Codex's config modal, pick "Full access", and Save.
     openAgentConfig("ag_codex");
-    fireEvent.click(screen.getByTestId("new-chat-landing-approval-full-access"));
+    pickSelectOption("new-chat-landing-config-approval", "Full access");
+    saveConfig();
     typeMessage("go");
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
 
@@ -887,7 +962,7 @@ describe("NewChatLandingScreen create flow", () => {
     await waitFor(() => expect(authenticatedFetch).toHaveBeenCalledTimes(1));
     const [, init] = vi.mocked(authenticatedFetch).mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body.labels?.["agent_meow.wrapper"]).toBe("codex-native-ui");
+    expect(body.labels?.["omnigent.wrapper"]).toBe("codex-native-ui");
     expect(body.terminal_launch_args).toBeUndefined();
   });
 
@@ -904,10 +979,10 @@ describe("NewChatLandingScreen create flow", () => {
 
     renderLanding();
     await waitForWorkspaceSeed();
-    // Open Polly's config submenu and pick the Pi harness (single section →
-    // selecting it commits the agent pick and closes the menu).
+    // Open Polly's config modal and pick the Pi harness, then Save.
     openAgentConfig("ag_polly");
-    fireEvent.click(screen.getByTestId("new-chat-landing-harness-pi"));
+    pickSelectOption("new-chat-landing-config-harness", "Pi");
+    saveConfig();
     expect(screen.getByTestId("new-chat-landing-agent-select").textContent).not.toContain("(");
     typeMessage("go");
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
@@ -960,12 +1035,14 @@ describe("NewChatLandingScreen create flow", () => {
 
     renderLanding();
     await waitForWorkspaceSeed();
-    // Pick Pi, then change mind back to the spec default (Claude SDK). Each
-    // pick closes the single-section submenu, so reopen between the two.
+    // Pick Pi, Save, then change mind back to the spec default (Claude SDK)
+    // and Save again.
     openAgentConfig("ag_polly");
-    fireEvent.click(screen.getByTestId("new-chat-landing-harness-pi"));
+    pickSelectOption("new-chat-landing-config-harness", "Pi");
+    saveConfig();
     openAgentConfig("ag_polly");
-    fireEvent.click(screen.getByTestId("new-chat-landing-harness-claude-sdk"));
+    pickSelectOption("new-chat-landing-config-harness", "Claude SDK");
+    saveConfig();
     typeMessage("go");
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
 
@@ -978,43 +1055,20 @@ describe("NewChatLandingScreen create flow", () => {
   });
 
   // Skipped while the toggle is hidden behind the false-gate in NewChatDialog; un-skip when re-enabling.
-  it.skip("posts cost_control_mode_override when the intelligent-model toggle is flipped on (polly)", async () => {
-    // Cost control is a polly-only feature, so the toggle only renders when
-    // the selected agent is polly. Seed polly as the sole (auto-selected) agent.
-    setAgents([agent({ id: "ag_polly", name: "polly", display_name: "Polly" })]);
-    vi.mocked(authenticatedFetch).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ id: "conv_new" }),
-    } as unknown as Response);
-
-    renderLanding();
-    await waitForWorkspaceSeed();
-    // Click the sparkle toggle — unset flips straight to "on"; the choice
-    // must travel in the create body so the switch is persisted before the
-    // session's first turn.
-    fireEvent.click(screen.getByTestId("cost-toggle-trigger"));
-    typeMessage("go");
-    fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
-
-    await waitFor(() => expect(authenticatedFetch).toHaveBeenCalledTimes(1));
-    const [, init] = vi.mocked(authenticatedFetch).mock.calls[0] as [string, RequestInit];
-    const body = JSON.parse(init.body as string);
-    expect(body.cost_control_mode_override).toBe("on");
-  });
-
-  it("hides the Cost Optimized pill for non-polly agents", async () => {
-    // The default seeded agent is a plain YAML agent (hello_world), not polly,
-    // so the cost pill must not render at all — cost control is polly-only.
+  it("no longer renders a standalone smart-routing composer toggle", async () => {
+    // The sparkle toggle was folded into the gear modal's Model dropdown — it
+    // must not render as a separate composer control anymore.
+    setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
     renderLanding();
     await waitForWorkspaceSeed();
     expect(screen.queryByTestId("cost-toggle-trigger")).toBeNull();
   });
 
-  it("omits cost_control_mode_override when the pill is left at spec default (polly)", async () => {
-    setAgents([agent({ id: "ag_polly", name: "polly", display_name: "Polly" })]);
+  it("omits cost_control_mode_override when Smart Routing is left unpicked", async () => {
+    setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
     vi.mocked(authenticatedFetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ id: "conv_new" }),
+      json: async () => ({ id: "conv_native" }),
     } as unknown as Response);
 
     renderLanding();
@@ -1026,10 +1080,8 @@ describe("NewChatLandingScreen create flow", () => {
     const [, init] = vi.mocked(authenticatedFetch).mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
     // Anchor on a required field so the absence check can't pass vacuously.
-    expect(body.agent_id).toBe("ag_polly");
-    // Unset = defer to the spec default; the field must be absent (an
-    // explicit null at create would be a pointless write, and "off" here
-    // would wrongly disable a spec-configured mode).
+    expect(body.agent_id).toBe("ag_native");
+    // Unset = defer to the spec default; the field must be absent.
     expect(body.cost_control_mode_override).toBeUndefined();
   });
 
@@ -1043,6 +1095,126 @@ describe("NewChatLandingScreen create flow", () => {
       target: { value: "feature/login" },
     });
     expect(screen.getByTestId("new-chat-landing-base-branch-input")).toBeInTheDocument();
+  });
+
+  // The base branch auto-fills from the Settings › Git default when the user
+  // names a new-worktree branch, and is then left to the user: any edit
+  // (including clearing it) stands, even when the dropdown is reopened. Only
+  // clearing the branch name — starting the worktree over — re-arms the
+  // auto-fill so the next named branch seeds from the current default again.
+  describe("base-branch field seeding", () => {
+    const baseInput = () =>
+      screen.getByTestId("new-chat-landing-base-branch-input") as HTMLInputElement;
+    const setBranch = (value: string) =>
+      fireEvent.change(screen.getByTestId("new-chat-landing-branch-input"), {
+        target: { value },
+      });
+    // The chip toggles the popover; two clicks close-then-reopen it.
+    const reopen = () => {
+      fireEvent.click(screen.getByTestId("new-chat-landing-branch-chip"));
+      fireEvent.click(screen.getByTestId("new-chat-landing-branch-chip"));
+    };
+
+    it("auto-fills from the stored default when a branch is named", () => {
+      localStorage.setItem("omnigent:default-base-branch", "main");
+      renderLanding();
+      openWorktree();
+      setBranch("feature/login");
+      expect(baseInput().value).toBe("main");
+    });
+
+    it("leaves the field blank when no default is stored, and lets the user type", () => {
+      renderLanding();
+      openWorktree();
+      setBranch("feature/login");
+      expect(baseInput().value).toBe("");
+
+      // The user can type freely; it doesn't touch the setting.
+      fireEvent.change(baseInput(), { target: { value: "whatever" } });
+      expect(baseInput().value).toBe("whatever");
+      expect(localStorage.getItem("omnigent:default-base-branch")).toBeNull();
+    });
+
+    it("keeps a base the user CLEARED, even after reopening the dropdown", () => {
+      // The reported bug: explicitly emptying the base must stick — reopening
+      // the dropdown must not re-fill it from the default.
+      localStorage.setItem("omnigent:default-base-branch", "main");
+      renderLanding();
+      openWorktree();
+      setBranch("feature/login");
+      expect(baseInput().value).toBe("main");
+
+      fireEvent.change(baseInput(), { target: { value: "" } });
+      expect(baseInput().value).toBe("");
+
+      reopen();
+      expect(baseInput().value).toBe("");
+    });
+
+    it("keeps a base the user typed, even after reopening the dropdown", () => {
+      localStorage.setItem("omnigent:default-base-branch", "main");
+      renderLanding();
+      openWorktree();
+      setBranch("feature/login");
+      fireEvent.change(baseInput(), { target: { value: "release/2.0" } });
+
+      reopen();
+      // The user's choice stands — not re-seeded from the default.
+      expect(baseInput().value).toBe("release/2.0");
+    });
+
+    it("re-arms auto-fill when the branch name is cleared and re-entered", () => {
+      localStorage.setItem("omnigent:default-base-branch", "main");
+      renderLanding();
+      openWorktree();
+      setBranch("feature/login");
+      fireEvent.change(baseInput(), { target: { value: "custom" } });
+      expect(baseInput().value).toBe("custom");
+
+      // Clear the branch name (start the worktree over) — the base field goes
+      // away and the auto-fill re-arms.
+      setBranch("");
+      // Name a branch again: seeds fresh from the current default.
+      setBranch("feature/other");
+      expect(baseInput().value).toBe("main");
+    });
+
+    it("seeds from the current default after it changes, on a re-entered branch", () => {
+      localStorage.setItem("omnigent:default-base-branch", "main");
+      renderLanding();
+      openWorktree();
+      setBranch("feature/login");
+      expect(baseInput().value).toBe("main");
+
+      // Change the setting, then start the worktree over.
+      act(() => writeDefaultBaseBranch("develop"));
+      setBranch("");
+      setBranch("feature/other");
+      expect(baseInput().value).toBe("develop");
+    });
+  });
+
+  it("posts the stored default base branch without the user touching the field", async () => {
+    localStorage.setItem("omnigent:default-base-branch", "main");
+    vi.mocked(authenticatedFetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: "conv_new" }),
+    } as unknown as Response);
+
+    renderLanding();
+    await waitForWorkspaceSeed();
+    openWorktree();
+    fireEvent.change(screen.getByTestId("new-chat-landing-branch-input"), {
+      target: { value: "feature/login" },
+    });
+    typeMessage("start the branch");
+    fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
+
+    await waitFor(() => expect(authenticatedFetch).toHaveBeenCalledTimes(1));
+    const [, init] = vi.mocked(authenticatedFetch).mock.calls[0] as [string, RequestInit];
+    // The auto-filled default reaches the server just like a typed base would.
+    const body = JSON.parse(init.body as string);
+    expect(body.git).toEqual({ branch_name: "feature/login", base_branch: "main" });
   });
 
   it("posts git.branch_name and git.base_branch when both are provided", async () => {
@@ -1119,12 +1291,14 @@ describe("NewChatLandingScreen create flow", () => {
 
     renderLanding();
     await waitForWorkspaceSeed();
-    // Pick the non-default agent (Radix opens on pointerdown).
+    // Pick the non-default agent (Radix opens on pointerdown). "second_agent"
+    // is a custom agent, so it lives in the "Custom agents" submenu.
     fireEvent.pointerDown(screen.getByTestId("new-chat-landing-agent-select"), { button: 0 });
+    fireEvent.click(screen.getByTestId("new-chat-landing-custom-agents"));
     fireEvent.click(screen.getByTestId("new-chat-landing-agent-ag_two"));
     // The explicit pick persists immediately — no session has to be created
     // for the preference to stick.
-    expect(localStorage.getItem("agent-meow:last-agent-id")).toBe("ag_two");
+    expect(localStorage.getItem("omnigent:last-agent-id")).toBe("ag_two");
 
     // A fresh mount (the "next visit") must start on the remembered agent:
     // submitting without touching the picker posts ag_two, not the
@@ -1148,7 +1322,7 @@ describe("NewChatLandingScreen create flow", () => {
     // A persisted pick can outlive its agent (unregistered between visits).
     // The stale id must lose to the catalog default — not yield an unusable
     // composer or post a dangling agent_id.
-    localStorage.setItem("agent-meow:last-agent-id", "ag_gone");
+    localStorage.setItem("omnigent:last-agent-id", "ag_gone");
     vi.mocked(authenticatedFetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ id: "conv_new" }),

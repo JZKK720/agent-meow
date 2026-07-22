@@ -1,21 +1,21 @@
-"""Sessions namespace — create, snapshot, post events, interrupt, stream.
+"""Sessions namespace �?create, snapshot, post events, interrupt, stream.
 
 Targets the server's ``/v1/sessions`` route family. This is a thin
 client over the snapshot + live-tail SSE contract documented in
 ``server/API.md``: callers ``create()`` a session from an agent
 bundle, optionally
 ``post_event()`` more inputs, ``stream()`` the live events, and
-``get()`` a snapshot to reconcile on reconnect. There is no replay —
+``get()`` a snapshot to reconcile on reconnect. There is no replay �?
 the server intentionally does not buffer past events.
 
 The SDK-side ``Session`` dataclass in this module mirrors
-:class:`omnigent.server.schemas.SessionResponse`. Note that the
+:class:`agent_meow.server.schemas.SessionResponse`. Note that the
 ``Session`` class exported from :mod:`omnigent_client._session` is
 an unrelated higher-level ``/v1/responses`` chat helper; the two
 concepts share a name because the server route is ``/v1/sessions``
 and the chat helper predates the new route. To avoid surfacing the
 collision in the public namespace we deliberately do NOT re-export
-this module's ``Session`` from :mod:`omnigent_client.__init__` —
+this module's ``Session`` from :mod:`omnigent_client.__init__` �?
 callers obtain it via ``client.sessions.create()``.
 """
 
@@ -41,11 +41,11 @@ from ._errors import raise_for_status, require_json_object, response_body
 _DEFAULT_SUBTREE_DEPTH = 3
 
 # Adapter that validates a single SSE ``data:`` payload against the
-# typed discriminated union. Built once at module load — TypeAdapter
+# typed discriminated union. Built once at module load �?TypeAdapter
 # caches the validator. ``ServerStreamEvent`` is a Pydantic-discriminated
 # union, so the result of ``validate_python`` is one of the concrete
-# event subclasses (CreatedEvent, OutputTextDeltaEvent, …) — see
-# :mod:`omnigent.server.schemas`.
+# event subclasses (CreatedEvent, OutputTextDeltaEvent, �? �?see
+# :mod:`agent_meow.server.schemas`.
 _SERVER_STREAM_EVENT_ADAPTER: TypeAdapter[ServerStreamEvent] = TypeAdapter(ServerStreamEvent)
 
 # ── Module-level constants (rule 34) ─────────────────────────────────
@@ -62,11 +62,11 @@ _INTERRUPT_TYPE: str = "interrupt"
 @dataclass(frozen=True)
 class SessionEventInput:
     """
-    Client-side mirror of :class:`omnigent.server.schemas.SessionEventInput`.
+    Client-side mirror of :class:`agent_meow.server.schemas.SessionEventInput`.
 
     Used as the body of ``POST /v1/sessions/{id}/events``. Frozen
     because the dataclass is
-    a value object — callers should construct a new instance to model
+    a value object �?callers should construct a new instance to model
     a new event rather than mutate an existing one.
 
     :param type: Discriminator for the event/input kind, e.g.
@@ -87,7 +87,7 @@ class SessionEventInput:
         Parse a :class:`SessionEventInput` from a JSON dict.
 
         :param raw: Raw JSON dict from the server. Must contain
-            both ``type`` and ``data`` fields — the server schema
+            both ``type`` and ``data`` fields �?the server schema
             (``server.schemas.SessionEventInput``) requires both.
         :returns: A typed :class:`SessionEventInput`.
         :raises KeyError: If ``type`` or ``data`` is missing from
@@ -107,11 +107,11 @@ class SessionEventInput:
 @dataclass(frozen=True)
 class Session:
     """
-    Client-side mirror of :class:`omnigent.server.schemas.SessionResponse`.
+    Client-side mirror of :class:`agent_meow.server.schemas.SessionResponse`.
 
     Returned by :meth:`SessionsNamespace.create` and
     :meth:`SessionsNamespace.get`. Frozen because the dataclass models
-    a single point-in-time snapshot — to observe state changes the
+    a single point-in-time snapshot �?to observe state changes the
     caller fetches a new snapshot via :meth:`SessionsNamespace.get`.
 
     Note: distinct from :class:`omnigent_client._session.Session`
@@ -411,8 +411,8 @@ class SessionsNamespace:
 
         :param limit: Maximum number of sessions to return
             (1-1000, default 20).
-        :param after: Cursor — return sessions after this session ID.
-        :param before: Cursor — return sessions before this session ID.
+        :param after: Cursor �?return sessions after this session ID.
+        :param before: Cursor �?return sessions before this session ID.
         :param agent_id: Filter to sessions bound to this agent,
             e.g. ``"ag_abc123"``. ``None`` returns all agents.
         :param agent_name: Filter to sessions whose bound agent row
@@ -592,7 +592,7 @@ class SessionsNamespace:
         ``include_archived=True``. Owner-only (the web UI stops the
         session on archive, an owner-gated lifecycle action, so archive
         is held to the same gate); note this method only flips the
-        archived flag — it does not stop the session.
+        archived flag �?it does not stop the session.
 
         :param session_id: Session/conversation identifier,
             e.g. ``"conv_abc123"``.
@@ -663,7 +663,7 @@ class SessionsNamespace:
             e.g. ``"conv_abc123"``.
         :param limit: Maximum number of items to return
             (1-1000, default 100).
-        :param after: Cursor — return items after this item ID.
+        :param after: Cursor �?return items after this item ID.
         :param order: Sort order, ``"asc"`` (chronological) or
             ``"desc"``.
         :returns: List of conversation item dicts.
@@ -694,7 +694,7 @@ class SessionsNamespace:
         returns a page of ``ChildSessionSummary`` dicts (``id``,
         ``title``, ``tool``, ``agent_name``, ``busy``,
         ``current_task_status``, ``last_message_preview``,
-        ``pending_elicitations_count``, …). The REPL recurses this per
+        ``pending_elicitations_count``, �?. The REPL recurses this per
         node to assemble the sub-agent tree shown on the main interface.
 
         :param session_id: Parent session/conversation identifier,
@@ -775,8 +775,8 @@ class SessionsNamespace:
         per-session and reads ``idle`` once it delegates and returns to its own
         prompt, even while its sub-agents run. This recurses the subtree
         (:meth:`child_sessions_tree`) and applies the canonical
-        :func:`omnigent_client.child_summary_busy` predicate — the same "busy"
-        definition the CLI badge and the web ``SubagentsPanel`` use — so an
+        :func:`omnigent_client.child_summary_busy` predicate �?the same "busy"
+        definition the CLI badge and the web ``SubagentsPanel`` use �?so an
         eval loop can gate "your turn" on real subtree activity.
 
         Point-in-time (no subscription); re-call for a fresh value.
@@ -796,7 +796,7 @@ class SessionsNamespace:
 
         Calls ``GET /v1/sessions/{session_id}``. The returned
         :class:`Session` includes committed items and any pending
-        queued inputs — clients use this on reconnect to reconcile
+        queued inputs �?clients use this on reconnect to reconcile
         state observed via :meth:`stream`.
 
         :param session_id: Session/conversation identifier,
@@ -853,7 +853,7 @@ class SessionsNamespace:
 
         Calls ``POST /v1/sessions/{session_id}/elicitations/
         {elicitation_id}/resolve`` with the MCP-shape
-        ``ElicitationResult`` body — the URL-based counterpart to
+        ``ElicitationResult`` body �?the URL-based counterpart to
         delivering the verdict as a ``{"type": "approval", ...}``
         event through :meth:`post_event`. The elicitation id travels
         in the URL path; the body carries only ``action`` (and
@@ -890,7 +890,6 @@ class SessionsNamespace:
         *,
         title: str | None = None,
         up_to_response_id: str | None = None,
-        model_override: str | None = None,
     ) -> dict[str, Any]:
         """
         Fork an existing session into a new session.
@@ -907,27 +906,19 @@ class SessionsNamespace:
             ``"resp_abc123"``. When set, the fork copies history only
             up to and including that response; ``None`` copies the
             full history.
-        :param model_override: Optional model id to launch the fork on
-            ("restart with model"), e.g. ``"databricks-gpt-5-4-mini"``.
-            Overrides the model the fork inherits from the source; the
-            server validates and family-checks it. ``None`` keeps the
-            source's model.
         :returns: Raw response dict matching the ``SessionResponse``
             shape: ``id``, ``agent_id``, ``status``, ``created_at``,
             ``title``, ``labels``, ``reasoning_effort``, and
             ``items``.
         :raises OmnigentError: 404 if *source_session_id* does
-            not exist; 400 if the source has no agent binding,
-            *up_to_response_id* names no response in the source, or
-            *model_override* is invalid / cross-family for the fork.
+            not exist; 400 if the source has no agent binding or
+            *up_to_response_id* names no response in the source.
         """
         body: dict[str, Any] = {}
         if title is not None:
             body["title"] = title
         if up_to_response_id is not None:
             body["up_to_response_id"] = up_to_response_id
-        if model_override is not None:
-            body["model_override"] = model_override
         resp = await self._http.post(
             f"{self._base}/v1/sessions/{source_session_id}/fork",
             json=body,
@@ -991,13 +982,13 @@ class SessionsNamespace:
 
         Iteration ends cleanly when the server closes the stream
         (the ``[DONE]`` sentinel). Network errors propagate to the
-        caller — auto-reconnect lives at the application layer
+        caller �?auto-reconnect lives at the application layer
         because the snapshot/dedupe step is application-specific.
 
         :param session_id: Session/conversation identifier, e.g.
             ``"conv_abc123"``.
         :yields: :class:`ServerStreamEvent` envelopes whose ``type`` is a
-            :class:`omnigent.server.schemas.ServerStreamEvent`
+            :class:`agent_meow.server.schemas.ServerStreamEvent`
             member and whose ``data`` is the event-specific payload
             dict.
         :raises OmnigentError: If the server returns a non-2xx
@@ -1024,7 +1015,7 @@ async def _stream_session_events(
     Open a single SSE connection and yield parsed
     :class:`ServerStreamEvent` instances.
 
-    Does NOT handle reconnection — that is the caller's
+    Does NOT handle reconnection �?that is the caller's
     responsibility. Network errors (``httpx.RemoteProtocolError``,
     ``httpx.ReadTimeout``, etc.) propagate.
 
@@ -1064,7 +1055,7 @@ async def _parse_sse_lines(
 
     Malformed payloads (non-JSON, non-dict, unknown event type) are
     logged and skipped so a single bad event does not poison the
-    stream — same forward-compatibility posture as ``_sse.py``.
+    stream �?same forward-compatibility posture as ``_sse.py``.
 
     :param line_stream: Async iterator of text lines from
         ``httpx.Response.aiter_lines()``.
@@ -1096,7 +1087,7 @@ def _try_parse_envelope(raw: str) -> ServerStreamEvent | None:
 
     The server emits each event with a flat shape carrying the
     fields documented on the matching subclass in
-    :mod:`omnigent.server.schemas` (e.g. ``{"type":
+    :mod:`agent_meow.server.schemas` (e.g. ``{"type":
     "response.output_text.delta", "delta": "Hello",
     "sequence_number": 5}``). The
     :data:`_SERVER_STREAM_EVENT_ADAPTER` dispatches on ``type`` to

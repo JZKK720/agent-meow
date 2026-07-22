@@ -1,7 +1,7 @@
 """Persistence for the ``accounts`` auth provider.
 
-Sibling to :class:`~?agent_meow.stores.permission_store.PermissionStore`
-â€” same database, separate API surface. Lives here (not under
+Sibling to :class:`agent_meow.stores.permission_store.PermissionStore`
+â€?same database, separate API surface. Lives here (not under
 ``stores/``) because it's a server-only concept: only the accounts
 provider's routes and bootstrap touch it, never the runtime or the
 runner. Internal hosted deploys that run header/OIDC don't
@@ -16,14 +16,14 @@ surface; PermissionStore stays exactly as it is on ``main``.
 
 Schema:
 
-- Reads / writes three columns on the existing ``users`` table â€”
-  ``password_hash``, ``created_at``, ``last_login_at`` â€” added by
+- Reads / writes three columns on the existing ``users`` table â€?
+  ``password_hash``, ``created_at``, ``last_login_at`` â€?added by
   the ``g1a2b3c4d5e6`` migration. Those columns are nullable, so
   rows created in header/OIDC mode (where ``PermissionStore.ensure_user``
   is the writer) leave them unset and accounts-specific reads
   return ``None``.
-- Owns the ``account_tokens`` table outright â€” invite + magic-login
-  tokens, atomic single-use via ``UPDATE â€¦ WHERE redeemed_at IS NULL``.
+- Owns the ``account_tokens`` table outright â€?invite + magic-login
+  tokens, atomic single-use via ``UPDATE â€?WHERE redeemed_at IS NULL``.
 """
 
 from __future__ import annotations
@@ -33,7 +33,13 @@ import time
 from sqlalchemy import and_, delete, exists, select, update
 from sqlalchemy.exc import IntegrityError
 
-from agent_meow.db.db_models import SqlAccountToken, SqlUser
+from agent_meow.db.db_models import (
+    SqlAccountToken,
+    SqlSessionPermission,
+    SqlUser,
+    current_workspace_id,
+)
+from agent_meow.db.enum_codecs import decode_account_token_kind, encode_account_token_kind
 from agent_meow.db.utils import get_or_create_engine, make_managed_session_maker
 from agent_meow.entities import Account, AccountToken
 from agent_meow.server.auth import RESERVED_USER_LOCAL, RESERVED_USER_PUBLIC
@@ -44,7 +50,7 @@ _HIDDEN_LIST_USERS = frozenset({RESERVED_USER_PUBLIC, RESERVED_USER_LOCAL})
 def _to_account(row: SqlUser) -> Account:
     """Convert a :class:`SqlUser` ORM row to an :class:`Account` entity.
 
-    Strips ``password_hash`` â€” it never leaves the store via this
+    Strips ``password_hash`` â€?it never leaves the store via this
     conversion. Callers that need the hash use
     :meth:`SqlAlchemyAccountStore.get_password_hash` explicitly.
     """
@@ -61,7 +67,7 @@ def _to_account_token(row: SqlAccountToken) -> AccountToken:
     """Convert a :class:`SqlAccountToken` row to a domain entity."""
     return AccountToken(
         id=row.id,
-        kind=row.kind,
+        kind=decode_account_token_kind(row.kind),
         user_id=row.user_id,
         created_by=row.created_by,
         created_at=row.created_at,
@@ -73,7 +79,7 @@ def _to_account_token(row: SqlAccountToken) -> AccountToken:
 class SqlAlchemyAccountStore:
     """SQLAlchemy-backed persistence for accounts-mode credentials and tokens.
 
-    Concrete class (no ABC) â€” accounts persistence has exactly one
+    Concrete class (no ABC) â€?accounts persistence has exactly one
     backend today and a Protocol can be extracted later if a second
     appears. Constructor matches PermissionStore so the wiring in
     ``create_app`` is mechanical.
@@ -101,12 +107,12 @@ class SqlAlchemyAccountStore:
 
         Used by ``/auth/register`` (invite redemption), by the
         first-boot admin bootstrap, and by admin "create user"
-        flows. Raises if the user already exists â€” registration
+        flows. Raises if the user already exists â€?registration
         UX should check uniqueness first to give a clean error.
 
         :param user_id: Chosen username, e.g. ``"alice"``.
         :param password_hash: Pre-hashed password (see
-            :mod:`~?agent_meow.server.passwords`). Plaintext never
+            :mod:`agent_meow.server.passwords`). Plaintext never
             crosses this boundary.
         :param is_admin: Admin flag at creation. Defaults False;
             the first-boot admin bootstrap passes True.
@@ -115,7 +121,7 @@ class SqlAlchemyAccountStore:
         """
         now = int(time.time())
         with self._session() as session:
-            existing = session.get(SqlUser, user_id)
+            existing = session.get(SqlUser, (current_workspace_id(), user_id))
             if existing is not None:
                 raise ValueError(f"user {user_id!r} already exists")
             row = SqlUser(
@@ -138,30 +144,30 @@ class SqlAlchemyAccountStore:
     def get_user(self, user_id: str) -> Account | None:
         """Look up a user by id. Returns ``None`` if missing."""
         with self._session() as session:
-            row = session.get(SqlUser, user_id)
+            row = session.get(SqlUser, (current_workspace_id(), user_id))
             return _to_account(row) if row is not None else None
 
     def is_admin(self, user_id: str) -> bool:
         """Whether ``user_id`` has the admin flag set.
 
         Duplicates :meth:`PermissionStore.is_admin` reading the
-        same column on ``users`` â€” kept here so the accounts
+        same column on ``users`` â€?kept here so the accounts
         routes don't have to wire in a PermissionStore reference
         just to gate admin endpoints. The two stores agree by
         construction (single source of truth: the column).
         """
         with self._session() as session:
-            row = session.get(SqlUser, user_id)
+            row = session.get(SqlUser, (current_workspace_id(), user_id))
             return row is not None and row.is_admin
 
     def set_admin(self, user_id: str, is_admin: bool) -> None:
         """Set the admin flag on an existing user row.
 
         The accounts-mode counterpart to
-        :meth:`PermissionStore.set_admin` â€” both write the same
+        :meth:`PermissionStore.set_admin` â€?both write the same
         ``users.is_admin`` column (single source of truth). Used by
         the file-backed admin-list promotion at login
-        (:func:`~?agent_meow.server.admin_list.promote_if_listed`), which
+        (:func:`agent_meow.server.admin_list.promote_if_listed`), which
         only ever promotes (passes ``True``). No-op if the row is
         missing (the login path ensures it first).
 
@@ -169,7 +175,14 @@ class SqlAlchemyAccountStore:
         :param is_admin: The flag value to set.
         """
         with self._session() as session:
-            session.execute(update(SqlUser).where(SqlUser.id == user_id).values(is_admin=is_admin))
+            session.execute(
+                update(SqlUser)
+                .where(
+                    SqlUser.workspace_id == current_workspace_id(),
+                    SqlUser.id == user_id,
+                )
+                .values(is_admin=is_admin)
+            )
 
     def list_users(self) -> list[Account]:
         """Return all users for the admin members page.
@@ -177,9 +190,9 @@ class SqlAlchemyAccountStore:
         Excludes two sentinel rows that aren't actionable in
         accounts mode:
 
-        - ``"__public__"`` â€” anonymous-grant sentinel, never a
+        - ``"__public__"`` â€?anonymous-grant sentinel, never a
           real user.
-        - ``"local"`` â€” backfilled by the original session-permissions
+        - ``"local"`` â€?backfilled by the original session-permissions
           migration so pre-accounts deploys had a default owner row
           for existing conversations. In accounts mode the name is
           reserved (can't authenticate, can't be reset, can't be
@@ -191,20 +204,36 @@ class SqlAlchemyAccountStore:
         Result is unordered; UI sorts.
         """
         with self._session() as session:
-            rows = session.execute(select(SqlUser)).scalars().all()
+            rows = (
+                session.execute(
+                    select(SqlUser).where(SqlUser.workspace_id == current_workspace_id())
+                )
+                .scalars()
+                .all()
+            )
             return [_to_account(r) for r in rows if r.id not in _HIDDEN_LIST_USERS]
 
     def delete_user(self, user_id: str) -> bool:
-        """Delete a user row and cascade their permission grants.
+        """Delete a user row and their permission grants.
 
-        Cascade is via the existing ``ON DELETE CASCADE`` foreign
-        key on ``session_permissions`` (set up by the original
-        permissions migration).
+        Explicitly deletes all ``session_permissions`` rows for the user
+        before removing the user row â€?the DB no longer cascades this.
 
-        :returns: ``True`` if a row was deleted, ``False`` otherwise.
+        :returns: ``True`` if a user row was deleted, ``False`` otherwise.
         """
         with self._session() as session:
-            result = session.execute(delete(SqlUser).where(SqlUser.id == user_id))
+            session.execute(
+                delete(SqlSessionPermission).where(
+                    SqlSessionPermission.workspace_id == current_workspace_id(),
+                    SqlSessionPermission.user_id == user_id,
+                )
+            )
+            result = session.execute(
+                delete(SqlUser).where(
+                    SqlUser.workspace_id == current_workspace_id(),
+                    SqlUser.id == user_id,
+                )
+            )
             return result.rowcount > 0
 
     def get_password_hash(self, user_id: str) -> str | None:
@@ -212,11 +241,11 @@ class SqlAlchemyAccountStore:
 
         ONLY method that surfaces the hash. Routes that call this
         must pass the result straight into
-        :func:`~?agent_meow.server.passwords.verify_password` â€” never
+        :func:`agent_meow.server.passwords.verify_password` â€?never
         log, return, or store the value elsewhere.
         """
         with self._session() as session:
-            row = session.get(SqlUser, user_id)
+            row = session.get(SqlUser, (current_workspace_id(), user_id))
             return row.password_hash if row is not None else None
 
     def update_password(self, user_id: str, password_hash: str) -> None:
@@ -228,7 +257,12 @@ class SqlAlchemyAccountStore:
         """
         with self._session() as session:
             session.execute(
-                update(SqlUser).where(SqlUser.id == user_id).values(password_hash=password_hash)
+                update(SqlUser)
+                .where(
+                    SqlUser.workspace_id == current_workspace_id(),
+                    SqlUser.id == user_id,
+                )
+                .values(password_hash=password_hash)
             )
 
     def mark_logged_in(self, user_id: str, when_epoch_seconds: int) -> None:
@@ -240,7 +274,10 @@ class SqlAlchemyAccountStore:
         with self._session() as session:
             session.execute(
                 update(SqlUser)
-                .where(SqlUser.id == user_id)
+                .where(
+                    SqlUser.workspace_id == current_workspace_id(),
+                    SqlUser.id == user_id,
+                )
                 .values(last_login_at=when_epoch_seconds)
             )
 
@@ -259,7 +296,7 @@ class SqlAlchemyAccountStore:
     ) -> AccountToken:
         """Persist a new invite or magic token.
 
-        The token id (the secret) is generated by the caller â€”
+        The token id (the secret) is generated by the caller â€?
         see :func:`secrets.token_urlsafe`. The store does not
         validate entropy. Bounds:
 
@@ -278,7 +315,7 @@ class SqlAlchemyAccountStore:
         with self._session() as session:
             row = SqlAccountToken(
                 id=token_id,
-                kind=kind,
+                kind=encode_account_token_kind(kind),
                 user_id=user_id,
                 created_by=created_by,
                 created_at=created_at,
@@ -296,13 +333,13 @@ class SqlAlchemyAccountStore:
 
         A naive "SELECT then UPDATE" race would let two concurrent
         requests both succeed. A single
-        ``UPDATE â€¦ WHERE redeemed_at IS NULL`` + rowcount check
-        makes the redeem step itself atomic â€” at most one caller
+        ``UPDATE â€?WHERE redeemed_at IS NULL`` + rowcount check
+        makes the redeem step itself atomic â€?at most one caller
         sees ``rowcount == 1`` even under concurrent redeem
         attempts.
 
         Returns ``None`` for missing / wrong-kind / already-redeemed
-        / expired tokens. Caller can't distinguish (intentional â€”
+        / expired tokens. Caller can't distinguish (intentional â€?
         opaque-to-bruteforce-guessing).
         """
         with self._session() as session:
@@ -310,8 +347,9 @@ class SqlAlchemyAccountStore:
                 update(SqlAccountToken)
                 .where(
                     and_(
+                        SqlAccountToken.workspace_id == current_workspace_id(),
                         SqlAccountToken.id == token_id,
-                        SqlAccountToken.kind == kind,
+                        SqlAccountToken.kind == encode_account_token_kind(kind),
                         SqlAccountToken.redeemed_at.is_(None),
                         SqlAccountToken.expires_at > now_epoch_seconds,
                     )
@@ -320,7 +358,7 @@ class SqlAlchemyAccountStore:
             )
             if result.rowcount == 0:
                 return None
-            row = session.get(SqlAccountToken, token_id)
+            row = session.get(SqlAccountToken, (current_workspace_id(), token_id))
             return _to_account_token(row) if row is not None else None
 
     def purge_expired_tokens(self, now_epoch_seconds: int) -> int:
@@ -335,7 +373,10 @@ class SqlAlchemyAccountStore:
         """
         with self._session() as session:
             result = session.execute(
-                delete(SqlAccountToken).where(SqlAccountToken.expires_at <= now_epoch_seconds)
+                delete(SqlAccountToken).where(
+                    SqlAccountToken.workspace_id == current_workspace_id(),
+                    SqlAccountToken.expires_at <= now_epoch_seconds,
+                )
             )
             return result.rowcount
 
@@ -346,14 +387,14 @@ class SqlAlchemyAccountStore:
     # single-use token is minted with ``user_id=NULL``; at the OIDC
     # callback we atomically redeem it AND stamp the redeeming email
     # into ``user_id``. That stamped, redeemed row IS the durable
-    # pre-authorization â€” ``is_email_invited`` just looks for one. This
+    # pre-authorization â€?``is_email_invited`` just looks for one. This
     # keeps the OSS-only invite feature from adding a table that would
     # ship (empty, unused) into the hosted / Databricks-Apps schema.
 
     def redeem_oidc_invite(self, token_id: str, email: str, *, now_epoch_seconds: int) -> bool:
         """Atomically redeem an OIDC invite token and bind it to ``email``.
 
-        A single ``UPDATE â€¦ WHERE redeemed_at IS NULL`` makes redemption
+        A single ``UPDATE â€?WHERE redeemed_at IS NULL`` makes redemption
         single-use even under concurrent callbacks, and stamps
         ``user_id=email`` so the redeemed row doubles as the durable
         pre-authorization that :meth:`is_email_invited` later finds.
@@ -371,8 +412,9 @@ class SqlAlchemyAccountStore:
                 update(SqlAccountToken)
                 .where(
                     and_(
+                        SqlAccountToken.workspace_id == current_workspace_id(),
                         SqlAccountToken.id == token_id,
-                        SqlAccountToken.kind == "invite",
+                        SqlAccountToken.kind == encode_account_token_kind("invite"),
                         SqlAccountToken.redeemed_at.is_(None),
                         SqlAccountToken.expires_at > now_epoch_seconds,
                     )
@@ -398,7 +440,8 @@ class SqlAlchemyAccountStore:
                 select(
                     exists().where(
                         and_(
-                            SqlAccountToken.kind == "invite",
+                            SqlAccountToken.workspace_id == current_workspace_id(),
+                            SqlAccountToken.kind == encode_account_token_kind("invite"),
                             SqlAccountToken.user_id == email,
                             SqlAccountToken.redeemed_at.is_not(None),
                         )

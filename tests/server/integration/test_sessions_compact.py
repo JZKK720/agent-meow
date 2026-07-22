@@ -5,15 +5,15 @@ The web-UI ``/compact`` command and compact button POST
 ``designs/CLAUDE_NATIVE.md`` ("Control events dispatch on the runner"),
 the agent-meow server stays harness-agnostic: it forwards the control to the
 bound runner and only runs its own in-process compaction
-(``_run_compact_locked`` â†’ ``compact_conversation_now``) when the
+(``_run_compact_locked`` â†?``compact_conversation_now``) when the
 runner did NOT handle it.
 
 The runner's dispatch contract (verified in
 ``tests/runner/test_app_sessions_native.py``):
 
 * claude-native injects ``/compact`` into the tmux pane and returns
-  **200** â€” Claude Code compacts its own context.
-* other harnesses **204** no-op â€” the agent-meow server owns the operation.
+  **200** â€?Claude Code compacts its own context.
+* other harnesses **204** no-op â€?the agent-meow server owns the operation.
 * a failed injection (pane not attached) returns **503**.
 
 These tests pin the agent-meow side of that contract by stubbing the runner's
@@ -22,7 +22,9 @@ HTTP response and asserting whether the AP-side compaction ran.
 
 from __future__ import annotations
 
+import asyncio
 import json
+from collections import defaultdict
 from typing import Any
 
 import httpx
@@ -138,7 +140,7 @@ async def test_compact_skips_omnigent_compaction_when_runner_handles_it(
     assert resp.json() == {"queued": False}, resp.text
     # Exactly one compact control was forwarded to the runner. 0 = the
     # agent-meow server never forwarded (it would have run _run_compact_locked
-    # directly â€” the pre-fix behavior); 2+ = duplicate forward.
+    # directly â€?the pre-fix behavior); 2+ = duplicate forward.
     assert captured == [{"type": "compact"}], (
         f"AP server must forward exactly one compact control to the runner; got {captured!r}."
     )
@@ -152,7 +154,7 @@ async def test_compact_runs_omnigent_compaction_when_runner_noops(
     A 204 from the runner (in-process harness) makes the agent-meow server run
     its own ``compact_conversation_now``.
 
-    In-process harnesses have no terminal to inject into â€” explicit
+    In-process harnesses have no terminal to inject into â€?explicit
     compaction is an AP-side LLM summarisation. The 204 no-op tells the
     agent-meow server it owns the operation, so it must still forward the
     control (harness-agnostic) AND then run the compaction.
@@ -186,7 +188,7 @@ async def test_compact_runs_omnigent_compaction_when_runner_noops(
 
     assert resp.status_code == 202, resp.text
     assert resp.json() == {"queued": False}, resp.text
-    # Control was still forwarded even though the runner no-ops â€” the
+    # Control was still forwarded even though the runner no-ops â€?the
     # agent-meow server is harness-agnostic and forwards for every harness.
     assert captured == [{"type": "compact"}], (
         f"AP server must forward compact to the runner even on the "
@@ -202,6 +204,187 @@ async def test_compact_runs_omnigent_compaction_when_runner_noops(
         f"AP-side compaction ran for the wrong session; got "
         f"{calls[0].get('conversation_id')!r}, expected {sid!r}."
     )
+
+
+async def test_compact_model_less_sdk_harness_returns_clear_unavailable_message(
+    client: httpx.AsyncClient,
+) -> None:
+    """
+    A model-less SDK-style harness should not expose the raw server-side
+    compaction model requirement.
+    """
+    agent = await create_test_agent(
+        client,
+        name="model-less-sdk",
+        # Explicit harness: build_agent_bundle defaults config.harness to
+        # "claude-sdk", which harness_kind would echo instead of the real
+        # model-less SDK harness under test.
+        executor={"type": "omnigent", "config": {"harness": "openai-agents"}},
+        include_llm=False,
+    )
+    sid = await _create_session(client, agent["id"])
+
+    resp = await client.post(
+        f"/v1/sessions/{sid}/events",
+        json={"type": "compact", "data": {}},
+    )
+
+    assert resp.status_code == 400, resp.text
+    assert "/compact is unavailable" in resp.text
+    assert "openai-agents" in resp.text
+    assert "llm.model" in resp.text
+    assert "executor.model" in resp.text
+
+
+async def test_compact_single_flight_per_session(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Explicit compaction is single-flight per session, not globally.
+
+    Two ``/compact`` POSTs for one session must never overlap inside
+    ``compact_conversation_now``. Different sessions may overlap. A
+    failed compaction must release the lock so a later request can run.
+    """
+    from agent_meow.runtime import set_runner_client
+    from agent_meow.server.routes import sessions as sessions_routes
+
+    active: dict[str, int] = defaultdict(int)
+    max_active: dict[str, int] = defaultdict(int)
+    simultaneous_sessions = 0
+    entered: dict[str, asyncio.Event] = {}
+    release: dict[str, asyncio.Event] = {}
+    fail_once: set[str] = set()
+    calls: list[str] = []
+    lock_requests: dict[str, int] = defaultdict(int)
+    second_lock_requested: dict[str, asyncio.Event] = {}
+
+    real_compact_lock = sessions_routes._compact_lock
+
+    def _instrumented_compact_lock(session_id: str) -> asyncio.Lock:
+        lock_requests[session_id] += 1
+        if lock_requests[session_id] == 2:
+            second_lock_requested.setdefault(session_id, asyncio.Event()).set()
+        return real_compact_lock(session_id)
+
+    monkeypatch.setattr(sessions_routes, "_compact_lock", _instrumented_compact_lock)
+
+    async def _gated(**kwargs: Any) -> CompactionResult:
+        """Hold inside compaction until the test releases this session."""
+        nonlocal simultaneous_sessions
+        cid = kwargs["conversation_id"]
+        assert isinstance(cid, str)
+        calls.append(cid)
+        active[cid] += 1
+        max_active[cid] = max(max_active[cid], active[cid])
+        simultaneous_sessions = max(
+            simultaneous_sessions,
+            sum(1 for count in active.values() if count > 0),
+        )
+        entered.setdefault(cid, asyncio.Event()).set()
+        try:
+            if cid in fail_once:
+                fail_once.discard(cid)
+                raise RuntimeError("injected compact failure")
+            await release.setdefault(cid, asyncio.Event()).wait()
+            return CompactionResult(messages=[], summary_metadata=None, total_tokens=1)
+        finally:
+            active[cid] -= 1
+
+    monkeypatch.setattr(
+        "agent_meow.runtime.workflow.compact_conversation_now",
+        _gated,
+    )
+
+    runner, _captured = _fake_runner_returning(204)
+    set_runner_client(runner)
+    try:
+        agent = await create_test_agent(client)
+        sid_a = await _create_session(client, agent["id"])
+        sid_b = await _create_session(client, agent["id"])
+        release[sid_a] = asyncio.Event()
+        release[sid_b] = asyncio.Event()
+        entered[sid_a] = asyncio.Event()
+        entered[sid_b] = asyncio.Event()
+        second_lock_requested[sid_a] = asyncio.Event()
+
+        # Same session: second request must wait outside compact_conversation_now
+        # until the first releases â€?never overlap.
+        first_a = asyncio.create_task(
+            client.post(f"/v1/sessions/{sid_a}/events", json={"type": "compact", "data": {}})
+        )
+        await asyncio.wait_for(entered[sid_a].wait(), timeout=5.0)
+        entered[sid_a].clear()
+        second_a = asyncio.create_task(
+            client.post(f"/v1/sessions/{sid_a}/events", json={"type": "compact", "data": {}})
+        )
+        await asyncio.wait_for(second_lock_requested[sid_a].wait(), timeout=5.0)
+        assert active[sid_a] == 1, (
+            f"Same-session compact overlapped inside compact_conversation_now; "
+            f"active={active[sid_a]}."
+        )
+        assert not entered[sid_a].is_set(), (
+            "Second same-session compact entered before the first released."
+        )
+        release[sid_a].set()
+        resp_a1, resp_a2 = await asyncio.wait_for(
+            asyncio.gather(first_a, second_a),
+            timeout=5.0,
+        )
+        assert resp_a1.status_code == 202, resp_a1.text
+        assert resp_a2.status_code == 202, resp_a2.text
+        assert max_active[sid_a] == 1, (
+            f"Same-session compact overlapped; max_active={max_active[sid_a]}."
+        )
+
+        # Different sessions may hold compact_conversation_now concurrently.
+        release[sid_a].clear()
+        release[sid_b].clear()
+        entered[sid_a].clear()
+        entered[sid_b].clear()
+        task_a = asyncio.create_task(
+            client.post(f"/v1/sessions/{sid_a}/events", json={"type": "compact", "data": {}})
+        )
+        task_b = asyncio.create_task(
+            client.post(f"/v1/sessions/{sid_b}/events", json={"type": "compact", "data": {}})
+        )
+        await asyncio.wait_for(
+            asyncio.gather(entered[sid_a].wait(), entered[sid_b].wait()),
+            timeout=5.0,
+        )
+        assert simultaneous_sessions >= 2, (
+            "Different sessions failed to overlap inside compact_conversation_now; "
+            f"simultaneous_sessions={simultaneous_sessions}."
+        )
+        release[sid_a].set()
+        release[sid_b].set()
+        resp_cross_a, resp_cross_b = await asyncio.wait_for(
+            asyncio.gather(task_a, task_b),
+            timeout=5.0,
+        )
+        assert resp_cross_a.status_code == 202, resp_cross_a.text
+        assert resp_cross_b.status_code == 202, resp_cross_b.text
+
+        # Failure must release the lock so a later compact can run.
+        fail_once.add(sid_a)
+        release[sid_a].set()
+        fail_resp = await client.post(
+            f"/v1/sessions/{sid_a}/events",
+            json={"type": "compact", "data": {}},
+        )
+        assert fail_resp.status_code == 500, fail_resp.text
+        retry_resp = await client.post(
+            f"/v1/sessions/{sid_a}/events",
+            json={"type": "compact", "data": {}},
+        )
+        assert retry_resp.status_code == 202, retry_resp.text
+        assert calls.count(sid_a) >= 4, (
+            f"Expected failed compact plus successful retry for {sid_a}; calls={calls!r}."
+        )
+    finally:
+        await runner.aclose()
+        set_runner_client(None)
 
 
 async def test_compact_errors_when_runner_injection_fails(
@@ -223,7 +406,7 @@ async def test_compact_errors_when_runner_injection_fails(
         """Fail loudly if AP-side compaction is reached on the error path."""
         raise AssertionError(
             "compact_conversation_now must not run when the runner "
-            "returned a non-200/204 status â€” agent-meow fell through to its "
+            "returned a non-200/204 status â€?agent-meow fell through to its "
             "own compaction instead of surfacing the runner failure."
         )
 
@@ -261,7 +444,7 @@ async def test_compact_errors_when_runner_injection_fails(
 # The claude-native forwarder posts external_compaction_status when Claude
 # Code's PreCompact / post-compaction SessionStart(source=compact) hooks
 # fire, so the web UI brackets Claude's own terminal compaction with the
-# same "Compacting conversationâ€¦" spinner the AP-side path drives.
+# same "Compacting conversationâ€? spinner the AP-side path drives.
 
 
 @pytest.mark.parametrize(
@@ -331,7 +514,7 @@ async def test_external_compaction_status_rejects_unknown_status(
     Unknown compaction-status values are rejected with a 400.
 
     Without this guard a typo in the forwarder would publish a
-    non-conforming event the SDK's strict adapter drops downstream â€”
+    non-conforming event the SDK's strict adapter drops downstream â€?
     the fail-loud guard rule 15 exists to prevent.
     """
     agent = await create_test_agent(client)

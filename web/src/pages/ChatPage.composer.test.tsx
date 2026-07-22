@@ -33,7 +33,6 @@ vi.mock("@/lib/agentLabels", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/agentLabels")>()),
   useBrainHarnessLabels: () => ({
     "claude-sdk": "Claude SDK",
-    "openai-agents": "OpenAI Agents SDK",
     codex: "Codex",
     cursor: "Cursor",
     pi: "Pi",
@@ -43,8 +42,14 @@ vi.mock("@/lib/agentLabels", async (importOriginal) => ({
 }));
 import type { ElicitationBlock } from "@/lib/blocks";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Composer } from "./ChatPage";
-import { SlashCommandMenu } from "@/components/SlashCommandMenu";
+import { Composer, shouldQueueSend } from "./ChatPage";
+import type { QueuedMessage } from "@/store/chatStore";
+import {
+  BUILTIN_SLASH_COMMANDS,
+  rankedSlashCommandNames,
+  SlashCommandMenu,
+  slashCommandMatches,
+} from "@/components/SlashCommandMenu";
 
 // These tests pin the slash-command suggestions menu UX in the composer:
 // (1) the first match is highlighted as soon as the menu opens, so Tab/Enter
@@ -134,6 +139,33 @@ describe("Composer slash-command menu", () => {
     fireEvent.keyDown(ta, { key: "Tab" });
     // Skills fill "/name " and keep focus so the user can append args.
     expect(ta.value).toBe("/deslop ");
+  });
+
+  it("Tab completes a match found only mid-name (exercises menuMatches, not just the render filter)", () => {
+    render(<Composer {...composerProps()} />);
+    const ta = textarea();
+    // "slop" is a substring of "deslop" but a prefix of no command. The menu
+    // render filter would show the row either way; Tab-completion reads
+    // menuMatches[menuIndex], so this only completes if the keyboard-nav
+    // filter is substring-based. Guards menuMatches from silently reverting
+    // to prefix matching and diverging from the rendered list.
+    fireEvent.change(ta, { target: { value: "/slop" } });
+    expect(activeRow()?.textContent).toContain("/deslop");
+    fireEvent.keyDown(ta, { key: "Tab" });
+    expect(ta.value).toBe("/deslop ");
+  });
+
+  it("ranks a prefix built-in ahead of mid-string matches so a short query can't execute the wrong command", () => {
+    render(<Composer {...composerProps()} />);
+    const ta = textarea();
+    // "/e": /effort is a prefix match; /context and /help merely contain "e".
+    // Before prefix-priority ranking, /context (a no-arg builtin) was
+    // highlighted first and Tab/Enter executed it — a side-effecting
+    // regression. /effort must win and Tab fills it (it takes an argument).
+    fireEvent.change(ta, { target: { value: "/e" } });
+    expect(activeRow()?.textContent).toContain("/effort");
+    fireEvent.keyDown(ta, { key: "Tab" });
+    expect(ta.value).toBe("/effort ");
   });
 
   it("Enter completes the highlighted command instead of sending", () => {
@@ -403,16 +435,12 @@ describe("Composer slash-command submit routing", () => {
     expect(screen.getAllByTestId("model-picker-item").length).toBeGreaterThan(0);
   });
 
-  it("shows the read-only model hint for bare /model on opencode-native", () => {
-    // opencode surfaces showModels (its pill mirrors the live TUI model) but
-    // has no web model options to populate a dropdown. The bare-/model intercept
-    // must NOT fire — opening an empty picker and swallowing the command was the
-    // regression. Instead it falls through to the builtin /model handler, which
-    // surfaces the current model as a read-only hint. ("/model <name>" still
-    // routes to setModel below — opencode reads model_override on the next turn,
-    // so a web switch is functional even though the picker list is empty.)
+  it("opens the server-backed model picker for bare /model on opencode-native", () => {
     const setModel = vi.fn().mockResolvedValue(undefined);
-    useChatStore.setState({ setModel, llmModel: "openrouter/nemotron" });
+    useChatStore.setState({
+      setModel,
+      llmModel: "opencode-go/glm-5.2",
+    });
     const onSend = vi.fn();
     render(
       <Composer
@@ -422,6 +450,7 @@ describe("Composer slash-command submit routing", () => {
           isNativeWrapper: true,
           showModels: true,
           modelPickerKind: "opencode",
+          codexModelOptions: [{ id: "opencode-go/glm-5.2", displayName: "opencode-go/glm-5.2" }],
         })}
       />,
     );
@@ -429,12 +458,11 @@ describe("Composer slash-command submit routing", () => {
     fireEvent.change(ta, { target: { value: "/model " } });
     fireEvent.keyDown(ta, { key: "Enter" });
 
-    // Not sent as plaintext, not a switch, and the (empty) web picker stays shut.
+    // Bare /model opens the picker without sending text or changing the model.
     expect(onSend).not.toHaveBeenCalled();
     expect(setModel).not.toHaveBeenCalled();
-    expect(screen.queryAllByTestId("model-picker-item")).toHaveLength(0);
-    // The builtin handler surfaced the current model as a read-only hint.
-    expect(screen.getByText(/openrouter\/nemotron/)).toBeTruthy();
+    expect(screen.getAllByTestId("model-picker-item")).toHaveLength(1);
+    expect(screen.getByText("opencode-go/glm-5.2")).toBeTruthy();
   });
 
   it("routes /model <name> to setModel on opencode-native (functional switch)", () => {
@@ -528,6 +556,9 @@ describe("AgentPicker trigger label", () => {
       selectedModel: null,
       selectedEffort: null,
       llmModel: null,
+      // Reset the per-session override too: a test that sets it must not leak
+      // into the next, which now reads sessionModelOverride first for the label.
+      sessionModelOverride: null,
       codexModelOptions: [],
       nativeVendorOwnsModel: false,
     });
@@ -558,6 +589,46 @@ describe("AgentPicker trigger label", () => {
     // Model black, effort grey.
     expect(within(trigger).getByText("Opus")).toHaveClass("text-foreground");
     expect(within(trigger).getByText("High")).toHaveClass("text-muted-foreground");
+  });
+
+  it("prefers a claude session override over the cross-session sticky model", () => {
+    useChatStore.setState({
+      selectedModel: "opus",
+      sessionModelOverride: "sonnet",
+      selectedEffort: null,
+      llmModel: "haiku",
+    });
+    renderWithTooltips(
+      <Composer
+        {...composerProps({
+          agents: [{ id: "a1", name: "claude" }],
+          selectedAgentId: "a1",
+          modelPickerKind: "claude",
+          showModels: true,
+          showEffort: false,
+        })}
+      />,
+    );
+
+    const trigger = screen.getByTestId("agent-picker-trigger");
+    expect(trigger).toHaveTextContent("Sonnet 4.6");
+    expect(trigger).not.toHaveTextContent("Opus");
+
+    // Open the picker via the bare-"/model" intercept — a synthetic click on the
+    // Radix trigger doesn't open the menu under jsdom, so the rows never mount.
+    fireEvent.change(textarea(), { target: { value: "/model " } });
+    fireEvent.keyDown(textarea(), { key: "Enter" });
+
+    const sonnetRow = document.querySelector<HTMLElement>(
+      '[data-testid="model-picker-item"][data-model-id="sonnet"]',
+    );
+    const opusRow = document.querySelector<HTMLElement>(
+      '[data-testid="model-picker-item"][data-model-id="opus"]',
+    );
+    // The applied session override ("sonnet") is the active row, not the
+    // cross-session sticky ("opus").
+    expect(sonnetRow).toHaveAttribute("data-active", "true");
+    expect(opusRow).not.toHaveAttribute("data-active", "true");
   });
 
   it("still renders an enabled trigger when the model/effort label is unresolved", () => {
@@ -803,6 +874,67 @@ describe("Composer Codex Plan-mode control", () => {
   });
 });
 
+describe("slashCommandMatches", () => {
+  it("matches the leaf segment after a namespace prefix", () => {
+    expect(slashCommandMatches("/superpowers:using-superpowers", "using-superpowers")).toBe(true);
+  });
+
+  it("matches a substring in the middle of the name", () => {
+    expect(slashCommandMatches("/cross-review", "rev")).toBe(true);
+  });
+
+  it("does not match a word that only appears in the description", () => {
+    // Matching is name-only — the web menu never shows descriptions inline,
+    // so a description-driven hit would look unexplained. "window" is in this
+    // command's blurb but not its name, so it must NOT match.
+    expect(slashCommandMatches("/context", "window")).toBe(false);
+  });
+
+  it("is case-insensitive on both name and query", () => {
+    expect(slashCommandMatches("/Superpowers:Using", "USING")).toBe(true);
+  });
+
+  it("returns false when the query is nowhere in the name", () => {
+    expect(slashCommandMatches("/context", "zzz")).toBe(false);
+  });
+});
+
+describe("rankedSlashCommandNames", () => {
+  it("ranks a prefix match ahead of commands that merely contain the query", () => {
+    // "/e": /effort is a prefix; /context, /model, /help only contain "e".
+    // Prefix-priority keeps /effort first so its auto-highlight + Enter can't
+    // execute an unrelated no-arg builtin (/context) as a side effect.
+    expect(rankedSlashCommandNames(BUILTIN_SLASH_COMMANDS, "e")[0]).toBe("/effort");
+  });
+
+  it("ranks /model ahead of commands that merely contain 'm'", () => {
+    // "/m": /model is a prefix; /compact contains "m". Was /compact first.
+    expect(rankedSlashCommandNames(BUILTIN_SLASH_COMMANDS, "m")[0]).toBe("/model");
+  });
+
+  it("keeps built-ins ahead of skills so the Commands section stays on top", () => {
+    const commands = { ...BUILTIN_SLASH_COMMANDS, "/superpowers:effort-helper": "x" };
+    const ranked = rankedSlashCommandNames(commands, "effort");
+    // Both /effort (builtin, prefix) and the skill (mid-string) match; the
+    // builtin must rank first so the render partition stays contiguous.
+    expect(ranked[0]).toBe("/effort");
+    expect(ranked.indexOf("/effort")).toBeLessThan(ranked.indexOf("/superpowers:effort-helper"));
+  });
+
+  it("ranks a prefix skill ahead of a mid-string skill, stably", () => {
+    // Insertion order is deep-research, research; ranking promotes the prefix
+    // match (research) above the mid-string one (deep-research contains "res").
+    const commands = { "/deep-research": "a", "/research": "b" };
+    expect(rankedSlashCommandNames(commands, "res")).toEqual(["/research", "/deep-research"]);
+  });
+
+  it("returns everything in insertion order for an empty query (lone '/')", () => {
+    expect(rankedSlashCommandNames(BUILTIN_SLASH_COMMANDS, "")).toEqual(
+      Object.keys(BUILTIN_SLASH_COMMANDS),
+    );
+  });
+});
+
 describe("SlashCommandMenu", () => {
   const COMMANDS = {
     "/alpha": "First",
@@ -867,6 +999,18 @@ describe("SlashCommandMenu", () => {
     expect(detail.textContent).toContain("/beta");
     expect(detail.textContent).toContain("Second");
     expect(detail.textContent).not.toContain("First");
+  });
+
+  it("surfaces a namespaced skill by its leaf name", () => {
+    render(
+      <SlashCommandMenu
+        query="using-superpowers"
+        activeIndex={0}
+        onSelect={vi.fn()}
+        commands={{ "/superpowers:using-superpowers": "Establishes how to find and use skills" }}
+      />,
+    );
+    expect(screen.getByTestId("slash-menu-item-superpowers:using-superpowers")).toBeDefined();
   });
 });
 
@@ -1186,5 +1330,78 @@ describe("Composer sub-agent tray", () => {
     // that some tray exists.
     expect(screen.getByText("check-account-eligibility")).toBeTruthy();
     expect(screen.getByText(/Chatting with sub-agent/)).toBeTruthy();
+  });
+});
+
+describe("Composer — queued-message flush gating", () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    useChatStore.setState({ queuedMessages: [] });
+  });
+
+  // Regression (Polly review 3a): the level-triggered flush effect must NOT
+  // drain the queue while the session is unreachable — flushing would POST
+  // into a void, bypassing onSend's reconnect dialog. It must drain once
+  // reachable again.
+  it("holds the queue while unreachable, then flushes when reachable", async () => {
+    const sendSpy = vi.fn().mockResolvedValue(undefined);
+    useChatStore.setState({
+      conversationId: "conv_test",
+      boundAgentId: "agent_xyz",
+      status: "idle",
+      sessionStatus: "idle",
+      send: sendSpy,
+      queuedMessages: [{ queueId: "q_1", text: "held", conversationId: "conv_test" }],
+    });
+
+    // Idle + a waiting head, but unreachable → the effect must not flush.
+    const { rerender } = render(<Composer {...composerProps({ unreachable: true })} />);
+    await waitFor(() => expect(sendSpy).not.toHaveBeenCalled());
+    expect(useChatStore.getState().queuedMessages).toHaveLength(1);
+
+    // Becomes reachable → the effect re-fires and drains the head.
+    rerender(<Composer {...composerProps({ unreachable: false })} />);
+    await waitFor(() => expect(sendSpy).toHaveBeenCalledTimes(1));
+    expect(sendSpy.mock.calls[0]!.slice(0, 2)).toEqual(["held", "agent_xyz"]);
+    expect(useChatStore.getState().queuedMessages).toHaveLength(0);
+  });
+});
+
+describe("shouldQueueSend", () => {
+  const q = (conversationId: string): QueuedMessage => ({
+    queueId: `q_${conversationId}`,
+    text: "queued",
+    conversationId,
+  });
+
+  it("sends directly (no queue) for a brand-new chat with no conversation", () => {
+    expect(shouldQueueSend(null, "streaming", "running", [])).toBe(false);
+  });
+
+  it("queues while the session is busy (streaming or running)", () => {
+    expect(shouldQueueSend("conv_a", "streaming", "idle", [])).toBe(true);
+    expect(shouldQueueSend("conv_a", "idle", "running", [])).toBe(true);
+  });
+
+  it("sends directly when idle and nothing is queued for this conversation", () => {
+    expect(shouldQueueSend("conv_a", "idle", "idle", [])).toBe(false);
+  });
+
+  it("sends directly on `waiting` (turn ended, only background work remains)", () => {
+    // A background shell / still-running sub-agent keeps the session in
+    // `waiting`, but the server's turn gate is already free — a new message
+    // must start a fresh turn rather than stalling in the client queue.
+    expect(shouldQueueSend("conv_a", "idle", "waiting", [])).toBe(false);
+  });
+
+  it("queues when idle but this conversation already has a queued message", () => {
+    // The ordering fix: an idle flicker must not let a later send overtake the
+    // still-queued earlier one.
+    expect(shouldQueueSend("conv_a", "idle", "idle", [q("conv_a")])).toBe(true);
+  });
+
+  it("ignores queued messages belonging to a different conversation", () => {
+    expect(shouldQueueSend("conv_a", "idle", "idle", [q("conv_b")])).toBe(false);
   });
 });

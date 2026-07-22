@@ -1,9 +1,10 @@
-"""Native Pi TUI wrapper for the agent-meow CLI."""
+"""Native Pi TUI wrapper for the Omnigent CLI."""
 
 from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import shutil
 from collections.abc import Callable, Mapping, Sequence
@@ -28,6 +29,7 @@ from agent_meow.host.daemon_launch import (
     wait_for_host_online,
     wait_for_runner_online,
 )
+from agent_meow.native_coding_agents import native_shell_terminal_spec
 from agent_meow.native_terminal import (
     DAEMON_HOST_ONLINE_TIMEOUT_S as _DAEMON_HOST_ONLINE_TIMEOUT_S,
 )
@@ -41,8 +43,11 @@ from agent_meow.native_terminal import bind_session_runner as _bind_session_runn
 from agent_meow.native_terminal import url_component
 from agent_meow.pi_native_bridge import bridge_dir_for_session_id
 
+_logger = logging.getLogger(__name__)
+
 _DEFAULT_PI_COMMAND = "pi"
 _PI_PATH_ENV = "OMNIGENT_PI_PATH"
+# Deprecated alias â€?remove in v0.8.0 (read via the legacy branch below, which warns).
 _LEGACY_HARNESS_PI_PATH_ENV = "HARNESS_PI_PATH"
 _AGENT_NAME = "pi-native-ui"
 _TERMINAL_NAME = "pi"
@@ -63,7 +68,7 @@ class NativePiLaunch:
 
 @dataclass(frozen=True)
 class LaunchedPiTerminal:
-    """Terminal resource returned by the agent-meow runner launch path."""
+    """Terminal resource returned by the Omnigent runner launch path."""
 
     terminal_id: str
     tmux_socket: Path | None
@@ -82,11 +87,21 @@ class PreparedPiTerminal:
 
 
 def _configured_pi_command(env: Mapping[str, str]) -> str:
-    """Return the configured Pi executable name/path from *env*."""
-    for key in (_PI_PATH_ENV, _LEGACY_HARNESS_PI_PATH_ENV):
-        value = env.get(key, "").strip()
-        if value:
-            return value
+    """Return the configured Pi executable name/path from *env*.
+
+    Reads ``OMNIGENT_PI_PATH`` (canonical) then the deprecated
+    ``HARNESS_PI_PATH`` (emitting a one-time-per-process deprecation warning
+    via the shared helper so wording/dedupe stay consistent).
+    """
+    value = env.get(_PI_PATH_ENV, "").strip()
+    if value:
+        return value
+    legacy = env.get(_LEGACY_HARNESS_PI_PATH_ENV, "").strip()
+    if legacy:
+        from agent_meow.harness_startup_config import _warn_legacy_path
+
+        _warn_legacy_path(_LEGACY_HARNESS_PI_PATH_ENV, _PI_PATH_ENV)
+        return legacy
     return _DEFAULT_PI_COMMAND
 
 
@@ -116,6 +131,58 @@ def resolve_pi_executable(
     return resolved
 
 
+def pi_version(executable: str) -> tuple[int, int, int] | None:
+    """Return the Pi CLI version as ``(major, minor, patch)``, or ``None``.
+
+    Runs ``pi --version`` synchronously with a short timeout. Returns
+    ``None`` on any failure (not installed, hung, unexpected output) so
+    callers treat an unknown version as "feature not supported" and avoid
+    passing flags the installed Pi may not recognise.
+
+    :param executable: Resolved path to the Pi CLI.
+    :returns: Parsed version tuple, e.g. ``(0, 79, 10)``, or ``None``.
+    """
+    import re
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            [executable, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5.0,
+        )
+    except Exception:  # noqa: BLE001
+        return None
+    # Older Pi (mariozechner package) prints the version to stderr via
+    # console.error; newer Pi (earendil-works) prints to stdout via
+    # console.log. Check both so the probe works across all versions.
+    combined = result.stdout + result.stderr
+    match = re.search(r"(\d+)\.(\d+)\.(\d+)", combined)
+    if match is None:
+        return None
+    return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+
+
+def pi_supports_approve(executable: str) -> bool:
+    """Return ``True`` when the Pi CLI at *executable* supports ``--approve``.
+
+    ``--approve`` (``projectTrustOverride=true``) was added in
+    ``@earendil-works/pi-coding-agent@0.79.0``. Passing it to an older
+    version produces an "Unknown option" error and Pi exits immediately.
+
+    Fails open â€?returns ``False`` on any version-probe error so an older
+    Pi keeps working without the flag.
+
+    :param executable: Resolved path to the Pi CLI.
+    :returns: ``True`` iff the installed Pi version is >= 0.79.0.
+    """
+    ver = pi_version(executable)
+    if ver is None:
+        return False
+    return ver >= (0, 79, 0)
+
+
 def build_pi_launch(
     pi_args: Sequence[str],
     *,
@@ -136,10 +203,10 @@ def run_pi_native(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch Pi TUI in an agent-meow terminal.
+    Launch Pi TUI in an Omnigent terminal.
 
-    :param server: Resolved agent-meow server URL.
-    :param session_id: Optional existing agent-meow conversation id.
+    :param server: Resolved Omnigent server URL.
+    :param session_id: Optional existing Omnigent conversation id.
     :param pi_args: Raw Pi CLI args to persist for the runner-owned TUI.
     :param resume_picker: ``True`` runs the Pi-native picker.
     :param auto_open_conversation: When ``True``, open the browser
@@ -149,7 +216,7 @@ def run_pi_native(
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "Pi requires a resolved agent-meow server URL. The CLI should call "
+            "Pi requires a resolved Omnigent server URL. The CLI should call "
             "_ensure_backend before run_pi_native."
         )
     with TemporaryDirectory(prefix="omnigent-pi-native-") as tmpdir:
@@ -166,7 +233,7 @@ def run_pi_native(
 
 def _materialize_pi_agent_spec(tmpdir: Path) -> Path:
     """
-    Write the terminal-first agent spec used by ``agent-meow pi``.
+    Write the terminal-first agent spec used by ``omnigent pi``.
 
     :param tmpdir: Temporary directory for the generated YAML file.
     :returns: Path to the generated YAML spec.
@@ -185,17 +252,9 @@ def _materialize_pi_agent_spec(tmpdir: Path) -> Path:
             "cwd": ".",
             "sandbox": {"type": "none"},
         },
-        "terminals": {
-            "shell": {
-                "command": "bash",
-                "allow_cwd_override": True,
-                "os_env": {
-                    "type": "caller_process",
-                    "cwd": ".",
-                    "sandbox": {"type": "none"},
-                },
-            },
-        },
+        # Default shell terminal for the web-UI "+ New shell" affordance;
+        # its command follows the user's ``$SHELL`` (zsh/fish/bash).
+        "terminals": native_shell_terminal_spec(),
     }
     yaml_path.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
     return yaml_path
@@ -211,11 +270,11 @@ def _run_with_remote_server(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch Pi on an agent-meow server via a daemon-spawned runner.
+    Launch Pi on an Omnigent server via a daemon-spawned runner.
 
-    :param base_url: agent-meow server base URL.
+    :param base_url: Omnigent server base URL.
     :param spec_path: Generated Pi wrapper agent spec.
-    :param session_id: Optional existing agent-meow session id.
+    :param session_id: Optional existing Omnigent session id.
     :param resume_picker: When ``True``, run the Pi-native picker.
     :param pi_args: Raw Pi CLI args.
     :param auto_open_conversation: Whether to open the web conversation URL.
@@ -269,7 +328,7 @@ def _run_with_remote_server(
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the agent-meow server at {base_url}. "
+            f"Could not reach the omnigent server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc
@@ -289,8 +348,8 @@ async def _prepare_pi_terminal_via_daemon(
     """
     Create or resume a Pi-native session through a daemon runner.
 
-    :param base_url: agent-meow server base URL.
-    :param headers: HTTP auth headers for agent-meow requests.
+    :param base_url: Omnigent server base URL.
+    :param headers: HTTP auth headers for Omnigent requests.
     :param session_id: Existing session id to resume, or ``None``.
     :param session_bundle: Gzipped Pi wrapper bundle for fresh sessions.
     :param pi_args: User pass-through Pi args.
@@ -388,10 +447,10 @@ async def _create_pi_session(
     """
     Create a bundled terminal-first Pi session.
 
-    :param client: HTTP client pointed at agent-meow.
+    :param client: HTTP client pointed at agent_meow.
     :param bundle: Gzipped agent bundle.
     :param terminal_launch_args: Pass-through Pi CLI args to persist.
-    :returns: New agent-meow session id.
+    :returns: New Omnigent session id.
     """
     metadata: dict[str, Any] = {"labels": dict(_SESSION_LABELS)}
     if terminal_launch_args:
@@ -414,7 +473,7 @@ async def _create_pi_session(
 
 
 async def _fetch_pi_session(client: httpx.AsyncClient, session_id: str) -> dict[str, Any]:
-    """Fetch an existing agent-meow session."""
+    """Fetch an existing Omnigent session."""
     resp = await client.get(f"/v1/sessions/{url_component(session_id)}")
     if resp.status_code == 404:
         raise click.ClickException(f"Conversation {session_id!r} not found on the server.")

@@ -6,13 +6,13 @@ owns the ``opencode serve`` process and SSE forwarder; this spec just binds
 the ``opencode-native`` harness and declares the spawn/terminal surface so
 the web UI renders the session terminal-first.
 
-This module also hosts the interactive local ``agent-meow opencode`` CLI wrapper
-(:func:`run_opencode_native`, the analog of ``agent-meow codex`` / ``agent-meow pi``):
+This module also hosts the interactive local ``omnigent opencode`` CLI wrapper
+(:func:`run_opencode_native`, the analog of ``omnigent codex`` / ``omnigent pi``):
 it ensures a local daemon + runner, creates-or-resumes the ``opencode-native-ui``
 session (whose runner auto-creates the ``opencode serve`` + ``opencode attach``
-terminal), and attaches this TTY directly to that runner-owned tmux pane â€” the
+terminal), and attaches this TTY directly to that runner-owned tmux pane â€?the
 same web-UI takeover path, driven from the CLI. The provider/gateway comes from
-the runner's ambient env / ``agent-meow setup`` config (a profile-bound spec routes
+the runner's ambient env / ``omnigent setup`` config (a profile-bound spec routes
 through the Databricks gateway; otherwise OpenAI-/Anthropic-compatible env vars).
 """
 
@@ -44,6 +44,7 @@ from agent_meow.host.daemon_launch import (
     wait_for_host_online,
     wait_for_runner_online,
 )
+from agent_meow.native_coding_agents import native_shell_terminal_spec
 from agent_meow.native_terminal import (
     DAEMON_HOST_ONLINE_TIMEOUT_S as _DAEMON_HOST_ONLINE_TIMEOUT_S,
 )
@@ -100,18 +101,9 @@ def _materialize_opencode_agent_spec(
         },
         # Declare a default shell terminal so the relay advertises the
         # ``sys_terminal_*`` family to the wrapped opencode (the relay's gate
-        # is a non-empty ``terminals:`` block on this spec).
-        "terminals": {
-            "shell": {
-                "command": "bash",
-                "allow_cwd_override": True,
-                "os_env": {
-                    "type": "caller_process",
-                    "cwd": ".",
-                    "sandbox": {"type": "none"},
-                },
-            },
-        },
+        # is a non-empty ``terminals:`` block on this spec). Its command
+        # follows the user's ``$SHELL`` (zsh/fish/bash).
+        "terminals": native_shell_terminal_spec(),
     }
     yaml_path.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
     return yaml_path
@@ -127,7 +119,7 @@ _SESSION_LABELS = {
 
 @dataclass(frozen=True)
 class LaunchedOpenCodeTerminal:
-    """Terminal resource returned by the agent-meow runner launch path."""
+    """Terminal resource returned by the Omnigent runner launch path."""
 
     terminal_id: str
     tmux_socket: Path | None
@@ -169,16 +161,16 @@ def run_opencode_native(  # pragma: no cover
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Launch the OpenCode TUI in an agent-meow terminal (the ``agent-meow opencode`` path).
+    Launch the OpenCode TUI in an Omnigent terminal (the ``omnigent opencode`` path).
 
-    Mirrors ``agent-meow codex`` / ``agent-meow pi``: ensure a local daemon + runner,
+    Mirrors ``omnigent codex`` / ``omnigent pi``: ensure a local daemon + runner,
     create-or-resume the ``opencode-native-ui`` session (the runner auto-creates
     the ``opencode serve`` + ``opencode attach`` terminal), then attach this TTY
     to that runner-owned tmux pane.
 
-    :param server: Resolved agent-meow server URL. ``None`` is an error (the CLI
+    :param server: Resolved Omnigent server URL. ``None`` is an error (the CLI
         must resolve a backend first).
-    :param session_id: Optional existing agent-meow conversation id to resume.
+    :param session_id: Optional existing Omnigent conversation id to resume.
     :param opencode_args: Raw ``opencode`` CLI args to persist for the TUI.
     :param resume_picker: When ``True``, run the opencode-native resume picker.
     :param model: Optional model id pinned on the materialized wrapper spec.
@@ -188,7 +180,7 @@ def run_opencode_native(  # pragma: no cover
     _preflight_local_tools()
     if server is None:
         raise click.ClickException(
-            "OpenCode requires a resolved agent-meow server URL. The CLI should resolve "
+            "OpenCode requires a resolved Omnigent server URL. The CLI should resolve "
             "a backend before run_opencode_native."
         )
     with TemporaryDirectory(prefix="omnigent-opencode-native-") as tmpdir:
@@ -212,7 +204,7 @@ def _run_with_remote_server(  # pragma: no cover
     opencode_args: tuple[str, ...],
     auto_open_conversation: bool = False,
 ) -> None:
-    """Launch OpenCode on an agent-meow server via a daemon-spawned runner."""
+    """Launch OpenCode on an Omnigent server via a daemon-spawned runner."""
     from agent_meow.chat import _bundle_agent, _remote_headers
     from agent_meow.cli import _ensure_host_daemon
     from agent_meow.host.identity import load_or_create_host_identity
@@ -266,7 +258,7 @@ def _run_with_remote_server(  # pragma: no cover
         asyncio.run(_drive())
     except httpx.ConnectError as exc:
         raise click.ClickException(
-            f"Could not reach the agent-meow server at {base_url}. "
+            f"Could not reach the omnigent server at {base_url}. "
             "Confirm the server is running and reachable from here "
             f"(e.g. `curl {base_url}/health`), and that --server is correct."
         ) from exc
@@ -389,7 +381,7 @@ async def _create_opencode_session(
 
 
 async def _fetch_opencode_session(client: httpx.AsyncClient, session_id: str) -> dict[str, Any]:
-    """Fetch an existing agent-meow session."""
+    """Fetch an existing Omnigent session."""
     resp = await client.get(f"/v1/sessions/{url_component(session_id)}")
     if resp.status_code == 404:
         raise click.ClickException(f"Conversation {session_id!r} not found on the server.")
@@ -450,7 +442,7 @@ def _record_launch_for_fresh_session(session_id: str) -> None:
     """
     Persist the wrapper's current cwd as the OpenCode session launch state.
 
-    :param session_id: Newly created agent-meow conversation id, e.g.
+    :param session_id: Newly created Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :returns: None.
     """
@@ -474,7 +466,7 @@ def _align_working_directory_with_session(session_id: str) -> None:
     state points at a different existing directory, prompt whether to
     switch there before the runner and ``opencode serve`` sample cwd.
 
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :returns: None. Side-effect-only; may change process cwd.
     :raises click.ClickException: If recorded state exists but the
         recorded directory no longer exists, or if the user cancels.
@@ -633,7 +625,7 @@ def _resolve_session_id_for_resume(
         return session_id
     if not resume_picker:
         return None
-    # Interactive SDK resume picker â€” exercised manually / via the live host
+    # Interactive SDK resume picker â€?exercised manually / via the live host
     # e2e, not unit tests (it opens an OmnigentClient and an arrow-key picker).
     from omnigent_client import OmnigentClient  # pragma: no cover
 

@@ -9,13 +9,13 @@ policies on native tools.
 
 Tests cover:
 
-- TOOL_CALL ALLOW: no matching policy â†’ ``POLICY_ACTION_ALLOW``.
-- TOOL_CALL DENY: ``default_policies`` deny â†’ ``POLICY_ACTION_DENY``
+- TOOL_CALL ALLOW: no matching policy â†?``POLICY_ACTION_ALLOW``.
+- TOOL_CALL DENY: ``default_policies`` deny â†?``POLICY_ACTION_DENY``
   with reason.
 - TOOL_RESULT DENY: tool result policy fires.
-- Missing session â†’ 404.
-- Malformed body â†’ 400.
-- Unknown event type â†’ 400.
+- Missing session â†?404.
+- Malformed body â†?400.
+- Unknown event type â†?400.
 
 Uses the shared ``client`` fixture from ``tests/server/conftest.py``
 (real stores + mock LLM).
@@ -283,7 +283,7 @@ async def test_tool_call_allow_when_no_matching_policy(
     )
     assert resp.status_code == 200
     body = resp.json()
-    # No policies â†’ ALLOW (the default engine result).
+    # No policies â†?ALLOW (the default engine result).
     assert body["result"] == "POLICY_ACTION_ALLOW"
     assert "reason" not in body
 
@@ -295,9 +295,9 @@ async def test_tool_call_deny_with_default_policy(
     """
     A default_policy that denies Bash returns DENY with reason.
 
-    This exercises the full path: route handler â†’ get_conversation â†’
-    agent lookup â†’ build_policy_engine(default_policies=...) â†’ evaluate
-    â†’ DENY response. If any link in this chain breaks (e.g. the
+    This exercises the full path: route handler â†?get_conversation â†?
+    agent lookup â†?build_policy_engine(default_policies=...) â†?evaluate
+    â†?DENY response. If any link in this chain breaks (e.g. the
     conversation_store.get() bug), this test fails.
     """
     deny_bash_policy = FunctionPolicySpec(
@@ -318,7 +318,7 @@ async def test_tool_call_deny_with_default_policy(
     agent = await create_test_agent(client)
     session_id = await _create_session(client, agent["id"])
 
-    # Bash â†’ DENY by the admin policy.
+    # Bash â†?DENY by the admin policy.
     resp = await client.post(
         f"/v1/sessions/{session_id}/policies/evaluate",
         json=_tool_call_request("Bash"),
@@ -328,7 +328,7 @@ async def test_tool_call_deny_with_default_policy(
     assert body["result"] == "POLICY_ACTION_DENY"
     assert body["reason"] == "Bash is blocked by admin policy."
 
-    # Read â†’ ALLOW (the policy only denies Bash).
+    # Read â†?ALLOW (the policy only denies Bash).
     resp2 = await client.post(
         f"/v1/sessions/{session_id}/policies/evaluate",
         json=_tool_call_request("Read"),
@@ -365,7 +365,7 @@ async def test_tool_result_deny_with_default_policy(
     agent = await create_test_agent(client)
     session_id = await _create_session(client, agent["id"])
 
-    # Tool result with SECRET â†’ DENY.
+    # Tool result with SECRET â†?DENY.
     resp = await client.post(
         f"/v1/sessions/{session_id}/policies/evaluate",
         json=_tool_result_request("output contains SECRET data"),
@@ -375,7 +375,7 @@ async def test_tool_result_deny_with_default_policy(
     assert body["result"] == "POLICY_ACTION_DENY"
     assert body["reason"] == "Output contains sensitive data."
 
-    # Clean tool result â†’ ALLOW.
+    # Clean tool result â†?ALLOW.
     resp2 = await client.post(
         f"/v1/sessions/{session_id}/policies/evaluate",
         json=_tool_result_request("normal output"),
@@ -480,8 +480,8 @@ async def test_evaluate_endpoint_passes_actor_to_policy(
 
     A policy that inspects ``event["context"]["actor"]["run_as"]``
     and denies if the user is ``"blocked@test.com"`` verifies the full
-    wiring from HTTP request â†’ ``_build_actor`` â†’ ``EvaluationContext``
-    â†’ ``FunctionPolicy`` event dict.
+    wiring from HTTP request â†?``_build_actor`` â†?``EvaluationContext``
+    â†?``FunctionPolicy`` event dict.
     """
     policy = FunctionPolicySpec(
         name="admin__deny_blocked_actor",
@@ -498,6 +498,148 @@ async def test_evaluate_endpoint_passes_actor_to_policy(
         lambda: patched_caps,
     )
     # Patch _get_user_id to simulate an authenticated user.
+    monkeypatch.setattr(
+        "agent_meow.server.routes.sessions._get_user_id",
+        lambda _req, _auth: "blocked@test.com",
+    )
+
+    agent = await create_test_agent(client)
+    session_id = await _create_session(client, agent["id"])
+
+    resp = await client.post(
+        f"/v1/sessions/{session_id}/policies/evaluate",
+        json=_tool_call_request("Read"),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["result"] == "POLICY_ACTION_DENY"
+    assert body["reason"] == "Blocked user"
+
+
+async def test_evaluate_server_stashed_turn_actor_overrides_request_user_id(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    When the server has stashed a turn-initiating actor for the session
+    (set at forward time from the human's verified ``created_by``), that
+    identity is used for policy evaluation instead of the HTTP request's
+    ``user_id`` (the runner's service-account credential).
+
+    No actor field in the request body is needed or trusted.
+    """
+    policy = FunctionPolicySpec(
+        name="admin__deny_blocked_actor",
+        on=None,
+        function=FunctionRef(path=f"{__name__}._deny_blocked_actor"),
+    )
+    original_caps = get_caps()
+    monkeypatch.setattr(
+        "agent_meow.server.routes.sessions.get_caps",
+        lambda: RuntimeCaps(
+            execution_timeout=original_caps.execution_timeout,
+            default_policies=[policy],
+        ),
+    )
+    # HTTP request carries the runner's service-account identity.
+    monkeypatch.setattr(
+        "agent_meow.server.routes.sessions._get_user_id",
+        lambda _req, _auth: "runner-svc@example.com",
+    )
+
+    agent = await create_test_agent(client)
+    session_id = await _create_session(client, agent["id"])
+
+    # Simulate the server persisting the turn-initiating human's identity
+    # (normally written by _forward_event_to_runner via set_labels).
+    from agent_meow.runtime import get_conversation_store
+    from agent_meow.server.routes.sessions import _TURN_ACTOR_LABEL
+
+    await asyncio.to_thread(
+        get_conversation_store().set_labels,
+        session_id,
+        {_TURN_ACTOR_LABEL: "blocked@test.com"},
+    )
+
+    resp = await client.post(
+        f"/v1/sessions/{session_id}/policies/evaluate",
+        json=_tool_call_request("Read"),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["result"] == "POLICY_ACTION_DENY", (
+        "persisted turn actor label should override the request user_id"
+    )
+    assert body["reason"] == "Blocked user"
+
+
+async def test_evaluate_body_actor_field_is_ignored(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    A caller cannot spoof the policy actor by injecting ``context.actor``
+    into the event payload â€?the body field is ignored; only the
+    server-stashed turn actor (or the request ``user_id``) is used.
+    """
+    policy = FunctionPolicySpec(
+        name="admin__deny_blocked_actor",
+        on=None,
+        function=FunctionRef(path=f"{__name__}._deny_blocked_actor"),
+    )
+    original_caps = get_caps()
+    monkeypatch.setattr(
+        "agent_meow.server.routes.sessions.get_caps",
+        lambda: RuntimeCaps(
+            execution_timeout=original_caps.execution_timeout,
+            default_policies=[policy],
+        ),
+    )
+    # HTTP request is unauthenticated; no turn actor stashed server-side.
+    monkeypatch.setattr(
+        "agent_meow.server.routes.sessions._get_user_id",
+        lambda _req, _auth: None,
+    )
+
+    agent = await create_test_agent(client)
+    session_id = await _create_session(client, agent["id"])
+
+    # Caller tries to spoof actor via the event context body field.
+    payload = _tool_call_request("Read")
+    payload["event"]["context"] = {"actor": {"run_as": "blocked@test.com"}}
+
+    resp = await client.post(
+        f"/v1/sessions/{session_id}/policies/evaluate",
+        json=payload,
+    )
+    assert resp.status_code == 200
+    # Policy should NOT fire â€?the body field is ignored, actor is None.
+    assert resp.json()["result"] == "POLICY_ACTION_ALLOW", (
+        "body-injected context.actor must not influence the policy actor"
+    )
+
+
+async def test_evaluate_falls_back_to_request_user_id_when_no_turn_actor(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    When no turn actor is stashed (direct API callers, no-auth mode),
+    the HTTP request's ``user_id`` is used â€?no regression.
+    """
+    policy = FunctionPolicySpec(
+        name="admin__deny_blocked_actor",
+        on=None,
+        function=FunctionRef(path=f"{__name__}._deny_blocked_actor"),
+    )
+    original_caps = get_caps()
+    monkeypatch.setattr(
+        "agent_meow.server.routes.sessions.get_caps",
+        lambda: RuntimeCaps(
+            execution_timeout=original_caps.execution_timeout,
+            default_policies=[policy],
+        ),
+    )
     monkeypatch.setattr(
         "agent_meow.server.routes.sessions._get_user_id",
         lambda _req, _auth: "blocked@test.com",
@@ -581,7 +723,7 @@ async def test_tool_call_ask_holds_gate_and_returns_allow_on_accept(
     agent = await create_test_agent(client)
     session_id = await _create_session(client, agent["id"])
 
-    # The evaluate POST parks until the verdict arrives â€” run it
+    # The evaluate POST parks until the verdict arrives â€?run it
     # concurrently and learn the elicitation id from the stream.
     drain = asyncio.create_task(_drain_elicitation_id(session_id))
     await asyncio.sleep(0.05)
@@ -609,7 +751,7 @@ async def test_tool_call_ask_returns_deny_on_decline(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A declined TOOL_CALL ASK collapses to ``POLICY_ACTION_DENY`` â€”
+    A declined TOOL_CALL ASK collapses to ``POLICY_ACTION_DENY`` â€?
     fail-closed. If the human refuses at the approve URL, the native
     tool must not run.
     """
@@ -647,7 +789,7 @@ async def test_tool_call_ask_forwards_popup_event_to_runner(
 
     This closes the gap where native tool-policy ASKs moved server-side
     and stopped showing in the TUI. The gate must now also forward a popup
-    event so the native terminal can answer it â€” carrying the SAME
+    event so the native terminal can answer it â€?carrying the SAME
     ``elicitation_id`` it parks on, so resolving via the popup's endpoint
     releases the gate. Without the forward, native-terminal users would see
     nothing and the gate would hold until the web card or timeout.
@@ -676,7 +818,7 @@ async def test_tool_call_ask_forwards_popup_event_to_runner(
     # capturing client's event rather than polling a sleep.
     await asyncio.wait_for(capturing.popup_seen.wait(), timeout=5.0)
     popups = [e for e in capturing.posted if e["json"].get("type") == "cost_approval_popup"]
-    assert popups, "parked tool-policy ASK forwarded no popup â€” native terminal sees nothing"
+    assert popups, "parked tool-policy ASK forwarded no popup â€?native terminal sees nothing"
     popup = popups[0]
     assert popup["url"] == f"/v1/sessions/{session_id}/events"
     # Same id the gate parked on, so the popup's resolve releases this gate.
@@ -685,7 +827,7 @@ async def test_tool_call_ask_forwards_popup_event_to_runner(
     # name) so the popup is meaningful.
     assert "Approve running Bash?" in popup["json"]["message"]
 
-    # Resolve via the same endpoint the popup uses â†’ the gate collapses to ALLOW.
+    # Resolve via the same endpoint the popup uses â†?the gate collapses to ALLOW.
     verdict = await client.post(
         f"/v1/sessions/{session_id}/elicitations/{elicitation_id}/resolve",
         json={"action": "accept"},
@@ -712,15 +854,20 @@ def test_native_ask_gate_lock_keys_by_session_and_policy() -> None:
     """
     from agent_meow.server.routes.sessions import _native_ask_gate_lock
 
-    lock_a = _native_ask_gate_lock("conv_1", "session_cost_guard")
-    # Same key â†’ same lock: this is what makes parallel tool calls that
+    lock_a = _native_ask_gate_lock("8e32600337d08f59ad381caf96a90659", "session_cost_guard")
+    # Same key â†?same lock: this is what makes parallel tool calls that
     # all trip one checkpoint share a single gate.
-    assert _native_ask_gate_lock("conv_1", "session_cost_guard") is lock_a
-    # Different policy on the same session â†’ different lock, so a cost ask
+    assert (
+        _native_ask_gate_lock("8e32600337d08f59ad381caf96a90659", "session_cost_guard") is lock_a
+    )
+    # Different policy on the same session â†?different lock, so a cost ask
     # and (say) a destructive-file ask can prompt concurrently.
-    assert _native_ask_gate_lock("conv_1", "other_policy") is not lock_a
-    # Different session â†’ different lock, so sessions stay independent.
-    assert _native_ask_gate_lock("conv_2", "session_cost_guard") is not lock_a
+    assert _native_ask_gate_lock("8e32600337d08f59ad381caf96a90659", "other_policy") is not lock_a
+    # Different session â†?different lock, so sessions stay independent.
+    assert (
+        _native_ask_gate_lock("19b2d8e5c4e1733f25034907cb7d05ed", "session_cost_guard")
+        is not lock_a
+    )
 
 
 async def test_concurrent_cost_asks_serialize_and_collapse_sibling(
@@ -740,8 +887,8 @@ async def test_concurrent_cost_asks_serialize_and_collapse_sibling(
 
     The gate is stubbed to stand in for the human-approval wait (the real
     gate's elicitation parking is covered by the accept/decline tests
-    above). The stub holds the *first* entrant â€” and therefore the real
-    lock the route handler acquires around it â€” until the test releases
+    above). The stub holds the *first* entrant â€?and therefore the real
+    lock the route handler acquires around it â€?until the test releases
     it, then records the ASKing policy's checkpoint exactly as the real
     gate does on accept. The assertions prove (1) a second concurrent ask
     can NOT enter the gate while the first is pending (the lock serializes
@@ -806,7 +953,7 @@ async def test_concurrent_cost_asks_serialize_and_collapse_sibling(
         :param session_id: Session id (unused by the stub).
         :param phase: Enforcement phase (unused by the stub).
         :param data: Proto event data (unused by the stub).
-        :param engine: The policy engine â€” used to persist the approved
+        :param engine: The policy engine â€?used to persist the approved
             checkpoint so a sibling's rebuild observes it.
         :param result: The composed ASK result carrying ``state_updates``.
         :param conversation_store: Conversation store (unused by the stub).
@@ -869,9 +1016,9 @@ async def test_concurrent_cost_asks_serialize_and_collapse_sibling(
         f"Expected exactly one ASK gate entry for two concurrent tool calls "
         f"crossing the same checkpoint, got {entries}."
     )
-    # First ask was accepted â†’ ALLOW.
+    # First ask was accepted â†?ALLOW.
     assert first_resp.json()["result"] == "POLICY_ACTION_ALLOW", first_resp.text
-    # Sibling re-evaluated under the lock against the recorded checkpoint â†’
+    # Sibling re-evaluated under the lock against the recorded checkpoint â†?
     # ALLOW with no second prompt.
     assert second_resp.json()["result"] == "POLICY_ACTION_ALLOW", second_resp.text
 
@@ -887,7 +1034,7 @@ async def test_llm_request_allow_when_no_matching_policy(
     PHASE_LLM_REQUEST with no policies returns ALLOW (unspecified
     pass-through).
 
-    Verifies the proto mapping ``PHASE_LLM_REQUEST`` â†’
+    Verifies the proto mapping ``PHASE_LLM_REQUEST`` â†?
     ``Phase.LLM_REQUEST`` is correct. If the mapping still pointed
     at ``Phase.REQUEST``, the policy engine would route to the wrong
     phase and possibly match session-level REQUEST policies instead.
@@ -901,7 +1048,7 @@ async def test_llm_request_allow_when_no_matching_policy(
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    # No policies registered â†’ ALLOW (unspecified pass-through).
+    # No policies registered â†?ALLOW (unspecified pass-through).
     assert body["result"] in ("POLICY_ACTION_ALLOW", "POLICY_ACTION_UNSPECIFIED"), (
         f"Expected ALLOW or UNSPECIFIED for no-policy session, got {body['result']}. "
         "If DENY, a default policy may be incorrectly matching LLM_REQUEST."
@@ -924,7 +1071,7 @@ async def test_llm_request_deny_by_function_policy(
     agent = await create_test_agent(client)
     session_id = await _create_session(client, agent["id"])
 
-    # Small request â†’ ALLOW
+    # Small request â†?ALLOW
     resp_allow = await client.post(
         f"/v1/sessions/{session_id}/policies/evaluate",
         json=_llm_request_payload(messages_count=50),
@@ -935,7 +1082,7 @@ async def test_llm_request_deny_by_function_policy(
         "If DENY, the policy condition is wrong or the data wasn't passed correctly."
     )
 
-    # Large request â†’ DENY
+    # Large request â†?DENY
     resp_deny = await client.post(
         f"/v1/sessions/{session_id}/policies/evaluate",
         json=_llm_request_payload(messages_count=200),
@@ -967,7 +1114,7 @@ async def test_llm_response_deny_by_function_policy(
     agent = await create_test_agent(client)
     session_id = await _create_session(client, agent["id"])
 
-    # Clean response â†’ ALLOW
+    # Clean response â†?ALLOW
     resp_allow = await client.post(
         f"/v1/sessions/{session_id}/policies/evaluate",
         json=_llm_response_payload(text_preview="Hello, how can I help?"),
@@ -978,7 +1125,7 @@ async def test_llm_response_deny_by_function_policy(
         "If DENY, the policy fired incorrectly on non-PII content."
     )
 
-    # PII response â†’ DENY
+    # PII response â†?DENY
     resp_deny = await client.post(
         f"/v1/sessions/{session_id}/policies/evaluate",
         json=_llm_response_payload(text_preview="Your SSN is 123-45-6789"),

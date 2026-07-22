@@ -3,12 +3,12 @@
 Drives Moonshot AI's upstream ``kimi`` CLI from
 https://github.com/MoonshotAI/Kimi-Code (the curl-installed
 single-binary build at https://code.kimi.com/kimi-code/install.sh).
-The legacy pypi ``kimi-cli`` package is **not** supported â€” its
+The legacy pypi ``kimi-cli`` package is **not** supported â€?its
 command-line surface (``--print``, list-of-blocks content, etc.) is
 incompatible with the upstream binary the issue (#271) targets.
 
 One ``kimi -p <prompt> --output-format stream-json`` subprocess per
-agent-meow turn:
+Omnigent turn:
 
 - parses each JSONL line on stdout into one or more
   :class:`ExecutorEvent` (assistant text, tool-call request, tool-call
@@ -19,25 +19,25 @@ agent-meow turn:
   has no ``--work-dir`` flag).
 
 Kimi runs its own agent loop and its own tools (Bash, edit, read, web,
-â€¦) â€” agent-meow does not re-execute them. The executor advertises
+â€? â€?Omnigent does not re-execute them. The executor advertises
 ``handles_tools_internally=True`` and forwards ``tool_calls`` /
 ``role:"tool"`` events from kimi's transcript as informational
-:class:`ToolCallRequest` / :class:`ToolCallComplete` so the agent-meow
+:class:`ToolCallRequest` / :class:`ToolCallComplete` so the Omnigent
 UI can render them, but the Session layer does not dispatch them.
 
 Env-var contract (read once at construction by
-:mod:`~?agent_meow.inner.kimi_harness`):
+:mod:`agent_meow.inner.kimi_harness`):
 
 - ``HARNESS_KIMI_MODEL``: Kimi-side model id, e.g. ``"kimi-k2-turbo"``.
   ``None`` lets the kimi config's ``default_model`` win.
 - ``HARNESS_KIMI_CWD``: working directory the kimi subprocess runs in.
   Upstream has no ``--work-dir`` flag so this is threaded through
   ``cwd=`` on the subprocess. ``None`` falls back to the runner's cwd.
-- ``HARNESS_KIMI_PATH``: explicit path to the ``kimi`` binary, e.g.
+- ``OMNIGENT_KIMI_PATH``: explicit path to the ``kimi`` binary, e.g.
   ``"/Users/x/.kimi-code/bin/kimi"``. Defaults to ``"kimi"`` looked up
-  on ``PATH``.
-- ``HARNESS_KIMI_PLAN``: truthy â†’ ``--plan`` (read-only plan mode).
-- ``HARNESS_KIMI_CONTINUE_LAST``: truthy â†’ ``--continue`` (resume the
+  on ``PATH``. (Legacy ``HARNESS_KIMI_PATH`` still honored, deprecated.)
+- ``HARNESS_KIMI_PLAN``: truthy â†?``--plan`` (read-only plan mode).
+- ``HARNESS_KIMI_CONTINUE_LAST``: truthy â†?``--continue`` (resume the
   most recent session for the working directory). Mutually exclusive
   with ``HARNESS_KIMI_SESSION_ID``; the explicit session id wins.
 - ``HARNESS_KIMI_SKILLS_DIRS``: JSON list of paths forwarded as one
@@ -47,7 +47,7 @@ Env-var contract (read once at construction by
 Per-invocation provider routing (``--config-file`` / ``--mcp-config-file``
 / gateway env vars) is **not** wired: upstream kimi has no per-spawn
 config override. Provider configuration lives in ``~/.kimi/config.toml``
-and is managed out-of-band via ``kimi provider add`` (agent-meow-side
+and is managed out-of-band via ``kimi provider add`` (Omnigent-side
 provider injection is a deferred follow-up).
 """
 
@@ -65,6 +65,7 @@ from collections.abc import AsyncIterator, Sequence
 from pathlib import Path
 from typing import Any
 
+from agent_meow.harness_startup_config import resolve_harness_path
 from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 from agent_meow.inner.executor import (
     EnqueuedContent,
@@ -92,7 +93,7 @@ _STREAM_LIMIT = 16 * 1024 * 1024
 
 # Matches the resume hint kimi also prints to stderr / stdout (best-effort
 # fallback for when the ``role:"meta"`` JSON event isn't seen). The session
-# id format is ``session_<hex-uuid>`` â€” we accept the broader ``\S+`` to
+# id format is ``session_<hex-uuid>`` â€?we accept the broader ``\S+`` to
 # survive minor format drift.
 _SESSION_RESUME_RE = re.compile(
     r"To resume this session:\s+\S+\s+-r\s+(\S+)",
@@ -110,16 +111,17 @@ def _parse_truthy(value: str | None) -> bool:
 def _resolve_kimi_binary() -> str:
     """Resolve the ``kimi`` binary path.
 
-    ``HARNESS_KIMI_PATH`` wins (lets users point at a custom build or a
-    non-standard install location). Otherwise default to ``"kimi"`` and
-    rely on ``shutil.which`` so a missing binary surfaces clearly at
-    ``run_turn``.
+    ``OMNIGENT_KIMI_PATH`` wins (legacy ``HARNESS_KIMI_PATH`` still honored
+    via :func:`resolve_harness_path`, which emits a deprecation warning; lets
+    users point at a custom build or a non-standard install location).
+    Otherwise default to ``"kimi"`` and rely on ``shutil.which`` so a missing
+    binary surfaces clearly at ``run_turn``.
 
-    The legacy pypi ``kimi-cli`` package is intentionally NOT detected â€”
+    The legacy pypi ``kimi-cli`` package is intentionally NOT detected â€?
     its command-line surface is incompatible with the upstream binary
-    agent-meow supports.
+    Omnigent supports.
     """
-    explicit = os.environ.get("HARNESS_KIMI_PATH", "").strip()
+    explicit = resolve_harness_path("kimi")
     if explicit:
         return explicit
     return "kimi"
@@ -183,7 +185,7 @@ def _resolve_skills_dirs(raw: str | None) -> list[str]:
 
 
 class KimiExecutor(Executor):
-    """Drive ``kimi -p`` per agent-meow turn.
+    """Drive ``kimi -p`` per Omnigent turn.
 
     See module docstring for env-var contract and lifecycle.
     """
@@ -234,22 +236,22 @@ class KimiExecutor(Executor):
         """The env handed to the kimi subprocess.
 
         Inherits the harness wrap's own env (so ``KIMI_*`` auth vars
-        the user exported reach the subprocess) and adds nothing â€” all
+        the user exported reach the subprocess) and adds nothing â€?all
         ``HARNESS_KIMI_*`` knobs are read on the wrap side and
         translated into CLI flags.
         """
         return os.environ.copy()
 
     def _sandbox_launch_path(self, spawn_env_names: Sequence[str]) -> str:
-        """Return the path to spawn for kimi â€” sandbox launcher or bare binary.
+        """Return the path to spawn for kimi â€?sandbox launcher or bare binary.
 
-        Mirrors :meth:`~?agent_meow.inner.qwen_executor.QwenExecutor._sandbox_launch_path`.
+        Mirrors :meth:`agent_meow.inner.qwen_executor.QwenExecutor._sandbox_launch_path`.
         Upstream kimi has no sandbox flag of its own and runs its built-in
         Bash / edit / read tools (and any shell child processes) in-process.
         When the spec's ``os_env.sandbox`` requests confinement, wrap the
         whole kimi process tree in the platform sandbox
         (``linux_bwrap`` / ``darwin_seatbelt``) so even an *allowed* tool
-        call can't touch paths outside the spec's read/write roots â€” the
+        call can't touch paths outside the spec's read/write roots â€?the
         OS-level guarantee kimi's own approval flow can't give.
 
         Falls back to the bare binary (never blocks startup) when no sandbox
@@ -328,7 +330,7 @@ class KimiExecutor(Executor):
         return argv
 
     def _translate_event(self, payload: dict[str, Any]) -> list[ExecutorEvent]:
-        """Translate one kimi stream-json line into agent-meow events.
+        """Translate one kimi stream-json line into Omnigent events.
 
         Upstream emits whole messages (not deltas). Roles seen:
 
@@ -336,13 +338,13 @@ class KimiExecutor(Executor):
           assistant's reply) and/or ``tool_calls`` (the model invoking
           one of kimi's internal tools).
         - ``"tool"``: kimi's own tool execution result delivered back to
-          its loop. Surfaced as a ``ToolCallComplete`` so the agent-meow
+          its loop. Surfaced as a ``ToolCallComplete`` so the Omnigent
           UI can render it; the Session layer does not re-execute
           (``handles_tools_internally=True``).
         - ``"meta"`` with ``type:"session.resume_hint"``: carries the
           kimi session id we capture for resume on the next turn.
 
-        Unknown roles / types are silently ignored â€” kimi may grow new
+        Unknown roles / types are silently ignored â€?kimi may grow new
         event types in future versions.
         """
         events: list[ExecutorEvent] = []
@@ -381,7 +383,7 @@ class KimiExecutor(Executor):
                         )
         elif role == "tool":
             # Kimi has already executed the tool. Emit a synthetic completion
-            # so the agent-meow UI can render the result. The Session layer
+            # so the Omnigent UI can render the result. The Session layer
             # will not double-execute (handles_tools_internally=True).
             result = payload.get("content")
             call_id = payload.get("tool_call_id") or ""
@@ -406,12 +408,12 @@ class KimiExecutor(Executor):
         self,
         messages: list[Message],
         tools: list[ToolSpec],
-        system_prompt: str,  # noqa: ARG002 â€” kimi's own agent spec carries instructions
-        config: ExecutorConfig | None = None,  # noqa: ARG002 â€” per-turn override not yet plumbed
+        system_prompt: str,  # noqa: ARG002 â€?kimi's own agent spec carries instructions
+        config: ExecutorConfig | None = None,  # noqa: ARG002 â€?per-turn override not yet plumbed
     ) -> AsyncIterator[ExecutorEvent]:
         if tools and not self._warned_tools_without_bridge:
             _logger.warning(
-                "kimi executor received %d declared tool(s) but agent-meow has no "
+                "kimi executor received %d declared tool(s) but Omnigent has no "
                 "tool-injection bridge for the upstream kimi binary yet (no "
                 "per-spawn --mcp-config-file). The tools will not be exposed to "
                 "kimi for this session (MCP tool-injection is a deferred follow-up).",
@@ -424,7 +426,8 @@ class KimiExecutor(Executor):
                 message=(
                     f"kimi harness: binary {self._binary_path!r} not found on PATH. "
                     "Install via `curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash` "
-                    "or set HARNESS_KIMI_PATH to its absolute location."
+                    "or set OMNIGENT_KIMI_PATH (legacy HARNESS_KIMI_PATH) to its"
+                    " absolute location."
                 ),
                 retryable=False,
             )
@@ -487,7 +490,7 @@ class KimiExecutor(Executor):
                     except json.JSONDecodeError:
                         # Kimi sometimes prints informational lines on stdout
                         # (e.g. ``Shell cwd was reset to ...``). Log at debug
-                        # and move on â€” never crash on non-JSON.
+                        # and move on â€?never crash on non-JSON.
                         _logger.debug("kimi executor: non-JSON stdout line: %s", line[:200])
                         continue
                     if not isinstance(payload, dict):
@@ -548,7 +551,7 @@ class KimiExecutor(Executor):
 
     # -- session lifecycle ---------------------------------------------------
 
-    async def close_session(self, session_key: str) -> None:  # noqa: ARG002 â€” per-session id is the kimi UUID, no extra teardown
+    async def close_session(self, session_key: str) -> None:  # noqa: ARG002 â€?per-session id is the kimi UUID, no extra teardown
         """Drop the captured session id so the next turn starts fresh.
 
         The kimi subprocess is per-turn, so there is no long-lived
@@ -556,7 +559,7 @@ class KimiExecutor(Executor):
         """
         self._session_id = None
 
-    async def interrupt_session(self, session_key: str) -> bool:  # noqa: ARG002 â€” best-effort process terminate
+    async def interrupt_session(self, session_key: str) -> bool:  # noqa: ARG002 â€?best-effort process terminate
         """Terminate the active kimi process, if any.
 
         Returns True when a process was actually signalled. The next
@@ -573,8 +576,8 @@ class KimiExecutor(Executor):
 
     async def enqueue_session_message(
         self,
-        session_key: str,  # noqa: ARG002 â€” per-turn subprocess model; no live queue
-        content: EnqueuedContent,  # noqa: ARG002 â€” per-turn subprocess model; no live queue
+        session_key: str,  # noqa: ARG002 â€?per-turn subprocess model; no live queue
+        content: EnqueuedContent,  # noqa: ARG002 â€?per-turn subprocess model; no live queue
     ) -> bool:
         """Not supported under the per-turn subprocess model.
 
