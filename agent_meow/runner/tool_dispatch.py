@@ -343,10 +343,11 @@ _IMAGE_TOOLS = frozenset(
     }
 )
 
-# Priority 5o: agent-meow Voice surface — transcribe_audio (Handy CLI),
-# transcribe_audio_high_quality (VibeVoice-ASR gateway), text_to_speech /
-# speak (VibeVoice TTS gateway). The runner shells out to Handy for STT
-# and proxies HTTP for TTS/ASR.
+# Priority 5o: agent-meow Voice surface — transcribe_audio (Handy CLI,
+# the required STT integration), transcribe_audio_high_quality (VibeVoice-ASR
+# gateway for diarized long-form), text_to_speech / speak (Voicebox REST,
+# the required TTS integration). Handy + Voicebox are the canonical
+# STT/TTS pair for agent-meow voice integration.
 _VOICE_TOOLS = frozenset(
     {"transcribe_audio", "transcribe_audio_high_quality", "text_to_speech", "speak"}
 )
@@ -4647,10 +4648,13 @@ async def _execute_voice_tool(
     - ``transcribe_audio_high_quality`` → calls a VibeVoice-ASR vLLM endpoint
       (``VIBEVOICE_ASR_URL``) for diarized long-form transcription.
     - ``text_to_speech`` / ``speak`` → calls Voicebox REST ``POST /speak``
-      (when ``VOICEBOX_URL`` is set — preferred, provides voice cloning,
-      7 TTS engines, per-profile personalities) or a VibeVoice TTS vLLM
-      endpoint (``VIBEVOICE_TTS_URL``) to synthesize speech. The audio is
-      returned as a data URL or a pollable Voicebox generation URL.
+      (``VOICEBOX_URL`` must be set — Voicebox provides voice cloning,
+      7 TTS engines, and per-profile personalities). The audio is
+      returned as a pollable Voicebox generation URL.
+
+    Handy + Voicebox are the required STT/TTS pair for agent-meow voice
+    integration. The ``VIBEVOICE_TTS_URL`` fallback is retained only for
+    legacy compatibility — new deployments should set ``VOICEBOX_URL``.
 
     :param tool_name: One of the voice tool names.
     :param args: Parsed tool arguments.
@@ -4773,19 +4777,23 @@ async def _execute_voice_tool(
         engine = args.get("engine")
         personality = args.get("personality")
 
-        # Voicebox is the preferred TTS path — it provides voice cloning,
-        # 7 TTS engines, per-profile personalities, and audio effects.
-        # VibeVoice vLLM is the fallback for direct model access.
+        # Voicebox is the required TTS path for agent-meow voice integration.
+        # It provides voice cloning, 7 TTS engines, per-profile personalities,
+        # and audio effects. VibeVoice vLLM is a legacy fallback only.
         voicebox_url = os.environ.get("VOICEBOX_URL", "")
         tts_url = os.environ.get("VIBEVOICE_TTS_URL", "")
-        if not voicebox_url and not tts_url:
+        if not voicebox_url:
             return json.dumps({
                 "error": (
-                    "No TTS endpoint configured. Either:\n"
-                    "  1. Set VOICEBOX_URL=http://127.0.0.1:17493 (Voicebox — "
-                    "cloning, 7 engines, personalities), or\n"
-                    "  2. Set VIBEVOICE_TTS_URL=http://127.0.0.1:8000/v1 "
-                    "(VibeVoice-TTS via vLLM)"
+                    "VOICEBOX_URL is not set. Voicebox is the required TTS"
+                    " endpoint for agent-meow voice integration.\n"
+                    "Install Voicebox and set:\n"
+                    "  VOICEBOX_URL=http://127.0.0.1:17493\n"
+                    "Voicebox provides voice cloning, 7 TTS engines, and\n"
+                    "per-profile personalities."
+                    + ("\n\n(VIBEVOICE_TTS_URL legacy fallback is set but"
+                       " not recommended for new deployments.)"
+                       if tts_url else "")
                 ),
             })
 
@@ -4843,7 +4851,8 @@ async def _execute_voice_tool(
                     result["generation_id"] = gen_id
                 return json.dumps(result)
 
-            # Fallback: VibeVoice-TTS via vLLM gateway.
+            # Legacy fallback: VibeVoice-TTS via vLLM gateway.
+            # Not recommended for new deployments — use Voicebox instead.
             payload = {
                 "model": "vibevoice-tts",
                 "input": text,
