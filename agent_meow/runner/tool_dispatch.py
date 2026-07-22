@@ -4646,9 +4646,11 @@ async def _execute_voice_tool(
       transcribed text.
     - ``transcribe_audio_high_quality`` → calls a VibeVoice-ASR vLLM endpoint
       (``VIBEVOICE_ASR_URL``) for diarized long-form transcription.
-    - ``text_to_speech`` / ``speak`` → calls a VibeVoice TTS vLLM endpoint
-      (``VIBEVOICE_TTS_URL``) to synthesize speech. The audio is uploaded as
-      a session artifact via the server's image/artifact routes.
+    - ``text_to_speech`` / ``speak`` → calls Voicebox REST ``POST /speak``
+      (when ``VOICEBOX_URL`` is set — preferred, provides voice cloning,
+      7 TTS engines, per-profile personalities) or a VibeVoice TTS vLLM
+      endpoint (``VIBEVOICE_TTS_URL``) to synthesize speech. The audio is
+      returned as a data URL or a pollable Voicebox generation URL.
 
     :param tool_name: One of the voice tool names.
     :param args: Parsed tool arguments.
@@ -4762,19 +4764,30 @@ async def _execute_voice_tool(
             return json.dumps({"error": f"transcribe_audio_high_quality failed: {exc}"})
 
     if tool_name in ("text_to_speech", "speak"):
-        tts_url = os.environ.get("VIBEVOICE_TTS_URL", "")
-        if not tts_url:
-            return json.dumps({
-                "error": (
-                    "VIBEVOICE_TTS_URL is not set. Serve VibeVoice-TTS via "
-                    "vLLM and set VIBEVOICE_TTS_URL=http://127.0.0.1:8000/v1"
-                ),
-            })
         text = args.get("text")
         if not isinstance(text, str) or not text:
             return json.dumps({"error": f"{tool_name} requires a non-empty 'text'"})
         voice = args.get("voice")
         language = args.get("language")
+        profile = args.get("profile")
+        engine = args.get("engine")
+        personality = args.get("personality")
+
+        # Voicebox is the preferred TTS path — it provides voice cloning,
+        # 7 TTS engines, per-profile personalities, and audio effects.
+        # VibeVoice vLLM is the fallback for direct model access.
+        voicebox_url = os.environ.get("VOICEBOX_URL", "")
+        tts_url = os.environ.get("VIBEVOICE_TTS_URL", "")
+        if not voicebox_url and not tts_url:
+            return json.dumps({
+                "error": (
+                    "No TTS endpoint configured. Either:\n"
+                    "  1. Set VOICEBOX_URL=http://127.0.0.1:17493 (Voicebox — "
+                    "cloning, 7 engines, personalities), or\n"
+                    "  2. Set VIBEVOICE_TTS_URL=http://127.0.0.1:8000/v1 "
+                    "(VibeVoice-TTS via vLLM)"
+                ),
+            })
 
         if server_client is None:
             return json.dumps({"error": f"{tool_name} requires server access"})
@@ -4782,7 +4795,56 @@ async def _execute_voice_tool(
         try:
             import base64
 
-            payload: dict[str, Any] = {
+            if voicebox_url:
+                # Route through Voicebox REST API (POST /speak).
+                # Voicebox resolves the profile (by name or id, falling back
+                # to the per-client binding, then the global default) and
+                # handles generation + playback. The response carries a
+                # generation_id we can use to poll /generate/{id}/status.
+                payload: dict[str, Any] = {"text": text}
+                if isinstance(profile, str) and profile:
+                    payload["profile"] = profile
+                if isinstance(engine, str) and engine:
+                    payload["engine"] = engine
+                if isinstance(language, str) and language:
+                    payload["language"] = language
+                if isinstance(personality, bool):
+                    payload["personality"] = personality
+                # Map the generic "voice" arg to Voicebox's "profile" if
+                # the caller used the VibeVoice-style parameter.
+                if not payload.get("profile") and isinstance(voice, str) and voice:
+                    payload["profile"] = voice
+
+                resp = await server_client.post(
+                    f"{voicebox_url.rstrip('/')}/speak",
+                    json=payload,
+                    timeout=120.0,
+                )
+                if resp.status_code >= 400:
+                    err_body = resp.text[:300] if hasattr(resp, "text") else ""
+                    return json.dumps({
+                        "error": f"Voicebox returned {resp.status_code}: {err_body}",
+                    })
+                data = resp.json()
+                gen_id = data.get("generation_id", "")
+                # The poll_url from Voicebox is a relative path (e.g.
+                # /generate/gen_123/status). Make it absolute so the web
+                # UI's AudioBlock can fetch it directly.
+                audio_url = f"{voicebox_url.rstrip('/')}/generate/{gen_id}/status" if gen_id else ""
+                result: dict[str, Any] = {
+                    "audio_url": audio_url,
+                    "format": "wav",
+                    "text": text,
+                    "source": "voicebox",
+                }
+                if data.get("profile"):
+                    result["profile"] = data["profile"]
+                if gen_id:
+                    result["generation_id"] = gen_id
+                return json.dumps(result)
+
+            # Fallback: VibeVoice-TTS via vLLM gateway.
+            payload = {
                 "model": "vibevoice-tts",
                 "input": text,
             }
@@ -4806,6 +4868,7 @@ async def _execute_voice_tool(
                 "audio_url": f"data:audio/wav;base64,{audio_b64}",
                 "format": "wav",
                 "text": text,
+                "source": "vibevoice",
             })
         except Exception as exc:  # noqa: BLE001
             return json.dumps({"error": f"{tool_name} failed: {exc}"})
