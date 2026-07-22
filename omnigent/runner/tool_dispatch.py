@@ -605,6 +605,10 @@ _ALL_LOCAL_TOOLS = (
     | _AGENT_TOOLS
     | _POLICY_TOOLS
     | _SCHEDULED_TASK_TOOLS
+    | _DOC_TOOLS
+    | _IMAGE_TOOLS
+    | _VOICE_TOOLS
+    | _VIDEO_TOOLS
 )
 _PLACEHOLDER_CWDS = (None, "", ".", "./")
 
@@ -4763,6 +4767,7 @@ async def _execute_doc_tool(
             base=base,
             server_client=server_client,
             runner_workspace=None,
+            conversation_id=conversation_id,
         )
 
     if tool_name == "doc_convert":
@@ -4790,6 +4795,7 @@ async def _execute_office_cli_tool(
     base: str,
     server_client: httpx.AsyncClient | None,
     runner_workspace: Path | None,
+    conversation_id: str | None,
 ) -> str:
     """Handle doc_create_office / doc_edit_office / doc_export via officecli shell-out."""
     import asyncio
@@ -5007,7 +5013,7 @@ async def _execute_office_cli_tool(
                 export_name = f"{os.path.splitext(doc_title)[0]}{out_ext}"
                 files = {"file": (export_name, data)}
                 resp = await server_client.post(
-                    f"/v1/sessions/{args.get('session_id', '')}/resources/images",
+                    f"/v1/sessions/{conversation_id}/resources/images",
                     files=files,
                     timeout=60.0,
                 )
