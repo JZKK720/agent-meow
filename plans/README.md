@@ -12,8 +12,8 @@ Scope: 7 CLI/harness integrations + 3 surface tools (Docs, Images, Voice).
 | 003 | Add doc surface dispatch tests | tests | MED | M | LOW | TODO |
 | 004 | Restore ironclaw-native harness implementation | bug | HIGH | L | MED | TODO |
 | 005 | Add server `/documents/{id}/file` binary endpoint | bug | MED | M | MED | TODO |
-| 006 | Add image surface dispatch tests | tests | MED | S | LOW | TODO |
-| 007 | Update voice schema docstrings (Voicebox preferred) | docs | LOW | S | LOW | TODO |
+| 006 | Add image surface dispatch tests | tests | MED | S | LOW | DONE |
+| 007 | Update voice schema docstrings (Voicebox preferred) | docs | LOW | S | LOW | DONE |
 
 ## Dependency graph
 
